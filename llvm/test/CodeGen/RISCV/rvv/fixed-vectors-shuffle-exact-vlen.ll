@@ -244,9 +244,9 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -256
 ; RV64-NEXT:    .cfi_def_cfa_offset 256
-; RV64-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 248(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 240(sp) # 8-byte Spill
+; RV64-NEXT:    sd s1, 232(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    .cfi_offset s1, -24
@@ -268,9 +268,9 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -256
 ; RV64-NEXT:    .cfi_def_cfa sp, 256
-; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 248(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 240(sp) # 8-byte Reload
+; RV64-NEXT:    ld s1, 232(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1

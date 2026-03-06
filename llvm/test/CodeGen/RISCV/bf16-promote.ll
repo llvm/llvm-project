@@ -42,28 +42,28 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; RV64-LABEL: test_fptrunc_float:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    call __truncsfbf2
 ; RV64-NEXT:    fmv.x.w a0, fa0
 ; RV64-NEXT:    sh a0, 0(s0)
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_fptrunc_float:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:    call __truncsfbf2
 ; RV32-NEXT:    fmv.x.w a0, fa0
 ; RV32-NEXT:    sh a0, 0(s0)
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
   %a = fptrunc float %f to bfloat
@@ -75,28 +75,28 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 ; RV64-LABEL: test_fptrunc_double:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    call __truncdfbf2
 ; RV64-NEXT:    fmv.x.w a0, fa0
 ; RV64-NEXT:    sh a0, 0(s0)
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_fptrunc_double:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:    call __truncdfbf2
 ; RV32-NEXT:    fmv.x.w a0, fa0
 ; RV32-NEXT:    sh a0, 0(s0)
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
   %a = fptrunc double %d to bfloat
@@ -108,8 +108,8 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV64-LABEL: test_fadd:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    lhu a0, 0(a1)
 ; RV64-NEXT:    lhu a1, 0(s0)
@@ -121,16 +121,16 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV64-NEXT:    call __truncsfbf2
 ; RV64-NEXT:    fmv.x.w a0, fa0
 ; RV64-NEXT:    sh a0, 0(s0)
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_fadd:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:    lhu a0, 0(a1)
 ; RV32-NEXT:    lhu a1, 0(s0)
@@ -142,8 +142,8 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV32-NEXT:    call __truncsfbf2
 ; RV32-NEXT:    fmv.x.w a0, fa0
 ; RV32-NEXT:    sh a0, 0(s0)
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
   %a = load bfloat, ptr %p

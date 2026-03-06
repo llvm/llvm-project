@@ -865,8 +865,8 @@ define i32 @extractelt_nxv32i32_neg1(<vscale x 32 x i32> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    addi s0, sp, 80
@@ -886,8 +886,8 @@ define i32 @extractelt_nxv32i32_neg1(<vscale x 32 x i32> %v) {
 ; CHECK-NEXT:    lw a0, -4(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
 ; CHECK-NEXT:    .cfi_def_cfa sp, 80
-; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 80
@@ -920,8 +920,8 @@ define i32 @extractelt_nxv32i32_idx(<vscale x 32 x i32> %v, i32 %idx) {
 ; CHECK-NEXT:  .LBB74_2:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    addi s0, sp, 80
@@ -940,8 +940,8 @@ define i32 @extractelt_nxv32i32_idx(<vscale x 32 x i32> %v, i32 %idx) {
 ; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
 ; CHECK-NEXT:    .cfi_def_cfa sp, 80
-; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 80

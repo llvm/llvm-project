@@ -356,13 +356,13 @@ define <32 x half> @vfmadd_vv_v32f16(<32 x half> %va, <32 x half> %vb, <32 x hal
 ; ZVFBFA-NEXT:    sub sp, sp, a0
 ; ZVFBFA-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vs4r.v v16, (a0) # vscale x 32-byte Folded Spill
+; ZVFBFA-NEXT:    vs4r.v v16, (a0) # vscale x 32-byte Spill
 ; ZVFBFA-NEXT:    li a0, 32
 ; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v12
 ; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
+; ZVFBFA-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Reload
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v8
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vv v24, v0, v16

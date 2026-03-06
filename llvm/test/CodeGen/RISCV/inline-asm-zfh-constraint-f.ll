@@ -96,56 +96,56 @@ define half @constraint_f_half_abi_name(half %a) nounwind {
 ; RV32ZFH-LABEL: constraint_f_half_abi_name:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    addi sp, sp, -16
-; RV32ZFH-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; RV32ZFH-NEXT:    fsw fs0, 12(sp) # 4-byte Spill
 ; RV32ZFH-NEXT:    lui a0, %hi(gh)
 ; RV32ZFH-NEXT:    flh fs0, %lo(gh)(a0)
 ; RV32ZFH-NEXT:    #APP
 ; RV32ZFH-NEXT:    fadd.s ft0, fa0, fs0
 ; RV32ZFH-NEXT:    #NO_APP
 ; RV32ZFH-NEXT:    fmv.h fa0, ft0
-; RV32ZFH-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; RV32ZFH-NEXT:    flw fs0, 12(sp) # 4-byte Reload
 ; RV32ZFH-NEXT:    addi sp, sp, 16
 ; RV32ZFH-NEXT:    ret
 ;
 ; RV64ZFH-LABEL: constraint_f_half_abi_name:
 ; RV64ZFH:       # %bb.0:
 ; RV64ZFH-NEXT:    addi sp, sp, -16
-; RV64ZFH-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; RV64ZFH-NEXT:    fsw fs0, 12(sp) # 4-byte Spill
 ; RV64ZFH-NEXT:    lui a0, %hi(gh)
 ; RV64ZFH-NEXT:    flh fs0, %lo(gh)(a0)
 ; RV64ZFH-NEXT:    #APP
 ; RV64ZFH-NEXT:    fadd.s ft0, fa0, fs0
 ; RV64ZFH-NEXT:    #NO_APP
 ; RV64ZFH-NEXT:    fmv.h fa0, ft0
-; RV64ZFH-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; RV64ZFH-NEXT:    flw fs0, 12(sp) # 4-byte Reload
 ; RV64ZFH-NEXT:    addi sp, sp, 16
 ; RV64ZFH-NEXT:    ret
 ;
 ; RV32DZFH-LABEL: constraint_f_half_abi_name:
 ; RV32DZFH:       # %bb.0:
 ; RV32DZFH-NEXT:    addi sp, sp, -16
-; RV32DZFH-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; RV32DZFH-NEXT:    fsd fs0, 8(sp) # 8-byte Spill
 ; RV32DZFH-NEXT:    lui a0, %hi(gh)
 ; RV32DZFH-NEXT:    flh fs0, %lo(gh)(a0)
 ; RV32DZFH-NEXT:    #APP
 ; RV32DZFH-NEXT:    fadd.s ft0, fa0, fs0
 ; RV32DZFH-NEXT:    #NO_APP
 ; RV32DZFH-NEXT:    fmv.h fa0, ft0
-; RV32DZFH-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV32DZFH-NEXT:    fld fs0, 8(sp) # 8-byte Reload
 ; RV32DZFH-NEXT:    addi sp, sp, 16
 ; RV32DZFH-NEXT:    ret
 ;
 ; RV64DZFH-LABEL: constraint_f_half_abi_name:
 ; RV64DZFH:       # %bb.0:
 ; RV64DZFH-NEXT:    addi sp, sp, -16
-; RV64DZFH-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; RV64DZFH-NEXT:    fsd fs0, 8(sp) # 8-byte Spill
 ; RV64DZFH-NEXT:    lui a0, %hi(gh)
 ; RV64DZFH-NEXT:    flh fs0, %lo(gh)(a0)
 ; RV64DZFH-NEXT:    #APP
 ; RV64DZFH-NEXT:    fadd.s ft0, fa0, fs0
 ; RV64DZFH-NEXT:    #NO_APP
 ; RV64DZFH-NEXT:    fmv.h fa0, ft0
-; RV64DZFH-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV64DZFH-NEXT:    fld fs0, 8(sp) # 8-byte Reload
 ; RV64DZFH-NEXT:    addi sp, sp, 16
 ; RV64DZFH-NEXT:    ret
   %1 = load half, ptr @gh

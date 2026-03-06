@@ -8,9 +8,9 @@ define i128 @fptosi_f64_to_i128(double %a) nounwind {
 ; CHECK-LABEL: fptosi_f64_to_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __fixdfti
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = fptosi double %a to i128
@@ -21,9 +21,9 @@ define i128 @fptoui_f64_to_i128(double %a) nounwind {
 ; CHECK-LABEL: fptoui_f64_to_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __fixunsdfti
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = fptoui double %a to i128
@@ -34,9 +34,9 @@ define double @sitofp_i128_to_f64(i128 %a) nounwind {
 ; CHECK-LABEL: sitofp_i128_to_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __floattidf
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = sitofp i128 %a to double
@@ -47,9 +47,9 @@ define double @uitofp_i128_to_f64(i128 %a) nounwind {
 ; CHECK-LABEL: uitofp_i128_to_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __floatuntidf
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = uitofp i128 %a to double

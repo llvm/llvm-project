@@ -15,8 +15,8 @@ define void @process_nodes(ptr %0) nounwind {
 ; RV32-NEXT:    beqz a0, .LBB0_4
 ; RV32-NEXT:  # %bb.1: # %loop.preheader
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:  .LBB0_2: # %loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -26,8 +26,8 @@ define void @process_nodes(ptr %0) nounwind {
 ; RV32-NEXT:    lw s0, 0(s0)
 ; RV32-NEXT:    bnez s0, .LBB0_2
 ; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:  .LBB0_4: # %exit
 ; RV32-NEXT:    ret
@@ -37,8 +37,8 @@ define void @process_nodes(ptr %0) nounwind {
 ; RV64-NEXT:    beqz a0, .LBB0_4
 ; RV64-NEXT:  # %bb.1: # %loop.preheader
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:  .LBB0_2: # %loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -48,8 +48,8 @@ define void @process_nodes(ptr %0) nounwind {
 ; RV64-NEXT:    ld s0, 0(s0)
 ; RV64-NEXT:    bnez s0, .LBB0_2
 ; RV64-NEXT:  # %bb.3:
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:  .LBB0_4: # %exit
 ; RV64-NEXT:    ret

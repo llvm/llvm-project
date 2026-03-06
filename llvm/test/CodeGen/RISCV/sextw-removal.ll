@@ -10,9 +10,9 @@ define void @test1(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    sraw s1, a0, a1
 ; CHECK-NEXT:  .LBB0_1: # %bb2
@@ -22,18 +22,18 @@ define void @test1(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sllw s1, s1, s0
 ; CHECK-NEXT:    bnez a0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test1:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -32
-; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    mv s0, a1
 ; NOREMOVAL-NEXT:    sraw s1, a0, a1
 ; NOREMOVAL-NEXT:  .LBB0_1: # %bb2
@@ -43,9 +43,9 @@ define void @test1(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sllw s1, s1, s0
 ; NOREMOVAL-NEXT:    bnez a0, .LBB0_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 32
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -170,11 +170,11 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-LABEL: test5:
 ; RV64I:       # %bb.0: # %bb
 ; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    lui a1, 349525
 ; RV64I-NEXT:    lui a2, 209715
@@ -202,18 +202,18 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    srliw a0, a0, 24
 ; RV64I-NEXT:    bnez a1, .LBB4_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test5:
 ; RV64ZBB:       # %bb.0: # %bb
 ; RV64ZBB-NEXT:    addi sp, sp, -16
-; RV64ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZBB-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZBB-NEXT:    sraw a0, a0, a1
 ; RV64ZBB-NEXT:  .LBB4_1: # %bb2
 ; RV64ZBB-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -222,14 +222,14 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64ZBB-NEXT:    cpopw a0, a0
 ; RV64ZBB-NEXT:    bnez a1, .LBB4_1
 ; RV64ZBB-NEXT:  # %bb.2: # %bb7
-; RV64ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZBB-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZBB-NEXT:    addi sp, sp, 16
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test5:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -16
-; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    sraw a1, a0, a1
 ; NOREMOVAL-NEXT:  .LBB4_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -238,7 +238,7 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    cpopw a1, a0
 ; NOREMOVAL-NEXT:    bnez a0, .LBB4_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -260,8 +260,8 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    fsw fs0, 4(sp) # 4-byte Spill
 ; CHECK-NEXT:    sraw a0, a0, a1
 ; CHECK-NEXT:    fmv.w.x fs0, zero
 ; CHECK-NEXT:  .LBB5_1: # %bb2
@@ -271,16 +271,16 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    fcvt.w.s a0, fa0, rtz
 ; CHECK-NEXT:    beqz a1, .LBB5_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    flw fs0, 4(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test6:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -16
-; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    fsw fs0, 4(sp) # 4-byte Spill
 ; NOREMOVAL-NEXT:    sraw a0, a0, a1
 ; NOREMOVAL-NEXT:    fmv.w.x fs0, zero
 ; NOREMOVAL-NEXT:  .LBB5_1: # %bb2
@@ -291,8 +291,8 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    fcvt.w.s a0, fa0, rtz
 ; NOREMOVAL-NEXT:    beqz a1, .LBB5_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    flw fs0, 4(sp) # 4-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -315,11 +315,11 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-LABEL: test7:
 ; RV64I:       # %bb.0: # %bb
 ; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    lui a1, 349525
 ; RV64I-NEXT:    lui a2, 209715
@@ -354,18 +354,18 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    bnez a0, .LBB6_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test7:
 ; RV64ZBB:       # %bb.0: # %bb
 ; RV64ZBB-NEXT:    addi sp, sp, -16
-; RV64ZBB-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZBB-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZBB-NEXT:    sraw a0, a0, a1
 ; RV64ZBB-NEXT:  .LBB6_1: # %bb2
 ; RV64ZBB-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -373,14 +373,14 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64ZBB-NEXT:    cpop a0, a0
 ; RV64ZBB-NEXT:    bnez a0, .LBB6_1
 ; RV64ZBB-NEXT:  # %bb.2: # %bb7
-; RV64ZBB-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZBB-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZBB-NEXT:    addi sp, sp, 16
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test7:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -16
-; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    sraw a0, a0, a1
 ; NOREMOVAL-NEXT:  .LBB6_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -389,7 +389,7 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    cpop a0, a0
 ; NOREMOVAL-NEXT:    bnez a0, .LBB6_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -412,7 +412,7 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    sraw a0, a0, a1
 ; CHECK-NEXT:  .LBB7_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -420,14 +420,14 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    ori a0, a0, -256
 ; CHECK-NEXT:    bnez a0, .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test8:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -16
-; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    sraw a0, a0, a1
 ; NOREMOVAL-NEXT:  .LBB7_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -436,7 +436,7 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    ori a0, a0, -256
 ; NOREMOVAL-NEXT:    bnez a0, .LBB7_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -461,8 +461,8 @@ define void @test9(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    sraw a0, a0, a1
 ; CHECK-NEXT:    li s0, 254
 ; CHECK-NEXT:  .LBB8_1: # %bb2
@@ -472,16 +472,16 @@ define void @test9(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    slti a0, a0, 255
 ; CHECK-NEXT:    blt s0, a1, .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test9:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -16
-; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    sraw a1, a0, a1
 ; NOREMOVAL-NEXT:    li s0, 254
 ; NOREMOVAL-NEXT:  .LBB8_1: # %bb2
@@ -491,8 +491,8 @@ define void @test9(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    slti a1, a0, 255
 ; NOREMOVAL-NEXT:    blt s0, a0, .LBB8_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -515,8 +515,8 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    fsw fs0, 4(sp) # 4-byte Spill
 ; CHECK-NEXT:    sraw a0, a0, a1
 ; CHECK-NEXT:    fmv.w.x fs0, zero
 ; CHECK-NEXT:  .LBB9_1: # %bb2
@@ -526,16 +526,16 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    fmv.x.w a0, fa0
 ; CHECK-NEXT:    beqz a1, .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    flw fs0, 4(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test10:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -16
-; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    fsw fs0, 4(sp) # 4-byte Spill
 ; NOREMOVAL-NEXT:    sraw a0, a0, a1
 ; NOREMOVAL-NEXT:    fmv.w.x fs0, zero
 ; NOREMOVAL-NEXT:  .LBB9_1: # %bb2
@@ -546,8 +546,8 @@ define void @test10(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    fmv.x.w a0, fa0
 ; NOREMOVAL-NEXT:    beqz a1, .LBB9_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    flw fs0, 4(sp) # 4-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -1146,9 +1146,9 @@ define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test16:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    mv s1, a0
@@ -1159,18 +1159,18 @@ define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sllw s1, s1, s0
 ; CHECK-NEXT:    bnez a0, .LBB19_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test16:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -32
-; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    mv s0, a1
 ; NOREMOVAL-NEXT:    call bar
 ; NOREMOVAL-NEXT:    mv s1, a0
@@ -1181,9 +1181,9 @@ define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sllw s1, s1, s0
 ; NOREMOVAL-NEXT:    bnez a0, .LBB19_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 32
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -1205,9 +1205,9 @@ define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test17:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call bat
 ; CHECK-NEXT:    mv s1, a0
@@ -1218,18 +1218,18 @@ define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sllw s1, s1, s0
 ; CHECK-NEXT:    bnez a0, .LBB20_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test17:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -32
-; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    mv s0, a1
 ; NOREMOVAL-NEXT:    call bat
 ; NOREMOVAL-NEXT:    mv s1, a0
@@ -1240,9 +1240,9 @@ define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sllw s1, s1, s0
 ; NOREMOVAL-NEXT:    bnez a0, .LBB20_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 32
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -1266,9 +1266,9 @@ define void @test18(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test18:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    sha256sig0 s1, a1
 ; CHECK-NEXT:  .LBB21_1: # %bb2
@@ -1278,18 +1278,18 @@ define void @test18(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sllw s1, s1, s0
 ; CHECK-NEXT:    bnez a0, .LBB21_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test18:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -32
-; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    mv s0, a1
 ; NOREMOVAL-NEXT:    sha256sig0 s1, a1
 ; NOREMOVAL-NEXT:  .LBB21_1: # %bb2
@@ -1299,9 +1299,9 @@ define void @test18(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sllw s1, s1, s0
 ; NOREMOVAL-NEXT:    bnez a0, .LBB21_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 32
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -1371,8 +1371,8 @@ define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nou
 ; CHECK-LABEL: test19:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    neg a0, a1
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    slli a1, a1, 32
@@ -1387,16 +1387,16 @@ define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nou
 ; CHECK-NEXT:  .LBB23_2: # %bb7
 ; CHECK-NEXT:    call side_effect
 ; CHECK-NEXT:    sext.w a0, s0
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test19:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -16
-; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    neg a0, a1
 ; NOREMOVAL-NEXT:    li a1, 1
 ; NOREMOVAL-NEXT:    slli a1, a1, 32
@@ -1411,8 +1411,8 @@ define signext i32 @test19(i64 %arg, i1 zeroext %c1, i1 zeroext %c2, ptr %p) nou
 ; NOREMOVAL-NEXT:  .LBB23_2: # %bb7
 ; NOREMOVAL-NEXT:    call side_effect
 ; NOREMOVAL-NEXT:    sext.w a0, s0
-; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
 ; NOREMOVAL-NEXT:    ret
 bb:
@@ -1438,9 +1438,9 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s s1, v8
@@ -1451,18 +1451,18 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sllw s1, s1, s0
 ; CHECK-NEXT:    bnez a0, .LBB24_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test20:
 ; NOREMOVAL:       # %bb.0: # %bb
 ; NOREMOVAL-NEXT:    addi sp, sp, -32
-; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; NOREMOVAL-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; NOREMOVAL-NEXT:    mv s0, a0
 ; NOREMOVAL-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; NOREMOVAL-NEXT:    vmv.x.s s1, v8
@@ -1473,9 +1473,9 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sllw s1, s1, s0
 ; NOREMOVAL-NEXT:    bnez a0, .LBB24_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
-; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; NOREMOVAL-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; NOREMOVAL-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 32
 ; NOREMOVAL-NEXT:    ret
 bb:

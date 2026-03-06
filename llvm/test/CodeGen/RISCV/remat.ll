@@ -23,19 +23,19 @@ define i32 @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -112
-; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    lui s0, %hi(a)
 ; CHECK-NEXT:    lw a0, %lo(a)(s0)
 ; CHECK-NEXT:    beqz a0, .LBB0_11
@@ -112,19 +112,19 @@ define i32 @test() nounwind {
 ; CHECK-NEXT:    j .LBB0_2
 ; CHECK-NEXT:  .LBB0_11: # %for.end
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:
@@ -205,31 +205,31 @@ define void @remat_load(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, 
 ; CHECK-LABEL: remat_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -208
-; CHECK-NEXT:    sd ra, 200(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 192(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 184(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 176(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 168(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 160(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 152(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 144(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s7, 136(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s8, 128(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 120(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s10, 112(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s11, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs2, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs3, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs4, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs5, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs6, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs7, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs8, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs9, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs10, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 200(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 192(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 184(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 176(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 168(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s4, 160(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s5, 152(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s6, 144(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s7, 136(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s8, 128(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s9, 120(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s10, 112(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s11, 104(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 96(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 88(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs2, 80(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs3, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs4, 64(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs5, 56(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs6, 48(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs7, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs8, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs9, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs10, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs11, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    fld fa5, 264(sp)
 ; CHECK-NEXT:    flw fa4, 256(sp)
 ; CHECK-NEXT:    flh fa3, 248(sp)
@@ -266,31 +266,31 @@ define void @remat_load(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, 
 ; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    fld fa5, 264(sp)
 ; CHECK-NEXT:    fsd fa5, 0(a0)
-; CHECK-NEXT:    ld ra, 200(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 192(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 184(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 176(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 168(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 160(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 152(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 144(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s7, 136(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s8, 128(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 120(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s10, 112(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s11, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs2, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs3, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs4, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs5, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs6, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs7, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs8, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs9, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs10, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 200(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 192(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 184(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 176(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 168(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s4, 160(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s5, 152(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s6, 144(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s7, 136(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s8, 128(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s9, 120(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s10, 112(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s11, 104(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 96(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 88(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs2, 80(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs3, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs4, 64(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs5, 56(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs6, 48(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs7, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs8, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs9, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs10, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs11, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 208
 ; CHECK-NEXT:    ret
 entry:
@@ -326,39 +326,39 @@ define i32 @constglobal_load() nounwind {
 ; CHECK-LABEL: constglobal_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -112
-; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    lui a0, %hi(const)
 ; CHECK-NEXT:    lw a0, %lo(const)(a0)
-; CHECK-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd a0, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    addiw a0, a0, 1
-; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:

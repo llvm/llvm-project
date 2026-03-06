@@ -8,8 +8,8 @@ define i64 @trivial_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    .cfi_offset s1, -16
 ; CHECK-NEXT:    mv s0, a0
@@ -33,8 +33,8 @@ define i64 @trivial_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 ; CHECK-NEXT:    addi ra, ra, -1281
 ; CHECK-NEXT:    jalr ra
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
 ; CHECK-NEXT:    addi sp, sp, 16

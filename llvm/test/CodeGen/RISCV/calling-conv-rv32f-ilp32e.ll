@@ -31,7 +31,7 @@ define float @caller_onstack_f32_noop(float %a) nounwind {
 ; RV32IF-ILP32E-LABEL: caller_onstack_f32_noop:
 ; RV32IF-ILP32E:       # %bb.0:
 ; RV32IF-ILP32E-NEXT:    addi sp, sp, -20
-; RV32IF-ILP32E-NEXT:    sw ra, 16(sp) # 4-byte Folded Spill
+; RV32IF-ILP32E-NEXT:    sw ra, 16(sp) # 4-byte Spill
 ; RV32IF-ILP32E-NEXT:    mv a1, a0
 ; RV32IF-ILP32E-NEXT:    lui a3, 264704
 ; RV32IF-ILP32E-NEXT:    li a5, 4
@@ -46,7 +46,7 @@ define float @caller_onstack_f32_noop(float %a) nounwind {
 ; RV32IF-ILP32E-NEXT:    li a3, 0
 ; RV32IF-ILP32E-NEXT:    li a5, 0
 ; RV32IF-ILP32E-NEXT:    call onstack_f32_noop
-; RV32IF-ILP32E-NEXT:    lw ra, 16(sp) # 4-byte Folded Reload
+; RV32IF-ILP32E-NEXT:    lw ra, 16(sp) # 4-byte Reload
 ; RV32IF-ILP32E-NEXT:    addi sp, sp, 20
 ; RV32IF-ILP32E-NEXT:    ret
   %1 = call float @onstack_f32_noop(i64 1, i64 2, i64 3, i64 4, float 5.0, float %a)
@@ -57,7 +57,7 @@ define float @caller_onstack_f32_fadd(float %a, float %b) nounwind {
 ; RV32IF-ILP32E-LABEL: caller_onstack_f32_fadd:
 ; RV32IF-ILP32E:       # %bb.0:
 ; RV32IF-ILP32E-NEXT:    addi sp, sp, -20
-; RV32IF-ILP32E-NEXT:    sw ra, 16(sp) # 4-byte Folded Spill
+; RV32IF-ILP32E-NEXT:    sw ra, 16(sp) # 4-byte Spill
 ; RV32IF-ILP32E-NEXT:    fmv.w.x fa5, a1
 ; RV32IF-ILP32E-NEXT:    fmv.w.x fa4, a0
 ; RV32IF-ILP32E-NEXT:    fadd.s fa3, fa4, fa5
@@ -74,7 +74,7 @@ define float @caller_onstack_f32_fadd(float %a, float %b) nounwind {
 ; RV32IF-ILP32E-NEXT:    li a3, 0
 ; RV32IF-ILP32E-NEXT:    li a5, 0
 ; RV32IF-ILP32E-NEXT:    call onstack_f32_noop
-; RV32IF-ILP32E-NEXT:    lw ra, 16(sp) # 4-byte Folded Reload
+; RV32IF-ILP32E-NEXT:    lw ra, 16(sp) # 4-byte Reload
 ; RV32IF-ILP32E-NEXT:    addi sp, sp, 20
 ; RV32IF-ILP32E-NEXT:    ret
   %1 = fadd float %a, %b

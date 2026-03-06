@@ -206,10 +206,10 @@ define i1 @flo(float %c, float %a, float %b) {
 ; CHECK-RV64I:       # %bb.0:
 ; CHECK-RV64I-NEXT:    addi sp, sp, -32
 ; CHECK-RV64I-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-RV64I-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-RV64I-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-RV64I-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-RV64I-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-RV64I-NEXT:    .cfi_offset ra, -8
 ; CHECK-RV64I-NEXT:    .cfi_offset s0, -16
 ; CHECK-RV64I-NEXT:    .cfi_offset s1, -24
@@ -225,10 +225,10 @@ define i1 @flo(float %c, float %a, float %b) {
 ; CHECK-RV64I-NEXT:    call __gesf2
 ; CHECK-RV64I-NEXT:    or a0, s2, a0
 ; CHECK-RV64I-NEXT:    srli a0, a0, 63
-; CHECK-RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-RV64I-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-RV64I-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-RV64I-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-RV64I-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-RV64I-NEXT:    .cfi_restore ra
 ; CHECK-RV64I-NEXT:    .cfi_restore s0
 ; CHECK-RV64I-NEXT:    .cfi_restore s1
@@ -257,10 +257,10 @@ define i1 @dlo(double %c, double %a, double %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -276,10 +276,10 @@ define i1 @dlo(double %c, double %a, double %b) {
 ; CHECK-NEXT:    call __gedf2
 ; CHECK-NEXT:    or a0, s2, a0
 ; CHECK-NEXT:    srli a0, a0, 63
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1

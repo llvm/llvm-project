@@ -20,48 +20,48 @@ define i32 @test_call_external(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_external:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    call external_function
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_external:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    call external_function
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_external:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -16
-; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    call external_function
-; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 16
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_external:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -16
-; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    call external_function
-; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_external:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi0:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI0_0)
 ; RV64I-LARGE-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi0)(a1)
 ; RV64I-LARGE-NEXT:    jalr a1
-; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -69,12 +69,12 @@ define i32 @test_call_external(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi0:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI0_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi0)(a1)
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call i32 @external_function(i32 %a)
@@ -87,48 +87,48 @@ define i32 @test_call_dso_local(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_dso_local:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    call dso_local_function
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_dso_local:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    call dso_local_function
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_dso_local:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -16
-; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    call dso_local_function
-; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 16
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_dso_local:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -16
-; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    call dso_local_function
-; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_dso_local:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi1:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI1_0)
 ; RV64I-LARGE-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi1)(a1)
 ; RV64I-LARGE-NEXT:    jalr a1
-; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -136,12 +136,12 @@ define i32 @test_call_dso_local(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi1:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI1_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi1)(a1)
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call i32 @dso_local_function(i32 %a)
@@ -187,48 +187,48 @@ define i32 @test_call_defined(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_defined:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    call defined_function
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_defined:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    call defined_function
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_defined:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -16
-; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    call defined_function
-; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 16
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_defined:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -16
-; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    call defined_function
-; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_defined:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi2:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI3_0)
 ; RV64I-LARGE-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi2)(a1)
 ; RV64I-LARGE-NEXT:    jalr a1
-; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -236,12 +236,12 @@ define i32 @test_call_defined(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi2:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI3_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi2)(a1)
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call i32 @defined_function(i32 %a)
@@ -252,55 +252,55 @@ define i32 @test_call_indirect(ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_call_indirect:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    jalr a2
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_indirect:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    jalr a2
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_indirect:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -16
-; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    mv a2, a0
 ; RV64I-SMALL-NEXT:    mv a0, a1
 ; RV64I-SMALL-NEXT:    jalr a2
-; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 16
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_indirect:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -16
-; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    mv a2, a0
 ; RV64I-MEDIUM-NEXT:    mv a0, a1
 ; RV64I-MEDIUM-NEXT:    jalr a2
-; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_indirect:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:    mv a2, a0
 ; RV64I-LARGE-NEXT:    mv a0, a1
 ; RV64I-LARGE-NEXT:    jalr a2
-; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -308,11 +308,11 @@ define i32 @test_call_indirect(ptr %a, i32 %b) nounwind {
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a2, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, a1
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr a2
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call i32 %a(i32 %b)
@@ -325,7 +325,7 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; CHECK-LABEL: test_call_indirect_no_t0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    mv t1, a0
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    mv a1, a2
@@ -335,14 +335,14 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; CHECK-NEXT:    mv a5, a6
 ; CHECK-NEXT:    mv a6, a7
 ; CHECK-NEXT:    jalr t1
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_indirect_no_t0:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    mv t1, a0
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    mv a1, a2
@@ -352,14 +352,14 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; RV64I-NEXT:    mv a5, a6
 ; RV64I-NEXT:    mv a6, a7
 ; RV64I-NEXT:    jalr t1
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_indirect_no_t0:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -16
-; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    mv t1, a0
 ; RV64I-SMALL-NEXT:    mv a0, a1
 ; RV64I-SMALL-NEXT:    mv a1, a2
@@ -369,14 +369,14 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; RV64I-SMALL-NEXT:    mv a5, a6
 ; RV64I-SMALL-NEXT:    mv a6, a7
 ; RV64I-SMALL-NEXT:    jalr t1
-; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 16
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_indirect_no_t0:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -16
-; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    mv t1, a0
 ; RV64I-MEDIUM-NEXT:    mv a0, a1
 ; RV64I-MEDIUM-NEXT:    mv a1, a2
@@ -386,14 +386,14 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; RV64I-MEDIUM-NEXT:    mv a5, a6
 ; RV64I-MEDIUM-NEXT:    mv a6, a7
 ; RV64I-MEDIUM-NEXT:    jalr t1
-; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_indirect_no_t0:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:    mv t1, a0
 ; RV64I-LARGE-NEXT:    mv a0, a1
 ; RV64I-LARGE-NEXT:    mv a1, a2
@@ -403,7 +403,7 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; RV64I-LARGE-NEXT:    mv a5, a6
 ; RV64I-LARGE-NEXT:    mv a6, a7
 ; RV64I-LARGE-NEXT:    jalr t1
-; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -411,7 +411,7 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:    mv t1, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, a1
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a1, a2
@@ -421,7 +421,7 @@ define i32 @test_call_indirect_no_t0(ptr %a, i32 %b, i32 %c, i32 %d, i32 %e, i32
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a5, a6
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a6, a7
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t1
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call i32 %a(i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
@@ -470,60 +470,60 @@ define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_call_fastcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    call fastcc_function
 ; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_fastcc:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    call fastcc_function
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_fastcc:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -16
-; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-SMALL-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-SMALL-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    mv s0, a0
 ; RV64I-SMALL-NEXT:    call fastcc_function
 ; RV64I-SMALL-NEXT:    mv a0, s0
-; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-SMALL-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-SMALL-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 16
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_fastcc:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -16
-; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-MEDIUM-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-MEDIUM-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    mv s0, a0
 ; RV64I-MEDIUM-NEXT:    call fastcc_function
 ; RV64I-MEDIUM-NEXT:    mv a0, s0
-; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-MEDIUM-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-MEDIUM-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 16
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_fastcc:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-LARGE-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-LARGE-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:    mv s0, a0
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi3:
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI7_0)
@@ -531,8 +531,8 @@ define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; RV64I-LARGE-NEXT:    mv a0, s0
 ; RV64I-LARGE-NEXT:    jalr a2
 ; RV64I-LARGE-NEXT:    mv a0, s0
-; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-LARGE-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-LARGE-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -540,8 +540,8 @@ define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:    mv s0, a0
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi3:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI7_0)
@@ -549,8 +549,8 @@ define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, s0
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-LARGE-ZICFILP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call fastcc i32 @fastcc_function(i32 %a, i32 %b)
@@ -563,8 +563,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_external_many_args:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    sw a0, 0(sp)
 ; CHECK-NEXT:    sw a0, 4(sp)
@@ -577,16 +577,16 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    mv a7, a0
 ; CHECK-NEXT:    call external_many_args
 ; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_external_many_args:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
-; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    sd a0, 0(sp)
 ; RV64I-NEXT:    sd a0, 8(sp)
@@ -599,16 +599,16 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    mv a7, a0
 ; RV64I-NEXT:    call external_many_args
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_external_many_args:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -32
-; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-SMALL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64I-SMALL-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    mv s0, a0
 ; RV64I-SMALL-NEXT:    sd a0, 0(sp)
 ; RV64I-SMALL-NEXT:    sd a0, 8(sp)
@@ -621,16 +621,16 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-SMALL-NEXT:    mv a7, a0
 ; RV64I-SMALL-NEXT:    call external_many_args
 ; RV64I-SMALL-NEXT:    mv a0, s0
-; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-SMALL-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64I-SMALL-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 32
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_external_many_args:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -32
-; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-MEDIUM-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64I-MEDIUM-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    mv s0, a0
 ; RV64I-MEDIUM-NEXT:    sd a0, 0(sp)
 ; RV64I-MEDIUM-NEXT:    sd a0, 8(sp)
@@ -643,16 +643,16 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-MEDIUM-NEXT:    mv a7, a0
 ; RV64I-MEDIUM-NEXT:    call external_many_args
 ; RV64I-MEDIUM-NEXT:    mv a0, s0
-; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-MEDIUM-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64I-MEDIUM-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 32
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_external_many_args:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -32
-; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-LARGE-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64I-LARGE-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:    mv s0, a0
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi4:
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
@@ -669,8 +669,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-NEXT:    mv a7, s0
 ; RV64I-LARGE-NEXT:    jalr t1
 ; RV64I-LARGE-NEXT:    mv a0, s0
-; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-LARGE-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64I-LARGE-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 32
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -678,8 +678,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -32
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:    mv s0, a0
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi4:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
@@ -696,8 +696,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a7, s0
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a0, s0
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-LARGE-ZICFILP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 32
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call i32 @external_many_args(i32 %a, i32 %a, i32 %a, i32 %a, i32 %a,
@@ -750,7 +750,7 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_defined_many_args:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    sw a0, 0(sp)
 ; CHECK-NEXT:    sw a0, 4(sp)
 ; CHECK-NEXT:    mv a1, a0
@@ -761,14 +761,14 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    mv a6, a0
 ; CHECK-NEXT:    mv a7, a0
 ; CHECK-NEXT:    call defined_many_args
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_defined_many_args:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
-; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-NEXT:    sd a0, 0(sp)
 ; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    mv a1, a0
@@ -779,14 +779,14 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    mv a6, a0
 ; RV64I-NEXT:    mv a7, a0
 ; RV64I-NEXT:    call defined_many_args
-; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: test_call_defined_many_args:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -32
-; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    sd a0, 0(sp)
 ; RV64I-SMALL-NEXT:    sd a0, 8(sp)
 ; RV64I-SMALL-NEXT:    mv a1, a0
@@ -797,14 +797,14 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-SMALL-NEXT:    mv a6, a0
 ; RV64I-SMALL-NEXT:    mv a7, a0
 ; RV64I-SMALL-NEXT:    call defined_many_args
-; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    addi sp, sp, 32
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: test_call_defined_many_args:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -32
-; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    sd a0, 0(sp)
 ; RV64I-MEDIUM-NEXT:    sd a0, 8(sp)
 ; RV64I-MEDIUM-NEXT:    mv a1, a0
@@ -815,14 +815,14 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-MEDIUM-NEXT:    mv a6, a0
 ; RV64I-MEDIUM-NEXT:    mv a7, a0
 ; RV64I-MEDIUM-NEXT:    call defined_many_args
-; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 32
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: test_call_defined_many_args:
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -32
-; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi5:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI10_0)
 ; RV64I-LARGE-NEXT:    ld t1, %pcrel_lo(.Lpcrel_hi5)(a1)
@@ -836,7 +836,7 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-NEXT:    mv a6, a0
 ; RV64I-LARGE-NEXT:    mv a7, a0
 ; RV64I-LARGE-NEXT:    jalr t1
-; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    addi sp, sp, 32
 ; RV64I-LARGE-NEXT:    ret
 ;
@@ -844,7 +844,7 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP:       # %bb.0:
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -32
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi5:
 ; RV64I-LARGE-ZICFILP-NEXT:    auipc a1, %pcrel_hi(.LCPI10_0)
 ; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi5)(a1)
@@ -858,7 +858,7 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a6, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    mv a7, a0
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 32
 ; RV64I-LARGE-ZICFILP-NEXT:    ret
   %1 = call i32 @defined_many_args(i32 %a, i32 %a, i32 %a, i32 %a, i32 %a,
@@ -871,7 +871,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    li t0, 10
 ; CHECK-NEXT:    li t1, 9
@@ -886,7 +886,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; CHECK-NEXT:    sw t1, 0(sp)
 ; CHECK-NEXT:    sw t0, 4(sp)
 ; CHECK-NEXT:    call external_many_args
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
@@ -896,7 +896,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    li t0, 10
 ; RV64I-NEXT:    li t1, 9
@@ -911,7 +911,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-NEXT:    sd t1, 0(sp)
 ; RV64I-NEXT:    sd t0, 8(sp)
 ; RV64I-NEXT:    call external_many_args
-; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
@@ -921,7 +921,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    addi sp, sp, -32
 ; RV64I-SMALL-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-SMALL-NEXT:    .cfi_offset ra, -8
 ; RV64I-SMALL-NEXT:    li t0, 10
 ; RV64I-SMALL-NEXT:    li t1, 9
@@ -936,7 +936,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-SMALL-NEXT:    sd t1, 0(sp)
 ; RV64I-SMALL-NEXT:    sd t0, 8(sp)
 ; RV64I-SMALL-NEXT:    call external_many_args
-; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-SMALL-NEXT:    .cfi_restore ra
 ; RV64I-SMALL-NEXT:    addi sp, sp, 32
 ; RV64I-SMALL-NEXT:    .cfi_def_cfa_offset 0
@@ -946,7 +946,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, -32
 ; RV64I-MEDIUM-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-MEDIUM-NEXT:    .cfi_offset ra, -8
 ; RV64I-MEDIUM-NEXT:    li t0, 10
 ; RV64I-MEDIUM-NEXT:    li t1, 9
@@ -961,7 +961,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-MEDIUM-NEXT:    sd t1, 0(sp)
 ; RV64I-MEDIUM-NEXT:    sd t0, 8(sp)
 ; RV64I-MEDIUM-NEXT:    call external_many_args
-; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-MEDIUM-NEXT:    .cfi_restore ra
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 32
 ; RV64I-MEDIUM-NEXT:    .cfi_def_cfa_offset 0
@@ -971,7 +971,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-LARGE:       # %bb.0:
 ; RV64I-LARGE-NEXT:    addi sp, sp, -32
 ; RV64I-LARGE-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-LARGE-NEXT:    .cfi_offset ra, -8
 ; RV64I-LARGE-NEXT:    li t0, 10
 ; RV64I-LARGE-NEXT:    li t1, 9
@@ -989,7 +989,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-LARGE-NEXT:    sd t1, 0(sp)
 ; RV64I-LARGE-NEXT:    sd t0, 8(sp)
 ; RV64I-LARGE-NEXT:    jalr t2
-; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-LARGE-NEXT:    .cfi_restore ra
 ; RV64I-LARGE-NEXT:    addi sp, sp, 32
 ; RV64I-LARGE-NEXT:    .cfi_def_cfa_offset 0
@@ -1000,7 +1000,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -32
 ; RV64I-LARGE-ZICFILP-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-LARGE-ZICFILP-NEXT:    .cfi_offset ra, -8
 ; RV64I-LARGE-ZICFILP-NEXT:    li t0, 10
 ; RV64I-LARGE-ZICFILP-NEXT:    li t1, 9
@@ -1018,7 +1018,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-LARGE-ZICFILP-NEXT:    sd t1, 0(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    sd t0, 8(sp)
 ; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
-; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-LARGE-ZICFILP-NEXT:    .cfi_restore ra
 ; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 32
 ; RV64I-LARGE-ZICFILP-NEXT:    .cfi_def_cfa_offset 0

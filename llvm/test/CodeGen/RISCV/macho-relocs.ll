@@ -13,9 +13,9 @@ define void @call() nounwind {
 ; COMMON-LABEL: call:
 ; COMMON:       ; %bb.0:
 ; COMMON-NEXT:    addi sp, sp, -16
-; COMMON-NEXT:    sw ra, 12(sp) ; 4-byte Folded Spill
+; COMMON-NEXT:    sw ra, 12(sp) ; 4-byte Spill
 ; COMMON-NEXT:    call _tail_call
-; COMMON-NEXT:    lw ra, 12(sp) ; 4-byte Folded Reload
+; COMMON-NEXT:    lw ra, 12(sp) ; 4-byte Reload
 ; COMMON-NEXT:    addi sp, sp, 16
 ; COMMON-NEXT:    ret
   call void @tail_call()

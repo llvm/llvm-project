@@ -168,13 +168,13 @@ define <4 x i8> @test_call_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    mv a2, a0
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:    call external_v4i8
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -184,13 +184,13 @@ define <4 x i8> @test_call_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    mv a2, a0
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:    call external_v4i8
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -207,7 +207,7 @@ define <8 x i8> @test_call_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    mv a4, a1
 ; RV32-NEXT:    mv a5, a0
@@ -215,7 +215,7 @@ define <8 x i8> @test_call_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    mv a2, a5
 ; RV32-NEXT:    mv a3, a4
 ; RV32-NEXT:    call external_v8i8
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -225,13 +225,13 @@ define <8 x i8> @test_call_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    mv a2, a0
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:    call external_v8i8
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -248,8 +248,8 @@ define <16 x i8> @test_call_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -64
 ; RV32-NEXT:    .cfi_def_cfa_offset 64
-; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 56(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    lw a3, 0(a2)
@@ -281,8 +281,8 @@ define <16 x i8> @test_call_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV32-NEXT:    sw a1, 4(s0)
 ; RV32-NEXT:    sw a2, 8(s0)
 ; RV32-NEXT:    sw a3, 12(s0)
-; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 56(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 64
@@ -293,7 +293,7 @@ define <16 x i8> @test_call_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    mv a4, a1
 ; RV64-NEXT:    mv a5, a0
@@ -302,7 +302,7 @@ define <16 x i8> @test_call_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV64-NEXT:    mv a2, a5
 ; RV64-NEXT:    mv a3, a4
 ; RV64-NEXT:    call external_v16i8
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0

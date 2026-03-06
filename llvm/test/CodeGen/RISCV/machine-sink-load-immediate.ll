@@ -5,10 +5,10 @@ define i1 @sink_li(ptr %text, ptr %text.addr.0) nounwind {
 ; CHECK-LABEL: sink_li:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    call toupper
@@ -79,10 +79,10 @@ define i1 @sink_li(ptr %text, ptr %text.addr.0) nounwind {
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:  .LBB0_25: # %return
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:
@@ -199,8 +199,8 @@ define signext i32 @switch_dispatch(i8 %a) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    zext.b a0, a0
@@ -244,8 +244,8 @@ define signext i32 @switch_dispatch(i8 %a) {
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call use
 ; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -288,8 +288,8 @@ define signext i32 @branch_dispatch(i8 %a) {
 ; CHECK:       # %bb.0: # %case.0
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_remember_state
@@ -326,8 +326,8 @@ define signext i32 @branch_dispatch(i8 %a) {
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call use
 ; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 16

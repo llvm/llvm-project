@@ -896,36 +896,36 @@ define i32 @in_multiuse_A(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; RV32-LABEL: in_multiuse_A:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a1
 ; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    and s1, a0, a3
 ; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call use32
 ; RV32-NEXT:    xor a0, s1, s0
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: in_multiuse_A:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    mv s0, a1
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    and s1, a0, a3
 ; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    call use32
 ; RV64-NEXT:    xor a0, s1, s0
-; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ret
   %n0 = xor i32 %x, %y
@@ -939,34 +939,34 @@ define i32 @in_multiuse_B(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; RV32-LABEL: in_multiuse_B:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a1
 ; RV32-NEXT:    xor a0, a0, a1
 ; RV32-NEXT:    and s1, a0, a3
 ; RV32-NEXT:    call use32
 ; RV32-NEXT:    xor a0, s1, s0
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: in_multiuse_B:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    mv s0, a1
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    and s1, a0, a3
 ; RV64-NEXT:    call use32
 ; RV64-NEXT:    xor a0, s1, s0
-; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ret
   %n0 = xor i32 %x, %y

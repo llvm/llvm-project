@@ -96,8 +96,8 @@ define void @local_var_m4() {
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    addi sp, sp, -48
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 48
-; RV64IV-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64IV-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; RV64IV-NEXT:    .cfi_offset ra, -8
 ; RV64IV-NEXT:    .cfi_offset s0, -16
 ; RV64IV-NEXT:    addi s0, sp, 48
@@ -115,8 +115,8 @@ define void @local_var_m4() {
 ; RV64IV-NEXT:    vl4r.v v8, (a0)
 ; RV64IV-NEXT:    addi sp, s0, -48
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 48
-; RV64IV-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64IV-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; RV64IV-NEXT:    .cfi_restore ra
 ; RV64IV-NEXT:    .cfi_restore s0
 ; RV64IV-NEXT:    addi sp, sp, 48
@@ -134,8 +134,8 @@ define void @local_var_m8() {
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    addi sp, sp, -80
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 80
-; RV64IV-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64IV-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64IV-NEXT:    .cfi_offset ra, -8
 ; RV64IV-NEXT:    .cfi_offset s0, -16
 ; RV64IV-NEXT:    addi s0, sp, 80
@@ -153,8 +153,8 @@ define void @local_var_m8() {
 ; RV64IV-NEXT:    vl8r.v v8, (a0)
 ; RV64IV-NEXT:    addi sp, s0, -80
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 80
-; RV64IV-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64IV-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64IV-NEXT:    .cfi_restore ra
 ; RV64IV-NEXT:    .cfi_restore s0
 ; RV64IV-NEXT:    addi sp, sp, 80
@@ -208,9 +208,9 @@ define void @local_var_m2_with_varsize_object(i64 %n) {
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    addi sp, sp, -32
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 32
-; RV64IV-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64IV-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64IV-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64IV-NEXT:    .cfi_offset ra, -8
 ; RV64IV-NEXT:    .cfi_offset s0, -16
 ; RV64IV-NEXT:    .cfi_offset s1, -24
@@ -240,9 +240,9 @@ define void @local_var_m2_with_varsize_object(i64 %n) {
 ; RV64IV-NEXT:    vl2r.v v8, (a0)
 ; RV64IV-NEXT:    addi sp, s0, -32
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 32
-; RV64IV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64IV-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64IV-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64IV-NEXT:    .cfi_restore ra
 ; RV64IV-NEXT:    .cfi_restore s0
 ; RV64IV-NEXT:    .cfi_restore s1
@@ -263,10 +263,10 @@ define void @local_var_m2_with_bp(i64 %n) {
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    addi sp, sp, -256
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 256
-; RV64IV-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
-; RV64IV-NEXT:    sd s2, 224(sp) # 8-byte Folded Spill
+; RV64IV-NEXT:    sd ra, 248(sp) # 8-byte Spill
+; RV64IV-NEXT:    sd s0, 240(sp) # 8-byte Spill
+; RV64IV-NEXT:    sd s1, 232(sp) # 8-byte Spill
+; RV64IV-NEXT:    sd s2, 224(sp) # 8-byte Spill
 ; RV64IV-NEXT:    .cfi_offset ra, -8
 ; RV64IV-NEXT:    .cfi_offset s0, -16
 ; RV64IV-NEXT:    .cfi_offset s1, -24
@@ -299,10 +299,10 @@ define void @local_var_m2_with_bp(i64 %n) {
 ; RV64IV-NEXT:    lw zero, 120(s1)
 ; RV64IV-NEXT:    addi sp, s0, -256
 ; RV64IV-NEXT:    .cfi_def_cfa sp, 256
-; RV64IV-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
-; RV64IV-NEXT:    ld s2, 224(sp) # 8-byte Folded Reload
+; RV64IV-NEXT:    ld ra, 248(sp) # 8-byte Reload
+; RV64IV-NEXT:    ld s0, 240(sp) # 8-byte Reload
+; RV64IV-NEXT:    ld s1, 232(sp) # 8-byte Reload
+; RV64IV-NEXT:    ld s2, 224(sp) # 8-byte Reload
 ; RV64IV-NEXT:    .cfi_restore ra
 ; RV64IV-NEXT:    .cfi_restore s0
 ; RV64IV-NEXT:    .cfi_restore s1

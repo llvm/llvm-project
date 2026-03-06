@@ -7,10 +7,10 @@ define void @foo(<vscale x 8 x i8> %0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24

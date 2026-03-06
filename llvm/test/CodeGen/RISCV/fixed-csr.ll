@@ -15,12 +15,12 @@ define noundef signext i32 @bar() nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd s9, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    li s8, 321
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ld s9, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   tail call void asm sideeffect "", "~{x25}"() #3

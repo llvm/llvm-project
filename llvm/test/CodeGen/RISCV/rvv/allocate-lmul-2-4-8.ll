@@ -109,61 +109,61 @@ define void @lmul4() nounwind {
 ; CHECK-LABEL: lmul4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 48
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -48
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul4:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul4:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul4:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v = alloca <vscale x 4 x i64>
@@ -174,61 +174,61 @@ define void @lmul8() nounwind {
 ; CHECK-LABEL: lmul8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul8:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul8:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul8:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v = alloca <vscale x 8 x i64>
@@ -297,61 +297,61 @@ define void @lmul2_and_4() nounwind {
 ; CHECK-LABEL: lmul2_and_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 48
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -48
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul2_and_4:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul2_and_4:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul2_and_4:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 2 x i64>
@@ -363,61 +363,61 @@ define void @lmul1_and_4() nounwind {
 ; CHECK-LABEL: lmul1_and_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 48
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -32
 ; CHECK-NEXT:    addi sp, s0, -48
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul1_and_4:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul1_and_4:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul1_and_4:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 1 x i64>
@@ -502,8 +502,8 @@ define void @lmul4_and_1() nounwind {
 ; NOZBA-LABEL: lmul4_and_1:
 ; NOZBA:       # %bb.0:
 ; NOZBA-NEXT:    addi sp, sp, -48
-; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOZBA-NEXT:    addi s0, sp, 48
 ; NOZBA-NEXT:    csrr a0, vlenb
 ; NOZBA-NEXT:    li a1, 6
@@ -511,16 +511,16 @@ define void @lmul4_and_1() nounwind {
 ; NOZBA-NEXT:    sub sp, sp, a0
 ; NOZBA-NEXT:    andi sp, sp, -32
 ; NOZBA-NEXT:    addi sp, s0, -48
-; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOZBA-NEXT:    addi sp, sp, 48
 ; NOZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: lmul4_and_1:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    addi sp, sp, -48
-; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; ZBA-NEXT:    addi s0, sp, 48
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    slli a0, a0, 1
@@ -528,16 +528,16 @@ define void @lmul4_and_1() nounwind {
 ; ZBA-NEXT:    sub sp, sp, a0
 ; ZBA-NEXT:    andi sp, sp, -32
 ; ZBA-NEXT:    addi sp, s0, -48
-; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; ZBA-NEXT:    addi sp, sp, 48
 ; ZBA-NEXT:    ret
 ;
 ; NOMUL-LABEL: lmul4_and_1:
 ; NOMUL:       # %bb.0:
 ; NOMUL-NEXT:    addi sp, sp, -48
-; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOMUL-NEXT:    addi s0, sp, 48
 ; NOMUL-NEXT:    csrr a0, vlenb
 ; NOMUL-NEXT:    slli a0, a0, 1
@@ -547,16 +547,16 @@ define void @lmul4_and_1() nounwind {
 ; NOMUL-NEXT:    sub sp, sp, a0
 ; NOMUL-NEXT:    andi sp, sp, -32
 ; NOMUL-NEXT:    addi sp, s0, -48
-; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOMUL-NEXT:    addi sp, sp, 48
 ; NOMUL-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul4_and_1:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a1, 6
@@ -564,16 +564,16 @@ define void @lmul4_and_1() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul4_and_1:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 1
@@ -581,16 +581,16 @@ define void @lmul4_and_1() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul4_and_1:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 1
@@ -600,8 +600,8 @@ define void @lmul4_and_1() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -613,8 +613,8 @@ define void @lmul4_and_2() nounwind {
 ; NOZBA-LABEL: lmul4_and_2:
 ; NOZBA:       # %bb.0:
 ; NOZBA-NEXT:    addi sp, sp, -48
-; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOZBA-NEXT:    addi s0, sp, 48
 ; NOZBA-NEXT:    csrr a0, vlenb
 ; NOZBA-NEXT:    li a1, 6
@@ -622,16 +622,16 @@ define void @lmul4_and_2() nounwind {
 ; NOZBA-NEXT:    sub sp, sp, a0
 ; NOZBA-NEXT:    andi sp, sp, -32
 ; NOZBA-NEXT:    addi sp, s0, -48
-; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOZBA-NEXT:    addi sp, sp, 48
 ; NOZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: lmul4_and_2:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    addi sp, sp, -48
-; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; ZBA-NEXT:    addi s0, sp, 48
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    slli a0, a0, 1
@@ -639,16 +639,16 @@ define void @lmul4_and_2() nounwind {
 ; ZBA-NEXT:    sub sp, sp, a0
 ; ZBA-NEXT:    andi sp, sp, -32
 ; ZBA-NEXT:    addi sp, s0, -48
-; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; ZBA-NEXT:    addi sp, sp, 48
 ; ZBA-NEXT:    ret
 ;
 ; NOMUL-LABEL: lmul4_and_2:
 ; NOMUL:       # %bb.0:
 ; NOMUL-NEXT:    addi sp, sp, -48
-; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOMUL-NEXT:    addi s0, sp, 48
 ; NOMUL-NEXT:    csrr a0, vlenb
 ; NOMUL-NEXT:    slli a0, a0, 1
@@ -658,16 +658,16 @@ define void @lmul4_and_2() nounwind {
 ; NOMUL-NEXT:    sub sp, sp, a0
 ; NOMUL-NEXT:    andi sp, sp, -32
 ; NOMUL-NEXT:    addi sp, s0, -48
-; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOMUL-NEXT:    addi sp, sp, 48
 ; NOMUL-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul4_and_2:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a1, 6
@@ -675,16 +675,16 @@ define void @lmul4_and_2() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul4_and_2:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 1
@@ -692,16 +692,16 @@ define void @lmul4_and_2() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul4_and_2:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 1
@@ -711,8 +711,8 @@ define void @lmul4_and_2() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -724,8 +724,8 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; NOZBA-LABEL: lmul4_and_2_x2_0:
 ; NOZBA:       # %bb.0:
 ; NOZBA-NEXT:    addi sp, sp, -48
-; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOZBA-NEXT:    addi s0, sp, 48
 ; NOZBA-NEXT:    csrr a0, vlenb
 ; NOZBA-NEXT:    li a1, 14
@@ -733,16 +733,16 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; NOZBA-NEXT:    sub sp, sp, a0
 ; NOZBA-NEXT:    andi sp, sp, -32
 ; NOZBA-NEXT:    addi sp, s0, -48
-; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOZBA-NEXT:    addi sp, sp, 48
 ; NOZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: lmul4_and_2_x2_0:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    addi sp, sp, -48
-; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; ZBA-NEXT:    addi s0, sp, 48
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    li a1, 14
@@ -750,16 +750,16 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; ZBA-NEXT:    sub sp, sp, a0
 ; ZBA-NEXT:    andi sp, sp, -32
 ; ZBA-NEXT:    addi sp, s0, -48
-; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; ZBA-NEXT:    addi sp, sp, 48
 ; ZBA-NEXT:    ret
 ;
 ; NOMUL-LABEL: lmul4_and_2_x2_0:
 ; NOMUL:       # %bb.0:
 ; NOMUL-NEXT:    addi sp, sp, -48
-; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOMUL-NEXT:    addi s0, sp, 48
 ; NOMUL-NEXT:    csrr a0, vlenb
 ; NOMUL-NEXT:    slli a0, a0, 1
@@ -771,16 +771,16 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; NOMUL-NEXT:    sub sp, sp, a0
 ; NOMUL-NEXT:    andi sp, sp, -32
 ; NOMUL-NEXT:    addi sp, s0, -48
-; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOMUL-NEXT:    addi sp, sp, 48
 ; NOMUL-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul4_and_2_x2_0:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a1, 14
@@ -788,16 +788,16 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul4_and_2_x2_0:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    li a1, 14
@@ -805,16 +805,16 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul4_and_2_x2_0:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 1
@@ -826,8 +826,8 @@ define void @lmul4_and_2_x2_0() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -841,8 +841,8 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; NOZBA-LABEL: lmul4_and_2_x2_1:
 ; NOZBA:       # %bb.0:
 ; NOZBA-NEXT:    addi sp, sp, -48
-; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOZBA-NEXT:    addi s0, sp, 48
 ; NOZBA-NEXT:    csrr a0, vlenb
 ; NOZBA-NEXT:    li a1, 12
@@ -850,16 +850,16 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; NOZBA-NEXT:    sub sp, sp, a0
 ; NOZBA-NEXT:    andi sp, sp, -32
 ; NOZBA-NEXT:    addi sp, s0, -48
-; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOZBA-NEXT:    addi sp, sp, 48
 ; NOZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: lmul4_and_2_x2_1:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    addi sp, sp, -48
-; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; ZBA-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; ZBA-NEXT:    addi s0, sp, 48
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    slli a0, a0, 2
@@ -867,16 +867,16 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; ZBA-NEXT:    sub sp, sp, a0
 ; ZBA-NEXT:    andi sp, sp, -32
 ; ZBA-NEXT:    addi sp, s0, -48
-; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; ZBA-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; ZBA-NEXT:    addi sp, sp, 48
 ; ZBA-NEXT:    ret
 ;
 ; NOMUL-LABEL: lmul4_and_2_x2_1:
 ; NOMUL:       # %bb.0:
 ; NOMUL-NEXT:    addi sp, sp, -48
-; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; NOMUL-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; NOMUL-NEXT:    addi s0, sp, 48
 ; NOMUL-NEXT:    csrr a0, vlenb
 ; NOMUL-NEXT:    slli a0, a0, 2
@@ -886,16 +886,16 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; NOMUL-NEXT:    sub sp, sp, a0
 ; NOMUL-NEXT:    andi sp, sp, -32
 ; NOMUL-NEXT:    addi sp, s0, -48
-; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; NOMUL-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; NOMUL-NEXT:    addi sp, sp, 48
 ; NOMUL-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul4_and_2_x2_1:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a1, 12
@@ -903,16 +903,16 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul4_and_2_x2_1:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 2
@@ -920,16 +920,16 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul4_and_2_x2_1:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 2
@@ -939,8 +939,8 @@ define void @lmul4_and_2_x2_1() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -32
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 4 x i64>
@@ -1039,8 +1039,8 @@ define void @gpr_and_lmul1_and_4() nounwind {
 ; CHECK-LABEL: gpr_and_lmul1_and_4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 48
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -1049,16 +1049,16 @@ define void @gpr_and_lmul1_and_4() nounwind {
 ; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    sd a0, 8(sp)
 ; CHECK-NEXT:    addi sp, s0, -48
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: gpr_and_lmul1_and_4:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
@@ -1066,16 +1066,16 @@ define void @gpr_and_lmul1_and_4() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a0, 3
 ; CHECK-NOZBA-VSETVLI-NEXT:    sd a0, 8(sp)
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: gpr_and_lmul1_and_4:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
@@ -1083,16 +1083,16 @@ define void @gpr_and_lmul1_and_4() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    li a0, 3
 ; CHECK-ZBA-VSETVLI-NEXT:    sd a0, 8(sp)
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: gpr_and_lmul1_and_4:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 32(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
@@ -1100,8 +1100,8 @@ define void @gpr_and_lmul1_and_4() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    li a0, 3
 ; CHECK-NOMUL-VSETVLI-NEXT:    sd a0, 8(sp)
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -48
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 32(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 48
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %x1 = alloca i64
@@ -1115,64 +1115,64 @@ define void @lmul_1_2_4_8() nounwind {
 ; CHECK-LABEL: lmul_1_2_4_8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul_1_2_4_8:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    slli a0, a0, 4
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul_1_2_4_8:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 4
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul_1_2_4_8:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 4
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 1 x i64>
@@ -1186,64 +1186,64 @@ define void @lmul_1_2_4_8_x2_0() nounwind {
 ; CHECK-LABEL: lmul_1_2_4_8_x2_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul_1_2_4_8_x2_0:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    slli a0, a0, 5
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul_1_2_4_8_x2_0:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 5
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul_1_2_4_8_x2_0:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 5
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 1 x i64>
@@ -1261,64 +1261,64 @@ define void @lmul_1_2_4_8_x2_1() nounwind {
 ; CHECK-LABEL: lmul_1_2_4_8_x2_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul_1_2_4_8_x2_1:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    slli a0, a0, 5
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul_1_2_4_8_x2_1:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 5
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul_1_2_4_8_x2_1:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 5
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v8 = alloca <vscale x 8 x i64>
@@ -1396,8 +1396,8 @@ define void @lmul_8_x5() nounwind {
 ; NOZBA-LABEL: lmul_8_x5:
 ; NOZBA:       # %bb.0:
 ; NOZBA-NEXT:    addi sp, sp, -80
-; NOZBA-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; NOZBA-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; NOZBA-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; NOZBA-NEXT:    addi s0, sp, 80
 ; NOZBA-NEXT:    csrr a0, vlenb
 ; NOZBA-NEXT:    li a1, 40
@@ -1405,16 +1405,16 @@ define void @lmul_8_x5() nounwind {
 ; NOZBA-NEXT:    sub sp, sp, a0
 ; NOZBA-NEXT:    andi sp, sp, -64
 ; NOZBA-NEXT:    addi sp, s0, -80
-; NOZBA-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; NOZBA-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; NOZBA-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; NOZBA-NEXT:    addi sp, sp, 80
 ; NOZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: lmul_8_x5:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    addi sp, sp, -80
-; ZBA-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZBA-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZBA-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZBA-NEXT:    addi s0, sp, 80
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    slli a0, a0, 3
@@ -1422,16 +1422,16 @@ define void @lmul_8_x5() nounwind {
 ; ZBA-NEXT:    sub sp, sp, a0
 ; ZBA-NEXT:    andi sp, sp, -64
 ; ZBA-NEXT:    addi sp, s0, -80
-; ZBA-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZBA-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZBA-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZBA-NEXT:    addi sp, sp, 80
 ; ZBA-NEXT:    ret
 ;
 ; NOMUL-LABEL: lmul_8_x5:
 ; NOMUL:       # %bb.0:
 ; NOMUL-NEXT:    addi sp, sp, -80
-; NOMUL-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; NOMUL-NEXT:    addi s0, sp, 80
 ; NOMUL-NEXT:    csrr a0, vlenb
 ; NOMUL-NEXT:    slli a0, a0, 3
@@ -1441,16 +1441,16 @@ define void @lmul_8_x5() nounwind {
 ; NOMUL-NEXT:    sub sp, sp, a0
 ; NOMUL-NEXT:    andi sp, sp, -64
 ; NOMUL-NEXT:    addi sp, s0, -80
-; NOMUL-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; NOMUL-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; NOMUL-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; NOMUL-NEXT:    addi sp, sp, 80
 ; NOMUL-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul_8_x5:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a1, 40
@@ -1458,16 +1458,16 @@ define void @lmul_8_x5() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul_8_x5:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 3
@@ -1475,16 +1475,16 @@ define void @lmul_8_x5() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul_8_x5:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 3
@@ -1494,8 +1494,8 @@ define void @lmul_8_x5() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 8 x i64>
@@ -1510,8 +1510,8 @@ define void @lmul_8_x9() nounwind {
 ; NOZBA-LABEL: lmul_8_x9:
 ; NOZBA:       # %bb.0:
 ; NOZBA-NEXT:    addi sp, sp, -80
-; NOZBA-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; NOZBA-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; NOZBA-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; NOZBA-NEXT:    addi s0, sp, 80
 ; NOZBA-NEXT:    csrr a0, vlenb
 ; NOZBA-NEXT:    li a1, 72
@@ -1519,16 +1519,16 @@ define void @lmul_8_x9() nounwind {
 ; NOZBA-NEXT:    sub sp, sp, a0
 ; NOZBA-NEXT:    andi sp, sp, -64
 ; NOZBA-NEXT:    addi sp, s0, -80
-; NOZBA-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; NOZBA-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; NOZBA-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; NOZBA-NEXT:    addi sp, sp, 80
 ; NOZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: lmul_8_x9:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    addi sp, sp, -80
-; ZBA-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZBA-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZBA-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZBA-NEXT:    addi s0, sp, 80
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    slli a0, a0, 3
@@ -1536,16 +1536,16 @@ define void @lmul_8_x9() nounwind {
 ; ZBA-NEXT:    sub sp, sp, a0
 ; ZBA-NEXT:    andi sp, sp, -64
 ; ZBA-NEXT:    addi sp, s0, -80
-; ZBA-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZBA-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZBA-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZBA-NEXT:    addi sp, sp, 80
 ; ZBA-NEXT:    ret
 ;
 ; NOMUL-LABEL: lmul_8_x9:
 ; NOMUL:       # %bb.0:
 ; NOMUL-NEXT:    addi sp, sp, -80
-; NOMUL-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; NOMUL-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; NOMUL-NEXT:    addi s0, sp, 80
 ; NOMUL-NEXT:    csrr a0, vlenb
 ; NOMUL-NEXT:    slli a0, a0, 3
@@ -1555,16 +1555,16 @@ define void @lmul_8_x9() nounwind {
 ; NOMUL-NEXT:    sub sp, sp, a0
 ; NOMUL-NEXT:    andi sp, sp, -64
 ; NOMUL-NEXT:    addi sp, s0, -80
-; NOMUL-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; NOMUL-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; NOMUL-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; NOMUL-NEXT:    addi sp, sp, 80
 ; NOMUL-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul_8_x9:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a1, 72
@@ -1572,16 +1572,16 @@ define void @lmul_8_x9() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul_8_x9:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 3
@@ -1589,16 +1589,16 @@ define void @lmul_8_x9() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-ZBA-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul_8_x9:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 3
@@ -1608,8 +1608,8 @@ define void @lmul_8_x9() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    sub sp, sp, a0
 ; CHECK-NOMUL-VSETVLI-NEXT:    andi sp, sp, -64
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -80
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 80
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 8 x i64>
@@ -1628,8 +1628,8 @@ define void @lmul_16_align() nounwind {
 ; NOZBA-LABEL: lmul_16_align:
 ; NOZBA:       # %bb.0:
 ; NOZBA-NEXT:    addi sp, sp, -144
-; NOZBA-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; NOZBA-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; NOZBA-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; NOZBA-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; NOZBA-NEXT:    addi s0, sp, 144
 ; NOZBA-NEXT:    csrr a0, vlenb
 ; NOZBA-NEXT:    li a1, 24
@@ -1651,16 +1651,16 @@ define void @lmul_16_align() nounwind {
 ; NOZBA-NEXT:    addi a0, sp, 128
 ; NOZBA-NEXT:    vs1r.v v8, (a0)
 ; NOZBA-NEXT:    addi sp, s0, -144
-; NOZBA-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; NOZBA-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; NOZBA-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; NOZBA-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; NOZBA-NEXT:    addi sp, sp, 144
 ; NOZBA-NEXT:    ret
 ;
 ; ZBA-LABEL: lmul_16_align:
 ; ZBA:       # %bb.0:
 ; ZBA-NEXT:    addi sp, sp, -144
-; ZBA-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; ZBA-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; ZBA-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; ZBA-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; ZBA-NEXT:    addi s0, sp, 144
 ; ZBA-NEXT:    csrr a0, vlenb
 ; ZBA-NEXT:    slli a0, a0, 3
@@ -1681,16 +1681,16 @@ define void @lmul_16_align() nounwind {
 ; ZBA-NEXT:    addi a0, sp, 128
 ; ZBA-NEXT:    vs1r.v v8, (a0)
 ; ZBA-NEXT:    addi sp, s0, -144
-; ZBA-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; ZBA-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; ZBA-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; ZBA-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; ZBA-NEXT:    addi sp, sp, 144
 ; ZBA-NEXT:    ret
 ;
 ; NOMUL-LABEL: lmul_16_align:
 ; NOMUL:       # %bb.0:
 ; NOMUL-NEXT:    addi sp, sp, -144
-; NOMUL-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; NOMUL-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; NOMUL-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; NOMUL-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; NOMUL-NEXT:    addi s0, sp, 144
 ; NOMUL-NEXT:    csrr a0, vlenb
 ; NOMUL-NEXT:    slli a0, a0, 3
@@ -1714,16 +1714,16 @@ define void @lmul_16_align() nounwind {
 ; NOMUL-NEXT:    addi a0, sp, 128
 ; NOMUL-NEXT:    vs1r.v v8, (a0)
 ; NOMUL-NEXT:    addi sp, s0, -144
-; NOMUL-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; NOMUL-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; NOMUL-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; NOMUL-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; NOMUL-NEXT:    addi sp, sp, 144
 ; NOMUL-NEXT:    ret
 ;
 ; CHECK-NOZBA-VSETVLI-LABEL: lmul_16_align:
 ; CHECK-NOZBA-VSETVLI:       # %bb.0:
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, -144
-; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; CHECK-NOZBA-VSETVLI-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi s0, sp, 144
 ; CHECK-NOZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOZBA-VSETVLI-NEXT:    li a1, 24
@@ -1745,16 +1745,16 @@ define void @lmul_16_align() nounwind {
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi a0, sp, 128
 ; CHECK-NOZBA-VSETVLI-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, s0, -144
-; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; CHECK-NOZBA-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; CHECK-NOZBA-VSETVLI-NEXT:    addi sp, sp, 144
 ; CHECK-NOZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-ZBA-VSETVLI-LABEL: lmul_16_align:
 ; CHECK-ZBA-VSETVLI:       # %bb.0:
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, -144
-; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; CHECK-ZBA-VSETVLI-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; CHECK-ZBA-VSETVLI-NEXT:    addi s0, sp, 144
 ; CHECK-ZBA-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZBA-VSETVLI-NEXT:    slli a0, a0, 3
@@ -1775,16 +1775,16 @@ define void @lmul_16_align() nounwind {
 ; CHECK-ZBA-VSETVLI-NEXT:    addi a0, sp, 128
 ; CHECK-ZBA-VSETVLI-NEXT:    vs1r.v v8, (a0)
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, s0, -144
-; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; CHECK-ZBA-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; CHECK-ZBA-VSETVLI-NEXT:    addi sp, sp, 144
 ; CHECK-ZBA-VSETVLI-NEXT:    ret
 ;
 ; CHECK-NOMUL-VSETVLI-LABEL: lmul_16_align:
 ; CHECK-NOMUL-VSETVLI:       # %bb.0:
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, -144
-; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; CHECK-NOMUL-VSETVLI-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi s0, sp, 144
 ; CHECK-NOMUL-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NOMUL-VSETVLI-NEXT:    slli a0, a0, 3
@@ -1808,8 +1808,8 @@ define void @lmul_16_align() nounwind {
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi a0, sp, 128
 ; CHECK-NOMUL-VSETVLI-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, s0, -144
-; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; CHECK-NOMUL-VSETVLI-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; CHECK-NOMUL-VSETVLI-NEXT:    addi sp, sp, 144
 ; CHECK-NOMUL-VSETVLI-NEXT:    ret
   %v1 = alloca <vscale x 16 x i64>

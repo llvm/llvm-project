@@ -9,11 +9,11 @@ define ptr @f2(ptr %x0, ptr %x1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    mv t0, a1
 ; CHECK-NEXT:    call __hwasan_check_x10_2_short
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
@@ -23,11 +23,11 @@ define ptr @f2(ptr %x0, ptr %x1) {
 ; COMPRESS:       # %bb.0:
 ; COMPRESS-NEXT:    c.addi sp, -16
 ; COMPRESS-NEXT:    .cfi_def_cfa_offset 16
-; COMPRESS-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; COMPRESS-NEXT:    c.sdsp ra, 8(sp) # 8-byte Spill
 ; COMPRESS-NEXT:    .cfi_offset ra, -8
 ; COMPRESS-NEXT:    c.mv t0, a1
 ; COMPRESS-NEXT:    call __hwasan_check_x10_2_short
-; COMPRESS-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; COMPRESS-NEXT:    c.ldsp ra, 8(sp) # 8-byte Reload
 ; COMPRESS-NEXT:    .cfi_restore ra
 ; COMPRESS-NEXT:    c.addi sp, 16
 ; COMPRESS-NEXT:    .cfi_def_cfa_offset 0

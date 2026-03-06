@@ -8,8 +8,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-LABEL: test_call_external_many_args:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    sw a0, 0(sp)
 ; CHECK-NEXT:    sw a0, 4(sp)
@@ -22,16 +22,16 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    mv a7, a0
 ; CHECK-NEXT:    call external_many_args
 ; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
 ; RV64I-LABEL: test_call_external_many_args:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
-; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    sd a0, 0(sp)
 ; RV64I-NEXT:    sd a0, 8(sp)
@@ -44,8 +44,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    mv a7, a0
 ; RV64I-NEXT:    call external_many_args
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %1 = call i32 @external_many_args(i32 %a, i32 %a, i32 %a, i32 %a, i32 %a,
@@ -58,7 +58,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    li t0, 9
 ; CHECK-NEXT:    li t1, 10
@@ -73,7 +73,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; CHECK-NEXT:    sw t0, 0(sp)
 ; CHECK-NEXT:    sw t1, 4(sp)
 ; CHECK-NEXT:    call external_many_args
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
@@ -83,7 +83,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    li t0, 9
 ; RV64I-NEXT:    li t1, 10
@@ -98,7 +98,7 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-NEXT:    sd t0, 0(sp)
 ; RV64I-NEXT:    sd t1, 8(sp)
 ; RV64I-NEXT:    call external_many_args
-; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Reload
 ; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0

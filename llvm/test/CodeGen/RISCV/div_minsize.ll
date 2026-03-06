@@ -105,11 +105,11 @@ define i128 @i128_sdiv(i128 %arg0) minsize nounwind {
 ; RV64IM-LABEL: i128_sdiv:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    addi sp, sp, -16
-; RV64IM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IM-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IM-NEXT:    li a2, 4
 ; RV64IM-NEXT:    li a3, 0
 ; RV64IM-NEXT:    call __divti3
-; RV64IM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IM-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IM-NEXT:    addi sp, sp, 16
 ; RV64IM-NEXT:    ret
   %div = sdiv i128 %arg0, 4

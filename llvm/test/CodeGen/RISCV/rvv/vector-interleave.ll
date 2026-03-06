@@ -1240,8 +1240,8 @@ define <vscale x 80 x i8> @vector_interleave_nxv80i8_nxv16i8(<vscale x 16 x i8> 
 ; RV32-LABEL: vector_interleave_nxv80i8_nxv16i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -1298,16 +1298,16 @@ define <vscale x 80 x i8> @vector_interleave_nxv80i8_nxv16i8(<vscale x 16 x i8> 
 ; RV32-NEXT:    vl8r.v v16, (a2)
 ; RV32-NEXT:    vl8r.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv80i8_nxv16i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -1364,16 +1364,16 @@ define <vscale x 80 x i8> @vector_interleave_nxv80i8_nxv16i8(<vscale x 16 x i8> 
 ; RV64-NEXT:    vl8r.v v16, (a2)
 ; RV64-NEXT:    vl8r.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv80i8_nxv16i8:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -1430,16 +1430,16 @@ define <vscale x 80 x i8> @vector_interleave_nxv80i8_nxv16i8(<vscale x 16 x i8> 
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv80i8_nxv16i8:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -1496,16 +1496,16 @@ define <vscale x 80 x i8> @vector_interleave_nxv80i8_nxv16i8(<vscale x 16 x i8> 
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv80i8_nxv16i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -1562,8 +1562,8 @@ define <vscale x 80 x i8> @vector_interleave_nxv80i8_nxv16i8(<vscale x 16 x i8> 
 ; ZIP-NEXT:    vl8r.v v16, (a2)
 ; ZIP-NEXT:    vl8r.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 80 x i8> @llvm.vector.interleave5.nxv80i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, <vscale x 16 x i8> %e)
@@ -1635,8 +1635,8 @@ define <vscale x 20 x i32> @vector_interleave_nxv20i32_nxv4i32(<vscale x 4 x i32
 ; RV32-LABEL: vector_interleave_nxv20i32_nxv4i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -1693,16 +1693,16 @@ define <vscale x 20 x i32> @vector_interleave_nxv20i32_nxv4i32(<vscale x 4 x i32
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv20i32_nxv4i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -1759,16 +1759,16 @@ define <vscale x 20 x i32> @vector_interleave_nxv20i32_nxv4i32(<vscale x 4 x i32
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv20i32_nxv4i32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -1825,16 +1825,16 @@ define <vscale x 20 x i32> @vector_interleave_nxv20i32_nxv4i32(<vscale x 4 x i32
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv20i32_nxv4i32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -1891,16 +1891,16 @@ define <vscale x 20 x i32> @vector_interleave_nxv20i32_nxv4i32(<vscale x 4 x i32
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv20i32_nxv4i32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -1957,8 +1957,8 @@ define <vscale x 20 x i32> @vector_interleave_nxv20i32_nxv4i32(<vscale x 4 x i32
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 20 x i32> @llvm.vector.interleave5.nxv20i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, <vscale x 4 x i32> %e)
@@ -1971,8 +1971,8 @@ define <vscale x 10 x i64> @vector_interleave_nxv10i64_nxv2i64(<vscale x 2 x i64
 ; RV32-LABEL: vector_interleave_nxv10i64_nxv2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -2029,16 +2029,16 @@ define <vscale x 10 x i64> @vector_interleave_nxv10i64_nxv2i64(<vscale x 2 x i64
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv10i64_nxv2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -2095,16 +2095,16 @@ define <vscale x 10 x i64> @vector_interleave_nxv10i64_nxv2i64(<vscale x 2 x i64
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv10i64_nxv2i64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -2161,16 +2161,16 @@ define <vscale x 10 x i64> @vector_interleave_nxv10i64_nxv2i64(<vscale x 2 x i64
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv10i64_nxv2i64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -2227,16 +2227,16 @@ define <vscale x 10 x i64> @vector_interleave_nxv10i64_nxv2i64(<vscale x 2 x i64
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv10i64_nxv2i64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -2293,8 +2293,8 @@ define <vscale x 10 x i64> @vector_interleave_nxv10i64_nxv2i64(<vscale x 2 x i64
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 10 x i64> @llvm.vector.interleave5.nxv10i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d, <vscale x 2 x i64> %e)
@@ -2480,8 +2480,8 @@ define <vscale x 96 x i8> @vector_interleave_nxv96i8_nxv16i8(<vscale x 16 x i8> 
 ; RV32-LABEL: vector_interleave_nxv96i8_nxv16i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -2545,16 +2545,16 @@ define <vscale x 96 x i8> @vector_interleave_nxv96i8_nxv16i8(<vscale x 16 x i8> 
 ; RV32-NEXT:    vl8r.v v16, (a2)
 ; RV32-NEXT:    vl8r.v v8, (a6)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv96i8_nxv16i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -2618,16 +2618,16 @@ define <vscale x 96 x i8> @vector_interleave_nxv96i8_nxv16i8(<vscale x 16 x i8> 
 ; RV64-NEXT:    vl8r.v v16, (a2)
 ; RV64-NEXT:    vl8r.v v8, (a6)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv96i8_nxv16i8:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -2691,16 +2691,16 @@ define <vscale x 96 x i8> @vector_interleave_nxv96i8_nxv16i8(<vscale x 16 x i8> 
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a6)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv96i8_nxv16i8:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -2764,16 +2764,16 @@ define <vscale x 96 x i8> @vector_interleave_nxv96i8_nxv16i8(<vscale x 16 x i8> 
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a6)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv96i8_nxv16i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -2837,8 +2837,8 @@ define <vscale x 96 x i8> @vector_interleave_nxv96i8_nxv16i8(<vscale x 16 x i8> 
 ; ZIP-NEXT:    vl8r.v v16, (a2)
 ; ZIP-NEXT:    vl8r.v v8, (a6)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 96 x i8> @llvm.vector.interleave6.nxv96i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, <vscale x 16 x i8> %e, <vscale x 16 x i8> %f)
@@ -2912,8 +2912,8 @@ define <vscale x 24 x i32> @vector_interleave_nxv24i32_nxv4i32(<vscale x 4 x i32
 ; RV32-LABEL: vector_interleave_nxv24i32_nxv4i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -2977,16 +2977,16 @@ define <vscale x 24 x i32> @vector_interleave_nxv24i32_nxv4i32(<vscale x 4 x i32
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a6)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv24i32_nxv4i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -3050,16 +3050,16 @@ define <vscale x 24 x i32> @vector_interleave_nxv24i32_nxv4i32(<vscale x 4 x i32
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a6)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv24i32_nxv4i32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -3123,16 +3123,16 @@ define <vscale x 24 x i32> @vector_interleave_nxv24i32_nxv4i32(<vscale x 4 x i32
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a6)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv24i32_nxv4i32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -3196,16 +3196,16 @@ define <vscale x 24 x i32> @vector_interleave_nxv24i32_nxv4i32(<vscale x 4 x i32
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a6)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv24i32_nxv4i32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -3269,8 +3269,8 @@ define <vscale x 24 x i32> @vector_interleave_nxv24i32_nxv4i32(<vscale x 4 x i32
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a6)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 24 x i32> @llvm.vector.interleave6.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, <vscale x 4 x i32> %e, <vscale x 4 x i32> %f)
@@ -3282,8 +3282,8 @@ define <vscale x 12 x i64> @vector_interleave_nxv12i64_nxv2i64(<vscale x 2 x i64
 ; RV32-LABEL: vector_interleave_nxv12i64_nxv2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -3347,16 +3347,16 @@ define <vscale x 12 x i64> @vector_interleave_nxv12i64_nxv2i64(<vscale x 2 x i64
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a6)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv12i64_nxv2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -3420,16 +3420,16 @@ define <vscale x 12 x i64> @vector_interleave_nxv12i64_nxv2i64(<vscale x 2 x i64
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a6)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv12i64_nxv2i64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -3493,16 +3493,16 @@ define <vscale x 12 x i64> @vector_interleave_nxv12i64_nxv2i64(<vscale x 2 x i64
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a6)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv12i64_nxv2i64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -3566,16 +3566,16 @@ define <vscale x 12 x i64> @vector_interleave_nxv12i64_nxv2i64(<vscale x 2 x i64
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a6)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv12i64_nxv2i64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -3639,8 +3639,8 @@ define <vscale x 12 x i64> @vector_interleave_nxv12i64_nxv2i64(<vscale x 2 x i64
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a6)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 12 x i64> @llvm.vector.interleave6.nxv12i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d, <vscale x 2 x i64> %e, <vscale x 2 x i64> %f)
@@ -3841,8 +3841,8 @@ define <vscale x 112 x i8> @vector_interleave_nxv112i8_nxv16i8(<vscale x 16 x i8
 ; RV32-LABEL: vector_interleave_nxv112i8_nxv16i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -3914,16 +3914,16 @@ define <vscale x 112 x i8> @vector_interleave_nxv112i8_nxv16i8(<vscale x 16 x i8
 ; RV32-NEXT:    vl8r.v v16, (a2)
 ; RV32-NEXT:    vl8r.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv112i8_nxv16i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -3995,16 +3995,16 @@ define <vscale x 112 x i8> @vector_interleave_nxv112i8_nxv16i8(<vscale x 16 x i8
 ; RV64-NEXT:    vl8r.v v16, (a2)
 ; RV64-NEXT:    vl8r.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv112i8_nxv16i8:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -4076,16 +4076,16 @@ define <vscale x 112 x i8> @vector_interleave_nxv112i8_nxv16i8(<vscale x 16 x i8
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv112i8_nxv16i8:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -4157,16 +4157,16 @@ define <vscale x 112 x i8> @vector_interleave_nxv112i8_nxv16i8(<vscale x 16 x i8
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv112i8_nxv16i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -4238,8 +4238,8 @@ define <vscale x 112 x i8> @vector_interleave_nxv112i8_nxv16i8(<vscale x 16 x i8
 ; ZIP-NEXT:    vl8r.v v16, (a2)
 ; ZIP-NEXT:    vl8r.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 112 x i8> @llvm.vector.interleave7.nxv112i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, <vscale x 16 x i8> %e, <vscale x 16 x i8> %f, <vscale x 16 x i8> %g)
@@ -4252,8 +4252,8 @@ define <vscale x 56 x i16> @vector_interleave_nxv56i16_nxv8i16(<vscale x 8 x i16
 ; RV32-LABEL: vector_interleave_nxv56i16_nxv8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -4325,16 +4325,16 @@ define <vscale x 56 x i16> @vector_interleave_nxv56i16_nxv8i16(<vscale x 8 x i16
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv56i16_nxv8i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -4406,16 +4406,16 @@ define <vscale x 56 x i16> @vector_interleave_nxv56i16_nxv8i16(<vscale x 8 x i16
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv56i16_nxv8i16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -4487,16 +4487,16 @@ define <vscale x 56 x i16> @vector_interleave_nxv56i16_nxv8i16(<vscale x 8 x i16
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv56i16_nxv8i16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -4568,16 +4568,16 @@ define <vscale x 56 x i16> @vector_interleave_nxv56i16_nxv8i16(<vscale x 8 x i16
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv56i16_nxv8i16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -4649,8 +4649,8 @@ define <vscale x 56 x i16> @vector_interleave_nxv56i16_nxv8i16(<vscale x 8 x i16
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 56 x i16> @llvm.vector.interleave7.nxv56i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c, <vscale x 8 x i16> %d, <vscale x 8 x i16> %e, <vscale x 8 x i16> %f, <vscale x 8 x i16> %g)
@@ -4663,8 +4663,8 @@ define <vscale x 28 x i32> @vector_interleave_nxv28i32_nxv4i32(<vscale x 4 x i32
 ; RV32-LABEL: vector_interleave_nxv28i32_nxv4i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -4736,16 +4736,16 @@ define <vscale x 28 x i32> @vector_interleave_nxv28i32_nxv4i32(<vscale x 4 x i32
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv28i32_nxv4i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -4817,16 +4817,16 @@ define <vscale x 28 x i32> @vector_interleave_nxv28i32_nxv4i32(<vscale x 4 x i32
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv28i32_nxv4i32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -4898,16 +4898,16 @@ define <vscale x 28 x i32> @vector_interleave_nxv28i32_nxv4i32(<vscale x 4 x i32
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv28i32_nxv4i32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -4979,16 +4979,16 @@ define <vscale x 28 x i32> @vector_interleave_nxv28i32_nxv4i32(<vscale x 4 x i32
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv28i32_nxv4i32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -5060,8 +5060,8 @@ define <vscale x 28 x i32> @vector_interleave_nxv28i32_nxv4i32(<vscale x 4 x i32
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 28 x i32> @llvm.vector.interleave7.nxv28i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, <vscale x 4 x i32> %e, <vscale x 4 x i32> %f, <vscale x 4 x i32> %g)
@@ -5073,8 +5073,8 @@ define <vscale x 14 x i64> @vector_interleave_nxv14i64_nxv2i64(<vscale x 2 x i64
 ; RV32-LABEL: vector_interleave_nxv14i64_nxv2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -5146,16 +5146,16 @@ define <vscale x 14 x i64> @vector_interleave_nxv14i64_nxv2i64(<vscale x 2 x i64
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv14i64_nxv2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -5227,16 +5227,16 @@ define <vscale x 14 x i64> @vector_interleave_nxv14i64_nxv2i64(<vscale x 2 x i64
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv14i64_nxv2i64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -5308,16 +5308,16 @@ define <vscale x 14 x i64> @vector_interleave_nxv14i64_nxv2i64(<vscale x 2 x i64
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv14i64_nxv2i64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -5389,16 +5389,16 @@ define <vscale x 14 x i64> @vector_interleave_nxv14i64_nxv2i64(<vscale x 2 x i64
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv14i64_nxv2i64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -5470,8 +5470,8 @@ define <vscale x 14 x i64> @vector_interleave_nxv14i64_nxv2i64(<vscale x 2 x i64
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 14 x i64> @llvm.vector.interleave7.nxv14i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, <vscale x 2 x i64> %d, <vscale x 2 x i64> %e, <vscale x 2 x i64> %f, <vscale x 2 x i64> %g)
@@ -8046,8 +8046,8 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; RV32-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -8104,16 +8104,16 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -8170,16 +8170,16 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -8236,16 +8236,16 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -8302,16 +8302,16 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -8368,8 +8368,8 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 40 x half> @llvm.vector.interleave5.nxv40f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4)
@@ -8512,8 +8512,8 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; RV32-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -8570,16 +8570,16 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -8636,16 +8636,16 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -8702,16 +8702,16 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -8768,16 +8768,16 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -8834,8 +8834,8 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 40 x bfloat> @llvm.vector.interleave5.nxv40bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4)
@@ -8978,8 +8978,8 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; RV32-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -9036,16 +9036,16 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -9102,16 +9102,16 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -9168,16 +9168,16 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -9234,16 +9234,16 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -9300,8 +9300,8 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 20 x float> @llvm.vector.interleave5.nxv20f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4)
@@ -9370,8 +9370,8 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; RV32-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -9428,16 +9428,16 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -9494,16 +9494,16 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -9560,16 +9560,16 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -9626,16 +9626,16 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -9692,8 +9692,8 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 10 x double> @llvm.vector.interleave5.nxv10f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4)
@@ -9848,8 +9848,8 @@ define <vscale x 48 x half> @vector_interleave_nxv48f16_nxv8f16(<vscale x 8 x ha
 ; RV32-LABEL: vector_interleave_nxv48f16_nxv8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -9913,16 +9913,16 @@ define <vscale x 48 x half> @vector_interleave_nxv48f16_nxv8f16(<vscale x 8 x ha
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a6)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv48f16_nxv8f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -9986,16 +9986,16 @@ define <vscale x 48 x half> @vector_interleave_nxv48f16_nxv8f16(<vscale x 8 x ha
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a6)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv48f16_nxv8f16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -10059,16 +10059,16 @@ define <vscale x 48 x half> @vector_interleave_nxv48f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a6)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv48f16_nxv8f16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -10132,16 +10132,16 @@ define <vscale x 48 x half> @vector_interleave_nxv48f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a6)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv48f16_nxv8f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -10205,8 +10205,8 @@ define <vscale x 48 x half> @vector_interleave_nxv48f16_nxv8f16(<vscale x 8 x ha
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a6)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 48 x half> @llvm.vector.interleave6.nxv48f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4, <vscale x 8 x half> %v5)
@@ -10361,8 +10361,8 @@ define <vscale x 48 x bfloat> @vector_interleave_nxv48bf16_nxv8bf16(<vscale x 8 
 ; RV32-LABEL: vector_interleave_nxv48bf16_nxv8bf16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -10426,16 +10426,16 @@ define <vscale x 48 x bfloat> @vector_interleave_nxv48bf16_nxv8bf16(<vscale x 8 
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a6)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv48bf16_nxv8bf16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -10499,16 +10499,16 @@ define <vscale x 48 x bfloat> @vector_interleave_nxv48bf16_nxv8bf16(<vscale x 8 
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a6)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv48bf16_nxv8bf16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -10572,16 +10572,16 @@ define <vscale x 48 x bfloat> @vector_interleave_nxv48bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a6)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv48bf16_nxv8bf16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -10645,16 +10645,16 @@ define <vscale x 48 x bfloat> @vector_interleave_nxv48bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a6)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv48bf16_nxv8bf16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -10718,8 +10718,8 @@ define <vscale x 48 x bfloat> @vector_interleave_nxv48bf16_nxv8bf16(<vscale x 8 
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a6)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 48 x bfloat> @llvm.vector.interleave6.nxv48bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4, <vscale x 8 x bfloat> %v5)
@@ -10874,8 +10874,8 @@ define <vscale x 24 x float> @vector_interleave_nxv24f32_nxv4f32(<vscale x 4 x f
 ; RV32-LABEL: vector_interleave_nxv24f32_nxv4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -10939,16 +10939,16 @@ define <vscale x 24 x float> @vector_interleave_nxv24f32_nxv4f32(<vscale x 4 x f
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a6)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv24f32_nxv4f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -11012,16 +11012,16 @@ define <vscale x 24 x float> @vector_interleave_nxv24f32_nxv4f32(<vscale x 4 x f
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a6)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv24f32_nxv4f32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -11085,16 +11085,16 @@ define <vscale x 24 x float> @vector_interleave_nxv24f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a6)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv24f32_nxv4f32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -11158,16 +11158,16 @@ define <vscale x 24 x float> @vector_interleave_nxv24f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a6)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv24f32_nxv4f32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -11231,8 +11231,8 @@ define <vscale x 24 x float> @vector_interleave_nxv24f32_nxv4f32(<vscale x 4 x f
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a6)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 24 x float> @llvm.vector.interleave6.nxv24f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4, <vscale x 4 x float> %v5)
@@ -11305,8 +11305,8 @@ define <vscale x 12 x double> @vector_interleave_nxv12f64_nxv2f64(<vscale x 2 x 
 ; RV32-LABEL: vector_interleave_nxv12f64_nxv2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
@@ -11370,16 +11370,16 @@ define <vscale x 12 x double> @vector_interleave_nxv12f64_nxv2f64(<vscale x 2 x 
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a6)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv12f64_nxv2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
@@ -11443,16 +11443,16 @@ define <vscale x 12 x double> @vector_interleave_nxv12f64_nxv2f64(<vscale x 2 x 
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a6)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv12f64_nxv2f64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
@@ -11516,16 +11516,16 @@ define <vscale x 12 x double> @vector_interleave_nxv12f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a6)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv12f64_nxv2f64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
@@ -11589,16 +11589,16 @@ define <vscale x 12 x double> @vector_interleave_nxv12f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a6)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv12f64_nxv2f64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
@@ -11662,8 +11662,8 @@ define <vscale x 12 x double> @vector_interleave_nxv12f64_nxv2f64(<vscale x 2 x 
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a6)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 12 x double> @llvm.vector.interleave6.nxv12f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4, <vscale x 2 x double> %v5)
@@ -11822,8 +11822,8 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; RV32-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -11895,16 +11895,16 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -11976,16 +11976,16 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -12057,16 +12057,16 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -12138,16 +12138,16 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -12219,8 +12219,8 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 56 x half> @llvm.vector.interleave7.nxv56f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4, <vscale x 8 x half> %v5, <vscale x 8 x half> %v6)
@@ -12379,8 +12379,8 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; RV32-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -12452,16 +12452,16 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -12533,16 +12533,16 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -12614,16 +12614,16 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -12695,16 +12695,16 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -12776,8 +12776,8 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 56 x bfloat> @llvm.vector.interleave7.nxv56bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4, <vscale x 8 x bfloat> %v5, <vscale x 8 x bfloat> %v6)
@@ -12936,8 +12936,8 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; RV32-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -13009,16 +13009,16 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -13090,16 +13090,16 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -13171,16 +13171,16 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -13252,16 +13252,16 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -13333,8 +13333,8 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 28 x float> @llvm.vector.interleave7.nxv28f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4, <vscale x 4 x float> %v5, <vscale x 4 x float> %v6)
@@ -13411,8 +13411,8 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; RV32-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
@@ -13484,16 +13484,16 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
@@ -13565,16 +13565,16 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
@@ -13646,16 +13646,16 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
@@ -13727,16 +13727,16 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; ZIP-NEXT:    addi s0, sp, 80
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
@@ -13808,8 +13808,8 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; ZIP-NEXT:    addi sp, sp, 80
 ; ZIP-NEXT:    ret
   %res = call <vscale x 14 x double> @llvm.vector.interleave7.nxv14f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4, <vscale x 2 x double> %v5, <vscale x 2 x double> %v6)

@@ -9,8 +9,8 @@ define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, a1, 32
@@ -27,8 +27,8 @@ define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
 ; RV32-NEXT:    vle32.v v8, (s0)
 ; RV32-NEXT:    vadd.vi v8, v8, 1
 ; RV32-NEXT:    vse32.v v8, (s0)
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
@@ -39,8 +39,8 @@ define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, a1, 32
@@ -57,8 +57,8 @@ define void @vecaddr_straightline(i32 zeroext %a, ptr %p) {
 ; RV64-NEXT:    vle32.v v8, (s0)
 ; RV64-NEXT:    vadd.vi v8, v8, 1
 ; RV64-NEXT:    vse32.v v8, (s0)
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
@@ -89,8 +89,8 @@ define void @vecaddr_loop(i32 zeroext %a, ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, a1, 32
@@ -109,8 +109,8 @@ define void @vecaddr_loop(i32 zeroext %a, ptr %p) {
 ; RV32-NEXT:    vse32.v v8, (s0)
 ; RV32-NEXT:    bnez a0, .LBB1_1
 ; RV32-NEXT:  .LBB1_2: # %exit
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
@@ -121,8 +121,8 @@ define void @vecaddr_loop(i32 zeroext %a, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, a1, 32
@@ -141,8 +141,8 @@ define void @vecaddr_loop(i32 zeroext %a, ptr %p) {
 ; RV64-NEXT:    vse32.v v8, (s0)
 ; RV64-NEXT:    bnez a0, .LBB1_1
 ; RV64-NEXT:  .LBB1_2: # %exit
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16

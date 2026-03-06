@@ -1300,18 +1300,18 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-LABEL: lshr_32bytes:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -160
-; RV64I-NEXT:    sd s0, 152(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 144(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 136(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 128(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 120(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 112(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s6, 104(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s7, 96(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 88(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s9, 80(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s10, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s11, 64(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 152(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s1, 144(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s2, 136(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s3, 128(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s4, 120(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s5, 112(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s6, 104(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s7, 96(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s8, 88(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s9, 80(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s10, 72(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s11, 64(sp) # 8-byte Spill
 ; RV64I-NEXT:    lbu a3, 0(a0)
 ; RV64I-NEXT:    lbu a4, 1(a0)
 ; RV64I-NEXT:    lbu a5, 2(a0)
@@ -1513,37 +1513,37 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    sb a1, 9(a2)
 ; RV64I-NEXT:    sb a5, 10(a2)
 ; RV64I-NEXT:    sb a3, 11(a2)
-; RV64I-NEXT:    ld s0, 152(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 144(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 136(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 128(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 120(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 112(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s6, 104(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s7, 96(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 88(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s9, 80(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s10, 72(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s11, 64(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 152(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s1, 144(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s2, 136(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s3, 128(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s4, 120(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s5, 112(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s6, 104(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s7, 96(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s8, 88(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s9, 80(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s10, 72(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s11, 64(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 160
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: lshr_32bytes:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -128
-; RV32I-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 116(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s2, 112(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s3, 108(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s4, 104(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s5, 100(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s6, 96(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s7, 92(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s8, 88(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s9, 84(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s10, 80(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s11, 76(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 124(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 120(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s1, 116(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s2, 112(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s3, 108(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s4, 104(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s5, 100(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s6, 96(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s7, 92(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s8, 88(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s9, 84(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s10, 80(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s11, 76(sp) # 4-byte Spill
 ; RV32I-NEXT:    lbu a3, 0(a0)
 ; RV32I-NEXT:    lbu a4, 1(a0)
 ; RV32I-NEXT:    lbu a6, 2(a0)
@@ -1568,7 +1568,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    slli a6, a6, 16
 ; RV32I-NEXT:    slli a7, a7, 24
 ; RV32I-NEXT:    or a3, a4, a3
-; RV32I-NEXT:    sw a3, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a3, 4(sp) # 4-byte Spill
 ; RV32I-NEXT:    or a4, a7, a6
 ; RV32I-NEXT:    lbu s10, 20(a0)
 ; RV32I-NEXT:    lbu s11, 21(a0)
@@ -1635,7 +1635,7 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    or t6, s6, s5
 ; RV32I-NEXT:    or a3, s7, a3
 ; RV32I-NEXT:    or a1, a1, s8
-; RV32I-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 4(sp) # 4-byte Reload
 ; RV32I-NEXT:    or a4, a4, s4
 ; RV32I-NEXT:    or a5, a6, a5
 ; RV32I-NEXT:    or a6, t0, a7
@@ -1751,19 +1751,19 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    sb a4, 5(a2)
 ; RV32I-NEXT:    sb a5, 6(a2)
 ; RV32I-NEXT:    sb a6, 7(a2)
-; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 116(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 112(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 108(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 104(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 100(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s6, 96(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s7, 92(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s8, 88(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s9, 84(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s10, 80(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s11, 76(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s1, 116(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s2, 112(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s3, 108(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s4, 104(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s5, 100(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s6, 96(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s7, 92(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s8, 88(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s9, 84(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s10, 80(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s11, 76(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 128
 ; RV32I-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1
@@ -1776,18 +1776,18 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-LABEL: shl_32bytes:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -160
-; RV64I-NEXT:    sd s0, 152(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 144(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 136(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 128(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 120(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 112(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s6, 104(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s7, 96(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 88(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s9, 80(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s10, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s11, 64(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 152(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s1, 144(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s2, 136(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s3, 128(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s4, 120(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s5, 112(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s6, 104(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s7, 96(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s8, 88(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s9, 80(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s10, 72(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s11, 64(sp) # 8-byte Spill
 ; RV64I-NEXT:    lbu a3, 0(a0)
 ; RV64I-NEXT:    lbu a4, 1(a0)
 ; RV64I-NEXT:    lbu a5, 2(a0)
@@ -1989,37 +1989,37 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    sb a1, 9(a2)
 ; RV64I-NEXT:    sb a5, 10(a2)
 ; RV64I-NEXT:    sb a3, 11(a2)
-; RV64I-NEXT:    ld s0, 152(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 144(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 136(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 128(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 120(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 112(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s6, 104(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s7, 96(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 88(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s9, 80(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s10, 72(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s11, 64(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 152(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s1, 144(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s2, 136(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s3, 128(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s4, 120(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s5, 112(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s6, 104(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s7, 96(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s8, 88(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s9, 80(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s10, 72(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s11, 64(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 160
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: shl_32bytes:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -128
-; RV32I-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 116(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s2, 112(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s3, 108(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s4, 104(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s5, 100(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s6, 96(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s7, 92(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s8, 88(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s9, 84(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s10, 80(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s11, 76(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 124(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 120(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s1, 116(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s2, 112(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s3, 108(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s4, 104(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s5, 100(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s6, 96(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s7, 92(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s8, 88(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s9, 84(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s10, 80(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s11, 76(sp) # 4-byte Spill
 ; RV32I-NEXT:    lbu a3, 0(a0)
 ; RV32I-NEXT:    lbu a4, 1(a0)
 ; RV32I-NEXT:    lbu a6, 2(a0)
@@ -2044,7 +2044,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    slli a6, a6, 16
 ; RV32I-NEXT:    slli a7, a7, 24
 ; RV32I-NEXT:    or a3, a4, a3
-; RV32I-NEXT:    sw a3, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a3, 4(sp) # 4-byte Spill
 ; RV32I-NEXT:    or a4, a7, a6
 ; RV32I-NEXT:    lbu s10, 20(a0)
 ; RV32I-NEXT:    lbu s11, 21(a0)
@@ -2111,7 +2111,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    or t6, s6, s5
 ; RV32I-NEXT:    or a3, s7, a3
 ; RV32I-NEXT:    or a1, a1, s8
-; RV32I-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 4(sp) # 4-byte Reload
 ; RV32I-NEXT:    or a4, a4, s4
 ; RV32I-NEXT:    or a5, a6, a5
 ; RV32I-NEXT:    or a6, t0, a7
@@ -2227,19 +2227,19 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    sb a4, 5(a2)
 ; RV32I-NEXT:    sb a5, 6(a2)
 ; RV32I-NEXT:    sb a6, 7(a2)
-; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 116(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 112(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 108(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 104(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 100(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s6, 96(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s7, 92(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s8, 88(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s9, 84(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s10, 80(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s11, 76(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s1, 116(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s2, 112(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s3, 108(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s4, 104(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s5, 100(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s6, 96(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s7, 92(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s8, 88(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s9, 84(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s10, 80(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s11, 76(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 128
 ; RV32I-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1
@@ -2252,18 +2252,18 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-LABEL: ashr_32bytes:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -160
-; RV64I-NEXT:    sd s0, 152(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 144(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 136(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 128(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 120(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 112(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s6, 104(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s7, 96(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s8, 88(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s9, 80(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s10, 72(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s11, 64(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 152(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s1, 144(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s2, 136(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s3, 128(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s4, 120(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s5, 112(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s6, 104(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s7, 96(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s8, 88(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s9, 80(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s10, 72(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s11, 64(sp) # 8-byte Spill
 ; RV64I-NEXT:    lbu a3, 0(a0)
 ; RV64I-NEXT:    lbu a4, 1(a0)
 ; RV64I-NEXT:    lbu a5, 2(a0)
@@ -2466,37 +2466,37 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV64I-NEXT:    sb a5, 9(a2)
 ; RV64I-NEXT:    sb a3, 10(a2)
 ; RV64I-NEXT:    sb a4, 11(a2)
-; RV64I-NEXT:    ld s0, 152(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 144(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 136(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 128(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 120(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 112(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s6, 104(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s7, 96(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s8, 88(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s9, 80(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s10, 72(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s11, 64(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 152(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s1, 144(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s2, 136(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s3, 128(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s4, 120(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s5, 112(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s6, 104(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s7, 96(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s8, 88(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s9, 80(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s10, 72(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s11, 64(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 160
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: ashr_32bytes:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -128
-; RV32I-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 116(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s2, 112(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s3, 108(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s4, 104(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s5, 100(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s6, 96(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s7, 92(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s8, 88(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s9, 84(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s10, 80(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s11, 76(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 124(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 120(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s1, 116(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s2, 112(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s3, 108(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s4, 104(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s5, 100(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s6, 96(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s7, 92(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s8, 88(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s9, 84(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s10, 80(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s11, 76(sp) # 4-byte Spill
 ; RV32I-NEXT:    lbu a3, 0(a0)
 ; RV32I-NEXT:    lbu a4, 1(a0)
 ; RV32I-NEXT:    lbu a6, 2(a0)
@@ -2521,7 +2521,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    slli a6, a6, 16
 ; RV32I-NEXT:    slli a7, a7, 24
 ; RV32I-NEXT:    or a3, a4, a3
-; RV32I-NEXT:    sw a3, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a3, 4(sp) # 4-byte Spill
 ; RV32I-NEXT:    or a4, a7, a6
 ; RV32I-NEXT:    lbu s8, 20(a0)
 ; RV32I-NEXT:    lbu s9, 21(a0)
@@ -2581,7 +2581,7 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    or t6, s6, s5
 ; RV32I-NEXT:    or a1, a1, s7
 ; RV32I-NEXT:    srai s0, a0, 31
-; RV32I-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a0, 4(sp) # 4-byte Reload
 ; RV32I-NEXT:    or a4, a4, a0
 ; RV32I-NEXT:    or a5, a6, a5
 ; RV32I-NEXT:    or a6, t0, a7
@@ -2705,19 +2705,19 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; RV32I-NEXT:    sb a4, 5(a2)
 ; RV32I-NEXT:    sb a5, 6(a2)
 ; RV32I-NEXT:    sb a6, 7(a2)
-; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 116(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s2, 112(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 108(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 104(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 100(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s6, 96(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s7, 92(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s8, 88(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s9, 84(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s10, 80(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s11, 76(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 124(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 120(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s1, 116(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s2, 112(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s3, 108(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s4, 104(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s5, 100(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s6, 96(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s7, 92(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s8, 88(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s9, 84(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s10, 80(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s11, 76(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 128
 ; RV32I-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1

@@ -12,10 +12,10 @@ define double @test_f64_call(double %a, double %b) {
 ; RV32LE:       # %bb.0:
 ; RV32LE-NEXT:    addi sp, sp, -16
 ; RV32LE-NEXT:    .cfi_def_cfa_offset 16
-; RV32LE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32LE-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32LE-NEXT:    .cfi_offset ra, -4
 ; RV32LE-NEXT:    call external_func
-; RV32LE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32LE-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32LE-NEXT:    .cfi_restore ra
 ; RV32LE-NEXT:    addi sp, sp, 16
 ; RV32LE-NEXT:    .cfi_def_cfa_offset 0
@@ -25,10 +25,10 @@ define double @test_f64_call(double %a, double %b) {
 ; RV32BE:       # %bb.0:
 ; RV32BE-NEXT:    addi sp, sp, -16
 ; RV32BE-NEXT:    .cfi_def_cfa_offset 16
-; RV32BE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32BE-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32BE-NEXT:    .cfi_offset ra, -4
 ; RV32BE-NEXT:    call external_func
-; RV32BE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32BE-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32BE-NEXT:    .cfi_restore ra
 ; RV32BE-NEXT:    addi sp, sp, 16
 ; RV32BE-NEXT:    .cfi_def_cfa_offset 0
@@ -43,7 +43,7 @@ define double @test_f64_call_with_fadd(double %a, double %b) {
 ; RV32LE:       # %bb.0:
 ; RV32LE-NEXT:    addi sp, sp, -16
 ; RV32LE-NEXT:    .cfi_def_cfa_offset 16
-; RV32LE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32LE-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32LE-NEXT:    .cfi_offset ra, -4
 ; RV32LE-NEXT:    sw a2, 0(sp)
 ; RV32LE-NEXT:    sw a3, 4(sp)
@@ -58,7 +58,7 @@ define double @test_f64_call_with_fadd(double %a, double %b) {
 ; RV32LE-NEXT:    mv a2, a0
 ; RV32LE-NEXT:    mv a3, a1
 ; RV32LE-NEXT:    call external_func
-; RV32LE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32LE-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32LE-NEXT:    .cfi_restore ra
 ; RV32LE-NEXT:    addi sp, sp, 16
 ; RV32LE-NEXT:    .cfi_def_cfa_offset 0
@@ -68,7 +68,7 @@ define double @test_f64_call_with_fadd(double %a, double %b) {
 ; RV32BE:       # %bb.0:
 ; RV32BE-NEXT:    addi sp, sp, -16
 ; RV32BE-NEXT:    .cfi_def_cfa_offset 16
-; RV32BE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32BE-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32BE-NEXT:    .cfi_offset ra, -4
 ; RV32BE-NEXT:    sw a2, 0(sp)
 ; RV32BE-NEXT:    sw a3, 4(sp)
@@ -83,7 +83,7 @@ define double @test_f64_call_with_fadd(double %a, double %b) {
 ; RV32BE-NEXT:    mv a2, a0
 ; RV32BE-NEXT:    mv a3, a1
 ; RV32BE-NEXT:    call external_func
-; RV32BE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32BE-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32BE-NEXT:    .cfi_restore ra
 ; RV32BE-NEXT:    addi sp, sp, 16
 ; RV32BE-NEXT:    .cfi_def_cfa_offset 0

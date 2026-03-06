@@ -1363,7 +1363,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sltu t6, a7, a4
 ; RV32I-NEXT:  .LBB17_13:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    beq a3, a6, .LBB17_15
 ; RV32I-NEXT:  # %bb.14:
 ; RV32I-NEXT:    sltu s0, a6, a3
@@ -1402,7 +1402,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw a5, 12(a0)
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -1490,7 +1490,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sltu t6, a7, a4
 ; RV32ZBB-NEXT:  .LBB17_13:
 ; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32ZBB-NEXT:    beq a3, a6, .LBB17_15
 ; RV32ZBB-NEXT:  # %bb.14:
 ; RV32ZBB-NEXT:    sltu s0, a6, a3
@@ -1529,7 +1529,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sw a3, 4(a0)
 ; RV32ZBB-NEXT:    sw a4, 8(a0)
 ; RV32ZBB-NEXT:    sw a5, 12(a0)
-; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32ZBB-NEXT:    addi sp, sp, 16
 ; RV32ZBB-NEXT:    ret
 ;

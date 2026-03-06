@@ -15,19 +15,19 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -704
-; CHECK-NEXT:    sw ra, 700(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 696(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 692(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s2, 688(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s3, 684(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s4, 680(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s5, 676(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s6, 672(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s7, 668(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s8, 664(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s9, 660(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s10, 656(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s11, 652(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 700(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 696(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s1, 692(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s2, 688(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s3, 684(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s4, 680(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s5, 676(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s6, 672(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s7, 668(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s8, 664(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s9, 660(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s10, 656(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s11, 652(sp) # 4-byte Spill
 ; CHECK-NEXT:    lui a0, %hi(U)
 ; CHECK-NEXT:    lw s9, %lo(U)(a0)
 ; CHECK-NEXT:    lw s10, %lo(U+4)(a0)
@@ -62,13 +62,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw s4, 580(sp)
 ; CHECK-NEXT:    call __subtf3
 ; CHECK-NEXT:    lw a0, 584(sp)
-; CHECK-NEXT:    sw a0, 52(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 52(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 588(sp)
-; CHECK-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 48(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 592(sp)
-; CHECK-NEXT:    sw a0, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 44(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 596(sp)
-; CHECK-NEXT:    sw a0, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 40(sp) # 4-byte Spill
 ; CHECK-NEXT:    sw zero, 504(sp)
 ; CHECK-NEXT:    sw zero, 508(sp)
 ; CHECK-NEXT:    sw zero, 512(sp)
@@ -87,13 +87,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lw s8, 548(sp)
 ; CHECK-NEXT:    lui a0, %hi(Y1)
 ; CHECK-NEXT:    lw a1, %lo(Y1)(a0)
-; CHECK-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a1, 20(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a2, %lo(Y1+4)(a0)
-; CHECK-NEXT:    sw a2, 16(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a2, 16(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a3, %lo(Y1+8)(a0)
-; CHECK-NEXT:    sw a3, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a3, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, %lo(Y1+12)(a0)
-; CHECK-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 8(sp) # 4-byte Spill
 ; CHECK-NEXT:    sw a1, 312(sp)
 ; CHECK-NEXT:    sw a2, 316(sp)
 ; CHECK-NEXT:    sw a3, 320(sp)
@@ -107,13 +107,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw s4, 340(sp)
 ; CHECK-NEXT:    call __multf3
 ; CHECK-NEXT:    lw a0, 344(sp)
-; CHECK-NEXT:    sw a0, 68(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 68(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 348(sp)
-; CHECK-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 64(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 352(sp)
-; CHECK-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 60(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 356(sp)
-; CHECK-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 56(sp) # 4-byte Spill
 ; CHECK-NEXT:    sw s9, 472(sp)
 ; CHECK-NEXT:    sw s10, 476(sp)
 ; CHECK-NEXT:    sw s11, 480(sp)
@@ -151,34 +151,34 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a0, %lo(X+8)(a4)
 ; CHECK-NEXT:    sw a3, %lo(X+4)(a4)
 ; CHECK-NEXT:    sw a2, %lo(X)(a4)
-; CHECK-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s5, 20(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s5, 216(sp)
-; CHECK-NEXT:    lw s9, 16(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s9, 16(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s9, 220(sp)
-; CHECK-NEXT:    lw s10, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s10, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s10, 224(sp)
-; CHECK-NEXT:    lw s11, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s11, 8(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s11, 228(sp)
 ; CHECK-NEXT:    addi a0, sp, 248
 ; CHECK-NEXT:    addi a1, sp, 232
 ; CHECK-NEXT:    addi a2, sp, 216
-; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 52(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s1, 232(sp)
-; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s2, 48(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s2, 236(sp)
-; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s3, 44(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s3, 240(sp)
-; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 40(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw s4, 244(sp)
 ; CHECK-NEXT:    call __multf3
 ; CHECK-NEXT:    lw a0, 248(sp)
-; CHECK-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 36(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 252(sp)
-; CHECK-NEXT:    sw a0, 32(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 32(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 256(sp)
-; CHECK-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 28(sp) # 4-byte Spill
 ; CHECK-NEXT:    lw a0, 260(sp)
-; CHECK-NEXT:    sw a0, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 24(sp) # 4-byte Spill
 ; CHECK-NEXT:    sw zero, 360(sp)
 ; CHECK-NEXT:    sw zero, 364(sp)
 ; CHECK-NEXT:    sw zero, 368(sp)
@@ -207,13 +207,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    addi a0, sp, 296
 ; CHECK-NEXT:    addi a1, sp, 280
 ; CHECK-NEXT:    addi a2, sp, 264
-; CHECK-NEXT:    lw a3, 68(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 68(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 280(sp)
-; CHECK-NEXT:    lw a3, 64(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 64(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 284(sp)
-; CHECK-NEXT:    lw a3, 60(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 60(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 288(sp)
-; CHECK-NEXT:    lw a3, 56(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 56(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 292(sp)
 ; CHECK-NEXT:    call __subtf3
 ; CHECK-NEXT:    lw a0, 304(sp)
@@ -232,13 +232,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    addi a0, sp, 200
 ; CHECK-NEXT:    addi a1, sp, 184
 ; CHECK-NEXT:    addi a2, sp, 168
-; CHECK-NEXT:    lw a3, 36(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 36(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 184(sp)
-; CHECK-NEXT:    lw a3, 32(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 32(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 188(sp)
-; CHECK-NEXT:    lw a3, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 28(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 192(sp)
-; CHECK-NEXT:    lw a3, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a3, 24(sp) # 4-byte Reload
 ; CHECK-NEXT:    sw a3, 196(sp)
 ; CHECK-NEXT:    call __addtf3
 ; CHECK-NEXT:    lw a0, 208(sp)
@@ -288,19 +288,19 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a1, %lo(Y1+12)(a4)
 ; CHECK-NEXT:    sw a2, %lo(Y1)(a4)
 ; CHECK-NEXT:    sw a3, %lo(Y1+4)(a4)
-; CHECK-NEXT:    lw ra, 700(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 696(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 692(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s2, 688(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s3, 684(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s4, 680(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s5, 676(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s6, 672(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s7, 668(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s8, 664(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s9, 660(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s10, 656(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s11, 652(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 700(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 696(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s1, 692(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s2, 688(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s3, 684(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s4, 680(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s5, 676(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s6, 672(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s7, 668(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s8, 664(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s9, 660(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s10, 656(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s11, 652(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 704
 ; CHECK-NEXT:    ret
   %1 = load fp128, ptr @U, align 16

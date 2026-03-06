@@ -315,10 +315,10 @@ define double @test_f64_arg_return(double %a, double %b) {
 ; RV32LE:       # %bb.0:
 ; RV32LE-NEXT:    addi sp, sp, -16
 ; RV32LE-NEXT:    .cfi_def_cfa_offset 16
-; RV32LE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32LE-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32LE-NEXT:    .cfi_offset ra, -4
 ; RV32LE-NEXT:    call external_f64_func
-; RV32LE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32LE-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32LE-NEXT:    .cfi_restore ra
 ; RV32LE-NEXT:    addi sp, sp, 16
 ; RV32LE-NEXT:    .cfi_def_cfa_offset 0
@@ -328,10 +328,10 @@ define double @test_f64_arg_return(double %a, double %b) {
 ; RV32BE:       # %bb.0:
 ; RV32BE-NEXT:    addi sp, sp, -16
 ; RV32BE-NEXT:    .cfi_def_cfa_offset 16
-; RV32BE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32BE-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32BE-NEXT:    .cfi_offset ra, -4
 ; RV32BE-NEXT:    call external_f64_func
-; RV32BE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32BE-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32BE-NEXT:    .cfi_restore ra
 ; RV32BE-NEXT:    addi sp, sp, 16
 ; RV32BE-NEXT:    .cfi_def_cfa_offset 0
@@ -341,10 +341,10 @@ define double @test_f64_arg_return(double %a, double %b) {
 ; RV64LE:       # %bb.0:
 ; RV64LE-NEXT:    addi sp, sp, -16
 ; RV64LE-NEXT:    .cfi_def_cfa_offset 16
-; RV64LE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64LE-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64LE-NEXT:    .cfi_offset ra, -8
 ; RV64LE-NEXT:    call external_f64_func
-; RV64LE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64LE-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64LE-NEXT:    .cfi_restore ra
 ; RV64LE-NEXT:    addi sp, sp, 16
 ; RV64LE-NEXT:    .cfi_def_cfa_offset 0
@@ -354,10 +354,10 @@ define double @test_f64_arg_return(double %a, double %b) {
 ; RV64BE:       # %bb.0:
 ; RV64BE-NEXT:    addi sp, sp, -16
 ; RV64BE-NEXT:    .cfi_def_cfa_offset 16
-; RV64BE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64BE-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64BE-NEXT:    .cfi_offset ra, -8
 ; RV64BE-NEXT:    call external_f64_func
-; RV64BE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64BE-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64BE-NEXT:    .cfi_restore ra
 ; RV64BE-NEXT:    addi sp, sp, 16
 ; RV64BE-NEXT:    .cfi_def_cfa_offset 0

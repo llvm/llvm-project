@@ -864,8 +864,8 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -512
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 512
-; RV32ZVFHMIN-NEXT:    sw ra, 508(sp) # 4-byte Folded Spill
-; RV32ZVFHMIN-NEXT:    sw s0, 504(sp) # 4-byte Folded Spill
+; RV32ZVFHMIN-NEXT:    sw ra, 508(sp) # 4-byte Spill
+; RV32ZVFHMIN-NEXT:    sw s0, 504(sp) # 4-byte Spill
 ; RV32ZVFHMIN-NEXT:    .cfi_offset ra, -4
 ; RV32ZVFHMIN-NEXT:    .cfi_offset s0, -8
 ; RV32ZVFHMIN-NEXT:    addi s0, sp, 512
@@ -1367,8 +1367,8 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vsm.v v12, (a2)
 ; RV32ZVFHMIN-NEXT:    addi sp, s0, -512
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa sp, 512
-; RV32ZVFHMIN-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
-; RV32ZVFHMIN-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
+; RV32ZVFHMIN-NEXT:    lw ra, 508(sp) # 4-byte Reload
+; RV32ZVFHMIN-NEXT:    lw s0, 504(sp) # 4-byte Reload
 ; RV32ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV32ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 512
@@ -1379,8 +1379,8 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, -512
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa_offset 512
-; RV64ZVFHMIN-NEXT:    sd ra, 504(sp) # 8-byte Folded Spill
-; RV64ZVFHMIN-NEXT:    sd s0, 496(sp) # 8-byte Folded Spill
+; RV64ZVFHMIN-NEXT:    sd ra, 504(sp) # 8-byte Spill
+; RV64ZVFHMIN-NEXT:    sd s0, 496(sp) # 8-byte Spill
 ; RV64ZVFHMIN-NEXT:    .cfi_offset ra, -8
 ; RV64ZVFHMIN-NEXT:    .cfi_offset s0, -16
 ; RV64ZVFHMIN-NEXT:    addi s0, sp, 512
@@ -1882,8 +1882,8 @@ define void @fcmp_ugt_vv_v64f16(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vsm.v v12, (a2)
 ; RV64ZVFHMIN-NEXT:    addi sp, s0, -512
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa sp, 512
-; RV64ZVFHMIN-NEXT:    ld ra, 504(sp) # 8-byte Folded Reload
-; RV64ZVFHMIN-NEXT:    ld s0, 496(sp) # 8-byte Folded Reload
+; RV64ZVFHMIN-NEXT:    ld ra, 504(sp) # 8-byte Reload
+; RV64ZVFHMIN-NEXT:    ld s0, 496(sp) # 8-byte Reload
 ; RV64ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV64ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, 512
@@ -1911,8 +1911,8 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -512
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 512
-; RV32ZVFHMIN-NEXT:    sw ra, 508(sp) # 4-byte Folded Spill
-; RV32ZVFHMIN-NEXT:    sw s0, 504(sp) # 4-byte Folded Spill
+; RV32ZVFHMIN-NEXT:    sw ra, 508(sp) # 4-byte Spill
+; RV32ZVFHMIN-NEXT:    sw s0, 504(sp) # 4-byte Spill
 ; RV32ZVFHMIN-NEXT:    .cfi_offset ra, -4
 ; RV32ZVFHMIN-NEXT:    .cfi_offset s0, -8
 ; RV32ZVFHMIN-NEXT:    addi s0, sp, 512
@@ -2350,8 +2350,8 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vsm.v v12, (a2)
 ; RV32ZVFHMIN-NEXT:    addi sp, s0, -512
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa sp, 512
-; RV32ZVFHMIN-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
-; RV32ZVFHMIN-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
+; RV32ZVFHMIN-NEXT:    lw ra, 508(sp) # 4-byte Reload
+; RV32ZVFHMIN-NEXT:    lw s0, 504(sp) # 4-byte Reload
 ; RV32ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV32ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 512
@@ -2362,8 +2362,8 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, -512
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa_offset 512
-; RV64ZVFHMIN-NEXT:    sd ra, 504(sp) # 8-byte Folded Spill
-; RV64ZVFHMIN-NEXT:    sd s0, 496(sp) # 8-byte Folded Spill
+; RV64ZVFHMIN-NEXT:    sd ra, 504(sp) # 8-byte Spill
+; RV64ZVFHMIN-NEXT:    sd s0, 496(sp) # 8-byte Spill
 ; RV64ZVFHMIN-NEXT:    .cfi_offset ra, -8
 ; RV64ZVFHMIN-NEXT:    .cfi_offset s0, -16
 ; RV64ZVFHMIN-NEXT:    addi s0, sp, 512
@@ -2801,8 +2801,8 @@ define void @fcmp_ugt_vv_v64f16_nonans(ptr %x, ptr %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vsm.v v12, (a2)
 ; RV64ZVFHMIN-NEXT:    addi sp, s0, -512
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa sp, 512
-; RV64ZVFHMIN-NEXT:    ld ra, 504(sp) # 8-byte Folded Reload
-; RV64ZVFHMIN-NEXT:    ld s0, 496(sp) # 8-byte Folded Reload
+; RV64ZVFHMIN-NEXT:    ld ra, 504(sp) # 8-byte Reload
+; RV64ZVFHMIN-NEXT:    ld s0, 496(sp) # 8-byte Reload
 ; RV64ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV64ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, 512
@@ -3428,8 +3428,8 @@ define void @fcmp_ugt_vf_v64f16(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Spill
+; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Spill
 ; RV32ZVFHMIN-NEXT:    .cfi_offset ra, -4
 ; RV32ZVFHMIN-NEXT:    .cfi_offset s0, -8
 ; RV32ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -3785,8 +3785,8 @@ define void @fcmp_ugt_vf_v64f16(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV32ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Reload
+; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Reload
 ; RV32ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV32ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 384
@@ -3797,8 +3797,8 @@ define void @fcmp_ugt_vf_v64f16(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; RV64ZVFHMIN-NEXT:    .cfi_offset ra, -8
 ; RV64ZVFHMIN-NEXT:    .cfi_offset s0, -16
 ; RV64ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -4154,8 +4154,8 @@ define void @fcmp_ugt_vf_v64f16(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV64ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; RV64ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV64ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, 384
@@ -4183,8 +4183,8 @@ define void @fcmp_ugt_vf_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Spill
+; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Spill
 ; RV32ZVFHMIN-NEXT:    .cfi_offset ra, -4
 ; RV32ZVFHMIN-NEXT:    .cfi_offset s0, -8
 ; RV32ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -4476,8 +4476,8 @@ define void @fcmp_ugt_vf_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV32ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Reload
+; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Reload
 ; RV32ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV32ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 384
@@ -4488,8 +4488,8 @@ define void @fcmp_ugt_vf_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; RV64ZVFHMIN-NEXT:    .cfi_offset ra, -8
 ; RV64ZVFHMIN-NEXT:    .cfi_offset s0, -16
 ; RV64ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -4781,8 +4781,8 @@ define void @fcmp_ugt_vf_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV64ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; RV64ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV64ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, 384
@@ -5417,8 +5417,8 @@ define void @fcmp_ugt_fv_v64f16(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Spill
+; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Spill
 ; RV32ZVFHMIN-NEXT:    .cfi_offset ra, -4
 ; RV32ZVFHMIN-NEXT:    .cfi_offset s0, -8
 ; RV32ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -5774,8 +5774,8 @@ define void @fcmp_ugt_fv_v64f16(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV32ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Reload
+; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Reload
 ; RV32ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV32ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 384
@@ -5786,8 +5786,8 @@ define void @fcmp_ugt_fv_v64f16(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; RV64ZVFHMIN-NEXT:    .cfi_offset ra, -8
 ; RV64ZVFHMIN-NEXT:    .cfi_offset s0, -16
 ; RV64ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -6143,8 +6143,8 @@ define void @fcmp_ugt_fv_v64f16(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV64ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; RV64ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV64ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, 384
@@ -6172,8 +6172,8 @@ define void @fcmp_ugt_fv_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32ZVFHMIN-NEXT:    sw ra, 380(sp) # 4-byte Spill
+; RV32ZVFHMIN-NEXT:    sw s0, 376(sp) # 4-byte Spill
 ; RV32ZVFHMIN-NEXT:    .cfi_offset ra, -4
 ; RV32ZVFHMIN-NEXT:    .cfi_offset s0, -8
 ; RV32ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -6465,8 +6465,8 @@ define void @fcmp_ugt_fv_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV32ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV32ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV32ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32ZVFHMIN-NEXT:    lw ra, 380(sp) # 4-byte Reload
+; RV32ZVFHMIN-NEXT:    lw s0, 376(sp) # 4-byte Reload
 ; RV32ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV32ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 384
@@ -6477,8 +6477,8 @@ define void @fcmp_ugt_fv_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa_offset 384
-; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64ZVFHMIN-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; RV64ZVFHMIN-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; RV64ZVFHMIN-NEXT:    .cfi_offset ra, -8
 ; RV64ZVFHMIN-NEXT:    .cfi_offset s0, -16
 ; RV64ZVFHMIN-NEXT:    addi s0, sp, 384
@@ -6770,8 +6770,8 @@ define void @fcmp_ugt_fv_v64f16_nonans(ptr %x, half %y, ptr %z) {
 ; RV64ZVFHMIN-NEXT:    vsm.v v12, (a1)
 ; RV64ZVFHMIN-NEXT:    addi sp, s0, -384
 ; RV64ZVFHMIN-NEXT:    .cfi_def_cfa sp, 384
-; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64ZVFHMIN-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; RV64ZVFHMIN-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; RV64ZVFHMIN-NEXT:    .cfi_restore ra
 ; RV64ZVFHMIN-NEXT:    .cfi_restore s0
 ; RV64ZVFHMIN-NEXT:    addi sp, sp, 384

@@ -90,8 +90,8 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 48
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    .cfi_offset ra, -36
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -40
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
@@ -110,8 +110,8 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 48
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
 ; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
@@ -122,8 +122,8 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -96
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 96
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    .cfi_offset ra, -72
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -80
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
@@ -148,8 +148,8 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    sw a2, -20(s0)
 ; RV64-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 96
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
 ; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
@@ -211,8 +211,8 @@ define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-LABEL: va1_va_arg:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
@@ -229,16 +229,16 @@ define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va1_va_arg:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -96
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
@@ -255,8 +255,8 @@ define iXLen @va1_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a0)
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
@@ -272,9 +272,9 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV32-LABEL: va1_va_arg_alloca:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 16
 ; RV32-NEXT:    sw a1, 4(s0)
 ; RV32-NEXT:    sw a2, 8(s0)
@@ -298,18 +298,18 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV32-NEXT:    call notdead
 ; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    addi sp, s0, -16
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va1_va_arg_alloca:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -96
-; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 32
 ; RV64-NEXT:    sd a1, 8(s0)
 ; RV64-NEXT:    sd a2, 16(s0)
@@ -333,18 +333,18 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV64-NEXT:    call notdead
 ; RV64-NEXT:    mv a0, s1
 ; RV64-NEXT:    addi sp, s0, -32
-; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 96
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va1_va_arg_alloca:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
@@ -368,18 +368,18 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    call notdead
 ; RV32-WITHFP-NEXT:    mv a0, s1
 ; RV32-WITHFP-NEXT:    addi sp, s0, -16
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va1_va_arg_alloca:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -96
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
@@ -403,9 +403,9 @@ define iXLen @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    call notdead
 ; RV64-WITHFP-NEXT:    mv a0, s1
 ; RV64-WITHFP-NEXT:    addi sp, s0, -32
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
@@ -421,82 +421,82 @@ define void @va1_caller() nounwind {
 ; RV32-LABEL: va1_caller:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    lui a3, 261888
 ; RV32-NEXT:    li a4, 2
 ; RV32-NEXT:    li a2, 0
 ; RV32-NEXT:    call va1
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; LP64-LABEL: va1_caller:
 ; LP64:       # %bb.0:
 ; LP64-NEXT:    addi sp, sp, -16
-; LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; LP64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; LP64-NEXT:    li a1, 1023
 ; LP64-NEXT:    slli a1, a1, 52
 ; LP64-NEXT:    li a2, 2
 ; LP64-NEXT:    call va1
-; LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; LP64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; LP64-NEXT:    addi sp, sp, 16
 ; LP64-NEXT:    ret
 ;
 ; LP64F-LABEL: va1_caller:
 ; LP64F:       # %bb.0:
 ; LP64F-NEXT:    addi sp, sp, -16
-; LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; LP64F-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; LP64F-NEXT:    li a0, 1023
 ; LP64F-NEXT:    slli a0, a0, 52
 ; LP64F-NEXT:    fmv.d.x fa5, a0
 ; LP64F-NEXT:    li a2, 2
 ; LP64F-NEXT:    fmv.x.d a1, fa5
 ; LP64F-NEXT:    call va1
-; LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; LP64F-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; LP64F-NEXT:    addi sp, sp, 16
 ; LP64F-NEXT:    ret
 ;
 ; LP64D-LABEL: va1_caller:
 ; LP64D:       # %bb.0:
 ; LP64D-NEXT:    addi sp, sp, -16
-; LP64D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; LP64D-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; LP64D-NEXT:    li a0, 1023
 ; LP64D-NEXT:    slli a0, a0, 52
 ; LP64D-NEXT:    fmv.d.x fa5, a0
 ; LP64D-NEXT:    li a2, 2
 ; LP64D-NEXT:    fmv.x.d a1, fa5
 ; LP64D-NEXT:    call va1
-; LP64D-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; LP64D-NEXT:    addi sp, sp, 16
 ; LP64D-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va1_caller:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    lui a3, 261888
 ; RV32-WITHFP-NEXT:    li a4, 2
 ; RV32-WITHFP-NEXT:    li a2, 0
 ; RV32-WITHFP-NEXT:    call va1
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va1_caller:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -16
-; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-NEXT:    li a1, 1023
 ; RV64-WITHFP-NEXT:    slli a1, a1, 52
 ; RV64-WITHFP-NEXT:    li a2, 2
 ; RV64-WITHFP-NEXT:    call va1
-; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    ret
   %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
@@ -625,8 +625,8 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-LABEL: va2:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
@@ -644,16 +644,16 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a1)
 ; RV32-WITHFP-NEXT:    lw a1, 4(a1)
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va2:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -96
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
@@ -670,8 +670,8 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    andi a1, a1, -8
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a1)
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
@@ -739,8 +739,8 @@ define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-LABEL: va2_va_arg:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
@@ -757,16 +757,16 @@ define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va2_va_arg:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -96
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
@@ -783,8 +783,8 @@ define iXLen @va2_va_arg(ptr %fmt, ...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a0)
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
@@ -798,46 +798,46 @@ define void @va2_caller() nounwind {
 ; RV32-LABEL: va2_caller:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    call va2
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va2_caller:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    call va2
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va2_caller:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    li a1, 1
 ; RV32-WITHFP-NEXT:    call va2
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va2_caller:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -16
-; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-NEXT:    li a1, 1
 ; RV64-WITHFP-NEXT:    call va2
-; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    ret
  %1 = call i64 (ptr, ...) @va2(ptr poison, i32 1)
@@ -974,8 +974,8 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32-WITHFP-LABEL: va3:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
-; RV32-WITHFP-NEXT:    sw ra, 20(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 16(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 20(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 16(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 24
 ; RV32-WITHFP-NEXT:    addi a0, s0, 4
 ; RV32-WITHFP-NEXT:    sw a0, -12(s0)
@@ -995,16 +995,16 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sltu a1, a0, a4
 ; RV32-WITHFP-NEXT:    add a2, a2, a3
 ; RV32-WITHFP-NEXT:    add a1, a2, a1
-; RV32-WITHFP-NEXT:    lw ra, 20(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 16(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 20(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 16(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va3:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -80
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    mv a0, s0
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
@@ -1021,8 +1021,8 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a0, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a2)
 ; RV64-WITHFP-NEXT:    add a0, a1, a0
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 80
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
@@ -1091,8 +1091,8 @@ define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV32-WITHFP-LABEL: va3_va_arg:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
-; RV32-WITHFP-NEXT:    sw ra, 20(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 16(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 20(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 16(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 24
 ; RV32-WITHFP-NEXT:    sw a2, 0(s0)
 ; RV32-WITHFP-NEXT:    sw a3, 4(s0)
@@ -1109,16 +1109,16 @@ define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV32-WITHFP-NEXT:    sw a2, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    add a0, a1, a0
-; RV32-WITHFP-NEXT:    lw ra, 20(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 16(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 20(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 16(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va3_va_arg:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -80
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    sd a2, 0(s0)
 ; RV64-WITHFP-NEXT:    sd a3, 8(s0)
@@ -1135,8 +1135,8 @@ define iXLen @va3_va_arg(iXLen %a, iXLen %b, ...) nounwind {
 ; RV64-WITHFP-NEXT:    sd a2, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    add a0, a1, a0
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 80
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
@@ -1151,35 +1151,35 @@ define void @va3_caller() nounwind {
 ; RV32-LABEL: va3_caller:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    lui a3, 5
 ; RV32-NEXT:    addi a3, a3, -480
 ; RV32-NEXT:    li a0, 2
 ; RV32-NEXT:    li a1, 1111
 ; RV32-NEXT:    li a2, 0
 ; RV32-NEXT:    call va3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va3_caller:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    lui a1, 5
 ; RV64-NEXT:    li a0, 2
 ; RV64-NEXT:    addi a2, a1, -480
 ; RV64-NEXT:    li a1, 1111
 ; RV64-NEXT:    call va3
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va3_caller:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -16
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    lui a3, 5
 ; RV32-WITHFP-NEXT:    addi a3, a3, -480
@@ -1187,24 +1187,24 @@ define void @va3_caller() nounwind {
 ; RV32-WITHFP-NEXT:    li a1, 1111
 ; RV32-WITHFP-NEXT:    li a2, 0
 ; RV32-WITHFP-NEXT:    call va3
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va3_caller:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -16
-; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-NEXT:    lui a1, 5
 ; RV64-WITHFP-NEXT:    li a0, 2
 ; RV64-WITHFP-NEXT:    addi a2, a1, -480
 ; RV64-WITHFP-NEXT:    li a1, 1111
 ; RV64-WITHFP-NEXT:    call va3
-; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    ret
  %1 = call i64 (i32, i64, ...) @va3(i32 2, i64 1111, i32 20000)
@@ -1215,9 +1215,9 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-LABEL: va4_va_copy:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -64
-; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
 ; RV32-NEXT:    sw a1, 36(sp)
 ; RV32-NEXT:    sw a2, 40(sp)
 ; RV32-NEXT:    sw a3, 44(sp)
@@ -1259,18 +1259,18 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-NEXT:    add a0, a0, s1
 ; RV32-NEXT:    add a1, a1, a2
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 64
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: va4_va_copy:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -112
-; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64-NEXT:    sd s1, 24(sp) # 8-byte Spill
 ; RV64-NEXT:    sd a1, 56(sp)
 ; RV64-NEXT:    sd a2, 64(sp)
 ; RV64-NEXT:    sd a3, 72(sp)
@@ -1315,19 +1315,19 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-NEXT:    add a0, a0, s1
 ; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64-NEXT:    ld s1, 24(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 112
 ; RV64-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va4_va_copy:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -64
-; RV32-WITHFP-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 32
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32-WITHFP-NEXT:    sw a2, 8(s0)
@@ -1370,20 +1370,20 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32-WITHFP-NEXT:    add a0, a0, s2
 ; RV32-WITHFP-NEXT:    add a1, a1, a2
 ; RV32-WITHFP-NEXT:    add a0, a0, a1
-; RV32-WITHFP-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 64
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va4_va_copy:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -112
-; RV64-WITHFP-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s2, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 48
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
@@ -1429,10 +1429,10 @@ define iXLen @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV64-WITHFP-NEXT:    add a0, a0, s2
 ; RV64-WITHFP-NEXT:    add a1, a1, a2
 ; RV64-WITHFP-NEXT:    add a0, a0, a1
-; RV64-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s2, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 112
 ; RV64-WITHFP-NEXT:    ret
   %vargs = alloca ptr
@@ -1509,8 +1509,8 @@ define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV32-WITHFP-LABEL: va6_no_fixed_args:
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32-WITHFP-NEXT:    sw a0, 0(s0)
 ; RV32-WITHFP-NEXT:    sw a1, 4(s0)
@@ -1528,16 +1528,16 @@ define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV32-WITHFP-NEXT:    addi a1, a0, 4
 ; RV32-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32-WITHFP-NEXT:    ret
 ;
 ; RV64-WITHFP-LABEL: va6_no_fixed_args:
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -96
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
 ; RV64-WITHFP-NEXT:    sd a0, 0(s0)
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
@@ -1555,8 +1555,8 @@ define iXLen @va6_no_fixed_args(...) nounwind {
 ; RV64-WITHFP-NEXT:    addi a1, a0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -24(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a0)
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96
 ; RV64-WITHFP-NEXT:    ret
   %va = alloca ptr
@@ -1661,8 +1661,8 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -2032
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
-; RV32-WITHFP-NEXT:    sw ra, 1996(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 1992(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 1996(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 1992(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    .cfi_offset ra, -36
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -40
 ; RV32-WITHFP-NEXT:    addi s0, sp, 2000
@@ -1690,8 +1690,8 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    addi a1, a1, -1728
 ; RV32-WITHFP-NEXT:    add sp, sp, a1
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
-; RV32-WITHFP-NEXT:    lw ra, 1996(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 1992(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 1996(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 1992(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
 ; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 2032
@@ -1702,8 +1702,8 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -2032
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
-; RV64-WITHFP-NEXT:    sd ra, 1960(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 1952(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 1960(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 1952(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    .cfi_offset ra, -72
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -80
 ; RV64-WITHFP-NEXT:    addi s0, sp, 1968
@@ -1736,8 +1736,8 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    addi a1, a1, -1680
 ; RV64-WITHFP-NEXT:    add sp, sp, a1
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
-; RV64-WITHFP-NEXT:    ld ra, 1960(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 1952(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 1960(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 1952(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
 ; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 2032
@@ -1793,8 +1793,8 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -16
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    .cfi_offset ra, -4
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -8
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
@@ -1809,8 +1809,8 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV32-WITHFP-NEXT:    sw a1, -16(s0)
 ; RV32-WITHFP-NEXT:    lw a0, 0(a0)
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 16
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
 ; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 16
@@ -1821,8 +1821,8 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -32
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 32
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    .cfi_offset ra, -8
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -16
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
@@ -1837,8 +1837,8 @@ define iXLen @va_vprintf(ptr %fmt, ptr %arg_start) {
 ; RV64-WITHFP-NEXT:    sd a1, -32(s0)
 ; RV64-WITHFP-NEXT:    ld a0, 0(a0)
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 32
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
 ; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 32
@@ -1858,7 +1858,7 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
 ; RV32-NEXT:    .cfi_def_cfa_offset 48
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -36
 ; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    sw a2, 24(sp)
@@ -1871,7 +1871,7 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-NEXT:    sw a6, 40(sp)
 ; RV32-NEXT:    sw a7, 44(sp)
 ; RV32-NEXT:    call va_vprintf
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -1881,7 +1881,7 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -72
 ; RV64-NEXT:    sd a1, 24(sp)
 ; RV64-NEXT:    sd a2, 32(sp)
@@ -1894,7 +1894,7 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
 ; RV64-NEXT:    call va_vprintf
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -1904,8 +1904,8 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-WITHFP:       # %bb.0:
 ; RV32-WITHFP-NEXT:    addi sp, sp, -48
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa_offset 48
-; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32-WITHFP-NEXT:    .cfi_offset ra, -36
 ; RV32-WITHFP-NEXT:    .cfi_offset s0, -40
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
@@ -1922,8 +1922,8 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV32-WITHFP-NEXT:    sw a7, 28(s0)
 ; RV32-WITHFP-NEXT:    call va_vprintf
 ; RV32-WITHFP-NEXT:    .cfi_def_cfa sp, 48
-; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32-WITHFP-NEXT:    .cfi_restore ra
 ; RV32-WITHFP-NEXT:    .cfi_restore s0
 ; RV32-WITHFP-NEXT:    addi sp, sp, 48
@@ -1934,8 +1934,8 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-WITHFP:       # %bb.0:
 ; RV64-WITHFP-NEXT:    addi sp, sp, -96
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa_offset 96
-; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-WITHFP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64-WITHFP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64-WITHFP-NEXT:    .cfi_offset ra, -72
 ; RV64-WITHFP-NEXT:    .cfi_offset s0, -80
 ; RV64-WITHFP-NEXT:    addi s0, sp, 32
@@ -1952,8 +1952,8 @@ define i32 @va_printf(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
 ; RV64-WITHFP-NEXT:    call va_vprintf
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 96
-; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64-WITHFP-NEXT:    .cfi_restore ra
 ; RV64-WITHFP-NEXT:    .cfi_restore s0
 ; RV64-WITHFP-NEXT:    addi sp, sp, 96

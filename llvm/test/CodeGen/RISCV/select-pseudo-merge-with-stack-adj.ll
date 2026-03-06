@@ -6,9 +6,9 @@ define i32 @test(i1 %arg_1, i32 %arg_2) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    .cfi_offset s1, -12
@@ -36,9 +36,9 @@ define i32 @test(i1 %arg_1, i32 %arg_2) {
 ; CHECK-NEXT:    bltu a0, s0, .LBB0_7
 ; CHECK-NEXT:  # %bb.8: # %exit
 ; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1

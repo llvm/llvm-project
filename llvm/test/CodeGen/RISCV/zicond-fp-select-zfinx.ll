@@ -205,9 +205,9 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV64ZHINX_ZICOND-LABEL: select_f64_fcmp:
 ; RV64ZHINX_ZICOND:       # %bb.0: # %entry
 ; RV64ZHINX_ZICOND-NEXT:    addi sp, sp, -32
-; RV64ZHINX_ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZHINX_ZICOND-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZHINX_ZICOND-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX_ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZHINX_ZICOND-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZHINX_ZICOND-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64ZHINX_ZICOND-NEXT:    mv s0, a3
 ; RV64ZHINX_ZICOND-NEXT:    mv s1, a2
 ; RV64ZHINX_ZICOND-NEXT:    call __gtdf2
@@ -215,9 +215,9 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV64ZHINX_ZICOND-NEXT:    czero.nez a1, s0, a0
 ; RV64ZHINX_ZICOND-NEXT:    czero.eqz a0, s1, a0
 ; RV64ZHINX_ZICOND-NEXT:    or a0, a0, a1
-; RV64ZHINX_ZICOND-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZHINX_ZICOND-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZHINX_ZICOND-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX_ZICOND-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZHINX_ZICOND-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZHINX_ZICOND-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64ZHINX_ZICOND-NEXT:    addi sp, sp, 32
 ; RV64ZHINX_ZICOND-NEXT:    ret
 ;
@@ -234,11 +234,11 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV32ZFINX_ZICOND-LABEL: select_f64_fcmp:
 ; RV32ZFINX_ZICOND:       # %bb.0: # %entry
 ; RV32ZFINX_ZICOND-NEXT:    addi sp, sp, -32
-; RV32ZFINX_ZICOND-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX_ZICOND-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX_ZICOND-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX_ZICOND-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX_ZICOND-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX_ZICOND-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZFINX_ZICOND-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZFINX_ZICOND-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZFINX_ZICOND-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZFINX_ZICOND-NEXT:    sw s3, 12(sp) # 4-byte Spill
 ; RV32ZFINX_ZICOND-NEXT:    mv s0, a7
 ; RV32ZFINX_ZICOND-NEXT:    mv s1, a6
 ; RV32ZFINX_ZICOND-NEXT:    mv s2, a5
@@ -251,22 +251,22 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV32ZFINX_ZICOND-NEXT:    czero.eqz a4, s2, a0
 ; RV32ZFINX_ZICOND-NEXT:    or a0, a2, a1
 ; RV32ZFINX_ZICOND-NEXT:    or a1, a4, a3
-; RV32ZFINX_ZICOND-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX_ZICOND-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX_ZICOND-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX_ZICOND-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX_ZICOND-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX_ZICOND-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZFINX_ZICOND-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZFINX_ZICOND-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZFINX_ZICOND-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZFINX_ZICOND-NEXT:    lw s3, 12(sp) # 4-byte Reload
 ; RV32ZFINX_ZICOND-NEXT:    addi sp, sp, 32
 ; RV32ZFINX_ZICOND-NEXT:    ret
 ;
 ; RV32ZFINX_NOZICOND-LABEL: select_f64_fcmp:
 ; RV32ZFINX_NOZICOND:       # %bb.0: # %entry
 ; RV32ZFINX_NOZICOND-NEXT:    addi sp, sp, -32
-; RV32ZFINX_NOZICOND-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX_NOZICOND-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX_NOZICOND-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX_NOZICOND-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX_NOZICOND-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX_NOZICOND-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZFINX_NOZICOND-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZFINX_NOZICOND-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZFINX_NOZICOND-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZFINX_NOZICOND-NEXT:    sw s3, 12(sp) # 4-byte Spill
 ; RV32ZFINX_NOZICOND-NEXT:    mv s1, a7
 ; RV32ZFINX_NOZICOND-NEXT:    mv s3, a6
 ; RV32ZFINX_NOZICOND-NEXT:    mv s0, a5
@@ -279,11 +279,11 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV32ZFINX_NOZICOND-NEXT:  .LBB2_2: # %entry
 ; RV32ZFINX_NOZICOND-NEXT:    mv a0, s2
 ; RV32ZFINX_NOZICOND-NEXT:    mv a1, s0
-; RV32ZFINX_NOZICOND-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX_NOZICOND-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX_NOZICOND-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX_NOZICOND-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX_NOZICOND-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX_NOZICOND-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZFINX_NOZICOND-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZFINX_NOZICOND-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZFINX_NOZICOND-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZFINX_NOZICOND-NEXT:    lw s3, 12(sp) # 4-byte Reload
 ; RV32ZFINX_NOZICOND-NEXT:    addi sp, sp, 32
 ; RV32ZFINX_NOZICOND-NEXT:    ret
 ;
@@ -541,7 +541,7 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV64ZDINX_ZICOND-LABEL: select_i1_half_0_add:
 ; RV64ZDINX_ZICOND:       # %bb.0: # %entry
 ; RV64ZDINX_ZICOND-NEXT:    addi sp, sp, -16
-; RV64ZDINX_ZICOND-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX_ZICOND-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV64ZDINX_ZICOND-NEXT:    andi a0, a0, 1
 ; RV64ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
@@ -554,14 +554,14 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV64ZDINX_ZICOND-NEXT:    lui a1, 1048560
 ; RV64ZDINX_ZICOND-NEXT:    or a0, a0, a1
 ; RV64ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV64ZDINX_ZICOND-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX_ZICOND-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZDINX_ZICOND-NEXT:    addi sp, sp, 16
 ; RV64ZDINX_ZICOND-NEXT:    ret
 ;
 ; RV64ZDINX_NOZICOND-LABEL: select_i1_half_0_add:
 ; RV64ZDINX_NOZICOND:       # %bb.0: # %entry
 ; RV64ZDINX_NOZICOND-NEXT:    addi sp, sp, -16
-; RV64ZDINX_NOZICOND-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX_NOZICOND-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV64ZDINX_NOZICOND-NEXT:    slli a0, a0, 63
 ; RV64ZDINX_NOZICOND-NEXT:    srai a0, a0, 63
@@ -575,7 +575,7 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV64ZDINX_NOZICOND-NEXT:    lui a1, 1048560
 ; RV64ZDINX_NOZICOND-NEXT:    or a0, a0, a1
 ; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV64ZDINX_NOZICOND-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX_NOZICOND-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZDINX_NOZICOND-NEXT:    addi sp, sp, 16
 ; RV64ZDINX_NOZICOND-NEXT:    ret
 ;
@@ -592,7 +592,7 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV64FD-LABEL: select_i1_half_0_add:
 ; RV64FD:       # %bb.0: # %entry
 ; RV64FD-NEXT:    addi sp, sp, -16
-; RV64FD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64FD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64FD-NEXT:    fmv.x.w a1, fa0
 ; RV64FD-NEXT:    slli a0, a0, 63
 ; RV64FD-NEXT:    srai a0, a0, 63
@@ -607,14 +607,14 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV64FD-NEXT:    lui a1, 1048560
 ; RV64FD-NEXT:    or a0, a0, a1
 ; RV64FD-NEXT:    fmv.w.x fa0, a0
-; RV64FD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64FD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64FD-NEXT:    addi sp, sp, 16
 ; RV64FD-NEXT:    ret
 ;
 ; RV32ZFINX_ZICOND-LABEL: select_i1_half_0_add:
 ; RV32ZFINX_ZICOND:       # %bb.0: # %entry
 ; RV32ZFINX_ZICOND-NEXT:    addi sp, sp, -16
-; RV32ZFINX_ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX_ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZFINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV32ZFINX_ZICOND-NEXT:    andi a0, a0, 1
 ; RV32ZFINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
@@ -627,14 +627,14 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV32ZFINX_ZICOND-NEXT:    lui a1, 1048560
 ; RV32ZFINX_ZICOND-NEXT:    or a0, a0, a1
 ; RV32ZFINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV32ZFINX_ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX_ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZFINX_ZICOND-NEXT:    addi sp, sp, 16
 ; RV32ZFINX_ZICOND-NEXT:    ret
 ;
 ; RV32ZFINX_NOZICOND-LABEL: select_i1_half_0_add:
 ; RV32ZFINX_NOZICOND:       # %bb.0: # %entry
 ; RV32ZFINX_NOZICOND-NEXT:    addi sp, sp, -16
-; RV32ZFINX_NOZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX_NOZICOND-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV32ZFINX_NOZICOND-NEXT:    slli a0, a0, 31
 ; RV32ZFINX_NOZICOND-NEXT:    srai a0, a0, 31
@@ -648,14 +648,14 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV32ZFINX_NOZICOND-NEXT:    lui a1, 1048560
 ; RV32ZFINX_NOZICOND-NEXT:    or a0, a0, a1
 ; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV32ZFINX_NOZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX_NOZICOND-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZFINX_NOZICOND-NEXT:    addi sp, sp, 16
 ; RV32ZFINX_NOZICOND-NEXT:    ret
 ;
 ; RV32ZDINX_ZICOND-LABEL: select_i1_half_0_add:
 ; RV32ZDINX_ZICOND:       # %bb.0: # %entry
 ; RV32ZDINX_ZICOND-NEXT:    addi sp, sp, -16
-; RV32ZDINX_ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZDINX_ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV32ZDINX_ZICOND-NEXT:    andi a0, a0, 1
 ; RV32ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
@@ -668,14 +668,14 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV32ZDINX_ZICOND-NEXT:    lui a1, 1048560
 ; RV32ZDINX_ZICOND-NEXT:    or a0, a0, a1
 ; RV32ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV32ZDINX_ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZDINX_ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZDINX_ZICOND-NEXT:    addi sp, sp, 16
 ; RV32ZDINX_ZICOND-NEXT:    ret
 ;
 ; RV32ZDINX_NOZICOND-LABEL: select_i1_half_0_add:
 ; RV32ZDINX_NOZICOND:       # %bb.0: # %entry
 ; RV32ZDINX_NOZICOND-NEXT:    addi sp, sp, -16
-; RV32ZDINX_NOZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZDINX_NOZICOND-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
 ; RV32ZDINX_NOZICOND-NEXT:    slli a0, a0, 31
 ; RV32ZDINX_NOZICOND-NEXT:    srai a0, a0, 31
@@ -689,7 +689,7 @@ define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
 ; RV32ZDINX_NOZICOND-NEXT:    lui a1, 1048560
 ; RV32ZDINX_NOZICOND-NEXT:    or a0, a0, a1
 ; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV32ZDINX_NOZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZDINX_NOZICOND-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZDINX_NOZICOND-NEXT:    addi sp, sp, 16
 ; RV32ZDINX_NOZICOND-NEXT:    ret
 entry:

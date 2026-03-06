@@ -20,7 +20,7 @@ define void @caller() nounwind {
 ; RV32I-LABEL: caller:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Spill
 ; RV32I-NEXT:    lui a0, %hi(foo)
 ; RV32I-NEXT:    addi a0, a0, %lo(foo)
 ; RV32I-NEXT:    lw a1, 12(a0)
@@ -33,7 +33,7 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    sw a0, 12(sp)
 ; RV32I-NEXT:    addi a0, sp, 12
 ; RV32I-NEXT:    call callee
-; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret
 entry:

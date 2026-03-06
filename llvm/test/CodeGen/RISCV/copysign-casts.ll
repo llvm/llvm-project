@@ -174,30 +174,30 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IFD-LABEL: fold_promote_d_h:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fmv.s fa0, fa1
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    fcvt.d.s fa5, fa0
 ; RV32IFD-NEXT:    fsgnj.d fa0, fs0, fa5
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fold_promote_d_h:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    fmv.d fs0, fa0
 ; RV64IFD-NEXT:    fmv.s fa0, fa1
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    fcvt.d.s fa5, fa0
 ; RV64IFD-NEXT:    fsgnj.d fa0, fs0, fa5
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 0(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ;
@@ -250,33 +250,33 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IZDINX-LABEL: fold_promote_d_h:
 ; RV32IZDINX:       # %bb.0:
 ; RV32IZDINX-NEXT:    addi sp, sp, -16
-; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32IZDINX-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32IZDINX-NEXT:    mv s1, a1
 ; RV32IZDINX-NEXT:    mv s0, a0
 ; RV32IZDINX-NEXT:    mv a0, a2
 ; RV32IZDINX-NEXT:    call __extendhfsf2
 ; RV32IZDINX-NEXT:    fcvt.d.s a0, a0
 ; RV32IZDINX-NEXT:    fsgnj.d a0, s0, a0
-; RV32IZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IZDINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IZDINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IZDINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32IZDINX-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32IZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZDINX-NEXT:    ret
 ;
 ; RV64IZDINX-LABEL: fold_promote_d_h:
 ; RV64IZDINX:       # %bb.0:
 ; RV64IZDINX-NEXT:    addi sp, sp, -16
-; RV64IZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZDINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64IZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64IZDINX-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64IZDINX-NEXT:    mv s0, a0
 ; RV64IZDINX-NEXT:    mv a0, a1
 ; RV64IZDINX-NEXT:    call __extendhfsf2
 ; RV64IZDINX-NEXT:    fcvt.d.s a0, a0
 ; RV64IZDINX-NEXT:    fsgnj.d a0, s0, a0
-; RV64IZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZDINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64IZDINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64IZDINX-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64IZDINX-NEXT:    addi sp, sp, 16
 ; RV64IZDINX-NEXT:    ret
   %c = fpext half %b to double
@@ -308,42 +308,42 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV32IF-LABEL: fold_promote_f_h:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 8(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IF-NEXT:    fsw fs0, 8(sp) # 4-byte Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    fmv.s fa0, fa1
 ; RV32IF-NEXT:    call __extendhfsf2
 ; RV32IF-NEXT:    fsgnj.s fa0, fs0, fa0
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IF-NEXT:    flw fs0, 8(sp) # 4-byte Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IFD-LABEL: fold_promote_f_h:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    fmv.s fs0, fa0
 ; RV32IFD-NEXT:    fmv.s fa0, fa1
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    fsgnj.s fa0, fs0, fa0
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fold_promote_f_h:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    fmv.s fs0, fa0
 ; RV64IFD-NEXT:    fmv.s fa0, fa1
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    fsgnj.s fa0, fs0, fa0
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 0(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ;
@@ -386,28 +386,28 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV32IZDINX-LABEL: fold_promote_f_h:
 ; RV32IZDINX:       # %bb.0:
 ; RV32IZDINX-NEXT:    addi sp, sp, -16
-; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IZDINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32IZDINX-NEXT:    mv s0, a0
 ; RV32IZDINX-NEXT:    mv a0, a1
 ; RV32IZDINX-NEXT:    call __extendhfsf2
 ; RV32IZDINX-NEXT:    fsgnj.s a0, s0, a0
-; RV32IZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZDINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IZDINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32IZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZDINX-NEXT:    ret
 ;
 ; RV64IZDINX-LABEL: fold_promote_f_h:
 ; RV64IZDINX:       # %bb.0:
 ; RV64IZDINX-NEXT:    addi sp, sp, -16
-; RV64IZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZDINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64IZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64IZDINX-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64IZDINX-NEXT:    mv s0, a0
 ; RV64IZDINX-NEXT:    mv a0, a1
 ; RV64IZDINX-NEXT:    call __extendhfsf2
 ; RV64IZDINX-NEXT:    fsgnj.s a0, s0, a0
-; RV64IZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZDINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64IZDINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64IZDINX-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64IZDINX-NEXT:    addi sp, sp, 16
 ; RV64IZDINX-NEXT:    ret
   %c = fpext half %b to float

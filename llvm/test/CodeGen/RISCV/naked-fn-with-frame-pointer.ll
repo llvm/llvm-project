@@ -21,8 +21,8 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-32:       # %bb.0:
 ; CHECK-32-NEXT:    addi sp, sp, -16
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; CHECK-32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-32-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; CHECK-32-NEXT:    .cfi_offset ra, -4
 ; CHECK-32-NEXT:    .cfi_offset s0, -8
 ; CHECK-32-NEXT:    addi s0, sp, 16
@@ -33,8 +33,8 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-64:       # %bb.0:
 ; CHECK-64-NEXT:    addi sp, sp, -16
 ; CHECK-64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; CHECK-64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; CHECK-64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; CHECK-64-NEXT:    .cfi_offset ra, -8
 ; CHECK-64-NEXT:    .cfi_offset s0, -16
 ; CHECK-64-NEXT:    addi s0, sp, 16

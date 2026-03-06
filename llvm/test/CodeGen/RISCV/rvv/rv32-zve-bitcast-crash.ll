@@ -8,12 +8,12 @@ define i64 @foo(double %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    lui a3, 261888
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    call __adddf3
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0

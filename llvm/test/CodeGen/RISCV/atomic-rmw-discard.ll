@@ -22,10 +22,10 @@ define void @amoswap_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amoswap_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a3, 5
 ; RV32-NEXT:    call __atomic_exchange_8
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -55,10 +55,10 @@ define void @amoadd_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amoadd_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a3, 5
 ; RV32-NEXT:    call __atomic_fetch_add_8
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -88,10 +88,10 @@ define void @amoand_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amoand_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a3, 5
 ; RV32-NEXT:    call __atomic_fetch_and_8
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -121,10 +121,10 @@ define void @amoor_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amoor_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a3, 5
 ; RV32-NEXT:    call __atomic_fetch_or_8
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -154,10 +154,10 @@ define void @amoxor_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amoxor_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a3, 5
 ; RV32-NEXT:    call __atomic_fetch_or_8
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -187,10 +187,10 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amomax_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a2
 ; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
@@ -230,10 +230,10 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB11_1
 ; RV32-NEXT:  .LBB11_6: # %atomicrmw.end
-; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
@@ -263,10 +263,10 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amomaxu_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a2
 ; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
@@ -306,10 +306,10 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB13_1
 ; RV32-NEXT:  .LBB13_6: # %atomicrmw.end
-; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
@@ -339,10 +339,10 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amomin_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a2
 ; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
@@ -382,10 +382,10 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB15_1
 ; RV32-NEXT:  .LBB15_6: # %atomicrmw.end
-; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
@@ -415,10 +415,10 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-LABEL: amominu_d_discard:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32-NEXT:    mv s0, a2
 ; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
@@ -458,10 +458,10 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB17_1
 ; RV32-NEXT:  .LBB17_6: # %atomicrmw.end
-; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;

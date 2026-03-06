@@ -84,9 +84,9 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 ; RV32F-LABEL: bitcast_double_and:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    addi sp, sp, -16
-; RV32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32F-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32F-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32F-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32F-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32F-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32F-NEXT:    mv s0, a1
 ; RV32F-NEXT:    mv s1, a0
 ; RV32F-NEXT:    call __adddf3
@@ -96,18 +96,18 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 ; RV32F-NEXT:    mv a0, s1
 ; RV32F-NEXT:    mv a1, s0
 ; RV32F-NEXT:    call __adddf3
-; RV32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32F-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32F-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32F-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32F-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32F-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32F-NEXT:    addi sp, sp, 16
 ; RV32F-NEXT:    ret
 ;
 ; RV32ZFINX-LABEL: bitcast_double_and:
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    mv s0, a1
 ; RV32ZFINX-NEXT:    mv s1, a0
 ; RV32ZFINX-NEXT:    call __adddf3
@@ -117,9 +117,9 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 ; RV32ZFINX-NEXT:    mv a0, s1
 ; RV32ZFINX-NEXT:    mv a1, s0
 ; RV32ZFINX-NEXT:    call __adddf3
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    addi sp, sp, 16
 ; RV32ZFINX-NEXT:    ret
 ;
@@ -144,32 +144,32 @@ define double @bitcast_double_and(double %a1, double %a2) nounwind {
 ; RV64F-LABEL: bitcast_double_and:
 ; RV64F:       # %bb.0:
 ; RV64F-NEXT:    addi sp, sp, -16
-; RV64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64F-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64F-NEXT:    mv s0, a0
 ; RV64F-NEXT:    call __adddf3
 ; RV64F-NEXT:    slli a0, a0, 1
 ; RV64F-NEXT:    srli a1, a0, 1
 ; RV64F-NEXT:    mv a0, s0
 ; RV64F-NEXT:    call __adddf3
-; RV64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64F-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64F-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64F-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64F-NEXT:    addi sp, sp, 16
 ; RV64F-NEXT:    ret
 ;
 ; RV64ZFINX-LABEL: bitcast_double_and:
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -16
-; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    mv s0, a0
 ; RV64ZFINX-NEXT:    call __adddf3
 ; RV64ZFINX-NEXT:    slli a0, a0, 1
 ; RV64ZFINX-NEXT:    srli a1, a0, 1
 ; RV64ZFINX-NEXT:    mv a0, s0
 ; RV64ZFINX-NEXT:    call __adddf3
-; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    addi sp, sp, 16
 ; RV64ZFINX-NEXT:    ret
 ;
@@ -261,9 +261,9 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV32F-LABEL: bitcast_double_xor:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    addi sp, sp, -16
-; RV32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32F-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32F-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32F-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32F-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32F-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32F-NEXT:    mv s0, a1
 ; RV32F-NEXT:    mv s1, a0
 ; RV32F-NEXT:    call __muldf3
@@ -274,18 +274,18 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV32F-NEXT:    call __muldf3
 ; RV32F-NEXT:    lui a2, 524288
 ; RV32F-NEXT:    xor a1, a1, a2
-; RV32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32F-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32F-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32F-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32F-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32F-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32F-NEXT:    addi sp, sp, 16
 ; RV32F-NEXT:    ret
 ;
 ; RV32ZFINX-LABEL: bitcast_double_xor:
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    mv s0, a1
 ; RV32ZFINX-NEXT:    mv s1, a0
 ; RV32ZFINX-NEXT:    call __muldf3
@@ -296,9 +296,9 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV32ZFINX-NEXT:    call __muldf3
 ; RV32ZFINX-NEXT:    lui a2, 524288
 ; RV32ZFINX-NEXT:    xor a1, a1, a2
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    addi sp, sp, 16
 ; RV32ZFINX-NEXT:    ret
 ;
@@ -324,8 +324,8 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV64F-LABEL: bitcast_double_xor:
 ; RV64F:       # %bb.0:
 ; RV64F-NEXT:    addi sp, sp, -16
-; RV64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64F-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64F-NEXT:    mv s0, a0
 ; RV64F-NEXT:    call __muldf3
 ; RV64F-NEXT:    mv a1, a0
@@ -334,16 +334,16 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV64F-NEXT:    li a1, -1
 ; RV64F-NEXT:    slli a1, a1, 63
 ; RV64F-NEXT:    xor a0, a0, a1
-; RV64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64F-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64F-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64F-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64F-NEXT:    addi sp, sp, 16
 ; RV64F-NEXT:    ret
 ;
 ; RV64ZFINX-LABEL: bitcast_double_xor:
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -16
-; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    mv s0, a0
 ; RV64ZFINX-NEXT:    call __muldf3
 ; RV64ZFINX-NEXT:    mv a1, a0
@@ -352,8 +352,8 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV64ZFINX-NEXT:    li a1, -1
 ; RV64ZFINX-NEXT:    slli a1, a1, 63
 ; RV64ZFINX-NEXT:    xor a0, a0, a1
-; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    addi sp, sp, 16
 ; RV64ZFINX-NEXT:    ret
 ;
@@ -452,9 +452,9 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV32F-LABEL: bitcast_double_or:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    addi sp, sp, -16
-; RV32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32F-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32F-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32F-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32F-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32F-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32F-NEXT:    mv s0, a1
 ; RV32F-NEXT:    mv s1, a0
 ; RV32F-NEXT:    call __muldf3
@@ -466,18 +466,18 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV32F-NEXT:    call __muldf3
 ; RV32F-NEXT:    lui a2, 524288
 ; RV32F-NEXT:    xor a1, a1, a2
-; RV32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32F-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32F-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32F-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32F-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32F-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32F-NEXT:    addi sp, sp, 16
 ; RV32F-NEXT:    ret
 ;
 ; RV32ZFINX-LABEL: bitcast_double_or:
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    mv s0, a1
 ; RV32ZFINX-NEXT:    mv s1, a0
 ; RV32ZFINX-NEXT:    call __muldf3
@@ -489,9 +489,9 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV32ZFINX-NEXT:    call __muldf3
 ; RV32ZFINX-NEXT:    lui a2, 524288
 ; RV32ZFINX-NEXT:    xor a1, a1, a2
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    addi sp, sp, 16
 ; RV32ZFINX-NEXT:    ret
 ;
@@ -518,8 +518,8 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV64F-LABEL: bitcast_double_or:
 ; RV64F:       # %bb.0:
 ; RV64F-NEXT:    addi sp, sp, -16
-; RV64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64F-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64F-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64F-NEXT:    mv s0, a0
 ; RV64F-NEXT:    call __muldf3
 ; RV64F-NEXT:    slli a0, a0, 1
@@ -529,16 +529,16 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV64F-NEXT:    li a1, -1
 ; RV64F-NEXT:    slli a1, a1, 63
 ; RV64F-NEXT:    xor a0, a0, a1
-; RV64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64F-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64F-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64F-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64F-NEXT:    addi sp, sp, 16
 ; RV64F-NEXT:    ret
 ;
 ; RV64ZFINX-LABEL: bitcast_double_or:
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -16
-; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    mv s0, a0
 ; RV64ZFINX-NEXT:    call __muldf3
 ; RV64ZFINX-NEXT:    slli a0, a0, 1
@@ -548,8 +548,8 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV64ZFINX-NEXT:    li a1, -1
 ; RV64ZFINX-NEXT:    slli a1, a1, 63
 ; RV64ZFINX-NEXT:    xor a0, a0, a1
-; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    addi sp, sp, 16
 ; RV64ZFINX-NEXT:    ret
 ;

@@ -28,12 +28,12 @@ define ptr @f1() nounwind {
 ; RV32-PIC-LABEL: f1:
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:    addi sp, sp, -16
-; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-PIC-NEXT:  .Lpcrel_hi0:
 ; RV32-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(unspecified)
 ; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
 ; RV32-PIC-NEXT:    call __tls_get_addr
-; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-PIC-NEXT:    addi sp, sp, 16
 ; RV32-PIC-NEXT:    ret
 ;
@@ -50,12 +50,12 @@ define ptr @f1() nounwind {
 ; RV64-PIC-LABEL: f1:
 ; RV64-PIC:       # %bb.0: # %entry
 ; RV64-PIC-NEXT:    addi sp, sp, -16
-; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-PIC-NEXT:  .Lpcrel_hi0:
 ; RV64-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(unspecified)
 ; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi0)
 ; RV64-PIC-NEXT:    call __tls_get_addr
-; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-PIC-NEXT:    addi sp, sp, 16
 ; RV64-PIC-NEXT:    ret
 ;
@@ -111,12 +111,12 @@ define ptr @f2() nounwind {
 ; RV32-PIC-LABEL: f2:
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:    addi sp, sp, -16
-; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-PIC-NEXT:  .Lpcrel_hi1:
 ; RV32-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(ld)
 ; RV32-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV32-PIC-NEXT:    call __tls_get_addr
-; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-PIC-NEXT:    addi sp, sp, 16
 ; RV32-PIC-NEXT:    ret
 ;
@@ -133,12 +133,12 @@ define ptr @f2() nounwind {
 ; RV64-PIC-LABEL: f2:
 ; RV64-PIC:       # %bb.0: # %entry
 ; RV64-PIC-NEXT:    addi sp, sp, -16
-; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-PIC-NEXT:  .Lpcrel_hi1:
 ; RV64-PIC-NEXT:    auipc a0, %tls_gd_pcrel_hi(ld)
 ; RV64-PIC-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi1)
 ; RV64-PIC-NEXT:    call __tls_get_addr
-; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-PIC-NEXT:    addi sp, sp, 16
 ; RV64-PIC-NEXT:    ret
 ;

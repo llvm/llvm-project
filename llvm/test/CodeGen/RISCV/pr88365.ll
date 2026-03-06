@@ -6,7 +6,7 @@ define void @foo() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -2032
 ; CHECK-NEXT:    .cfi_def_cfa_offset 2032
-; CHECK-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 2028(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    li a0, -2048
 ; CHECK-NEXT:    sub sp, sp, a0
@@ -16,7 +16,7 @@ define void @foo() {
 ; CHECK-NEXT:    li a0, -2048
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 2032
-; CHECK-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 2028(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 2032
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0

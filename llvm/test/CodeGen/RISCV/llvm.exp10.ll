@@ -11,14 +11,14 @@ define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    fmv.w.x fa0, a0
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    call __truncsfhf2
 ; RV32IFD-NEXT:    fmv.x.w a0, fa0
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
@@ -28,14 +28,14 @@ define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    fmv.w.x fa0, a0
 ; RV64IFD-NEXT:    call __extendhfsf2
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
@@ -49,9 +49,9 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset s0, -8
 ; RV32IFD-NEXT:    .cfi_offset fs0, -16
@@ -67,9 +67,9 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; RV32IFD-NEXT:    call __truncsfhf2
 ; RV32IFD-NEXT:    fmv.x.w a1, fa0
 ; RV32IFD-NEXT:    mv a0, s0
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore s0
 ; RV32IFD-NEXT:    .cfi_restore fs0
@@ -81,9 +81,9 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -32
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 32
-; RV64IFD-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset s0, -16
 ; RV64IFD-NEXT:    .cfi_offset s1, -24
@@ -99,9 +99,9 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) {
 ; RV64IFD-NEXT:    call __truncsfhf2
 ; RV64IFD-NEXT:    fmv.x.w a1, fa0
 ; RV64IFD-NEXT:    mv a0, s1
-; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore s0
 ; RV64IFD-NEXT:    .cfi_restore s1
@@ -117,12 +117,12 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -48
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s1, 36(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset s0, -8
 ; RV32IFD-NEXT:    .cfi_offset s1, -12
@@ -157,12 +157,12 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    fmv.x.w a0, fa0
 ; RV32IFD-NEXT:    sw s1, 0(s0)
 ; RV32IFD-NEXT:    sh a0, 4(s0)
-; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s1, 36(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 24(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs2, 8(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore s0
 ; RV32IFD-NEXT:    .cfi_restore s1
@@ -177,11 +177,11 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -48
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset s0, -16
 ; RV64IFD-NEXT:    .cfi_offset s1, -24
@@ -213,11 +213,11 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    sw s1, 0(s0)
 ; RV64IFD-NEXT:    sh a0, 4(s0)
-; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore s0
 ; RV64IFD-NEXT:    .cfi_restore s1
@@ -235,15 +235,15 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -64
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 64
-; RV32IFD-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s0, 56(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s1, 52(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s2, 48(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s3, 44(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset s0, -8
 ; RV32IFD-NEXT:    .cfi_offset s1, -12
@@ -288,15 +288,15 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV32IFD-NEXT:    sh s2, 2(s0)
 ; RV32IFD-NEXT:    sh s3, 4(s0)
 ; RV32IFD-NEXT:    sh a0, 6(s0)
-; RV32IFD-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s0, 56(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s1, 52(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s2, 48(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s3, 44(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore s0
 ; RV32IFD-NEXT:    .cfi_restore s1
@@ -314,14 +314,14 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -64
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 64
-; RV64IFD-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s0, 48(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s1, 40(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s2, 32(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s3, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset s0, -16
 ; RV64IFD-NEXT:    .cfi_offset s1, -24
@@ -362,14 +362,14 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV64IFD-NEXT:    sh s2, 2(s0)
 ; RV64IFD-NEXT:    sh s3, 4(s0)
 ; RV64IFD-NEXT:    sh a0, 6(s0)
-; RV64IFD-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 56(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s0, 48(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s1, 40(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s2, 32(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s3, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs2, 0(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore s0
 ; RV64IFD-NEXT:    .cfi_restore s1
@@ -390,10 +390,10 @@ define <1 x float> @exp10_v1f32(<1 x float> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    call exp10f
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 0
@@ -403,10 +403,10 @@ define <1 x float> @exp10_v1f32(<1 x float> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    call exp10f
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 0
@@ -420,9 +420,9 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 32
-; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset fs0, -16
 ; RV32IFD-NEXT:    .cfi_offset fs1, -24
@@ -433,9 +433,9 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    fmv.s fa1, fa0
 ; RV32IFD-NEXT:    fmv.s fa0, fs1
-; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore fs0
 ; RV32IFD-NEXT:    .cfi_restore fs1
@@ -447,9 +447,9 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -32
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 32
-; RV64IFD-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset fs0, -16
 ; RV64IFD-NEXT:    .cfi_offset fs1, -24
@@ -460,9 +460,9 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) {
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    fmv.s fa1, fa0
 ; RV64IFD-NEXT:    fmv.s fa0, fs1
-; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore fs0
 ; RV64IFD-NEXT:    .cfi_restore fs1
@@ -478,11 +478,11 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 32
-; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset s0, -8
 ; RV32IFD-NEXT:    .cfi_offset fs0, -16
@@ -501,11 +501,11 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV32IFD-NEXT:    fsw fs2, 0(s0)
 ; RV32IFD-NEXT:    fsw fs1, 4(s0)
 ; RV32IFD-NEXT:    fsw fa0, 8(s0)
-; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs2, 0(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore s0
 ; RV32IFD-NEXT:    .cfi_restore fs0
@@ -519,11 +519,11 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -48
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset s0, -16
 ; RV64IFD-NEXT:    .cfi_offset s1, -24
@@ -546,11 +546,11 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    sd s1, 0(s0)
 ; RV64IFD-NEXT:    fsw fa0, 8(s0)
-; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore s0
 ; RV64IFD-NEXT:    .cfi_restore s1
@@ -568,12 +568,12 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -48
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset s0, -8
 ; RV32IFD-NEXT:    .cfi_offset fs0, -16
@@ -598,12 +598,12 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV32IFD-NEXT:    fsw fs2, 4(s0)
 ; RV32IFD-NEXT:    fsw fs1, 8(s0)
 ; RV32IFD-NEXT:    fsw fa0, 12(s0)
-; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore s0
 ; RV32IFD-NEXT:    .cfi_restore fs0
@@ -618,12 +618,12 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -48
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs3, 0(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs3, 0(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset s0, -16
 ; RV64IFD-NEXT:    .cfi_offset fs0, -24
@@ -648,12 +648,12 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; RV64IFD-NEXT:    fsw fs2, 4(s0)
 ; RV64IFD-NEXT:    fsw fs1, 8(s0)
 ; RV64IFD-NEXT:    fsw fa0, 12(s0)
-; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs3, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs3, 0(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore s0
 ; RV64IFD-NEXT:    .cfi_restore fs0
@@ -678,9 +678,9 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 32
-; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset fs0, -16
 ; RV32IFD-NEXT:    .cfi_offset fs1, -24
@@ -691,9 +691,9 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; RV32IFD-NEXT:    call exp10
 ; RV32IFD-NEXT:    fmv.d fa1, fa0
 ; RV32IFD-NEXT:    fmv.d fa0, fs1
-; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore fs0
 ; RV32IFD-NEXT:    .cfi_restore fs1
@@ -705,9 +705,9 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -32
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 32
-; RV64IFD-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset fs0, -16
 ; RV64IFD-NEXT:    .cfi_offset fs1, -24
@@ -718,9 +718,9 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) {
 ; RV64IFD-NEXT:    call exp10
 ; RV64IFD-NEXT:    fmv.d fa1, fa0
 ; RV64IFD-NEXT:    fmv.d fa0, fs1
-; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore fs0
 ; RV64IFD-NEXT:    .cfi_restore fs1
@@ -736,11 +736,11 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 32
-; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs2, 0(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset s0, -8
 ; RV32IFD-NEXT:    .cfi_offset fs0, -16
@@ -759,11 +759,11 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV32IFD-NEXT:    fsd fs2, 0(s0)
 ; RV32IFD-NEXT:    fsd fs1, 8(s0)
 ; RV32IFD-NEXT:    fsd fa0, 16(s0)
-; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs2, 0(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore s0
 ; RV32IFD-NEXT:    .cfi_restore fs0
@@ -777,11 +777,11 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -48
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset s0, -16
 ; RV64IFD-NEXT:    .cfi_offset fs0, -24
@@ -800,11 +800,11 @@ define <3 x double> @exp10_v3f64(<3 x double> %x) {
 ; RV64IFD-NEXT:    fsd fs2, 0(s0)
 ; RV64IFD-NEXT:    fsd fs1, 8(s0)
 ; RV64IFD-NEXT:    fsd fa0, 16(s0)
-; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore s0
 ; RV64IFD-NEXT:    .cfi_restore fs0
@@ -822,12 +822,12 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -48
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Folded Spill
-; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 44(sp) # 4-byte Spill
+; RV32IFD-NEXT:    sw s0, 40(sp) # 4-byte Spill
+; RV32IFD-NEXT:    fsd fs0, 32(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs1, 24(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs2, 16(sp) # 8-byte Spill
+; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    .cfi_offset s0, -8
 ; RV32IFD-NEXT:    .cfi_offset fs0, -16
@@ -852,12 +852,12 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV32IFD-NEXT:    fsd fs2, 8(s0)
 ; RV32IFD-NEXT:    fsd fs1, 16(s0)
 ; RV32IFD-NEXT:    fsd fa0, 24(s0)
-; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Reload
+; RV32IFD-NEXT:    lw s0, 40(sp) # 4-byte Reload
+; RV32IFD-NEXT:    fld fs0, 32(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs1, 24(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs2, 16(sp) # 8-byte Reload
+; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
 ; RV32IFD-NEXT:    .cfi_restore s0
 ; RV32IFD-NEXT:    .cfi_restore fs0
@@ -872,12 +872,12 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -48
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 48
-; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fsd fs3, 0(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64IFD-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs0, 24(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs1, 16(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Spill
+; RV64IFD-NEXT:    fsd fs3, 0(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    .cfi_offset s0, -16
 ; RV64IFD-NEXT:    .cfi_offset fs0, -24
@@ -902,12 +902,12 @@ define <4 x double> @exp10_v4f64(<4 x double> %x) {
 ; RV64IFD-NEXT:    fsd fs2, 8(s0)
 ; RV64IFD-NEXT:    fsd fs1, 16(s0)
 ; RV64IFD-NEXT:    fsd fa0, 24(s0)
-; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    fld fs3, 0(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64IFD-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs0, 24(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs1, 16(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Reload
+; RV64IFD-NEXT:    fld fs3, 0(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    .cfi_restore ra
 ; RV64IFD-NEXT:    .cfi_restore s0
 ; RV64IFD-NEXT:    .cfi_restore fs0

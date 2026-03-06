@@ -5,10 +5,10 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub sp, sp, a1
@@ -22,45 +22,45 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Spill
 ; CHECK-NEXT:    fmv.s fa0, fa5
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Spill
 ; CHECK-NEXT:    fmv.w.x fa0, s1
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fmv.w.x fa5, s0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Spill
 ; CHECK-NEXT:    fmv.s fa0, fa5
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
   %2 = load <4 x half>, ptr %0, align 2

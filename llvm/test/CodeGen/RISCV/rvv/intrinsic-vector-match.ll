@@ -451,7 +451,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; RV32-NEXT:    vrgather.vi v14, v10, 1
@@ -566,7 +566,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV32-NEXT:    vmseq.vx v11, v8, s0
 ; RV32-NEXT:    vmor.mm v8, v10, v11
 ; RV32-NEXT:    vmand.mm v0, v8, v0
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -576,7 +576,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset s0, -8
 ; RV64-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; RV64-NEXT:    vrgather.vi v14, v10, 1
@@ -691,7 +691,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; RV64-NEXT:    vmseq.vx v11, v8, s0
 ; RV64-NEXT:    vmor.mm v8, v10, v11
 ; RV64-NEXT:    vmand.mm v0, v8, v0
-; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -705,7 +705,7 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vrgather.vi v9, v10, 1
@@ -822,7 +822,7 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV32-NEXT:    vmseq.vx v8, v8, s0
 ; RV32-NEXT:    vmor.mm v8, v9, v8
 ; RV32-NEXT:    vmand.mm v0, v8, v0
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -832,7 +832,7 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset s0, -8
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vrgather.vi v9, v10, 1
@@ -949,7 +949,7 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; RV64-NEXT:    vmseq.vx v8, v8, s0
 ; RV64-NEXT:    vmor.mm v8, v9, v8
 ; RV64-NEXT:    vmand.mm v0, v8, v0
-; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0

@@ -251,36 +251,36 @@ define dso_local void @call_dsolocal_func() nounwind {
 ; RV32-STATIC-LABEL: call_dsolocal_func:
 ; RV32-STATIC:       # %bb.0:
 ; RV32-STATIC-NEXT:    addi sp, sp, -16
-; RV32-STATIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-STATIC-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-STATIC-NEXT:    call dsolocal_func
-; RV32-STATIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-STATIC-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-STATIC-NEXT:    addi sp, sp, 16
 ; RV32-STATIC-NEXT:    ret
 ;
 ; RV32-PIC-LABEL: call_dsolocal_func:
 ; RV32-PIC:       # %bb.0:
 ; RV32-PIC-NEXT:    addi sp, sp, -16
-; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-PIC-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-PIC-NEXT:    call .Ldsolocal_func$local
-; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-PIC-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-PIC-NEXT:    addi sp, sp, 16
 ; RV32-PIC-NEXT:    ret
 ;
 ; RV64-STATIC-LABEL: call_dsolocal_func:
 ; RV64-STATIC:       # %bb.0:
 ; RV64-STATIC-NEXT:    addi sp, sp, -16
-; RV64-STATIC-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-STATIC-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-STATIC-NEXT:    call dsolocal_func
-; RV64-STATIC-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-STATIC-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-STATIC-NEXT:    addi sp, sp, 16
 ; RV64-STATIC-NEXT:    ret
 ;
 ; RV64-PIC-LABEL: call_dsolocal_func:
 ; RV64-PIC:       # %bb.0:
 ; RV64-PIC-NEXT:    addi sp, sp, -16
-; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-PIC-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-PIC-NEXT:    call .Ldsolocal_func$local
-; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-PIC-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-PIC-NEXT:    addi sp, sp, 16
 ; RV64-PIC-NEXT:    ret
   call ptr @dsolocal_func()

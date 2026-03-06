@@ -878,42 +878,42 @@ define void @load_zext_nneg_sext_cse(ptr %p) nounwind {
 ; RV32I-LABEL: load_zext_nneg_sext_cse:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32I-NEXT:    lh s0, 0(a0)
 ; RV32I-NEXT:    bltz s0, .LBB50_2
 ; RV32I-NEXT:  # %bb.1: # %bb1
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call bar_i16
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    tail bar_i32
 ; RV32I-NEXT:  .LBB50_2: # %bb2
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: load_zext_nneg_sext_cse:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64-NEXT:    lh s0, 0(a0)
 ; RV64-NEXT:    bltz s0, .LBB50_2
 ; RV64-NEXT:  # %bb.1: # %bb1
 ; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    call bar_i16
 ; RV64-NEXT:    mv a0, s0
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    tail bar_i32
 ; RV64-NEXT:  .LBB50_2: # %bb2
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %load = load i16, ptr %p

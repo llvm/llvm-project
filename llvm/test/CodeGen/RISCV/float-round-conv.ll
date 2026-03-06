@@ -98,10 +98,10 @@ define i64 @test_floor_si64(float %x) {
 ; RV32IF-NEXT:  .LBB3_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixsfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -125,10 +125,10 @@ define i64 @test_floor_si64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB3_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixsfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -233,10 +233,10 @@ define i64 @test_floor_ui64(float %x) {
 ; RV32IF-NEXT:  .LBB7_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixunssfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -260,10 +260,10 @@ define i64 @test_floor_ui64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB7_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixunssfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -368,10 +368,10 @@ define i64 @test_ceil_si64(float %x) {
 ; RV32IF-NEXT:  .LBB11_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixsfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -395,10 +395,10 @@ define i64 @test_ceil_si64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB11_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixsfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -503,10 +503,10 @@ define i64 @test_ceil_ui64(float %x) {
 ; RV32IF-NEXT:  .LBB15_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixunssfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -530,10 +530,10 @@ define i64 @test_ceil_ui64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB15_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixunssfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -638,10 +638,10 @@ define i64 @test_trunc_si64(float %x) {
 ; RV32IF-NEXT:  .LBB19_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixsfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -665,10 +665,10 @@ define i64 @test_trunc_si64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB19_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixsfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -773,10 +773,10 @@ define i64 @test_trunc_ui64(float %x) {
 ; RV32IF-NEXT:  .LBB23_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixunssfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -800,10 +800,10 @@ define i64 @test_trunc_ui64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB23_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixunssfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -908,10 +908,10 @@ define i64 @test_round_si64(float %x) {
 ; RV32IF-NEXT:  .LBB27_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixsfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -935,10 +935,10 @@ define i64 @test_round_si64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB27_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixsfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -1043,10 +1043,10 @@ define i64 @test_round_ui64(float %x) {
 ; RV32IF-NEXT:  .LBB31_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixunssfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -1070,10 +1070,10 @@ define i64 @test_round_ui64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB31_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixunssfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -1178,10 +1178,10 @@ define i64 @test_roundeven_si64(float %x) {
 ; RV32IF-NEXT:  .LBB35_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixsfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -1205,10 +1205,10 @@ define i64 @test_roundeven_si64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB35_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixsfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -1313,10 +1313,10 @@ define i64 @test_roundeven_ui64(float %x) {
 ; RV32IF-NEXT:  .LBB39_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixunssfdi
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 0
@@ -1340,10 +1340,10 @@ define i64 @test_roundeven_ui64(float %x) {
 ; RV32IZFINX-NEXT:  .LBB39_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32IZFINX-NEXT:    call __fixunssfdi
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    .cfi_restore ra
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -1363,10 +1363,10 @@ define float @test_floor_float(float %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    call floor@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -1374,10 +1374,10 @@ define float @test_floor_float(float %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    call floor@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ; RV32IF-LABEL: test_floor_float:
@@ -1442,10 +1442,10 @@ define float @test_ceil_float(float %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    call ceil@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -1453,10 +1453,10 @@ define float @test_ceil_float(float %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    call ceil@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ; RV32IF-LABEL: test_ceil_float:
@@ -1521,10 +1521,10 @@ define float @test_trunc_float(float %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    call trunc@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -1532,10 +1532,10 @@ define float @test_trunc_float(float %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    call trunc@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ; RV32IF-LABEL: test_trunc_float:
@@ -1600,10 +1600,10 @@ define float @test_round_float(float %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    call round@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -1611,10 +1611,10 @@ define float @test_round_float(float %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    call round@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ; RV32IF-LABEL: test_round_float:
@@ -1679,10 +1679,10 @@ define float @test_roundeven_float(float %x) {
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
 ; RV32IFD-NEXT:    call roundeven@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -1690,10 +1690,10 @@ define float @test_roundeven_float(float %x) {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    .cfi_offset ra, -8
 ; RV64IFD-NEXT:    call roundeven@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
 ; RV32IF-LABEL: test_roundeven_float:

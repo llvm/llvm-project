@@ -25,10 +25,10 @@ define void @testi(ptr %a) {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    .cfi_def_cfa_offset 16
-; RV32I-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s3, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s4, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s5, 0(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 12(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s3, 8(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s4, 4(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s5, 0(sp) # 4-byte Spill
 ; RV32I-NEXT:    .cfi_offset s2, -4
 ; RV32I-NEXT:    .cfi_offset s3, -8
 ; RV32I-NEXT:    .cfi_offset s4, -12
@@ -39,10 +39,10 @@ define void @testi(ptr %a) {
 ; RV32I-NEXT:    lw s4, 12(a0)
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s3, 8(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s5, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 12(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s3, 8(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s4, 4(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s5, 0(sp) # 4-byte Reload
 ; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    .cfi_restore s3
 ; RV32I-NEXT:    .cfi_restore s4
@@ -55,10 +55,10 @@ define void @testi(ptr %a) {
 ; RV32D:       # %bb.0: # %entry
 ; RV32D-NEXT:    addi sp, sp, -16
 ; RV32D-NEXT:    .cfi_def_cfa_offset 16
-; RV32D-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
-; RV32D-NEXT:    sw s3, 8(sp) # 4-byte Folded Spill
-; RV32D-NEXT:    sw s4, 4(sp) # 4-byte Folded Spill
-; RV32D-NEXT:    sw s5, 0(sp) # 4-byte Folded Spill
+; RV32D-NEXT:    sw s2, 12(sp) # 4-byte Spill
+; RV32D-NEXT:    sw s3, 8(sp) # 4-byte Spill
+; RV32D-NEXT:    sw s4, 4(sp) # 4-byte Spill
+; RV32D-NEXT:    sw s5, 0(sp) # 4-byte Spill
 ; RV32D-NEXT:    .cfi_offset s2, -4
 ; RV32D-NEXT:    .cfi_offset s3, -8
 ; RV32D-NEXT:    .cfi_offset s4, -12
@@ -69,10 +69,10 @@ define void @testi(ptr %a) {
 ; RV32D-NEXT:    lw s4, 12(a0)
 ; RV32D-NEXT:    #APP
 ; RV32D-NEXT:    #NO_APP
-; RV32D-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
-; RV32D-NEXT:    lw s3, 8(sp) # 4-byte Folded Reload
-; RV32D-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
-; RV32D-NEXT:    lw s5, 0(sp) # 4-byte Folded Reload
+; RV32D-NEXT:    lw s2, 12(sp) # 4-byte Reload
+; RV32D-NEXT:    lw s3, 8(sp) # 4-byte Reload
+; RV32D-NEXT:    lw s4, 4(sp) # 4-byte Reload
+; RV32D-NEXT:    lw s5, 0(sp) # 4-byte Reload
 ; RV32D-NEXT:    .cfi_restore s2
 ; RV32D-NEXT:    .cfi_restore s3
 ; RV32D-NEXT:    .cfi_restore s4
@@ -85,10 +85,10 @@ define void @testi(ptr %a) {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi sp, sp, -32
 ; RV64I-NEXT:    .cfi_def_cfa_offset 32
-; RV64I-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s5, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s4, 8(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s5, 0(sp) # 8-byte Spill
 ; RV64I-NEXT:    .cfi_offset s2, -8
 ; RV64I-NEXT:    .cfi_offset s3, -16
 ; RV64I-NEXT:    .cfi_offset s4, -24
@@ -99,10 +99,10 @@ define void @testi(ptr %a) {
 ; RV64I-NEXT:    ld s4, 24(a0)
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s5, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s4, 8(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s5, 0(sp) # 8-byte Reload
 ; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    .cfi_restore s3
 ; RV64I-NEXT:    .cfi_restore s4
@@ -115,10 +115,10 @@ define void @testi(ptr %a) {
 ; RV64D:       # %bb.0: # %entry
 ; RV64D-NEXT:    addi sp, sp, -32
 ; RV64D-NEXT:    .cfi_def_cfa_offset 32
-; RV64D-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64D-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64D-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64D-NEXT:    sd s5, 0(sp) # 8-byte Folded Spill
+; RV64D-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64D-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64D-NEXT:    sd s4, 8(sp) # 8-byte Spill
+; RV64D-NEXT:    sd s5, 0(sp) # 8-byte Spill
 ; RV64D-NEXT:    .cfi_offset s2, -8
 ; RV64D-NEXT:    .cfi_offset s3, -16
 ; RV64D-NEXT:    .cfi_offset s4, -24
@@ -129,10 +129,10 @@ define void @testi(ptr %a) {
 ; RV64D-NEXT:    ld s4, 24(a0)
 ; RV64D-NEXT:    #APP
 ; RV64D-NEXT:    #NO_APP
-; RV64D-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64D-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64D-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64D-NEXT:    ld s5, 0(sp) # 8-byte Folded Reload
+; RV64D-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64D-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64D-NEXT:    ld s4, 8(sp) # 8-byte Reload
+; RV64D-NEXT:    ld s5, 0(sp) # 8-byte Reload
 ; RV64D-NEXT:    .cfi_restore s2
 ; RV64D-NEXT:    .cfi_restore s3
 ; RV64D-NEXT:    .cfi_restore s4
@@ -145,10 +145,10 @@ define void @testi(ptr %a) {
 ; RV32I_PAIR:       # %bb.0: # %entry
 ; RV32I_PAIR-NEXT:    addi sp, sp, -16
 ; RV32I_PAIR-NEXT:    .cfi_def_cfa_offset 16
-; RV32I_PAIR-NEXT:    sw s3, 8(sp) # 4-byte Folded Spill
-; RV32I_PAIR-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
-; RV32I_PAIR-NEXT:    sw s5, 0(sp) # 4-byte Folded Spill
-; RV32I_PAIR-NEXT:    sw s4, 4(sp) # 4-byte Folded Spill
+; RV32I_PAIR-NEXT:    sw s3, 8(sp) # 4-byte Spill
+; RV32I_PAIR-NEXT:    sw s2, 12(sp) # 4-byte Spill
+; RV32I_PAIR-NEXT:    sw s5, 0(sp) # 4-byte Spill
+; RV32I_PAIR-NEXT:    sw s4, 4(sp) # 4-byte Spill
 ; RV32I_PAIR-NEXT:    .cfi_offset s2, -4
 ; RV32I_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32I_PAIR-NEXT:    .cfi_offset s4, -12
@@ -157,10 +157,10 @@ define void @testi(ptr %a) {
 ; RV32I_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32I_PAIR-NEXT:    #APP
 ; RV32I_PAIR-NEXT:    #NO_APP
-; RV32I_PAIR-NEXT:    lw s3, 8(sp) # 4-byte Folded Reload
-; RV32I_PAIR-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
-; RV32I_PAIR-NEXT:    lw s5, 0(sp) # 4-byte Folded Reload
-; RV32I_PAIR-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32I_PAIR-NEXT:    lw s3, 8(sp) # 4-byte Reload
+; RV32I_PAIR-NEXT:    lw s2, 12(sp) # 4-byte Reload
+; RV32I_PAIR-NEXT:    lw s5, 0(sp) # 4-byte Reload
+; RV32I_PAIR-NEXT:    lw s4, 4(sp) # 4-byte Reload
 ; RV32I_PAIR-NEXT:    .cfi_restore s2
 ; RV32I_PAIR-NEXT:    .cfi_restore s3
 ; RV32I_PAIR-NEXT:    .cfi_restore s4
@@ -173,10 +173,10 @@ define void @testi(ptr %a) {
 ; RV32D_PAIR:       # %bb.0: # %entry
 ; RV32D_PAIR-NEXT:    addi sp, sp, -16
 ; RV32D_PAIR-NEXT:    .cfi_def_cfa_offset 16
-; RV32D_PAIR-NEXT:    sw s3, 8(sp) # 4-byte Folded Spill
-; RV32D_PAIR-NEXT:    sw s2, 12(sp) # 4-byte Folded Spill
-; RV32D_PAIR-NEXT:    sw s5, 0(sp) # 4-byte Folded Spill
-; RV32D_PAIR-NEXT:    sw s4, 4(sp) # 4-byte Folded Spill
+; RV32D_PAIR-NEXT:    sw s3, 8(sp) # 4-byte Spill
+; RV32D_PAIR-NEXT:    sw s2, 12(sp) # 4-byte Spill
+; RV32D_PAIR-NEXT:    sw s5, 0(sp) # 4-byte Spill
+; RV32D_PAIR-NEXT:    sw s4, 4(sp) # 4-byte Spill
 ; RV32D_PAIR-NEXT:    .cfi_offset s2, -4
 ; RV32D_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32D_PAIR-NEXT:    .cfi_offset s4, -12
@@ -185,10 +185,10 @@ define void @testi(ptr %a) {
 ; RV32D_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32D_PAIR-NEXT:    #APP
 ; RV32D_PAIR-NEXT:    #NO_APP
-; RV32D_PAIR-NEXT:    lw s3, 8(sp) # 4-byte Folded Reload
-; RV32D_PAIR-NEXT:    lw s2, 12(sp) # 4-byte Folded Reload
-; RV32D_PAIR-NEXT:    lw s5, 0(sp) # 4-byte Folded Reload
-; RV32D_PAIR-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32D_PAIR-NEXT:    lw s3, 8(sp) # 4-byte Reload
+; RV32D_PAIR-NEXT:    lw s2, 12(sp) # 4-byte Reload
+; RV32D_PAIR-NEXT:    lw s5, 0(sp) # 4-byte Reload
+; RV32D_PAIR-NEXT:    lw s4, 4(sp) # 4-byte Reload
 ; RV32D_PAIR-NEXT:    .cfi_restore s2
 ; RV32D_PAIR-NEXT:    .cfi_restore s3
 ; RV32D_PAIR-NEXT:    .cfi_restore s4
@@ -201,10 +201,10 @@ define void @testi(ptr %a) {
 ; RV64I_PAIR:       # %bb.0: # %entry
 ; RV64I_PAIR-NEXT:    addi sp, sp, -32
 ; RV64I_PAIR-NEXT:    .cfi_def_cfa_offset 32
-; RV64I_PAIR-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64I_PAIR-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64I_PAIR-NEXT:    sd s5, 0(sp) # 8-byte Folded Spill
-; RV64I_PAIR-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64I_PAIR-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64I_PAIR-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64I_PAIR-NEXT:    sd s5, 0(sp) # 8-byte Spill
+; RV64I_PAIR-NEXT:    sd s4, 8(sp) # 8-byte Spill
 ; RV64I_PAIR-NEXT:    .cfi_offset s2, -8
 ; RV64I_PAIR-NEXT:    .cfi_offset s3, -16
 ; RV64I_PAIR-NEXT:    .cfi_offset s4, -24
@@ -214,10 +214,10 @@ define void @testi(ptr %a) {
 ; RV64I_PAIR-NEXT:    ld s4, 24(a0)
 ; RV64I_PAIR-NEXT:    #APP
 ; RV64I_PAIR-NEXT:    #NO_APP
-; RV64I_PAIR-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64I_PAIR-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64I_PAIR-NEXT:    ld s5, 0(sp) # 8-byte Folded Reload
-; RV64I_PAIR-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64I_PAIR-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64I_PAIR-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64I_PAIR-NEXT:    ld s5, 0(sp) # 8-byte Reload
+; RV64I_PAIR-NEXT:    ld s4, 8(sp) # 8-byte Reload
 ; RV64I_PAIR-NEXT:    .cfi_restore s2
 ; RV64I_PAIR-NEXT:    .cfi_restore s3
 ; RV64I_PAIR-NEXT:    .cfi_restore s4
@@ -230,10 +230,10 @@ define void @testi(ptr %a) {
 ; RV64P_8700:       # %bb.0: # %entry
 ; RV64P_8700-NEXT:    addi sp, sp, -32
 ; RV64P_8700-NEXT:    .cfi_def_cfa_offset 32
-; RV64P_8700-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64P_8700-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64P_8700-NEXT:    sd s5, 0(sp) # 8-byte Folded Spill
-; RV64P_8700-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64P_8700-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64P_8700-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64P_8700-NEXT:    sd s5, 0(sp) # 8-byte Spill
+; RV64P_8700-NEXT:    sd s4, 8(sp) # 8-byte Spill
 ; RV64P_8700-NEXT:    .cfi_offset s2, -8
 ; RV64P_8700-NEXT:    .cfi_offset s3, -16
 ; RV64P_8700-NEXT:    .cfi_offset s4, -24
@@ -243,10 +243,10 @@ define void @testi(ptr %a) {
 ; RV64P_8700-NEXT:    ld s4, 24(a0)
 ; RV64P_8700-NEXT:    #APP
 ; RV64P_8700-NEXT:    #NO_APP
-; RV64P_8700-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64P_8700-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64P_8700-NEXT:    ld s5, 0(sp) # 8-byte Folded Reload
-; RV64P_8700-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64P_8700-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64P_8700-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64P_8700-NEXT:    ld s5, 0(sp) # 8-byte Reload
+; RV64P_8700-NEXT:    ld s4, 8(sp) # 8-byte Reload
 ; RV64P_8700-NEXT:    .cfi_restore s2
 ; RV64P_8700-NEXT:    .cfi_restore s3
 ; RV64P_8700-NEXT:    .cfi_restore s4
@@ -259,10 +259,10 @@ define void @testi(ptr %a) {
 ; RV64D_PAIR:       # %bb.0: # %entry
 ; RV64D_PAIR-NEXT:    addi sp, sp, -32
 ; RV64D_PAIR-NEXT:    .cfi_def_cfa_offset 32
-; RV64D_PAIR-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64D_PAIR-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64D_PAIR-NEXT:    sd s5, 0(sp) # 8-byte Folded Spill
-; RV64D_PAIR-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64D_PAIR-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64D_PAIR-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64D_PAIR-NEXT:    sd s5, 0(sp) # 8-byte Spill
+; RV64D_PAIR-NEXT:    sd s4, 8(sp) # 8-byte Spill
 ; RV64D_PAIR-NEXT:    .cfi_offset s2, -8
 ; RV64D_PAIR-NEXT:    .cfi_offset s3, -16
 ; RV64D_PAIR-NEXT:    .cfi_offset s4, -24
@@ -272,10 +272,10 @@ define void @testi(ptr %a) {
 ; RV64D_PAIR-NEXT:    ld s4, 24(a0)
 ; RV64D_PAIR-NEXT:    #APP
 ; RV64D_PAIR-NEXT:    #NO_APP
-; RV64D_PAIR-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64D_PAIR-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64D_PAIR-NEXT:    ld s5, 0(sp) # 8-byte Folded Reload
-; RV64D_PAIR-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64D_PAIR-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64D_PAIR-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64D_PAIR-NEXT:    ld s5, 0(sp) # 8-byte Reload
+; RV64D_PAIR-NEXT:    ld s4, 8(sp) # 8-byte Reload
 ; RV64D_PAIR-NEXT:    .cfi_restore s2
 ; RV64D_PAIR-NEXT:    .cfi_restore s3
 ; RV64D_PAIR-NEXT:    .cfi_restore s4
@@ -288,10 +288,10 @@ define void @testi(ptr %a) {
 ; RV64D_NOPAIR:       # %bb.0: # %entry
 ; RV64D_NOPAIR-NEXT:    addi sp, sp, -32
 ; RV64D_NOPAIR-NEXT:    .cfi_def_cfa_offset 32
-; RV64D_NOPAIR-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64D_NOPAIR-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64D_NOPAIR-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
-; RV64D_NOPAIR-NEXT:    sd s5, 0(sp) # 8-byte Folded Spill
+; RV64D_NOPAIR-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64D_NOPAIR-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64D_NOPAIR-NEXT:    sd s4, 8(sp) # 8-byte Spill
+; RV64D_NOPAIR-NEXT:    sd s5, 0(sp) # 8-byte Spill
 ; RV64D_NOPAIR-NEXT:    .cfi_offset s2, -8
 ; RV64D_NOPAIR-NEXT:    .cfi_offset s3, -16
 ; RV64D_NOPAIR-NEXT:    .cfi_offset s4, -24
@@ -302,10 +302,10 @@ define void @testi(ptr %a) {
 ; RV64D_NOPAIR-NEXT:    ld s4, 24(a0)
 ; RV64D_NOPAIR-NEXT:    #APP
 ; RV64D_NOPAIR-NEXT:    #NO_APP
-; RV64D_NOPAIR-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64D_NOPAIR-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64D_NOPAIR-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
-; RV64D_NOPAIR-NEXT:    ld s5, 0(sp) # 8-byte Folded Reload
+; RV64D_NOPAIR-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64D_NOPAIR-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64D_NOPAIR-NEXT:    ld s4, 8(sp) # 8-byte Reload
+; RV64D_NOPAIR-NEXT:    ld s5, 0(sp) # 8-byte Reload
 ; RV64D_NOPAIR-NEXT:    .cfi_restore s2
 ; RV64D_NOPAIR-NEXT:    .cfi_restore s3
 ; RV64D_NOPAIR-NEXT:    .cfi_restore s4

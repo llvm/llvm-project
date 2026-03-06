@@ -118,22 +118,22 @@ define iXLen2 @test_udiv_7(iXLen2 %x) nounwind {
 ; RV32-LABEL: test_udiv_7:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a2, 7
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __udivdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_udiv_7:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    li a2, 7
 ; RV64-NEXT:    li a3, 0
 ; RV64-NEXT:    call __udivti3
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 7
@@ -144,22 +144,22 @@ define iXLen2 @test_udiv_9(iXLen2 %x) nounwind {
 ; RV32-LABEL: test_udiv_9:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a2, 9
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __udivdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_udiv_9:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    li a2, 9
 ; RV64-NEXT:    li a3, 0
 ; RV64-NEXT:    call __udivti3
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 9

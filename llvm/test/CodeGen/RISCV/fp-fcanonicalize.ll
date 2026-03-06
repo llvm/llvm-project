@@ -16,7 +16,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    slli a0, a0, 48
 ; CHECK-SOFT-RV64-NEXT:    srli a0, a0, 48
@@ -24,7 +24,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -39,7 +39,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-NOFP16-RV64:       # %bb.0:
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, -16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NOFP16-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-NOFP16-RV64-NEXT:    call __extendhfsf2
 ; CHECK-NOFP16-RV64-NEXT:    fmin.s fa0, fa0, fa0
@@ -48,7 +48,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-NOFP16-RV64-NEXT:    lui a1, 1048560
 ; CHECK-NOFP16-RV64-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV64-NEXT:    fmv.w.x fa0, a0
-; CHECK-NOFP16-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -58,7 +58,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    slli a0, a0, 16
 ; CHECK-SOFT-RV32-NEXT:    srli a0, a0, 16
@@ -66,7 +66,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -81,7 +81,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NOFP16-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NOFP16-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-NOFP16-RV32-NEXT:    call __extendhfsf2
 ; CHECK-NOFP16-RV32-NEXT:    fmin.s fa0, fa0, fa0
@@ -90,7 +90,7 @@ define half @fcanonicalize_f16(half %x) {
 ; CHECK-NOFP16-RV32-NEXT:    lui a1, 1048560
 ; CHECK-NOFP16-RV32-NEXT:    or a0, a0, a1
 ; CHECK-NOFP16-RV32-NEXT:    fmv.w.x fa0, a0
-; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -100,7 +100,7 @@ define half @fcanonicalize_f16(half %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    call __extendhfsf2
 ; RV32ZFINX-NEXT:    fmin.s a0, a0, a0
@@ -109,7 +109,7 @@ define half @fcanonicalize_f16(half %x) {
 ; RV32ZFINX-NEXT:    lui a1, 1048560
 ; RV32ZFINX-NEXT:    or a0, a0, a1
 ; RV32ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    addi sp, sp, 16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -119,7 +119,7 @@ define half @fcanonicalize_f16(half %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -16
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    call __extendhfsf2
 ; RV64ZFINX-NEXT:    fmin.s a0, a0, a0
@@ -128,7 +128,7 @@ define half @fcanonicalize_f16(half %x) {
 ; RV64ZFINX-NEXT:    lui a1, 1048560
 ; RV64ZFINX-NEXT:    or a0, a0, a1
 ; RV64ZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    addi sp, sp, 16
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -138,7 +138,7 @@ define half @fcanonicalize_f16(half %x) {
 ; RV64ZDINX:       # %bb.0:
 ; RV64ZDINX-NEXT:    addi sp, sp, -16
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZDINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZDINX-NEXT:    call __extendhfsf2
 ; RV64ZDINX-NEXT:    fmin.s a0, a0, a0
@@ -147,7 +147,7 @@ define half @fcanonicalize_f16(half %x) {
 ; RV64ZDINX-NEXT:    lui a1, 1048560
 ; RV64ZDINX-NEXT:    or a0, a0, a1
 ; RV64ZDINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
-; RV64ZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZDINX-NEXT:    .cfi_restore ra
 ; RV64ZDINX-NEXT:    addi sp, sp, 16
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 0
@@ -171,10 +171,10 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -195,10 +195,10 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV64-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s1
-; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -217,9 +217,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-NOFP16-RV64:       # %bb.0:
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NOFP16-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s1, -24
@@ -235,9 +235,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    call __truncsfhf2
 ; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a1, fa0
 ; CHECK-NOFP16-RV64-NEXT:    mv a0, s1
-; CHECK-NOFP16-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
@@ -249,10 +249,10 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 0(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -273,10 +273,10 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV32-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, s1
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 0(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -295,9 +295,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NOFP16-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 0(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset fs0, -16
@@ -313,9 +313,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    call __truncsfhf2
 ; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a1, fa0
 ; CHECK-NOFP16-RV32-NEXT:    mv a0, s0
-; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs0, 0(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
@@ -327,9 +327,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -345,9 +345,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    mv a1, a0
 ; RV32ZFINX-NEXT:    mv a0, s1
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -359,9 +359,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -32
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -377,9 +377,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    mv a1, a0
 ; RV64ZFINX-NEXT:    mv a0, s1
-; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -391,9 +391,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; RV64ZDINX:       # %bb.0:
 ; RV64ZDINX-NEXT:    addi sp, sp, -32
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZDINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64ZDINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZDINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZDINX-NEXT:    .cfi_offset s1, -24
@@ -409,9 +409,9 @@ define <2 x half> @fcanonicalize_v2f16(<2 x half> %x) {
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    mv a1, a0
 ; RV64ZDINX-NEXT:    mv a0, s1
-; RV64ZDINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64ZDINX-NEXT:    .cfi_restore ra
 ; RV64ZDINX-NEXT:    .cfi_restore s0
 ; RV64ZDINX-NEXT:    .cfi_restore s1
@@ -439,10 +439,10 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -463,10 +463,10 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV64-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s1
-; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -485,9 +485,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-NOFP16-RV64:       # %bb.0:
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NOFP16-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s1, -24
@@ -503,9 +503,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    call __truncsfhf2
 ; CHECK-NOFP16-RV64-NEXT:    fmv.x.w a1, fa0
 ; CHECK-NOFP16-RV64-NEXT:    mv a0, s1
-; CHECK-NOFP16-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
@@ -517,10 +517,10 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 0(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -541,10 +541,10 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    call __truncsfhf2
 ; CHECK-SOFT-RV32-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, s1
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 0(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -563,9 +563,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NOFP16-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 0(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset fs0, -16
@@ -581,9 +581,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    call __truncsfhf2
 ; CHECK-NOFP16-RV32-NEXT:    fmv.x.w a1, fa0
 ; CHECK-NOFP16-RV32-NEXT:    mv a0, s0
-; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs0, 0(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore fs0
@@ -595,9 +595,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -613,9 +613,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; RV32ZFINX-NEXT:    call __truncsfhf2
 ; RV32ZFINX-NEXT:    mv a1, a0
 ; RV32ZFINX-NEXT:    mv a0, s1
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -627,9 +627,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -32
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -645,9 +645,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; RV64ZFINX-NEXT:    call __truncsfhf2
 ; RV64ZFINX-NEXT:    mv a1, a0
 ; RV64ZFINX-NEXT:    mv a0, s1
-; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -659,9 +659,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; RV64ZDINX:       # %bb.0:
 ; RV64ZDINX-NEXT:    addi sp, sp, -32
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZDINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; RV64ZDINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZDINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZDINX-NEXT:    .cfi_offset s1, -24
@@ -677,9 +677,9 @@ define <2 x half> @fcanonicalize_v2f16_nnan(<2 x half> %x) {
 ; RV64ZDINX-NEXT:    call __truncsfhf2
 ; RV64ZDINX-NEXT:    mv a1, a0
 ; RV64ZDINX-NEXT:    mv a0, s1
-; RV64ZDINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; RV64ZDINX-NEXT:    .cfi_restore ra
 ; RV64ZDINX-NEXT:    .cfi_restore s0
 ; RV64ZDINX-NEXT:    .cfi_restore s1
@@ -707,12 +707,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -48
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SOFT-RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -751,12 +751,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    sh s1, 2(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s2, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh a0, 6(s0)
-; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -783,14 +783,14 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV64:       # %bb.0:
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, -64
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NOFP16-RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 0(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV64-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s0, 48(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s1, 40(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s2, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s3, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 0(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s1, -24
@@ -831,14 +831,14 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh a0, 6(s0)
-; CHECK-NOFP16-RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    ld ra, 56(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s0, 48(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s1, 40(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s2, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s3, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs1, 8(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs2, 0(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
@@ -855,12 +855,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -899,12 +899,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    sh s1, 2(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s2, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh a0, 6(s0)
-; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -931,15 +931,15 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, -64
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NOFP16-RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV32-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s0, 56(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s1, 52(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s2, 48(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s3, 44(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 8(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s1, -12
@@ -984,15 +984,15 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh a0, 6(s0)
-; CHECK-NOFP16-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s0, 56(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s1, 52(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s2, 48(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s3, 44(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs0, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs1, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs2, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs3, 8(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
@@ -1010,12 +1010,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -32
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -1051,12 +1051,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV32ZFINX-NEXT:    sh s1, 2(s0)
 ; RV32ZFINX-NEXT:    sh s2, 4(s0)
 ; RV32ZFINX-NEXT:    sh a0, 6(s0)
-; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -1071,12 +1071,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -48
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 48
-; RV64ZFINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -1112,12 +1112,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV64ZFINX-NEXT:    sh s1, 2(s0)
 ; RV64ZFINX-NEXT:    sh s2, 4(s0)
 ; RV64ZFINX-NEXT:    sh a0, 6(s0)
-; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -1132,12 +1132,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV64ZDINX:       # %bb.0:
 ; RV64ZDINX-NEXT:    addi sp, sp, -48
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 48
-; RV64ZDINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; RV64ZDINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZDINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZDINX-NEXT:    .cfi_offset s1, -24
@@ -1173,12 +1173,12 @@ define <4 x half> @fcanonicalize_v4f16(<4 x half> %x) {
 ; RV64ZDINX-NEXT:    sh s1, 2(s0)
 ; RV64ZDINX-NEXT:    sh s2, 4(s0)
 ; RV64ZDINX-NEXT:    sh a0, 6(s0)
-; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; RV64ZDINX-NEXT:    .cfi_restore ra
 ; RV64ZDINX-NEXT:    .cfi_restore s0
 ; RV64ZDINX-NEXT:    .cfi_restore s1
@@ -1221,12 +1221,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -48
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SOFT-RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -1265,12 +1265,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    sh s1, 2(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s2, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh a0, 6(s0)
-; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -1297,14 +1297,14 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV64:       # %bb.0:
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, -64
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NOFP16-RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 0(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV64-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s0, 48(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s1, 40(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s2, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s3, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 0(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s1, -24
@@ -1345,14 +1345,14 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh a0, 6(s0)
-; CHECK-NOFP16-RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    ld ra, 56(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s0, 48(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s1, 40(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s2, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s3, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs1, 8(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs2, 0(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
@@ -1369,12 +1369,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -1413,12 +1413,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    sh s1, 2(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s2, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh a0, 6(s0)
-; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -1445,15 +1445,15 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, -64
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NOFP16-RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV32-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s0, 56(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s1, 52(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s2, 48(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s3, 44(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 8(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s1, -12
@@ -1498,15 +1498,15 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh a0, 6(s0)
-; CHECK-NOFP16-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs1, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs2, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s0, 56(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s1, 52(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s2, 48(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s3, 44(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs0, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs1, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs2, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs3, 8(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
@@ -1524,12 +1524,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -32
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -1565,12 +1565,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV32ZFINX-NEXT:    sh s1, 2(s0)
 ; RV32ZFINX-NEXT:    sh s2, 4(s0)
 ; RV32ZFINX-NEXT:    sh a0, 6(s0)
-; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -1585,12 +1585,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -48
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 48
-; RV64ZFINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -1626,12 +1626,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV64ZFINX-NEXT:    sh s1, 2(s0)
 ; RV64ZFINX-NEXT:    sh s2, 4(s0)
 ; RV64ZFINX-NEXT:    sh a0, 6(s0)
-; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -1646,12 +1646,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV64ZDINX:       # %bb.0:
 ; RV64ZDINX-NEXT:    addi sp, sp, -48
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 48
-; RV64ZDINX-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; RV64ZDINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZDINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZDINX-NEXT:    .cfi_offset s1, -24
@@ -1687,12 +1687,12 @@ define <4 x half> @fcanonicalize_v4f16_nnan(<4 x half> %x) {
 ; RV64ZDINX-NEXT:    sh s1, 2(s0)
 ; RV64ZDINX-NEXT:    sh s2, 4(s0)
 ; RV64ZDINX-NEXT:    sh a0, 6(s0)
-; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; RV64ZDINX-NEXT:    .cfi_restore ra
 ; RV64ZDINX-NEXT:    .cfi_restore s0
 ; RV64ZDINX-NEXT:    .cfi_restore s1
@@ -1735,16 +1735,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -80
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-SOFT-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 56(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 48(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s3, 40(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s4, 32(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s5, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s6, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s7, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s8, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -1819,16 +1819,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s8, 6(s0)
-; CHECK-SOFT-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 56(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 48(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s3, 40(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s4, 32(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s5, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s6, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s7, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s8, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -1867,22 +1867,22 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV64:       # %bb.0:
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, -128
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 128
-; CHECK-NOFP16-RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 48(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 40(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs3, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs4, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs6, 0(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV64-NEXT:    sd ra, 120(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s0, 112(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s1, 104(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s2, 96(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s3, 88(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s4, 80(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s5, 72(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s6, 64(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s7, 56(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 48(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 40(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs3, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs4, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs5, 8(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs6, 0(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s1, -24
@@ -1963,22 +1963,22 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s4, 6(s0)
-; CHECK-NOFP16-RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs0, 48(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs1, 40(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs2, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs3, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    ld ra, 120(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s0, 112(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s1, 104(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s2, 96(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s3, 88(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s4, 80(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s5, 72(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s6, 64(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s7, 56(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs0, 48(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs1, 40(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs2, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs3, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs4, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs5, 8(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs6, 0(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
@@ -2003,16 +2003,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -48
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SOFT-RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 44(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 40(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 36(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 32(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s5, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s6, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s7, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s8, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -2087,16 +2087,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s8, 6(s0)
-; CHECK-SOFT-RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 44(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 40(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 36(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 32(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s5, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s6, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s7, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s8, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -2135,23 +2135,23 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, -112
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NOFP16-RV32-NEXT:    sw ra, 108(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s0, 104(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s1, 100(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s2, 96(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s3, 92(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s4, 88(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s5, 84(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s6, 80(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s7, 76(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 64(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 56(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 48(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 40(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs4, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs5, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs6, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs7, 8(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV32-NEXT:    sw ra, 108(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s0, 104(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s1, 100(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s2, 96(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s3, 92(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s4, 88(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s5, 84(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s6, 80(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s7, 76(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 64(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 56(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 48(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 40(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs4, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs5, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs6, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs7, 8(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s1, -12
@@ -2240,23 +2240,23 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s4, 6(s0)
-; CHECK-NOFP16-RV32-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s1, 100(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s2, 96(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s3, 92(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s4, 88(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s5, 84(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s6, 80(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s7, 76(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs0, 64(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs1, 56(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs2, 48(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs3, 40(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs4, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs5, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs6, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    lw ra, 108(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s0, 104(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s1, 100(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s2, 96(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s3, 92(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s4, 88(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s5, 84(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s6, 80(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s7, 76(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs0, 64(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs1, 56(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs2, 48(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs3, 40(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs4, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs5, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs6, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs7, 8(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
@@ -2282,16 +2282,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -48
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 48
-; RV32ZFINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 44(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 40(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 36(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s2, 32(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s3, 28(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s4, 24(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s5, 20(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s6, 16(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s7, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s8, 8(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -2359,16 +2359,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV32ZFINX-NEXT:    sh s4, 2(s0)
 ; RV32ZFINX-NEXT:    sh s6, 4(s0)
 ; RV32ZFINX-NEXT:    sh s8, 6(s0)
-; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s2, 32(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s3, 28(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s4, 24(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s5, 20(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s6, 16(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s7, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s8, 8(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -2387,16 +2387,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -80
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 80
-; RV64ZFINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 64(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 56(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s2, 48(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s3, 40(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s4, 32(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s5, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s6, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s7, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s8, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -2464,16 +2464,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    sh s4, 2(s0)
 ; RV64ZFINX-NEXT:    sh s6, 4(s0)
 ; RV64ZFINX-NEXT:    sh s8, 6(s0)
-; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s2, 48(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s3, 40(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s4, 32(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s5, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s6, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s7, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s8, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -2492,16 +2492,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZDINX:       # %bb.0:
 ; RV64ZDINX-NEXT:    addi sp, sp, -80
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 80
-; RV64ZDINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s0, 64(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s1, 56(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s2, 48(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s3, 40(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s4, 32(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s5, 24(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s6, 16(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s7, 8(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s8, 0(sp) # 8-byte Spill
 ; RV64ZDINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZDINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZDINX-NEXT:    .cfi_offset s1, -24
@@ -2569,16 +2569,16 @@ define <8 x half> @fcanonicalize_v8f16(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    sh s4, 2(s0)
 ; RV64ZDINX-NEXT:    sh s6, 4(s0)
 ; RV64ZDINX-NEXT:    sh s8, 6(s0)
-; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s2, 48(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s3, 40(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s4, 32(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s5, 24(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s6, 16(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s7, 8(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s8, 0(sp) # 8-byte Reload
 ; RV64ZDINX-NEXT:    .cfi_restore ra
 ; RV64ZDINX-NEXT:    .cfi_restore s0
 ; RV64ZDINX-NEXT:    .cfi_restore s1
@@ -2643,16 +2643,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -80
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-SOFT-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 56(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 48(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s3, 40(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s4, 32(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s5, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s6, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s7, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s8, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -2727,16 +2727,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV64-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV64-NEXT:    sh s8, 6(s0)
-; CHECK-SOFT-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 56(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 48(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s3, 40(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s4, 32(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s5, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s6, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s7, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s8, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -2775,22 +2775,22 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV64:       # %bb.0:
 ; CHECK-NOFP16-RV64-NEXT:    addi sp, sp, -128
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_def_cfa_offset 128
-; CHECK-NOFP16-RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s3, 88(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s4, 80(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s5, 72(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s6, 64(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    sd s7, 56(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 48(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 40(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs3, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs4, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV64-NEXT:    fsd fs6, 0(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV64-NEXT:    sd ra, 120(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s0, 112(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s1, 104(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s2, 96(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s3, 88(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s4, 80(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s5, 72(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s6, 64(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    sd s7, 56(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs0, 48(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs1, 40(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs2, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs3, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs4, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs5, 8(sp) # 8-byte Spill
+; CHECK-NOFP16-RV64-NEXT:    fsd fs6, 0(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_offset s1, -24
@@ -2871,22 +2871,22 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV64-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV64-NEXT:    sh s4, 6(s0)
-; CHECK-NOFP16-RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s3, 88(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s4, 80(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s5, 72(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s6, 64(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    ld s7, 56(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs0, 48(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs1, 40(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs2, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs3, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV64-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV64-NEXT:    ld ra, 120(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s0, 112(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s1, 104(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s2, 96(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s3, 88(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s4, 80(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s5, 72(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s6, 64(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    ld s7, 56(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs0, 48(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs1, 40(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs2, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs3, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs4, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs5, 8(sp) # 8-byte Reload
+; CHECK-NOFP16-RV64-NEXT:    fld fs6, 0(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV64-NEXT:    .cfi_restore s1
@@ -2911,16 +2911,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -48
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SOFT-RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 44(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 40(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 36(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 32(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s5, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s6, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s7, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s8, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -2995,16 +2995,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-SOFT-RV32-NEXT:    sh s4, 2(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s6, 4(s0)
 ; CHECK-SOFT-RV32-NEXT:    sh s8, 6(s0)
-; CHECK-SOFT-RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 44(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 40(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 36(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 32(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s5, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s6, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s7, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s8, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -3043,23 +3043,23 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV32:       # %bb.0:
 ; CHECK-NOFP16-RV32-NEXT:    addi sp, sp, -112
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NOFP16-RV32-NEXT:    sw ra, 108(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s0, 104(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s1, 100(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s2, 96(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s3, 92(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s4, 88(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s5, 84(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s6, 80(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    sw s7, 76(sp) # 4-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 64(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 56(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 48(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 40(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs4, 32(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs5, 24(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs6, 16(sp) # 8-byte Folded Spill
-; CHECK-NOFP16-RV32-NEXT:    fsd fs7, 8(sp) # 8-byte Folded Spill
+; CHECK-NOFP16-RV32-NEXT:    sw ra, 108(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s0, 104(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s1, 100(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s2, 96(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s3, 92(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s4, 88(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s5, 84(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s6, 80(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    sw s7, 76(sp) # 4-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs0, 64(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs1, 56(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs2, 48(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs3, 40(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs4, 32(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs5, 24(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs6, 16(sp) # 8-byte Spill
+; CHECK-NOFP16-RV32-NEXT:    fsd fs7, 8(sp) # 8-byte Spill
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_offset s1, -12
@@ -3148,23 +3148,23 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; CHECK-NOFP16-RV32-NEXT:    sh s2, 2(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s3, 4(s0)
 ; CHECK-NOFP16-RV32-NEXT:    sh s4, 6(s0)
-; CHECK-NOFP16-RV32-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s1, 100(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s2, 96(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s3, 92(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s4, 88(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s5, 84(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s6, 80(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    lw s7, 76(sp) # 4-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs0, 64(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs1, 56(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs2, 48(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs3, 40(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs4, 32(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs5, 24(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs6, 16(sp) # 8-byte Folded Reload
-; CHECK-NOFP16-RV32-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
+; CHECK-NOFP16-RV32-NEXT:    lw ra, 108(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s0, 104(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s1, 100(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s2, 96(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s3, 92(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s4, 88(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s5, 84(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s6, 80(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    lw s7, 76(sp) # 4-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs0, 64(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs1, 56(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs2, 48(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs3, 40(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs4, 32(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs5, 24(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs6, 16(sp) # 8-byte Reload
+; CHECK-NOFP16-RV32-NEXT:    fld fs7, 8(sp) # 8-byte Reload
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore ra
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s0
 ; CHECK-NOFP16-RV32-NEXT:    .cfi_restore s1
@@ -3190,16 +3190,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -48
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 48
-; RV32ZFINX-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 44(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 40(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 36(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s2, 32(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s3, 28(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s4, 24(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s5, 20(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s6, 16(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s7, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s8, 8(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -3267,16 +3267,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV32ZFINX-NEXT:    sh s4, 2(s0)
 ; RV32ZFINX-NEXT:    sh s6, 4(s0)
 ; RV32ZFINX-NEXT:    sh s8, 6(s0)
-; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s8, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 44(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 40(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 36(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s2, 32(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s3, 28(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s4, 24(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s5, 20(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s6, 16(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s7, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s8, 8(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -3295,16 +3295,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -80
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 80
-; RV64ZFINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 64(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 56(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s2, 48(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s3, 40(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s4, 32(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s5, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s6, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s7, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s8, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -3372,16 +3372,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZFINX-NEXT:    sh s4, 2(s0)
 ; RV64ZFINX-NEXT:    sh s6, 4(s0)
 ; RV64ZFINX-NEXT:    sh s8, 6(s0)
-; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 64(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 56(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s2, 48(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s3, 40(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s4, 32(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s5, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s6, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s7, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s8, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -3400,16 +3400,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZDINX:       # %bb.0:
 ; RV64ZDINX-NEXT:    addi sp, sp, -80
 ; RV64ZDINX-NEXT:    .cfi_def_cfa_offset 80
-; RV64ZDINX-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
-; RV64ZDINX-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
+; RV64ZDINX-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s0, 64(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s1, 56(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s2, 48(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s3, 40(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s4, 32(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s5, 24(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s6, 16(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s7, 8(sp) # 8-byte Spill
+; RV64ZDINX-NEXT:    sd s8, 0(sp) # 8-byte Spill
 ; RV64ZDINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZDINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZDINX-NEXT:    .cfi_offset s1, -24
@@ -3477,16 +3477,16 @@ define <8 x half> @fcanonicalize_v8f16_nnan(<8 x half> %x) {
 ; RV64ZDINX-NEXT:    sh s4, 2(s0)
 ; RV64ZDINX-NEXT:    sh s6, 4(s0)
 ; RV64ZDINX-NEXT:    sh s8, 6(s0)
-; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
-; RV64ZDINX-NEXT:    ld s8, 0(sp) # 8-byte Folded Reload
+; RV64ZDINX-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s0, 64(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s1, 56(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s2, 48(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s3, 40(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s4, 32(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s5, 24(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s6, 16(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s7, 8(sp) # 8-byte Reload
+; RV64ZDINX-NEXT:    ld s8, 0(sp) # 8-byte Reload
 ; RV64ZDINX-NEXT:    .cfi_restore ra
 ; RV64ZDINX-NEXT:    .cfi_restore s0
 ; RV64ZDINX-NEXT:    .cfi_restore s1
@@ -3551,11 +3551,11 @@ define float @fcanonicalize_f32(float %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
-; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -3575,11 +3575,11 @@ define float @fcanonicalize_f32(float %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    lui a1, 260096
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -3628,9 +3628,9 @@ define <2 x float> @fcanonicalize_v2f32(<2 x float> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -3643,9 +3643,9 @@ define <2 x float> @fcanonicalize_v2f32(<2 x float> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s1
-; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -3669,9 +3669,9 @@ define <2 x float> @fcanonicalize_v2f32(<2 x float> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -3684,9 +3684,9 @@ define <2 x float> @fcanonicalize_v2f32(<2 x float> %x) {
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, s1
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -3744,9 +3744,9 @@ define <2 x float> @fcanonicalize_v2f32_nnan(<2 x float> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -3759,9 +3759,9 @@ define <2 x float> @fcanonicalize_v2f32_nnan(<2 x float> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV64-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s1
-; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -3785,9 +3785,9 @@ define <2 x float> @fcanonicalize_v2f32_nnan(<2 x float> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -3800,9 +3800,9 @@ define <2 x float> @fcanonicalize_v2f32_nnan(<2 x float> %x) {
 ; CHECK-SOFT-RV32-NEXT:    call __mulsf3
 ; CHECK-SOFT-RV32-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV32-NEXT:    mv a0, s1
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -3860,12 +3860,12 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -48
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SOFT-RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -3896,12 +3896,12 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-SOFT-RV64-NEXT:    sw s0, 4(s3)
 ; CHECK-SOFT-RV64-NEXT:    sw s1, 8(s3)
 ; CHECK-SOFT-RV64-NEXT:    sw a0, 12(s3)
-; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -3940,12 +3940,12 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -3976,12 +3976,12 @@ define <4 x float> @fcanonicalize_v4f32(<4 x float> %x) {
 ; CHECK-SOFT-RV32-NEXT:    sw s0, 4(s3)
 ; CHECK-SOFT-RV32-NEXT:    sw s1, 8(s3)
 ; CHECK-SOFT-RV32-NEXT:    sw a0, 12(s3)
-; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -4084,12 +4084,12 @@ define double @fcanonicalize_f64(double %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    li a1, 1023
 ; CHECK-SOFT-RV64-NEXT:    slli a1, a1, 52
 ; CHECK-SOFT-RV64-NEXT:    call __muldf3
-; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -4109,12 +4109,12 @@ define double @fcanonicalize_f64(double %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    lui a3, 261888
 ; CHECK-SOFT-RV32-NEXT:    li a2, 0
 ; CHECK-SOFT-RV32-NEXT:    call __muldf3
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -4134,12 +4134,12 @@ define double @fcanonicalize_f64(double %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    lui a3, 261888
 ; RV32ZFINX-NEXT:    li a2, 0
 ; RV32ZFINX-NEXT:    call __muldf3
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    addi sp, sp, 16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4149,12 +4149,12 @@ define double @fcanonicalize_f64(double %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -16
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    li a1, 1023
 ; RV64ZFINX-NEXT:    slli a1, a1, 52
 ; RV64ZFINX-NEXT:    call __muldf3
-; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    addi sp, sp, 16
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4169,12 +4169,12 @@ define double @fcanonicalize_f64(double %x) {
 ; RV32ZHINX:       # %bb.0:
 ; RV32ZHINX-NEXT:    addi sp, sp, -16
 ; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZHINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZHINX-NEXT:    lui a3, 261888
 ; RV32ZHINX-NEXT:    li a2, 0
 ; RV32ZHINX-NEXT:    call __muldf3
-; RV32ZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZHINX-NEXT:    .cfi_restore ra
 ; RV32ZHINX-NEXT:    addi sp, sp, 16
 ; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4184,12 +4184,12 @@ define double @fcanonicalize_f64(double %x) {
 ; RV64ZHINX:       # %bb.0:
 ; RV64ZHINX-NEXT:    addi sp, sp, -16
 ; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZHINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZHINX-NEXT:    li a1, 1023
 ; RV64ZHINX-NEXT:    slli a1, a1, 52
 ; RV64ZHINX-NEXT:    call __muldf3
-; RV64ZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZHINX-NEXT:    .cfi_restore ra
 ; RV64ZHINX-NEXT:    addi sp, sp, 16
 ; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4203,12 +4203,12 @@ define double @fcanonicalize_f64_nnan(double %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    li a1, 1023
 ; CHECK-SOFT-RV64-NEXT:    slli a1, a1, 52
 ; CHECK-SOFT-RV64-NEXT:    call __muldf3
-; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -4228,12 +4228,12 @@ define double @fcanonicalize_f64_nnan(double %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    lui a3, 261888
 ; CHECK-SOFT-RV32-NEXT:    li a2, 0
 ; CHECK-SOFT-RV32-NEXT:    call __muldf3
-; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -4253,12 +4253,12 @@ define double @fcanonicalize_f64_nnan(double %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    lui a3, 261888
 ; RV32ZFINX-NEXT:    li a2, 0
 ; RV32ZFINX-NEXT:    call __muldf3
-; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    addi sp, sp, 16
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4268,12 +4268,12 @@ define double @fcanonicalize_f64_nnan(double %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -16
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    li a1, 1023
 ; RV64ZFINX-NEXT:    slli a1, a1, 52
 ; RV64ZFINX-NEXT:    call __muldf3
-; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    addi sp, sp, 16
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4288,12 +4288,12 @@ define double @fcanonicalize_f64_nnan(double %x) {
 ; RV32ZHINX:       # %bb.0:
 ; RV32ZHINX-NEXT:    addi sp, sp, -16
 ; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32ZHINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZHINX-NEXT:    lui a3, 261888
 ; RV32ZHINX-NEXT:    li a2, 0
 ; RV32ZHINX-NEXT:    call __muldf3
-; RV32ZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32ZHINX-NEXT:    .cfi_restore ra
 ; RV32ZHINX-NEXT:    addi sp, sp, 16
 ; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4303,12 +4303,12 @@ define double @fcanonicalize_f64_nnan(double %x) {
 ; RV64ZHINX:       # %bb.0:
 ; RV64ZHINX-NEXT:    addi sp, sp, -16
 ; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64ZHINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZHINX-NEXT:    li a1, 1023
 ; RV64ZHINX-NEXT:    slli a1, a1, 52
 ; RV64ZHINX-NEXT:    call __muldf3
-; RV64ZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64ZHINX-NEXT:    .cfi_restore ra
 ; RV64ZHINX-NEXT:    addi sp, sp, 16
 ; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 0
@@ -4322,10 +4322,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -4341,10 +4341,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __muldf3
 ; CHECK-SOFT-RV64-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s2
-; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -4369,12 +4369,12 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -4402,12 +4402,12 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; CHECK-SOFT-RV32-NEXT:    sw s4, 4(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a0, 8(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a1, 12(s2)
-; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -4434,12 +4434,12 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -32
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -4467,12 +4467,12 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV32ZFINX-NEXT:    sw s4, 4(s2)
 ; RV32ZFINX-NEXT:    sw a0, 8(s2)
 ; RV32ZFINX-NEXT:    sw a1, 12(s2)
-; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -4487,10 +4487,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -32
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -4506,10 +4506,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV64ZFINX-NEXT:    call __muldf3
 ; RV64ZFINX-NEXT:    mv a1, a0
 ; RV64ZFINX-NEXT:    mv a0, s2
-; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -4528,12 +4528,12 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV32ZHINX:       # %bb.0:
 ; RV32ZHINX-NEXT:    addi sp, sp, -32
 ; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZHINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZHINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZHINX-NEXT:    .cfi_offset s1, -12
@@ -4561,12 +4561,12 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV32ZHINX-NEXT:    sw s4, 4(s2)
 ; RV32ZHINX-NEXT:    sw a0, 8(s2)
 ; RV32ZHINX-NEXT:    sw a1, 12(s2)
-; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZHINX-NEXT:    .cfi_restore ra
 ; RV32ZHINX-NEXT:    .cfi_restore s0
 ; RV32ZHINX-NEXT:    .cfi_restore s1
@@ -4581,10 +4581,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV64ZHINX:       # %bb.0:
 ; RV64ZHINX-NEXT:    addi sp, sp, -32
 ; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; RV64ZHINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZHINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZHINX-NEXT:    .cfi_offset s1, -24
@@ -4600,10 +4600,10 @@ define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; RV64ZHINX-NEXT:    call __muldf3
 ; RV64ZHINX-NEXT:    mv a1, a0
 ; RV64ZHINX-NEXT:    mv a0, s2
-; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; RV64ZHINX-NEXT:    .cfi_restore ra
 ; RV64ZHINX-NEXT:    .cfi_restore s0
 ; RV64ZHINX-NEXT:    .cfi_restore s1
@@ -4620,10 +4620,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; CHECK-SOFT-RV64:       # %bb.0:
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -4639,10 +4639,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; CHECK-SOFT-RV64-NEXT:    call __muldf3
 ; CHECK-SOFT-RV64-NEXT:    mv a1, a0
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s2
-; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -4667,12 +4667,12 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; CHECK-SOFT-RV32:       # %bb.0:
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -4700,12 +4700,12 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; CHECK-SOFT-RV32-NEXT:    sw s4, 4(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a0, 8(s2)
 ; CHECK-SOFT-RV32-NEXT:    sw a1, 12(s2)
-; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -4732,12 +4732,12 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV32ZFINX:       # %bb.0:
 ; RV32ZFINX-NEXT:    addi sp, sp, -32
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -4765,12 +4765,12 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV32ZFINX-NEXT:    sw s4, 4(s2)
 ; RV32ZFINX-NEXT:    sw a0, 8(s2)
 ; RV32ZFINX-NEXT:    sw a1, 12(s2)
-; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -4785,10 +4785,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV64ZFINX:       # %bb.0:
 ; RV64ZFINX-NEXT:    addi sp, sp, -32
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -4804,10 +4804,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV64ZFINX-NEXT:    call __muldf3
 ; RV64ZFINX-NEXT:    mv a1, a0
 ; RV64ZFINX-NEXT:    mv a0, s2
-; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -4826,12 +4826,12 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV32ZHINX:       # %bb.0:
 ; RV32ZHINX-NEXT:    addi sp, sp, -32
 ; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZHINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZHINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZHINX-NEXT:    .cfi_offset s1, -12
@@ -4859,12 +4859,12 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV32ZHINX-NEXT:    sw s4, 4(s2)
 ; RV32ZHINX-NEXT:    sw a0, 8(s2)
 ; RV32ZHINX-NEXT:    sw a1, 12(s2)
-; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZHINX-NEXT:    .cfi_restore ra
 ; RV32ZHINX-NEXT:    .cfi_restore s0
 ; RV32ZHINX-NEXT:    .cfi_restore s1
@@ -4879,10 +4879,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV64ZHINX:       # %bb.0:
 ; RV64ZHINX-NEXT:    addi sp, sp, -32
 ; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; RV64ZHINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZHINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZHINX-NEXT:    .cfi_offset s1, -24
@@ -4898,10 +4898,10 @@ define <2 x double> @fcanonicalize_v2f64_nnan(<2 x double> %x) {
 ; RV64ZHINX-NEXT:    call __muldf3
 ; RV64ZHINX-NEXT:    mv a1, a0
 ; RV64ZHINX-NEXT:    mv a0, s2
-; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; RV64ZHINX-NEXT:    .cfi_restore ra
 ; RV64ZHINX-NEXT:    .cfi_restore s0
 ; RV64ZHINX-NEXT:    .cfi_restore s1
@@ -4918,10 +4918,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; CHECK-SOFT-RV64:       # %bb.0: # %start
 ; CHECK-SOFT-RV64-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV64-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-SOFT-RV64-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-SOFT-RV64-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset ra, -8
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s0, -16
 ; CHECK-SOFT-RV64-NEXT:    .cfi_offset s1, -24
@@ -4943,10 +4943,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; CHECK-SOFT-RV64-NEXT:    slli a1, a1, 52
 ; CHECK-SOFT-RV64-NEXT:    mv a0, s0
 ; CHECK-SOFT-RV64-NEXT:    call __muldf3
-; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-SOFT-RV64-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-SOFT-RV64-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV64-NEXT:    .cfi_restore s1
@@ -4985,12 +4985,12 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; CHECK-SOFT-RV32:       # %bb.0: # %start
 ; CHECK-SOFT-RV32-NEXT:    addi sp, sp, -32
 ; CHECK-SOFT-RV32-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-SOFT-RV32-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; CHECK-SOFT-RV32-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset ra, -4
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s0, -8
 ; CHECK-SOFT-RV32-NEXT:    .cfi_offset s1, -12
@@ -5020,12 +5020,12 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; CHECK-SOFT-RV32-NEXT:    mv a1, s0
 ; CHECK-SOFT-RV32-NEXT:    li a2, 0
 ; CHECK-SOFT-RV32-NEXT:    call __muldf3
-; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-SOFT-RV32-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; CHECK-SOFT-RV32-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore ra
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s0
 ; CHECK-SOFT-RV32-NEXT:    .cfi_restore s1
@@ -5066,12 +5066,12 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV32ZFINX:       # %bb.0: # %start
 ; RV32ZFINX-NEXT:    addi sp, sp, -32
 ; RV32ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZFINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZFINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZFINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZFINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZFINX-NEXT:    .cfi_offset s1, -12
@@ -5101,12 +5101,12 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV32ZFINX-NEXT:    mv a1, s0
 ; RV32ZFINX-NEXT:    li a2, 0
 ; RV32ZFINX-NEXT:    call __muldf3
-; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZFINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZFINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZFINX-NEXT:    .cfi_restore ra
 ; RV32ZFINX-NEXT:    .cfi_restore s0
 ; RV32ZFINX-NEXT:    .cfi_restore s1
@@ -5121,10 +5121,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV64ZFINX:       # %bb.0: # %start
 ; RV64ZFINX-NEXT:    addi sp, sp, -32
 ; RV64ZFINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZFINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; RV64ZFINX-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; RV64ZFINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZFINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZFINX-NEXT:    .cfi_offset s1, -24
@@ -5146,10 +5146,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV64ZFINX-NEXT:    slli a1, a1, 52
 ; RV64ZFINX-NEXT:    mv a0, s0
 ; RV64ZFINX-NEXT:    call __muldf3
-; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZFINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; RV64ZFINX-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; RV64ZFINX-NEXT:    .cfi_restore ra
 ; RV64ZFINX-NEXT:    .cfi_restore s0
 ; RV64ZFINX-NEXT:    .cfi_restore s1
@@ -5175,12 +5175,12 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV32ZHINX:       # %bb.0: # %start
 ; RV32ZHINX-NEXT:    addi sp, sp, -32
 ; RV32ZHINX-NEXT:    .cfi_def_cfa_offset 32
-; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; RV32ZHINX-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; RV32ZHINX-NEXT:    .cfi_offset ra, -4
 ; RV32ZHINX-NEXT:    .cfi_offset s0, -8
 ; RV32ZHINX-NEXT:    .cfi_offset s1, -12
@@ -5210,12 +5210,12 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV32ZHINX-NEXT:    mv a1, s0
 ; RV32ZHINX-NEXT:    li a2, 0
 ; RV32ZHINX-NEXT:    call __muldf3
-; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; RV32ZHINX-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; RV32ZHINX-NEXT:    .cfi_restore ra
 ; RV32ZHINX-NEXT:    .cfi_restore s0
 ; RV32ZHINX-NEXT:    .cfi_restore s1
@@ -5230,10 +5230,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV64ZHINX:       # %bb.0: # %start
 ; RV64ZHINX-NEXT:    addi sp, sp, -32
 ; RV64ZHINX-NEXT:    .cfi_def_cfa_offset 32
-; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; RV64ZHINX-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; RV64ZHINX-NEXT:    .cfi_offset ra, -8
 ; RV64ZHINX-NEXT:    .cfi_offset s0, -16
 ; RV64ZHINX-NEXT:    .cfi_offset s1, -24
@@ -5255,10 +5255,10 @@ define double @fcanonicalize_softfloat(double, double) unnamed_addr #0 {
 ; RV64ZHINX-NEXT:    slli a1, a1, 52
 ; RV64ZHINX-NEXT:    mv a0, s0
 ; RV64ZHINX-NEXT:    call __muldf3
-; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; RV64ZHINX-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; RV64ZHINX-NEXT:    .cfi_restore ra
 ; RV64ZHINX-NEXT:    .cfi_restore s0
 ; RV64ZHINX-NEXT:    .cfi_restore s1

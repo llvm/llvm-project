@@ -320,8 +320,8 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v256i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -384
-; RV32-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 380(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 376(sp) # 4-byte Spill
 ; RV32-NEXT:    addi s0, sp, 384
 ; RV32-NEXT:    andi sp, sp, -128
 ; RV32-NEXT:    li a2, 128
@@ -342,16 +342,16 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vse8.v v8, (a1)
 ; RV32-NEXT:    lbu a0, 0(a0)
 ; RV32-NEXT:    addi sp, s0, -384
-; RV32-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 380(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 376(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 384
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: extractelt_v256i1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -384
-; RV64-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; RV64-NEXT:    addi s0, sp, 384
 ; RV64-NEXT:    andi sp, sp, -128
 ; RV64-NEXT:    li a2, 128
@@ -372,16 +372,16 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vse8.v v8, (a1)
 ; RV64-NEXT:    lbu a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -384
-; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 384
 ; RV64-NEXT:    ret
 ;
 ; RV32ZBS-LABEL: extractelt_v256i1:
 ; RV32ZBS:       # %bb.0:
 ; RV32ZBS-NEXT:    addi sp, sp, -384
-; RV32ZBS-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32ZBS-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32ZBS-NEXT:    sw ra, 380(sp) # 4-byte Spill
+; RV32ZBS-NEXT:    sw s0, 376(sp) # 4-byte Spill
 ; RV32ZBS-NEXT:    addi s0, sp, 384
 ; RV32ZBS-NEXT:    andi sp, sp, -128
 ; RV32ZBS-NEXT:    li a2, 128
@@ -402,16 +402,16 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32ZBS-NEXT:    vse8.v v8, (a1)
 ; RV32ZBS-NEXT:    lbu a0, 0(a0)
 ; RV32ZBS-NEXT:    addi sp, s0, -384
-; RV32ZBS-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32ZBS-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32ZBS-NEXT:    lw ra, 380(sp) # 4-byte Reload
+; RV32ZBS-NEXT:    lw s0, 376(sp) # 4-byte Reload
 ; RV32ZBS-NEXT:    addi sp, sp, 384
 ; RV32ZBS-NEXT:    ret
 ;
 ; RV64ZBS-LABEL: extractelt_v256i1:
 ; RV64ZBS:       # %bb.0:
 ; RV64ZBS-NEXT:    addi sp, sp, -384
-; RV64ZBS-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64ZBS-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64ZBS-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; RV64ZBS-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; RV64ZBS-NEXT:    addi s0, sp, 384
 ; RV64ZBS-NEXT:    andi sp, sp, -128
 ; RV64ZBS-NEXT:    li a2, 128
@@ -432,8 +432,8 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vse8.v v8, (a1)
 ; RV64ZBS-NEXT:    lbu a0, 0(a0)
 ; RV64ZBS-NEXT:    addi sp, s0, -384
-; RV64ZBS-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64ZBS-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64ZBS-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; RV64ZBS-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; RV64ZBS-NEXT:    addi sp, sp, 384
 ; RV64ZBS-NEXT:    ret
   %a = load <256 x i8>, ptr %x

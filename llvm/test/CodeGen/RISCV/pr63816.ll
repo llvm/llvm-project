@@ -5,16 +5,16 @@ define void @test(ptr %0, ptr %1) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs2, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs3, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs4, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs6, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 56(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 48(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs2, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs3, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs4, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs5, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs6, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    lhu a0, 12(a0)
@@ -63,16 +63,16 @@ define void @test(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    fsd fs5, 8(s0)
 ; CHECK-NEXT:    fsd fs4, 16(s0)
 ; CHECK-NEXT:    fsd fs3, 24(s0)
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs2, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs3, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 56(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 48(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs2, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs3, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs4, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs5, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs6, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
   %V1 = load <8 x half>, ptr %0

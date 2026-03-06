@@ -10,8 +10,8 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LABEL: test0:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -64
-; RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; RV64-NEXT:    sd a0, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    lui a0, %hi(f)
 ; RV64-NEXT:    addi a0, a0, %lo(f)
 ; RV64-NEXT:    sd a0, 48(sp)
@@ -29,20 +29,20 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-NEXT:    sw a0, 28(sp)
 ; RV64-NEXT:    addi a1, sp, 40
 ; RV64-NEXT:    addi a0, sp, 24
-; RV64-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd a0, 16(sp) # 8-byte Spill
 ; RV64-NEXT:    call __clear_cache
-; RV64-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a0, 8(sp) # 8-byte Reload
+; RV64-NEXT:    ld a1, 16(sp) # 8-byte Reload
 ; RV64-NEXT:    jalr a1
-; RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 56(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 64
 ; RV64-NEXT:    ret
 ;
 ; RV64-LINUX-LABEL: test0:
 ; RV64-LINUX:       # %bb.0:
 ; RV64-LINUX-NEXT:    addi sp, sp, -64
-; RV64-LINUX-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64-LINUX-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
+; RV64-LINUX-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; RV64-LINUX-NEXT:    sd a0, 8(sp) # 8-byte Spill
 ; RV64-LINUX-NEXT:    lui a0, %hi(f)
 ; RV64-LINUX-NEXT:    addi a0, a0, %lo(f)
 ; RV64-LINUX-NEXT:    sd a0, 48(sp)
@@ -60,13 +60,13 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LINUX-NEXT:    sw a0, 28(sp)
 ; RV64-LINUX-NEXT:    addi a1, sp, 40
 ; RV64-LINUX-NEXT:    addi a0, sp, 24
-; RV64-LINUX-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
+; RV64-LINUX-NEXT:    sd a0, 16(sp) # 8-byte Spill
 ; RV64-LINUX-NEXT:    li a2, 0
 ; RV64-LINUX-NEXT:    call __riscv_flush_icache
-; RV64-LINUX-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; RV64-LINUX-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64-LINUX-NEXT:    ld a0, 8(sp) # 8-byte Reload
+; RV64-LINUX-NEXT:    ld a1, 16(sp) # 8-byte Reload
 ; RV64-LINUX-NEXT:    jalr a1
-; RV64-LINUX-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; RV64-LINUX-NEXT:    ld ra, 56(sp) # 8-byte Reload
 ; RV64-LINUX-NEXT:    addi sp, sp, 64
 ; RV64-LINUX-NEXT:    ret
   %alloca = alloca [32 x i8], align 8

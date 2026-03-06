@@ -307,21 +307,21 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_nxv8i64_nxv
 ; V-NEXT:    vcompress.vm v0, v8, v29
 ; V-NEXT:    vcompress.vm v8, v16, v28
 ; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Spill
 ; V-NEXT:    vcompress.vm v8, v16, v29
 ; V-NEXT:    csrr a0, vlenb
 ; V-NEXT:    slli a0, a0, 3
 ; V-NEXT:    add a0, sp, a0
 ; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Spill
 ; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; V-NEXT:    vmv4r.v v28, v8
 ; V-NEXT:    csrr a0, vlenb
 ; V-NEXT:    slli a0, a0, 3
 ; V-NEXT:    add a0, sp, a0
 ; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; V-NEXT:    vmv4r.v v4, v8
 ; V-NEXT:    vmv8r.v v8, v24
 ; V-NEXT:    vmv8r.v v16, v0
@@ -1878,21 +1878,21 @@ define {<vscale x 8 x double>, <vscale x 8 x double>} @vector_deinterleave_nxv8f
 ; V-NEXT:    vcompress.vm v0, v8, v29
 ; V-NEXT:    vcompress.vm v8, v16, v28
 ; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Spill
 ; V-NEXT:    vcompress.vm v8, v16, v29
 ; V-NEXT:    csrr a0, vlenb
 ; V-NEXT:    slli a0, a0, 3
 ; V-NEXT:    add a0, sp, a0
 ; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Spill
 ; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; V-NEXT:    vmv4r.v v28, v8
 ; V-NEXT:    csrr a0, vlenb
 ; V-NEXT:    slli a0, a0, 3
 ; V-NEXT:    add a0, sp, a0
 ; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; V-NEXT:    vmv4r.v v4, v8
 ; V-NEXT:    vmv8r.v v8, v24
 ; V-NEXT:    vmv8r.v v16, v0

@@ -20,15 +20,15 @@ define void @test_rnmi_empty() "interrupt"="rnmi" {
 ; RNMI-RV32-FP:       # %bb.0:
 ; RNMI-RV32-FP-NEXT:    addi sp, sp, -16
 ; RNMI-RV32-FP-NEXT:    .cfi_def_cfa_offset 16
-; RNMI-RV32-FP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RNMI-RV32-FP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RNMI-RV32-FP-NEXT:    .cfi_offset ra, -4
 ; RNMI-RV32-FP-NEXT:    .cfi_offset s0, -8
 ; RNMI-RV32-FP-NEXT:    addi s0, sp, 16
 ; RNMI-RV32-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RNMI-RV32-FP-NEXT:    .cfi_def_cfa sp, 16
-; RNMI-RV32-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RNMI-RV32-FP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RNMI-RV32-FP-NEXT:    .cfi_restore ra
 ; RNMI-RV32-FP-NEXT:    .cfi_restore s0
 ; RNMI-RV32-FP-NEXT:    addi sp, sp, 16
@@ -43,15 +43,15 @@ define void @test_rnmi_empty() "interrupt"="rnmi" {
 ; RNMI-RV64-FP:       # %bb.0:
 ; RNMI-RV64-FP-NEXT:    addi sp, sp, -16
 ; RNMI-RV64-FP-NEXT:    .cfi_def_cfa_offset 16
-; RNMI-RV64-FP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RNMI-RV64-FP-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RNMI-RV64-FP-NEXT:    .cfi_offset ra, -8
 ; RNMI-RV64-FP-NEXT:    .cfi_offset s0, -16
 ; RNMI-RV64-FP-NEXT:    addi s0, sp, 16
 ; RNMI-RV64-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RNMI-RV64-FP-NEXT:    .cfi_def_cfa sp, 16
-; RNMI-RV64-FP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RNMI-RV64-FP-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RNMI-RV64-FP-NEXT:    .cfi_restore ra
 ; RNMI-RV64-FP-NEXT:    .cfi_restore s0
 ; RNMI-RV64-FP-NEXT:    addi sp, sp, 16
@@ -67,22 +67,22 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV32:       # %bb.0:
 ; RNMI-RV32-NEXT:    addi sp, sp, -64
 ; RNMI-RV32-NEXT:    .cfi_def_cfa_offset 64
-; RNMI-RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw t0, 56(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw t1, 52(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw t2, 48(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a0, 44(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a1, 40(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a2, 36(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a3, 32(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a4, 28(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a5, 24(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a6, 20(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw a7, 16(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw t3, 12(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw t4, 8(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw t5, 4(sp) # 4-byte Folded Spill
-; RNMI-RV32-NEXT:    sw t6, 0(sp) # 4-byte Folded Spill
+; RNMI-RV32-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw t0, 56(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw t1, 52(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw t2, 48(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a0, 44(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a1, 40(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a2, 36(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a3, 32(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a4, 28(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a5, 24(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a6, 20(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw a7, 16(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw t3, 12(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw t4, 8(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw t5, 4(sp) # 4-byte Spill
+; RNMI-RV32-NEXT:    sw t6, 0(sp) # 4-byte Spill
 ; RNMI-RV32-NEXT:    .cfi_offset ra, -4
 ; RNMI-RV32-NEXT:    .cfi_offset t0, -8
 ; RNMI-RV32-NEXT:    .cfi_offset t1, -12
@@ -100,22 +100,22 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV32-NEXT:    .cfi_offset t5, -60
 ; RNMI-RV32-NEXT:    .cfi_offset t6, -64
 ; RNMI-RV32-NEXT:    call callee
-; RNMI-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw t0, 56(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw t1, 52(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw t2, 48(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a0, 44(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a1, 40(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a2, 36(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a3, 32(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a4, 28(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a5, 24(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a6, 20(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw a7, 16(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw t3, 12(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw t4, 8(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw t5, 4(sp) # 4-byte Folded Reload
-; RNMI-RV32-NEXT:    lw t6, 0(sp) # 4-byte Folded Reload
+; RNMI-RV32-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw t0, 56(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw t1, 52(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw t2, 48(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a0, 44(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a1, 40(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a2, 36(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a3, 32(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a4, 28(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a5, 24(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a6, 20(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw a7, 16(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw t3, 12(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw t4, 8(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw t5, 4(sp) # 4-byte Reload
+; RNMI-RV32-NEXT:    lw t6, 0(sp) # 4-byte Reload
 ; RNMI-RV32-NEXT:    .cfi_restore ra
 ; RNMI-RV32-NEXT:    .cfi_restore t0
 ; RNMI-RV32-NEXT:    .cfi_restore t1
@@ -140,23 +140,23 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV32-FP:       # %bb.0:
 ; RNMI-RV32-FP-NEXT:    addi sp, sp, -80
 ; RNMI-RV32-FP-NEXT:    .cfi_def_cfa_offset 80
-; RNMI-RV32-FP-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw t0, 72(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw t1, 68(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw t2, 64(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw s0, 60(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a1, 52(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a2, 48(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a3, 44(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a4, 40(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a5, 36(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a6, 32(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw a7, 28(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw t3, 24(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw t4, 20(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw t5, 16(sp) # 4-byte Folded Spill
-; RNMI-RV32-FP-NEXT:    sw t6, 12(sp) # 4-byte Folded Spill
+; RNMI-RV32-FP-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw t0, 72(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw t1, 68(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw t2, 64(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw s0, 60(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a0, 56(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a1, 52(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a2, 48(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a3, 44(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a4, 40(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a5, 36(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a6, 32(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw a7, 28(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw t3, 24(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw t4, 20(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw t5, 16(sp) # 4-byte Spill
+; RNMI-RV32-FP-NEXT:    sw t6, 12(sp) # 4-byte Spill
 ; RNMI-RV32-FP-NEXT:    .cfi_offset ra, -4
 ; RNMI-RV32-FP-NEXT:    .cfi_offset t0, -8
 ; RNMI-RV32-FP-NEXT:    .cfi_offset t1, -12
@@ -178,23 +178,23 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV32-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RNMI-RV32-FP-NEXT:    call callee
 ; RNMI-RV32-FP-NEXT:    .cfi_def_cfa sp, 80
-; RNMI-RV32-FP-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw t0, 72(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw t1, 68(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw t2, 64(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw s0, 60(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a1, 52(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a2, 48(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a3, 44(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a4, 40(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a5, 36(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a6, 32(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw a7, 28(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw t3, 24(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw t4, 20(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw t5, 16(sp) # 4-byte Folded Reload
-; RNMI-RV32-FP-NEXT:    lw t6, 12(sp) # 4-byte Folded Reload
+; RNMI-RV32-FP-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw t0, 72(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw t1, 68(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw t2, 64(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw s0, 60(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a0, 56(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a1, 52(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a2, 48(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a3, 44(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a4, 40(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a5, 36(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a6, 32(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw a7, 28(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw t3, 24(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw t4, 20(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw t5, 16(sp) # 4-byte Reload
+; RNMI-RV32-FP-NEXT:    lw t6, 12(sp) # 4-byte Reload
 ; RNMI-RV32-FP-NEXT:    .cfi_restore ra
 ; RNMI-RV32-FP-NEXT:    .cfi_restore t0
 ; RNMI-RV32-FP-NEXT:    .cfi_restore t1
@@ -220,22 +220,22 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV64:       # %bb.0:
 ; RNMI-RV64-NEXT:    addi sp, sp, -128
 ; RNMI-RV64-NEXT:    .cfi_def_cfa_offset 128
-; RNMI-RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd t0, 112(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd t1, 104(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd t2, 96(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a0, 88(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a1, 80(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a2, 72(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a3, 64(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a4, 56(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a5, 48(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a6, 40(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd a7, 32(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd t3, 24(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd t4, 16(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
-; RNMI-RV64-NEXT:    sd t6, 0(sp) # 8-byte Folded Spill
+; RNMI-RV64-NEXT:    sd ra, 120(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd t0, 112(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd t1, 104(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd t2, 96(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a0, 88(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a1, 80(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a2, 72(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a3, 64(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a4, 56(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a5, 48(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a6, 40(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd a7, 32(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd t3, 24(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd t4, 16(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd t5, 8(sp) # 8-byte Spill
+; RNMI-RV64-NEXT:    sd t6, 0(sp) # 8-byte Spill
 ; RNMI-RV64-NEXT:    .cfi_offset ra, -8
 ; RNMI-RV64-NEXT:    .cfi_offset t0, -16
 ; RNMI-RV64-NEXT:    .cfi_offset t1, -24
@@ -253,22 +253,22 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV64-NEXT:    .cfi_offset t5, -120
 ; RNMI-RV64-NEXT:    .cfi_offset t6, -128
 ; RNMI-RV64-NEXT:    call callee
-; RNMI-RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld t0, 112(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld t1, 104(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld t2, 96(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a0, 88(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a1, 80(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a2, 72(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a3, 64(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a4, 56(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a5, 48(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a6, 40(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld a7, 32(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld t3, 24(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld t4, 16(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
-; RNMI-RV64-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
+; RNMI-RV64-NEXT:    ld ra, 120(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld t0, 112(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld t1, 104(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld t2, 96(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a0, 88(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a1, 80(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a2, 72(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a3, 64(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a4, 56(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a5, 48(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a6, 40(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld a7, 32(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld t3, 24(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld t4, 16(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld t5, 8(sp) # 8-byte Reload
+; RNMI-RV64-NEXT:    ld t6, 0(sp) # 8-byte Reload
 ; RNMI-RV64-NEXT:    .cfi_restore ra
 ; RNMI-RV64-NEXT:    .cfi_restore t0
 ; RNMI-RV64-NEXT:    .cfi_restore t1
@@ -293,23 +293,23 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV64-FP:       # %bb.0:
 ; RNMI-RV64-FP-NEXT:    addi sp, sp, -144
 ; RNMI-RV64-FP-NEXT:    .cfi_def_cfa_offset 144
-; RNMI-RV64-FP-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd t0, 128(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd t1, 120(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd t2, 112(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd s0, 104(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a1, 88(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a2, 80(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a3, 72(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a4, 64(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a5, 56(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a6, 48(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd a7, 40(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd t3, 32(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd t4, 24(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
-; RNMI-RV64-FP-NEXT:    sd t6, 8(sp) # 8-byte Folded Spill
+; RNMI-RV64-FP-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd t0, 128(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd t1, 120(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd t2, 112(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd s0, 104(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a0, 96(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a1, 88(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a2, 80(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a3, 72(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a4, 64(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a5, 56(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a6, 48(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd a7, 40(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd t3, 32(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd t4, 24(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd t5, 16(sp) # 8-byte Spill
+; RNMI-RV64-FP-NEXT:    sd t6, 8(sp) # 8-byte Spill
 ; RNMI-RV64-FP-NEXT:    .cfi_offset ra, -8
 ; RNMI-RV64-FP-NEXT:    .cfi_offset t0, -16
 ; RNMI-RV64-FP-NEXT:    .cfi_offset t1, -24
@@ -331,23 +331,23 @@ define void @test_rnmi_caller() "interrupt"="rnmi" {
 ; RNMI-RV64-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RNMI-RV64-FP-NEXT:    call callee
 ; RNMI-RV64-FP-NEXT:    .cfi_def_cfa sp, 144
-; RNMI-RV64-FP-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld t0, 128(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld t1, 120(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld t2, 112(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld s0, 104(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a1, 88(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a2, 80(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a3, 72(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a4, 64(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a5, 56(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a6, 48(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld a7, 40(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld t3, 32(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld t4, 24(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld t5, 16(sp) # 8-byte Folded Reload
-; RNMI-RV64-FP-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
+; RNMI-RV64-FP-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld t0, 128(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld t1, 120(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld t2, 112(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld s0, 104(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a0, 96(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a1, 88(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a2, 80(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a3, 72(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a4, 64(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a5, 56(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a6, 48(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld a7, 40(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld t3, 32(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld t4, 24(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld t5, 16(sp) # 8-byte Reload
+; RNMI-RV64-FP-NEXT:    ld t6, 8(sp) # 8-byte Reload
 ; RNMI-RV64-FP-NEXT:    .cfi_restore ra
 ; RNMI-RV64-FP-NEXT:    .cfi_restore t0
 ; RNMI-RV64-FP-NEXT:    .cfi_restore t1

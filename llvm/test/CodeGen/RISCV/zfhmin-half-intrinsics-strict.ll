@@ -74,66 +74,66 @@ define half @floor_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: floor_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call floorf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: floor_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call floorf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: floor_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call floorf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: floor_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call floorf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: floor_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call floorf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: floor_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call floorf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.floor.f16(half %a, metadata !"fpexcept.strict") strictfp
@@ -144,66 +144,66 @@ define half @ceil_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: ceil_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call ceilf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: ceil_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call ceilf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: ceil_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call ceilf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: ceil_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call ceilf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: ceil_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call ceilf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: ceil_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call ceilf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.ceil.f16(half %a, metadata !"fpexcept.strict") strictfp
@@ -214,66 +214,66 @@ define half @trunc_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: trunc_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call truncf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: trunc_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call truncf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: trunc_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call truncf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: trunc_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call truncf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: trunc_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call truncf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: trunc_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call truncf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.trunc.f16(half %a, metadata !"fpexcept.strict") strictfp
@@ -284,66 +284,66 @@ define half @rint_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: rint_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call rintf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: rint_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call rintf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: rint_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call rintf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: rint_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call rintf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: rint_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call rintf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: rint_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call rintf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.rint.f16(half %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -354,66 +354,66 @@ define half @nearbyint_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: nearbyint_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call nearbyintf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: nearbyint_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call nearbyintf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: nearbyint_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call nearbyintf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: nearbyint_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call nearbyintf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: nearbyint_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call nearbyintf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: nearbyint_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call nearbyintf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.nearbyint.f16(half %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -424,66 +424,66 @@ define half @round_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: round_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call roundf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: round_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call roundf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: round_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call roundf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: round_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call roundf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: round_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call roundf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: round_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call roundf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.round.f16(half %a, metadata !"fpexcept.strict") strictfp
@@ -494,66 +494,66 @@ define half @roundeven_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: roundeven_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call roundevenf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: roundeven_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call roundevenf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: roundeven_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call roundevenf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: roundeven_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call roundevenf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: roundeven_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call roundevenf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: roundeven_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call roundevenf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.roundeven.f16(half %a, metadata !"fpexcept.strict") strictfp
@@ -644,10 +644,10 @@ define i64 @llrint_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: llrint_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call llrintf
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
@@ -660,10 +660,10 @@ define i64 @llrint_f16(half %a) nounwind strictfp {
 ; RV32IZHINXMIN-STRICT-LABEL: llrint_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call llrintf
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
@@ -676,10 +676,10 @@ define i64 @llrint_f16(half %a) nounwind strictfp {
 ; RV32IZDINXZHINXMIN-LABEL: llrint_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call llrintf
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
@@ -696,10 +696,10 @@ define i64 @llround_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: llround_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call llroundf
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
@@ -712,10 +712,10 @@ define i64 @llround_f16(half %a) nounwind strictfp {
 ; RV32IZHINXMIN-STRICT-LABEL: llround_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call llroundf
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
@@ -728,10 +728,10 @@ define i64 @llround_f16(half %a) nounwind strictfp {
 ; RV32IZDINXZHINXMIN-LABEL: llround_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call llroundf
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
@@ -748,66 +748,66 @@ define half @ldexp_f16(half %x, i32 signext %y) nounwind {
 ; RV32IZFHMIN-LABEL: ldexp_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV32IZFHMIN-NEXT:    call ldexpf
 ; RV32IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: ldexp_f16:
 ; RV64IZFHMIN:       # %bb.0:
 ; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFHMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFHMIN-NEXT:    fcvt.s.h fa0, fa0
 ; RV64IZFHMIN-NEXT:    call ldexpf
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
-; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFHMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-STRICT-LABEL: ldexp_f16:
 ; RV32IZHINXMIN-STRICT:       # %bb.0:
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZHINXMIN-STRICT-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV32IZHINXMIN-STRICT-NEXT:    call ldexpf
 ; RV32IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZHINXMIN-STRICT-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV64IZHINXMIN-STRICT-LABEL: ldexp_f16:
 ; RV64IZHINXMIN-STRICT:       # %bb.0:
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZHINXMIN-STRICT-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.s.h a0, a0
 ; RV64IZHINXMIN-STRICT-NEXT:    call ldexpf
 ; RV64IZHINXMIN-STRICT-NEXT:    fcvt.h.s a0, a0
-; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZHINXMIN-STRICT-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZHINXMIN-STRICT-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-STRICT-NEXT:    ret
 ;
 ; RV32IZDINXZHINXMIN-LABEL: ldexp_f16:
 ; RV32IZDINXZHINXMIN:       # %bb.0:
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV32IZDINXZHINXMIN-NEXT:    call ldexpf
 ; RV32IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZDINXZHINXMIN-NEXT:    ret
 ;
 ; RV64IZDINXZHINXMIN-LABEL: ldexp_f16:
 ; RV64IZDINXZHINXMIN:       # %bb.0:
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZDINXZHINXMIN-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; RV64IZDINXZHINXMIN-NEXT:    call ldexpf
 ; RV64IZDINXZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
   %z = call half @llvm.experimental.constrained.ldexp.f16.i32(half %x, i32 %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp

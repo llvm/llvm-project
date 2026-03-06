@@ -5,7 +5,7 @@ define void @foo(i32 %i) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    li a1, 7
 ; CHECK-NEXT:    beq a0, a1, .LBB0_3
@@ -18,7 +18,7 @@ define void @foo(i32 %i) nounwind {
 ; CHECK-NEXT:  .LBB0_3: # %if.then2
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:  .LBB0_4: # %if.end3
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    tail bar
 entry:

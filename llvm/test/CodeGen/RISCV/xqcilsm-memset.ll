@@ -215,7 +215,7 @@ define void @test4b() nounwind {
 ; RV32I-LABEL: test4b:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    lui a0, %hi(struct4b)
 ; RV32I-NEXT:    addi a0, a0, %lo(struct4b)
 ; RV32I-NEXT:    li a2, 188
@@ -225,7 +225,7 @@ define void @test4b() nounwind {
 ; RV32I-NEXT:    addi a0, a0, %lo(struct4b1)
 ; RV32I-NEXT:    li a2, 192
 ; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    tail memset
 ;

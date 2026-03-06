@@ -7,9 +7,9 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -96
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    sd ra, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 88(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 80(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 72(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -42,9 +42,9 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    addi sp, s0, -96
 ; CHECK-NEXT:    .cfi_def_cfa sp, 96
-; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1

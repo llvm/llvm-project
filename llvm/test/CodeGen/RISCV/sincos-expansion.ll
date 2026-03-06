@@ -8,18 +8,18 @@ define float @test_sincos_f32(float %f) nounwind {
 ; CHECK-LABEL: test_sincos_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    fmv.s fs0, fa0
 ; CHECK-NEXT:    call sinf
 ; CHECK-NEXT:    fmv.s fs1, fa0
 ; CHECK-NEXT:    fmv.s fa0, fs0
 ; CHECK-NEXT:    call cosf
 ; CHECK-NEXT:    fadd.s fa0, fs1, fa0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %sin = call float @sinf(float %f) readnone
@@ -32,18 +32,18 @@ define float @test_sincos_f32_errno(float %f) nounwind {
 ; CHECK-LABEL: test_sincos_f32_errno:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    fmv.s fs0, fa0
 ; CHECK-NEXT:    call sinf
 ; CHECK-NEXT:    fmv.s fs1, fa0
 ; CHECK-NEXT:    fmv.s fa0, fs0
 ; CHECK-NEXT:    call cosf
 ; CHECK-NEXT:    fadd.s fa0, fs1, fa0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %sin = call float @sinf(float %f)
@@ -56,18 +56,18 @@ define double @test_sincos_f64(double %f) nounwind {
 ; CHECK-LABEL: test_sincos_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    fmv.d fs0, fa0
 ; CHECK-NEXT:    call sin
 ; CHECK-NEXT:    fmv.d fs1, fa0
 ; CHECK-NEXT:    fmv.d fa0, fs0
 ; CHECK-NEXT:    call cos
 ; CHECK-NEXT:    fadd.d fa0, fs1, fa0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %sin = call double @sin(double %f) readnone
@@ -80,18 +80,18 @@ define double @test_sincos_f64_errno(double %f) nounwind {
 ; CHECK-LABEL: test_sincos_f64_errno:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    fmv.d fs0, fa0
 ; CHECK-NEXT:    call sin
 ; CHECK-NEXT:    fmv.d fs1, fa0
 ; CHECK-NEXT:    fmv.d fa0, fs0
 ; CHECK-NEXT:    call cos
 ; CHECK-NEXT:    fadd.d fa0, fs1, fa0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
   %sin = call double @sin(double %f)
@@ -104,11 +104,11 @@ define fp128 @test_sincos_f128(fp128 %f) nounwind {
 ; CHECK-LABEL: test_sincos_f128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    call sinl
@@ -122,11 +122,11 @@ define fp128 @test_sincos_f128(fp128 %f) nounwind {
 ; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    mv a1, s3
 ; CHECK-NEXT:    call __addtf3
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
   %sin = call fp128 @sinl(fp128 %f) readnone
@@ -139,11 +139,11 @@ define fp128 @test_sincos_f128_errno(fp128 %f) nounwind {
 ; CHECK-LABEL: test_sincos_f128_errno:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    call sinl
@@ -157,11 +157,11 @@ define fp128 @test_sincos_f128_errno(fp128 %f) nounwind {
 ; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    mv a1, s3
 ; CHECK-NEXT:    call __addtf3
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
   %sin = call fp128 @sinl(fp128 %f)

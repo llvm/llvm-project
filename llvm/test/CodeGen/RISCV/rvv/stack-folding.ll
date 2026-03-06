@@ -13,14 +13,14 @@ define i64 @i64(<vscale x 1 x i64> %v, i1 %c) {
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; RV32-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    #APP
 ; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    beqz a0, .LBB0_2
 ; RV32-NEXT:  # %bb.1: # %truebb
 ; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Folded Reload
+; RV32-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Reload
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vx v8, v9, a0
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -44,13 +44,13 @@ define i64 @i64(<vscale x 1 x i64> %v, i1 %c) {
 ; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; RV64-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; RV64-NEXT:    andi a0, a0, 1
 ; RV64-NEXT:    #APP
 ; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    beqz a0, .LBB0_2
 ; RV64-NEXT:  # %bb.1: # %truebb
-; RV64-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld a0, 16(sp) # 8-byte Reload
 ; RV64-NEXT:  .LBB0_2: # %falsebb
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    add sp, sp, a1
@@ -76,13 +76,13 @@ define i32 @i32(<vscale x 2 x i32> %v, i1 %c) {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    lw a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    lw a0, 16(sp) # 8-byte Reload
 ; CHECK-NEXT:  .LBB1_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
@@ -108,13 +108,13 @@ define i16 @i16(<vscale x 4 x i16> %v, i1 %c) {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    lh a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    lh a0, 16(sp) # 8-byte Reload
 ; CHECK-NEXT:  .LBB2_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
@@ -140,13 +140,13 @@ define i8 @i8(<vscale x 8 x i8> %v, i1 %c) {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    lb a0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    lb a0, 16(sp) # 8-byte Reload
 ; CHECK-NEXT:  .LBB3_2: # %falsebb
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add sp, sp, a1
@@ -172,13 +172,13 @@ define double @f64(<vscale x 1 x double> %v, i1 %c) {
 ; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; RV32-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    #APP
 ; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    beqz a0, .LBB4_2
 ; RV32-NEXT:  # %bb.1: # %truebb
-; RV32-NEXT:    fld fa0, 16(sp) # 8-byte Folded Reload
+; RV32-NEXT:    fld fa0, 16(sp) # 8-byte Reload
 ; RV32-NEXT:    j .LBB4_3
 ; RV32-NEXT:  .LBB4_2: # %falsebb
 ; RV32-NEXT:    fcvt.d.w fa0, zero
@@ -198,13 +198,13 @@ define double @f64(<vscale x 1 x double> %v, i1 %c) {
 ; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; RV64-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; RV64-NEXT:    andi a0, a0, 1
 ; RV64-NEXT:    #APP
 ; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    beqz a0, .LBB4_2
 ; RV64-NEXT:  # %bb.1: # %truebb
-; RV64-NEXT:    fld fa0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    fld fa0, 16(sp) # 8-byte Reload
 ; RV64-NEXT:    j .LBB4_3
 ; RV64-NEXT:  .LBB4_2: # %falsebb
 ; RV64-NEXT:    fmv.d.x fa0, zero
@@ -233,13 +233,13 @@ define float @f32(<vscale x 2 x float> %v, i1 %c) {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    flw fa0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    flw fa0, 16(sp) # 8-byte Reload
 ; CHECK-NEXT:    j .LBB5_3
 ; CHECK-NEXT:  .LBB5_2: # %falsebb
 ; CHECK-NEXT:    fmv.w.x fa0, zero
@@ -268,13 +268,13 @@ define half @f16(<vscale x 1 x half> %v, i1 %c) {
 ; ZFMIN-NEXT:    sub sp, sp, a1
 ; ZFMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; ZFMIN-NEXT:    addi a1, sp, 16
-; ZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; ZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; ZFMIN-NEXT:    andi a0, a0, 1
 ; ZFMIN-NEXT:    #APP
 ; ZFMIN-NEXT:    #NO_APP
 ; ZFMIN-NEXT:    beqz a0, .LBB6_2
 ; ZFMIN-NEXT:  # %bb.1: # %truebb
-; ZFMIN-NEXT:    flh fa0, 16(sp) # 8-byte Folded Reload
+; ZFMIN-NEXT:    flh fa0, 16(sp) # 8-byte Reload
 ; ZFMIN-NEXT:    j .LBB6_3
 ; ZFMIN-NEXT:  .LBB6_2: # %falsebb
 ; ZFMIN-NEXT:    fmv.h.x fa0, zero
@@ -294,13 +294,13 @@ define half @f16(<vscale x 1 x half> %v, i1 %c) {
 ; NOZFMIN-NEXT:    sub sp, sp, a1
 ; NOZFMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; NOZFMIN-NEXT:    addi a1, sp, 16
-; NOZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; NOZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; NOZFMIN-NEXT:    andi a0, a0, 1
 ; NOZFMIN-NEXT:    #APP
 ; NOZFMIN-NEXT:    #NO_APP
 ; NOZFMIN-NEXT:    beqz a0, .LBB6_2
 ; NOZFMIN-NEXT:  # %bb.1: # %truebb
-; NOZFMIN-NEXT:    lh a0, 16(sp) # 8-byte Folded Reload
+; NOZFMIN-NEXT:    lh a0, 16(sp) # 8-byte Reload
 ; NOZFMIN-NEXT:    lui a1, 1048560
 ; NOZFMIN-NEXT:    or a0, a0, a1
 ; NOZFMIN-NEXT:    j .LBB6_3
@@ -332,13 +332,13 @@ define bfloat @bf16(<vscale x 2 x bfloat> %v, i1 %c) {
 ; ZFMIN-NEXT:    sub sp, sp, a1
 ; ZFMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; ZFMIN-NEXT:    addi a1, sp, 16
-; ZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; ZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; ZFMIN-NEXT:    andi a0, a0, 1
 ; ZFMIN-NEXT:    #APP
 ; ZFMIN-NEXT:    #NO_APP
 ; ZFMIN-NEXT:    beqz a0, .LBB7_2
 ; ZFMIN-NEXT:  # %bb.1: # %truebb
-; ZFMIN-NEXT:    lh a0, 16(sp) # 8-byte Folded Reload
+; ZFMIN-NEXT:    lh a0, 16(sp) # 8-byte Reload
 ; ZFMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFMIN-NEXT:    j .LBB7_3
 ; ZFMIN-NEXT:  .LBB7_2: # %falsebb
@@ -359,13 +359,13 @@ define bfloat @bf16(<vscale x 2 x bfloat> %v, i1 %c) {
 ; NOZFMIN-NEXT:    sub sp, sp, a1
 ; NOZFMIN-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; NOZFMIN-NEXT:    addi a1, sp, 16
-; NOZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; NOZFMIN-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Spill
 ; NOZFMIN-NEXT:    andi a0, a0, 1
 ; NOZFMIN-NEXT:    #APP
 ; NOZFMIN-NEXT:    #NO_APP
 ; NOZFMIN-NEXT:    beqz a0, .LBB7_2
 ; NOZFMIN-NEXT:  # %bb.1: # %truebb
-; NOZFMIN-NEXT:    lh a0, 16(sp) # 8-byte Folded Reload
+; NOZFMIN-NEXT:    lh a0, 16(sp) # 8-byte Reload
 ; NOZFMIN-NEXT:    lui a1, 1048560
 ; NOZFMIN-NEXT:    or a0, a0, a1
 ; NOZFMIN-NEXT:    j .LBB7_3

@@ -1399,11 +1399,11 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F:       # %bb.0: # %entry
 ; ZVE32F-NEXT:    addi sp, sp, -256
 ; ZVE32F-NEXT:    .cfi_def_cfa_offset 256
-; ZVE32F-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
-; ZVE32F-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; ZVE32F-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
-; ZVE32F-NEXT:    sd s2, 224(sp) # 8-byte Folded Spill
-; ZVE32F-NEXT:    sd s3, 216(sp) # 8-byte Folded Spill
+; ZVE32F-NEXT:    sd ra, 248(sp) # 8-byte Spill
+; ZVE32F-NEXT:    sd s0, 240(sp) # 8-byte Spill
+; ZVE32F-NEXT:    sd s1, 232(sp) # 8-byte Spill
+; ZVE32F-NEXT:    sd s2, 224(sp) # 8-byte Spill
+; ZVE32F-NEXT:    sd s3, 216(sp) # 8-byte Spill
 ; ZVE32F-NEXT:    .cfi_offset ra, -8
 ; ZVE32F-NEXT:    .cfi_offset s0, -16
 ; ZVE32F-NEXT:    .cfi_offset s1, -24
@@ -1483,11 +1483,11 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F-NEXT:    vse32.v v8, (a0)
 ; ZVE32F-NEXT:    addi sp, s0, -256
 ; ZVE32F-NEXT:    .cfi_def_cfa sp, 256
-; ZVE32F-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
-; ZVE32F-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; ZVE32F-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
-; ZVE32F-NEXT:    ld s2, 224(sp) # 8-byte Folded Reload
-; ZVE32F-NEXT:    ld s3, 216(sp) # 8-byte Folded Reload
+; ZVE32F-NEXT:    ld ra, 248(sp) # 8-byte Reload
+; ZVE32F-NEXT:    ld s0, 240(sp) # 8-byte Reload
+; ZVE32F-NEXT:    ld s1, 232(sp) # 8-byte Reload
+; ZVE32F-NEXT:    ld s2, 224(sp) # 8-byte Reload
+; ZVE32F-NEXT:    ld s3, 216(sp) # 8-byte Reload
 ; ZVE32F-NEXT:    .cfi_restore ra
 ; ZVE32F-NEXT:    .cfi_restore s0
 ; ZVE32F-NEXT:    .cfi_restore s1

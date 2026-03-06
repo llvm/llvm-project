@@ -289,10 +289,10 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-LABEL: atomicrmw_max_i64_seq_cst:
 ; RV32IB-COMMON:       # %bb.0:
 ; RV32IB-COMMON-NEXT:    addi sp, sp, -32
-; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
 ; RV32IB-COMMON-NEXT:    mv s1, a0
 ; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
@@ -333,10 +333,10 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:  .LBB4_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
 ; RV32IB-COMMON-NEXT:    mv a1, a5
-; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32IB-COMMON-NEXT:    addi sp, sp, 32
 ; RV32IB-COMMON-NEXT:    ret
 ;
@@ -378,10 +378,10 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-LABEL: atomicrmw_min_i64_seq_cst:
 ; RV32IB-COMMON:       # %bb.0:
 ; RV32IB-COMMON-NEXT:    addi sp, sp, -32
-; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
 ; RV32IB-COMMON-NEXT:    mv s1, a0
 ; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
@@ -422,10 +422,10 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:  .LBB5_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
 ; RV32IB-COMMON-NEXT:    mv a1, a5
-; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32IB-COMMON-NEXT:    addi sp, sp, 32
 ; RV32IB-COMMON-NEXT:    ret
 ;
@@ -467,10 +467,10 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-LABEL: atomicrmw_umax_i64_seq_cst:
 ; RV32IB-COMMON:       # %bb.0:
 ; RV32IB-COMMON-NEXT:    addi sp, sp, -32
-; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
 ; RV32IB-COMMON-NEXT:    mv s1, a0
 ; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
@@ -511,10 +511,10 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:  .LBB6_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
 ; RV32IB-COMMON-NEXT:    mv a1, a5
-; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32IB-COMMON-NEXT:    addi sp, sp, 32
 ; RV32IB-COMMON-NEXT:    ret
 ;
@@ -556,10 +556,10 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-LABEL: atomicrmw_umin_i64_seq_cst:
 ; RV32IB-COMMON:       # %bb.0:
 ; RV32IB-COMMON-NEXT:    addi sp, sp, -32
-; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32IB-COMMON-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
 ; RV32IB-COMMON-NEXT:    mv s1, a0
 ; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
@@ -600,10 +600,10 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:  .LBB7_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
 ; RV32IB-COMMON-NEXT:    mv a1, a5
-; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; RV32IB-COMMON-NEXT:    lw s2, 16(sp) # 4-byte Reload
 ; RV32IB-COMMON-NEXT:    addi sp, sp, 32
 ; RV32IB-COMMON-NEXT:    ret
 ;

@@ -7,9 +7,9 @@ define void @bar() nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -96
-; CHECK-NEXT:    sd ra, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 88(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 80(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 72(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 96
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -34,9 +34,9 @@ define void @bar() nounwind {
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    addi sp, s0, -96
-; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 96
 ; CHECK-NEXT:    ret
 entry:

@@ -9,12 +9,12 @@ define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -48
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s4, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -35,12 +35,12 @@ define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (s1)
 ; CHECK-NEXT:    vse64.v v8, (s0)
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s4, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -100,9 +100,9 @@ define void @i8_i16(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -110,9 +110,9 @@ define void @i8_i16(ptr %p, ptr %q) {
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sh s1, 0(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -136,10 +136,10 @@ define void @i8_i16_rotate(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -150,10 +150,10 @@ define void @i8_i16_rotate(ptr %p, ptr %q) {
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s2, 0(s0)
 ; CHECK-NEXT:    sb s1, 1(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -180,10 +180,10 @@ define void @i8_i16_resched_readnone_ld(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -196,10 +196,10 @@ define void @i8_i16_resched_readnone_ld(ptr %p, ptr %q) {
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s2, 0(s1)
 ; CHECK-NEXT:    sb s0, 1(s1)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -227,10 +227,10 @@ define void @i8_i16_resched_readnone_st(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -242,10 +242,10 @@ define void @i8_i16_resched_readnone_st(ptr %p, ptr %q) {
 ; CHECK-NEXT:    sb s1, 0(s0)
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s2, 1(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -271,9 +271,9 @@ define void @i32_i64(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -281,9 +281,9 @@ define void @i32_i64(ptr %p, ptr %q) {
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sd s1, 0(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -307,9 +307,9 @@ define void @i32_i64_rotate(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -318,9 +318,9 @@ define void @i32_i64_rotate(ptr %p, ptr %q) {
 ; CHECK-NEXT:    rori s1, a0, 32
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sd s1, 0(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -346,8 +346,8 @@ define void @v2i8_v4i8(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    csrr a2, vlenb
@@ -356,18 +356,18 @@ define void @v2i8_v4i8(ptr %p, ptr %q) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    .cfi_def_cfa sp, 32
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -393,9 +393,9 @@ define void @v16i8_v32i8(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 40(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -407,19 +407,19 @@ define void @v16i8_v32i8(ptr %p, ptr %q) {
 ; CHECK-NEXT:    vsetvli zero, s1, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 32
-; CHECK-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
+; CHECK-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    addi a0, sp, 32
-; CHECK-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
+; CHECK-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Reload
 ; CHECK-NEXT:    vsetvli zero, s1, e8, m2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    sh1add sp, a0, sp
 ; CHECK-NEXT:    .cfi_def_cfa sp, 64
-; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 40(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -443,9 +443,9 @@ define void @two_half(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -453,9 +453,9 @@ define void @two_half(ptr %p, ptr %q) {
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sw s1, 0(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -479,10 +479,10 @@ define void @two_half_unaligned(ptr %p, ptr %q) {
 ; V:       # %bb.0:
 ; V-NEXT:    addi sp, sp, -32
 ; V-NEXT:    .cfi_def_cfa_offset 32
-; V-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; V-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; V-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; V-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; V-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; V-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; V-NEXT:    sd s1, 8(sp) # 8-byte Spill
+; V-NEXT:    sd s2, 0(sp) # 8-byte Spill
 ; V-NEXT:    .cfi_offset ra, -8
 ; V-NEXT:    .cfi_offset s0, -16
 ; V-NEXT:    .cfi_offset s1, -24
@@ -493,10 +493,10 @@ define void @two_half_unaligned(ptr %p, ptr %q) {
 ; V-NEXT:    call g
 ; V-NEXT:    sh s1, 0(s0)
 ; V-NEXT:    sh s2, 2(s0)
-; V-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; V-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; V-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; V-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; V-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; V-NEXT:    ld s1, 8(sp) # 8-byte Reload
+; V-NEXT:    ld s2, 0(sp) # 8-byte Reload
 ; V-NEXT:    .cfi_restore ra
 ; V-NEXT:    .cfi_restore s0
 ; V-NEXT:    .cfi_restore s1
@@ -509,10 +509,10 @@ define void @two_half_unaligned(ptr %p, ptr %q) {
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    addi sp, sp, -32
 ; ZVFH-NEXT:    .cfi_def_cfa_offset 32
-; ZVFH-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; ZVFH-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; ZVFH-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
-; ZVFH-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; ZVFH-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; ZVFH-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; ZVFH-NEXT:    fsd fs0, 8(sp) # 8-byte Spill
+; ZVFH-NEXT:    fsd fs1, 0(sp) # 8-byte Spill
 ; ZVFH-NEXT:    .cfi_offset ra, -8
 ; ZVFH-NEXT:    .cfi_offset s0, -16
 ; ZVFH-NEXT:    .cfi_offset fs0, -24
@@ -523,10 +523,10 @@ define void @two_half_unaligned(ptr %p, ptr %q) {
 ; ZVFH-NEXT:    call g
 ; ZVFH-NEXT:    fsh fs0, 0(s0)
 ; ZVFH-NEXT:    fsh fs1, 2(s0)
-; ZVFH-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; ZVFH-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; ZVFH-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; ZVFH-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; ZVFH-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; ZVFH-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; ZVFH-NEXT:    fld fs0, 8(sp) # 8-byte Reload
+; ZVFH-NEXT:    fld fs1, 0(sp) # 8-byte Reload
 ; ZVFH-NEXT:    .cfi_restore ra
 ; ZVFH-NEXT:    .cfi_restore s0
 ; ZVFH-NEXT:    .cfi_restore fs0
@@ -551,9 +551,9 @@ define void @two_float(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -561,9 +561,9 @@ define void @two_float(ptr %p, ptr %q) {
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sd s1, 0(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -587,10 +587,10 @@ define void @two_float_unaligned(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset fs0, -24
@@ -601,10 +601,10 @@ define void @two_float_unaligned(ptr %p, ptr %q) {
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    fsw fs0, 0(s0)
 ; CHECK-NEXT:    fsw fs1, 4(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore fs0
@@ -629,9 +629,9 @@ define void @two_float_rotate(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -640,9 +640,9 @@ define void @two_float_rotate(ptr %p, ptr %q) {
 ; CHECK-NEXT:    rori s1, a0, 32
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sd s1, 0(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -666,10 +666,10 @@ define void @two_double(ptr %p, ptr %q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset fs0, -24
@@ -680,10 +680,10 @@ define void @two_double(ptr %p, ptr %q) {
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    fsd fs0, 0(s0)
 ; CHECK-NEXT:    fsd fs1, 8(s0)
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore fs0

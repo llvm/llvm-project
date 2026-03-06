@@ -6,8 +6,8 @@ define dso_local void @lots_args(i32 signext %x0, i32 signext %x1, <vscale x 16 
 ; CHECK-LABEL: lots_args:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 64
 ; CHECK-NEXT:    csrr t0, vlenb
 ; CHECK-NEXT:    slli t0, t0, 3
@@ -31,8 +31,8 @@ define dso_local void @lots_args(i32 signext %x0, i32 signext %x1, <vscale x 16 
 ; CHECK-NEXT:    sw t1, -60(s0)
 ; CHECK-NEXT:    sw t0, -64(s0)
 ; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    ret
 entry:
@@ -65,9 +65,9 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -112
-; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 112
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -134,9 +134,9 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    addi sp, s0, -112
-; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:

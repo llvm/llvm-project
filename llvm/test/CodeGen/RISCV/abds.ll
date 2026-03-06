@@ -556,7 +556,7 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    mv t3, t5
 ; RV32I-NEXT:  .LBB11_4:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    xor t6, a7, t1
 ; RV32I-NEXT:    xor s0, a5, a6
 ; RV32I-NEXT:    or t6, s0, t6
@@ -603,7 +603,7 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw a2, 12(a0)
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -652,7 +652,7 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    mv t3, t5
 ; RV32ZBB-NEXT:  .LBB11_4:
 ; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32ZBB-NEXT:    xor t6, a7, t1
 ; RV32ZBB-NEXT:    xor s0, a5, a6
 ; RV32ZBB-NEXT:    or t6, s0, t6
@@ -699,7 +699,7 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sw a3, 4(a0)
 ; RV32ZBB-NEXT:    sw a4, 8(a0)
 ; RV32ZBB-NEXT:    sw a2, 12(a0)
-; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32ZBB-NEXT:    addi sp, sp, 16
 ; RV32ZBB-NEXT:    ret
 ;
@@ -756,7 +756,7 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    mv t3, t5
 ; RV32I-NEXT:  .LBB12_4:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    xor t6, a7, t1
 ; RV32I-NEXT:    xor s0, a5, a6
 ; RV32I-NEXT:    or t6, s0, t6
@@ -803,7 +803,7 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw a2, 12(a0)
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -852,7 +852,7 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    mv t3, t5
 ; RV32ZBB-NEXT:  .LBB12_4:
 ; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32ZBB-NEXT:    xor t6, a7, t1
 ; RV32ZBB-NEXT:    xor s0, a5, a6
 ; RV32ZBB-NEXT:    or t6, s0, t6
@@ -899,7 +899,7 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sw a3, 4(a0)
 ; RV32ZBB-NEXT:    sw a4, 8(a0)
 ; RV32ZBB-NEXT:    sw a2, 12(a0)
-; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32ZBB-NEXT:    addi sp, sp, 16
 ; RV32ZBB-NEXT:    ret
 ;
@@ -1145,7 +1145,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    mv t3, t5
 ; RV32I-NEXT:  .LBB17_4:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    xor t6, a7, t1
 ; RV32I-NEXT:    xor s0, a5, a6
 ; RV32I-NEXT:    or t6, s0, t6
@@ -1192,7 +1192,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw a2, 12(a0)
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -1241,7 +1241,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    mv t3, t5
 ; RV32ZBB-NEXT:  .LBB17_4:
 ; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32ZBB-NEXT:    xor t6, a7, t1
 ; RV32ZBB-NEXT:    xor s0, a5, a6
 ; RV32ZBB-NEXT:    or t6, s0, t6
@@ -1288,7 +1288,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sw a3, 4(a0)
 ; RV32ZBB-NEXT:    sw a4, 8(a0)
 ; RV32ZBB-NEXT:    sw a2, 12(a0)
-; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32ZBB-NEXT:    addi sp, sp, 16
 ; RV32ZBB-NEXT:    ret
 ;
@@ -1536,7 +1536,7 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    mv t3, t5
 ; RV32I-NEXT:  .LBB22_4:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    xor t6, a7, t1
 ; RV32I-NEXT:    xor s0, a5, a6
 ; RV32I-NEXT:    or t6, s0, t6
@@ -1583,7 +1583,7 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw a2, 12(a0)
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -1632,7 +1632,7 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    mv t3, t5
 ; RV32ZBB-NEXT:  .LBB22_4:
 ; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32ZBB-NEXT:    xor t6, a7, t1
 ; RV32ZBB-NEXT:    xor s0, a5, a6
 ; RV32ZBB-NEXT:    or t6, s0, t6
@@ -1679,7 +1679,7 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sw a3, 4(a0)
 ; RV32ZBB-NEXT:    sw a4, 8(a0)
 ; RV32ZBB-NEXT:    sw a2, 12(a0)
-; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32ZBB-NEXT:    addi sp, sp, 16
 ; RV32ZBB-NEXT:    ret
 ;
@@ -2527,7 +2527,7 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    mv t3, t5
 ; RV32I-NEXT:  .LBB38_4:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    xor t6, a7, t1
 ; RV32I-NEXT:    xor s0, a5, a6
 ; RV32I-NEXT:    or t6, s0, t6
@@ -2574,7 +2574,7 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a4, 8(a0)
 ; RV32I-NEXT:    sw a2, 12(a0)
-; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -2623,7 +2623,7 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    mv t3, t5
 ; RV32ZBB-NEXT:  .LBB38_4:
 ; RV32ZBB-NEXT:    addi sp, sp, -16
-; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBB-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32ZBB-NEXT:    xor t6, a7, t1
 ; RV32ZBB-NEXT:    xor s0, a5, a6
 ; RV32ZBB-NEXT:    or t6, s0, t6
@@ -2670,7 +2670,7 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; RV32ZBB-NEXT:    sw a3, 4(a0)
 ; RV32ZBB-NEXT:    sw a4, 8(a0)
 ; RV32ZBB-NEXT:    sw a2, 12(a0)
-; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBB-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32ZBB-NEXT:    addi sp, sp, 16
 ; RV32ZBB-NEXT:    ret
 ;

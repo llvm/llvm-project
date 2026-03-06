@@ -1139,7 +1139,7 @@ define <8 x i64> @v8xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    lw t0, 44(sp)
 ; RV32-NEXT:    lw t1, 40(sp)
@@ -1166,7 +1166,7 @@ define <8 x i64> @v8xi64_exact(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i
 ; RV32-NEXT:    vslide1down.vx v11, v11, t2
 ; RV32-NEXT:    vslide1down.vx v11, v11, t1
 ; RV32-NEXT:    vslide1down.vx v11, v11, t0
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -1337,7 +1337,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV32-ONLY:       # %bb.0:
 ; RV32-ONLY-NEXT:    addi sp, sp, -16
 ; RV32-ONLY-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ONLY-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-ONLY-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32-ONLY-NEXT:    .cfi_offset s0, -4
 ; RV32-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV32-ONLY-NEXT:    lbu a2, 1(a0)
@@ -1376,7 +1376,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV32-ONLY-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-ONLY-NEXT:    vslide1down.vx v9, v9, t0
 ; RV32-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
-; RV32-ONLY-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-ONLY-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32-ONLY-NEXT:    .cfi_restore s0
 ; RV32-ONLY-NEXT:    addi sp, sp, 16
 ; RV32-ONLY-NEXT:    .cfi_def_cfa_offset 0
@@ -1472,7 +1472,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64V-ONLY:       # %bb.0:
 ; RV64V-ONLY-NEXT:    addi sp, sp, -16
 ; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 16
-; RV64V-ONLY-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64V-ONLY-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64V-ONLY-NEXT:    .cfi_offset s0, -8
 ; RV64V-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV64V-ONLY-NEXT:    lbu a2, 1(a0)
@@ -1511,7 +1511,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64V-ONLY-NEXT:    vslide1down.vx v9, v9, t0
 ; RV64V-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
-; RV64V-ONLY-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64V-ONLY-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64V-ONLY-NEXT:    .cfi_restore s0
 ; RV64V-ONLY-NEXT:    addi sp, sp, 16
 ; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 0
@@ -1609,7 +1609,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    addi sp, sp, -16
 ; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZVE32-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64ZVE32-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64ZVE32-NEXT:    .cfi_offset s0, -8
 ; RV64ZVE32-NEXT:    lbu a1, 0(a0)
 ; RV64ZVE32-NEXT:    lbu a2, 1(a0)
@@ -1648,7 +1648,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64ZVE32-NEXT:    vslide1down.vx v9, v9, t0
 ; RV64ZVE32-NEXT:    vslidedown.vi v8, v9, 8, v0.t
-; RV64ZVE32-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64ZVE32-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64ZVE32-NEXT:    .cfi_restore s0
 ; RV64ZVE32-NEXT:    addi sp, sp, 16
 ; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 0
@@ -1711,7 +1711,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV32-ONLY:       # %bb.0:
 ; RV32-ONLY-NEXT:    addi sp, sp, -16
 ; RV32-ONLY-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ONLY-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-ONLY-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32-ONLY-NEXT:    .cfi_offset s0, -4
 ; RV32-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV32-ONLY-NEXT:    lbu a2, 1(a0)
@@ -1750,7 +1750,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV32-ONLY-NEXT:    vslide1down.vx v8, v8, t2
 ; RV32-ONLY-NEXT:    vslide1down.vx v9, v9, t0
 ; RV32-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
-; RV32-ONLY-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-ONLY-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32-ONLY-NEXT:    .cfi_restore s0
 ; RV32-ONLY-NEXT:    addi sp, sp, 16
 ; RV32-ONLY-NEXT:    .cfi_def_cfa_offset 0
@@ -1846,7 +1846,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64V-ONLY:       # %bb.0:
 ; RV64V-ONLY-NEXT:    addi sp, sp, -16
 ; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 16
-; RV64V-ONLY-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64V-ONLY-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64V-ONLY-NEXT:    .cfi_offset s0, -8
 ; RV64V-ONLY-NEXT:    lbu a1, 0(a0)
 ; RV64V-ONLY-NEXT:    lbu a2, 1(a0)
@@ -1885,7 +1885,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64V-ONLY-NEXT:    vslide1down.vx v8, v8, t2
 ; RV64V-ONLY-NEXT:    vslide1down.vx v9, v9, t0
 ; RV64V-ONLY-NEXT:    vslidedown.vi v8, v9, 8, v0.t
-; RV64V-ONLY-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64V-ONLY-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64V-ONLY-NEXT:    .cfi_restore s0
 ; RV64V-ONLY-NEXT:    addi sp, sp, 16
 ; RV64V-ONLY-NEXT:    .cfi_def_cfa_offset 0
@@ -1946,7 +1946,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RVA22U64-PACK:       # %bb.0:
 ; RVA22U64-PACK-NEXT:    addi sp, sp, -16
 ; RVA22U64-PACK-NEXT:    .cfi_def_cfa_offset 16
-; RVA22U64-PACK-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RVA22U64-PACK-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RVA22U64-PACK-NEXT:    .cfi_offset s0, -8
 ; RVA22U64-PACK-NEXT:    lbu a1, 0(a0)
 ; RVA22U64-PACK-NEXT:    lbu a2, 1(a0)
@@ -1981,7 +1981,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RVA22U64-PACK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RVA22U64-PACK-NEXT:    vmv.v.x v8, a1
 ; RVA22U64-PACK-NEXT:    vslide1down.vx v8, v8, a0
-; RVA22U64-PACK-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RVA22U64-PACK-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RVA22U64-PACK-NEXT:    .cfi_restore s0
 ; RVA22U64-PACK-NEXT:    addi sp, sp, 16
 ; RVA22U64-PACK-NEXT:    .cfi_def_cfa_offset 0
@@ -1991,7 +1991,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64ZVE32:       # %bb.0:
 ; RV64ZVE32-NEXT:    addi sp, sp, -16
 ; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZVE32-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64ZVE32-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64ZVE32-NEXT:    .cfi_offset s0, -8
 ; RV64ZVE32-NEXT:    lbu a1, 0(a0)
 ; RV64ZVE32-NEXT:    lbu a2, 1(a0)
@@ -2030,7 +2030,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV64ZVE32-NEXT:    vslide1down.vx v8, v8, t2
 ; RV64ZVE32-NEXT:    vslide1down.vx v9, v9, t0
 ; RV64ZVE32-NEXT:    vslidedown.vi v8, v9, 8, v0.t
-; RV64ZVE32-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64ZVE32-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64ZVE32-NEXT:    .cfi_restore s0
 ; RV64ZVE32-NEXT:    addi sp, sp, 16
 ; RV64ZVE32-NEXT:    .cfi_def_cfa_offset 0

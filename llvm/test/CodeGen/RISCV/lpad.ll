@@ -142,14 +142,14 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; RV32-NEXT:    lpad 0
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_remember_state
 ; RV32-NEXT:  .Ltmp0:
 ; RV32-NEXT:    jalr a0
 ; RV32-NEXT:  .Ltmp1:
 ; RV32-NEXT:  .LBB2_1: # %try.cont
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -164,14 +164,14 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; RV64-NEXT:    lpad 0
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_remember_state
 ; RV64-NEXT:  .Ltmp0:
 ; RV64-NEXT:    jalr a0
 ; RV64-NEXT:  .Ltmp1:
 ; RV64-NEXT:  .LBB2_1: # %try.cont
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -186,7 +186,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV32-NEXT:    lpad 1
 ; FIXED-ONE-RV32-NEXT:    addi sp, sp, -16
 ; FIXED-ONE-RV32-NEXT:    .cfi_def_cfa_offset 16
-; FIXED-ONE-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; FIXED-ONE-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; FIXED-ONE-RV32-NEXT:    .cfi_offset ra, -4
 ; FIXED-ONE-RV32-NEXT:    .cfi_remember_state
 ; FIXED-ONE-RV32-NEXT:  .Ltmp0:
@@ -194,7 +194,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV32-NEXT:    jalr a0
 ; FIXED-ONE-RV32-NEXT:  .Ltmp1:
 ; FIXED-ONE-RV32-NEXT:  .LBB2_1: # %try.cont
-; FIXED-ONE-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; FIXED-ONE-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; FIXED-ONE-RV32-NEXT:    .cfi_restore ra
 ; FIXED-ONE-RV32-NEXT:    addi sp, sp, 16
 ; FIXED-ONE-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -209,7 +209,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV64-NEXT:    lpad 1
 ; FIXED-ONE-RV64-NEXT:    addi sp, sp, -16
 ; FIXED-ONE-RV64-NEXT:    .cfi_def_cfa_offset 16
-; FIXED-ONE-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; FIXED-ONE-RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; FIXED-ONE-RV64-NEXT:    .cfi_offset ra, -8
 ; FIXED-ONE-RV64-NEXT:    .cfi_remember_state
 ; FIXED-ONE-RV64-NEXT:  .Ltmp0:
@@ -217,7 +217,7 @@ define void @invoke(ptr %f) personality ptr @__gxx_personality_v0 {
 ; FIXED-ONE-RV64-NEXT:    jalr a0
 ; FIXED-ONE-RV64-NEXT:  .Ltmp1:
 ; FIXED-ONE-RV64-NEXT:  .LBB2_1: # %try.cont
-; FIXED-ONE-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; FIXED-ONE-RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; FIXED-ONE-RV64-NEXT:    .cfi_restore ra
 ; FIXED-ONE-RV64-NEXT:    addi sp, sp, 16
 ; FIXED-ONE-RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -298,12 +298,12 @@ define i32 @test_returns_twice() {
 ; RV32-NEXT:    lpad 0
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    call setjmp
 ; RV32-NEXT:    lpad 0
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -314,12 +314,12 @@ define i32 @test_returns_twice() {
 ; RV64-NEXT:    lpad 0
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    addi a0, sp, 4
 ; RV64-NEXT:    call setjmp
 ; RV64-NEXT:    lpad 0
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
@@ -330,12 +330,12 @@ define i32 @test_returns_twice() {
 ; FIXED-ONE-RV32-NEXT:    lpad 1
 ; FIXED-ONE-RV32-NEXT:    addi sp, sp, -16
 ; FIXED-ONE-RV32-NEXT:    .cfi_def_cfa_offset 16
-; FIXED-ONE-RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; FIXED-ONE-RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; FIXED-ONE-RV32-NEXT:    .cfi_offset ra, -4
 ; FIXED-ONE-RV32-NEXT:    addi a0, sp, 8
 ; FIXED-ONE-RV32-NEXT:    call setjmp
 ; FIXED-ONE-RV32-NEXT:    lpad 1
-; FIXED-ONE-RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; FIXED-ONE-RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; FIXED-ONE-RV32-NEXT:    .cfi_restore ra
 ; FIXED-ONE-RV32-NEXT:    addi sp, sp, 16
 ; FIXED-ONE-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -346,12 +346,12 @@ define i32 @test_returns_twice() {
 ; FIXED-ONE-RV64-NEXT:    lpad 1
 ; FIXED-ONE-RV64-NEXT:    addi sp, sp, -16
 ; FIXED-ONE-RV64-NEXT:    .cfi_def_cfa_offset 16
-; FIXED-ONE-RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; FIXED-ONE-RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; FIXED-ONE-RV64-NEXT:    .cfi_offset ra, -8
 ; FIXED-ONE-RV64-NEXT:    addi a0, sp, 4
 ; FIXED-ONE-RV64-NEXT:    call setjmp
 ; FIXED-ONE-RV64-NEXT:    lpad 1
-; FIXED-ONE-RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; FIXED-ONE-RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; FIXED-ONE-RV64-NEXT:    .cfi_restore ra
 ; FIXED-ONE-RV64-NEXT:    addi sp, sp, 16
 ; FIXED-ONE-RV64-NEXT:    .cfi_def_cfa_offset 0

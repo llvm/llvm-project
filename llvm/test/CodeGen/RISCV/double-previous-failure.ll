@@ -22,7 +22,7 @@ define i32 @main() nounwind {
 ; RV32IFD-LABEL: main:
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    lui a1, 262144
 ; RV32IFD-NEXT:    li a0, 0
 ; RV32IFD-NEXT:    call test
@@ -46,7 +46,7 @@ define i32 @main() nounwind {
 ; RV32IZFINXZDINX-LABEL: main:
 ; RV32IZFINXZDINX:       # %bb.0: # %entry
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    lui a1, 262144
 ; RV32IZFINXZDINX-NEXT:    li a0, 0
 ; RV32IZFINXZDINX-NEXT:    call test

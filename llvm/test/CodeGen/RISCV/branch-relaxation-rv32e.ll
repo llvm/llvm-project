@@ -75,9 +75,9 @@ define void @relax_jal_spill_32() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    .cfi_offset s1, -12
@@ -119,7 +119,7 @@ define void @relax_jal_spill_32() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beq a4, a5, .LBB2_1
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Spill
 ; CHECK-NEXT:    jump .LBB2_4, s1
 ; CHECK-NEXT:  .LBB2_1: # %branch_1
 ; CHECK-NEXT:    #APP
@@ -127,7 +127,7 @@ define void @relax_jal_spill_32() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    j .LBB2_2
 ; CHECK-NEXT:  .LBB2_4: # %branch_2
-; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Reload
 ; CHECK-NEXT:  .LBB2_2: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
@@ -165,9 +165,9 @@ define void @relax_jal_spill_32() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use a5
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -219,9 +219,9 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -2044
 ; CHECK-NEXT:    .cfi_def_cfa_offset 2044
-; CHECK-NEXT:    sw ra, 2040(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 2036(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 2032(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 2040(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 2036(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s1, 2032(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    .cfi_offset s1, -12
@@ -270,7 +270,7 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beq a4, a5, .LBB3_1
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Spill
 ; CHECK-NEXT:    jump .LBB3_4, s1
 ; CHECK-NEXT:  .LBB3_1: # %branch_1
 ; CHECK-NEXT:    #APP
@@ -278,7 +278,7 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    j .LBB3_2
 ; CHECK-NEXT:  .LBB3_4: # %branch_2
-; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Reload
 ; CHECK-NEXT:  .LBB3_2: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
@@ -318,9 +318,9 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    addi sp, s0, -2044
 ; CHECK-NEXT:    .cfi_def_cfa sp, 2044
-; CHECK-NEXT:    lw ra, 2040(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 2036(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 2032(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 2040(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 2036(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s1, 2032(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -371,9 +371,9 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s1, 4(sp) # 4-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    .cfi_offset s1, -12
@@ -417,7 +417,7 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-NEXT:    bne a4, a5, .LBB4_2
 ; CHECK-NEXT:    j .LBB4_1
 ; CHECK-NEXT:  .LBB4_8: # %dest_1
-; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Reload
 ; CHECK-NEXT:  .LBB4_1: # %dest_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 1
@@ -469,9 +469,9 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use a5
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s1, 4(sp) # 4-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
@@ -486,7 +486,7 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.7: # %space
-; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Spill
 ; CHECK-NEXT:    jump .LBB4_8, s1
 entry:
   %ra = call i32 asm sideeffect "addi ra, x0, 1", "={ra}"()

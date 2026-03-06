@@ -9,19 +9,19 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -112
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -151,19 +151,19 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    sb a0, 0(zero)
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1

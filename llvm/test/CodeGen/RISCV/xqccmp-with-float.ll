@@ -11,12 +11,12 @@ define float @foo(float %arg) {
 ; XQCCMP32-NEXT:    qc.cm.push {ra}, -32
 ; XQCCMP32-NEXT:    .cfi_def_cfa_offset 32
 ; XQCCMP32-NEXT:    .cfi_offset ra, -4
-; XQCCMP32-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; XQCCMP32-NEXT:    fsw fs0, 12(sp) # 4-byte Spill
 ; XQCCMP32-NEXT:    .cfi_offset fs0, -20
 ; XQCCMP32-NEXT:    fmv.s fs0, fa0
 ; XQCCMP32-NEXT:    call callee
 ; XQCCMP32-NEXT:    fmv.s fa0, fs0
-; XQCCMP32-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; XQCCMP32-NEXT:    flw fs0, 12(sp) # 4-byte Reload
 ; XQCCMP32-NEXT:    .cfi_restore fs0
 ; XQCCMP32-NEXT:    qc.cm.popret {ra}, 32
 ;
@@ -25,12 +25,12 @@ define float @foo(float %arg) {
 ; XQCCMP64-NEXT:    qc.cm.push {ra}, -32
 ; XQCCMP64-NEXT:    .cfi_def_cfa_offset 32
 ; XQCCMP64-NEXT:    .cfi_offset ra, -8
-; XQCCMP64-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; XQCCMP64-NEXT:    fsw fs0, 12(sp) # 4-byte Spill
 ; XQCCMP64-NEXT:    .cfi_offset fs0, -20
 ; XQCCMP64-NEXT:    fmv.s fs0, fa0
 ; XQCCMP64-NEXT:    call callee
 ; XQCCMP64-NEXT:    fmv.s fa0, fs0
-; XQCCMP64-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; XQCCMP64-NEXT:    flw fs0, 12(sp) # 4-byte Reload
 ; XQCCMP64-NEXT:    .cfi_restore fs0
 ; XQCCMP64-NEXT:    qc.cm.popret {ra}, 32
 entry:
@@ -45,14 +45,14 @@ define void @foo2(i32 %x, float %y) {
 ; XQCCMP32-NEXT:    .cfi_def_cfa_offset 32
 ; XQCCMP32-NEXT:    .cfi_offset ra, -4
 ; XQCCMP32-NEXT:    .cfi_offset s0, -8
-; XQCCMP32-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; XQCCMP32-NEXT:    fsw fs0, 12(sp) # 4-byte Spill
 ; XQCCMP32-NEXT:    .cfi_offset fs0, -20
 ; XQCCMP32-NEXT:    fmv.s fs0, fa0
 ; XQCCMP32-NEXT:    mv s0, a0
 ; XQCCMP32-NEXT:    call bar
 ; XQCCMP32-NEXT:    mv a0, s0
 ; XQCCMP32-NEXT:    fmv.s fa0, fs0
-; XQCCMP32-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; XQCCMP32-NEXT:    flw fs0, 12(sp) # 4-byte Reload
 ; XQCCMP32-NEXT:    .cfi_restore fs0
 ; XQCCMP32-NEXT:    qc.cm.pop {ra, s0}, 32
 ; XQCCMP32-NEXT:    .cfi_restore ra
@@ -66,14 +66,14 @@ define void @foo2(i32 %x, float %y) {
 ; XQCCMP64-NEXT:    .cfi_def_cfa_offset 32
 ; XQCCMP64-NEXT:    .cfi_offset ra, -8
 ; XQCCMP64-NEXT:    .cfi_offset s0, -16
-; XQCCMP64-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; XQCCMP64-NEXT:    fsw fs0, 12(sp) # 4-byte Spill
 ; XQCCMP64-NEXT:    .cfi_offset fs0, -20
 ; XQCCMP64-NEXT:    fmv.s fs0, fa0
 ; XQCCMP64-NEXT:    mv s0, a0
 ; XQCCMP64-NEXT:    call bar
 ; XQCCMP64-NEXT:    mv a0, s0
 ; XQCCMP64-NEXT:    fmv.s fa0, fs0
-; XQCCMP64-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; XQCCMP64-NEXT:    flw fs0, 12(sp) # 4-byte Reload
 ; XQCCMP64-NEXT:    .cfi_restore fs0
 ; XQCCMP64-NEXT:    qc.cm.pop {ra, s0}, 32
 ; XQCCMP64-NEXT:    .cfi_restore ra

@@ -31,8 +31,8 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV32IF:       # %bb.0: # %entry
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IF-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    .cfi_offset s0, -8
 ; RV32IF-NEXT:    li a0, 1
@@ -56,8 +56,8 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV32IF-NEXT:    addi a0, a0, -1
 ; RV32IF-NEXT:    seqz a0, a0
 ; RV32IF-NEXT:  .LBB1_3: # %return
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IF-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32IF-NEXT:    .cfi_restore ra
 ; RV32IF-NEXT:    .cfi_restore s0
 ; RV32IF-NEXT:    addi sp, sp, 16
@@ -68,8 +68,8 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV64IF:       # %bb.0: # %entry
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    .cfi_def_cfa_offset 16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64IF-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64IF-NEXT:    .cfi_offset ra, -8
 ; RV64IF-NEXT:    .cfi_offset s0, -16
 ; RV64IF-NEXT:    li a0, 1
@@ -93,8 +93,8 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV64IF-NEXT:    addi a0, a0, -1
 ; RV64IF-NEXT:    seqz a0, a0
 ; RV64IF-NEXT:  .LBB1_3: # %return
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64IF-NEXT:    .cfi_restore ra
 ; RV64IF-NEXT:    .cfi_restore s0
 ; RV64IF-NEXT:    addi sp, sp, 16

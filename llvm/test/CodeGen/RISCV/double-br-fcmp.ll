@@ -19,7 +19,7 @@ define void @br_fcmp_false(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB0_2: # %if.else
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_false:
@@ -29,7 +29,7 @@ define void @br_fcmp_false(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB0_2: # %if.else
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_false:
@@ -39,7 +39,7 @@ define void @br_fcmp_false(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB0_2: # %if.else
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_false:
@@ -49,7 +49,7 @@ define void @br_fcmp_false(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB0_2: # %if.else
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp false double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -69,7 +69,7 @@ define void @br_fcmp_oeq(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB1_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_oeq:
@@ -80,7 +80,7 @@ define void @br_fcmp_oeq(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB1_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_oeq:
@@ -91,7 +91,7 @@ define void @br_fcmp_oeq(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB1_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_oeq:
@@ -102,7 +102,7 @@ define void @br_fcmp_oeq(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB1_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp oeq double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -125,7 +125,7 @@ define void @br_fcmp_oeq_alt(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB2_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_oeq_alt:
@@ -136,7 +136,7 @@ define void @br_fcmp_oeq_alt(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB2_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_oeq_alt:
@@ -147,7 +147,7 @@ define void @br_fcmp_oeq_alt(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB2_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_oeq_alt:
@@ -158,7 +158,7 @@ define void @br_fcmp_oeq_alt(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB2_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp oeq double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -178,7 +178,7 @@ define void @br_fcmp_ogt(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB3_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_ogt:
@@ -189,7 +189,7 @@ define void @br_fcmp_ogt(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB3_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_ogt:
@@ -200,7 +200,7 @@ define void @br_fcmp_ogt(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB3_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_ogt:
@@ -211,7 +211,7 @@ define void @br_fcmp_ogt(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB3_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp ogt double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -231,7 +231,7 @@ define void @br_fcmp_oge(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB4_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_oge:
@@ -242,7 +242,7 @@ define void @br_fcmp_oge(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB4_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_oge:
@@ -253,7 +253,7 @@ define void @br_fcmp_oge(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB4_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_oge:
@@ -264,7 +264,7 @@ define void @br_fcmp_oge(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB4_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp oge double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -284,7 +284,7 @@ define void @br_fcmp_olt(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB5_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_olt:
@@ -295,7 +295,7 @@ define void @br_fcmp_olt(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB5_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_olt:
@@ -306,7 +306,7 @@ define void @br_fcmp_olt(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB5_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_olt:
@@ -317,7 +317,7 @@ define void @br_fcmp_olt(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB5_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp olt double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -337,7 +337,7 @@ define void @br_fcmp_ole(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB6_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_ole:
@@ -348,7 +348,7 @@ define void @br_fcmp_ole(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB6_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_ole:
@@ -359,7 +359,7 @@ define void @br_fcmp_ole(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB6_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_ole:
@@ -370,7 +370,7 @@ define void @br_fcmp_ole(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB6_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp ole double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -392,7 +392,7 @@ define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB7_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_one:
@@ -405,7 +405,7 @@ define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB7_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_one:
@@ -418,7 +418,7 @@ define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB7_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_one:
@@ -431,7 +431,7 @@ define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB7_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp one double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -453,7 +453,7 @@ define void @br_fcmp_ord(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB8_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_ord:
@@ -466,7 +466,7 @@ define void @br_fcmp_ord(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB8_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_ord:
@@ -479,7 +479,7 @@ define void @br_fcmp_ord(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB8_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_ord:
@@ -492,7 +492,7 @@ define void @br_fcmp_ord(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB8_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp ord double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -514,7 +514,7 @@ define void @br_fcmp_ueq(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB9_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_ueq:
@@ -527,7 +527,7 @@ define void @br_fcmp_ueq(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB9_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_ueq:
@@ -540,7 +540,7 @@ define void @br_fcmp_ueq(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB9_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_ueq:
@@ -553,7 +553,7 @@ define void @br_fcmp_ueq(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB9_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp ueq double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -573,7 +573,7 @@ define void @br_fcmp_ugt(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB10_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_ugt:
@@ -584,7 +584,7 @@ define void @br_fcmp_ugt(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB10_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_ugt:
@@ -595,7 +595,7 @@ define void @br_fcmp_ugt(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB10_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_ugt:
@@ -606,7 +606,7 @@ define void @br_fcmp_ugt(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB10_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp ugt double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -626,7 +626,7 @@ define void @br_fcmp_uge(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB11_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_uge:
@@ -637,7 +637,7 @@ define void @br_fcmp_uge(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB11_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_uge:
@@ -648,7 +648,7 @@ define void @br_fcmp_uge(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB11_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_uge:
@@ -659,7 +659,7 @@ define void @br_fcmp_uge(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB11_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp uge double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -679,7 +679,7 @@ define void @br_fcmp_ult(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB12_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_ult:
@@ -690,7 +690,7 @@ define void @br_fcmp_ult(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB12_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_ult:
@@ -701,7 +701,7 @@ define void @br_fcmp_ult(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB12_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_ult:
@@ -712,7 +712,7 @@ define void @br_fcmp_ult(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB12_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp ult double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -732,7 +732,7 @@ define void @br_fcmp_ule(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB13_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_ule:
@@ -743,7 +743,7 @@ define void @br_fcmp_ule(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB13_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_ule:
@@ -754,7 +754,7 @@ define void @br_fcmp_ule(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB13_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_ule:
@@ -765,7 +765,7 @@ define void @br_fcmp_ule(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB13_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp ule double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -785,7 +785,7 @@ define void @br_fcmp_une(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB14_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_une:
@@ -796,7 +796,7 @@ define void @br_fcmp_une(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB14_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_une:
@@ -807,7 +807,7 @@ define void @br_fcmp_une(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB14_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_une:
@@ -818,7 +818,7 @@ define void @br_fcmp_une(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB14_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp une double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -840,7 +840,7 @@ define void @br_fcmp_uno(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB15_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_uno:
@@ -853,7 +853,7 @@ define void @br_fcmp_uno(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB15_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_uno:
@@ -866,7 +866,7 @@ define void @br_fcmp_uno(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB15_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_uno:
@@ -879,7 +879,7 @@ define void @br_fcmp_uno(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB15_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp uno double %a, %b
   br i1 %1, label %if.then, label %if.else
@@ -898,7 +898,7 @@ define void @br_fcmp_true(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    ret
 ; RV32IFD-NEXT:  .LBB16_2: # %if.then
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IFD-NEXT:    call abort
 ;
 ; RV64IFD-LABEL: br_fcmp_true:
@@ -908,7 +908,7 @@ define void @br_fcmp_true(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    ret
 ; RV64IFD-NEXT:  .LBB16_2: # %if.then
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IFD-NEXT:    call abort
 ;
 ; RV32IZFINXZDINX-LABEL: br_fcmp_true:
@@ -918,7 +918,7 @@ define void @br_fcmp_true(double %a, double %b) nounwind {
 ; RV32IZFINXZDINX-NEXT:    ret
 ; RV32IZFINXZDINX-NEXT:  .LBB16_2: # %if.then
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINXZDINX-NEXT:    call abort
 ;
 ; RV64IZFINXZDINX-LABEL: br_fcmp_true:
@@ -928,7 +928,7 @@ define void @br_fcmp_true(double %a, double %b) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ret
 ; RV64IZFINXZDINX-NEXT:  .LBB16_2: # %if.then
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINXZDINX-NEXT:    call abort
   %1 = fcmp true double %a, %b
   br i1 %1, label %if.then, label %if.else

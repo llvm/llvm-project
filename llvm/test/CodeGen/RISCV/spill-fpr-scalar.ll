@@ -8,10 +8,10 @@ define void @spill_half(ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    flh fa5, 0(a0)
-; CHECK-NEXT:    fsh fa5, 14(sp) # 2-byte Folded Spill
+; CHECK-NEXT:    fsh fa5, 14(sp) # 2-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    flh fa5, 14(sp) # 2-byte Folded Reload
+; CHECK-NEXT:    flh fa5, 14(sp) # 2-byte Reload
 ; CHECK-NEXT:    fsh fa5, 0(a0)
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -26,10 +26,10 @@ define void @spill_float(ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    flw fa5, 0(a0)
-; CHECK-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    fsw fa5, 0(a0)
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -44,10 +44,10 @@ define void @spill_double(ptr) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    fld fa5, 0(a0)
-; CHECK-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fa5, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    fld fa5, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fa5, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    fsd fa5, 0(a0)
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret

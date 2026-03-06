@@ -12,24 +12,24 @@ define ptr @get_external_x() nounwind {
 ; RV32-LABEL: get_external_x:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:  .Lpcrel_hi0:
 ; RV32-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.external_x)
 ; RV32-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV32-NEXT:    call __emutls_get_address
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: get_external_x:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:  .Lpcrel_hi0:
 ; RV64-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.external_x)
 ; RV64-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64-NEXT:    call __emutls_get_address
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 entry:
@@ -40,24 +40,24 @@ define ptr @get_y() nounwind {
 ; RV32-LABEL: get_y:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:  .Lpcrel_hi1:
 ; RV32-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.y)
 ; RV32-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV32-NEXT:    call __emutls_get_address
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: get_y:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:  .Lpcrel_hi1:
 ; RV64-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.y)
 ; RV64-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64-NEXT:    call __emutls_get_address
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 entry:
@@ -68,24 +68,24 @@ define ptr @get_internal_z() nounwind {
 ; RV32-LABEL: get_internal_z:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:  .Lpcrel_hi2:
 ; RV32-NEXT:    auipc a0, %pcrel_hi(__emutls_v.internal_z)
 ; RV32-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
 ; RV32-NEXT:    call __emutls_get_address
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: get_internal_z:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:  .Lpcrel_hi2:
 ; RV64-NEXT:    auipc a0, %pcrel_hi(__emutls_v.internal_z)
 ; RV64-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
 ; RV64-NEXT:    call __emutls_get_address
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 entry:

@@ -931,10 +931,10 @@ define <8 x i64> @shuffle_v8i64_as_i128(<8 x i64> %v) {
 ; RV32ZVKB-ZVE32X:       # %bb.0:
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
-; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s1, 116(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s2, 112(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s1, 116(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s2, 112(sp) # 4-byte Spill
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -4
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -12
@@ -980,10 +980,10 @@ define <8 x i64> @shuffle_v8i64_as_i128(<8 x i64> %v) {
 ; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
-; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s1, 116(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s2, 112(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s1, 116(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s2, 112(sp) # 4-byte Reload
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore ra
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s1
@@ -996,10 +996,10 @@ define <8 x i64> @shuffle_v8i64_as_i128(<8 x i64> %v) {
 ; RV64ZVKB-ZVE32X:       # %bb.0:
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
-; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s1, 104(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s2, 96(sp) # 8-byte Spill
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -8
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -16
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -24
@@ -1045,10 +1045,10 @@ define <8 x i64> @shuffle_v8i64_as_i128(<8 x i64> %v) {
 ; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
-; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s1, 104(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s2, 96(sp) # 8-byte Reload
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore ra
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s1
@@ -1086,8 +1086,8 @@ define <8 x i64> @shuffle_v8i64_as_i128_2(<8 x i64> %v) {
 ; RV32ZVKB-ZVE32X:       # %bb.0:
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
-; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Spill
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -4
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
 ; RV32ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
@@ -1123,8 +1123,8 @@ define <8 x i64> @shuffle_v8i64_as_i128_2(<8 x i64> %v) {
 ; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
-; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Reload
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore ra
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
@@ -1135,8 +1135,8 @@ define <8 x i64> @shuffle_v8i64_as_i128_2(<8 x i64> %v) {
 ; RV64ZVKB-ZVE32X:       # %bb.0:
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
-; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Spill
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -8
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -16
 ; RV64ZVKB-ZVE32X-NEXT:    addi s0, sp, 128
@@ -1172,8 +1172,8 @@ define <8 x i64> @shuffle_v8i64_as_i128_2(<8 x i64> %v) {
 ; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
-; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Reload
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore ra
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, 128
@@ -1208,10 +1208,10 @@ define <8 x i64> @shuffle_v8i64_as_i256(<8 x i64> %v) {
 ; RV32ZVKB-ZVE32X:       # %bb.0:
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
-; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s1, 116(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s2, 112(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw ra, 124(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 120(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s1, 116(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s2, 112(sp) # 4-byte Spill
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -4
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -12
@@ -1257,10 +1257,10 @@ define <8 x i64> @shuffle_v8i64_as_i256(<8 x i64> %v) {
 ; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
-; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s1, 116(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s2, 112(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw ra, 124(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 120(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s1, 116(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s2, 112(sp) # 4-byte Reload
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore ra
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s1
@@ -1273,10 +1273,10 @@ define <8 x i64> @shuffle_v8i64_as_i256(<8 x i64> %v) {
 ; RV64ZVKB-ZVE32X:       # %bb.0:
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -128
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 128
-; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s2, 96(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd ra, 120(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 112(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s1, 104(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s2, 96(sp) # 8-byte Spill
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset ra, -8
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -16
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -24
@@ -1322,10 +1322,10 @@ define <8 x i64> @shuffle_v8i64_as_i256(<8 x i64> %v) {
 ; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, s0, -128
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa sp, 128
-; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s2, 96(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld ra, 120(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 112(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s1, 104(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s2, 96(sp) # 8-byte Reload
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore ra
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s1
@@ -1366,8 +1366,8 @@ define <8 x i64> @shuffle_v8i64_as_i256_zvl256b(<8 x i64> %v) vscale_range(4,0) 
 ; RV32ZVKB-ZVE32X:       # %bb.0:
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, -16
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 16
-; RV32ZVKB-ZVE32X-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32ZVKB-ZVE32X-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s0, 12(sp) # 4-byte Spill
+; RV32ZVKB-ZVE32X-NEXT:    sw s1, 8(sp) # 4-byte Spill
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -4
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -8
 ; RV32ZVKB-ZVE32X-NEXT:    lw a2, 48(a1)
@@ -1404,8 +1404,8 @@ define <8 x i64> @shuffle_v8i64_as_i256_zvl256b(<8 x i64> %v) vscale_range(4,0) 
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a4
 ; RV32ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
 ; RV32ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
-; RV32ZVKB-ZVE32X-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32ZVKB-ZVE32X-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s0, 12(sp) # 4-byte Reload
+; RV32ZVKB-ZVE32X-NEXT:    lw s1, 8(sp) # 4-byte Reload
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV32ZVKB-ZVE32X-NEXT:    .cfi_restore s1
 ; RV32ZVKB-ZVE32X-NEXT:    addi sp, sp, 16
@@ -1416,8 +1416,8 @@ define <8 x i64> @shuffle_v8i64_as_i256_zvl256b(<8 x i64> %v) vscale_range(4,0) 
 ; RV64ZVKB-ZVE32X:       # %bb.0:
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, -16
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZVKB-ZVE32X-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; RV64ZVKB-ZVE32X-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s0, 8(sp) # 8-byte Spill
+; RV64ZVKB-ZVE32X-NEXT:    sd s1, 0(sp) # 8-byte Spill
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s0, -8
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_offset s1, -16
 ; RV64ZVKB-ZVE32X-NEXT:    ld a2, 32(a1)
@@ -1454,8 +1454,8 @@ define <8 x i64> @shuffle_v8i64_as_i256_zvl256b(<8 x i64> %v) vscale_range(4,0) 
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, a5
 ; RV64ZVKB-ZVE32X-NEXT:    vslide1down.vx v8, v8, t1
 ; RV64ZVKB-ZVE32X-NEXT:    vse32.v v8, (a0)
-; RV64ZVKB-ZVE32X-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; RV64ZVKB-ZVE32X-NEXT:    ld s1, 0(sp) # 8-byte Folded Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s0, 8(sp) # 8-byte Reload
+; RV64ZVKB-ZVE32X-NEXT:    ld s1, 0(sp) # 8-byte Reload
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s0
 ; RV64ZVKB-ZVE32X-NEXT:    .cfi_restore s1
 ; RV64ZVKB-ZVE32X-NEXT:    addi sp, sp, 16

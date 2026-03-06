@@ -8,8 +8,8 @@ define <vscale x 1 x double> @crash_func(<vscale x 1 x double> %a, <vscale x 1 x
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -22,27 +22,27 @@ define <vscale x 1 x double> @crash_func(<vscale x 1 x double> %a, <vscale x 1 x
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs1r.v v10, (a1) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v10, (a1) # vscale x 8-byte Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs1r.v v9, (a1) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v9, (a1) # vscale x 8-byte Spill
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs1r.v v0, (a1) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v0, (a1) # vscale x 8-byte Spill
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    slli s0, s0, 32
 ; CHECK-NEXT:    srli s0, s0, 32
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -50,8 +50,8 @@ define <vscale x 1 x double> @crash_func(<vscale x 1 x double> %a, <vscale x 1 x
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    .cfi_def_cfa sp, 32
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 32

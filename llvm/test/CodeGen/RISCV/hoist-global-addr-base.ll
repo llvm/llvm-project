@@ -272,7 +272,7 @@ define dso_local i32 @load_half() nounwind {
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB8_2: # %if.then
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    call abort
 ;
 ; RV32XQCI-LABEL: load_half:
@@ -286,7 +286,7 @@ define dso_local i32 @load_half() nounwind {
 ; RV32XQCI-NEXT:    ret
 ; RV32XQCI-NEXT:  .LBB8_2: # %if.then
 ; RV32XQCI-NEXT:    addi sp, sp, -16
-; RV32XQCI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32XQCI-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32XQCI-NEXT:    call abort
 ;
 ; RV64-LABEL: load_half:
@@ -300,7 +300,7 @@ define dso_local i32 @load_half() nounwind {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB8_2: # %if.then
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    call abort
 entry:
   %0 = load i16, ptr getelementptr inbounds ([6 x i16], ptr @foo, i32 0, i32 4), align 2

@@ -358,13 +358,13 @@ define void @addi_fold_crash(i64 %arg) nounwind {
 ; RV64I-LABEL: addi_fold_crash:
 ; RV64I:       # %bb.0: # %bb
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    sb zero, 0(a0)
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    call snork
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 bb:

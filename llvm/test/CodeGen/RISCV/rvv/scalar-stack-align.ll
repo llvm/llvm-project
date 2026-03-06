@@ -12,7 +12,7 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV32-ZVE64-LABEL: scalar_stack_align16:
 ; RV32-ZVE64:       # %bb.0:
 ; RV32-ZVE64-NEXT:    addi sp, sp, -48
-; RV32-ZVE64-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32-ZVE64-NEXT:    sw ra, 44(sp) # 4-byte Spill
 ; RV32-ZVE64-NEXT:    csrr a0, vlenb
 ; RV32-ZVE64-NEXT:    slli a0, a0, 1
 ; RV32-ZVE64-NEXT:    sub sp, sp, a0
@@ -22,14 +22,14 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV32-ZVE64-NEXT:    csrr a1, vlenb
 ; RV32-ZVE64-NEXT:    slli a1, a1, 1
 ; RV32-ZVE64-NEXT:    add sp, sp, a1
-; RV32-ZVE64-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-ZVE64-NEXT:    lw ra, 44(sp) # 4-byte Reload
 ; RV32-ZVE64-NEXT:    addi sp, sp, 48
 ; RV32-ZVE64-NEXT:    ret
 ;
 ; RV64-ZVE64-LABEL: scalar_stack_align16:
 ; RV64-ZVE64:       # %bb.0:
 ; RV64-ZVE64-NEXT:    addi sp, sp, -48
-; RV64-ZVE64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-ZVE64-NEXT:    sd ra, 40(sp) # 8-byte Spill
 ; RV64-ZVE64-NEXT:    csrr a0, vlenb
 ; RV64-ZVE64-NEXT:    slli a0, a0, 1
 ; RV64-ZVE64-NEXT:    sub sp, sp, a0
@@ -39,14 +39,14 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV64-ZVE64-NEXT:    csrr a1, vlenb
 ; RV64-ZVE64-NEXT:    slli a1, a1, 1
 ; RV64-ZVE64-NEXT:    add sp, sp, a1
-; RV64-ZVE64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-ZVE64-NEXT:    ld ra, 40(sp) # 8-byte Reload
 ; RV64-ZVE64-NEXT:    addi sp, sp, 48
 ; RV64-ZVE64-NEXT:    ret
 ;
 ; RV32-V-LABEL: scalar_stack_align16:
 ; RV32-V:       # %bb.0:
 ; RV32-V-NEXT:    addi sp, sp, -48
-; RV32-V-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32-V-NEXT:    sw ra, 44(sp) # 4-byte Spill
 ; RV32-V-NEXT:    csrr a0, vlenb
 ; RV32-V-NEXT:    sub sp, sp, a0
 ; RV32-V-NEXT:    addi a0, sp, 32
@@ -54,14 +54,14 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV32-V-NEXT:    addi a0, sp, 16
 ; RV32-V-NEXT:    csrr a1, vlenb
 ; RV32-V-NEXT:    add sp, sp, a1
-; RV32-V-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-V-NEXT:    lw ra, 44(sp) # 4-byte Reload
 ; RV32-V-NEXT:    addi sp, sp, 48
 ; RV32-V-NEXT:    ret
 ;
 ; RV64-V-LABEL: scalar_stack_align16:
 ; RV64-V:       # %bb.0:
 ; RV64-V-NEXT:    addi sp, sp, -48
-; RV64-V-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-V-NEXT:    sd ra, 40(sp) # 8-byte Spill
 ; RV64-V-NEXT:    csrr a0, vlenb
 ; RV64-V-NEXT:    sub sp, sp, a0
 ; RV64-V-NEXT:    addi a0, sp, 32
@@ -69,7 +69,7 @@ define ptr @scalar_stack_align16() nounwind {
 ; RV64-V-NEXT:    addi a0, sp, 16
 ; RV64-V-NEXT:    csrr a1, vlenb
 ; RV64-V-NEXT:    add sp, sp, a1
-; RV64-V-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-V-NEXT:    ld ra, 40(sp) # 8-byte Reload
 ; RV64-V-NEXT:    addi sp, sp, 48
 ; RV64-V-NEXT:    ret
   %a = alloca <vscale x 2 x i32>

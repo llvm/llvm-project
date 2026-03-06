@@ -9,11 +9,11 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -2032
-; CHECK-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 2008(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 2000(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 1992(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 2024(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 2016(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s1, 2008(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s2, 2000(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s3, 1992(sp) # 8-byte Spill
 ; CHECK-NEXT:    lui a0, 7
 ; CHECK-NEXT:    sub t1, sp, a0
 ; CHECK-NEXT:    lui t2, 1
@@ -43,7 +43,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Spill
 ; CHECK-NEXT:    addi a0, a1, 1622
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    vse8.v v8, (s1)
@@ -55,7 +55,7 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    lui a0, 8
 ; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Reload
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    vse8.v v8, (s1)
@@ -67,11 +67,11 @@ define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {
 ; CHECK-NEXT:    lui a1, 8
 ; CHECK-NEXT:    addi a1, a1, -1952
 ; CHECK-NEXT:    add sp, sp, a1
-; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 2008(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 2000(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 1992(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s1, 2008(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s2, 2000(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s3, 1992(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 2032
 ; CHECK-NEXT:    ret
   %1 = alloca %"buff", align 8

@@ -12,7 +12,7 @@ define i32 @test_load_and_cmp() nounwind {
 ; RV32I-LABEL: test_load_and_cmp:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Spill
 ; RV32I-NEXT:    lui a0, %hi(x)
 ; RV32I-NEXT:    lui a1, %hi(y)
 ; RV32I-NEXT:    lw a2, %lo(x)(a0)
@@ -35,7 +35,7 @@ define i32 @test_load_and_cmp() nounwind {
 ; RV32I-NEXT:    sw a5, 36(sp)
 ; RV32I-NEXT:    call __netf2
 ; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 48
 ; RV32I-NEXT:    ret
   %1 = load fp128, ptr @x, align 16
@@ -49,7 +49,7 @@ define i32 @test_add_and_fptosi() nounwind {
 ; RV32I-LABEL: test_add_and_fptosi:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -80
-; RV32I-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 76(sp) # 4-byte Spill
 ; RV32I-NEXT:    lui a0, %hi(x)
 ; RV32I-NEXT:    lui a1, %hi(y)
 ; RV32I-NEXT:    lw a3, %lo(x)(a0)
@@ -82,7 +82,7 @@ define i32 @test_add_and_fptosi() nounwind {
 ; RV32I-NEXT:    sw a3, 16(sp)
 ; RV32I-NEXT:    sw a4, 20(sp)
 ; RV32I-NEXT:    call __fixtfsi
-; RV32I-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 76(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 80
 ; RV32I-NEXT:    ret
   %1 = load fp128, ptr @x, align 16
@@ -97,8 +97,8 @@ define fp128 @fmaximum(fp128 %x, fp128 %y) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -64
 ; RV32I-NEXT:    .cfi_def_cfa_offset 64
-; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    lw a3, 0(a1)
@@ -130,8 +130,8 @@ define fp128 @fmaximum(fp128 %x, fp128 %y) {
 ; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    sw a2, 8(s0)
 ; RV32I-NEXT:    sw a3, 12(s0)
-; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Reload
 ; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    .cfi_restore s0
 ; RV32I-NEXT:    addi sp, sp, 64
@@ -146,8 +146,8 @@ define fp128 @fminimum(fp128 %x, fp128 %y) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -64
 ; RV32I-NEXT:    .cfi_def_cfa_offset 64
-; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    lw a3, 0(a1)
@@ -179,8 +179,8 @@ define fp128 @fminimum(fp128 %x, fp128 %y) {
 ; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    sw a2, 8(s0)
 ; RV32I-NEXT:    sw a3, 12(s0)
-; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Reload
 ; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    .cfi_restore s0
 ; RV32I-NEXT:    addi sp, sp, 64
@@ -194,8 +194,8 @@ define { fp128, fp128 } @modf(fp128 %a) nounwind {
 ; RV32I-LABEL: modf:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -64
-; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Spill
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    lw a4, 4(a1)
 ; RV32I-NEXT:    lw a5, 8(a1)
@@ -225,8 +225,8 @@ define { fp128, fp128 } @modf(fp128 %a) nounwind {
 ; RV32I-NEXT:    sw a1, 4(s0)
 ; RV32I-NEXT:    sw a2, 8(s0)
 ; RV32I-NEXT:    sw a3, 12(s0)
-; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 64
 ; RV32I-NEXT:    ret
   %result = call { fp128, fp128 } @llvm.modf.f128(fp128 %a)

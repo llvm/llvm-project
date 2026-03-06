@@ -308,18 +308,18 @@ define void @callee() nounwind {
 ; ILP32F-LABEL: callee:
 ; ILP32F:       # %bb.0:
 ; ILP32F-NEXT:    addi sp, sp, -48
-; ILP32F-NEXT:    fsw fs0, 44(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs1, 40(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs2, 36(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs3, 32(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs4, 28(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs5, 24(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs6, 20(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs7, 16(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs8, 12(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs9, 8(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs10, 4(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs11, 0(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fs0, 44(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs1, 40(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs2, 36(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs3, 32(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs4, 28(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs5, 24(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs6, 20(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs7, 16(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs8, 12(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs9, 8(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs10, 4(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs11, 0(sp) # 4-byte Spill
 ; ILP32F-NEXT:    lui a0, %hi(var)
 ; ILP32F-NEXT:    addi a0, a0, %lo(var)
 ; ILP32F-NEXT:    flw fa5, 0(a0)
@@ -386,36 +386,36 @@ define void @callee() nounwind {
 ; ILP32F-NEXT:    fsw fa3, 8(a0)
 ; ILP32F-NEXT:    fsw fa4, 4(a0)
 ; ILP32F-NEXT:    fsw fa5, 0(a0)
-; ILP32F-NEXT:    flw fs0, 44(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs1, 40(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs2, 36(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs3, 32(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs4, 28(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs5, 24(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs6, 20(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs7, 16(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs8, 12(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs9, 8(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs10, 4(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs11, 0(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fs0, 44(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs1, 40(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs2, 36(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs3, 32(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs4, 28(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs5, 24(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs6, 20(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs7, 16(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs8, 12(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs9, 8(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs10, 4(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs11, 0(sp) # 4-byte Reload
 ; ILP32F-NEXT:    addi sp, sp, 48
 ; ILP32F-NEXT:    ret
 ;
 ; LP64F-LABEL: callee:
 ; LP64F:       # %bb.0:
 ; LP64F-NEXT:    addi sp, sp, -48
-; LP64F-NEXT:    fsw fs0, 44(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs1, 40(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs2, 36(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs3, 32(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs4, 28(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs5, 24(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs6, 20(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs7, 16(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs8, 12(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs9, 8(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs10, 4(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs11, 0(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fs0, 44(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs1, 40(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs2, 36(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs3, 32(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs4, 28(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs5, 24(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs6, 20(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs7, 16(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs8, 12(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs9, 8(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs10, 4(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs11, 0(sp) # 4-byte Spill
 ; LP64F-NEXT:    lui a0, %hi(var)
 ; LP64F-NEXT:    addi a0, a0, %lo(var)
 ; LP64F-NEXT:    flw fa5, 0(a0)
@@ -482,36 +482,36 @@ define void @callee() nounwind {
 ; LP64F-NEXT:    fsw fa3, 8(a0)
 ; LP64F-NEXT:    fsw fa4, 4(a0)
 ; LP64F-NEXT:    fsw fa5, 0(a0)
-; LP64F-NEXT:    flw fs0, 44(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs1, 40(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs2, 36(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs3, 32(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs4, 28(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs5, 24(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs6, 20(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs7, 16(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs8, 12(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs9, 8(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs10, 4(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs11, 0(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fs0, 44(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs1, 40(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs2, 36(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs3, 32(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs4, 28(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs5, 24(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs6, 20(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs7, 16(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs8, 12(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs9, 8(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs10, 4(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs11, 0(sp) # 4-byte Reload
 ; LP64F-NEXT:    addi sp, sp, 48
 ; LP64F-NEXT:    ret
 ;
 ; ILP32D-LABEL: callee:
 ; ILP32D:       # %bb.0:
 ; ILP32D-NEXT:    addi sp, sp, -96
-; ILP32D-NEXT:    fsd fs0, 88(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs1, 80(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs2, 72(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs3, 64(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs4, 56(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs5, 48(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs6, 40(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs7, 32(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs8, 24(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs9, 16(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs10, 8(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs11, 0(sp) # 8-byte Folded Spill
+; ILP32D-NEXT:    fsd fs0, 88(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs1, 80(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs2, 72(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs3, 64(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs4, 56(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs5, 48(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs6, 40(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs7, 32(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs8, 24(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs9, 16(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs10, 8(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs11, 0(sp) # 8-byte Spill
 ; ILP32D-NEXT:    lui a0, %hi(var)
 ; ILP32D-NEXT:    addi a0, a0, %lo(var)
 ; ILP32D-NEXT:    flw fa5, 0(a0)
@@ -578,36 +578,36 @@ define void @callee() nounwind {
 ; ILP32D-NEXT:    fsw fa3, 8(a0)
 ; ILP32D-NEXT:    fsw fa4, 4(a0)
 ; ILP32D-NEXT:    fsw fa5, 0(a0)
-; ILP32D-NEXT:    fld fs0, 88(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs1, 80(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs2, 72(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs3, 64(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs4, 56(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs5, 48(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs6, 40(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs7, 32(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs8, 24(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs9, 16(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs11, 0(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    fld fs0, 88(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs1, 80(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs2, 72(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs3, 64(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs4, 56(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs5, 48(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs6, 40(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs7, 32(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs8, 24(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs9, 16(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs10, 8(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs11, 0(sp) # 8-byte Reload
 ; ILP32D-NEXT:    addi sp, sp, 96
 ; ILP32D-NEXT:    ret
 ;
 ; LP64D-LABEL: callee:
 ; LP64D:       # %bb.0:
 ; LP64D-NEXT:    addi sp, sp, -96
-; LP64D-NEXT:    fsd fs0, 88(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs1, 80(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs2, 72(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs3, 64(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs4, 56(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs5, 48(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs6, 40(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs7, 32(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs8, 24(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs9, 16(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs10, 8(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs11, 0(sp) # 8-byte Folded Spill
+; LP64D-NEXT:    fsd fs0, 88(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs1, 80(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs2, 72(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs3, 64(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs4, 56(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs5, 48(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs6, 40(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs7, 32(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs8, 24(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs9, 16(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs10, 8(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs11, 0(sp) # 8-byte Spill
 ; LP64D-NEXT:    lui a0, %hi(var)
 ; LP64D-NEXT:    addi a0, a0, %lo(var)
 ; LP64D-NEXT:    flw fa5, 0(a0)
@@ -674,18 +674,18 @@ define void @callee() nounwind {
 ; LP64D-NEXT:    fsw fa3, 8(a0)
 ; LP64D-NEXT:    fsw fa4, 4(a0)
 ; LP64D-NEXT:    fsw fa5, 0(a0)
-; LP64D-NEXT:    fld fs0, 88(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs1, 80(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs2, 72(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs3, 64(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs4, 56(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs5, 48(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs6, 40(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs7, 32(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs8, 24(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs9, 16(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs11, 0(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    fld fs0, 88(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs1, 80(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs2, 72(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs3, 64(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs4, 56(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs5, 48(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs6, 40(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs7, 32(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs8, 24(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs9, 16(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs10, 8(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs11, 0(sp) # 8-byte Reload
 ; LP64D-NEXT:    addi sp, sp, 96
 ; LP64D-NEXT:    ret
   %val = load [32 x float], ptr @var
@@ -704,626 +704,626 @@ define void @caller() nounwind {
 ; ILP32-LABEL: caller:
 ; ILP32:       # %bb.0:
 ; ILP32-NEXT:    addi sp, sp, -144
-; ILP32-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
-; ILP32-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    sw ra, 140(sp) # 4-byte Spill
+; ILP32-NEXT:    sw s0, 136(sp) # 4-byte Spill
 ; ILP32-NEXT:    lui s0, %hi(var)
 ; ILP32-NEXT:    addi s0, s0, %lo(var)
 ; ILP32-NEXT:    flw fa5, 0(s0)
-; ILP32-NEXT:    fsw fa5, 132(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 132(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 4(s0)
-; ILP32-NEXT:    fsw fa5, 128(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 128(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 8(s0)
-; ILP32-NEXT:    fsw fa5, 124(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 124(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 12(s0)
-; ILP32-NEXT:    fsw fa5, 120(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 120(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 16(s0)
-; ILP32-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 116(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 20(s0)
-; ILP32-NEXT:    fsw fa5, 112(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 112(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 24(s0)
-; ILP32-NEXT:    fsw fa5, 108(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 108(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 28(s0)
-; ILP32-NEXT:    fsw fa5, 104(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 104(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 32(s0)
-; ILP32-NEXT:    fsw fa5, 100(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 100(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 36(s0)
-; ILP32-NEXT:    fsw fa5, 96(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 96(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 40(s0)
-; ILP32-NEXT:    fsw fa5, 92(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 92(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 44(s0)
-; ILP32-NEXT:    fsw fa5, 88(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 88(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 48(s0)
-; ILP32-NEXT:    fsw fa5, 84(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 84(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 52(s0)
-; ILP32-NEXT:    fsw fa5, 80(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 80(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 56(s0)
-; ILP32-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 60(s0)
-; ILP32-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 64(s0)
-; ILP32-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 68(s0)
-; ILP32-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 72(s0)
-; ILP32-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 76(s0)
-; ILP32-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 80(s0)
-; ILP32-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 84(s0)
-; ILP32-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 88(s0)
-; ILP32-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 92(s0)
-; ILP32-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 96(s0)
-; ILP32-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 100(s0)
-; ILP32-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 104(s0)
-; ILP32-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 108(s0)
-; ILP32-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 112(s0)
-; ILP32-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 116(s0)
-; ILP32-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 120(s0)
-; ILP32-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; ILP32-NEXT:    flw fa5, 124(s0)
-; ILP32-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; ILP32-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; ILP32-NEXT:    call callee
-; ILP32-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 124(s0)
-; ILP32-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 120(s0)
-; ILP32-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 116(s0)
-; ILP32-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 112(s0)
-; ILP32-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 108(s0)
-; ILP32-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 104(s0)
-; ILP32-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 100(s0)
-; ILP32-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 96(s0)
-; ILP32-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 92(s0)
-; ILP32-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 88(s0)
-; ILP32-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 84(s0)
-; ILP32-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 80(s0)
-; ILP32-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 76(s0)
-; ILP32-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 72(s0)
-; ILP32-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 68(s0)
-; ILP32-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 64(s0)
-; ILP32-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 60(s0)
-; ILP32-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 56(s0)
-; ILP32-NEXT:    flw fa5, 80(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 80(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 52(s0)
-; ILP32-NEXT:    flw fa5, 84(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 84(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 48(s0)
-; ILP32-NEXT:    flw fa5, 88(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 88(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 44(s0)
-; ILP32-NEXT:    flw fa5, 92(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 92(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 40(s0)
-; ILP32-NEXT:    flw fa5, 96(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 96(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 36(s0)
-; ILP32-NEXT:    flw fa5, 100(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 100(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 32(s0)
-; ILP32-NEXT:    flw fa5, 104(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 104(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 28(s0)
-; ILP32-NEXT:    flw fa5, 108(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 108(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 24(s0)
-; ILP32-NEXT:    flw fa5, 112(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 112(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 20(s0)
-; ILP32-NEXT:    flw fa5, 116(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 116(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 16(s0)
-; ILP32-NEXT:    flw fa5, 120(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 120(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 12(s0)
-; ILP32-NEXT:    flw fa5, 124(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 124(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 8(s0)
-; ILP32-NEXT:    flw fa5, 128(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 128(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 4(s0)
-; ILP32-NEXT:    flw fa5, 132(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    flw fa5, 132(sp) # 4-byte Reload
 ; ILP32-NEXT:    fsw fa5, 0(s0)
-; ILP32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
-; ILP32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
+; ILP32-NEXT:    lw ra, 140(sp) # 4-byte Reload
+; ILP32-NEXT:    lw s0, 136(sp) # 4-byte Reload
 ; ILP32-NEXT:    addi sp, sp, 144
 ; ILP32-NEXT:    ret
 ;
 ; ILP32E-LABEL: caller:
 ; ILP32E:       # %bb.0:
 ; ILP32E-NEXT:    addi sp, sp, -136
-; ILP32E-NEXT:    sw ra, 132(sp) # 4-byte Folded Spill
-; ILP32E-NEXT:    sw s0, 128(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    sw ra, 132(sp) # 4-byte Spill
+; ILP32E-NEXT:    sw s0, 128(sp) # 4-byte Spill
 ; ILP32E-NEXT:    lui s0, %hi(var)
 ; ILP32E-NEXT:    addi s0, s0, %lo(var)
 ; ILP32E-NEXT:    flw fa5, 0(s0)
-; ILP32E-NEXT:    fsw fa5, 124(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 124(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 4(s0)
-; ILP32E-NEXT:    fsw fa5, 120(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 120(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 8(s0)
-; ILP32E-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 116(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 12(s0)
-; ILP32E-NEXT:    fsw fa5, 112(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 112(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 16(s0)
-; ILP32E-NEXT:    fsw fa5, 108(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 108(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 20(s0)
-; ILP32E-NEXT:    fsw fa5, 104(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 104(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 24(s0)
-; ILP32E-NEXT:    fsw fa5, 100(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 100(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 28(s0)
-; ILP32E-NEXT:    fsw fa5, 96(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 96(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 32(s0)
-; ILP32E-NEXT:    fsw fa5, 92(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 92(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 36(s0)
-; ILP32E-NEXT:    fsw fa5, 88(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 88(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 40(s0)
-; ILP32E-NEXT:    fsw fa5, 84(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 84(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 44(s0)
-; ILP32E-NEXT:    fsw fa5, 80(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 80(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 48(s0)
-; ILP32E-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 52(s0)
-; ILP32E-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 56(s0)
-; ILP32E-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 60(s0)
-; ILP32E-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 64(s0)
-; ILP32E-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 68(s0)
-; ILP32E-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 72(s0)
-; ILP32E-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 76(s0)
-; ILP32E-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 80(s0)
-; ILP32E-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 84(s0)
-; ILP32E-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 88(s0)
-; ILP32E-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 92(s0)
-; ILP32E-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 96(s0)
-; ILP32E-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 100(s0)
-; ILP32E-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 104(s0)
-; ILP32E-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 108(s0)
-; ILP32E-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 112(s0)
-; ILP32E-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 116(s0)
-; ILP32E-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 120(s0)
-; ILP32E-NEXT:    fsw fa5, 4(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 4(sp) # 4-byte Spill
 ; ILP32E-NEXT:    flw fa5, 124(s0)
-; ILP32E-NEXT:    fsw fa5, 0(sp) # 4-byte Folded Spill
+; ILP32E-NEXT:    fsw fa5, 0(sp) # 4-byte Spill
 ; ILP32E-NEXT:    call callee
-; ILP32E-NEXT:    flw fa5, 0(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 0(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 124(s0)
-; ILP32E-NEXT:    flw fa5, 4(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 4(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 120(s0)
-; ILP32E-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 116(s0)
-; ILP32E-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 112(s0)
-; ILP32E-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 108(s0)
-; ILP32E-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 104(s0)
-; ILP32E-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 100(s0)
-; ILP32E-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 96(s0)
-; ILP32E-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 92(s0)
-; ILP32E-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 88(s0)
-; ILP32E-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 84(s0)
-; ILP32E-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 80(s0)
-; ILP32E-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 76(s0)
-; ILP32E-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 72(s0)
-; ILP32E-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 68(s0)
-; ILP32E-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 64(s0)
-; ILP32E-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 60(s0)
-; ILP32E-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 56(s0)
-; ILP32E-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 52(s0)
-; ILP32E-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 48(s0)
-; ILP32E-NEXT:    flw fa5, 80(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 80(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 44(s0)
-; ILP32E-NEXT:    flw fa5, 84(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 84(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 40(s0)
-; ILP32E-NEXT:    flw fa5, 88(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 88(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 36(s0)
-; ILP32E-NEXT:    flw fa5, 92(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 92(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 32(s0)
-; ILP32E-NEXT:    flw fa5, 96(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 96(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 28(s0)
-; ILP32E-NEXT:    flw fa5, 100(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 100(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 24(s0)
-; ILP32E-NEXT:    flw fa5, 104(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 104(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 20(s0)
-; ILP32E-NEXT:    flw fa5, 108(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 108(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 16(s0)
-; ILP32E-NEXT:    flw fa5, 112(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 112(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 12(s0)
-; ILP32E-NEXT:    flw fa5, 116(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 116(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 8(s0)
-; ILP32E-NEXT:    flw fa5, 120(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 120(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 4(s0)
-; ILP32E-NEXT:    flw fa5, 124(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    flw fa5, 124(sp) # 4-byte Reload
 ; ILP32E-NEXT:    fsw fa5, 0(s0)
-; ILP32E-NEXT:    lw ra, 132(sp) # 4-byte Folded Reload
-; ILP32E-NEXT:    lw s0, 128(sp) # 4-byte Folded Reload
+; ILP32E-NEXT:    lw ra, 132(sp) # 4-byte Reload
+; ILP32E-NEXT:    lw s0, 128(sp) # 4-byte Reload
 ; ILP32E-NEXT:    addi sp, sp, 136
 ; ILP32E-NEXT:    ret
 ;
 ; LP64-LABEL: caller:
 ; LP64:       # %bb.0:
 ; LP64-NEXT:    addi sp, sp, -144
-; LP64-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; LP64-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; LP64-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; LP64-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; LP64-NEXT:    lui s0, %hi(var)
 ; LP64-NEXT:    addi s0, s0, %lo(var)
 ; LP64-NEXT:    flw fa5, 0(s0)
-; LP64-NEXT:    fsw fa5, 124(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 124(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 4(s0)
-; LP64-NEXT:    fsw fa5, 120(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 120(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 8(s0)
-; LP64-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 116(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 12(s0)
-; LP64-NEXT:    fsw fa5, 112(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 112(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 16(s0)
-; LP64-NEXT:    fsw fa5, 108(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 108(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 20(s0)
-; LP64-NEXT:    fsw fa5, 104(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 104(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 24(s0)
-; LP64-NEXT:    fsw fa5, 100(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 100(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 28(s0)
-; LP64-NEXT:    fsw fa5, 96(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 96(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 32(s0)
-; LP64-NEXT:    fsw fa5, 92(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 92(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 36(s0)
-; LP64-NEXT:    fsw fa5, 88(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 88(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 40(s0)
-; LP64-NEXT:    fsw fa5, 84(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 84(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 44(s0)
-; LP64-NEXT:    fsw fa5, 80(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 80(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 48(s0)
-; LP64-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 52(s0)
-; LP64-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 56(s0)
-; LP64-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 60(s0)
-; LP64-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 64(s0)
-; LP64-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 68(s0)
-; LP64-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 72(s0)
-; LP64-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 76(s0)
-; LP64-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 80(s0)
-; LP64-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 84(s0)
-; LP64-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 88(s0)
-; LP64-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 92(s0)
-; LP64-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 96(s0)
-; LP64-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 100(s0)
-; LP64-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 104(s0)
-; LP64-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 108(s0)
-; LP64-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 112(s0)
-; LP64-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 116(s0)
-; LP64-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 120(s0)
-; LP64-NEXT:    fsw fa5, 4(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 4(sp) # 4-byte Spill
 ; LP64-NEXT:    flw fa5, 124(s0)
-; LP64-NEXT:    fsw fa5, 0(sp) # 4-byte Folded Spill
+; LP64-NEXT:    fsw fa5, 0(sp) # 4-byte Spill
 ; LP64-NEXT:    call callee
-; LP64-NEXT:    flw fa5, 0(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 0(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 124(s0)
-; LP64-NEXT:    flw fa5, 4(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 4(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 120(s0)
-; LP64-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 116(s0)
-; LP64-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 112(s0)
-; LP64-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 108(s0)
-; LP64-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 104(s0)
-; LP64-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 100(s0)
-; LP64-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 96(s0)
-; LP64-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 92(s0)
-; LP64-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 88(s0)
-; LP64-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 84(s0)
-; LP64-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 80(s0)
-; LP64-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 76(s0)
-; LP64-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 72(s0)
-; LP64-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 68(s0)
-; LP64-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 64(s0)
-; LP64-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 60(s0)
-; LP64-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 56(s0)
-; LP64-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 52(s0)
-; LP64-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 48(s0)
-; LP64-NEXT:    flw fa5, 80(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 80(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 44(s0)
-; LP64-NEXT:    flw fa5, 84(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 84(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 40(s0)
-; LP64-NEXT:    flw fa5, 88(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 88(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 36(s0)
-; LP64-NEXT:    flw fa5, 92(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 92(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 32(s0)
-; LP64-NEXT:    flw fa5, 96(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 96(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 28(s0)
-; LP64-NEXT:    flw fa5, 100(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 100(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 24(s0)
-; LP64-NEXT:    flw fa5, 104(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 104(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 20(s0)
-; LP64-NEXT:    flw fa5, 108(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 108(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 16(s0)
-; LP64-NEXT:    flw fa5, 112(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 112(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 12(s0)
-; LP64-NEXT:    flw fa5, 116(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 116(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 8(s0)
-; LP64-NEXT:    flw fa5, 120(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 120(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 4(s0)
-; LP64-NEXT:    flw fa5, 124(sp) # 4-byte Folded Reload
+; LP64-NEXT:    flw fa5, 124(sp) # 4-byte Reload
 ; LP64-NEXT:    fsw fa5, 0(s0)
-; LP64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; LP64-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; LP64-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; LP64-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; LP64-NEXT:    addi sp, sp, 144
 ; LP64-NEXT:    ret
 ;
 ; LP64E-LABEL: caller:
 ; LP64E:       # %bb.0:
 ; LP64E-NEXT:    addi sp, sp, -144
-; LP64E-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; LP64E-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; LP64E-NEXT:    sd s0, 128(sp) # 8-byte Spill
 ; LP64E-NEXT:    lui s0, %hi(var)
 ; LP64E-NEXT:    addi s0, s0, %lo(var)
 ; LP64E-NEXT:    flw fa5, 0(s0)
-; LP64E-NEXT:    fsw fa5, 124(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 124(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 4(s0)
-; LP64E-NEXT:    fsw fa5, 120(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 120(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 8(s0)
-; LP64E-NEXT:    fsw fa5, 116(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 116(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 12(s0)
-; LP64E-NEXT:    fsw fa5, 112(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 112(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 16(s0)
-; LP64E-NEXT:    fsw fa5, 108(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 108(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 20(s0)
-; LP64E-NEXT:    fsw fa5, 104(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 104(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 24(s0)
-; LP64E-NEXT:    fsw fa5, 100(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 100(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 28(s0)
-; LP64E-NEXT:    fsw fa5, 96(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 96(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 32(s0)
-; LP64E-NEXT:    fsw fa5, 92(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 92(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 36(s0)
-; LP64E-NEXT:    fsw fa5, 88(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 88(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 40(s0)
-; LP64E-NEXT:    fsw fa5, 84(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 84(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 44(s0)
-; LP64E-NEXT:    fsw fa5, 80(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 80(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 48(s0)
-; LP64E-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 52(s0)
-; LP64E-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 56(s0)
-; LP64E-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 60(s0)
-; LP64E-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 64(s0)
-; LP64E-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 68(s0)
-; LP64E-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 72(s0)
-; LP64E-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 76(s0)
-; LP64E-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 80(s0)
-; LP64E-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 84(s0)
-; LP64E-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 88(s0)
-; LP64E-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 92(s0)
-; LP64E-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 96(s0)
-; LP64E-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 100(s0)
-; LP64E-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 104(s0)
-; LP64E-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 108(s0)
-; LP64E-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 112(s0)
-; LP64E-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 116(s0)
-; LP64E-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 120(s0)
-; LP64E-NEXT:    fsw fa5, 4(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 4(sp) # 4-byte Spill
 ; LP64E-NEXT:    flw fa5, 124(s0)
-; LP64E-NEXT:    fsw fa5, 0(sp) # 4-byte Folded Spill
+; LP64E-NEXT:    fsw fa5, 0(sp) # 4-byte Spill
 ; LP64E-NEXT:    call callee
-; LP64E-NEXT:    flw fa5, 0(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 0(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 124(s0)
-; LP64E-NEXT:    flw fa5, 4(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 4(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 120(s0)
-; LP64E-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 116(s0)
-; LP64E-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 112(s0)
-; LP64E-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 108(s0)
-; LP64E-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 104(s0)
-; LP64E-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 100(s0)
-; LP64E-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 96(s0)
-; LP64E-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 92(s0)
-; LP64E-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 88(s0)
-; LP64E-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 84(s0)
-; LP64E-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 80(s0)
-; LP64E-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 76(s0)
-; LP64E-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 72(s0)
-; LP64E-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 68(s0)
-; LP64E-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 64(s0)
-; LP64E-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 60(s0)
-; LP64E-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 56(s0)
-; LP64E-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 52(s0)
-; LP64E-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 48(s0)
-; LP64E-NEXT:    flw fa5, 80(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 80(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 44(s0)
-; LP64E-NEXT:    flw fa5, 84(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 84(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 40(s0)
-; LP64E-NEXT:    flw fa5, 88(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 88(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 36(s0)
-; LP64E-NEXT:    flw fa5, 92(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 92(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 32(s0)
-; LP64E-NEXT:    flw fa5, 96(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 96(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 28(s0)
-; LP64E-NEXT:    flw fa5, 100(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 100(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 24(s0)
-; LP64E-NEXT:    flw fa5, 104(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 104(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 20(s0)
-; LP64E-NEXT:    flw fa5, 108(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 108(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 16(s0)
-; LP64E-NEXT:    flw fa5, 112(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 112(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 12(s0)
-; LP64E-NEXT:    flw fa5, 116(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 116(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 8(s0)
-; LP64E-NEXT:    flw fa5, 120(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 120(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 4(s0)
-; LP64E-NEXT:    flw fa5, 124(sp) # 4-byte Folded Reload
+; LP64E-NEXT:    flw fa5, 124(sp) # 4-byte Reload
 ; LP64E-NEXT:    fsw fa5, 0(s0)
-; LP64E-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; LP64E-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; LP64E-NEXT:    ld s0, 128(sp) # 8-byte Reload
 ; LP64E-NEXT:    addi sp, sp, 144
 ; LP64E-NEXT:    ret
 ;
 ; ILP32F-LABEL: caller:
 ; ILP32F:       # %bb.0:
 ; ILP32F-NEXT:    addi sp, sp, -144
-; ILP32F-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs0, 132(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs1, 128(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs2, 124(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs3, 120(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs4, 116(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs5, 112(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs6, 108(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs7, 104(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs8, 100(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs9, 96(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs10, 92(sp) # 4-byte Folded Spill
-; ILP32F-NEXT:    fsw fs11, 88(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    sw ra, 140(sp) # 4-byte Spill
+; ILP32F-NEXT:    sw s0, 136(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs0, 132(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs1, 128(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs2, 124(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs3, 120(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs4, 116(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs5, 112(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs6, 108(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs7, 104(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs8, 100(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs9, 96(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs10, 92(sp) # 4-byte Spill
+; ILP32F-NEXT:    fsw fs11, 88(sp) # 4-byte Spill
 ; ILP32F-NEXT:    lui s0, %hi(var)
 ; ILP32F-NEXT:    addi s0, s0, %lo(var)
 ; ILP32F-NEXT:    flw fa5, 0(s0)
-; ILP32F-NEXT:    fsw fa5, 84(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 84(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 4(s0)
-; ILP32F-NEXT:    fsw fa5, 80(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 80(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 8(s0)
-; ILP32F-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 12(s0)
-; ILP32F-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 16(s0)
-; ILP32F-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 20(s0)
-; ILP32F-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 24(s0)
-; ILP32F-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 28(s0)
-; ILP32F-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 32(s0)
-; ILP32F-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 36(s0)
-; ILP32F-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 40(s0)
-; ILP32F-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 44(s0)
-; ILP32F-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 48(s0)
-; ILP32F-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 52(s0)
-; ILP32F-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 56(s0)
-; ILP32F-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 60(s0)
-; ILP32F-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 64(s0)
-; ILP32F-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 68(s0)
-; ILP32F-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 72(s0)
-; ILP32F-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fa5, 76(s0)
-; ILP32F-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; ILP32F-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; ILP32F-NEXT:    flw fs8, 80(s0)
 ; ILP32F-NEXT:    flw fs9, 84(s0)
 ; ILP32F-NEXT:    flw fs10, 88(s0)
@@ -1349,122 +1349,122 @@ define void @caller() nounwind {
 ; ILP32F-NEXT:    fsw fs10, 88(s0)
 ; ILP32F-NEXT:    fsw fs9, 84(s0)
 ; ILP32F-NEXT:    fsw fs8, 80(s0)
-; ILP32F-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 76(s0)
-; ILP32F-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 72(s0)
-; ILP32F-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 68(s0)
-; ILP32F-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 64(s0)
-; ILP32F-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 60(s0)
-; ILP32F-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 56(s0)
-; ILP32F-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 52(s0)
-; ILP32F-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 48(s0)
-; ILP32F-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 44(s0)
-; ILP32F-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 40(s0)
-; ILP32F-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 36(s0)
-; ILP32F-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 32(s0)
-; ILP32F-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 28(s0)
-; ILP32F-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 24(s0)
-; ILP32F-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 20(s0)
-; ILP32F-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 16(s0)
-; ILP32F-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 12(s0)
-; ILP32F-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 8(s0)
-; ILP32F-NEXT:    flw fa5, 80(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 80(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 4(s0)
-; ILP32F-NEXT:    flw fa5, 84(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    flw fa5, 84(sp) # 4-byte Reload
 ; ILP32F-NEXT:    fsw fa5, 0(s0)
-; ILP32F-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs0, 132(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs1, 128(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs2, 124(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs3, 120(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs4, 116(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs5, 112(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs6, 108(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs7, 104(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs8, 100(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs9, 96(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs10, 92(sp) # 4-byte Folded Reload
-; ILP32F-NEXT:    flw fs11, 88(sp) # 4-byte Folded Reload
+; ILP32F-NEXT:    lw ra, 140(sp) # 4-byte Reload
+; ILP32F-NEXT:    lw s0, 136(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs0, 132(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs1, 128(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs2, 124(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs3, 120(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs4, 116(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs5, 112(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs6, 108(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs7, 104(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs8, 100(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs9, 96(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs10, 92(sp) # 4-byte Reload
+; ILP32F-NEXT:    flw fs11, 88(sp) # 4-byte Reload
 ; ILP32F-NEXT:    addi sp, sp, 144
 ; ILP32F-NEXT:    ret
 ;
 ; LP64F-LABEL: caller:
 ; LP64F:       # %bb.0:
 ; LP64F-NEXT:    addi sp, sp, -144
-; LP64F-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
-; LP64F-NEXT:    sd s0, 128(sp) # 8-byte Folded Spill
-; LP64F-NEXT:    fsw fs0, 124(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs1, 120(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs2, 116(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs3, 112(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs4, 108(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs5, 104(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs6, 100(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs7, 96(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs8, 92(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs9, 88(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs10, 84(sp) # 4-byte Folded Spill
-; LP64F-NEXT:    fsw fs11, 80(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    sd ra, 136(sp) # 8-byte Spill
+; LP64F-NEXT:    sd s0, 128(sp) # 8-byte Spill
+; LP64F-NEXT:    fsw fs0, 124(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs1, 120(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs2, 116(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs3, 112(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs4, 108(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs5, 104(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs6, 100(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs7, 96(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs8, 92(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs9, 88(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs10, 84(sp) # 4-byte Spill
+; LP64F-NEXT:    fsw fs11, 80(sp) # 4-byte Spill
 ; LP64F-NEXT:    lui s0, %hi(var)
 ; LP64F-NEXT:    addi s0, s0, %lo(var)
 ; LP64F-NEXT:    flw fa5, 0(s0)
-; LP64F-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 4(s0)
-; LP64F-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 8(s0)
-; LP64F-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 12(s0)
-; LP64F-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 16(s0)
-; LP64F-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 20(s0)
-; LP64F-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 24(s0)
-; LP64F-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 28(s0)
-; LP64F-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 32(s0)
-; LP64F-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 36(s0)
-; LP64F-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 40(s0)
-; LP64F-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 44(s0)
-; LP64F-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 48(s0)
-; LP64F-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 52(s0)
-; LP64F-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 56(s0)
-; LP64F-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 60(s0)
-; LP64F-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 64(s0)
-; LP64F-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 68(s0)
-; LP64F-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 72(s0)
-; LP64F-NEXT:    fsw fa5, 4(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 4(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fa5, 76(s0)
-; LP64F-NEXT:    fsw fa5, 0(sp) # 4-byte Folded Spill
+; LP64F-NEXT:    fsw fa5, 0(sp) # 4-byte Spill
 ; LP64F-NEXT:    flw fs8, 80(s0)
 ; LP64F-NEXT:    flw fs9, 84(s0)
 ; LP64F-NEXT:    flw fs10, 88(s0)
@@ -1490,122 +1490,122 @@ define void @caller() nounwind {
 ; LP64F-NEXT:    fsw fs10, 88(s0)
 ; LP64F-NEXT:    fsw fs9, 84(s0)
 ; LP64F-NEXT:    fsw fs8, 80(s0)
-; LP64F-NEXT:    flw fa5, 0(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 0(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 76(s0)
-; LP64F-NEXT:    flw fa5, 4(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 4(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 72(s0)
-; LP64F-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 68(s0)
-; LP64F-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 64(s0)
-; LP64F-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 60(s0)
-; LP64F-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 56(s0)
-; LP64F-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 52(s0)
-; LP64F-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 48(s0)
-; LP64F-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 44(s0)
-; LP64F-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 40(s0)
-; LP64F-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 36(s0)
-; LP64F-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 32(s0)
-; LP64F-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 28(s0)
-; LP64F-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 24(s0)
-; LP64F-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 20(s0)
-; LP64F-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 16(s0)
-; LP64F-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 12(s0)
-; LP64F-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 8(s0)
-; LP64F-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 4(s0)
-; LP64F-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; LP64F-NEXT:    fsw fa5, 0(s0)
-; LP64F-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
-; LP64F-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
-; LP64F-NEXT:    flw fs0, 124(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs1, 120(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs2, 116(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs3, 112(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs4, 108(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs5, 104(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs6, 100(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs7, 96(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs8, 92(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs9, 88(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs10, 84(sp) # 4-byte Folded Reload
-; LP64F-NEXT:    flw fs11, 80(sp) # 4-byte Folded Reload
+; LP64F-NEXT:    ld ra, 136(sp) # 8-byte Reload
+; LP64F-NEXT:    ld s0, 128(sp) # 8-byte Reload
+; LP64F-NEXT:    flw fs0, 124(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs1, 120(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs2, 116(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs3, 112(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs4, 108(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs5, 104(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs6, 100(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs7, 96(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs8, 92(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs9, 88(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs10, 84(sp) # 4-byte Reload
+; LP64F-NEXT:    flw fs11, 80(sp) # 4-byte Reload
 ; LP64F-NEXT:    addi sp, sp, 144
 ; LP64F-NEXT:    ret
 ;
 ; ILP32D-LABEL: caller:
 ; ILP32D:       # %bb.0:
 ; ILP32D-NEXT:    addi sp, sp, -192
-; ILP32D-NEXT:    sw ra, 188(sp) # 4-byte Folded Spill
-; ILP32D-NEXT:    sw s0, 184(sp) # 4-byte Folded Spill
-; ILP32D-NEXT:    fsd fs0, 176(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs1, 168(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs2, 160(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs3, 152(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs4, 144(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs5, 136(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs6, 128(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs7, 120(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs8, 112(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs9, 104(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs10, 96(sp) # 8-byte Folded Spill
-; ILP32D-NEXT:    fsd fs11, 88(sp) # 8-byte Folded Spill
+; ILP32D-NEXT:    sw ra, 188(sp) # 4-byte Spill
+; ILP32D-NEXT:    sw s0, 184(sp) # 4-byte Spill
+; ILP32D-NEXT:    fsd fs0, 176(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs1, 168(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs2, 160(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs3, 152(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs4, 144(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs5, 136(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs6, 128(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs7, 120(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs8, 112(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs9, 104(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs10, 96(sp) # 8-byte Spill
+; ILP32D-NEXT:    fsd fs11, 88(sp) # 8-byte Spill
 ; ILP32D-NEXT:    lui s0, %hi(var)
 ; ILP32D-NEXT:    addi s0, s0, %lo(var)
 ; ILP32D-NEXT:    flw fa5, 0(s0)
-; ILP32D-NEXT:    fsw fa5, 84(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 84(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 4(s0)
-; ILP32D-NEXT:    fsw fa5, 80(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 80(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 8(s0)
-; ILP32D-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 12(s0)
-; ILP32D-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 16(s0)
-; ILP32D-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 20(s0)
-; ILP32D-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 24(s0)
-; ILP32D-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 28(s0)
-; ILP32D-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 32(s0)
-; ILP32D-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 36(s0)
-; ILP32D-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 40(s0)
-; ILP32D-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 44(s0)
-; ILP32D-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 48(s0)
-; ILP32D-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 52(s0)
-; ILP32D-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 56(s0)
-; ILP32D-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 60(s0)
-; ILP32D-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 64(s0)
-; ILP32D-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 68(s0)
-; ILP32D-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 72(s0)
-; ILP32D-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fa5, 76(s0)
-; ILP32D-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; ILP32D-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; ILP32D-NEXT:    flw fs8, 80(s0)
 ; ILP32D-NEXT:    flw fs9, 84(s0)
 ; ILP32D-NEXT:    flw fs10, 88(s0)
@@ -1631,122 +1631,122 @@ define void @caller() nounwind {
 ; ILP32D-NEXT:    fsw fs10, 88(s0)
 ; ILP32D-NEXT:    fsw fs9, 84(s0)
 ; ILP32D-NEXT:    fsw fs8, 80(s0)
-; ILP32D-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 76(s0)
-; ILP32D-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 72(s0)
-; ILP32D-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 68(s0)
-; ILP32D-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 64(s0)
-; ILP32D-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 60(s0)
-; ILP32D-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 56(s0)
-; ILP32D-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 52(s0)
-; ILP32D-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 48(s0)
-; ILP32D-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 44(s0)
-; ILP32D-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 40(s0)
-; ILP32D-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 36(s0)
-; ILP32D-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 32(s0)
-; ILP32D-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 28(s0)
-; ILP32D-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 24(s0)
-; ILP32D-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 20(s0)
-; ILP32D-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 16(s0)
-; ILP32D-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 12(s0)
-; ILP32D-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 8(s0)
-; ILP32D-NEXT:    flw fa5, 80(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 80(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 4(s0)
-; ILP32D-NEXT:    flw fa5, 84(sp) # 4-byte Folded Reload
+; ILP32D-NEXT:    flw fa5, 84(sp) # 4-byte Reload
 ; ILP32D-NEXT:    fsw fa5, 0(s0)
-; ILP32D-NEXT:    lw ra, 188(sp) # 4-byte Folded Reload
-; ILP32D-NEXT:    lw s0, 184(sp) # 4-byte Folded Reload
-; ILP32D-NEXT:    fld fs0, 176(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs1, 168(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs2, 160(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs3, 152(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs4, 144(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs5, 136(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs6, 128(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs7, 120(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs8, 112(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs9, 104(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs10, 96(sp) # 8-byte Folded Reload
-; ILP32D-NEXT:    fld fs11, 88(sp) # 8-byte Folded Reload
+; ILP32D-NEXT:    lw ra, 188(sp) # 4-byte Reload
+; ILP32D-NEXT:    lw s0, 184(sp) # 4-byte Reload
+; ILP32D-NEXT:    fld fs0, 176(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs1, 168(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs2, 160(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs3, 152(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs4, 144(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs5, 136(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs6, 128(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs7, 120(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs8, 112(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs9, 104(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs10, 96(sp) # 8-byte Reload
+; ILP32D-NEXT:    fld fs11, 88(sp) # 8-byte Reload
 ; ILP32D-NEXT:    addi sp, sp, 192
 ; ILP32D-NEXT:    ret
 ;
 ; LP64D-LABEL: caller:
 ; LP64D:       # %bb.0:
 ; LP64D-NEXT:    addi sp, sp, -192
-; LP64D-NEXT:    sd ra, 184(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    sd s0, 176(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs0, 168(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs1, 160(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs2, 152(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs3, 144(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs4, 136(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs5, 128(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs6, 120(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs7, 112(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs8, 104(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs9, 96(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs10, 88(sp) # 8-byte Folded Spill
-; LP64D-NEXT:    fsd fs11, 80(sp) # 8-byte Folded Spill
+; LP64D-NEXT:    sd ra, 184(sp) # 8-byte Spill
+; LP64D-NEXT:    sd s0, 176(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs0, 168(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs1, 160(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs2, 152(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs3, 144(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs4, 136(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs5, 128(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs6, 120(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs7, 112(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs8, 104(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs9, 96(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs10, 88(sp) # 8-byte Spill
+; LP64D-NEXT:    fsd fs11, 80(sp) # 8-byte Spill
 ; LP64D-NEXT:    lui s0, %hi(var)
 ; LP64D-NEXT:    addi s0, s0, %lo(var)
 ; LP64D-NEXT:    flw fa5, 0(s0)
-; LP64D-NEXT:    fsw fa5, 76(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 76(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 4(s0)
-; LP64D-NEXT:    fsw fa5, 72(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 72(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 8(s0)
-; LP64D-NEXT:    fsw fa5, 68(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 68(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 12(s0)
-; LP64D-NEXT:    fsw fa5, 64(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 64(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 16(s0)
-; LP64D-NEXT:    fsw fa5, 60(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 60(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 20(s0)
-; LP64D-NEXT:    fsw fa5, 56(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 56(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 24(s0)
-; LP64D-NEXT:    fsw fa5, 52(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 52(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 28(s0)
-; LP64D-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 48(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 32(s0)
-; LP64D-NEXT:    fsw fa5, 44(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 44(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 36(s0)
-; LP64D-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 40(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 40(s0)
-; LP64D-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 36(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 44(s0)
-; LP64D-NEXT:    fsw fa5, 32(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 32(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 48(s0)
-; LP64D-NEXT:    fsw fa5, 28(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 28(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 52(s0)
-; LP64D-NEXT:    fsw fa5, 24(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 24(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 56(s0)
-; LP64D-NEXT:    fsw fa5, 20(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 20(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 60(s0)
-; LP64D-NEXT:    fsw fa5, 16(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 16(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 64(s0)
-; LP64D-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 12(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 68(s0)
-; LP64D-NEXT:    fsw fa5, 8(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 8(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 72(s0)
-; LP64D-NEXT:    fsw fa5, 4(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 4(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fa5, 76(s0)
-; LP64D-NEXT:    fsw fa5, 0(sp) # 4-byte Folded Spill
+; LP64D-NEXT:    fsw fa5, 0(sp) # 4-byte Spill
 ; LP64D-NEXT:    flw fs8, 80(s0)
 ; LP64D-NEXT:    flw fs9, 84(s0)
 ; LP64D-NEXT:    flw fs10, 88(s0)
@@ -1772,60 +1772,60 @@ define void @caller() nounwind {
 ; LP64D-NEXT:    fsw fs10, 88(s0)
 ; LP64D-NEXT:    fsw fs9, 84(s0)
 ; LP64D-NEXT:    fsw fs8, 80(s0)
-; LP64D-NEXT:    flw fa5, 0(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 0(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 76(s0)
-; LP64D-NEXT:    flw fa5, 4(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 4(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 72(s0)
-; LP64D-NEXT:    flw fa5, 8(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 8(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 68(s0)
-; LP64D-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 12(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 64(s0)
-; LP64D-NEXT:    flw fa5, 16(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 16(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 60(s0)
-; LP64D-NEXT:    flw fa5, 20(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 20(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 56(s0)
-; LP64D-NEXT:    flw fa5, 24(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 24(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 52(s0)
-; LP64D-NEXT:    flw fa5, 28(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 28(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 48(s0)
-; LP64D-NEXT:    flw fa5, 32(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 32(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 44(s0)
-; LP64D-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 36(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 40(s0)
-; LP64D-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 40(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 36(s0)
-; LP64D-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 44(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 32(s0)
-; LP64D-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 48(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 28(s0)
-; LP64D-NEXT:    flw fa5, 52(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 52(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 24(s0)
-; LP64D-NEXT:    flw fa5, 56(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 56(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 20(s0)
-; LP64D-NEXT:    flw fa5, 60(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 60(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 16(s0)
-; LP64D-NEXT:    flw fa5, 64(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 64(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 12(s0)
-; LP64D-NEXT:    flw fa5, 68(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 68(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 8(s0)
-; LP64D-NEXT:    flw fa5, 72(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 72(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 4(s0)
-; LP64D-NEXT:    flw fa5, 76(sp) # 4-byte Folded Reload
+; LP64D-NEXT:    flw fa5, 76(sp) # 4-byte Reload
 ; LP64D-NEXT:    fsw fa5, 0(s0)
-; LP64D-NEXT:    ld ra, 184(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs0, 168(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs1, 160(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs2, 152(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs3, 144(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs4, 136(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs5, 128(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs6, 120(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs7, 112(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs8, 104(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs9, 96(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs10, 88(sp) # 8-byte Folded Reload
-; LP64D-NEXT:    fld fs11, 80(sp) # 8-byte Folded Reload
+; LP64D-NEXT:    ld ra, 184(sp) # 8-byte Reload
+; LP64D-NEXT:    ld s0, 176(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs0, 168(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs1, 160(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs2, 152(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs3, 144(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs4, 136(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs5, 128(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs6, 120(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs7, 112(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs8, 104(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs9, 96(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs10, 88(sp) # 8-byte Reload
+; LP64D-NEXT:    fld fs11, 80(sp) # 8-byte Reload
 ; LP64D-NEXT:    addi sp, sp, 192
 ; LP64D-NEXT:    ret
   %val = load [32 x float], ptr @var

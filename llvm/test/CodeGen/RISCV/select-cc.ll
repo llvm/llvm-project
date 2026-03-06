@@ -312,8 +312,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32I-LABEL: numsignbits:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32I-NEXT:    mv s0, a3
 ; RV32I-NEXT:    beqz a0, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
@@ -325,16 +325,16 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32I-NEXT:    call bar
 ; RV32I-NEXT:  .LBB1_4:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCI-LABEL: numsignbits:
 ; RV32IXQCI:       # %bb.0:
 ; RV32IXQCI-NEXT:    addi sp, sp, -16
-; RV32IXQCI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IXQCI-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IXQCI-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32IXQCI-NEXT:    mv s0, a2
 ; RV32IXQCI-NEXT:    qc.mveqi s0, a0, 0, a3
 ; RV32IXQCI-NEXT:    beqz a1, .LBB1_2
@@ -343,16 +343,16 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32IXQCI-NEXT:    call bar
 ; RV32IXQCI-NEXT:  .LBB1_2:
 ; RV32IXQCI-NEXT:    mv a0, s0
-; RV32IXQCI-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IXQCI-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IXQCI-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32IXQCI-NEXT:    addi sp, sp, 16
 ; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: numsignbits:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-NEXT:    mv s0, a3
 ; RV64I-NEXT:    beqz a0, .LBB1_2
 ; RV64I-NEXT:  # %bb.1:
@@ -364,16 +364,16 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64I-NEXT:    call bar
 ; RV64I-NEXT:  .LBB1_4:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-CCMOV-LABEL: numsignbits:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    addi sp, sp, -16
-; RV64I-CCMOV-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-CCMOV-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-CCMOV-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-CCMOV-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-CCMOV-NEXT:    mips.ccmov s0, a0, a2, a3
 ; RV64I-CCMOV-NEXT:    beqz a1, .LBB1_2
 ; RV64I-CCMOV-NEXT:  # %bb.1:
@@ -381,8 +381,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64I-CCMOV-NEXT:    call bar
 ; RV64I-CCMOV-NEXT:  .LBB1_2:
 ; RV64I-CCMOV-NEXT:    mv a0, s0
-; RV64I-CCMOV-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-CCMOV-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-CCMOV-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-CCMOV-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-CCMOV-NEXT:    addi sp, sp, 16
 ; RV64I-CCMOV-NEXT:    ret
   %5 = icmp eq i16 %0, 0

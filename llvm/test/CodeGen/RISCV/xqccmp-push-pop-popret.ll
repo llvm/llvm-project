@@ -1029,8 +1029,8 @@ define i32 @varargs(ptr %fmt, ...) {
 ; RV32IXQCCMP-FP:       # %bb.0:
 ; RV32IXQCCMP-FP-NEXT:    addi sp, sp, -48
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa_offset 48
-; RV32IXQCCMP-FP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset ra, -36
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset s0, -40
 ; RV32IXQCCMP-FP-NEXT:    addi s0, sp, 16
@@ -1046,8 +1046,8 @@ define i32 @varargs(ptr %fmt, ...) {
 ; RV32IXQCCMP-FP-NEXT:    addi a1, s0, 8
 ; RV32IXQCCMP-FP-NEXT:    sw a1, -12(s0)
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 48
-; RV32IXQCCMP-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore ra
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore s0
 ; RV32IXQCCMP-FP-NEXT:    addi sp, sp, 48
@@ -1058,8 +1058,8 @@ define i32 @varargs(ptr %fmt, ...) {
 ; RV64IXQCCMP-FP:       # %bb.0:
 ; RV64IXQCCMP-FP-NEXT:    addi sp, sp, -96
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa_offset 96
-; RV64IXQCCMP-FP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset ra, -72
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset s0, -80
 ; RV64IXQCCMP-FP-NEXT:    addi s0, sp, 32
@@ -1075,8 +1075,8 @@ define i32 @varargs(ptr %fmt, ...) {
 ; RV64IXQCCMP-FP-NEXT:    sd a3, 24(s0)
 ; RV64IXQCCMP-FP-NEXT:    sd a4, 32(s0)
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 96
-; RV64IXQCCMP-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore ra
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore s0
 ; RV64IXQCCMP-FP-NEXT:    addi sp, sp, 96
@@ -1574,21 +1574,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-NEXT:    .cfi_offset ra, -4
 ; RV32IXQCCMP-NEXT:    addi sp, sp, -16
 ; RV32IXQCCMP-NEXT:    .cfi_def_cfa_offset 80
-; RV32IXQCCMP-NEXT:    sw t0, 60(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t1, 56(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t2, 52(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a1, 44(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a2, 40(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a3, 36(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a4, 32(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a5, 28(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a6, 24(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a7, 20(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t3, 16(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t4, 12(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t5, 8(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t6, 4(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw t0, 60(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t1, 56(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t2, 52(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a0, 48(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a1, 44(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a2, 40(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a3, 36(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a4, 32(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a5, 28(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a6, 24(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a7, 20(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t3, 16(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t4, 12(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t5, 8(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t6, 4(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    .cfi_offset t0, -20
 ; RV32IXQCCMP-NEXT:    .cfi_offset t1, -24
 ; RV32IXQCCMP-NEXT:    .cfi_offset t2, -28
@@ -1605,21 +1605,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-NEXT:    .cfi_offset t5, -72
 ; RV32IXQCCMP-NEXT:    .cfi_offset t6, -76
 ; RV32IXQCCMP-NEXT:    call foo_test_irq
-; RV32IXQCCMP-NEXT:    lw t0, 60(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t1, 56(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t2, 52(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a1, 44(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a2, 40(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a3, 36(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a4, 32(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a5, 28(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a6, 24(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a7, 20(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t3, 16(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t4, 12(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t5, 8(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t6, 4(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw t0, 60(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t1, 56(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t2, 52(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a0, 48(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a1, 44(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a2, 40(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a3, 36(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a4, 32(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a5, 28(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a6, 24(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a7, 20(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t3, 16(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t4, 12(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t5, 8(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t6, 4(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    .cfi_restore t0
 ; RV32IXQCCMP-NEXT:    .cfi_restore t1
 ; RV32IXQCCMP-NEXT:    .cfi_restore t2
@@ -1649,21 +1649,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-NEXT:    .cfi_offset ra, -8
 ; RV64IXQCCMP-NEXT:    addi sp, sp, -80
 ; RV64IXQCCMP-NEXT:    .cfi_def_cfa_offset 144
-; RV64IXQCCMP-NEXT:    sd t0, 120(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t1, 112(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t2, 104(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a1, 88(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a2, 80(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a3, 72(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a4, 64(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a5, 56(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a6, 48(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a7, 40(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t3, 32(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t4, 24(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t6, 8(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd t0, 120(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t1, 112(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t2, 104(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a0, 96(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a1, 88(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a2, 80(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a3, 72(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a4, 64(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a5, 56(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a6, 48(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a7, 40(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t3, 32(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t4, 24(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t5, 16(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t6, 8(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    .cfi_offset t0, -24
 ; RV64IXQCCMP-NEXT:    .cfi_offset t1, -32
 ; RV64IXQCCMP-NEXT:    .cfi_offset t2, -40
@@ -1680,21 +1680,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-NEXT:    .cfi_offset t5, -128
 ; RV64IXQCCMP-NEXT:    .cfi_offset t6, -136
 ; RV64IXQCCMP-NEXT:    call foo_test_irq
-; RV64IXQCCMP-NEXT:    ld t0, 120(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t1, 112(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t2, 104(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a1, 88(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a2, 80(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a3, 72(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a4, 64(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a5, 56(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a6, 48(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a7, 40(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t3, 32(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t4, 24(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t5, 16(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld t0, 120(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t1, 112(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t2, 104(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a0, 96(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a1, 88(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a2, 80(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a3, 72(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a4, 64(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a5, 56(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a6, 48(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a7, 40(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t3, 32(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t4, 24(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t5, 16(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t6, 8(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    .cfi_restore t0
 ; RV64IXQCCMP-NEXT:    .cfi_restore t1
 ; RV64IXQCCMP-NEXT:    .cfi_restore t2
@@ -1725,21 +1725,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset s0, -8
 ; RV32IXQCCMP-FP-NEXT:    addi sp, sp, -16
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa_offset 80
-; RV32IXQCCMP-FP-NEXT:    sw t0, 60(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t1, 56(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t2, 52(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a1, 44(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a2, 40(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a3, 36(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a4, 32(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a5, 28(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a6, 24(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a7, 20(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t3, 16(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t4, 12(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t5, 8(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t6, 4(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw t0, 60(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t1, 56(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t2, 52(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a0, 48(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, 44(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a2, 40(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a3, 36(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a4, 32(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a5, 28(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a6, 24(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a7, 20(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t3, 16(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t4, 12(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t5, 8(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t6, 4(sp) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset t0, -20
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset t1, -24
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset t2, -28
@@ -1758,21 +1758,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IXQCCMP-FP-NEXT:    call foo_test_irq
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 80
-; RV32IXQCCMP-FP-NEXT:    lw t0, 60(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t1, 56(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t2, 52(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a1, 44(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a2, 40(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a3, 36(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a4, 32(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a5, 28(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a6, 24(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a7, 20(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t3, 16(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t4, 12(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t5, 8(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t6, 4(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw t0, 60(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t1, 56(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t2, 52(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a0, 48(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, 44(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a2, 40(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a3, 36(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a4, 32(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a5, 28(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a6, 24(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a7, 20(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t3, 16(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t4, 12(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t5, 8(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t6, 4(sp) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore t0
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore t1
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore t2
@@ -1804,21 +1804,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset s0, -16
 ; RV64IXQCCMP-FP-NEXT:    addi sp, sp, -80
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa_offset 144
-; RV64IXQCCMP-FP-NEXT:    sd t0, 120(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t1, 112(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t2, 104(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a1, 88(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a2, 80(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a3, 72(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a4, 64(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a5, 56(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a6, 48(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a7, 40(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t3, 32(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t4, 24(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t6, 8(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd t0, 120(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t1, 112(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t2, 104(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a0, 96(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, 88(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a2, 80(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a3, 72(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a4, 64(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a5, 56(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a6, 48(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a7, 40(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t3, 32(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t4, 24(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t5, 16(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t6, 8(sp) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset t0, -24
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset t1, -32
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset t2, -40
@@ -1837,21 +1837,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IXQCCMP-FP-NEXT:    call foo_test_irq
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 144
-; RV64IXQCCMP-FP-NEXT:    ld t0, 120(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t1, 112(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t2, 104(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a1, 88(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a2, 80(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a3, 72(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a4, 64(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a5, 56(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a6, 48(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a7, 40(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t3, 32(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t4, 24(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t5, 16(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld t0, 120(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t1, 112(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t2, 104(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a0, 96(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, 88(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a2, 80(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a3, 72(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a4, 64(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a5, 56(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a6, 48(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a7, 40(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t3, 32(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t4, 24(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t5, 16(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t6, 8(sp) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore t0
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore t1
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore t2
@@ -1882,21 +1882,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset ra, -4
 ; RV32IXQCCMP-SR-NEXT:    addi sp, sp, -16
 ; RV32IXQCCMP-SR-NEXT:    .cfi_def_cfa_offset 80
-; RV32IXQCCMP-SR-NEXT:    sw t0, 60(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t1, 56(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t2, 52(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a0, 48(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a1, 44(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a2, 40(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a3, 36(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a4, 32(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a5, 28(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a6, 24(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a7, 20(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t3, 16(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t4, 12(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t5, 8(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t6, 4(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw t0, 60(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t1, 56(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t2, 52(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a0, 48(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 44(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a2, 40(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a3, 36(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a4, 32(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a5, 28(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a6, 24(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a7, 20(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t3, 16(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t4, 12(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t5, 8(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t6, 4(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t0, -20
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t1, -24
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t2, -28
@@ -1913,21 +1913,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t5, -72
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t6, -76
 ; RV32IXQCCMP-SR-NEXT:    call foo_test_irq
-; RV32IXQCCMP-SR-NEXT:    lw t0, 60(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t1, 56(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t2, 52(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a0, 48(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a1, 44(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a2, 40(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a3, 36(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a4, 32(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a5, 28(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a6, 24(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a7, 20(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t3, 16(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t4, 12(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t5, 8(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t6, 4(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw t0, 60(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t1, 56(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t2, 52(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a0, 48(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 44(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a2, 40(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a3, 36(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a4, 32(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a5, 28(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a6, 24(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a7, 20(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t3, 16(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t4, 12(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t5, 8(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t6, 4(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    .cfi_restore t0
 ; RV32IXQCCMP-SR-NEXT:    .cfi_restore t1
 ; RV32IXQCCMP-SR-NEXT:    .cfi_restore t2
@@ -1957,21 +1957,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset ra, -8
 ; RV64IXQCCMP-SR-NEXT:    addi sp, sp, -80
 ; RV64IXQCCMP-SR-NEXT:    .cfi_def_cfa_offset 144
-; RV64IXQCCMP-SR-NEXT:    sd t0, 120(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t1, 112(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t2, 104(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a0, 96(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a1, 88(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a2, 80(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a3, 72(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a4, 64(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a5, 56(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a6, 48(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a7, 40(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t3, 32(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t4, 24(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t6, 8(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd t0, 120(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t1, 112(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t2, 104(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a0, 96(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 88(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a2, 80(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a3, 72(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a4, 64(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a5, 56(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a6, 48(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a7, 40(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t3, 32(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t4, 24(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t5, 16(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t6, 8(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t0, -24
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t1, -32
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t2, -40
@@ -1988,21 +1988,21 @@ define void @foo_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t5, -128
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t6, -136
 ; RV64IXQCCMP-SR-NEXT:    call foo_test_irq
-; RV64IXQCCMP-SR-NEXT:    ld t0, 120(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t1, 112(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t2, 104(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a0, 96(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a1, 88(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a2, 80(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a3, 72(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a4, 64(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a5, 56(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a6, 48(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a7, 40(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t3, 32(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t4, 24(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t5, 16(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t6, 8(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld t0, 120(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t1, 112(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t2, 104(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a0, 96(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 88(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a2, 80(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a3, 72(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a4, 64(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a5, 56(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a6, 48(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a7, 40(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t3, 32(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t4, 24(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t5, 16(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t6, 8(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    .cfi_restore t0
 ; RV64IXQCCMP-SR-NEXT:    .cfi_restore t1
 ; RV64IXQCCMP-SR-NEXT:    .cfi_restore t2
@@ -2106,21 +2106,21 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-NEXT:    .cfi_offset s11, -52
 ; RV32IXQCCMP-NEXT:    addi sp, sp, -32
 ; RV32IXQCCMP-NEXT:    .cfi_def_cfa_offset 144
-; RV32IXQCCMP-NEXT:    sw t0, 76(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t1, 72(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t2, 68(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a1, 60(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a2, 56(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a3, 52(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a4, 48(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a5, 44(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a6, 40(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw a7, 36(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t3, 32(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t4, 28(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t5, 24(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-NEXT:    sw t6, 20(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw t0, 76(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t1, 72(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t2, 68(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a0, 64(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a1, 60(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a2, 56(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a3, 52(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a4, 48(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a5, 44(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a6, 40(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw a7, 36(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t3, 32(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t4, 28(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t5, 24(sp) # 4-byte Spill
+; RV32IXQCCMP-NEXT:    sw t6, 20(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    .cfi_offset t0, -68
 ; RV32IXQCCMP-NEXT:    .cfi_offset t1, -72
 ; RV32IXQCCMP-NEXT:    .cfi_offset t2, -76
@@ -2139,15 +2139,15 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV32IXQCCMP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV32IXQCCMP-NEXT:    lw a1, 0(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 16(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 4(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 12(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 8(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 8(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 12(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 4(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 16(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 0(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw t3, 20(a0)
 ; RV32IXQCCMP-NEXT:    lw t4, 24(a0)
 ; RV32IXQCCMP-NEXT:    lw t5, 28(a0)
@@ -2202,31 +2202,31 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-NEXT:    sw t5, 28(a0)
 ; RV32IXQCCMP-NEXT:    sw t4, 24(a0)
 ; RV32IXQCCMP-NEXT:    sw t3, 20(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 0(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 16(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 4(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 12(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 8(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 8(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 12(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 4(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 16(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 0(a0)
-; RV32IXQCCMP-NEXT:    lw t0, 76(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t1, 72(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t2, 68(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a1, 60(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a2, 56(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a3, 52(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a4, 48(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a5, 44(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a6, 40(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw a7, 36(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t3, 32(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t4, 28(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t5, 24(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-NEXT:    lw t6, 20(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw t0, 76(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t1, 72(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t2, 68(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a0, 64(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a1, 60(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a2, 56(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a3, 52(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a4, 48(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a5, 44(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a6, 40(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw a7, 36(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t3, 32(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t4, 28(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t5, 24(sp) # 4-byte Reload
+; RV32IXQCCMP-NEXT:    lw t6, 20(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    .cfi_restore t0
 ; RV32IXQCCMP-NEXT:    .cfi_restore t1
 ; RV32IXQCCMP-NEXT:    .cfi_restore t2
@@ -2280,21 +2280,21 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-NEXT:    .cfi_offset s11, -104
 ; RV64IXQCCMP-NEXT:    addi sp, sp, -112
 ; RV64IXQCCMP-NEXT:    .cfi_def_cfa_offset 272
-; RV64IXQCCMP-NEXT:    sd t0, 152(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t1, 144(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t2, 136(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a0, 128(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a1, 120(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a2, 112(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a3, 104(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a4, 96(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a5, 88(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a6, 80(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd a7, 72(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t3, 64(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t4, 56(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t5, 48(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-NEXT:    sd t6, 40(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd t0, 152(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t1, 144(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t2, 136(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a0, 128(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a1, 120(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a2, 112(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a3, 104(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a4, 96(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a5, 88(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a6, 80(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd a7, 72(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t3, 64(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t4, 56(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t5, 48(sp) # 8-byte Spill
+; RV64IXQCCMP-NEXT:    sd t6, 40(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    .cfi_offset t0, -120
 ; RV64IXQCCMP-NEXT:    .cfi_offset t1, -128
 ; RV64IXQCCMP-NEXT:    .cfi_offset t2, -136
@@ -2313,15 +2313,15 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV64IXQCCMP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV64IXQCCMP-NEXT:    lw a1, 0(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 32(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 4(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 24(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 8(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 16(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 12(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 8(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 16(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 0(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw t3, 20(a0)
 ; RV64IXQCCMP-NEXT:    lw t4, 24(a0)
 ; RV64IXQCCMP-NEXT:    lw t5, 28(a0)
@@ -2376,31 +2376,31 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-NEXT:    sw t5, 28(a0)
 ; RV64IXQCCMP-NEXT:    sw t4, 24(a0)
 ; RV64IXQCCMP-NEXT:    sw t3, 20(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 0(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 16(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 8(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 12(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 16(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 8(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 24(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 4(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 32(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 0(a0)
-; RV64IXQCCMP-NEXT:    ld t0, 152(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t1, 144(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t2, 136(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a0, 128(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a1, 120(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a2, 112(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a3, 104(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a4, 96(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a5, 88(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a6, 80(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld a7, 72(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t3, 64(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t4, 56(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t5, 48(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-NEXT:    ld t6, 40(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld t0, 152(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t1, 144(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t2, 136(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a0, 128(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a1, 120(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a2, 112(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a3, 104(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a4, 96(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a5, 88(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a6, 80(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld a7, 72(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t3, 64(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t4, 56(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t5, 48(sp) # 8-byte Reload
+; RV64IXQCCMP-NEXT:    ld t6, 40(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    .cfi_restore t0
 ; RV64IXQCCMP-NEXT:    .cfi_restore t1
 ; RV64IXQCCMP-NEXT:    .cfi_restore t2
@@ -2454,21 +2454,21 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset s11, -52
 ; RV32IXQCCMP-FP-NEXT:    addi sp, sp, -48
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa_offset 160
-; RV32IXQCCMP-FP-NEXT:    sw t0, 92(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t1, 88(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t2, 84(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a0, 80(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a1, 76(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a2, 72(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a3, 68(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a4, 64(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a5, 60(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a6, 56(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw a7, 52(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t3, 48(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t4, 44(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t5, 40(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-FP-NEXT:    sw t6, 36(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw t0, 92(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t1, 88(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t2, 84(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a0, 80(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, 76(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a2, 72(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a3, 68(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a4, 64(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a5, 60(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a6, 56(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw a7, 52(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t3, 48(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t4, 44(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t5, 40(sp) # 4-byte Spill
+; RV32IXQCCMP-FP-NEXT:    sw t6, 36(sp) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset t0, -68
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset t1, -72
 ; RV32IXQCCMP-FP-NEXT:    .cfi_offset t2, -76
@@ -2488,17 +2488,17 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-FP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV32IXQCCMP-FP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 0(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -128(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -128(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 4(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -132(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -132(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 8(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -136(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -136(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 12(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -140(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -140(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 16(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -144(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -144(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 20(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -148(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -148(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw t4, 24(a0)
 ; RV32IXQCCMP-FP-NEXT:    lw t5, 28(a0)
 ; RV32IXQCCMP-FP-NEXT:    lw t6, 32(a0)
@@ -2551,34 +2551,34 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-FP-NEXT:    sw t6, 32(a0)
 ; RV32IXQCCMP-FP-NEXT:    sw t5, 28(a0)
 ; RV32IXQCCMP-FP-NEXT:    sw t4, 24(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -148(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -148(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 20(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -144(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -144(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 16(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -140(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -140(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 12(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -136(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -136(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 8(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -132(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -132(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 4(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -128(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -128(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 0(a0)
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 160
-; RV32IXQCCMP-FP-NEXT:    lw t0, 92(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t1, 88(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t2, 84(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a0, 80(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a1, 76(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a2, 72(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a3, 68(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a4, 64(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a5, 60(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a6, 56(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw a7, 52(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t3, 48(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t4, 44(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t5, 40(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-FP-NEXT:    lw t6, 36(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw t0, 92(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t1, 88(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t2, 84(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a0, 80(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, 76(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a2, 72(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a3, 68(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a4, 64(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a5, 60(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a6, 56(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw a7, 52(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t3, 48(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t4, 44(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t5, 40(sp) # 4-byte Reload
+; RV32IXQCCMP-FP-NEXT:    lw t6, 36(sp) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore t0
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore t1
 ; RV32IXQCCMP-FP-NEXT:    .cfi_restore t2
@@ -2632,21 +2632,21 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset s11, -104
 ; RV64IXQCCMP-FP-NEXT:    addi sp, sp, -128
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa_offset 288
-; RV64IXQCCMP-FP-NEXT:    sd t0, 168(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t1, 160(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t2, 152(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a0, 144(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a1, 136(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a2, 128(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a3, 120(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a4, 112(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a5, 104(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a6, 96(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd a7, 88(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t3, 80(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t4, 72(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t5, 64(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-FP-NEXT:    sd t6, 56(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd t0, 168(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t1, 160(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t2, 152(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a0, 144(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, 136(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a2, 128(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a3, 120(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a4, 112(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a5, 104(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a6, 96(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd a7, 88(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t3, 80(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t4, 72(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t5, 64(sp) # 8-byte Spill
+; RV64IXQCCMP-FP-NEXT:    sd t6, 56(sp) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset t0, -120
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset t1, -128
 ; RV64IXQCCMP-FP-NEXT:    .cfi_offset t2, -136
@@ -2666,17 +2666,17 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-FP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV64IXQCCMP-FP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 0(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -240(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -240(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 4(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -248(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -248(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 8(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -256(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -256(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 12(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -264(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -264(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 16(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -272(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -272(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 20(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -280(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -280(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw t4, 24(a0)
 ; RV64IXQCCMP-FP-NEXT:    lw t5, 28(a0)
 ; RV64IXQCCMP-FP-NEXT:    lw t6, 32(a0)
@@ -2729,34 +2729,34 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-FP-NEXT:    sw t6, 32(a0)
 ; RV64IXQCCMP-FP-NEXT:    sw t5, 28(a0)
 ; RV64IXQCCMP-FP-NEXT:    sw t4, 24(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -280(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -280(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 20(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -272(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -272(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 16(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -264(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -264(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 12(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -256(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -256(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 8(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -248(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -248(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 4(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -240(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -240(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 0(a0)
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 288
-; RV64IXQCCMP-FP-NEXT:    ld t0, 168(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t1, 160(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t2, 152(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a0, 144(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a1, 136(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a2, 128(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a3, 120(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a4, 112(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a5, 104(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a6, 96(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld a7, 88(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t3, 80(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t4, 72(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t5, 64(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-FP-NEXT:    ld t6, 56(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld t0, 168(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t1, 160(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t2, 152(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a0, 144(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, 136(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a2, 128(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a3, 120(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a4, 112(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a5, 104(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a6, 96(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld a7, 88(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t3, 80(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t4, 72(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t5, 64(sp) # 8-byte Reload
+; RV64IXQCCMP-FP-NEXT:    ld t6, 56(sp) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore t0
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore t1
 ; RV64IXQCCMP-FP-NEXT:    .cfi_restore t2
@@ -2810,21 +2810,21 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset s11, -52
 ; RV32IXQCCMP-SR-NEXT:    addi sp, sp, -32
 ; RV32IXQCCMP-SR-NEXT:    .cfi_def_cfa_offset 144
-; RV32IXQCCMP-SR-NEXT:    sw t0, 76(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t1, 72(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t2, 68(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a0, 64(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a1, 60(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a2, 56(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a3, 52(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a4, 48(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a5, 44(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a6, 40(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw a7, 36(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t3, 32(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t4, 28(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t5, 24(sp) # 4-byte Folded Spill
-; RV32IXQCCMP-SR-NEXT:    sw t6, 20(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw t0, 76(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t1, 72(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t2, 68(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a0, 64(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 60(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a2, 56(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a3, 52(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a4, 48(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a5, 44(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a6, 40(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw a7, 36(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t3, 32(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t4, 28(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t5, 24(sp) # 4-byte Spill
+; RV32IXQCCMP-SR-NEXT:    sw t6, 20(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t0, -68
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t1, -72
 ; RV32IXQCCMP-SR-NEXT:    .cfi_offset t2, -76
@@ -2843,15 +2843,15 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-SR-NEXT:    lui a0, %hi(var_test_irq)
 ; RV32IXQCCMP-SR-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 0(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 16(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 4(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 12(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 8(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 8(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 12(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 4(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 4(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 16(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 0(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw t3, 20(a0)
 ; RV32IXQCCMP-SR-NEXT:    lw t4, 24(a0)
 ; RV32IXQCCMP-SR-NEXT:    lw t5, 28(a0)
@@ -2906,31 +2906,31 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-SR-NEXT:    sw t5, 28(a0)
 ; RV32IXQCCMP-SR-NEXT:    sw t4, 24(a0)
 ; RV32IXQCCMP-SR-NEXT:    sw t3, 20(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 0(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 16(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 4(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 4(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 12(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 8(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 8(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 12(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 4(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 16(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 0(a0)
-; RV32IXQCCMP-SR-NEXT:    lw t0, 76(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t1, 72(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t2, 68(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a0, 64(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a1, 60(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a2, 56(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a3, 52(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a4, 48(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a5, 44(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a6, 40(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw a7, 36(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t3, 32(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t4, 28(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t5, 24(sp) # 4-byte Folded Reload
-; RV32IXQCCMP-SR-NEXT:    lw t6, 20(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw t0, 76(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t1, 72(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t2, 68(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a0, 64(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 60(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a2, 56(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a3, 52(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a4, 48(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a5, 44(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a6, 40(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw a7, 36(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t3, 32(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t4, 28(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t5, 24(sp) # 4-byte Reload
+; RV32IXQCCMP-SR-NEXT:    lw t6, 20(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    .cfi_restore t0
 ; RV32IXQCCMP-SR-NEXT:    .cfi_restore t1
 ; RV32IXQCCMP-SR-NEXT:    .cfi_restore t2
@@ -2984,21 +2984,21 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset s11, -104
 ; RV64IXQCCMP-SR-NEXT:    addi sp, sp, -112
 ; RV64IXQCCMP-SR-NEXT:    .cfi_def_cfa_offset 272
-; RV64IXQCCMP-SR-NEXT:    sd t0, 152(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t1, 144(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t2, 136(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a0, 128(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a1, 120(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a2, 112(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a3, 104(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a4, 96(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a5, 88(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a6, 80(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd a7, 72(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t3, 64(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t4, 56(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t5, 48(sp) # 8-byte Folded Spill
-; RV64IXQCCMP-SR-NEXT:    sd t6, 40(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd t0, 152(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t1, 144(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t2, 136(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a0, 128(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 120(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a2, 112(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a3, 104(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a4, 96(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a5, 88(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a6, 80(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd a7, 72(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t3, 64(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t4, 56(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t5, 48(sp) # 8-byte Spill
+; RV64IXQCCMP-SR-NEXT:    sd t6, 40(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t0, -120
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t1, -128
 ; RV64IXQCCMP-SR-NEXT:    .cfi_offset t2, -136
@@ -3017,15 +3017,15 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-SR-NEXT:    lui a0, %hi(var_test_irq)
 ; RV64IXQCCMP-SR-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 0(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 32(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 4(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 24(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 8(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 16(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 12(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 8(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 16(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 0(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw t3, 20(a0)
 ; RV64IXQCCMP-SR-NEXT:    lw t4, 24(a0)
 ; RV64IXQCCMP-SR-NEXT:    lw t5, 28(a0)
@@ -3080,31 +3080,31 @@ define void @callee_with_irq() "interrupt"="machine" {
 ; RV64IXQCCMP-SR-NEXT:    sw t5, 28(a0)
 ; RV64IXQCCMP-SR-NEXT:    sw t4, 24(a0)
 ; RV64IXQCCMP-SR-NEXT:    sw t3, 20(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 0(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 16(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 8(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 12(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 16(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 8(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 24(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 4(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 32(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 0(a0)
-; RV64IXQCCMP-SR-NEXT:    ld t0, 152(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t1, 144(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t2, 136(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a0, 128(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a1, 120(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a2, 112(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a3, 104(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a4, 96(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a5, 88(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a6, 80(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld a7, 72(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t3, 64(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t4, 56(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t5, 48(sp) # 8-byte Folded Reload
-; RV64IXQCCMP-SR-NEXT:    ld t6, 40(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld t0, 152(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t1, 144(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t2, 136(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a0, 128(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 120(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a2, 112(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a3, 104(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a4, 96(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a5, 88(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a6, 80(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld a7, 72(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t3, 64(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t4, 56(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t5, 48(sp) # 8-byte Reload
+; RV64IXQCCMP-SR-NEXT:    ld t6, 40(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    .cfi_restore t0
 ; RV64IXQCCMP-SR-NEXT:    .cfi_restore t1
 ; RV64IXQCCMP-SR-NEXT:    .cfi_restore t2
@@ -3164,15 +3164,15 @@ define void @callee_no_irq() {
 ; RV32IXQCCMP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV32IXQCCMP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV32IXQCCMP-NEXT:    lw a1, 0(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 28(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 28(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 4(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 24(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 8(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 20(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 12(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 16(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw a1, 16(a0)
-; RV32IXQCCMP-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-NEXT:    sw a1, 12(sp) # 4-byte Spill
 ; RV32IXQCCMP-NEXT:    lw t3, 20(a0)
 ; RV32IXQCCMP-NEXT:    lw t4, 24(a0)
 ; RV32IXQCCMP-NEXT:    lw t5, 28(a0)
@@ -3227,15 +3227,15 @@ define void @callee_no_irq() {
 ; RV32IXQCCMP-NEXT:    sw t5, 28(a0)
 ; RV32IXQCCMP-NEXT:    sw t4, 24(a0)
 ; RV32IXQCCMP-NEXT:    sw t3, 20(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 12(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 16(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 16(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 12(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 20(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 20(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 8(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 24(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 24(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 4(a0)
-; RV32IXQCCMP-NEXT:    lw a1, 28(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-NEXT:    lw a1, 28(sp) # 4-byte Reload
 ; RV32IXQCCMP-NEXT:    sw a1, 0(a0)
 ; RV32IXQCCMP-NEXT:    qc.cm.popret {ra, s0-s11}, 96
 ;
@@ -3259,15 +3259,15 @@ define void @callee_no_irq() {
 ; RV64IXQCCMP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV64IXQCCMP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV64IXQCCMP-NEXT:    lw a1, 0(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 40(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 40(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 4(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 32(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 8(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 24(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 12(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 16(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw a1, 16(a0)
-; RV64IXQCCMP-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-NEXT:    sd a1, 8(sp) # 8-byte Spill
 ; RV64IXQCCMP-NEXT:    lw t3, 20(a0)
 ; RV64IXQCCMP-NEXT:    lw t4, 24(a0)
 ; RV64IXQCCMP-NEXT:    lw t5, 28(a0)
@@ -3322,15 +3322,15 @@ define void @callee_no_irq() {
 ; RV64IXQCCMP-NEXT:    sw t5, 28(a0)
 ; RV64IXQCCMP-NEXT:    sw t4, 24(a0)
 ; RV64IXQCCMP-NEXT:    sw t3, 20(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 8(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 16(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 16(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 12(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 24(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 8(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 32(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 4(a0)
-; RV64IXQCCMP-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-NEXT:    ld a1, 40(sp) # 8-byte Reload
 ; RV64IXQCCMP-NEXT:    sw a1, 0(a0)
 ; RV64IXQCCMP-NEXT:    qc.cm.popret {ra, s0-s11}, 160
 ;
@@ -3355,17 +3355,17 @@ define void @callee_no_irq() {
 ; RV32IXQCCMP-FP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV32IXQCCMP-FP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 0(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -68(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -68(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 4(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -72(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -72(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 8(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -76(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -76(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 12(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -80(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -80(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 16(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -84(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -84(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw a1, 20(a0)
-; RV32IXQCCMP-FP-NEXT:    sw a1, -88(s0) # 4-byte Folded Spill
+; RV32IXQCCMP-FP-NEXT:    sw a1, -88(s0) # 4-byte Spill
 ; RV32IXQCCMP-FP-NEXT:    lw t4, 24(a0)
 ; RV32IXQCCMP-FP-NEXT:    lw t5, 28(a0)
 ; RV32IXQCCMP-FP-NEXT:    lw t6, 32(a0)
@@ -3418,17 +3418,17 @@ define void @callee_no_irq() {
 ; RV32IXQCCMP-FP-NEXT:    sw t6, 32(a0)
 ; RV32IXQCCMP-FP-NEXT:    sw t5, 28(a0)
 ; RV32IXQCCMP-FP-NEXT:    sw t4, 24(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -88(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -88(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 20(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -84(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -84(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 16(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -80(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -80(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 12(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -76(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -76(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 8(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -72(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -72(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 4(a0)
-; RV32IXQCCMP-FP-NEXT:    lw a1, -68(s0) # 4-byte Folded Reload
+; RV32IXQCCMP-FP-NEXT:    lw a1, -68(s0) # 4-byte Reload
 ; RV32IXQCCMP-FP-NEXT:    sw a1, 0(a0)
 ; RV32IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 96
 ; RV32IXQCCMP-FP-NEXT:    qc.cm.popret {ra, s0-s11}, 96
@@ -3454,17 +3454,17 @@ define void @callee_no_irq() {
 ; RV64IXQCCMP-FP-NEXT:    lui a0, %hi(var_test_irq)
 ; RV64IXQCCMP-FP-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 0(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -120(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -120(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 4(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -128(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -128(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 8(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -136(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -136(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 12(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -144(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -144(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 16(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -152(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -152(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw a1, 20(a0)
-; RV64IXQCCMP-FP-NEXT:    sd a1, -160(s0) # 8-byte Folded Spill
+; RV64IXQCCMP-FP-NEXT:    sd a1, -160(s0) # 8-byte Spill
 ; RV64IXQCCMP-FP-NEXT:    lw t4, 24(a0)
 ; RV64IXQCCMP-FP-NEXT:    lw t5, 28(a0)
 ; RV64IXQCCMP-FP-NEXT:    lw t6, 32(a0)
@@ -3517,17 +3517,17 @@ define void @callee_no_irq() {
 ; RV64IXQCCMP-FP-NEXT:    sw t6, 32(a0)
 ; RV64IXQCCMP-FP-NEXT:    sw t5, 28(a0)
 ; RV64IXQCCMP-FP-NEXT:    sw t4, 24(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -160(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -160(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 20(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -152(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -152(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 16(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -144(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -144(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 12(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -136(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -136(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 8(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -128(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -128(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 4(a0)
-; RV64IXQCCMP-FP-NEXT:    ld a1, -120(s0) # 8-byte Folded Reload
+; RV64IXQCCMP-FP-NEXT:    ld a1, -120(s0) # 8-byte Reload
 ; RV64IXQCCMP-FP-NEXT:    sw a1, 0(a0)
 ; RV64IXQCCMP-FP-NEXT:    .cfi_def_cfa sp, 160
 ; RV64IXQCCMP-FP-NEXT:    qc.cm.popret {ra, s0-s11}, 160
@@ -3552,15 +3552,15 @@ define void @callee_no_irq() {
 ; RV32IXQCCMP-SR-NEXT:    lui a0, %hi(var_test_irq)
 ; RV32IXQCCMP-SR-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 0(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 28(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 28(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 4(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 24(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 24(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 8(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 20(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 20(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 12(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 16(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 16(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw a1, 16(a0)
-; RV32IXQCCMP-SR-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32IXQCCMP-SR-NEXT:    sw a1, 12(sp) # 4-byte Spill
 ; RV32IXQCCMP-SR-NEXT:    lw t3, 20(a0)
 ; RV32IXQCCMP-SR-NEXT:    lw t4, 24(a0)
 ; RV32IXQCCMP-SR-NEXT:    lw t5, 28(a0)
@@ -3615,15 +3615,15 @@ define void @callee_no_irq() {
 ; RV32IXQCCMP-SR-NEXT:    sw t5, 28(a0)
 ; RV32IXQCCMP-SR-NEXT:    sw t4, 24(a0)
 ; RV32IXQCCMP-SR-NEXT:    sw t3, 20(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 12(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 12(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 16(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 16(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 16(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 12(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 20(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 20(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 8(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 24(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 24(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 4(a0)
-; RV32IXQCCMP-SR-NEXT:    lw a1, 28(sp) # 4-byte Folded Reload
+; RV32IXQCCMP-SR-NEXT:    lw a1, 28(sp) # 4-byte Reload
 ; RV32IXQCCMP-SR-NEXT:    sw a1, 0(a0)
 ; RV32IXQCCMP-SR-NEXT:    qc.cm.popret {ra, s0-s11}, 96
 ;
@@ -3647,15 +3647,15 @@ define void @callee_no_irq() {
 ; RV64IXQCCMP-SR-NEXT:    lui a0, %hi(var_test_irq)
 ; RV64IXQCCMP-SR-NEXT:    addi a0, a0, %lo(var_test_irq)
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 0(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 40(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 40(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 4(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 32(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 8(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 24(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 24(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 12(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 16(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 16(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw a1, 16(a0)
-; RV64IXQCCMP-SR-NEXT:    sd a1, 8(sp) # 8-byte Folded Spill
+; RV64IXQCCMP-SR-NEXT:    sd a1, 8(sp) # 8-byte Spill
 ; RV64IXQCCMP-SR-NEXT:    lw t3, 20(a0)
 ; RV64IXQCCMP-SR-NEXT:    lw t4, 24(a0)
 ; RV64IXQCCMP-SR-NEXT:    lw t5, 28(a0)
@@ -3710,15 +3710,15 @@ define void @callee_no_irq() {
 ; RV64IXQCCMP-SR-NEXT:    sw t5, 28(a0)
 ; RV64IXQCCMP-SR-NEXT:    sw t4, 24(a0)
 ; RV64IXQCCMP-SR-NEXT:    sw t3, 20(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 8(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 16(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 16(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 12(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 24(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 8(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 32(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 4(a0)
-; RV64IXQCCMP-SR-NEXT:    ld a1, 40(sp) # 8-byte Folded Reload
+; RV64IXQCCMP-SR-NEXT:    ld a1, 40(sp) # 8-byte Reload
 ; RV64IXQCCMP-SR-NEXT:    sw a1, 0(a0)
 ; RV64IXQCCMP-SR-NEXT:    qc.cm.popret {ra, s0-s11}, 160
   %val = load [32 x i32], ptr @var_test_irq

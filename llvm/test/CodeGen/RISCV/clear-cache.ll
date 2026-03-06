@@ -10,38 +10,38 @@ define void @foo(ptr %a, ptr %b) nounwind {
 ; RV32-LABEL: foo:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    call __clear_cache
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: foo:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    call __clear_cache
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
 ; RV32-LINUX-LABEL: foo:
 ; RV32-LINUX:       # %bb.0:
 ; RV32-LINUX-NEXT:    addi sp, sp, -16
-; RV32-LINUX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-LINUX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-LINUX-NEXT:    li a2, 0
 ; RV32-LINUX-NEXT:    call __riscv_flush_icache
-; RV32-LINUX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-LINUX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-LINUX-NEXT:    addi sp, sp, 16
 ; RV32-LINUX-NEXT:    ret
 ;
 ; RV64-LINUX-LABEL: foo:
 ; RV64-LINUX:       # %bb.0:
 ; RV64-LINUX-NEXT:    addi sp, sp, -16
-; RV64-LINUX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-LINUX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-LINUX-NEXT:    li a2, 0
 ; RV64-LINUX-NEXT:    call __riscv_flush_icache
-; RV64-LINUX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-LINUX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64-LINUX-NEXT:    addi sp, sp, 16
 ; RV64-LINUX-NEXT:    ret
   call void @llvm.clear_cache(ptr %a, ptr %b)

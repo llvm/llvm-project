@@ -96,7 +96,7 @@ define half @constraint_half_abi_name(half %a) nounwind {
 ; RV32ZHINX-LABEL: constraint_half_abi_name:
 ; RV32ZHINX:       # %bb.0:
 ; RV32ZHINX-NEXT:    addi sp, sp, -16
-; RV32ZHINX-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZHINX-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32ZHINX-NEXT:    lui a1, %hi(gh)
 ; RV32ZHINX-NEXT:    lh s0, %lo(gh)(a1)
 ; RV32ZHINX-NEXT:    # kill: def $x10_h killed $x10_h def $x10
@@ -104,14 +104,14 @@ define half @constraint_half_abi_name(half %a) nounwind {
 ; RV32ZHINX-NEXT:    fadd.s t0, a0, s0
 ; RV32ZHINX-NEXT:    #NO_APP
 ; RV32ZHINX-NEXT:    mv a0, t0
-; RV32ZHINX-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZHINX-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32ZHINX-NEXT:    addi sp, sp, 16
 ; RV32ZHINX-NEXT:    ret
 ;
 ; RV64ZHINX-LABEL: constraint_half_abi_name:
 ; RV64ZHINX:       # %bb.0:
 ; RV64ZHINX-NEXT:    addi sp, sp, -16
-; RV64ZHINX-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64ZHINX-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64ZHINX-NEXT:    lui a1, %hi(gh)
 ; RV64ZHINX-NEXT:    lh s0, %lo(gh)(a1)
 ; RV64ZHINX-NEXT:    # kill: def $x10_h killed $x10_h def $x10
@@ -119,14 +119,14 @@ define half @constraint_half_abi_name(half %a) nounwind {
 ; RV64ZHINX-NEXT:    fadd.s t0, a0, s0
 ; RV64ZHINX-NEXT:    #NO_APP
 ; RV64ZHINX-NEXT:    mv a0, t0
-; RV64ZHINX-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64ZHINX-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64ZHINX-NEXT:    addi sp, sp, 16
 ; RV64ZHINX-NEXT:    ret
 ;
 ; RV32DINXZHINX-LABEL: constraint_half_abi_name:
 ; RV32DINXZHINX:       # %bb.0:
 ; RV32DINXZHINX-NEXT:    addi sp, sp, -16
-; RV32DINXZHINX-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32DINXZHINX-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32DINXZHINX-NEXT:    lui a1, %hi(gh)
 ; RV32DINXZHINX-NEXT:    lh s0, %lo(gh)(a1)
 ; RV32DINXZHINX-NEXT:    # kill: def $x10_h killed $x10_h def $x10
@@ -134,14 +134,14 @@ define half @constraint_half_abi_name(half %a) nounwind {
 ; RV32DINXZHINX-NEXT:    fadd.s t0, a0, s0
 ; RV32DINXZHINX-NEXT:    #NO_APP
 ; RV32DINXZHINX-NEXT:    mv a0, t0
-; RV32DINXZHINX-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32DINXZHINX-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32DINXZHINX-NEXT:    addi sp, sp, 16
 ; RV32DINXZHINX-NEXT:    ret
 ;
 ; RV64DINXZHINX-LABEL: constraint_half_abi_name:
 ; RV64DINXZHINX:       # %bb.0:
 ; RV64DINXZHINX-NEXT:    addi sp, sp, -16
-; RV64DINXZHINX-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64DINXZHINX-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64DINXZHINX-NEXT:    lui a1, %hi(gh)
 ; RV64DINXZHINX-NEXT:    lh s0, %lo(gh)(a1)
 ; RV64DINXZHINX-NEXT:    # kill: def $x10_h killed $x10_h def $x10
@@ -149,7 +149,7 @@ define half @constraint_half_abi_name(half %a) nounwind {
 ; RV64DINXZHINX-NEXT:    fadd.s t0, a0, s0
 ; RV64DINXZHINX-NEXT:    #NO_APP
 ; RV64DINXZHINX-NEXT:    mv a0, t0
-; RV64DINXZHINX-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64DINXZHINX-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64DINXZHINX-NEXT:    addi sp, sp, 16
 ; RV64DINXZHINX-NEXT:    ret
   %1 = load half, ptr @gh

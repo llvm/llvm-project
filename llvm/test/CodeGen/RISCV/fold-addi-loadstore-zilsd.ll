@@ -34,12 +34,12 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-LABEL: fold_addi_from_different_bb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Spill
+; CHECK-NEXT:    sw s4, 8(sp) # 4-byte Spill
 ; CHECK-NEXT:    blez a1, .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
 ; CHECK-NEXT:    mv s2, a2
@@ -60,12 +60,12 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:    fmv.d s0, zero
 ; CHECK-NEXT:  .LBB2_4: # %for.cond.cleanup
 ; CHECK-NEXT:    fmv.d a0, s0
-; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s2, 16(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s3, 12(sp) # 4-byte Reload
+; CHECK-NEXT:    lw s4, 8(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:

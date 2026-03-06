@@ -182,8 +182,8 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -384
 ; RV32-NEXT:    .cfi_def_cfa_offset 384
-; RV32-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 380(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 376(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 384
@@ -203,8 +203,8 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV32-NEXT:    vle32.v v16, (a3)
 ; RV32-NEXT:    addi sp, s0, -384
 ; RV32-NEXT:    .cfi_def_cfa sp, 384
-; RV32-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 380(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 376(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 384
@@ -215,8 +215,8 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -384
 ; RV64-NEXT:    .cfi_def_cfa_offset 384
-; RV64-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 384
@@ -236,8 +236,8 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV64-NEXT:    vle32.v v16, (a3)
 ; RV64-NEXT:    addi sp, s0, -384
 ; RV64-NEXT:    .cfi_def_cfa sp, 384
-; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 384
@@ -248,8 +248,8 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    addi sp, sp, -384
 ; VISNI-NEXT:    .cfi_def_cfa_offset 384
-; VISNI-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; VISNI-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; VISNI-NEXT:    sd ra, 376(sp) # 8-byte Spill
+; VISNI-NEXT:    sd s0, 368(sp) # 8-byte Spill
 ; VISNI-NEXT:    .cfi_offset ra, -8
 ; VISNI-NEXT:    .cfi_offset s0, -16
 ; VISNI-NEXT:    addi s0, sp, 384
@@ -269,8 +269,8 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; VISNI-NEXT:    vle32.v v16, (a3)
 ; VISNI-NEXT:    addi sp, s0, -384
 ; VISNI-NEXT:    .cfi_def_cfa sp, 384
-; VISNI-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; VISNI-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; VISNI-NEXT:    ld ra, 376(sp) # 8-byte Reload
+; VISNI-NEXT:    ld s0, 368(sp) # 8-byte Reload
 ; VISNI-NEXT:    .cfi_restore ra
 ; VISNI-NEXT:    .cfi_restore s0
 ; VISNI-NEXT:    addi sp, sp, 384

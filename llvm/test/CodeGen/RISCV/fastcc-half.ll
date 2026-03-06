@@ -17,7 +17,7 @@ define half @caller(<32 x half> %A) nounwind {
 ; CHECK-LABEL: caller:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Spill
 ; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    fmv.h.x fa1, a1
 ; CHECK-NEXT:    fmv.h.x fa2, a2
@@ -63,7 +63,7 @@ define half @caller(<32 x half> %A) nounwind {
 ; CHECK-NEXT:    fsh fs2, 4(sp)
 ; CHECK-NEXT:    fsh fs3, 6(sp)
 ; CHECK-NEXT:    call callee
-; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 	%C = call fastcc half @callee(<32 x half> %A)

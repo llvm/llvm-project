@@ -41,10 +41,10 @@ define double @bar(double %0, double %1, i64 %n) strictfp {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Spill
+; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset fs0, -24
@@ -64,10 +64,10 @@ define double @bar(double %0, double %1, i64 %n) strictfp {
 ; CHECK-NEXT:    addi s0, s0, -1
 ; CHECK-NEXT:    beqz s0, .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Reload
+; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore fs0

@@ -8,14 +8,14 @@ define dso_local i64 @a() #0 {
 ; CHECK-NEXT:  .LBB0_1: # %entry
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    rdcycleh a0
-; CHECK-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a0, 8(sp) # 4-byte Spill
 ; CHECK-NEXT:    rdcycle a1
-; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw a1, 12(sp) # 4-byte Spill
 ; CHECK-NEXT:    rdcycleh a1
 ; CHECK-NEXT:    bne a0, a1, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw a1, 8(sp) # 4-byte Reload
+; CHECK-NEXT:    lw a0, 12(sp) # 4-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:

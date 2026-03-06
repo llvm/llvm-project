@@ -138,60 +138,60 @@ define dso_local float @flw_stack(float %a) nounwind {
 ; RV32IF-LABEL: flw_stack:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    fsw fs0, 8(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IF-NEXT:    fsw fs0, 8(sp) # 4-byte Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    addi a0, sp, 4
 ; RV32IF-NEXT:    call notdead
 ; RV32IF-NEXT:    flw fa5, 4(sp)
 ; RV32IF-NEXT:    fadd.s fa0, fa5, fs0
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IF-NEXT:    flw fs0, 8(sp) # 4-byte Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: flw_stack:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64IF-NEXT:    fsw fs0, 4(sp) # 4-byte Spill
 ; RV64IF-NEXT:    fmv.s fs0, fa0
 ; RV64IF-NEXT:    mv a0, sp
 ; RV64IF-NEXT:    call notdead
 ; RV64IF-NEXT:    flw fa5, 0(sp)
 ; RV64IF-NEXT:    fadd.s fa0, fa5, fs0
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    flw fs0, 4(sp) # 4-byte Folded Reload
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64IF-NEXT:    flw fs0, 4(sp) # 4-byte Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: flw_stack:
 ; RV32IZFINX:       # %bb.0:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
+; RV32IZFINX-NEXT:    sw s0, 8(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    mv s0, a0
 ; RV32IZFINX-NEXT:    addi a0, sp, 4
 ; RV32IZFINX-NEXT:    call notdead
 ; RV32IZFINX-NEXT:    lw a0, 4(sp)
 ; RV32IZFINX-NEXT:    fadd.s a0, a0, s0
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
+; RV32IZFINX-NEXT:    lw s0, 8(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: flw_stack:
 ; RV64IZFINX:       # %bb.0:
 ; RV64IZFINX-NEXT:    addi sp, sp, -32
-; RV64IZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64IZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    sd ra, 24(sp) # 8-byte Spill
+; RV64IZFINX-NEXT:    sd s0, 16(sp) # 8-byte Spill
 ; RV64IZFINX-NEXT:    mv s0, a0
 ; RV64IZFINX-NEXT:    addi a0, sp, 12
 ; RV64IZFINX-NEXT:    call notdead
 ; RV64IZFINX-NEXT:    lw a0, 12(sp)
 ; RV64IZFINX-NEXT:    fadd.s a0, a0, s0
-; RV64IZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64IZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    ld ra, 24(sp) # 8-byte Reload
+; RV64IZFINX-NEXT:    ld s0, 16(sp) # 8-byte Reload
 ; RV64IZFINX-NEXT:    addi sp, sp, 32
 ; RV64IZFINX-NEXT:    ret
   %1 = alloca float, align 4
@@ -205,48 +205,48 @@ define dso_local void @fsw_stack(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fsw_stack:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IF-NEXT:    fadd.s fa5, fa0, fa1
 ; RV32IF-NEXT:    fsw fa5, 8(sp)
 ; RV32IF-NEXT:    addi a0, sp, 8
 ; RV32IF-NEXT:    call notdead
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fsw_stack:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IF-NEXT:    fadd.s fa5, fa0, fa1
 ; RV64IF-NEXT:    fsw fa5, 4(sp)
 ; RV64IF-NEXT:    addi a0, sp, 4
 ; RV64IF-NEXT:    call notdead
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: fsw_stack:
 ; RV32IZFINX:       # %bb.0:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
-; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32IZFINX-NEXT:    fadd.s a0, a0, a1
 ; RV32IZFINX-NEXT:    sw a0, 8(sp)
 ; RV32IZFINX-NEXT:    addi a0, sp, 8
 ; RV32IZFINX-NEXT:    call notdead
-; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32IZFINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: fsw_stack:
 ; RV64IZFINX:       # %bb.0:
 ; RV64IZFINX-NEXT:    addi sp, sp, -16
-; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64IZFINX-NEXT:    fadd.s a0, a0, a1
 ; RV64IZFINX-NEXT:    sw a0, 4(sp)
 ; RV64IZFINX-NEXT:    addi a0, sp, 4
 ; RV64IZFINX-NEXT:    call notdead
-; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64IZFINX-NEXT:    addi sp, sp, 16
 ; RV64IZFINX-NEXT:    ret
   %1 = fadd float %a, %b ; force store from FPR32

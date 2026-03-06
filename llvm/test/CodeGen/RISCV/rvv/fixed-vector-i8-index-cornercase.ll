@@ -9,8 +9,8 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -1536
 ; CHECK-NEXT:    .cfi_def_cfa_offset 1536
-; CHECK-NEXT:    sd ra, 1528(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 1520(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 1528(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 1520(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    addi s0, sp, 1536
@@ -45,8 +45,8 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK-NEXT:    vslideup.vx v8, v16, a0
 ; CHECK-NEXT:    addi sp, s0, -1536
 ; CHECK-NEXT:    .cfi_def_cfa sp, 1536
-; CHECK-NEXT:    ld ra, 1528(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 1520(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 1528(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 1520(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 1536
@@ -97,8 +97,8 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -1536
 ; CHECK-NEXT:    .cfi_def_cfa_offset 1536
-; CHECK-NEXT:    sd ra, 1528(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 1520(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 1528(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 1520(sp) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    addi s0, sp, 1536
@@ -108,7 +108,7 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -512
 ; CHECK-NEXT:    addi a0, sp, 1520
-; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Spill
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a0, 512
@@ -150,13 +150,13 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v24, a2
 ; CHECK-NEXT:    addi a1, sp, 1520
-; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
 ; CHECK-NEXT:    vrgather.vv v8, v24, v16, v0.t
 ; CHECK-NEXT:    addi sp, s0, -1536
 ; CHECK-NEXT:    .cfi_def_cfa sp, 1536
-; CHECK-NEXT:    ld ra, 1528(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 1520(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 1528(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 1520(sp) # 8-byte Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 1536

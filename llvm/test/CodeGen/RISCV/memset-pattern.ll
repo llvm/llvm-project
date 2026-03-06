@@ -55,12 +55,12 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-LABEL: memset_1_noalign:
 ; RV32:       # %bb.0: # %loadstoreloop.preheader
 ; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    sw s0, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 20(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s3, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s5, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 28(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 24(sp) # 4-byte Spill
+; RV32-NEXT:    sw s2, 20(sp) # 4-byte Spill
+; RV32-NEXT:    sw s3, 16(sp) # 4-byte Spill
+; RV32-NEXT:    sw s4, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s5, 8(sp) # 4-byte Spill
 ; RV32-NEXT:    li a2, 0
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    lw a4, 4(a1)
@@ -105,21 +105,21 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    sb s1, 15(s4)
 ; RV32-NEXT:    beqz s5, .LBB1_1
 ; RV32-NEXT:  # %bb.2: # %split
-; RV32-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s5, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 28(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 24(sp) # 4-byte Reload
+; RV32-NEXT:    lw s2, 20(sp) # 4-byte Reload
+; RV32-NEXT:    lw s3, 16(sp) # 4-byte Reload
+; RV32-NEXT:    lw s4, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s5, 8(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memset_1_noalign:
 ; RV64:       # %bb.0: # %loadstoreloop.preheader
 ; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 24(sp) # 8-byte Spill
+; RV64-NEXT:    sd s1, 16(sp) # 8-byte Spill
+; RV64-NEXT:    sd s2, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    addi a3, a0, 16
 ; RV64-NEXT:    srli a4, a1, 56
 ; RV64-NEXT:    srli a5, a1, 48
@@ -156,9 +156,9 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    bne a0, a3, .LBB1_1
 ; RV64-NEXT:  # %bb.2: # %split
-; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 24(sp) # 8-byte Reload
+; RV64-NEXT:    ld s1, 16(sp) # 8-byte Reload
+; RV64-NEXT:    ld s2, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    ret
 ;

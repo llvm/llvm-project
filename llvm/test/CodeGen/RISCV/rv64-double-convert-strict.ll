@@ -10,9 +10,9 @@ define i128 @fptosi_f64_to_i128(double %a) nounwind strictfp {
 ; CHECK-LABEL: fptosi_f64_to_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __fixdfti
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = call i128 @llvm.experimental.constrained.fptosi.i128.f64(double %a, metadata !"fpexcept.strict")
@@ -23,9 +23,9 @@ define i128 @fptoui_f64_to_i128(double %a) nounwind strictfp {
 ; CHECK-LABEL: fptoui_f64_to_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __fixunsdfti
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = call i128 @llvm.experimental.constrained.fptoui.i128.f64(double %a, metadata !"fpexcept.strict")
@@ -36,9 +36,9 @@ define double @sitofp_i128_to_f64(i128 %a) nounwind strictfp {
 ; CHECK-LABEL: sitofp_i128_to_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __floattidf
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i128(i128 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -49,9 +49,9 @@ define double @uitofp_i128_to_f64(i128 %a) nounwind strictfp {
 ; CHECK-LABEL: uitofp_i128_to_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; CHECK-NEXT:    call __floatuntidf
-; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i128(i128 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")

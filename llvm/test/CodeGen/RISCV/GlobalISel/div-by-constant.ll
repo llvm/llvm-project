@@ -479,11 +479,11 @@ define i64 @sdiv64_constant_no_srai(i64 %a) nounwind {
 ; RV32-LABEL: sdiv64_constant_no_srai:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a2, 3
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __divdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -503,11 +503,11 @@ define i64 @sdiv64_constant_srai(i64 %a) nounwind {
 ; RV32-LABEL: sdiv64_constant_srai:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a2, 5
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __divdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -528,11 +528,11 @@ define i64 @sdiv64_constant_add_srai(i64 %a) nounwind {
 ; RV32-LABEL: sdiv64_constant_add_srai:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a2, 15
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __divdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -560,11 +560,11 @@ define i64 @sdiv64_constant_sub_srai(i64 %a) nounwind {
 ; RV32-LABEL: sdiv64_constant_sub_srai:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    li a2, -3
 ; RV32-NEXT:    li a3, -1
 ; RV32-NEXT:    call __divdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;

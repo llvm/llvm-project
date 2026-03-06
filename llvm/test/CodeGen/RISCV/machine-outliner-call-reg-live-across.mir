@@ -5,11 +5,11 @@
   ; CHECK-LABEL: test1:
   ; CHECK:       # %bb.0: # %entry
   ; CHECK-NEXT:    addi sp, sp, -32
-  ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Spill
   ; CHECK-NEXT:    mv s0, a7
   ; CHECK-NEXT:    mv t0, a6
   ; CHECK-NEXT:    mv t1, a5
@@ -37,11 +37,11 @@
   ; CHECK-LABEL: test2:
   ; CHECK:       # %bb.0: # %entry
   ; CHECK-NEXT:    addi sp, sp, -32
-  ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-  ; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+  ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Spill
+  ; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Spill
   ; CHECK-NEXT:    mv s0, a7
   ; CHECK-NEXT:    mv t0, a6
   ; CHECK-NEXT:    mv t1, a5

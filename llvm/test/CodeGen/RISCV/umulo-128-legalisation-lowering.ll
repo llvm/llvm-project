@@ -5,12 +5,12 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-LABEL: muloti_test:
 ; RISCV32:       # %bb.0: # %start
 ; RISCV32-NEXT:    addi sp, sp, -32
-; RISCV32-NEXT:    sw s0, 28(sp) # 4-byte Folded Spill
-; RISCV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
-; RISCV32-NEXT:    sw s2, 20(sp) # 4-byte Folded Spill
-; RISCV32-NEXT:    sw s3, 16(sp) # 4-byte Folded Spill
-; RISCV32-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
-; RISCV32-NEXT:    sw s5, 8(sp) # 4-byte Folded Spill
+; RISCV32-NEXT:    sw s0, 28(sp) # 4-byte Spill
+; RISCV32-NEXT:    sw s1, 24(sp) # 4-byte Spill
+; RISCV32-NEXT:    sw s2, 20(sp) # 4-byte Spill
+; RISCV32-NEXT:    sw s3, 16(sp) # 4-byte Spill
+; RISCV32-NEXT:    sw s4, 12(sp) # 4-byte Spill
+; RISCV32-NEXT:    sw s5, 8(sp) # 4-byte Spill
 ; RISCV32-NEXT:    lw a4, 0(a1)
 ; RISCV32-NEXT:    lw t0, 4(a1)
 ; RISCV32-NEXT:    lw a3, 8(a1)
@@ -99,12 +99,12 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) #0 {
 ; RISCV32-NEXT:    sw t2, 8(a0)
 ; RISCV32-NEXT:    sw t3, 12(a0)
 ; RISCV32-NEXT:    sb a1, 16(a0)
-; RISCV32-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s3, 16(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
-; RISCV32-NEXT:    lw s5, 8(sp) # 4-byte Folded Reload
+; RISCV32-NEXT:    lw s0, 28(sp) # 4-byte Reload
+; RISCV32-NEXT:    lw s1, 24(sp) # 4-byte Reload
+; RISCV32-NEXT:    lw s2, 20(sp) # 4-byte Reload
+; RISCV32-NEXT:    lw s3, 16(sp) # 4-byte Reload
+; RISCV32-NEXT:    lw s4, 12(sp) # 4-byte Reload
+; RISCV32-NEXT:    lw s5, 8(sp) # 4-byte Reload
 ; RISCV32-NEXT:    addi sp, sp, 32
 ; RISCV32-NEXT:    ret
 start:

@@ -47,7 +47,7 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV32I-LABEL: if_of_or:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32I-NEXT:    bnez a0, .LBB1_3
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    bnez a1, .LBB1_3
@@ -57,14 +57,14 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV32I-NEXT:  .LBB1_3: # %if.then
 ; RV32I-NEXT:    call either
 ; RV32I-NEXT:  .LBB1_4: # %if.end
-; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: if_of_or:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-NEXT:    bnez a0, .LBB1_3
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    bnez a1, .LBB1_3
@@ -74,14 +74,14 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64I-NEXT:  .LBB1_3: # %if.then
 ; RV64I-NEXT:    call either
 ; RV64I-NEXT:  .LBB1_4: # %if.end
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-CCMOV-LABEL: if_of_or:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    addi sp, sp, -16
-; RV64I-CCMOV-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-CCMOV-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64I-CCMOV-NEXT:    bnez a0, .LBB1_3
 ; RV64I-CCMOV-NEXT:  # %bb.1:
 ; RV64I-CCMOV-NEXT:    bnez a1, .LBB1_3
@@ -91,7 +91,7 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64I-CCMOV-NEXT:  .LBB1_3: # %if.then
 ; RV64I-CCMOV-NEXT:    call either
 ; RV64I-CCMOV-NEXT:  .LBB1_4: # %if.end
-; RV64I-CCMOV-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-CCMOV-NEXT:    ld ra, 8(sp) # 8-byte Reload
 ; RV64I-CCMOV-NEXT:    addi sp, sp, 16
 ; RV64I-CCMOV-NEXT:    ret
   %1 = or i1 %a, %b

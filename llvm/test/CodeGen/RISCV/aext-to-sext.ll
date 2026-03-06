@@ -14,8 +14,8 @@ define void @quux(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    beq a1, a0, .LBB0_4
 ; RV64I-NEXT:  # %bb.1: # %bb2.preheader
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Spill
 ; RV64I-NEXT:    sub s0, a1, a0
 ; RV64I-NEXT:  .LBB0_2: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -23,8 +23,8 @@ define void @quux(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    addiw s0, s0, -1
 ; RV64I-NEXT:    bnez s0, .LBB0_2
 ; RV64I-NEXT:  # %bb.3:
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:  .LBB0_4: # %bb6
 ; RV64I-NEXT:    ret

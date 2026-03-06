@@ -480,8 +480,8 @@ define <vscale x 16 x i64> @test_vp_splice_nxv16i64(<vscale x 16 x i64> %va, <vs
 ; CHECK-NEXT:    mv a6, a7
 ; CHECK-NEXT:  .LBB22_2:
 ; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    csrr a7, vlenb
 ; CHECK-NEXT:    slli a7, a7, 5
@@ -526,8 +526,8 @@ define <vscale x 16 x i64> @test_vp_splice_nxv16i64(<vscale x 16 x i64> %va, <vs
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a2)
 ; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.experimental.vp.splice.nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i64> %vb, i32 5, <vscale x 16 x i1> splat (i1 1), i32 %evla, i32 %evlb)
@@ -548,8 +548,8 @@ define <vscale x 16 x i64> @test_vp_splice_nxv16i64_negative_offset(<vscale x 16
 ; CHECK-NEXT:    mv a6, a7
 ; CHECK-NEXT:  .LBB23_2:
 ; CHECK-NEXT:    addi sp, sp, -80
-; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    csrr a7, vlenb
 ; CHECK-NEXT:    slli a7, a7, 5
@@ -599,8 +599,8 @@ define <vscale x 16 x i64> @test_vp_splice_nxv16i64_negative_offset(<vscale x 16
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a2)
 ; CHECK-NEXT:    addi sp, s0, -80
-; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.experimental.vp.splice.nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i64> %vb, i32 -1, <vscale x 16 x i1> splat (i1 1), i32 %evla, i32 %evlb)

@@ -56,7 +56,7 @@ define float @constraint_float_abi_name(float %a) nounwind {
 ; RV32FINX-LABEL: constraint_float_abi_name:
 ; RV32FINX:       # %bb.0:
 ; RV32FINX-NEXT:    addi sp, sp, -16
-; RV32FINX-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32FINX-NEXT:    sw s0, 12(sp) # 4-byte Spill
 ; RV32FINX-NEXT:    lui a1, %hi(gf)
 ; RV32FINX-NEXT:    lw s0, %lo(gf)(a1)
 ; RV32FINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
@@ -64,14 +64,14 @@ define float @constraint_float_abi_name(float %a) nounwind {
 ; RV32FINX-NEXT:    fadd.s t0, a0, s0
 ; RV32FINX-NEXT:    #NO_APP
 ; RV32FINX-NEXT:    mv a0, t0
-; RV32FINX-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32FINX-NEXT:    lw s0, 12(sp) # 4-byte Reload
 ; RV32FINX-NEXT:    addi sp, sp, 16
 ; RV32FINX-NEXT:    ret
 ;
 ; RV64FINX-LABEL: constraint_float_abi_name:
 ; RV64FINX:       # %bb.0:
 ; RV64FINX-NEXT:    addi sp, sp, -16
-; RV64FINX-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
+; RV64FINX-NEXT:    sd s0, 8(sp) # 8-byte Spill
 ; RV64FINX-NEXT:    lui a1, %hi(gf)
 ; RV64FINX-NEXT:    lw s0, %lo(gf)(a1)
 ; RV64FINX-NEXT:    # kill: def $x10_w killed $x10_w def $x10
@@ -79,7 +79,7 @@ define float @constraint_float_abi_name(float %a) nounwind {
 ; RV64FINX-NEXT:    fadd.s t0, a0, s0
 ; RV64FINX-NEXT:    #NO_APP
 ; RV64FINX-NEXT:    mv a0, t0
-; RV64FINX-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
+; RV64FINX-NEXT:    ld s0, 8(sp) # 8-byte Reload
 ; RV64FINX-NEXT:    addi sp, sp, 16
 ; RV64FINX-NEXT:    ret
   %1 = load float, ptr @gf

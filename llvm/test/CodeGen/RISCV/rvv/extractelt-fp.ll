@@ -1546,8 +1546,8 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
@@ -1567,8 +1567,8 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV32-NEXT:    fld fa0, -8(a0)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    .cfi_def_cfa sp, 80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
@@ -1579,8 +1579,8 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
@@ -1608,8 +1608,8 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV64-NEXT:    fld fa0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    .cfi_def_cfa sp, 80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
@@ -1642,8 +1642,8 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV32-NEXT:  .LBB72_2:
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
-; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
@@ -1662,8 +1662,8 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV32-NEXT:    fld fa0, 0(a0)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    .cfi_def_cfa sp, 80
-; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
@@ -1681,8 +1681,8 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV64-NEXT:  .LBB72_2:
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
@@ -1701,8 +1701,8 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV64-NEXT:    fld fa0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    .cfi_def_cfa sp, 80
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80

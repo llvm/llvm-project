@@ -394,11 +394,11 @@ define <vscale x 32 x bfloat> @vfsub_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <v
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v24, v16
 ; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; ZVFH-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Spill
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v0, v8
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v24, v20
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v12
-; ZVFH-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFH-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFH-NEXT:    vfsub.vv v0, v0, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -426,11 +426,11 @@ define <vscale x 32 x bfloat> @vfsub_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <v
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v24, v16
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Spill
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v0, v8
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v24, v20
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfsub.vv v0, v0, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -469,7 +469,7 @@ define <vscale x 32 x bfloat> @vfsub_vf_nxv32bf16(<vscale x 32 x bfloat> %va, bf
 ; ZVFH-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; ZVFH-NEXT:    addi a1, sp, 16
-; ZVFH-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVFH-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Spill
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v24, v12
 ; ZVFH-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; ZVFH-NEXT:    vmv.v.x v8, a0
@@ -477,7 +477,7 @@ define <vscale x 32 x bfloat> @vfsub_vf_nxv32bf16(<vscale x 32 x bfloat> %va, bf
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v0, v8
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v12
 ; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFH-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFH-NEXT:    vfsub.vv v0, v8, v0
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -506,7 +506,7 @@ define <vscale x 32 x bfloat> @vfsub_vf_nxv32bf16(<vscale x 32 x bfloat> %va, bf
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    addi a1, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Spill
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v24, v12
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv.v.x v8, a0
@@ -514,7 +514,7 @@ define <vscale x 32 x bfloat> @vfsub_vf_nxv32bf16(<vscale x 32 x bfloat> %va, bf
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v0, v8
 ; ZVFHMIN-NEXT:    vfwcvtbf16.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfsub.vv v0, v8, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -936,11 +936,11 @@ define <vscale x 32 x half> @vfsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v16
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Spill
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v20
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfsub.vv v0, v0, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -968,11 +968,11 @@ define <vscale x 32 x half> @vfsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v16
 ; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; ZVFBFA-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Spill
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v8
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v20
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFBFA-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFBFA-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFBFA-NEXT:    vfsub.vv v0, v0, v8
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -1011,7 +1011,7 @@ define <vscale x 32 x half> @vfsub_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    addi a1, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Spill
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv.v.x v8, a0
@@ -1019,7 +1019,7 @@ define <vscale x 32 x half> @vfsub_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfsub.vv v0, v8, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -1048,7 +1048,7 @@ define <vscale x 32 x half> @vfsub_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 ; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFBFA-NEXT:    addi a1, sp, 16
-; ZVFBFA-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVFBFA-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Spill
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v12
 ; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; ZVFBFA-NEXT:    vmv.v.x v8, a0
@@ -1056,7 +1056,7 @@ define <vscale x 32 x half> @vfsub_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v8
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFBFA-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Reload
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFBFA-NEXT:    vfsub.vv v0, v8, v0
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m4, ta, ma

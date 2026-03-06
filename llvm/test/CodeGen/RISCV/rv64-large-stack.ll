@@ -8,7 +8,7 @@ define void @foo() nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -2032
-; CHECK-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd ra, 2024(sp) # 8-byte Spill
 ; CHECK-NEXT:    lui a0, 390625
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -2000
@@ -19,7 +19,7 @@ define void @foo() nounwind {
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -2000
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Reload
 ; CHECK-NEXT:    addi sp, sp, 2032
 ; CHECK-NEXT:    ret
 entry:

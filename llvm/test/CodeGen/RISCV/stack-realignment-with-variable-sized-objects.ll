@@ -15,9 +15,9 @@ define void @caller(i32 %n) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -64
 ; RV32I-NEXT:    .cfi_def_cfa_offset 64
-; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Spill
+; RV32I-NEXT:    sw s1, 52(sp) # 4-byte Spill
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    .cfi_offset s1, -12
@@ -33,9 +33,9 @@ define void @caller(i32 %n) {
 ; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    addi sp, s0, -64
 ; RV32I-NEXT:    .cfi_def_cfa sp, 64
-; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Reload
+; RV32I-NEXT:    lw s1, 52(sp) # 4-byte Reload
 ; RV32I-NEXT:    .cfi_restore ra
 ; RV32I-NEXT:    .cfi_restore s0
 ; RV32I-NEXT:    .cfi_restore s1
@@ -47,9 +47,9 @@ define void @caller(i32 %n) {
 ; RV32I-ILP32E:       # %bb.0:
 ; RV32I-ILP32E-NEXT:    addi sp, sp, -64
 ; RV32I-ILP32E-NEXT:    .cfi_def_cfa_offset 64
-; RV32I-ILP32E-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; RV32I-ILP32E-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
-; RV32I-ILP32E-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; RV32I-ILP32E-NEXT:    sw ra, 60(sp) # 4-byte Spill
+; RV32I-ILP32E-NEXT:    sw s0, 56(sp) # 4-byte Spill
+; RV32I-ILP32E-NEXT:    sw s1, 52(sp) # 4-byte Spill
 ; RV32I-ILP32E-NEXT:    .cfi_offset ra, -4
 ; RV32I-ILP32E-NEXT:    .cfi_offset s0, -8
 ; RV32I-ILP32E-NEXT:    .cfi_offset s1, -12
@@ -65,9 +65,9 @@ define void @caller(i32 %n) {
 ; RV32I-ILP32E-NEXT:    call callee
 ; RV32I-ILP32E-NEXT:    addi sp, s0, -64
 ; RV32I-ILP32E-NEXT:    .cfi_def_cfa sp, 64
-; RV32I-ILP32E-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; RV32I-ILP32E-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
-; RV32I-ILP32E-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; RV32I-ILP32E-NEXT:    lw ra, 60(sp) # 4-byte Reload
+; RV32I-ILP32E-NEXT:    lw s0, 56(sp) # 4-byte Reload
+; RV32I-ILP32E-NEXT:    lw s1, 52(sp) # 4-byte Reload
 ; RV32I-ILP32E-NEXT:    .cfi_restore ra
 ; RV32I-ILP32E-NEXT:    .cfi_restore s0
 ; RV32I-ILP32E-NEXT:    .cfi_restore s1
@@ -79,9 +79,9 @@ define void @caller(i32 %n) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -64
 ; RV64I-NEXT:    .cfi_def_cfa_offset 64
-; RV64I-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s0, 48(sp) # 8-byte Spill
+; RV64I-NEXT:    sd s1, 40(sp) # 8-byte Spill
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    .cfi_offset s1, -24
@@ -99,9 +99,9 @@ define void @caller(i32 %n) {
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    addi sp, s0, -64
 ; RV64I-NEXT:    .cfi_def_cfa sp, 64
-; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld ra, 56(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s0, 48(sp) # 8-byte Reload
+; RV64I-NEXT:    ld s1, 40(sp) # 8-byte Reload
 ; RV64I-NEXT:    .cfi_restore ra
 ; RV64I-NEXT:    .cfi_restore s0
 ; RV64I-NEXT:    .cfi_restore s1
@@ -113,9 +113,9 @@ define void @caller(i32 %n) {
 ; RV64I-LP64E:       # %bb.0:
 ; RV64I-LP64E-NEXT:    addi sp, sp, -64
 ; RV64I-LP64E-NEXT:    .cfi_def_cfa_offset 64
-; RV64I-LP64E-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64I-LP64E-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64I-LP64E-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
+; RV64I-LP64E-NEXT:    sd ra, 56(sp) # 8-byte Spill
+; RV64I-LP64E-NEXT:    sd s0, 48(sp) # 8-byte Spill
+; RV64I-LP64E-NEXT:    sd s1, 40(sp) # 8-byte Spill
 ; RV64I-LP64E-NEXT:    .cfi_offset ra, -8
 ; RV64I-LP64E-NEXT:    .cfi_offset s0, -16
 ; RV64I-LP64E-NEXT:    .cfi_offset s1, -24
@@ -133,9 +133,9 @@ define void @caller(i32 %n) {
 ; RV64I-LP64E-NEXT:    call callee
 ; RV64I-LP64E-NEXT:    addi sp, s0, -64
 ; RV64I-LP64E-NEXT:    .cfi_def_cfa sp, 64
-; RV64I-LP64E-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64I-LP64E-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64I-LP64E-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; RV64I-LP64E-NEXT:    ld ra, 56(sp) # 8-byte Reload
+; RV64I-LP64E-NEXT:    ld s0, 48(sp) # 8-byte Reload
+; RV64I-LP64E-NEXT:    ld s1, 40(sp) # 8-byte Reload
 ; RV64I-LP64E-NEXT:    .cfi_restore ra
 ; RV64I-LP64E-NEXT:    .cfi_restore s0
 ; RV64I-LP64E-NEXT:    .cfi_restore s1

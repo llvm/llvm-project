@@ -249,7 +249,7 @@ define i32 @xor_branch_imm_ret(i32 %x) nounwind {
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB11_2: # %if.end
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    call abort
 ;
 ; RV64-LABEL: xor_branch_imm_ret:
@@ -261,7 +261,7 @@ define i32 @xor_branch_imm_ret(i32 %x) nounwind {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB11_2: # %if.end
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    call abort
 entry:
   %cmp.not = icmp eq i32 %x, -1365
@@ -285,7 +285,7 @@ define i32 @xor_branch_ret(i32 %x) nounwind {
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB12_2: # %if.end
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Spill
 ; RV32-NEXT:    call abort
 ;
 ; RV64-LABEL: xor_branch_ret:
@@ -299,7 +299,7 @@ define i32 @xor_branch_ret(i32 %x) nounwind {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB12_2: # %if.end
 ; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    call abort
 entry:
   %cmp.not = icmp eq i32 %x, 2048

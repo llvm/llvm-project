@@ -28,10 +28,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:  # %bb.4: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s3, 0(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 12(sp) # 4-byte Spill
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Spill
+; RV32-NEXT:    sw s2, 4(sp) # 4-byte Spill
+; RV32-NEXT:    sw s3, 0(sp) # 4-byte Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    .cfi_offset s2, -12
@@ -139,10 +139,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    bnez t6, .LBB0_15
 ; RV32-NEXT:    j .LBB0_9
 ; RV32-NEXT:  .LBB0_16:
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 12(sp) # 4-byte Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Reload
+; RV32-NEXT:    lw s2, 4(sp) # 4-byte Reload
+; RV32-NEXT:    lw s3, 0(sp) # 4-byte Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    .cfi_restore s2
@@ -161,11 +161,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
 ; RV64P670-NEXT:    addi sp, sp, -48
 ; RV64P670-NEXT:    .cfi_def_cfa_offset 48
-; RV64P670-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64P670-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64P670-NEXT:    sd s0, 40(sp) # 8-byte Spill
+; RV64P670-NEXT:    sd s1, 32(sp) # 8-byte Spill
+; RV64P670-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64P670-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64P670-NEXT:    sd s4, 8(sp) # 8-byte Spill
 ; RV64P670-NEXT:    .cfi_offset s0, -8
 ; RV64P670-NEXT:    .cfi_offset s1, -16
 ; RV64P670-NEXT:    .cfi_offset s2, -24
@@ -269,11 +269,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:    bne s1, s2, .LBB0_10
 ; RV64P670-NEXT:    j .LBB0_3
 ; RV64P670-NEXT:  .LBB0_11:
-; RV64P670-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64P670-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64P670-NEXT:    ld s0, 40(sp) # 8-byte Reload
+; RV64P670-NEXT:    ld s1, 32(sp) # 8-byte Reload
+; RV64P670-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64P670-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64P670-NEXT:    ld s4, 8(sp) # 8-byte Reload
 ; RV64P670-NEXT:    .cfi_restore s0
 ; RV64P670-NEXT:    .cfi_restore s1
 ; RV64P670-NEXT:    .cfi_restore s2
@@ -293,11 +293,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
 ; RV64X60-NEXT:    addi sp, sp, -48
 ; RV64X60-NEXT:    .cfi_def_cfa_offset 48
-; RV64X60-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64X60-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64X60-NEXT:    sd s0, 40(sp) # 8-byte Spill
+; RV64X60-NEXT:    sd s1, 32(sp) # 8-byte Spill
+; RV64X60-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64X60-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64X60-NEXT:    sd s4, 8(sp) # 8-byte Spill
 ; RV64X60-NEXT:    .cfi_offset s0, -8
 ; RV64X60-NEXT:    .cfi_offset s1, -16
 ; RV64X60-NEXT:    .cfi_offset s2, -24
@@ -401,11 +401,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    bne s0, s2, .LBB0_10
 ; RV64X60-NEXT:    j .LBB0_3
 ; RV64X60-NEXT:  .LBB0_11:
-; RV64X60-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64X60-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64X60-NEXT:    ld s0, 40(sp) # 8-byte Reload
+; RV64X60-NEXT:    ld s1, 32(sp) # 8-byte Reload
+; RV64X60-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64X60-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64X60-NEXT:    ld s4, 8(sp) # 8-byte Reload
 ; RV64X60-NEXT:    .cfi_restore s0
 ; RV64X60-NEXT:    .cfi_restore s1
 ; RV64X60-NEXT:    .cfi_restore s2
@@ -424,11 +424,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
 ; RV64-NEXT:    addi sp, sp, -48
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 40(sp) # 8-byte Spill
+; RV64-NEXT:    sd s1, 32(sp) # 8-byte Spill
+; RV64-NEXT:    sd s2, 24(sp) # 8-byte Spill
+; RV64-NEXT:    sd s3, 16(sp) # 8-byte Spill
+; RV64-NEXT:    sd s4, 8(sp) # 8-byte Spill
 ; RV64-NEXT:    .cfi_offset s0, -8
 ; RV64-NEXT:    .cfi_offset s1, -16
 ; RV64-NEXT:    .cfi_offset s2, -24
@@ -538,11 +538,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    bne s0, s2, .LBB0_12
 ; RV64-NEXT:    j .LBB0_5
 ; RV64-NEXT:  .LBB0_13:
-; RV64-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s3, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 40(sp) # 8-byte Reload
+; RV64-NEXT:    ld s1, 32(sp) # 8-byte Reload
+; RV64-NEXT:    ld s2, 24(sp) # 8-byte Reload
+; RV64-NEXT:    ld s3, 16(sp) # 8-byte Reload
+; RV64-NEXT:    ld s4, 8(sp) # 8-byte Reload
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    .cfi_restore s2
