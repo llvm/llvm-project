@@ -75,7 +75,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    st.w $zero, $fp, -12
 ; CHECK-NEXT:    st.w $zero, $fp, -16
 ; CHECK-NEXT:    ori $a0, $zero, 1
-; CHECK-NEXT:    beq $zero, $zero, .LBB0_3
+; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
