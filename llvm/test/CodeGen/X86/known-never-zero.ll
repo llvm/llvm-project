@@ -20,6 +20,12 @@ declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
 declare i32 @llvm.abs.i32(i32, i1)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
+declare <4 x i8>  @llvm.ctpop.v4i8(<4 x i8>)
+declare <4 x i16> @llvm.bswap.v4i16(<4 x i16>)
+declare <4 x i8>  @llvm.bitreverse.v4i8(<4 x i8>)
+declare <4 x i8>  @llvm.fshl.v4i8(<4 x i8>, <4 x i8>, <4 x i8>)
+declare <4 x i8>  @llvm.fshr.v4i8(<4 x i8>, <4 x i8>, <4 x i8>)
+declare <4 x i8>  @llvm.abs.v4i8(<4 x i8>, i1)
 
 define i32 @or_known_nonzero(i32 %x) {
 ; X86-LABEL: or_known_nonzero:
@@ -1464,4 +1470,108 @@ define i32 @sext_maybe_zero(i16 %x) {
   %z = sext i16 %x to i32
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
   ret i32 %r
+}
+
+define i1 @ctpop_lane0_nonzero() {
+; X86-LABEL: ctpop_lane0_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: ctpop_lane0_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    retq
+  %v0 = insertelement <4 x i8> poison, i8 8, i64 0
+  %w  = call <4 x i8> @llvm.ctpop.v4i8(<4 x i8> %v0)
+  %e0 = extractelement <4 x i8> %w, i64 0
+  %cmp = icmp ne i8 %e0, 0
+  ret i1 %cmp
+}
+
+define i1 @bswap_lane0_nonzero() {
+; X86-LABEL: bswap_lane0_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: bswap_lane0_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    retq
+  %v0 = insertelement <4 x i16> poison, i16 1, i64 0
+  %w  = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> %v0)
+  %e0 = extractelement <4 x i16> %w, i64 0
+  %cmp = icmp ne i16 %e0, 0
+  ret i1 %cmp
+}
+
+define i1 @bitreverse_lane0_nonzero() {
+; X86-LABEL: bitreverse_lane0_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: bitreverse_lane0_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    retq
+  %v0 = insertelement <4 x i8> poison, i8 1, i64 0
+  %w  = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %v0)
+  %e0 = extractelement <4 x i8> %w, i64 0
+  %cmp = icmp ne i8 %e0, 0
+  ret i1 %cmp
+}
+
+define i1 @rotl_lane0_nonzero() {
+; X86-LABEL: rotl_lane0_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: rotl_lane0_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    retq
+  %x  = insertelement <4 x i8> poison, i8 2, i64 0
+  %k  = insertelement <4 x i8> poison, i8 1, i64 0
+  %w  = call <4 x i8> @llvm.fshl.v4i8(<4 x i8> %x, <4 x i8> %x, <4 x i8> %k)
+  %e0 = extractelement <4 x i8> %w, i64 0
+  %cmp = icmp ne i8 %e0, 0
+  ret i1 %cmp
+}
+
+define i1 @rotr_lane0_nonzero() {
+; X86-LABEL: rotr_lane0_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: rotr_lane0_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    retq
+  %x  = insertelement <4 x i8> poison, i8 2, i64 0
+  %k  = insertelement <4 x i8> poison, i8 1, i64 0
+  %w  = call <4 x i8> @llvm.fshr.v4i8(<4 x i8> %x, <4 x i8> %x, <4 x i8> %k)
+  %e0 = extractelement <4 x i8> %w, i64 0
+  %cmp = icmp ne i8 %e0, 0
+  ret i1 %cmp
+}
+
+define i1 @abs_lane0_nonzero() {
+; X86-LABEL: abs_lane0_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: abs_lane0_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $1, %al
+; X64-NEXT:    retq
+  %v0 = insertelement <4 x i8> poison, i8 -2, i64 0
+  %w  = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %v0, i1 false)
+  %e0 = extractelement <4 x i8> %w, i64 0
+  %cmp = icmp ne i8 %e0, 0
+  ret i1 %cmp
 }
