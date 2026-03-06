@@ -137,7 +137,7 @@ CXCASDatabases clang_experimental_cas_Databases_create(CXCASOptions COpts,
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
       &DiagPrinter, /*ShouldOwnClient=*/false);
 
-  auto [CAS, Cache] = Opts.getOrCreateDatabases(Diags);
+  auto [CAS, Cache] = Opts.createDatabases(Diags);
   if (!CAS || !Cache) {
     if (Error)
       *Error = cxstring::createDup(OS.str());

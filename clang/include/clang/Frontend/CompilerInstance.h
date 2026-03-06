@@ -1039,6 +1039,9 @@ public:
   std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
             std::shared_ptr<llvm::cas::ActionCache>>
   getOrCreateCASDatabases();
+
+  void setCASDatabases(std::shared_ptr<llvm::cas::ObjectStore> CAS,
+                       std::shared_ptr<llvm::cas::ActionCache> Cache);
 };
 
 } // end namespace clang

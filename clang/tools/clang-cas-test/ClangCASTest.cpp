@@ -84,9 +84,7 @@ int main(int Argc, const char **Argv) {
     }
   }
 
-  auto CAS =
-      Opts.getOrCreateDatabases(*Diags, /*CreateEmptyCASOnFailure=*/false)
-          .first;
+  auto CAS = Opts.createDatabases(*Diags).first;
   if (!CAS)
     return 1;
 

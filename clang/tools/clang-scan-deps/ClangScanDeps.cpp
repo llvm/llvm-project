@@ -1130,7 +1130,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     if (!InMemoryCAS)
       CASOpts.ensurePersistentCAS();
 
-    std::tie(CAS, Cache) = CASOpts.getOrCreateDatabases(Diags);
+    std::tie(CAS, Cache) = CASOpts.createDatabases(Diags);
     if (!CAS)
       return 1;
   }
