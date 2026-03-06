@@ -184,10 +184,12 @@ define void @integer_extension_and_truncation(i32 %arg1) {
 define ptr @pointer_casts(ptr %arg1, i64 %arg2) {
   ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:  llvm.ptrtoint %[[ARG1]] : !llvm.ptr to i64
+  ; CHECK:  llvm.ptrtoaddr %[[ARG1]] : !llvm.ptr to i64
   ; CHECK:  llvm.inttoptr %[[ARG2]] : i64 to !llvm.ptr
   ; CHECK:  llvm.bitcast %[[ARG1]] : !llvm.ptr to !llvm.ptr
   ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr
   %1 = ptrtoint ptr %arg1 to i64
+  %p = ptrtoaddr ptr %arg1 to i64
   %2 = inttoptr i64 %arg2 to ptr
   %3 = bitcast ptr %arg1 to ptr
   ret ptr null
