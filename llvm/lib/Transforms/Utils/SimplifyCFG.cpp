@@ -3832,28 +3832,24 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   if (!PN)
     return true;
 
-  // Return true if at least one of these is a 'not', and another is either
-  // a 'not' too, or a constant.
-  auto CanHoistNotFromBothValues = [](Value *V0, Value *V1) {
-    if (!match(V0, m_Not(m_Value())))
-      std::swap(V0, V1);
-    auto Invertible = m_CombineOr(m_Not(m_Value()), m_AnyIntegralConstant());
-    return match(V0, m_Not(m_Value())) && match(V1, Invertible);
-  };
-
   // Don't fold i1 branches on PHIs which contain binary operators or
-  // (possibly inverted) select form of or/ands,  unless one of
-  // the incoming values is an 'not' and another one is freely invertible.
-  // These can often be turned into switches and other things.
-  auto IsBinOpOrAnd = [](Value *V) {
-    return match(
-        V, m_CombineOr(m_BinOp(), m_c_Select(m_ImmConstant(), m_Value())));
+  // (possibly inverted) select form of or/ands if their parameters are
+  // an equality test.
+  auto IsBinOpOrAndEq = [](Value *V) {
+    CmpPredicate Pred;
+    if (match(V, m_CombineOr(
+                     m_CombineOr(
+                         m_BinOp(m_Cmp(Pred, m_Value(), m_Value()), m_Value()),
+                         m_BinOp(m_Value(), m_Cmp(Pred, m_Value(), m_Value()))),
+                     m_c_Select(m_ImmConstant(),
+                                m_Cmp(Pred, m_Value(), m_Value()))))) {
+      return CmpInst::isEquality(Pred);
+    }
+    return false;
   };
   if (PN->getType()->isIntegerTy(1) &&
-      (IsBinOpOrAnd(PN->getIncomingValue(0)) ||
-       IsBinOpOrAnd(PN->getIncomingValue(1)) || IsBinOpOrAnd(IfCond)) &&
-      !CanHoistNotFromBothValues(PN->getIncomingValue(0),
-                                 PN->getIncomingValue(1)))
+      (IsBinOpOrAndEq(PN->getIncomingValue(0)) ||
+       IsBinOpOrAndEq(PN->getIncomingValue(1)) || IsBinOpOrAndEq(IfCond)))
     return Changed;
 
   // If all PHI nodes are promotable, check to make sure that all instructions
