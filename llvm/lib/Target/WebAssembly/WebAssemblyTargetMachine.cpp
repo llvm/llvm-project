@@ -604,6 +604,10 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Nullify DBG_VALUE_LISTs that we cannot handle.
   addPass(createWebAssemblyNullifyDebugValueLists());
 
+  // Remove any unreachable blocks that may be left floating around.
+  // Rare, but possible. Needed for WebAssemblyFixIrreducibleControlFlow.
+  addPass(&UnreachableMachineBlockElimID);
+
   // Eliminate multiple-entry loops.
   if (!WasmDisableFixIrreducibleControlFlowPass)
     addPass(createWebAssemblyFixIrreducibleControlFlow());

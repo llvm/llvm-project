@@ -20,8 +20,8 @@
 
 // RUN: %clang_cc1 %s -pedantic -Wno-error=extra-tokens 2>&1 | grep "warning:"
 
-// This should emit a warning, because -Wfoo overrides -pedantic*.
-// RUN: %clang_cc1 %s -pedantic-errors -Wextra-tokens 2>&1 | grep "warning:"
+// -Wfoo does not override -pedantic-errors; the diagnostic stays an error.
+// RUN: not %clang_cc1 %s -pedantic-errors -Wextra-tokens 2>&1 | grep "error:"
 
 // This should emit nothing, because -Wno-extra-tokens overrides -pedantic*
 // RUN: %clang_cc1 %s -pedantic-errors -Wno-extra-tokens 2>&1 | not grep diagnostic
