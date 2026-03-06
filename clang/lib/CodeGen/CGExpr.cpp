@@ -5612,7 +5612,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                          const FieldDecl *field,
                                          bool IsInBounds) {
-  if (field->isZeroSize(CGF.getContext()))
+  if (isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();
