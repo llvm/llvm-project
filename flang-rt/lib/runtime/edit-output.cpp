@@ -434,9 +434,11 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
         // LZS: never print the optional leading zero
         break;
       case MutableModes::LeadingZeroMode::Processor:
-        // LZ: processor-defined; flang chooses to print it
-        zeroesBeforePoint = 1;
-        ++totalLength;
+        // LZ: processor-defined; add leading zero only when field has room
+        if (totalLength < width) {
+          zeroesBeforePoint = 1;
+          ++totalLength;
+        }
         break;
       }
     }
@@ -581,9 +583,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
         // LZS: never print the optional leading zero
         break;
       case MutableModes::LeadingZeroMode::Processor:
-        // LZ: processor-defined; flang chooses to print it
-        zeroesBeforePoint = 1;
-        break;
+        break; // handled below after width computation
       }
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
@@ -592,6 +592,11 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     int width{editWidth > 0 || trailingBlanks_ ? editWidth : totalLength};
     if (totalLength > width) {
       return EmitRepeated(io_, '*', width);
+    }
+    if (edit.modes.leadingZero == MutableModes::LeadingZeroMode::Processor &&
+        totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0) {
+      zeroesBeforePoint = 1;
+      ++totalLength;
     }
     return EmitPrefix(edit, totalLength, width) &&
         EmitAscii(io_, convertedStr, signLength + digitsBeforePoint) &&
