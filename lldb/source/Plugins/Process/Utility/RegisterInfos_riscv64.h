@@ -25,6 +25,10 @@
 #error FPR_OFFSET must be defined before including this header file
 #endif
 
+#ifndef VCSR_OFFSET
+#error VCSR_OFFSET must be defined before including this header file
+#endif
+
 using namespace riscv_dwarf;
 
 // clang-format off
@@ -74,6 +78,14 @@ using namespace riscv_dwarf;
 #define DEFINE_VPR_ALT(reg, alt, generic_kind)                                 \
   {                                                                            \
     #reg, #alt, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,      \
+    VPR_KIND(vpr_##reg, generic_kind), nullptr, nullptr, nullptr               \
+  }
+
+#define DEFINE_VCSR(reg, generic_kind) DEFINE_VCSR_ALT(reg, reg, 8, generic_kind)
+
+#define DEFINE_VCSR_ALT(reg, alt, size, generic_kind)                           \
+  {                                                                            \
+    #reg, #alt, size, VCSR_OFFSET(vpr_##reg##_riscv - vcsr_first_riscv), lldb::eEncodingUint, lldb::eFormatHex,                \
     VPR_KIND(vpr_##reg, generic_kind), nullptr, nullptr, nullptr               \
   }
 
@@ -153,22 +165,43 @@ static lldb_private::RegisterInfo g_register_infos_riscv64_fpr[] = {
 };
 
 static lldb_private::RegisterInfo g_register_infos_riscv64_vpr[] = {
-    DEFINE_VPR(v0, LLDB_INVALID_REGNUM),  DEFINE_VPR(v1, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v2, LLDB_INVALID_REGNUM),  DEFINE_VPR(v3, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v4, LLDB_INVALID_REGNUM),  DEFINE_VPR(v5, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v6, LLDB_INVALID_REGNUM),  DEFINE_VPR(v7, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v8, LLDB_INVALID_REGNUM),  DEFINE_VPR(v9, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v10, LLDB_INVALID_REGNUM), DEFINE_VPR(v11, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v12, LLDB_INVALID_REGNUM), DEFINE_VPR(v13, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v14, LLDB_INVALID_REGNUM), DEFINE_VPR(v15, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v16, LLDB_INVALID_REGNUM), DEFINE_VPR(v17, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v18, LLDB_INVALID_REGNUM), DEFINE_VPR(v19, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v20, LLDB_INVALID_REGNUM), DEFINE_VPR(v21, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v22, LLDB_INVALID_REGNUM), DEFINE_VPR(v23, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v24, LLDB_INVALID_REGNUM), DEFINE_VPR(v25, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v26, LLDB_INVALID_REGNUM), DEFINE_VPR(v27, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v28, LLDB_INVALID_REGNUM), DEFINE_VPR(v29, LLDB_INVALID_REGNUM),
-    DEFINE_VPR(v30, LLDB_INVALID_REGNUM), DEFINE_VPR(v31, LLDB_INVALID_REGNUM),
+    DEFINE_VCSR(vstart, LLDB_INVALID_REGNUM),
+    DEFINE_VCSR(vl, LLDB_INVALID_REGNUM),
+    DEFINE_VCSR(vtype, LLDB_INVALID_REGNUM),
+    DEFINE_VCSR(vcsr, LLDB_INVALID_REGNUM),
+    DEFINE_VCSR(vlenb, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v0, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v1, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v2, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v3, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v4, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v5, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v6, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v7, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v8, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v9, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v10, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v11, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v12, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v13, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v14, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v15, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v16, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v17, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v18, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v19, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v20, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v21, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v22, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v23, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v24, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v25, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v26, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v27, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v28, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v29, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v30, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v31, LLDB_INVALID_REGNUM),
 };
 
 #endif // DECLARE_REGISTER_INFOS_RISCV64_STRUCT
