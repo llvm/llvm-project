@@ -536,7 +536,6 @@ public:
         fill(MO->getBytes(), Byte::undef());
       } else {
         MO->setState(MemoryObjectState::Dead);
-        fill(MO->getBytes(), Byte::poison());
       }
       return AnyValue();
     }
