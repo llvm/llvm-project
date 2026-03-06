@@ -50,6 +50,7 @@ jobs:
       build_variant_cmake_preset: ${{ inputs.build_variant_cmake_preset }}
       build_variant_suffix: ${{ inputs.build_variant_suffix }}
       expect_failure: ${{ inputs.expect_failure }}
+      test_type: ${{ inputs.test_type }}
     permissions:
       contents: read
       id-token: write

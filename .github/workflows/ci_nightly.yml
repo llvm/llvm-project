@@ -150,7 +150,7 @@ jobs:
 
   invoke-teams-notifier:
     uses: ROCm/llvm-project/.github/workflows/teams_notifier.yml@amd-staging
-    if: always()
+    if: always() && github.ref == 'refs/heads/amd-staging'
     needs:
       - windows_build_and_test
       - linux_build_and_test

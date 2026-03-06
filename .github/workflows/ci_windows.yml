@@ -50,6 +50,7 @@ jobs:
       build_variant_suffix: ${{ inputs.build_variant_suffix }}
       package_version: ${{ inputs.rocm_package_version }}
       expect_failure: ${{ inputs.expect_failure }}
+      test_type: ${{ inputs.test_type }}  
     permissions:
       contents: read
       id-token: write

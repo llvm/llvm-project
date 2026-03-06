@@ -49,6 +49,8 @@ on:
         type: boolean
       extra_cmake_options:
         type: string
+      test_type:
+        type: string
 
 # See the details regarding permissions from the link:
 # https://github.com/aws-actions/configure-aws-credentials?tab=readme-ov-file#oidc
@@ -218,7 +220,7 @@ jobs:
              cd -
 
       - name: Configure PR Projects
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_type != 'full') }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
@@ -229,7 +231,7 @@ jobs:
           python3 build_tools/github_actions/build_configure.py --manylinux
 
       - name: Configure All Projects
-        if: ${{ github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' && inputs.test_type == 'full' ) }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
