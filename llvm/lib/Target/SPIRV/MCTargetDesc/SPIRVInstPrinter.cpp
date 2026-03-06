@@ -53,8 +53,13 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
     // SPV_ALTERA_arbitrary_precision_integers allows for integer widths greater
     // than 64, which will be encoded via multiple operands.
-    for (unsigned I = StartIndex; I != MI->getNumOperands(); ++I)
-      O << ' ' << MI->getOperand(I).getImm();
+    const unsigned TotalBits = NumVarOps * 32;
+    APInt Val(TotalBits, 0);
+    for (unsigned i = 0; i < NumVarOps; ++i) {
+      uint64_t Word = MI->getOperand(StartIndex + i).getImm();
+      Val |= APInt(TotalBits, Word) << (i * 32);
+    }
+    O << Val;
     return;
   }
 

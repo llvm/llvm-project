@@ -531,7 +531,7 @@ public:
   Register getOrCreateConstInt(const APInt &Val, MachineInstr &I,
                                SPIRVTypeInst SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
-  Register createConstInt(const ConstantInt *CI, MachineInstr &I,
+  Register createConstInt(const Constant *CA, MachineInstr &I,
                           SPIRVTypeInst SpvType, const SPIRVInstrInfo &TII,
                           bool ZeroAsNull);
   Register getOrCreateConstFP(APFloat Val, MachineInstr &I,

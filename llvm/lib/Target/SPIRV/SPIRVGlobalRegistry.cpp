@@ -153,6 +153,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
 
 unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
+  if (Width > 1024)
+    report_fatal_error("Unsupported integer width!");
   if (ST.canUseExtension(
           SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
       (Width == 4 && ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4)))
@@ -167,7 +169,7 @@ unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
     return 64;
   else if (Width <= 128)
     return 128;
-  reportFatalUsageError("Unsupported Integer width!");
+  return Width;
 }
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
@@ -420,7 +422,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt &Val,
   return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
 }
 
-Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
+Register SPIRVGlobalRegistry::createConstInt(const Constant *CA,
                                              MachineInstr &I,
                                              SPIRVTypeInst SpvType,
                                              const SPIRVInstrInfo &TII,
@@ -439,15 +441,20 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
         MachineInstrBuilder MIB;
         if (BitWidth == 1) {
           MIB = MIRBuilder
-                    .buildInstr(CI->isZero() ? SPIRV::OpConstantFalse
+                    .buildInstr(CA->isNegativeZeroValue() ? SPIRV::OpConstantFalse
                                              : SPIRV::OpConstantTrue)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-        } else if (!CI->isZero() || !ZeroAsNull) {
+        } else if (!CA->isNegativeZeroValue() || !ZeroAsNull) {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          addNumImm(CI->getValue(), MIB);
+          if (BitWidth <= 64) {
+            const ConstantInt *CI = dyn_cast<ConstantInt>(CA);
+            addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
+          } else {
+            addNumImm(CA->getUniqueInteger(), MIB);
+          }
         } else {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                     .addDef(Res)
@@ -459,7 +466,7 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
                                          *ST.getRegBankInfo());
         return MIB;
       });
-  add(CI, Const);
+  add(CA, Const);
   return Res;
 }
 
