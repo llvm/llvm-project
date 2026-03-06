@@ -537,7 +537,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
       if (!synth_sp->MightHaveChildren() &&
           synth_sp->DoesProvideSyntheticValue())
         is_synth_val = true;
-      else
+      else if (synth_sp->MightHaveChildren())
         return false;
     }
 
