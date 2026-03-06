@@ -2,12 +2,13 @@
 
 // RUN: not ssaf-linker 2>&1 | FileCheck %s --check-prefix=NO-ARGS
 // NO-ARGS: ssaf-linker: Not enough positional command line arguments specified!
-// NO-ARGS: Must specify at least 1 positional argument: See: ssaf-linker --help
+// NO-ARGS: Must specify at least 1 positional argument: See: {{.*}}/ssaf-linker --help
+// NO-ARGS: ssaf-linker: for the -o option: must be specified at least once!
 
 // RUN: not ssaf-linker %S/Inputs/tu-empty.json 2>&1 | FileCheck %s --check-prefix=NO-OUTPUT
 // NO-OUTPUT: ssaf-linker: for the -o option: must be specified at least once!
 
 // RUN: not ssaf-linker -o %t/output.json 2>&1 | FileCheck %s --check-prefix=NO-INPUT
 // NO-INPUT: ssaf-linker: Not enough positional command line arguments specified!
-// NO-INPUT: Must specify at least 1 positional argument: See: ssaf-linker --help
+// NO-INPUT: Must specify at least 1 positional argument: See: {{.*}}/ssaf-linker --help
 

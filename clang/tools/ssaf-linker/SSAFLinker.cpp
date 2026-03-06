@@ -296,11 +296,15 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 int main(int argc, const char **argv) {
   InitLLVM X(argc, argv);
   ToolName = llvm::sys::path::filename(argv[0]);
-  initializeJSONFormat();
 
+  // Hide options unrelated to ssaf-linker from --help output.
   cl::HideUnrelatedOptions(SsafLinkerCategory);
+  // Register a custom version printer for the --version flag.
   cl::SetVersionPrinter(PrintVersion);
+  // Parse command-line arguments and exit with an error if they are invalid.
   cl::ParseCommandLineOptions(argc, argv, "SSAF Linker\n");
+
+  initializeJSONFormat();
 
   llvm::TimerGroup LinkerTimers("ssaf-linker", "SSAF Linker");
   LinkerInput LI;
