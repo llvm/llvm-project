@@ -15,7 +15,19 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE long double ceill(long double x) { return fputil::ceil(x); }
+// TODO(bassiounix): Re-enable long double tests on X86 once float80 is complete
+#if !(defined(linux) && (defined(__x86_64__) || defined(__i386__)))
+
+LIBC_INLINE constexpr long double ceill(long double x) {
+
+#else
+
+LIBC_INLINE long double ceill(long double x) {
+
+#endif
+
+  return fputil::ceil(x);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
