@@ -1239,6 +1239,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakConstructorInitializers);
     IO.mapOptional("BreakFunctionDefinitionParameters",
                    Style.BreakFunctionDefinitionParameters);
+    IO.mapOptional("BreakFunctionDeclarationParameters",
+                   Style.BreakFunctionDeclarationParameters);
     IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("BreakTemplateDeclarations",
@@ -1787,6 +1789,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
+  LLVMStyle.BreakFunctionDeclarationParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
