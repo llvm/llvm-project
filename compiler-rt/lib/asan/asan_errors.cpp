@@ -742,7 +742,8 @@ void ErrorNonSelfAMDGPU::PrintStack() {
   source_location.Append(" in ");
   __sanitizer::AMDGPUCodeObjectSymbolizer symbolizer;
   symbolizer.Init(cb_loc.fd, cb_loc.offset, cb_loc.size);
-  symbolizer.SymbolizePC(callstack[0] - cb_loc.vma_adjust, source_location);
+  if (!symbolizer.SymbolizePC(callstack[0] - cb_loc.vma_adjust, source_location))
+    source_location.Append("<unavailable>\n");
   // release all allocated comgr objects.
   symbolizer.Release();
 #endif
