@@ -6053,12 +6053,24 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
 /// casts that feed into it.
 struct ExtendedReductionOperand {
   VPWidenRecipe *BinOp = nullptr;
-  std::array<VPWidenCastRecipe *, 2> CastRecipes = {nullptr};
+  // Note: The second cast recipe may be null.
+  std::array<VPWidenCastRecipe *, 2> CastRecipes = {};
 };
 
 /// Checks if \p Op (which is an operand of \p UpdateR) is an extended reduction
 /// operand. This is an operand where the source of the value (e.g. a load) has
 /// been extended (sext, zext, or fpext) before it is used in the reduction.
+///
+/// Possible forms matched by this function:
+///  - UpdateR(PrevValue, ext(...))
+///  - UpdateR(PrevValue, BinOp(ext(...), ext(...)))
+///  - UpdateR(PrevValue, BinOp(ext(...), Constant))
+///  - UpdateR(PrevValue, neg(BinOp(ext(...), ext(...))))
+///  - UpdateR(PrevValue, neg(BinOp(ext(...), Constant)))
+///  - UpdateR(PrevValue, ext(mul(ext(...), ext(...))))
+///  - UpdateR(PrevValue, ext(mul(ext(...), Constant)))
+///
+/// Note: The second operand of UpdateR corresponds to \p Op in the examples.
 static std::optional<ExtendedReductionOperand>
 matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   assert(is_contained(UpdateR->operands(), Op) &&
@@ -6072,7 +6084,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
   if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue()))) ||
       match(Op, m_FPExt(m_FMul(m_VPValue(), m_VPValue())))) {
-    auto *CastRecipe = dyn_cast<VPWidenCastRecipe>(Op);
+    auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
     if (!CastRecipe)
       return std::nullopt;
     auto CastOp = static_cast<Instruction::CastOps>(CastRecipe->getOpcode());
@@ -6083,7 +6095,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   // If the update is a binary op, check both of its operands to see if
   // they are extends. Otherwise, see if the update comes directly from an
   // extend.
-  std::array<VPWidenCastRecipe *, 2> CastRecipes = {nullptr};
+  std::array<VPWidenCastRecipe *, 2> CastRecipes = {};
 
   // Match extends and populate CastRecipes. Returns false if matching fails.
   auto MatchExtends = [OuterExtKind,
@@ -6168,7 +6180,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *ExitValue,
 
     // Find the extended operand. The other operand (PrevValue) is the next link
     // in the reduction chain.
-    auto ExtendedOp = matchExtendedReductionOperand(UpdateR, Op);
+    std::optional<ExtendedReductionOperand> ExtendedOp =
+        matchExtendedReductionOperand(UpdateR, Op);
     if (!ExtendedOp) {
       ExtendedOp = matchExtendedReductionOperand(UpdateR, PrevValue);
       if (!ExtendedOp)
