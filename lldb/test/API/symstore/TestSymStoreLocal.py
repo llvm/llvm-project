@@ -71,11 +71,12 @@ class SymStoreLocalTests(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def build_inferior(self):
-        if self.getDebugInfo() != "pdb":
-            self.skipTest("Non-PDB debug info variants not yet supported")
         self.build()
         exe_file = "a.out"
-        sym_file = "a.pdb"
+        if self.getDebugInfo() == "pdb":
+            sym_file = "a.pdb"
+        else:
+            self.skipTest("Non-PDB debug info variants not yet supported")
         self.assertTrue(os.path.isfile(self.getBuildArtifact(exe_file)))
         self.assertTrue(os.path.isfile(self.getBuildArtifact(sym_file)))
         return exe_file, sym_file
