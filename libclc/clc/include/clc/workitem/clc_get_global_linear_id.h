@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/workitem/clc_get_global_linear_id.h"
+#ifndef __CLC_WORKITEM_CLC_GET_GLOBAL_LINEAR_ID_H__
+#define __CLC_WORKITEM_CLC_GET_GLOBAL_LINEAR_ID_H__
 
-_CLC_OVERLOAD _CLC_DEF _CLC_CONST size_t get_global_linear_id() {
-  return __clc_get_global_linear_id();
-}
+#include "clc/internal/clc.h"
+
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL size_t __clc_get_global_linear_id();
+
+#endif // __CLC_WORKITEM_CLC_GET_GLOBAL_LINEAR_ID_H__
