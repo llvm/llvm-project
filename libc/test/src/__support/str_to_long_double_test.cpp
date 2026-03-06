@@ -30,12 +30,23 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Simple) {
 }
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80LongerMantissa) {
+#if __SIZEOF_LONG_DOUBLE__ == 16
   eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 0,
                     0x91a2b3c091a2b3c1, 16507);
   eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, 300,
                     0xd97757de56adb65c, 17503);
   eisel_lemire_test(0x12345678'12345678'12345678'12345678_u128, -300,
                     0xc30feb9a7618457d, 15510);
+#elif __SIZEOF_LONG_DOUBLE__ == 12
+  eisel_lemire_test(0x12345678'12345678'12345678_u96, 0, 0x91a2b3c091a2b3c1,
+                    16475);
+  eisel_lemire_test(0x12345678'12345678'12345678_u96, 300, 0xd97757de56adb65c,
+                    17471);
+  eisel_lemire_test(0x12345678'12345678'12345678_u96, -300, 0xc30feb9a7618457d,
+                    15478);
+#else
+#error "unhandled long double type"
+#endif
 }
 
 // These tests check numbers at the edge of the DETAILED_POWERS_OF_TEN table.

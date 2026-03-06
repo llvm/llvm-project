@@ -99,6 +99,20 @@ subroutine omp_erf_f64(x, y)
   y = erf(x)
 end subroutine omp_erf_f64
 
+subroutine omp_erfc_f32(x, y)
+!$omp declare target
+  real :: x, y
+!CHECK: call float @__ocml_erfc_f32(float {{.*}})
+  y = erfc(x)
+end subroutine omp_erfc_f32
+
+subroutine omp_erfc_f64(x, y)
+!$omp declare target
+  real(8) :: x, y
+!CHECK: call double @__ocml_erfc_f64(double {{.*}})
+  y = erfc(x)
+end subroutine omp_erfc_f64
+
 subroutine omp_exp_f32(x, y)
 !$omp declare target
   real :: x, y

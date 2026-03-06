@@ -108,14 +108,15 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
-  if(MSVC AND NOT CLANG_LINK_CLANG_DYLIB)
-    # Make sure all consumers also turn off visibility macros so there not trying to dllimport symbols.
+  if((WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
+    # Make sure all consumers also turn off visibility macros so they're not
+    # trying to dllimport symbols.
     target_compile_definitions(${name} PUBLIC CLANG_BUILD_STATIC)
     if(TARGET "obj.${name}")
       target_compile_definitions("obj.${name}" PUBLIC CLANG_BUILD_STATIC)
     endif()
-  elseif(NOT ARG_SHARED AND NOT ARG_STATIC)
-    # Clang component libraries linked in to clang-cpp are declared without SHARED or STATIC
+  elseif(TARGET "obj.${name}" AND NOT ARG_SHARED AND NOT ARG_STATIC)
+    # Clang component libraries linked to clang-cpp are declared without SHARED or STATIC
     target_compile_definitions("obj.${name}" PUBLIC CLANG_EXPORTS)
   endif()
 
@@ -185,6 +186,10 @@ macro(add_clang_tool name)
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         COMPONENT ${name})
 
+      if (LLVM_ENABLE_PDB)
+        install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name} OPTIONAL)
+      endif()
+
       if(NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
                                  DEPENDS ${name}
@@ -212,7 +217,7 @@ endmacro()
 
 function(clang_target_link_libraries target type)
   if (TARGET obj.${target})
-    target_link_libraries(obj.${target} ${ARGN})
+    target_link_libraries(obj.${target} ${type} ${ARGN})
   endif()
 
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)

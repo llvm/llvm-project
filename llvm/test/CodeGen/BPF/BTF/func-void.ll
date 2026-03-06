@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 
 ; Source code:
 ;   void f1(void) {}
@@ -7,7 +7,7 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local void @f1() local_unnamed_addr #0 !dbg !7 {
+define dso_local void @f1() local_unnamed_addr !dbg !7 {
   ret void, !dbg !10
 }
 
@@ -56,8 +56,6 @@ define dso_local void @f1() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   10
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1040                    # Line 1 Col 16
-
-attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

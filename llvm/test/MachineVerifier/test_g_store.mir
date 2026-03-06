@@ -1,14 +1,9 @@
-# RUN: not --crash llc -o - -mtriple=arm64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_store
-legalized:       true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_store
+body: |
   bb.0:
 
     ; CHECK: Bad machine code: Generic memory instruction must access a pointer
@@ -26,5 +21,4 @@ body:             |
 
     ; CHECK: Bad machine code: atomic store cannot use acquire ordering
     G_STORE %1, %2 :: (store acq_rel (s32))
-
 ...

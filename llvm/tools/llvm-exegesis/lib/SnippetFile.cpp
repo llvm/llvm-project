@@ -14,7 +14,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegister.h"
@@ -80,7 +80,7 @@ public:
     if (CommentText.consume_front("LIVEIN")) {
       // LLVM-EXEGESIS-LIVEIN <reg>
       const auto RegName = CommentText.ltrim();
-      if (unsigned Reg = findRegisterByName(RegName))
+      if (MCRegister Reg = findRegisterByName(RegName))
         Result->LiveIns.push_back(Reg);
       else {
         errs() << "unknown register '" << RegName
@@ -179,7 +179,7 @@ public:
     }
     if (CommentText.consume_front("LOOP-REGISTER")) {
       // LLVM-EXEGESIS-LOOP-REGISTER <loop register>
-      unsigned LoopRegister;
+      MCRegister LoopRegister;
 
       if (!(LoopRegister = findRegisterByName(CommentText.trim()))) {
         errs() << "unknown register '" << CommentText
@@ -202,18 +202,16 @@ private:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;
   }
-  void emitValueToAlignment(Align Alignment, int64_t Value, unsigned ValueSize,
-                            unsigned MaxBytesToEmit) override {}
   void emitZerofill(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                     Align ByteAlignment, SMLoc Loc) override {}
 
-  unsigned findRegisterByName(const StringRef RegName) const {
+  MCRegister findRegisterByName(const StringRef RegName) const {
     std::optional<MCRegister> RegisterNumber =
         State.getRegisterNumberFromName(RegName);
     if (!RegisterNumber.has_value()) {
       errs() << "'" << RegName
              << "' is not a valid register name for the target\n";
-      return MCRegister::NoRegister;
+      return MCRegister();
     }
     return *RegisterNumber;
   }

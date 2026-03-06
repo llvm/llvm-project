@@ -1,4 +1,4 @@
-# RUN: llc -march=mipsel -mcpu=mips32r6 -start-after=block-placement %s -o - | FileCheck %s
+# RUN: llc -mtriple=mipsel -mcpu=mips32r6 -start-after=block-placement %s -o - | FileCheck %s
 
 # Check that empty blocks in the cfg don't cause the mips hazard scheduler to
 # crash and that the nop is inserted correctly.

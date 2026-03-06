@@ -46,7 +46,7 @@ class StructuralHashImpl {
   /// Assign a unique ID to each Value in the order they are first seen.
   DenseMap<const Value *, int> ValueToId;
 
-  stable_hash hashType(Type *ValueType) {
+  static stable_hash hashType(Type *ValueType) {
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(ValueType->getTypeID());
     if (ValueType->isIntegerTy())
@@ -65,7 +65,7 @@ public:
     }
   }
 
-  stable_hash hashAPInt(const APInt &I) {
+  static stable_hash hashAPInt(const APInt &I) {
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(I.getBitWidth());
     auto RawVals = ArrayRef<uint64_t>(I.getRawData(), I.getNumWords());
@@ -73,11 +73,39 @@ public:
     return stable_hash_combine(Hashes);
   }
 
-  stable_hash hashAPFloat(const APFloat &F) {
+  static stable_hash hashAPFloat(const APFloat &F) {
     return hashAPInt(F.bitcastToAPInt());
   }
 
-  stable_hash hashGlobalValue(const GlobalValue *GV) {
+  static stable_hash hashGlobalVariable(const GlobalVariable &GVar) {
+    if (!GVar.hasInitializer())
+      return hashGlobalValue(&GVar);
+
+    // Hash the contents of a string.
+    if (GVar.getName().starts_with(".str")) {
+      auto *C = GVar.getInitializer();
+      if (const auto *Seq = dyn_cast<ConstantDataSequential>(C))
+        if (Seq->isString())
+          return stable_hash_name(Seq->getAsString());
+    }
+
+    // Hash structural contents of Objective-C metadata in specific sections.
+    // This can be extended to other metadata if needed.
+    static constexpr const char *SectionNames[] = {
+        "__cfstring",      "__cstring",      "__objc_classrefs",
+        "__objc_methname", "__objc_selrefs",
+    };
+    if (GVar.hasSection()) {
+      StringRef SectionName = GVar.getSection();
+      for (const char *Name : SectionNames)
+        if (SectionName.contains(Name))
+          return hashConstant(GVar.getInitializer());
+    }
+
+    return hashGlobalValue(&GVar);
+  }
+
+  static stable_hash hashGlobalValue(const GlobalValue *GV) {
     if (!GV->hasName())
       return 0;
     return stable_hash_name(GV->getName());
@@ -87,7 +115,7 @@ public:
   // FunctionComparator::cmpConstants() in FunctionComparator.cpp, but here
   // we're interested in computing a hash rather than comparing two Constants.
   // Some of the logic is simplified, e.g, we don't expand GEPOperator.
-  stable_hash hashConstant(Constant *C) {
+  static stable_hash hashConstant(const Constant *C) {
     SmallVector<stable_hash> Hashes;
 
     Type *Ty = C->getType();
@@ -98,14 +126,21 @@ public:
       return stable_hash_combine(Hashes);
     }
 
+    if (auto *GVar = dyn_cast<GlobalVariable>(C)) {
+      Hashes.emplace_back(hashGlobalVariable(*GVar));
+      return stable_hash_combine(Hashes);
+    }
+
     if (auto *G = dyn_cast<GlobalValue>(C)) {
       Hashes.emplace_back(hashGlobalValue(G));
       return stable_hash_combine(Hashes);
     }
 
     if (const auto *Seq = dyn_cast<ConstantDataSequential>(C)) {
-      Hashes.emplace_back(xxh3_64bits(Seq->getRawDataValues()));
-      return stable_hash_combine(Hashes);
+      if (Seq->isString()) {
+        Hashes.emplace_back(stable_hash_name(Seq->getAsString()));
+        return stable_hash_combine(Hashes);
+      }
     }
 
     switch (C->getValueID()) {
@@ -295,6 +330,10 @@ stable_hash llvm::StructuralHash(const Function &F, bool DetailedHash) {
   StructuralHashImpl H(DetailedHash);
   H.update(F);
   return H.getHash();
+}
+
+stable_hash llvm::StructuralHash(const GlobalVariable &GVar) {
+  return StructuralHashImpl::hashGlobalVariable(GVar);
 }
 
 stable_hash llvm::StructuralHash(const Module &M, bool DetailedHash) {

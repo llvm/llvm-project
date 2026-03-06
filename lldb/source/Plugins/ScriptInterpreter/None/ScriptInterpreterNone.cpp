@@ -12,10 +12,6 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 
-#include "llvm/Support/Threading.h"
-
-#include <mutex>
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -33,22 +29,18 @@ static const char *no_interpreter_err_msg =
 bool ScriptInterpreterNone::ExecuteOneLine(llvm::StringRef command,
                                            CommandReturnObject *,
                                            const ExecuteScriptOptions &) {
-  m_debugger.GetErrorStream().PutCString(no_interpreter_err_msg);
+  m_debugger.GetAsyncErrorStream()->PutCString(no_interpreter_err_msg);
   return false;
 }
 
 void ScriptInterpreterNone::ExecuteInterpreterLoop() {
-  m_debugger.GetErrorStream().PutCString(no_interpreter_err_msg);
+  m_debugger.GetAsyncErrorStream()->PutCString(no_interpreter_err_msg);
 }
 
 void ScriptInterpreterNone::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguageNone, CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                lldb::eScriptLanguageNone, CreateInstance);
 }
 
 void ScriptInterpreterNone::Terminate() {}

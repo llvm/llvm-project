@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
-#define _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
+#ifndef _LIBCPP___CXX03___THREAD_POLL_WITH_BACKOFF_H
+#define _LIBCPP___CXX03___THREAD_POLL_WITH_BACKOFF_H
 
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__chrono/high_resolution_clock.h>
@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-static _LIBCPP_CONSTEXPR const int __libcpp_polling_count = 64;
+static const int __libcpp_polling_count = 64;
 
 // Polls a thread for a condition given by a predicate, and backs off based on a backoff policy
 // before polling again.
@@ -59,9 +59,9 @@ _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_poll_with_b
 // so this should most likely only be used on single-threaded systems where there
 // are no other threads to compete with.
 struct __spinning_backoff_policy {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(chrono::nanoseconds const&) const { return false; }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds const&) const { return false; }
 };
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
+#endif // _LIBCPP___CXX03___THREAD_POLL_WITH_BACKOFF_H

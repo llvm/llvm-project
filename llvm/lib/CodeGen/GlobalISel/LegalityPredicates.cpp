@@ -101,6 +101,12 @@ LegalityPredicate LegalityPredicates::isPointer(unsigned TypeIdx,
   };
 }
 
+LegalityPredicate LegalityPredicates::isPointerVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isPointerVector();
+  };
+}
+
 LegalityPredicate LegalityPredicates::elementTypeIs(unsigned TypeIdx,
                                                     LLT EltTy) {
   return [=](const LegalityQuery &Query) {
@@ -146,6 +152,26 @@ LegalityPredicate LegalityPredicates::scalarOrEltNarrowerThan(unsigned TypeIdx,
   return [=](const LegalityQuery &Query) {
     const LLT QueryTy = Query.Types[TypeIdx];
     return QueryTy.getScalarSizeInBits() < Size;
+  };
+}
+
+LegalityPredicate
+LegalityPredicates::vectorElementCountIsGreaterThan(unsigned TypeIdx,
+                                                    unsigned Size) {
+
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isFixedVector() && QueryTy.getNumElements() > Size;
+  };
+}
+
+LegalityPredicate
+LegalityPredicates::vectorElementCountIsLessThanOrEqualTo(unsigned TypeIdx,
+                                                          unsigned Size) {
+
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isFixedVector() && QueryTy.getNumElements() <= Size;
   };
 }
 

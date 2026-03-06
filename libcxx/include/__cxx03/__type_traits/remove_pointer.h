@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_REMOVE_POINTER_H
-#define _LIBCPP___TYPE_TRAITS_REMOVE_POINTER_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_POINTER_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_POINTER_H
 
 #include <__cxx03/__config>
 
@@ -43,11 +43,6 @@ template <class _Tp>
 using __remove_pointer_t = typename remove_pointer<_Tp>::type;
 #endif // !defined(_LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS) && __has_builtin(__remove_pointer)
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using remove_pointer_t = __remove_pointer_t<_Tp>;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_REMOVE_POINTER_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_REMOVE_POINTER_H

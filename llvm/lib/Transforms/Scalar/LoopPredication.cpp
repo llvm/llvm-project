@@ -192,7 +192,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1234,7 +1233,7 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
           cast<BranchInst>(BB->getTerminator()));
   }
 
-  SCEVExpander Expander(*SE, *DL, "loop-predication");
+  SCEVExpander Expander(*SE, "loop-predication");
   bool Changed = false;
   for (auto *Guard : Guards)
     Changed |= widenGuardConditions(Guard, Expander);

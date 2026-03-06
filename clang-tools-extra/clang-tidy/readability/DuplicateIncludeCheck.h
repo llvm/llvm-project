@@ -1,4 +1,4 @@
-//===--- DuplicateIncludeCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATE_INCLUDE_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATE_INCLUDE_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATEINCLUDECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATEINCLUDECHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -19,13 +19,18 @@ namespace clang::tidy::readability {
 /// directives between them are analyzed.
 class DuplicateIncludeCheck : public ClangTidyCheck {
 public:
-  DuplicateIncludeCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  DuplicateIncludeCheck(StringRef Name, ClangTidyContext *Context);
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  // Semicolon-separated list of regexes or file names to ignore from duplicate
+  // warnings.
+  const std::vector<StringRef> IgnoredFilesList;
 };
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATE_INCLUDE_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_DUPLICATEINCLUDECHECK_H

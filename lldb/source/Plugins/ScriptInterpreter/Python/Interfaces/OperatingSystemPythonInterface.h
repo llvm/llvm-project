@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_OPERATINGSYSTEMPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_OPERATINGSYSTEMPYTHONINTERFACE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_OPERATINGSYSTEMPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_OPERATINGSYSTEMPYTHONINTERFACE_H
 
-#include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "ScriptedThreadPythonInterface.h"
 
@@ -45,6 +42,8 @@ public:
 
   std::optional<std::string> GetRegisterContextForTID(lldb::tid_t tid) override;
 
+  std::optional<bool> DoesPluginReportAllThreads() override;
+
   static void Initialize();
 
   static void Terminate();
@@ -57,5 +56,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_OPERATINGSYSTEMPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_OPERATINGSYSTEMPYTHONINTERFACE_H

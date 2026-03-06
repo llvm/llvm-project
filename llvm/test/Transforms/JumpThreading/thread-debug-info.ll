@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
-; RUN: opt -S -passes=jump-threading < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 @a = global i32 0, align 4
 ; Test that the llvm.dbg.value calls in a threaded block are correctly updated to
@@ -96,6 +95,8 @@ exit:                                             ; preds = %bb.f4, %bb.f3, %bb.
 ; being threaded, the `and` in the function below is optimised away, but its
 ; debug-info should still be preserved.
 ; Similarly, the call to f1 gets cloned, its dbg.value should be cloned too.
+; Duplicated debug value in land.end.thr_comm is removed by
+; RemoveRedundantDbgInstrs pass at the end.
 define void @test16(i1 %c, i1 %c2, i1 %c3, i1 %c4) nounwind ssp !dbg !30 {
 ; CHECK-LABEL: define void @test16(i1
 entry:
@@ -109,7 +110,6 @@ lor.lhs.false.i:
   br i1 %c3, label %land.end, label %land.end, !dbg !33
 
 ; CHECK-LABEL: land.end.thr_comm:
-; CHECK-NEXT:  #dbg_value(i32 0,
 ; CHECK-NEXT:  #dbg_value(i32 1,
 ; CHECK-NEXT:  call void @f1()
 ; CHECK-NEXT:  br i1 %c4,

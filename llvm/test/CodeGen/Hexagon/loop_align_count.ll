@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv73 -O2 -mattr=+hvxv73,hvx-length64b \
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv73 -O2 -mattr=+hvxv73,hvx-length64b \
 ; RUN: -debug-only=hexagon-loop-align 2>&1 < %s | FileCheck %s
 ; Validate that there are 4 bundles in the loop.
 ; REQUIRES: asserts
@@ -112,5 +112,5 @@ declare <16 x i32> @llvm.hexagon.V6.vnavgh(<16 x i32>, <16 x i32>) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
 declare <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32>, <16 x i32>) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 %"fmt::Formatter.1.77.153.229.305.381.1673" = type { [0 x i8], i32, [0 x i8], i32, [0 x i8], i8, [0 x i8], %"option::Option<usize>.0.76.152.228.304.380.1672", [0 x i8], %"option::Option<usize>.0.76.152.228.304.380.1672", [0 x i8], { ptr, ptr }, [0 x i8], { ptr, ptr }, [0 x i8], { ptr, i16 }, [0 x i8] }
 %"option::Option<usize>.0.76.152.228.304.380.1672" = type { [0 x i8], i8, [2 x i8] }

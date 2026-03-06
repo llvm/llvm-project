@@ -8,11 +8,11 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -25,11 +25,17 @@ using namespace lld;
 using namespace lld::elf;
 using namespace llvm::object;
 
+// Cortex-M Security Extensions. Prefix for functions that should be exported
+// for the non-secure world.
+constexpr char ACLESESYM_PREFIX[] = "__acle_se_";
+constexpr int ACLESESYM_SIZE = 8;
+
 namespace {
 class ARM final : public TargetInfo {
 public:
   ARM(Ctx &);
   uint32_t calcEFlags() const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -48,15 +54,50 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override {
+    if (ctx.arg.ekind == ELF32BEKind)
+      elf::scanSection1<ARM, ELF32BE>(*this, sec);
+    else
+      elf::scanSection1<ARM, ELF32LE>(*this, sec);
+  }
+
+  DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap;
 
 private:
-void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
-                           int group, bool check) const;
+  void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
+                      int group, bool check) const;
 };
 enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
-} // namespace
 
-static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
+struct CmseSGVeneer {
+  CmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
+               std::optional<uint64_t> addr = std::nullopt)
+      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
+  static const size_t size{ACLESESYM_SIZE};
+  std::optional<uint64_t> getAddr() const { return entAddr; };
+
+  Symbol *sym;
+  Symbol *acleSeSym;
+  uint64_t offset = 0;
+  const std::optional<uint64_t> entAddr;
+};
+
+struct ArmCmseSGSection : SyntheticSection {
+  ArmCmseSGSection(Ctx &ctx);
+  bool isNeeded() const override { return !entries.empty(); }
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+  void addSGVeneer(Symbol *sym, Symbol *ext_sym);
+  void addMappingSymbol();
+  void finalizeContents() override;
+  uint64_t impLibMaxAddr = 0;
+  SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
+  SmallVector<std::unique_ptr<CmseSGVeneer>, 0> sgVeneers;
+  uint64_t newEntries = 0;
+};
+} // namespace
 
 ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_ARM_COPY;
@@ -100,104 +141,174 @@ uint32_t ARM::calcEFlags() const {
   return EF_ARM_EABI_VER5 | abiFloatType | armBE8;
 }
 
+void ARM::initTargetSpecificSections() {
+  ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>(ctx);
+  ctx.inputSections.push_back(ctx.in.armCmseSGSection.get());
+}
+
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
   switch (type) {
   case R_ARM_ABS32:
-  case R_ARM_MOVW_ABS_NC:
-  case R_ARM_MOVT_ABS:
-  case R_ARM_THM_MOVW_ABS_NC:
-  case R_ARM_THM_MOVT_ABS:
-  case R_ARM_THM_ALU_ABS_G0_NC:
-  case R_ARM_THM_ALU_ABS_G1_NC:
-  case R_ARM_THM_ALU_ABS_G2_NC:
-  case R_ARM_THM_ALU_ABS_G3:
     return R_ABS;
-  case R_ARM_THM_JUMP8:
-  case R_ARM_THM_JUMP11:
+  case R_ARM_REL32:
     return R_PC;
-  case R_ARM_CALL:
-  case R_ARM_JUMP24:
-  case R_ARM_PC24:
-  case R_ARM_PLT32:
-  case R_ARM_PREL31:
-  case R_ARM_THM_JUMP19:
-  case R_ARM_THM_JUMP24:
-  case R_ARM_THM_CALL:
-    return R_PLT_PC;
-  case R_ARM_GOTOFF32:
-    // (S + A) - GOT_ORG
-    return R_GOTREL;
-  case R_ARM_GOT_BREL:
-    // GOT(S) + A - GOT_ORG
-    return R_GOT_OFF;
-  case R_ARM_GOT_PREL:
-  case R_ARM_TLS_IE32:
-    // GOT(S) + A - P
-    return R_GOT_PC;
   case R_ARM_SBREL32:
-    return R_ARM_SBREL;
-  case R_ARM_TARGET1:
-    return ctx.arg.target1Rel ? R_PC : R_ABS;
-  case R_ARM_TARGET2:
-    if (ctx.arg.target2 == Target2Policy::Rel)
-      return R_PC;
-    if (ctx.arg.target2 == Target2Policy::Abs)
-      return R_ABS;
-    return R_GOT_PC;
-  case R_ARM_TLS_GD32:
-    return R_TLSGD_PC;
-  case R_ARM_TLS_LDM32:
-    return R_TLSLD_PC;
+    return RE_ARM_SBREL;
   case R_ARM_TLS_LDO32:
     return R_DTPREL;
-  case R_ARM_BASE_PREL:
-    // B(S) + A - P
-    // FIXME: currently B(S) assumed to be .got, this may not hold for all
-    // platforms.
-    return R_GOTONLY_PC;
-  case R_ARM_MOVW_PREL_NC:
-  case R_ARM_MOVT_PREL:
-  case R_ARM_REL32:
-  case R_ARM_THM_MOVW_PREL_NC:
-  case R_ARM_THM_MOVT_PREL:
-    return R_PC;
-  case R_ARM_ALU_PC_G0:
-  case R_ARM_ALU_PC_G0_NC:
-  case R_ARM_ALU_PC_G1:
-  case R_ARM_ALU_PC_G1_NC:
-  case R_ARM_ALU_PC_G2:
-  case R_ARM_LDR_PC_G0:
-  case R_ARM_LDR_PC_G1:
-  case R_ARM_LDR_PC_G2:
-  case R_ARM_LDRS_PC_G0:
-  case R_ARM_LDRS_PC_G1:
-  case R_ARM_LDRS_PC_G2:
-  case R_ARM_THM_ALU_PREL_11_0:
-  case R_ARM_THM_PC8:
-  case R_ARM_THM_PC12:
-    return R_ARM_PCA;
-  case R_ARM_MOVW_BREL_NC:
-  case R_ARM_MOVW_BREL:
-  case R_ARM_MOVT_BREL:
-  case R_ARM_THM_MOVW_BREL_NC:
-  case R_ARM_THM_MOVW_BREL:
-  case R_ARM_THM_MOVT_BREL:
-    return R_ARM_SBREL;
   case R_ARM_NONE:
     return R_NONE;
-  case R_ARM_TLS_LE32:
-    return R_TPREL;
-  case R_ARM_V4BX:
-    // V4BX is just a marker to indicate there's a "bx rN" instruction at the
-    // given address. It can be used to implement a special linker mode which
-    // rewrites ARMv4T inputs to ARMv4. Since we support only ARMv4 input and
-    // not ARMv4 output, we can just ignore it.
-    return R_NONE;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
+  }
+}
+
+template <class ELFT, class RelTy>
+void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (type == R_ARM_NONE)
+      continue;
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    switch (type) {
+    case R_ARM_V4BX:
+      continue;
+
+    // Absolute relocations:
+    case R_ARM_ABS32:
+    case R_ARM_MOVW_ABS_NC:
+    case R_ARM_MOVT_ABS:
+    case R_ARM_THM_MOVW_ABS_NC:
+    case R_ARM_THM_MOVT_ABS:
+    case R_ARM_THM_ALU_ABS_G0_NC:
+    case R_ARM_THM_ALU_ABS_G1_NC:
+    case R_ARM_THM_ALU_ABS_G2_NC:
+    case R_ARM_THM_ALU_ABS_G3:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_ARM_THM_JUMP8:
+    case R_ARM_THM_JUMP11:
+    case R_ARM_MOVW_PREL_NC:
+    case R_ARM_MOVT_PREL:
+    case R_ARM_REL32:
+    case R_ARM_THM_MOVW_PREL_NC:
+    case R_ARM_THM_MOVT_PREL:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+    // R_PC variant (place aligned down to 4-byte boundary):
+    case R_ARM_ALU_PC_G0:
+    case R_ARM_ALU_PC_G0_NC:
+    case R_ARM_ALU_PC_G1:
+    case R_ARM_ALU_PC_G1_NC:
+    case R_ARM_ALU_PC_G2:
+    case R_ARM_LDR_PC_G0:
+    case R_ARM_LDR_PC_G1:
+    case R_ARM_LDR_PC_G2:
+    case R_ARM_LDRS_PC_G0:
+    case R_ARM_LDRS_PC_G1:
+    case R_ARM_LDRS_PC_G2:
+    case R_ARM_THM_ALU_PREL_11_0:
+    case R_ARM_THM_PC8:
+    case R_ARM_THM_PC12:
+      expr = RE_ARM_PCA;
+      break;
+
+    // PLT-generating relocations:
+    case R_ARM_CALL:
+    case R_ARM_JUMP24:
+    case R_ARM_PC24:
+    case R_ARM_PLT32:
+    case R_ARM_PREL31:
+    case R_ARM_THM_JUMP19:
+    case R_ARM_THM_JUMP24:
+    case R_ARM_THM_CALL:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT relocations:
+    case R_ARM_GOT_BREL:
+      expr = R_GOT_OFF;
+      break;
+    case R_ARM_GOT_PREL:
+      expr = R_GOT_PC;
+      break;
+    case R_ARM_GOTOFF32:
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTREL;
+      break;
+    case R_ARM_BASE_PREL:
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTONLY_PC;
+      break;
+
+    // RE_ARM_SBREL relocations:
+    case R_ARM_SBREL32:
+    case R_ARM_MOVW_BREL_NC:
+    case R_ARM_MOVW_BREL:
+    case R_ARM_MOVT_BREL:
+    case R_ARM_THM_MOVW_BREL_NC:
+    case R_ARM_THM_MOVW_BREL:
+    case R_ARM_THM_MOVT_BREL:
+      expr = RE_ARM_SBREL;
+      break;
+
+    // Platform-specific relocations:
+    case R_ARM_TARGET1:
+      expr = ctx.arg.target1Rel ? R_PC : R_ABS;
+      break;
+    case R_ARM_TARGET2:
+      if (ctx.arg.target2 == Target2Policy::Rel)
+        expr = R_PC;
+      else if (ctx.arg.target2 == Target2Policy::Abs)
+        expr = R_ABS;
+      else
+        expr = R_GOT_PC;
+      break;
+
+    // TLS relocations (no optimization):
+    case R_ARM_TLS_LE32:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_ARM_TLS_IE32:
+      rs.handleTlsIe<false>(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_ARM_TLS_GD32:
+      rs.handleTlsGd(R_TLSGD_PC, R_NONE, R_NONE, type, offset, addend, sym);
+      continue;
+    case R_ARM_TLS_LDM32:
+      ctx.needsTlsLd.store(true, std::memory_order_relaxed);
+      sec.addReloc({R_TLSLD_PC, type, offset, addend, &sym});
+      continue;
+    case R_ARM_TLS_LDO32:
+      expr = R_DTPREL;
+      break;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
   }
 }
 
@@ -473,7 +584,7 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
     // Bit 0 == 1 denotes Thumb state, it is not part of the range.
     dst &= ~0x1;
 
-  int64_t offset = dst - src;
+  int64_t offset = llvm::SignExtend64<32>(dst - src);
   switch (type) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
@@ -557,8 +668,8 @@ void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
     rot = (lz + 8) << 7;
   }
   if (check && imm > 0xff)
-    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate "
-             << Twine(val).str() << " for relocation " << rel.type;
+    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate " << val
+             << " for relocation " << rel.type;
   write32(ctx, loc,
           (read32(ctx, loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
@@ -663,12 +774,12 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_THM_JUMP8:
     // We do a 9 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 9, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
     break;
   case R_ARM_THM_JUMP11:
     // We do a 12 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 12, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
@@ -875,8 +986,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
@@ -1048,10 +1158,10 @@ static bool isDataMapSymbol(const Symbol *b) {
   return b->getName() == "$d" || b->getName().starts_with("$d.");
 }
 
-void elf::sortArmMappingSymbols() {
+void elf::sortArmMappingSymbols(Ctx &ctx) {
   // For each input section make sure the mapping symbols are sorted in
   // ascending order.
-  for (auto &kv : sectionMap) {
+  for (auto &kv : static_cast<ARM &>(*ctx.target).sectionMap) {
     SmallVector<const Defined *, 0> &mapSyms = kv.second;
     llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
       return a->value < b->value;
@@ -1064,6 +1174,7 @@ void elf::addArmInputSectionMappingSymbols(Ctx &ctx) {
   // The linker generated mapping symbols for all the synthetic
   // sections are adding into the sectionmap through the function
   // addArmSyntheitcSectionMappingSymbol.
+  auto &sectionMap = static_cast<ARM &>(*ctx.target).sectionMap;
   for (ELFFileBase *file : ctx.objectFiles) {
     for (Symbol *sym : file->getLocalSymbols()) {
       auto *def = dyn_cast<Defined>(sym);
@@ -1089,7 +1200,7 @@ void elf::addArmSyntheticSectionMappingSymbol(Defined *sym) {
     return;
   if (auto *sec = cast_if_present<InputSection>(sym->section))
     if (sec->flags & SHF_EXECINSTR)
-      sectionMap[sec].push_back(sym);
+      static_cast<ARM &>(*sec->file->ctx.target).sectionMap[sec].push_back(sym);
 }
 
 static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
@@ -1110,7 +1221,9 @@ static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
 // identify half open intervals of Arm code [$a, non $a) and Thumb code
 // [$t, non $t) and convert these to little endian a word or half word at a
 // time respectively.
-void elf::convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf) {
+void elf::convertArmInstructionstoBE8(Ctx &ctx, InputSection *sec,
+                                      uint8_t *buf) {
+  auto &sectionMap = static_cast<ARM &>(*ctx.target).sectionMap;
   auto it = sectionMap.find(sec);
   if (it == sectionMap.end())
     return;
@@ -1199,7 +1312,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
   ArrayRef<Elf_Sym> eSyms = getELFSyms<ELFT>();
   // Error for local symbols. The symbol at index 0 is LOCAL. So skip it.
   for (size_t i = 1, end = firstGlobal; i != end; ++i) {
-    Err(ctx) << "CMSE symbol '" << CHECK(eSyms[i].getName(stringTable), this)
+    Err(ctx) << "CMSE symbol '" << CHECK2(eSyms[i].getName(stringTable), this)
              << "' in import library '" << this << "' is not global";
   }
 
@@ -1209,7 +1322,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
 
     // Initialize symbol fields.
     memset(static_cast<void *>(sym), 0, sizeof(Symbol));
-    sym->setName(CHECK(eSyms[i].getName(stringTable), this));
+    sym->setName(CHECK2(eSyms[i].getName(stringTable), this));
     sym->value = eSym.st_value;
     sym->size = eSym.st_size;
     sym->type = eSym.getType();
@@ -1217,29 +1330,27 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
     sym->stOther = eSym.st_other;
 
     if (eSym.st_shndx != SHN_ABS) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' in import library '" << this << "' is not absolute";
+      Err(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+               << this << "' is not absolute";
       continue;
     }
 
     if (!(eSym.st_value & 1) || (eSym.getType() != STT_FUNC)) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' in import library '" << this
-                     << "' is not a Thumb function definition";
+      Err(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+               << this << "' is not a Thumb function definition";
       continue;
     }
 
-    if (ctx.symtab->cmseImportLib.count(sym->getName())) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' is multiply defined in import library '" << this
-                     << "'";
+    if (ctx.symtab->cmseImportLib.contains(sym->getName())) {
+      Err(ctx) << "CMSE symbol '" << sym->getName()
+               << "' is multiply defined in import library '" << this << "'";
       continue;
     }
 
     if (eSym.st_size != ACLESESYM_SIZE) {
       Warn(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
-                << this << "' does not have correct size of "
-                << Twine(ACLESESYM_SIZE) << " bytes";
+                << this << "' does not have correct size of " << ACLESESYM_SIZE
+                << " bytes";
     }
 
     ctx.symtab->cmseImportLib[sym->getName()] = sym;
@@ -1248,15 +1359,16 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
 
 // Check symbol attributes of the acleSeSym, sym pair.
 // Both symbols should be global/weak Thumb code symbol definitions.
-static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
-  auto check = [](Symbol *s, StringRef type) -> std::optional<std::string> {
+static std::string checkCmseSymAttributes(Ctx &ctx, Symbol *acleSeSym,
+                                          Symbol *sym) {
+  auto check = [&](Symbol *s, StringRef type) -> std::optional<std::string> {
     auto d = dyn_cast_or_null<Defined>(s);
     if (!(d && d->isFunc() && (d->value & 1)))
-      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+      return (Twine(toStr(ctx, s->file)) + ": cmse " + type + " symbol '" +
               s->getName() + "' is not a Thumb function definition")
           .str();
     if (!d->section)
-      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+      return (Twine(toStr(ctx, s->file)) + ": cmse " + type + " symbol '" +
               s->getName() + "' cannot be an absolute symbol")
           .str();
     return std::nullopt;
@@ -1286,8 +1398,7 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
     if (!ctx.arg.armCMSESupport) {
-      ErrAlways(ctx)
-          << "CMSE is only supported by ARMv8-M architecture or later";
+      Err(ctx) << "CMSE is only supported by ARMv8-M architecture or later";
       ctx.arg.cmseImplib = false;
       break;
     }
@@ -1297,17 +1408,16 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
     Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
-      ErrAlways(ctx)
-          << acleSeSym->file << ": cmse special symbol '"
-          << acleSeSym->getName()
-          << "' detected, but no associated entry function definition '" << name
-          << "' with external linkage found";
+      Err(ctx) << acleSeSym->file << ": cmse special symbol '"
+               << acleSeSym->getName()
+               << "' detected, but no associated entry function definition '"
+               << name << "' with external linkage found";
       continue;
     }
 
-    std::string errMsg = checkCmseSymAttributes(acleSeSym, sym);
+    std::string errMsg = checkCmseSymAttributes(ctx, acleSeSym, sym);
     if (!errMsg.empty()) {
-      ErrAlways(ctx) << errMsg;
+      Err(ctx) << errMsg;
       continue;
     }
 
@@ -1319,34 +1429,19 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
   // with its corresponding special symbol __acle_se_<sym>.
   parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i) {
-      StringRef symName = syms[i]->getName();
-      if (ctx.symtab->cmseSymMap.count(symName))
-        syms[i] = ctx.symtab->cmseSymMap[symName].acleSeSym;
+    for (Symbol *&sym : syms) {
+      StringRef symName = sym->getName();
+      auto it = ctx.symtab->cmseSymMap.find(symName);
+      if (it != ctx.symtab->cmseSymMap.end())
+        sym = it->second.acleSeSym;
     }
   });
 }
 
-class elf::ArmCmseSGVeneer {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
-  static const size_t size{ACLESESYM_SIZE};
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-  uint64_t offset = 0;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
-    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
-                       llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs") {
+    : SyntheticSection(ctx, ".gnu.sgstubs", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR,
+                       /*addralign=*/32) {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
@@ -1360,7 +1455,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     addSGVeneer(cast<Defined>(entryFunc.acleSeSym),
                 cast<Defined>(entryFunc.sym));
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
-    if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
+    if (!ctx.symtab->inCMSEOutImpLib.contains(sym->getName()))
       Warn(ctx)
           << "entry function '" << sym->getName()
           << "' from CMSE import library is not present in secure application";
@@ -1369,7 +1464,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
   if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
     for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
-      if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
+      if (!ctx.symtab->inCMSEOutImpLib.contains(sym->getName()))
         Warn(ctx) << "new entry function '" << sym->getName()
                   << "' introduced but no output import library specified";
     }
@@ -1378,7 +1473,7 @@ ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
 
 void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   entries.emplace_back(acleSeSym, sym);
-  if (ctx.symtab->cmseImportLib.count(sym->getName()))
+  if (ctx.symtab->cmseImportLib.contains(sym->getName()))
     ctx.symtab->inCMSEOutImpLib[sym->getName()] = true;
   // Symbol addresses different, nothing to do.
   if (acleSeSym->file != sym->file ||
@@ -1386,19 +1481,20 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
     return;
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
-  ArmCmseSGVeneer *ss = nullptr;
-  if (ctx.symtab->cmseImportLib.count(sym->getName())) {
-    Defined *impSym = ctx.symtab->cmseImportLib[sym->getName()];
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
+  std::unique_ptr<CmseSGVeneer> ss;
+  auto it = ctx.symtab->cmseImportLib.find(sym->getName());
+  if (it != ctx.symtab->cmseImportLib.end()) {
+    Defined *impSym = it->second;
+    ss = std::make_unique<CmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
+    ss = std::make_unique<CmseSGVeneer>(sym, acleSeSym);
     ++newEntries;
   }
-  sgVeneers.emplace_back(ss);
+  sgVeneers.emplace_back(std::move(ss));
 }
 
 void ArmCmseSGSection::writeTo(uint8_t *buf) {
-  for (ArmCmseSGVeneer *s : sgVeneers) {
+  for (std::unique_ptr<CmseSGVeneer> &s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(ctx, p + 0, 0xe97f); // SG
     write16(ctx, p + 2, 0xe97f);
@@ -1427,8 +1523,8 @@ void ArmCmseSGSection::finalizeContents() {
 
   auto it =
       std::stable_partition(sgVeneers.begin(), sgVeneers.end(),
-                            [](auto *i) { return i->getAddr().has_value(); });
-  std::sort(sgVeneers.begin(), it, [](auto *a, auto *b) {
+                            [](auto &i) { return i->getAddr().has_value(); });
+  std::sort(sgVeneers.begin(), it, [](auto &a, auto &b) {
     return a->getAddr().value() < b->getAddr().value();
   });
   // This is the partition of the veneers with fixed addresses.
@@ -1438,13 +1534,12 @@ void ArmCmseSGSection::finalizeContents() {
   // Check if the start address of '.gnu.sgstubs' correspond to the
   // linker-synthesized veneer with the lowest address.
   if ((getVA() & ~1) != (addr & ~1)) {
-    ErrAlways(ctx)
+    Err(ctx)
         << "start address of '.gnu.sgstubs' is different from previous link";
     return;
   }
 
-  for (size_t i = 0; i < sgVeneers.size(); ++i) {
-    ArmCmseSGVeneer *s = sgVeneers[i];
+  for (auto [i, s] : enumerate(sgVeneers)) {
     s->offset = i * s->size;
     Defined(ctx, file, StringRef(), s->sym->binding, s->sym->stOther,
             s->sym->type, s->offset | 1, s->size, this)
@@ -1459,19 +1554,22 @@ void ArmCmseSGSection::finalizeContents() {
 // See Arm® v8-M Security Extensions: Requirements on Development Tools
 // https://developer.arm.com/documentation/ecm0359818/latest
 template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
-  StringTableSection *shstrtab =
-      make<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
-  StringTableSection *strtab =
-      make<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
-  SymbolTableBaseSection *impSymTab =
-      make<SymbolTableSection<ELFT>>(ctx, *strtab);
+  auto shstrtab =
+      std::make_unique<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
+  auto strtab =
+      std::make_unique<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
+  auto impSymTab = std::make_unique<SymbolTableSection<ELFT>>(ctx, *strtab);
 
-  SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
-  osIsPairs.emplace_back(make<OutputSection>(ctx, strtab->name, 0, 0), strtab);
-  osIsPairs.emplace_back(make<OutputSection>(ctx, impSymTab->name, 0, 0),
-                         impSymTab);
-  osIsPairs.emplace_back(make<OutputSection>(ctx, shstrtab->name, 0, 0),
-                         shstrtab);
+  SmallVector<std::pair<std::unique_ptr<OutputSection>, SyntheticSection *>, 0>
+      osIsPairs;
+  osIsPairs.emplace_back(
+      std::make_unique<OutputSection>(ctx, strtab->name, 0, 0), strtab.get());
+  osIsPairs.emplace_back(
+      std::make_unique<OutputSection>(ctx, impSymTab->name, 0, 0),
+      impSymTab.get());
+  osIsPairs.emplace_back(
+      std::make_unique<OutputSection>(ctx, shstrtab->name, 0, 0),
+      shstrtab.get());
 
   llvm::sort(ctx.symtab->cmseSymMap, [&](const auto &a, const auto &b) {
     return a.second.sym->getVA(ctx) < b.second.sym->getVA(ctx);
@@ -1502,13 +1600,13 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   const uint64_t fileSize =
       sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
   const unsigned flags =
-      ctx.arg.mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+      ctx.arg.mmapOutputFile ? (unsigned)FileOutputBuffer::F_mmap : 0;
   unlinkAsync(ctx.arg.cmseOutputLib);
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
-    ErrAlways(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
-                   << llvm::toString(bufferOrErr.takeError());
+    Err(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
+             << bufferOrErr.takeError();
     return;
   }
 
@@ -1549,8 +1647,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   }
 
   if (auto e = buffer->commit())
-    Fatal(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    Err(ctx) << "failed to write output '" << buffer->getPath()
+             << "': " << std::move(e);
 }
 
 void elf::setARMTargetInfo(Ctx &ctx) { ctx.target.reset(new ARM(ctx)); }

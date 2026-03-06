@@ -12,18 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonRegisterInfo.h"
-#include "Hexagon.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -31,12 +28,10 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #define GET_REGINFO_TARGET_DESC
@@ -57,6 +52,25 @@ HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
                              0/*PC*/, HwMode) {}
 
+bool HexagonRegisterInfo::isGlobalReg(MCPhysReg Reg) const {
+  switch (Reg) {
+  case Hexagon::R29:
+  case Hexagon::R30:
+  case Hexagon::R31:
+    return true;
+  }
+  return false;
+}
+
+bool HexagonRegisterInfo::isFakeReg(MCPhysReg Reg) const {
+  // VF0-VF31 are fake registers used as sub-registers in HVX vector pairs
+  if (Reg >= Hexagon::VF0 && Reg <= Hexagon::VF31)
+    return true;
+  // VFR0-VFR31 are fake registers used for reversed vector pairs
+  if (Reg >= Hexagon::VFR0 && Reg <= Hexagon::VFR31)
+    return true;
+  return false;
+}
 
 bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(Register R) const {
   return R == Hexagon::R0 || R == Hexagon::R1 || R == Hexagon::R2 ||
@@ -436,8 +450,9 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       return WSub[GenIdx];
   }
 
-  if (const TargetRegisterClass *SuperRC = *RC.getSuperClasses())
-    return getHexagonSubRegIndex(*SuperRC, GenIdx);
+  if (!RC.superclasses().empty())
+    return getHexagonSubRegIndex(*getRegClass(*RC.superclasses().begin()),
+                                 GenIdx);
 
   llvm_unreachable("Invalid register class");
 }
@@ -448,7 +463,6 @@ bool HexagonRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF)
 }
 
 const TargetRegisterClass *
-HexagonRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                        unsigned Kind) const {
+HexagonRegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &Hexagon::IntRegsRegClass;
 }

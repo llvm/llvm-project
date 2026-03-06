@@ -13,17 +13,20 @@
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
-#include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -32,6 +35,12 @@
 #include <vector>
 
 namespace llvm {
+
+static cl::opt<bool> ForceMinByValParamAlign(
+    "nvptx-force-min-byval-param-align", cl::Hidden,
+    cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
+             " params of device functions."),
+    cl::init(false));
 
 namespace {
 typedef std::map<std::string, std::vector<unsigned>> key_val_pair_t;
@@ -54,15 +63,6 @@ void clearAnnotationCache(const Module *Mod) {
   AC.Cache.erase(Mod);
 }
 
-static void readIntVecFromMDNode(const MDNode *MetadataNode,
-                                 std::vector<unsigned> &Vec) {
-  for (unsigned i = 0, e = MetadataNode->getNumOperands(); i != e; ++i) {
-    ConstantInt *Val =
-        mdconst::extract<ConstantInt>(MetadataNode->getOperand(i));
-    Vec.push_back(Val->getZExtValue());
-  }
-}
-
 static void cacheAnnotationFromMD(const MDNode *MetadataNode,
                                   key_val_pair_t &retval) {
   auto &AC = getAnnotationCache();
@@ -82,19 +82,8 @@ static void cacheAnnotationFromMD(const MDNode *MetadataNode,
     if (ConstantInt *Val = mdconst::dyn_extract<ConstantInt>(
             MetadataNode->getOperand(i + 1))) {
       retval[Key].push_back(Val->getZExtValue());
-    } else if (MDNode *VecMd =
-                   dyn_cast<MDNode>(MetadataNode->getOperand(i + 1))) {
-      // note: only "grid_constant" annotations support vector MDNodes.
-      // assert: there can only exist one unique key value pair of
-      // the form (string key, MDNode node). Operands of such a node
-      // shall always be unsigned ints.
-      auto [It, Inserted] = retval.try_emplace(Key);
-      if (Inserted) {
-        readIntVecFromMDNode(VecMd, It->second);
-        continue;
-      }
     } else {
-      llvm_unreachable("Value operand not a constant int or an mdnode");
+      llvm_unreachable("Value operand not a constant int");
     }
   }
 }
@@ -132,13 +121,18 @@ static std::optional<unsigned> findOneNVVMAnnotation(const GlobalValue *gv,
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if (AC.Cache.find(m) == AC.Cache.end())
+  auto ACIt = AC.Cache.find(m);
+  if (ACIt == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
+  else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
-  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
+  auto &KVP = AC.Cache[m][gv];
+  auto It = KVP.find(prop);
+  if (It == KVP.end())
     return std::nullopt;
-  return AC.Cache[m][gv][prop][0];
+  return It->second[0];
 }
 
 static bool findAllNVVMAnnotation(const GlobalValue *gv,
@@ -147,13 +141,18 @@ static bool findAllNVVMAnnotation(const GlobalValue *gv,
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if (AC.Cache.find(m) == AC.Cache.end())
+  auto ACIt = AC.Cache.find(m);
+  if (ACIt == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
+  else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
-  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
+  auto &KVP = AC.Cache[m][gv];
+  auto It = KVP.find(prop);
+  if (It == KVP.end())
     return false;
-  retval = AC.Cache[m][gv][prop];
+  retval = It->second;
   return true;
 }
 
@@ -168,32 +167,77 @@ static bool globalHasNVVMAnnotation(const Value &V, const std::string &Prop) {
 }
 
 static bool argHasNVVMAnnotation(const Value &Val,
-                                 const std::string &Annotation,
-                                 const bool StartArgIndexAtOne = false) {
+                                 const std::string &Annotation) {
   if (const Argument *Arg = dyn_cast<Argument>(&Val)) {
     const Function *Func = Arg->getParent();
     std::vector<unsigned> Annot;
     if (findAllNVVMAnnotation(Func, Annotation, Annot)) {
-      const unsigned BaseOffset = StartArgIndexAtOne ? 1 : 0;
-      if (is_contained(Annot, BaseOffset + Arg->getArgNo())) {
+      if (is_contained(Annot, Arg->getArgNo()))
         return true;
-      }
     }
   }
   return false;
 }
 
-bool isParamGridConstant(const Value &V) {
-  if (const Argument *Arg = dyn_cast<Argument>(&V)) {
-    // "grid_constant" counts argument indices starting from 1
-    if (Arg->hasByValAttr() &&
-        argHasNVVMAnnotation(*Arg, "grid_constant",
-                             /*StartArgIndexAtOne*/ true)) {
-      assert(isKernelFunction(*Arg->getParent()) &&
-             "only kernel arguments can be grid_constant");
-      return true;
+static std::optional<unsigned> getFnAttrParsedInt(const Function &F,
+                                                  StringRef Attr) {
+  return F.hasFnAttribute(Attr)
+             ? std::optional(F.getFnAttributeAsParsedInteger(Attr))
+             : std::nullopt;
+}
+
+static SmallVector<unsigned, 3> getFnAttrParsedVector(const Function &F,
+                                                      StringRef Attr) {
+  SmallVector<unsigned, 3> V;
+  auto &Ctx = F.getContext();
+
+  if (F.hasFnAttribute(Attr)) {
+    // We expect the attribute value to be of the form "x[,y[,z]]", where x, y,
+    // and z are unsigned values.
+    StringRef S = F.getFnAttribute(Attr).getValueAsString();
+    for (unsigned I = 0; I < 3 && !S.empty(); I++) {
+      auto [First, Rest] = S.split(",");
+      unsigned IntVal;
+      if (First.trim().getAsInteger(0, IntVal))
+        Ctx.emitError("can't parse integer attribute " + First + " in " + Attr);
+
+      V.push_back(IntVal);
+      S = Rest;
     }
   }
+  return V;
+}
+
+static std::optional<uint64_t> getVectorProduct(ArrayRef<unsigned> V) {
+  if (V.empty())
+    return std::nullopt;
+
+  return std::accumulate(V.begin(), V.end(), 1, std::multiplies<uint64_t>{});
+}
+
+bool isParamGridConstant(const Argument &Arg) {
+  assert(isKernelFunction(*Arg.getParent()) &&
+         "only kernel arguments can be grid_constant");
+
+  if (!Arg.hasByValAttr())
+    return false;
+
+  // Lowering an argument as a grid_constant violates the byval semantics (and
+  // the C++ API) by reusing the same memory location for the argument across
+  // multiple threads. If an argument doesn't read memory and its address is not
+  // captured (its address is not compared with any value), then the tweak of
+  // the C++ API and byval semantics is unobservable by the program and we can
+  // lower the arg as a grid_constant.
+  if (Arg.onlyReadsMemory()) {
+    const auto CI = Arg.getAttributes().getCaptureInfo();
+    if (!capturesAddress(CI) && !capturesFullProvenance(CI))
+      return true;
+  }
+
+  // "grid_constant" counts argument indices starting from 1
+  if (Arg.hasAttribute("nvvm.grid_constant"))
+    return true;
+
   return false;
 }
 
@@ -241,103 +285,59 @@ StringRef getSamplerName(const Value &V) {
   return V.getName();
 }
 
-std::optional<unsigned> getMaxNTIDx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidx");
+SmallVector<unsigned, 3> getMaxNTID(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.maxntid");
 }
 
-std::optional<unsigned> getMaxNTIDy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidy");
+SmallVector<unsigned, 3> getReqNTID(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.reqntid");
 }
 
-std::optional<unsigned> getMaxNTIDz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidz");
+SmallVector<unsigned, 3> getClusterDim(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.cluster_dim");
 }
 
-std::optional<unsigned> getMaxNTID(const Function &F) {
+std::optional<uint64_t> getOverallMaxNTID(const Function &F) {
   // Note: The semantics here are a bit strange. The PTX ISA states the
   // following (11.4.2. Performance-Tuning Directives: .maxntid):
   //
   //  Note that this directive guarantees that the total number of threads does
   //  not exceed the maximum, but does not guarantee that the limit in any
   //  particular dimension is not exceeded.
-  std::optional<unsigned> MaxNTIDx = getMaxNTIDx(F);
-  std::optional<unsigned> MaxNTIDy = getMaxNTIDy(F);
-  std::optional<unsigned> MaxNTIDz = getMaxNTIDz(F);
-  if (MaxNTIDx || MaxNTIDy || MaxNTIDz)
-    return MaxNTIDx.value_or(1) * MaxNTIDy.value_or(1) * MaxNTIDz.value_or(1);
-  return std::nullopt;
+  const auto MaxNTID = getMaxNTID(F);
+  return getVectorProduct(MaxNTID);
 }
 
-std::optional<unsigned> getClusterDimx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_x");
+std::optional<uint64_t> getOverallReqNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  const auto ReqNTID = getReqNTID(F);
+  return getVectorProduct(ReqNTID);
 }
 
-std::optional<unsigned> getClusterDimy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_y");
-}
+std::optional<uint64_t> getOverallClusterRank(const Function &F) {
+  // maxclusterrank and cluster_dim are mutually exclusive.
+  if (const auto ClusterRank = getMaxClusterRank(F))
+    return ClusterRank;
 
-std::optional<unsigned> getClusterDimz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_z");
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  const auto ClusterDim = getClusterDim(F);
+  return getVectorProduct(ClusterDim);
 }
 
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxclusterrank");
-}
-
-std::optional<unsigned> getReqNTIDx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidx");
-}
-
-std::optional<unsigned> getReqNTIDy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidy");
-}
-
-std::optional<unsigned> getReqNTIDz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidz");
-}
-
-std::optional<unsigned> getReqNTID(const Function &F) {
-  // Note: The semantics here are a bit strange. See getMaxNTID.
-  std::optional<unsigned> ReqNTIDx = getReqNTIDx(F);
-  std::optional<unsigned> ReqNTIDy = getReqNTIDy(F);
-  std::optional<unsigned> ReqNTIDz = getReqNTIDz(F);
-  if (ReqNTIDx || ReqNTIDy || ReqNTIDz)
-    return ReqNTIDx.value_or(1) * ReqNTIDy.value_or(1) * ReqNTIDz.value_or(1);
-  return std::nullopt;
+  return getFnAttrParsedInt(F, "nvvm.maxclusterrank");
 }
 
 std::optional<unsigned> getMinCTASm(const Function &F) {
-  return findOneNVVMAnnotation(&F, "minctasm");
+  return getFnAttrParsedInt(F, "nvvm.minctasm");
 }
 
 std::optional<unsigned> getMaxNReg(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxnreg");
+  return getFnAttrParsedInt(F, "nvvm.maxnreg");
 }
 
-bool isKernelFunction(const Function &F) {
-  if (const auto X = findOneNVVMAnnotation(&F, "kernel"))
-    return (*X == 1);
-
-  // There is no NVVM metadata, check the calling convention
-  return F.getCallingConv() == CallingConv::PTX_Kernel;
-}
-
-MaybeAlign getAlign(const Function &F, unsigned Index) {
-  // First check the alignstack metadata
-  if (MaybeAlign StackAlign =
-          F.getAttributes().getAttributes(Index).getStackAlignment())
-    return StackAlign;
-
-  // If that is missing, check the legacy nvvm metadata
-  std::vector<unsigned> Vs;
-  bool retval = findAllNVVMAnnotation(&F, "align", Vs);
-  if (!retval)
-    return std::nullopt;
-  for (unsigned V : Vs)
-    if ((V >> 16) == Index)
-      return Align(V & 0xFFFF);
-
-  return std::nullopt;
+bool hasBlocksAreClusters(const Function &F) {
+  return F.hasFnAttribute("nvvm.blocksareclusters");
 }
 
 MaybeAlign getAlign(const CallInst &I, unsigned Index) {
@@ -366,6 +366,52 @@ Function *getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 }
 
+Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
+                                     const DataLayout &DL) {
+  // Capping the alignment to 128 bytes as that is the maximum alignment
+  // supported by PTX.
+  const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
+
+  // If a function has linkage different from internal or private, we
+  // must use default ABI alignment as external users rely on it. Same
+  // for a function that may be called from a function pointer.
+  if (!F || !F->hasLocalLinkage() ||
+      F->hasAddressTaken(/*Users=*/nullptr,
+                         /*IgnoreCallbackUses=*/false,
+                         /*IgnoreAssumeLikeCalls=*/true,
+                         /*IgnoreLLVMUsed=*/true))
+    return ABITypeAlign;
+
+  assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
+  return std::max(Align(16), ABITypeAlign);
+}
+
+Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
+                                   const DataLayout &DL) {
+  return getAlign(*F, Idx).value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
+}
+
+Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
+                                 Align InitialAlign, const DataLayout &DL) {
+  Align ArgAlign = InitialAlign;
+  if (F)
+    ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
+
+  // Old ptx versions have a bug. When PTX code takes address of
+  // byval parameter with alignment < 4, ptxas generates code to
+  // spill argument into memory. Alas on sm_50+ ptxas generates
+  // SASS code that fails with misaligned access. To work around
+  // the problem, make sure that we align byval parameters by at
+  // least 4. This bug seems to be fixed at least starting from
+  // ptxas > 9.0.
+  // TODO: remove this after verifying the bug is not reproduced
+  // on non-deprecated ptxas versions.
+  if (ForceMinByValParamAlign)
+    ArgAlign = std::max(ArgAlign, Align(4));
+
+  return ArgAlign;
+}
+
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
   const auto &ST =
       *static_cast<const NVPTXTargetMachine &>(TM).getSubtargetImpl();
@@ -383,10 +429,6 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
   return F->doesNotReturn() &&
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
-}
-
-bool Isv2x16VT(EVT VT) {
-  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
 }
 
 } // namespace llvm

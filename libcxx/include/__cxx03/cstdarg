@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSTDARG
-#define _LIBCPP_CSTDARG
+#ifndef _LIBCPP___CXX03_CSTDARG
+#define _LIBCPP___CXX03_CSTDARG
 
 /*
     cstdarg synopsis
@@ -36,7 +36,7 @@ Types:
 // <stdarg.h> is not provided by libc++
 #if __has_include(<stdarg.h>)
 #  include <stdarg.h>
-#  ifdef _LIBCPP_STDARG_H
+#  ifdef _LIBCPP___CXX03_STDARG_H
 #    error "If libc++ starts defining <stdarg.h>, the __has_include check should move to libc++'s <stdarg.h>"
 #  endif
 #endif
@@ -51,4 +51,4 @@ using ::va_list _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CSTDARG
+#endif // _LIBCPP___CXX03_CSTDARG

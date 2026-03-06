@@ -1341,3 +1341,64 @@ entry:
   %avg = ashr <vscale x 2 x i64> %add, splat (i64 1)
   ret <vscale x 2 x i64> %avg
 }
+
+define void @zext_mload_avgflooru(ptr %p1, ptr %p2, <vscale x 8 x i1> %mask) {
+; SVE-LABEL: zext_mload_avgflooru:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; SVE-NEXT:    ld1b { z1.h }, p0/z, [x1]
+; SVE-NEXT:    add z0.h, z0.h, z1.h
+; SVE-NEXT:    lsr z0.h, z0.h, #1
+; SVE-NEXT:    st1h { z0.h }, p0, [x0]
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: zext_mload_avgflooru:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; SVE2-NEXT:    ld1b { z1.h }, p0/z, [x1]
+; SVE2-NEXT:    ptrue p1.h
+; SVE2-NEXT:    uhadd z0.h, p1/m, z0.h, z1.h
+; SVE2-NEXT:    st1h { z0.h }, p0, [x0]
+; SVE2-NEXT:    ret
+  %ld1 = call <vscale x 8 x i8> @llvm.masked.load(ptr %p1, i32 16, <vscale x 8 x i1> %mask, <vscale x 8 x i8> zeroinitializer)
+  %ld2 = call <vscale x 8 x i8> @llvm.masked.load(ptr %p2, i32 16, <vscale x 8 x i1> %mask, <vscale x 8 x i8> zeroinitializer)
+  %and = and <vscale x 8 x i8> %ld1, %ld2
+  %xor = xor <vscale x 8 x i8> %ld1, %ld2
+  %shift = lshr <vscale x 8 x i8> %xor, splat(i8 1)
+  %avg = add <vscale x 8 x i8> %and, %shift
+  %avgext = zext <vscale x 8 x i8> %avg to <vscale x 8 x i16>
+  call void @llvm.masked.store.nxv8i16(<vscale x 8 x i16> %avgext, ptr %p1, i32 16, <vscale x 8 x i1> %mask)
+  ret void
+}
+
+define void @zext_mload_avgceilu(ptr %p1, ptr %p2, <vscale x 8 x i1> %mask) {
+; SVE-LABEL: zext_mload_avgceilu:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; SVE-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    ld1b { z2.h }, p0/z, [x1]
+; SVE-NEXT:    eor z0.d, z0.d, z1.d
+; SVE-NEXT:    sub z0.h, z2.h, z0.h
+; SVE-NEXT:    lsr z0.h, z0.h, #1
+; SVE-NEXT:    st1b { z0.h }, p0, [x0]
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: zext_mload_avgceilu:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; SVE2-NEXT:    ld1b { z1.h }, p0/z, [x1]
+; SVE2-NEXT:    ptrue p1.h
+; SVE2-NEXT:    urhadd z0.h, p1/m, z0.h, z1.h
+; SVE2-NEXT:    st1b { z0.h }, p0, [x0]
+; SVE2-NEXT:    ret
+  %ld1 = call <vscale x 8 x i8> @llvm.masked.load(ptr %p1, i32 16, <vscale x 8 x i1> %mask, <vscale x 8 x i8> zeroinitializer)
+  %ld2 = call <vscale x 8 x i8> @llvm.masked.load(ptr %p2, i32 16, <vscale x 8 x i1> %mask, <vscale x 8 x i8> zeroinitializer)
+  %zext1 = zext <vscale x 8 x i8> %ld1 to <vscale x 8 x i16>
+  %zext2 = zext <vscale x 8 x i8> %ld2 to <vscale x 8 x i16>
+  %add1 = add nuw nsw <vscale x 8 x i16> %zext1, splat(i16 1)
+  %add2 = add nuw nsw <vscale x 8 x i16> %add1, %zext2
+  %shift = lshr <vscale x 8 x i16> %add2, splat(i16 1)
+  %trunc = trunc <vscale x 8 x i16> %shift to <vscale x 8 x i8>
+  call void @llvm.masked.store.nxv8i8(<vscale x 8 x i8> %trunc, ptr %p1, i32 16, <vscale x 8 x i1> %mask)
+  ret void
+}

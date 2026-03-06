@@ -28,27 +28,6 @@
 
 using namespace llvm;
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
-
-// Backup all of the existing settings that may be modified when
-// PreserveInputDbgFormat=true, so that when the test is finished we return them
-// (and the "preserve" setting) to their original values.
-static auto SaveDbgInfoFormat() {
-  return make_scope_exit(
-      [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
-       OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue(),
-       OldWriteNewDbgInfoFormatToBitcode = WriteNewDbgInfoFormatToBitcode,
-       OldWriteNewDbgInfoFormat = WriteNewDbgInfoFormat.getValue()] {
-        PreserveInputDbgFormat = OldPreserveInputDbgFormat;
-        UseNewDbgInfoFormat = OldUseNewDbgInfoFormat;
-        WriteNewDbgInfoFormatToBitcode = OldWriteNewDbgInfoFormatToBitcode;
-        WriteNewDbgInfoFormat = OldWriteNewDbgInfoFormat;
-      });
-}
-
 TEST(Local, RecursivelyDeleteDeadPHINodes) {
   LLVMContext C;
 
@@ -204,7 +183,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
   auto resetIR = [&]() {
     M = parseIR(C,
                 R"(
-      define i32 @f(i8* %str) {
+      define i32 @f(ptr %str) {
       entry:
         br label %bb2.i
       bb2.i:                                            ; preds = %bb4.i, %entry
@@ -432,7 +411,7 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
+        indirectbr ptr blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
       bb0:
         ret void
       bb1:
@@ -441,14 +420,14 @@ TEST(Local, ConstantFoldTerminator) {
 
       define void @indirectbr_repeated() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
+        indirectbr ptr blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
       bb0:
         ret void
       }
 
       define void @indirectbr_unreachable() {
       entry:
-        indirectbr i8* blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
+        indirectbr ptr blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
       bb0:
         ret void
       bb1:
@@ -606,53 +585,6 @@ TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
   verifyDebugValuesAreSalvaged();
 }
 
-TEST(Local, wouldInstructionBeTriviallyDead) {
-  LLVMContext Ctx;
-  // FIXME: PreserveInputDbgFormat is set to true because this test has
-  // been written to expect debug intrinsics rather than debug records.
-  // TODO: This test doesn't have a DbgRecord equivalent form so delete
-  // it when debug intrinsics are removed.
-  auto SettingGuard = SaveDbgInfoFormat();
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
-  std::unique_ptr<Module> M = parseIR(Ctx,
-                                      R"(
-    define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {
-    entry:
-      call void @llvm.dbg.declare(metadata !{}, metadata !13, metadata !DIExpression()), !dbg !16
-      ret void, !dbg !16
-    }
-
-    declare void @llvm.dbg.declare(metadata, metadata, metadata)
-
-    !llvm.dbg.cu = !{!0}
-    !llvm.module.flags = !{!2, !3}
-    !llvm.ident = !{!8}
-
-    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 16.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-    !1 = !DIFile(filename: "test.c", directory: "/")
-    !2 = !{i32 7, !"Dwarf Version", i32 5}
-    !3 = !{i32 2, !"Debug Info Version", i32 3}
-    !8 = !{!"clang version 16.0.0"}
-    !9 = distinct !DISubprogram(name: "fun", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
-    !10 = !DISubroutineType(types: !11)
-    !11 = !{null}
-    !12 = !{!13}
-    !13 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 1, type: !14)
-    !14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !16 = !DILocation(line: 1, column: 21, scope: !9)
-    )");
-  bool BrokenDebugInfo = true;
-  verifyModule(*M, &errs(), &BrokenDebugInfo);
-  ASSERT_FALSE(BrokenDebugInfo);
-
-  // Get the dbg.declare.
-  Function &F = *cast<Function>(M->getNamedValue("fun"));
-  Instruction *DbgDeclare = &F.front().front();
-  ASSERT_TRUE(isa<DbgDeclareInst>(DbgDeclare));
-  // Debug intrinsics with empty metadata arguments are not dead.
-  EXPECT_FALSE(wouldInstructionBeTriviallyDead(DbgDeclare));
-}
-
 TEST(Local, ChangeToUnreachable) {
   LLVMContext Ctx;
 
@@ -701,62 +633,6 @@ TEST(Local, ChangeToUnreachable) {
   EXPECT_EQ(DLA, DLB);
 }
 
-TEST(Local, FindDbgUsers) {
-  LLVMContext Ctx;
-  std::unique_ptr<Module> M = parseIR(Ctx,
-                                      R"(
-  define dso_local void @fun(ptr %a) #0 !dbg !11 {
-  entry:
-      #dbg_assign(ptr %a, !16, !DIExpression(), !15, ptr %a, !DIExpression(), !19)
-    ret void
-  }
-
-  !llvm.dbg.cu = !{!0}
-  !llvm.module.flags = !{!2, !3, !9}
-  !llvm.ident = !{!10}
-
-  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-  !1 = !DIFile(filename: "test.cpp", directory: "/")
-  !2 = !{i32 7, !"Dwarf Version", i32 5}
-  !3 = !{i32 2, !"Debug Info Version", i32 3}
-  !4 = !{i32 1, !"wchar_size", i32 4}
-  !9 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
-  !10 = !{!"clang version 17.0.0"}
-  !11 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
-  !12 = !DISubroutineType(types: !13)
-  !13 = !{null}
-  !14 = !{}
-  !15 = distinct !DIAssignID()
-  !16 = !DILocalVariable(name: "x", scope: !11, file: !1, line: 2, type: !17)
-  !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 64)
-  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-  !19 = !DILocation(line: 0, scope: !11)
-  )");
-
-  bool BrokenDebugInfo = true;
-  verifyModule(*M, &errs(), &BrokenDebugInfo);
-  ASSERT_FALSE(BrokenDebugInfo);
-
-  // Convert to debug intrinsics as we want to test findDbgUsers and
-  // findDbgValue's debug-intrinsic-finding code here.
-  // TODO: Remove this test when debug intrinsics are removed.
-  M->convertFromNewDbgValues();
-
-  Function &Fun = *cast<Function>(M->getNamedValue("fun"));
-  Value *Arg = Fun.getArg(0);
-  SmallVector<DbgVariableIntrinsic *> Users;
-  // Arg (%a) is used twice by a single dbg.assign. Check findDbgUsers returns
-  // only 1 pointer to it rather than 2.
-  findDbgUsers(Users, Arg);
-  EXPECT_EQ(Users.size(), 1u);
-
-  SmallVector<DbgValueInst *> Vals;
-  // Arg (%a) is used twice by a single dbg.assign. Check findDbgValues returns
-  // only 1 pointer to it rather than 2.
-  findDbgValues(Vals, Arg);
-  EXPECT_EQ(Vals.size(), 1u);
-}
-
 TEST(Local, FindDbgRecords) {
   // DbgRecord copy of the FindDbgUsers test above.
   LLVMContext Ctx;
@@ -797,20 +673,16 @@ TEST(Local, FindDbgRecords) {
   Function &Fun = *cast<Function>(M->getNamedValue("fun"));
   Value *Arg = Fun.getArg(0);
 
-  SmallVector<DbgVariableIntrinsic *> Users;
   SmallVector<DbgVariableRecord *> Records;
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgUsers returns
   // only 1 pointer to it rather than 2.
-  findDbgUsers(Users, Arg, &Records);
-  EXPECT_EQ(Users.size(), 0u);
+  findDbgUsers(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 
-  SmallVector<DbgValueInst *> Vals;
   Records.clear();
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
   // only 1 pointer to it rather than 2.
-  findDbgValues(Vals, Arg, &Records);
-  EXPECT_EQ(Vals.size(), 0u);
+  findDbgValues(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 }
 
@@ -891,13 +763,13 @@ TEST(Local, ReplaceAllDbgUsesWith) {
 
   BasicBlock &BB = F.front();
   Instruction &A = BB.front();
-  Instruction &B = *A.getNextNonDebugInstruction();
-  Instruction &C = *B.getNextNonDebugInstruction();
-  Instruction &D = *C.getNextNonDebugInstruction();
-  Instruction &E = *D.getNextNonDebugInstruction();
-  Instruction &F_ = *E.getNextNonDebugInstruction();
-  Instruction &Barrier = *F_.getNextNonDebugInstruction();
-  Instruction &G = *Barrier.getNextNonDebugInstruction();
+  Instruction &B = *A.getNextNode();
+  Instruction &C = *B.getNextNode();
+  Instruction &D = *C.getNextNode();
+  Instruction &E = *D.getNextNode();
+  Instruction &F_ = *E.getNextNode();
+  Instruction &Barrier = *F_.getNextNode();
+  Instruction &G = *Barrier.getNextNode();
 
   // Simulate i32 <-> i64* conversion. Expect no updates: the datalayout says
   // pointers are 64 bits, so the conversion would be lossy.
@@ -911,20 +783,16 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   // Simulate i32* <-> i64* conversion.
   EXPECT_TRUE(replaceAllDbgUsesWith(D, C, C, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> CDbgVals;
   SmallVector<DbgVariableRecord *, 2> CDbgRecords;
-  findDbgUsers(CDbgVals, &C, &CDbgRecords);
-  EXPECT_EQ(0U, CDbgVals.size());
+  findDbgUsers(&C, CDbgRecords);
   EXPECT_EQ(2U, CDbgRecords.size());
   EXPECT_TRUE(all_of(
       CDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
 
   EXPECT_TRUE(replaceAllDbgUsesWith(C, D, D, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> DDbgVals;
   SmallVector<DbgVariableRecord *, 2> DDbgRecords;
-  findDbgUsers(DDbgVals, &D, &DDbgRecords);
-  EXPECT_EQ(0U, DDbgVals.size());
+  findDbgUsers(&D, DDbgRecords);
   EXPECT_EQ(2U, DDbgRecords.size());
   EXPECT_TRUE(all_of(
       DDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
@@ -948,10 +816,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   EXPECT_EQ(BarrierDbgVal->getNumVariableLocationOps(), 1u);
   EXPECT_TRUE(BarrierDbgVal->isKillLocation());
 
-  SmallVector<DbgValueInst *, 1> BarrierDbgVals;
   SmallVector<DbgVariableRecord *, 8> BarrierDbgRecs;
-  findDbgValues(BarrierDbgVals, &F_, &BarrierDbgRecs);
-  EXPECT_EQ(0U, BarrierDbgVals.size());
+  findDbgValues(&F_, BarrierDbgRecs);
   EXPECT_EQ(0U, BarrierDbgRecs.size());
 
   // Simulate i32 -> i64 conversion to test sign-extension. Here are some
@@ -962,10 +828,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   //  4-6) like (1-3), but with a fragment
   EXPECT_TRUE(replaceAllDbgUsesWith(B, A, A, DT));
 
-  SmallVector<DbgValueInst *, 8> BDbgVals;
   SmallVector<DbgVariableRecord *, 8> BDbgRecs;
-  findDbgValues(BDbgVals, &A, &BDbgRecs);
-  EXPECT_EQ(0U, BDbgVals.size());
+  findDbgValues(&A, BDbgRecs);
   EXPECT_EQ(6U, BDbgRecs.size());
 
   // Check that %a has a dbg.value with a DIExpression matching \p Ops.
@@ -1060,7 +924,7 @@ TEST(Local, RemoveUnreachableBlocks) {
 
       declare i32 @__gxx_personality_v0(...)
 
-      define void @invoke_terminator() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+      define void @invoke_terminator() personality ptr @__gxx_personality_v0 {
       entry:
         br i1 undef, label %invoke.block, label %exit
 
@@ -1078,8 +942,8 @@ TEST(Local, RemoveUnreachableBlocks) {
         unreachable
 
       lpad.block:
-        %lp = landingpad { i8*, i32 }
-                catch i8* null
+        %lp = landingpad { ptr, i32 }
+                catch ptr null
         br label %exit
 
       exit:
@@ -1192,6 +1056,14 @@ TEST(Local, SimplifyCFGWithNullAC) {
                           RequireAndPreserveDomTree ? &DTU : nullptr, Options));
 }
 
+TEST(LocalTest, TargetTypeInfoHasNoReplacementProperty) {
+  LLVMContext Ctx;
+  SmallVector<unsigned, 3> Ints = {};
+  auto *TT = llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {}, Ints);
+
+  EXPECT_TRUE(TT->hasProperty(TargetExtType::Property::IsTokenLike));
+}
+
 TEST(Local, CanReplaceOperandWithVariable) {
   LLVMContext Ctx;
   Module M("test_module", Ctx);
@@ -1243,8 +1115,8 @@ TEST(Local, CanReplaceOperandWithVariable) {
   // immarg.
   Type *PtrPtr = B.getPtrTy(0);
   Value *Alloca = B.CreateAlloca(PtrPtr, (unsigned)0);
-  CallInst *GCRoot = B.CreateIntrinsic(Intrinsic::gcroot, {},
-    {Alloca, Constant::getNullValue(PtrPtr)});
+  CallInst *GCRoot = B.CreateIntrinsic(
+      Intrinsic::gcroot, {Alloca, Constant::getNullValue(PtrPtr)});
   EXPECT_TRUE(canReplaceOperandWithVariable(GCRoot, 0)); // Alloca
   EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 1));
   EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 2));
@@ -1280,7 +1152,7 @@ TEST(Local, ExpressionForConstant) {
   IntegerType *Int1Ty = Type::getInt1Ty(Context);
   Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
-  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
+  EXPECT_EQ(Expr->getElement(1), 1U);
 
   Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
   EXPECT_NE(Expr, nullptr);
@@ -1373,11 +1245,6 @@ TEST(Local, ExpressionForConstant) {
 
 TEST(Local, ReplaceDbgVariableRecord) {
   LLVMContext C;
-  // FIXME: PreserveInputDbgFormat is set to true because this test has
-  // been written to expect debug intrinsics rather than debug records; use the
-  // intrinsic format until we update the test checks.
-  auto SettingGuard = SaveDbgInfoFormat();
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   // Test that RAUW also replaces the operands of DbgVariableRecord objects,
   // i.e. non-instruction stored debugging information.
@@ -1388,7 +1255,7 @@ TEST(Local, ReplaceDbgVariableRecord) {
       entry:
         %foo = add i32 %a, 1, !dbg !13
         %bar = add i32 %foo, 0, !dbg !13
-        call void @llvm.dbg.value(metadata i32 %bar, metadata !11, metadata !DIExpression()), !dbg !13
+          #dbg_value(i32 %bar, !11, !DIExpression(), !13)
         ret void, !dbg !14
       }
       !llvm.dbg.cu = !{!0}
@@ -1415,18 +1282,13 @@ TEST(Local, ReplaceDbgVariableRecord) {
   It = std::next(It);
   Instruction *BarInst = &*It;
   It = std::next(It);
-  DbgValueInst *DVI = dyn_cast<DbgValueInst>(It);
-  ASSERT_TRUE(DVI);
-  It = std::next(It);
   Instruction *RetInst = &*It;
 
-  // Convert DVI into a DbgVariableRecord.
-  RetInst->DebugMarker = new DbgMarker();
-  RetInst->DebugMarker->MarkedInstr = RetInst;
-  DbgVariableRecord *DVR = new DbgVariableRecord(DVI);
-  RetInst->DebugMarker->insertDbgRecord(DVR, false);
-  // ... and erase the dbg.value.
-  DVI->eraseFromParent();
+  // There should be a DbgVariableRecord on the return.
+  auto Range = RetInst->getDbgRecordRange();
+  ASSERT_FALSE(Range.empty());
+  DbgVariableRecord *DVR = dyn_cast<DbgVariableRecord>(&*Range.begin());
+  ASSERT_NE(DVR, nullptr);
 
   // DVR should originally refer to %bar,
   EXPECT_EQ(DVR->getVariableLocationOp(0), BarInst);

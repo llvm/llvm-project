@@ -13,5 +13,17 @@ contains
 !ERROR: 'threadfence' is use-associated from module 'cudadevice' and cannot be re-declared
     integer :: threadfence
   end subroutine
+
+  attributes(host,device) subroutine sub3()
+    if (on_device()) then
+      print*, 'on device'
+    else
+      print*, 'on host'
+    end if
+  end subroutine
+
+  attributes(grid_global) subroutine sub4()
+    call threadfence()
+  end subroutine
 end module
 

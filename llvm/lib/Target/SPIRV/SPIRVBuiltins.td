@@ -42,6 +42,7 @@ def Variable : BuiltinGroup;
 def Atomic : BuiltinGroup;
 def Barrier : BuiltinGroup;
 def Dot : BuiltinGroup;
+def IntegerDot : BuiltinGroup;
 def Wave : BuiltinGroup;
 def GetQuery : BuiltinGroup;
 def ImageSizeQuery : BuiltinGroup;
@@ -63,6 +64,17 @@ def KernelClock : BuiltinGroup;
 def CastToPtr : BuiltinGroup;
 def Construct : BuiltinGroup;
 def CoopMatr : BuiltinGroup;
+def ICarryBorrow : BuiltinGroup;
+def ExtendedBitOps : BuiltinGroup;
+def BindlessINTEL : BuiltinGroup;
+def TernaryBitwiseINTEL : BuiltinGroup;
+def Block2DLoadStore : BuiltinGroup;
+def Pipe : BuiltinGroup;
+def PredicatedLoadStore : BuiltinGroup;
+def ArbitraryPrecisionFixedPoint : BuiltinGroup;
+def BlockingPipes : BuiltinGroup;
+def ImageChannelDataTypes : BuiltinGroup;
+def ArbitraryFloatingPoint: BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -100,16 +112,20 @@ def lookupBuiltin : SearchIndex {
 // Dot builtin record:
 def : DemangledBuiltin<"dot", OpenCL_std, Dot, 2, 2>;
 def : DemangledBuiltin<"__spirv_Dot", OpenCL_std, Dot, 2, 2>;
+def : DemangledBuiltin<"dot_acc_sat", OpenCL_std, IntegerDot, 3, 3>;
+def : DemangledBuiltin<"__spirv_DotAccSat", OpenCL_std, IntegerDot, 3, 3>;
 
 // Image builtin records:
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imageui", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imagef", OpenCL_std, ReadImage, 2, 4>;
+def : DemangledBuiltin<"__spirv_ImageRead", OpenCL_std, ReadImage, 2, 0>;
 
 def : DemangledBuiltin<"write_imagef", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imagei", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imageui", OpenCL_std, WriteImage, 3, 4>;
 def : DemangledBuiltin<"write_imageh", OpenCL_std, WriteImage, 3, 4>;
+def : DemangledBuiltin<"__spirv_ImageWrite", OpenCL_std, WriteImage, 3, 0>;
 
 def : DemangledBuiltin<"__translate_sampler_initializer", OpenCL_std, SampleImage, 1, 1>;
 def : DemangledBuiltin<"__spirv_SampledImage", OpenCL_std, SampleImage, 2, 2>;
@@ -191,8 +207,8 @@ class NonSemanticExtInst<string name, bits<32> value> {
 
 // Multiclass used to define at the same time both a demangled builtin record
 // and a corresponding extended builtin record.
-multiclass DemangledExtendedBuiltin<string name, InstructionSet set, int number> {
-  def : DemangledBuiltin<name, set, Extended, 1, 3>;
+multiclass DemangledExtendedBuiltin<string name, InstructionSet set, int number, bits<8> minNumArgs = 1, bits<8> maxNumArgs = 3> {
+  def : DemangledBuiltin<name, set, Extended, minNumArgs, maxNumArgs>;
   def : ExtendedBuiltin<name, set, number>;
 
   if !eq(set, OpenCL_std) then {
@@ -209,168 +225,173 @@ multiclass DemangledExtendedBuiltin<string name, InstructionSet set, int number>
 }
 
 // Extended builtin records:
-defm : DemangledExtendedBuiltin<"acos", OpenCL_std, 0>;
-defm : DemangledExtendedBuiltin<"acosh", OpenCL_std, 1>;
-defm : DemangledExtendedBuiltin<"acospi", OpenCL_std, 2>;
-defm : DemangledExtendedBuiltin<"asin", OpenCL_std, 3>;
-defm : DemangledExtendedBuiltin<"asinh", OpenCL_std, 4>;
-defm : DemangledExtendedBuiltin<"asinpi", OpenCL_std, 5>;
-defm : DemangledExtendedBuiltin<"atan", OpenCL_std, 6>;
-defm : DemangledExtendedBuiltin<"atan2", OpenCL_std, 7>;
-defm : DemangledExtendedBuiltin<"atanh", OpenCL_std, 8>;
-defm : DemangledExtendedBuiltin<"atanpi", OpenCL_std, 9>;
-defm : DemangledExtendedBuiltin<"atan2pi", OpenCL_std, 10>;
-defm : DemangledExtendedBuiltin<"cbrt", OpenCL_std, 11>;
-defm : DemangledExtendedBuiltin<"ceil", OpenCL_std, 12>;
-defm : DemangledExtendedBuiltin<"copysign", OpenCL_std, 13>;
-defm : DemangledExtendedBuiltin<"cos", OpenCL_std, 14>;
-defm : DemangledExtendedBuiltin<"cosh", OpenCL_std, 15>;
-defm : DemangledExtendedBuiltin<"cospi", OpenCL_std, 16>;
-defm : DemangledExtendedBuiltin<"erfc", OpenCL_std, 17>;
-defm : DemangledExtendedBuiltin<"erf", OpenCL_std, 18>;
-defm : DemangledExtendedBuiltin<"exp", OpenCL_std, 19>;
-defm : DemangledExtendedBuiltin<"exp2", OpenCL_std, 20>;
-defm : DemangledExtendedBuiltin<"exp10", OpenCL_std, 21>;
-defm : DemangledExtendedBuiltin<"expm1", OpenCL_std, 22>;
-defm : DemangledExtendedBuiltin<"fabs", OpenCL_std, 23>;
-defm : DemangledExtendedBuiltin<"fdim", OpenCL_std, 24>;
-defm : DemangledExtendedBuiltin<"floor", OpenCL_std, 25>;
-defm : DemangledExtendedBuiltin<"fma", OpenCL_std, 26>;
-defm : DemangledExtendedBuiltin<"fmax", OpenCL_std, 27>;
-defm : DemangledExtendedBuiltin<"fmin", OpenCL_std, 28>;
-defm : DemangledExtendedBuiltin<"fmod", OpenCL_std, 29>;
-defm : DemangledExtendedBuiltin<"fract", OpenCL_std, 30>;
-defm : DemangledExtendedBuiltin<"frexp", OpenCL_std, 31>;
-defm : DemangledExtendedBuiltin<"hypot", OpenCL_std, 32>;
-defm : DemangledExtendedBuiltin<"ilogb", OpenCL_std, 33>;
-defm : DemangledExtendedBuiltin<"ldexp", OpenCL_std, 34>;
-defm : DemangledExtendedBuiltin<"lgamma", OpenCL_std, 35>;
-defm : DemangledExtendedBuiltin<"lgamma_r", OpenCL_std, 36>;
-defm : DemangledExtendedBuiltin<"log", OpenCL_std, 37>;
-defm : DemangledExtendedBuiltin<"log2", OpenCL_std, 38>;
-defm : DemangledExtendedBuiltin<"log10", OpenCL_std, 39>;
-defm : DemangledExtendedBuiltin<"log1p", OpenCL_std, 40>;
-defm : DemangledExtendedBuiltin<"logb", OpenCL_std, 41>;
-defm : DemangledExtendedBuiltin<"mad", OpenCL_std, 42>;
-defm : DemangledExtendedBuiltin<"maxmag", OpenCL_std, 43>;
-defm : DemangledExtendedBuiltin<"minmag", OpenCL_std, 44>;
-defm : DemangledExtendedBuiltin<"modf", OpenCL_std, 45>;
-defm : DemangledExtendedBuiltin<"nan", OpenCL_std, 46>;
-defm : DemangledExtendedBuiltin<"nextafter", OpenCL_std, 47>;
-defm : DemangledExtendedBuiltin<"pow", OpenCL_std, 48>;
-defm : DemangledExtendedBuiltin<"pown", OpenCL_std, 49>;
-defm : DemangledExtendedBuiltin<"powr", OpenCL_std, 50>;
-defm : DemangledExtendedBuiltin<"remainder", OpenCL_std, 51>;
-defm : DemangledExtendedBuiltin<"remquo", OpenCL_std, 52>;
-defm : DemangledExtendedBuiltin<"rint", OpenCL_std, 53>;
-defm : DemangledExtendedBuiltin<"rootn", OpenCL_std, 54>;
-defm : DemangledExtendedBuiltin<"round", OpenCL_std, 55>;
-defm : DemangledExtendedBuiltin<"rsqrt", OpenCL_std, 56>;
-defm : DemangledExtendedBuiltin<"sin", OpenCL_std, 57>;
-defm : DemangledExtendedBuiltin<"sincos", OpenCL_std, 58>;
-defm : DemangledExtendedBuiltin<"sinh", OpenCL_std, 59>;
-defm : DemangledExtendedBuiltin<"sinpi", OpenCL_std, 60>;
-defm : DemangledExtendedBuiltin<"sqrt", OpenCL_std, 61>;
-defm : DemangledExtendedBuiltin<"tan", OpenCL_std, 62>;
-defm : DemangledExtendedBuiltin<"tanh", OpenCL_std, 63>;
-defm : DemangledExtendedBuiltin<"tanpi", OpenCL_std, 64>;
-defm : DemangledExtendedBuiltin<"tgamma", OpenCL_std, 65>;
-defm : DemangledExtendedBuiltin<"trunc", OpenCL_std, 66>;
-defm : DemangledExtendedBuiltin<"half_cos", OpenCL_std, 67>;
-defm : DemangledExtendedBuiltin<"half_divide", OpenCL_std, 68>;
-defm : DemangledExtendedBuiltin<"half_exp", OpenCL_std, 69>;
-defm : DemangledExtendedBuiltin<"half_exp2", OpenCL_std, 70>;
-defm : DemangledExtendedBuiltin<"half_exp10", OpenCL_std, 71>;
-defm : DemangledExtendedBuiltin<"half_log", OpenCL_std, 72>;
-defm : DemangledExtendedBuiltin<"half_log2", OpenCL_std, 73>;
-defm : DemangledExtendedBuiltin<"half_log10", OpenCL_std, 74>;
-defm : DemangledExtendedBuiltin<"half_powr", OpenCL_std, 75>;
-defm : DemangledExtendedBuiltin<"half_recip", OpenCL_std, 76>;
-defm : DemangledExtendedBuiltin<"half_rsqrt", OpenCL_std, 77>;
-defm : DemangledExtendedBuiltin<"half_sin", OpenCL_std, 78>;
-defm : DemangledExtendedBuiltin<"half_sqrt", OpenCL_std, 79>;
-defm : DemangledExtendedBuiltin<"half_tan", OpenCL_std, 80>;
-defm : DemangledExtendedBuiltin<"native_cos", OpenCL_std, 81>;
-defm : DemangledExtendedBuiltin<"native_divide", OpenCL_std, 82>;
-defm : DemangledExtendedBuiltin<"native_exp", OpenCL_std, 83>;
-defm : DemangledExtendedBuiltin<"native_exp2", OpenCL_std, 84>;
-defm : DemangledExtendedBuiltin<"native_exp10", OpenCL_std, 85>;
-defm : DemangledExtendedBuiltin<"native_log", OpenCL_std, 86>;
-defm : DemangledExtendedBuiltin<"native_log2", OpenCL_std, 87>;
-defm : DemangledExtendedBuiltin<"native_log10", OpenCL_std, 88>;
-defm : DemangledExtendedBuiltin<"native_powr", OpenCL_std, 89>;
-defm : DemangledExtendedBuiltin<"native_recip", OpenCL_std, 90>;
-defm : DemangledExtendedBuiltin<"native_rsqrt", OpenCL_std, 91>;
-defm : DemangledExtendedBuiltin<"native_sin", OpenCL_std, 92>;
-defm : DemangledExtendedBuiltin<"native_sqrt", OpenCL_std, 93>;
-defm : DemangledExtendedBuiltin<"native_tan", OpenCL_std, 94>;
-defm : DemangledExtendedBuiltin<"s_abs", OpenCL_std, 141>;
-defm : DemangledExtendedBuiltin<"s_abs_diff", OpenCL_std, 142>;
-defm : DemangledExtendedBuiltin<"s_add_sat", OpenCL_std, 143>;
-defm : DemangledExtendedBuiltin<"u_add_sat", OpenCL_std, 144>;
-defm : DemangledExtendedBuiltin<"s_hadd", OpenCL_std, 145>;
-defm : DemangledExtendedBuiltin<"u_hadd", OpenCL_std, 146>;
-defm : DemangledExtendedBuiltin<"s_rhadd", OpenCL_std, 147>;
-defm : DemangledExtendedBuiltin<"u_rhadd", OpenCL_std, 148>;
-defm : DemangledExtendedBuiltin<"s_clamp", OpenCL_std, 149>;
-defm : DemangledExtendedBuiltin<"u_clamp", OpenCL_std, 150>;
-defm : DemangledExtendedBuiltin<"clz", OpenCL_std, 151>;
-defm : DemangledExtendedBuiltin<"ctz", OpenCL_std, 152>;
-defm : DemangledExtendedBuiltin<"s_mad_hi", OpenCL_std, 153>;
-defm : DemangledExtendedBuiltin<"u_mad_sat", OpenCL_std, 154>;
-defm : DemangledExtendedBuiltin<"s_mad_sat", OpenCL_std, 155>;
-defm : DemangledExtendedBuiltin<"s_max", OpenCL_std, 156>;
-defm : DemangledExtendedBuiltin<"u_max", OpenCL_std, 157>;
-defm : DemangledExtendedBuiltin<"s_min", OpenCL_std, 158>;
-defm : DemangledExtendedBuiltin<"u_min", OpenCL_std, 159>;
-defm : DemangledExtendedBuiltin<"s_mul_hi", OpenCL_std, 160>;
-defm : DemangledExtendedBuiltin<"rotate", OpenCL_std, 161>;
-defm : DemangledExtendedBuiltin<"s_sub_sat", OpenCL_std, 162>;
-defm : DemangledExtendedBuiltin<"u_sub_sat", OpenCL_std, 163>;
-defm : DemangledExtendedBuiltin<"u_upsample", OpenCL_std, 164>;
-defm : DemangledExtendedBuiltin<"s_upsample", OpenCL_std, 165>;
-defm : DemangledExtendedBuiltin<"popcount", OpenCL_std, 166>;
-defm : DemangledExtendedBuiltin<"s_mad24", OpenCL_std, 167>;
-defm : DemangledExtendedBuiltin<"u_mad24", OpenCL_std, 168>;
-defm : DemangledExtendedBuiltin<"s_mul24", OpenCL_std, 169>;
-defm : DemangledExtendedBuiltin<"u_mul24", OpenCL_std, 170>;
-defm : DemangledExtendedBuiltin<"u_abs", OpenCL_std, 201>;
-defm : DemangledExtendedBuiltin<"u_abs_diff", OpenCL_std, 202>;
-defm : DemangledExtendedBuiltin<"u_mul_hi", OpenCL_std, 203>;
-defm : DemangledExtendedBuiltin<"u_mad_hi", OpenCL_std, 204>;
-defm : DemangledExtendedBuiltin<"fclamp", OpenCL_std, 95>;
-defm : DemangledExtendedBuiltin<"degrees", OpenCL_std, 96>;
-defm : DemangledExtendedBuiltin<"fmax_common", OpenCL_std, 97>;
-defm : DemangledExtendedBuiltin<"fmin_common", OpenCL_std, 98>;
-defm : DemangledExtendedBuiltin<"mix", OpenCL_std, 99>;
-defm : DemangledExtendedBuiltin<"radians", OpenCL_std, 100>;
-defm : DemangledExtendedBuiltin<"step", OpenCL_std, 101>;
-defm : DemangledExtendedBuiltin<"smoothstep", OpenCL_std, 102>;
-defm : DemangledExtendedBuiltin<"sign", OpenCL_std, 103>;
-defm : DemangledExtendedBuiltin<"cross", OpenCL_std, 104>;
-defm : DemangledExtendedBuiltin<"distance", OpenCL_std, 105>;
-defm : DemangledExtendedBuiltin<"length", OpenCL_std, 106>;
-defm : DemangledExtendedBuiltin<"normalize", OpenCL_std, 107>;
-defm : DemangledExtendedBuiltin<"fast_distance", OpenCL_std, 108>;
-defm : DemangledExtendedBuiltin<"fast_length", OpenCL_std, 109>;
-defm : DemangledExtendedBuiltin<"fast_normalize", OpenCL_std, 110>;
-defm : DemangledExtendedBuiltin<"bitselect", OpenCL_std, 186>;
-defm : DemangledExtendedBuiltin<"select", OpenCL_std, 187>;
-defm : DemangledExtendedBuiltin<"vloadn", OpenCL_std, 171>;
-defm : DemangledExtendedBuiltin<"vstoren", OpenCL_std, 172>;
-defm : DemangledExtendedBuiltin<"vload_half", OpenCL_std, 173>;
-defm : DemangledExtendedBuiltin<"vload_halfn", OpenCL_std, 174>;
-defm : DemangledExtendedBuiltin<"vstore_half", OpenCL_std, 175>;
-defm : DemangledExtendedBuiltin<"vstore_half_r", OpenCL_std, 176>;
-defm : DemangledExtendedBuiltin<"vstore_halfn", OpenCL_std, 177>;
-defm : DemangledExtendedBuiltin<"vstore_halfn_r", OpenCL_std, 178>;
-defm : DemangledExtendedBuiltin<"vloada_halfn", OpenCL_std, 179>;
-defm : DemangledExtendedBuiltin<"vstorea_halfn", OpenCL_std, 180>;
-defm : DemangledExtendedBuiltin<"vstorea_halfn_r", OpenCL_std, 181>;
-defm : DemangledExtendedBuiltin<"shuffle", OpenCL_std, 182>;
-defm : DemangledExtendedBuiltin<"shuffle2", OpenCL_std, 183>;
-defm : DemangledExtendedBuiltin<"printf", OpenCL_std, 184>;
-defm : DemangledExtendedBuiltin<"prefetch", OpenCL_std, 185>;
+//
+// OpenCL math builtins (1 arg).
+defm : DemangledExtendedBuiltin<"acos", OpenCL_std, 0, 1, 1>;
+defm : DemangledExtendedBuiltin<"acosh", OpenCL_std, 1, 1, 1>;
+defm : DemangledExtendedBuiltin<"acospi", OpenCL_std, 2, 1, 1>;
+defm : DemangledExtendedBuiltin<"asin", OpenCL_std, 3, 1, 1>;
+defm : DemangledExtendedBuiltin<"asinh", OpenCL_std, 4, 1, 1>;
+defm : DemangledExtendedBuiltin<"asinpi", OpenCL_std, 5, 1, 1>;
+defm : DemangledExtendedBuiltin<"atan", OpenCL_std, 6, 1, 1>;
+defm : DemangledExtendedBuiltin<"atanh", OpenCL_std, 8, 1, 1>;
+defm : DemangledExtendedBuiltin<"atanpi", OpenCL_std, 9, 1, 1>;
+defm : DemangledExtendedBuiltin<"cbrt", OpenCL_std, 11, 1, 1>;
+defm : DemangledExtendedBuiltin<"ceil", OpenCL_std, 12, 1, 1>;
+defm : DemangledExtendedBuiltin<"cos", OpenCL_std, 14, 1, 1>;
+defm : DemangledExtendedBuiltin<"cosh", OpenCL_std, 15, 1, 1>;
+defm : DemangledExtendedBuiltin<"cospi", OpenCL_std, 16, 1, 1>;
+defm : DemangledExtendedBuiltin<"erfc", OpenCL_std, 17, 1, 1>;
+defm : DemangledExtendedBuiltin<"erf", OpenCL_std, 18, 1, 1>;
+defm : DemangledExtendedBuiltin<"exp", OpenCL_std, 19, 1, 1>;
+defm : DemangledExtendedBuiltin<"exp2", OpenCL_std, 20, 1, 1>;
+defm : DemangledExtendedBuiltin<"exp10", OpenCL_std, 21, 1, 1>;
+defm : DemangledExtendedBuiltin<"expm1", OpenCL_std, 22, 1, 1>;
+defm : DemangledExtendedBuiltin<"fabs", OpenCL_std, 23, 1, 1>;
+defm : DemangledExtendedBuiltin<"floor", OpenCL_std, 25, 1, 1>;
+defm : DemangledExtendedBuiltin<"ilogb", OpenCL_std, 33, 1, 1>;
+defm : DemangledExtendedBuiltin<"lgamma", OpenCL_std, 35, 1, 1>;
+defm : DemangledExtendedBuiltin<"log", OpenCL_std, 37, 1, 1>;
+defm : DemangledExtendedBuiltin<"log2", OpenCL_std, 38, 1, 1>;
+defm : DemangledExtendedBuiltin<"log10", OpenCL_std, 39, 1, 1>;
+defm : DemangledExtendedBuiltin<"log1p", OpenCL_std, 40, 1, 1>;
+defm : DemangledExtendedBuiltin<"logb", OpenCL_std, 41, 1, 1>;
+defm : DemangledExtendedBuiltin<"nan", OpenCL_std, 46, 1, 1>;
+defm : DemangledExtendedBuiltin<"rint", OpenCL_std, 53, 1, 1>;
+defm : DemangledExtendedBuiltin<"round", OpenCL_std, 55, 1, 1>;
+defm : DemangledExtendedBuiltin<"rsqrt", OpenCL_std, 56, 1, 1>;
+defm : DemangledExtendedBuiltin<"sin", OpenCL_std, 57, 1, 1>;
+defm : DemangledExtendedBuiltin<"sinh", OpenCL_std, 59, 1, 1>;
+defm : DemangledExtendedBuiltin<"sinpi", OpenCL_std, 60, 1, 1>;
+defm : DemangledExtendedBuiltin<"sqrt", OpenCL_std, 61, 1, 1>;
+defm : DemangledExtendedBuiltin<"tan", OpenCL_std, 62, 1, 1>;
+defm : DemangledExtendedBuiltin<"tanh", OpenCL_std, 63, 1, 1>;
+defm : DemangledExtendedBuiltin<"tanpi", OpenCL_std, 64, 1, 1>;
+defm : DemangledExtendedBuiltin<"tgamma", OpenCL_std, 65, 1, 1>;
+defm : DemangledExtendedBuiltin<"trunc", OpenCL_std, 66, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_cos", OpenCL_std, 67, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_exp", OpenCL_std, 69, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_exp2", OpenCL_std, 70, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_exp10", OpenCL_std, 71, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_log", OpenCL_std, 72, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_log2", OpenCL_std, 73, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_log10", OpenCL_std, 74, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_recip", OpenCL_std, 76, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_rsqrt", OpenCL_std, 77, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_sin", OpenCL_std, 78, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_sqrt", OpenCL_std, 79, 1, 1>;
+defm : DemangledExtendedBuiltin<"half_tan", OpenCL_std, 80, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_cos", OpenCL_std, 81, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_exp", OpenCL_std, 83, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_exp2", OpenCL_std, 84, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_exp10", OpenCL_std, 85, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_log", OpenCL_std, 86, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_log2", OpenCL_std, 87, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_log10", OpenCL_std, 88, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_recip", OpenCL_std, 90, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_rsqrt", OpenCL_std, 91, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_sin", OpenCL_std, 92, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_sqrt", OpenCL_std, 93, 1, 1>;
+defm : DemangledExtendedBuiltin<"native_tan", OpenCL_std, 94, 1, 1>;
+defm : DemangledExtendedBuiltin<"s_abs", OpenCL_std, 141, 1, 1>;
+defm : DemangledExtendedBuiltin<"clz", OpenCL_std, 151, 1, 1>;
+defm : DemangledExtendedBuiltin<"ctz", OpenCL_std, 152, 1, 1>;
+defm : DemangledExtendedBuiltin<"popcount", OpenCL_std, 166, 1, 1>;
+defm : DemangledExtendedBuiltin<"u_abs", OpenCL_std, 201, 1, 1>;
+defm : DemangledExtendedBuiltin<"degrees", OpenCL_std, 96, 1, 1>;
+defm : DemangledExtendedBuiltin<"radians", OpenCL_std, 100, 1, 1>;
+defm : DemangledExtendedBuiltin<"sign", OpenCL_std, 103, 1, 1>;
+defm : DemangledExtendedBuiltin<"length", OpenCL_std, 106, 1, 1>;
+defm : DemangledExtendedBuiltin<"normalize", OpenCL_std, 107, 1, 1>;
+defm : DemangledExtendedBuiltin<"fast_length", OpenCL_std, 109, 1, 1>;
+defm : DemangledExtendedBuiltin<"fast_normalize", OpenCL_std, 110, 1, 1>;
+// OpenCL math builtins (2 args).
+defm : DemangledExtendedBuiltin<"atan2", OpenCL_std, 7, 2, 2>;
+defm : DemangledExtendedBuiltin<"atan2pi", OpenCL_std, 10, 2, 2>;
+defm : DemangledExtendedBuiltin<"copysign", OpenCL_std, 13, 2, 2>;
+defm : DemangledExtendedBuiltin<"fdim", OpenCL_std, 24, 2, 2>;
+defm : DemangledExtendedBuiltin<"fmax", OpenCL_std, 27, 2, 2>;
+defm : DemangledExtendedBuiltin<"fmin", OpenCL_std, 28, 2, 2>;
+defm : DemangledExtendedBuiltin<"fmod", OpenCL_std, 29, 2, 2>;
+defm : DemangledExtendedBuiltin<"fract", OpenCL_std, 30, 2, 2>;
+defm : DemangledExtendedBuiltin<"frexp", OpenCL_std, 31, 2, 2>;
+defm : DemangledExtendedBuiltin<"hypot", OpenCL_std, 32, 2, 2>;
+defm : DemangledExtendedBuiltin<"ldexp", OpenCL_std, 34, 2, 2>;
+defm : DemangledExtendedBuiltin<"lgamma_r", OpenCL_std, 36, 2, 2>;
+defm : DemangledExtendedBuiltin<"maxmag", OpenCL_std, 43, 2, 2>;
+defm : DemangledExtendedBuiltin<"minmag", OpenCL_std, 44, 2, 2>;
+defm : DemangledExtendedBuiltin<"modf", OpenCL_std, 45, 2, 2>;
+defm : DemangledExtendedBuiltin<"nextafter", OpenCL_std, 47, 2, 2>;
+defm : DemangledExtendedBuiltin<"pow", OpenCL_std, 48, 2, 2>;
+defm : DemangledExtendedBuiltin<"pown", OpenCL_std, 49, 2, 2>;
+defm : DemangledExtendedBuiltin<"powr", OpenCL_std, 50, 2, 2>;
+defm : DemangledExtendedBuiltin<"remainder", OpenCL_std, 51, 2, 2>;
+defm : DemangledExtendedBuiltin<"rootn", OpenCL_std, 54, 2, 2>;
+defm : DemangledExtendedBuiltin<"sincos", OpenCL_std, 58, 2, 2>;
+defm : DemangledExtendedBuiltin<"half_divide", OpenCL_std, 68, 2, 2>;
+defm : DemangledExtendedBuiltin<"half_powr", OpenCL_std, 75, 2, 2>;
+defm : DemangledExtendedBuiltin<"native_divide", OpenCL_std, 82, 2, 2>;
+defm : DemangledExtendedBuiltin<"native_powr", OpenCL_std, 89, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_abs_diff", OpenCL_std, 142, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_add_sat", OpenCL_std, 143, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_add_sat", OpenCL_std, 144, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_hadd", OpenCL_std, 145, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_hadd", OpenCL_std, 146, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_rhadd", OpenCL_std, 147, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_rhadd", OpenCL_std, 148, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_max", OpenCL_std, 156, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_max", OpenCL_std, 157, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_min", OpenCL_std, 158, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_min", OpenCL_std, 159, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_mul_hi", OpenCL_std, 160, 2, 2>;
+defm : DemangledExtendedBuiltin<"rotate", OpenCL_std, 161, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_sub_sat", OpenCL_std, 162, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_sub_sat", OpenCL_std, 163, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_upsample", OpenCL_std, 164, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_upsample", OpenCL_std, 165, 2, 2>;
+defm : DemangledExtendedBuiltin<"s_mul24", OpenCL_std, 169, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_mul24", OpenCL_std, 170, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_abs_diff", OpenCL_std, 202, 2, 2>;
+defm : DemangledExtendedBuiltin<"u_mul_hi", OpenCL_std, 203, 2, 2>;
+defm : DemangledExtendedBuiltin<"fmax_common", OpenCL_std, 97, 2, 2>;
+defm : DemangledExtendedBuiltin<"fmin_common", OpenCL_std, 98, 2, 2>;
+defm : DemangledExtendedBuiltin<"step", OpenCL_std, 101, 2, 2>;
+defm : DemangledExtendedBuiltin<"cross", OpenCL_std, 104, 2, 2>;
+defm : DemangledExtendedBuiltin<"distance", OpenCL_std, 105, 2, 2>;
+defm : DemangledExtendedBuiltin<"fast_distance", OpenCL_std, 108, 2, 2>;
+defm : DemangledExtendedBuiltin<"shuffle", OpenCL_std, 182, 2, 2>;
+defm : DemangledExtendedBuiltin<"prefetch", OpenCL_std, 185, 2, 2>;
+defm : DemangledExtendedBuiltin<"vloadn", OpenCL_std, 171, 2, 2>;
+defm : DemangledExtendedBuiltin<"vload_half", OpenCL_std, 173, 2, 2>;
+defm : DemangledExtendedBuiltin<"vload_halfn", OpenCL_std, 174, 2, 2>;
+defm : DemangledExtendedBuiltin<"vloada_halfn", OpenCL_std, 179, 2, 2>;
+// OpenCL math builtins (3 args).
+defm : DemangledExtendedBuiltin<"fma", OpenCL_std, 26, 3, 3>;
+defm : DemangledExtendedBuiltin<"mad", OpenCL_std, 42, 3, 3>;
+defm : DemangledExtendedBuiltin<"remquo", OpenCL_std, 52, 3, 3>;
+defm : DemangledExtendedBuiltin<"s_clamp", OpenCL_std, 149, 3, 3>;
+defm : DemangledExtendedBuiltin<"u_clamp", OpenCL_std, 150, 3, 3>;
+defm : DemangledExtendedBuiltin<"s_mad_hi", OpenCL_std, 153, 3, 3>;
+defm : DemangledExtendedBuiltin<"u_mad_sat", OpenCL_std, 154, 3, 3>;
+defm : DemangledExtendedBuiltin<"s_mad_sat", OpenCL_std, 155, 3, 3>;
+defm : DemangledExtendedBuiltin<"s_mad24", OpenCL_std, 167, 3, 3>;
+defm : DemangledExtendedBuiltin<"u_mad24", OpenCL_std, 168, 3, 3>;
+defm : DemangledExtendedBuiltin<"u_mad_hi", OpenCL_std, 204, 3, 3>;
+defm : DemangledExtendedBuiltin<"fclamp", OpenCL_std, 95, 3, 3>;
+defm : DemangledExtendedBuiltin<"mix", OpenCL_std, 99, 3, 3>;
+defm : DemangledExtendedBuiltin<"smoothstep", OpenCL_std, 102, 3, 3>;
+defm : DemangledExtendedBuiltin<"bitselect", OpenCL_std, 186, 3, 3>;
+defm : DemangledExtendedBuiltin<"select", OpenCL_std, 187, 3, 3>;
+defm : DemangledExtendedBuiltin<"shuffle2", OpenCL_std, 183, 3, 3>;
+defm : DemangledExtendedBuiltin<"vstoren", OpenCL_std, 172, 3, 3>;
+defm : DemangledExtendedBuiltin<"vstore_half", OpenCL_std, 175, 3, 3>;
+defm : DemangledExtendedBuiltin<"vstore_half_r", OpenCL_std, 176, 3, 3>;
+defm : DemangledExtendedBuiltin<"vstore_halfn", OpenCL_std, 177, 3, 3>;
+defm : DemangledExtendedBuiltin<"vstore_halfn_r", OpenCL_std, 178, 3, 3>;
+defm : DemangledExtendedBuiltin<"vstorea_halfn", OpenCL_std, 180, 3, 3>;
+defm : DemangledExtendedBuiltin<"vstorea_halfn_r", OpenCL_std, 181, 3, 3>;
+// OpenCL printf (variadic: 1+).
+defm : DemangledExtendedBuiltin<"printf", OpenCL_std, 184, 1, 0>;
 
 defm : DemangledExtendedBuiltin<"Round", GLSL_std_450, 1>;
 defm : DemangledExtendedBuiltin<"RoundEven", GLSL_std_450, 2>;
@@ -623,10 +644,37 @@ defm : DemangledNativeBuiltin<"__spirv_AtomicSMax", OpenCL_std, Atomic, 4, 4, Op
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMin", OpenCL_std, Atomic, 4, 4, OpAtomicUMin>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMax", OpenCL_std, Atomic, 4, 4, OpAtomicUMax>;
 
+// Pipe builtin records.
+defm : DemangledNativeBuiltin<"__read_pipe_2", OpenCL_std, Pipe, 4, 4, OpReadPipe>;
+defm : DemangledNativeBuiltin<"__write_pipe_2", OpenCL_std, Pipe, 4, 4, OpWritePipe>;
+defm : DemangledNativeBuiltin<"__read_pipe_4", OpenCL_std, Pipe, 6, 6, OpReservedReadPipe>;
+defm : DemangledNativeBuiltin<"__write_pipe_4", OpenCL_std, Pipe, 6, 6, OpReservedWritePipe>;
+defm : DemangledNativeBuiltin<"__reserve_read_pipe", OpenCL_std, Pipe, 4, 4, OpReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__reserve_write_pipe", OpenCL_std, Pipe, 4, 4, OpReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__commit_read_pipe", OpenCL_std, Pipe, 4, 4, OpCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__commit_write_pipe", OpenCL_std, Pipe, 4, 4, OpCommitWritePipe>;
+defm : DemangledNativeBuiltin<"is_valid_reserve_id", OpenCL_std, Pipe, 1, 1, OpIsValidReserveId>;
+defm : DemangledNativeBuiltin<"__get_pipe_num_packets_ro", OpenCL_std, Pipe, 3, 3, OpGetNumPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_max_packets_ro", OpenCL_std, Pipe, 3, 3, OpGetMaxPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_num_packets_wo", OpenCL_std, Pipe, 3, 3, OpGetNumPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_max_packets_wo", OpenCL_std, Pipe, 3, 3, OpGetMaxPipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_reserve_read_pipe", OpenCL_std, Pipe, 4, 4, OpGroupReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_reserve_write_pipe", OpenCL_std, Pipe, 4, 4, OpGroupReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_commit_read_pipe", OpenCL_std, Pipe, 4, 4, OpGroupCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__work_group_commit_write_pipe", OpenCL_std, Pipe, 4, 4, OpGroupCommitWritePipe>;
+defm : DemangledNativeBuiltin<"__sub_group_reserve_read_pipe", OpenCL_std, Pipe, 4, 4, OpGroupReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__sub_group_reserve_write_pipe", OpenCL_std, Pipe, 4, 4, OpGroupReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__sub_group_commit_read_pipe", OpenCL_std, Pipe, 4, 4, OpGroupCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__sub_group_commit_write_pipe", OpenCL_std, Pipe, 4, 4, OpGroupCommitWritePipe>;
+
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 3, OpControlBarrier>;
+
+// ICarryBorrow builtin record:
+defm : DemangledNativeBuiltin<"__spirv_IAddCarry", OpenCL_std, ICarryBorrow, 3, 3, OpIAddCarryS>;
+defm : DemangledNativeBuiltin<"__spirv_ISubBorrow", OpenCL_std, ICarryBorrow, 3, 3, OpISubBorrowS>;
 
 // cl_intel_split_work_group_barrier
 defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
@@ -660,6 +708,8 @@ defm : DemangledNativeBuiltin<"ndrange_3D", OpenCL_std, Enqueue, 1, 3, OpBuildND
 
 // Spec constant builtin records:
 defm : DemangledNativeBuiltin<"__spirv_SpecConstant", OpenCL_std, SpecConstant, 2, 2, OpSpecConstant>;
+defm : DemangledNativeBuiltin<"__spirv_SpecConstant", GLSL_std_450,
+                              SpecConstant, 2, 2, OpSpecConstant>;
 defm : DemangledNativeBuiltin<"__spirv_SpecConstantComposite", OpenCL_std, SpecConstant, 1, 0, OpSpecConstantComposite>;
 
 // Async Copy and Prefetch builtin records:
@@ -674,21 +724,90 @@ defm : DemangledNativeBuiltin<"__spirv_Load", OpenCL_std, LoadStore, 1, 3, OpLoa
 defm : DemangledNativeBuiltin<"__spirv_Store", OpenCL_std, LoadStore, 2, 4, OpStore>;
 
 // Address Space Qualifier Functions/Pointers Conversion Instructions:
-defm : DemangledNativeBuiltin<"to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtrExplicit>;
 
 // Cooperative Matrix builtin records:
-defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 0, OpCooperativeMatrixLoadKHR>;
-defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixStoreKHR>;
-defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixMulAddKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixMulAddKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 4, OpCooperativeMatrixLoadKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreKHR", OpenCL_std, CoopMatr, 3, 5, OpCooperativeMatrixStoreKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixMulAddKHR", OpenCL_std, CoopMatr, 3, 4, OpCooperativeMatrixMulAddKHR>;
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLengthKHR", OpenCL_std, CoopMatr, 1, 1, OpCooperativeMatrixLengthKHR>;
+
+// Cooperative Matrix Intel builtin records:
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixPrefetchINTEL", OpenCL_std, CoopMatr, 5, 7, OpCooperativeMatrixPrefetchINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadCheckedINTEL", OpenCL_std, CoopMatr, 6, 8, OpCooperativeMatrixLoadCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreCheckedINTEL", OpenCL_std, CoopMatr, 7, 9, OpCooperativeMatrixStoreCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixConstructCheckedINTEL", OpenCL_std, CoopMatr, 5, 5, OpCooperativeMatrixConstructCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixGetElementCoordINTEL", OpenCL_std, CoopMatr, 2, 2, OpCooperativeMatrixGetElementCoordINTEL>;
+
+// Arbitrary Precision Floating Point builtin records:
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatGTALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatGTALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatGEALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatGEALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLTALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatLTALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLEALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatLEALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatEQALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatEQALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatRecipALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatRecipALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCbrtALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCbrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatHypotALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatHypotALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSqrtALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLogALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLogALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLog2ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLog2ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLog10ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLog10ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLog1pALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLog1pALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExpALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExpALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExp2ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExp2ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExp10ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExp10ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExpm1ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExpm1ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCosALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinCosALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCosPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinCosPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatAddALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatAddALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSubALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatSubALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatMulALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatMulALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatDivALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatDivALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatRSqrtALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatRSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatASinALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatASinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatASinPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatASinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatACosALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatACosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatACosPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatACosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatATanALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatATanALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatATanPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatATanPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatATan2ALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatATan2ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatPowALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatPowALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatPowRALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatPowRALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatPowNALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatPowNALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCastALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCastALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCastFromIntALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCastFromIntALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCastToIntALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCastToIntALTERA>;
+
+// SPV_INTEL_bindless_images builtin records:
+defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToImageINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSamplerINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSamplerINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSampledImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSampledImageINTEL>;
+
+// SPV_INTEL_ternary_bitwise_function builtin records:
+defm : DemangledNativeBuiltin<"__spirv_BitwiseFunctionINTEL", OpenCL_std, TernaryBitwiseINTEL, 4, 4, OpBitwiseFunctionINTEL>;
+
+// SPV_INTEL_2d_block_io builtin records
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransposeINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadTransposeINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransformINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadTransformINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockPrefetchINTEL", OpenCL_std, Block2DLoadStore, 9, 9, OpSubgroup2DBlockPrefetchINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockStoreINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockStoreINTEL>;
+
+// SPV_INTEL_predicated_io builtin records
+defm : DemangledNativeBuiltin<"__spirv_PredicatedLoadINTEL", OpenCL_std, PredicatedLoadStore, 3, 4, OpPredicatedLoadINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_PredicatedStoreINTEL", OpenCL_std, PredicatedLoadStore, 3, 4, OpPredicatedStoreINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
@@ -735,6 +854,7 @@ class GroupBuiltin<string name, Op operation> {
   bit NoGroupOperation = !or(IsElect, IsAllOrAny, IsAllEqual,
                              IsBallot, IsInverseBallot,
                              IsBallotBitExtract, IsBallotFindBit,
+                             !eq(operation, OpSubgroupMatrixMultiplyAccumulateINTEL),
                              !eq(operation, OpGroupNonUniformShuffle),
                              !eq(operation, OpGroupNonUniformShuffleXor),
                              !eq(operation, OpGroupNonUniformShuffleUp),
@@ -789,7 +909,9 @@ defm : DemangledGroupBuiltinWrapper<"__spirv_GroupAny", 2, 2, OpGroupAny>;
 defm : DemangledGroupBuiltin<"group_broadcast", WorkOrSub, OpGroupBroadcast>;
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupBroadcast", 3, 3, OpGroupBroadcast>;
 defm : DemangledGroupBuiltin<"group_non_uniform_broadcast", OnlySub, OpGroupNonUniformBroadcast>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBroadcast", 3, 3, OpGroupNonUniformBroadcast>;
 defm : DemangledGroupBuiltin<"group_broadcast_first", OnlySub, OpGroupNonUniformBroadcastFirst>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBroadcastFirst", 2, 2, OpGroupNonUniformBroadcastFirst>;
 
 // cl_khr_subgroup_non_uniform_vote
 defm : DemangledGroupBuiltin<"group_elect", OnlySub, OpGroupNonUniformElect>;
@@ -816,6 +938,9 @@ defm : DemangledGroupBuiltin<"group_ballot_find_lsb", OnlySub, OpGroupNonUniform
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindLSB", 2, 2, OpGroupNonUniformBallotFindLSB>;
 defm : DemangledGroupBuiltin<"group_ballot_find_msb", OnlySub, OpGroupNonUniformBallotFindMSB>;
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindMSB", 2, 2, OpGroupNonUniformBallotFindMSB>;
+
+// SPV_INTEL_subgroup_matrix_multiply_accumulate
+defm : DemangledGroupBuiltinWrapper<"__spirv_SubgroupMatrixMultiplyAccumulateINTEL", 4, 5, OpSubgroupMatrixMultiplyAccumulateINTEL>;
 
 // cl_khr_subgroup_shuffle
 defm : DemangledGroupBuiltin<"group_shuffle", OnlySub, OpGroupNonUniformShuffle>;
@@ -1102,6 +1227,24 @@ defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock,
 defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 
+//SPV_ALTERA_blocking_pipes
+defm : DemangledNativeBuiltin<"__spirv_WritePipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpWritePipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadPipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadClockKHR", OpenCL_std, KernelClock, 1, 1, OpReadClockKHR>;
+
+//SPV_ALTERA_arbitrary_precision_fixed_point
+defm : DemangledNativeBuiltin<"__spirv_FixedSqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRecipINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRecipALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRsqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRsqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedLogINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedLogALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedExpINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedExpALTERA>;
+
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.
 //
@@ -1149,14 +1292,19 @@ class IntelSubgroupsBuiltin<string name, Op operation> {
   string Name = name;
   Op Opcode = operation;
   bit IsBlock = !or(!eq(operation, OpSubgroupBlockReadINTEL),
-                    !eq(operation, OpSubgroupBlockWriteINTEL));
-  bit IsWrite = !eq(operation, OpSubgroupBlockWriteINTEL);
+                    !eq(operation, OpSubgroupBlockWriteINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockReadINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
+  bit IsWrite = !or(!eq(operation, OpSubgroupBlockWriteINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
+  bit IsMedia = !or(!eq(operation, OpSubgroupImageMediaBlockReadINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
 }
 
 // Table gathering all the Intel sub group builtins.
 def IntelSubgroupsBuiltins : GenericTable {
   let FilterClass = "IntelSubgroupsBuiltin";
-  let Fields = ["Name", "Opcode", "IsBlock", "IsWrite"];
+  let Fields = ["Name", "Opcode", "IsBlock", "IsWrite", "IsMedia"];
 }
 
 // Function to lookup group builtins by their name and set.
@@ -1178,23 +1326,30 @@ defm : DemangledIntelSubgroupsBuiltin<"shuffle_down", 3, 3, OpSubgroupShuffleDow
 defm : DemangledIntelSubgroupsBuiltin<"shuffle_up", 3, 3, OpSubgroupShuffleUpINTEL>;
 defm : DemangledIntelSubgroupsBuiltin<"shuffle_xor", 2, 2, OpSubgroupShuffleXorINTEL>;
 foreach i = ["", "2", "4", "8"] in {
-  // cl_intel_subgroups
+  // cl_intel_subgroups, cl_intel_subgroup_local_block_io
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read",  i), 1, 2, OpSubgroupBlockReadINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write", i), 2, 3, OpSubgroupBlockWriteINTEL>;
-  // cl_intel_subgroups_short
+  // cl_intel_subgroups_short, cl_intel_subgroup_local_block_io
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_ui",  i), 1, 2, OpSubgroupBlockReadINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_ui", i), 2, 3, OpSubgroupBlockWriteINTEL>;
+  // cl_intel_media_block_io
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read",  i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read_ui",  i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write_ui", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
 }
-// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long
+// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long, cl_intel_media_block_io, cl_intel_subgroup_local_block_io
 foreach i = ["", "2", "4", "8", "16"] in {
   foreach j = ["c", "s", "l"] in {
     defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_u", j,  i), 1, 2, OpSubgroupBlockReadINTEL>;
     defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_u", j, i), 2, 3, OpSubgroupBlockWriteINTEL>;
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read_u", j, i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write_u", j, i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
   }
 }
 // OpSubgroupImageBlockReadINTEL and OpSubgroupImageBlockWriteINTEL are to be resolved later on (in code)
 
-// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups extension.
+// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups and the SPV_INTEL_media_block_io extensions.
 multiclass DemangledIntelSubgroupsBuiltinWrapper<string name, bits<8> numArgs, Op operation> {
   def : DemangledBuiltin<!strconcat("__spirv_", name), OpenCL_std, IntelSubgroups, numArgs, numArgs>;
   def : IntelSubgroupsBuiltin<!strconcat("__spirv_", name), operation>;
@@ -1208,6 +1363,8 @@ defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockReadINTEL", 1, OpSubg
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockWriteINTEL", 2, OpSubgroupBlockWriteINTEL>;
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockReadINTEL", 2, OpSubgroupImageBlockReadINTEL>;
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockWriteINTEL", 3, OpSubgroupImageBlockWriteINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageMediaBlockReadINTEL", 4, OpSubgroupImageMediaBlockReadINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageMediaBlockWriteINTEL", 5, OpSubgroupImageMediaBlockWriteINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a builtin for group operations within uniform control flow.
@@ -1291,13 +1448,39 @@ multiclass DemangledGetBuiltin<string name, InstructionSet set, BuiltinGroup gro
 }
 
 // Builtin variable records:
+defm : DemangledGetBuiltin<"get_global_linear_id", OpenCL_std, Variable, GlobalLinearId>;
+defm : DemangledGetBuiltin<"get_local_linear_id", OpenCL_std, Variable, LocalInvocationIndex>;
+defm : DemangledGetBuiltin<"get_work_dim", OpenCL_std, Variable, WorkDim>;
+defm : DemangledGetBuiltin<"get_sub_group_size", OpenCL_std, Variable, SubgroupSize>;
+defm : DemangledGetBuiltin<"get_max_sub_group_size", OpenCL_std, Variable, SubgroupMaxSize>;
+defm : DemangledGetBuiltin<"get_num_sub_groups", OpenCL_std, Variable, NumSubgroups>;
+defm : DemangledGetBuiltin<"get_enqueued_num_sub_groups", OpenCL_std, Variable, NumEnqueuedSubgroups>;
+defm : DemangledGetBuiltin<"get_sub_group_id", OpenCL_std, Variable, SubgroupId>;
+defm : DemangledGetBuiltin<"get_sub_group_local_id", OpenCL_std, Variable, SubgroupLocalInvocationId>;
 defm : DemangledGetBuiltin<"get_sub_group_eq_mask", OpenCL_std, Variable, SubgroupEqMask>;
 defm : DemangledGetBuiltin<"get_sub_group_ge_mask", OpenCL_std, Variable, SubgroupGeMask>;
 defm : DemangledGetBuiltin<"get_sub_group_gt_mask", OpenCL_std, Variable, SubgroupGtMask>;
 defm : DemangledGetBuiltin<"get_sub_group_le_mask", OpenCL_std, Variable, SubgroupLeMask>;
 defm : DemangledGetBuiltin<"get_sub_group_lt_mask", OpenCL_std, Variable, SubgroupLtMask>;
 defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalLinearId", OpenCL_std, Variable, GlobalLinearId>;
-defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalInvocationId", OpenCL_std, Variable, GlobalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInLocalInvocationIndex", OpenCL_std, Variable, LocalInvocationIndex>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInWorkDim", OpenCL_std, Variable, WorkDim>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupSize", OpenCL_std, Variable, SubgroupSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupMaxSize", OpenCL_std, Variable, SubgroupMaxSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInNumSubgroups", OpenCL_std, Variable, NumSubgroups>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInNumEnqueuedSubgroups", OpenCL_std, Variable, NumEnqueuedSubgroups>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupId", OpenCL_std, Variable, SubgroupId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLocalInvocationId", OpenCL_std, Variable, SubgroupLocalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupEqMask", OpenCL_std, Variable, SubgroupEqMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupEqMaskKHR", OpenCL_std, Variable, SubgroupEqMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGeMask", OpenCL_std, Variable, SubgroupGeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGeMaskKHR", OpenCL_std, Variable, SubgroupGeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGtMask", OpenCL_std, Variable, SubgroupGtMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupGtMaskKHR", OpenCL_std, Variable, SubgroupGtMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLeMask", OpenCL_std, Variable, SubgroupLeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLeMaskKHR", OpenCL_std, Variable, SubgroupLeMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLtMask", OpenCL_std, Variable, SubgroupLtMask>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInSubgroupLtMaskKHR", OpenCL_std, Variable, SubgroupLtMask>;
 
 // GetQuery builtin records:
 defm : DemangledGetBuiltin<"get_local_id", OpenCL_std, GetQuery, LocalInvocationId>;
@@ -1307,6 +1490,15 @@ defm : DemangledGetBuiltin<"get_global_size", OpenCL_std, GetQuery, GlobalSize>;
 defm : DemangledGetBuiltin<"get_group_id", OpenCL_std, GetQuery, WorkgroupId>;
 defm : DemangledGetBuiltin<"get_enqueued_local_size", OpenCL_std, GetQuery, EnqueuedWorkgroupSize>;
 defm : DemangledGetBuiltin<"get_num_groups", OpenCL_std, GetQuery, NumWorkgroups>;
+defm : DemangledGetBuiltin<"get_global_offset", OpenCL_std, GetQuery, GlobalOffset>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInLocalInvocationId", OpenCL_std, GetQuery, LocalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalInvocationId", OpenCL_std, GetQuery, GlobalInvocationId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInWorkgroupSize", OpenCL_std, GetQuery, WorkgroupSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalSize", OpenCL_std, GetQuery, GlobalSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInWorkgroupId", OpenCL_std, GetQuery, WorkgroupId>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInEnqueuedWorkgroupSize", OpenCL_std, GetQuery, EnqueuedWorkgroupSize>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInNumWorkgroups", OpenCL_std, GetQuery, NumWorkgroups>;
+defm : DemangledGetBuiltin<"__spirv_BuiltInGlobalOffset", OpenCL_std, GetQuery, GlobalOffset>;
 defm : DemangledGetBuiltin<"__hlsl_wave_get_lane_index", GLSL_std_450, Wave, SubgroupLocalInvocationId>;
 
 //===----------------------------------------------------------------------===//
@@ -1352,6 +1544,7 @@ defm : DemangledImageQueryBuiltin<"get_image_array_size", OpenCL_std, 3>;
 
 defm : DemangledNativeBuiltin<"get_image_num_samples", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQuerySamples>;
 defm : DemangledNativeBuiltin<"get_image_num_mip_levels", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQueryLevels>;
+defm : DemangledNativeBuiltin<"get_image_channel_data_type", OpenCL_std, ImageChannelDataTypes, 1, 1, OpImageQueryFormat>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a "convert_destType<_sat><_roundingMode>" call record for
@@ -1368,6 +1561,8 @@ class ConvertBuiltin<string name, InstructionSet set> {
   bit IsRounded = !not(!eq(!find(name, "_rt"), -1));
   bit IsBfloat16 = !or(!not(!eq(!find(name, "BF16"), -1)),
                        !not(!eq(!find(name, "bfloat16"), -1)));
+  bit IsTF32 = !or(!not(!eq(!find(name, "TF32"), -1)),
+                       !not(!eq(!find(name, "tensor_float32"), -1)));
   FPRoundingMode RoundingMode = !cond(!not(!eq(!find(name, "_rte"), -1)) : RTE,
                                   !not(!eq(!find(name, "_rtz"), -1)) : RTZ,
                                   !not(!eq(!find(name, "_rtp"), -1)) : RTP,
@@ -1379,7 +1574,7 @@ class ConvertBuiltin<string name, InstructionSet set> {
 def ConvertBuiltins : GenericTable {
   let FilterClass = "ConvertBuiltin";
   let Fields = ["Name", "Set", "IsDestinationSigned", "IsSaturated",
-                "IsRounded", "IsBfloat16", "RoundingMode"];
+                "IsRounded", "IsBfloat16", "IsTF32", "RoundingMode"];
   string TypeOf_Set = "InstructionSet";
   string TypeOf_RoundingMode = "FPRoundingMode";
 }
@@ -1434,6 +1629,16 @@ defm : DemangledNativeBuiltin<"__spirv_SatConvertSToU", OpenCL_std, Convert, 1, 
 defm : DemangledNativeBuiltin<"__spirv_SatConvertUToS", OpenCL_std, Convert, 1, 1, OpSatConvertUToS>;
 defm : DemangledNativeBuiltin<"__spirv_ConvertUToPtr", OpenCL_std, Convert, 1, 1, OpConvertUToPtr>;
 
+// cl_khr_extended_bit_ops / SPV_KHR_bit_instructions
+defm : DemangledNativeBuiltin<"bitfield_insert", OpenCL_std, ExtendedBitOps, 4, 4, OpBitFieldInsert>;
+defm : DemangledNativeBuiltin<"__spirv_BitFieldInsert", OpenCL_std, ExtendedBitOps, 4, 4, OpBitFieldInsert>;
+defm : DemangledNativeBuiltin<"bitfield_extract_signed", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldSExtract>;
+defm : DemangledNativeBuiltin<"__spirv_BitFieldSExtract", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldSExtract>;
+defm : DemangledNativeBuiltin<"bitfield_extract_unsigned", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldUExtract>;
+defm : DemangledNativeBuiltin<"__spirv_BitFieldUExtract", OpenCL_std, ExtendedBitOps, 3, 3, OpBitFieldUExtract>;
+defm : DemangledNativeBuiltin<"bit_reverse", OpenCL_std, ExtendedBitOps, 1, 1, OpBitReverse>;
+defm : DemangledNativeBuiltin<"__spirv_BitReverse", OpenCL_std, ExtendedBitOps, 1, 1, OpBitReverse>;
+
 // cl_intel_bfloat16_conversions / SPV_INTEL_bfloat16_conversion
 // Multiclass used to define at the same time both a demangled builtin records
 // and a corresponding convert builtin records.
@@ -1451,6 +1656,25 @@ defm : DemangledBF16ConvertBuiltin<"as_bfloat16", "_float">;
 foreach conv = ["FToBF16INTEL", "BF16ToFINTEL"] in {
   def : DemangledBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std, Convert, 1, 1>;
   def : ConvertBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std>;
+}
+
+// cl_intel_tensor_float32_conversions / SPV_INTEL_tensor_float32_conversion
+// Multiclass used to define at the same time both a demangled builtin record
+// and a corresponding convert builtin record.
+multiclass DemangledTF32RoundBuiltin<string name1, string name2> {
+  // Create records for scalar and vector conversions.
+  foreach i = ["", "2", "3", "4", "8", "16"] in {
+    def : DemangledBuiltin<!strconcat("intel_round_", name1, i, name2, i), OpenCL_std, Convert, 1, 1>;
+    def : ConvertBuiltin<!strconcat("intel_round_", name1, i, name2, i), OpenCL_std>;
+  }
+}
+
+defm : DemangledTF32RoundBuiltin<"tensor_float32", "_as_float">;
+defm : DemangledTF32RoundBuiltin<"as_tensor_float32", "_float">;
+
+foreach conv = ["FToTF32INTEL"] in {
+  def : DemangledBuiltin<!strconcat("__spirv_Round", conv), OpenCL_std, Convert, 1, 1>;
+  def : ConvertBuiltin<!strconcat("__spirv_Round", conv), OpenCL_std>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1556,6 +1780,7 @@ def : BuiltinType<"spirv.Event", OpTypeEvent>;
 def : BuiltinType<"spirv.Sampler", OpTypeSampler>;
 def : BuiltinType<"spirv.DeviceEvent", OpTypeDeviceEvent>;
 def : BuiltinType<"spirv.Image", OpTypeImage>;
+def : BuiltinType<"spirv.SignedImage", OpTypeImage>;
 def : BuiltinType<"spirv.SampledImage", OpTypeSampledImage>;
 def : BuiltinType<"spirv.Pipe", OpTypePipe>;
 def : BuiltinType<"spirv.CooperativeMatrixKHR", OpTypeCooperativeMatrixKHR>;
@@ -1687,3 +1912,47 @@ class CLMemoryFenceFlags<bits<32> value> {
 def CLK_LOCAL_MEM_FENCE : CLMemoryFenceFlags<0x1>;
 def CLK_GLOBAL_MEM_FENCE : CLMemoryFenceFlags<0x2>;
 def CLK_IMAGE_MEM_FENCE : CLMemoryFenceFlags<0x4>;
+
+//===----------------------------------------------------------------------===//
+// Class defining dot builtins that should be translated into a
+// SPIR-V instruction using SPIR-V 1.6 or SPV_KHR_integer_dot_product extension.
+//
+// name is the demangled name of the given builtin.
+// opcode specifies the SPIR-V operation code of the generated instruction.
+// isSwapRequired specifies if the operands need to be swapped (the SPIR-V extension
+// has only one instruction for arguments of different signedness).
+//===----------------------------------------------------------------------===//
+class IntegerDotProductBuiltin<string name, Op operation> {
+  string Name = name;
+  Op Opcode = operation;
+  bit IsSwapReq = !not(!eq(!find(name, "_us"), -1));
+}
+
+// Table gathering all the integer dot product builtins.
+def IntegerDotProductBuiltins : GenericTable {
+  let FilterClass = "IntegerDotProductBuiltin";
+  let Fields = ["Name", "Opcode", "IsSwapReq"];
+}
+
+// Function to lookup group builtins by their name and set.
+def lookupIntegerDotProductBuiltin : SearchIndex {
+  let Table = IntegerDotProductBuiltins;
+  let Key = ["Name"];
+}
+
+// Multiclass used to define incoming builtin records for the SPV_KHR_integer_dot_product extension.
+multiclass DemangledIntegerDotProductBuiltin<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("dot", name), OpenCL_std, IntegerDot, minNumArgs, maxNumArgs>;
+  def : IntegerDotProductBuiltin<!strconcat("dot", name), operation>;
+}
+
+// cl_khr_integer_dot_product
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_uu_uint", 2, 3, OpUDot>;
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_ss_int", 2, 3, OpSDot>;
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_us_int", 2, 3, OpSUDot>;
+defm : DemangledIntegerDotProductBuiltin<"_4x8packed_su_int", 2, 3, OpSUDot>;
+
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_uu_uint", 3, 4, OpUDotAccSat>;
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_ss_int", 3, 4, OpSDotAccSat>;
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_us_int", 3, 4, OpSUDotAccSat>;
+defm : DemangledIntegerDotProductBuiltin<"_acc_sat_4x8packed_su_int", 3, 4, OpSUDotAccSat>;

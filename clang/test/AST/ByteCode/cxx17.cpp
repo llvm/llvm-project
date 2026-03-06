@@ -1,5 +1,10 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++17 -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++17 -verify=ref,both      %s
+
+[[clang::require_constant_initialization]] int cc = cc; // both-error {{variable does not have a constant initializer}} \
+                                                        // both-note {{attribute here}} \
+                                                        // both-note {{ead of object outside its lifetime}}
+
 
 struct F { int a; int b;};
 constexpr F getF() {
@@ -105,3 +110,42 @@ constexpr S s = getS(); // both-error {{must be initialized by a constant expres
                         // both-note {{declared here}}
 static_assert(s.a == 12, ""); // both-error {{not an integral constant expression}} \
                               // both-note {{initializer of 's' is not a constant expression}}
+
+using size_t = decltype(sizeof(0));
+namespace std { template<typename T> struct tuple_size; }
+namespace std { template<size_t, typename> struct tuple_element; }
+
+namespace constant {
+  struct Q {};
+  template<int N> constexpr int get(Q &&) { return N * N; }
+}
+template<> struct std::tuple_size<constant::Q> { static const int value = 3; };
+template<int N> struct std::tuple_element<N, constant::Q> { typedef int type; };
+
+namespace constant {
+  Q q;
+  constexpr bool f() {
+    auto [a, b, c] = q;
+    return a == 0 && b == 1 && c == 4;
+  }
+  static_assert(f());
+}
+
+
+template <int a> struct i; // both-note {{template is declared here}}
+template <> struct i<0> {};
+
+template <int x> constexpr auto c() {
+  i<x> g; // both-error {{implicit instantiation of undefined template 'i<1>'}}
+  return 0;
+}
+
+auto y = c<1>(); // both-note {{in instantiation of function template specialization 'c<1>' requested here}}
+
+namespace NonConstexprStructuredBinding {
+  void f1() {
+    int arr[2] = {};
+    auto [a, b] = arr;
+    static_assert(&a != &b);
+  }
+}

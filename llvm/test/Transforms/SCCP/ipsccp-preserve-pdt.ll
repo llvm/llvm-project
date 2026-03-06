@@ -20,16 +20,17 @@
 ; CHECK-NEXT:    [2] %for.body {4294967295,4294967295} [1]
 ; CHECK-NEXT:    [2] %if.end4 {4294967295,4294967295} [1]
 ; CHECK-NEXT:      [3] %entry {4294967295,4294967295} [2]
-; CHECK-NEXT:    [2] %for.cond34 {4294967295,4294967295} [1]
-; CHECK-NEXT:      [3] %for.cond16 {4294967295,4294967295} [2]
-; CHECK-NEXT: Roots: %for.body %for.cond34
+; CHECK-NEXT:    [2] %for.body37 {4294967295,4294967295} [1]
+; CHECK-NEXT:      [3] %for.cond34 {4294967295,4294967295} [2]
+; CHECK-NEXT:        [4] %for.cond16 {4294967295,4294967295} [3]
+; CHECK-NEXT: Roots: %for.body %for.body37
 ; CHECK-NEXT: PostDominatorTree for function: bar
 ; CHECK-NOT: <badref>
 
 declare hidden i1 @compare(ptr) align 2
 declare hidden { i8, ptr } @getType(ptr) align 2
 
-define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset) {
+define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset, i1 %arg) {
 entry:
   %VT = alloca i64, align 8
   br i1 false, label %if.then, label %if.end4
@@ -51,7 +52,7 @@ for.cond16:                                       ; preds = %for.cond34, %if.end
   br label %for.cond34
 
 for.cond34:                                       ; preds = %for.body37, %for.cond16
-  br i1 undef, label %for.body37, label %for.cond16
+  br i1 %arg, label %for.body37, label %for.cond16
 
 for.body37:                                       ; preds = %for.cond34
   %tobool39 = icmp ne ptr %Offsets, null

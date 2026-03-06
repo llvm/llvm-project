@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_flags.h"
 #include "tsan_interface.h"
 #include "tsan_rtl.h"
@@ -520,8 +521,19 @@ static morder to_morder(int mo) {
   return res;
 }
 
+template <class... Types>
+ALWAYS_INLINE auto AtomicDelayImpl(morder mo, Types... args) {
+  AdaptiveDelay::AtomicOpFence(mo);
+}
+
+template <class AddrType, class... Types>
+ALWAYS_INLINE auto AtomicDelayImpl(morder mo, AddrType addr, Types... args) {
+  AdaptiveDelay::AtomicOpAddr((uptr)addr, (int)mo);
+}
+
 template <class Op, class... Types>
 ALWAYS_INLINE auto AtomicImpl(morder mo, Types... args) {
+  AtomicDelayImpl(mo, args...);
   ThreadState *const thr = cur_thread();
   ProcessPendingSignals(thr);
   if (UNLIKELY(thr->ignore_sync || thr->ignore_interceptors))
@@ -987,7 +999,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                          u8 *a) {
   a64 cmp = *(a64 *)(a + 8);
-  a32 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire, *(a64 **)a,
+  a64 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire, *(a64 **)a,
                                cmp, *(a64 *)(a + 16));
   *(bool *)(a + 24) = (cur == cmp);
 }

@@ -1,0 +1,26 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   prefetchrst2  268435456(%rbp,%r14,8)
+# INTEL: prefetchrst2 byte ptr [rbp + 8*r14 + 268435456]
+0x42,0x0f,0x18,0xa4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   prefetchrst2  291(%r8,%rax,4)
+# INTEL: prefetchrst2 byte ptr [r8 + 4*rax + 291]
+0x41,0x0f,0x18,0xa4,0x80,0x23,0x01,0x00,0x00
+
+# ATT:   prefetchrst2  (%rip)
+# INTEL: prefetchrst2 byte ptr [rip]
+0x0f,0x18,0x25,0x00,0x00,0x00,0x00
+
+# ATT:   prefetchrst2  -32(,%rbp,2)
+# INTEL: prefetchrst2 byte ptr [2*rbp - 32]
+0x0f,0x18,0x24,0x6d,0xe0,0xff,0xff,0xff
+
+# ATT:   prefetchrst2  127(%rcx)
+# INTEL: prefetchrst2 byte ptr [rcx + 127]
+0x0f,0x18,0x61,0x7f
+
+# ATT:   prefetchrst2  -128(%rdx)
+# INTEL: prefetchrst2 byte ptr [rdx - 128]
+0x0f,0x18,0x62,0x80

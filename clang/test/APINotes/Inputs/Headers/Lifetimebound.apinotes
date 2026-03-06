@@ -8,6 +8,14 @@ Functions:
 Tags:
 - Name: MyClass
   Methods:
+    - Name: annotateThis
+      Parameters:
+        - Position:      -1
+          Lifetimebound: true
+    - Name: annotateThis2
+      Parameters:
+        - Position:      -1
+          Lifetimebound: true
     - Name: methodToAnnotate
       Parameters:
         - Position:      0

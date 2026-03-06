@@ -159,8 +159,29 @@ Lamdas:
    clang-repl> welcome();
    Welcome to REPL
 
-Using Dynamic Library:
-======================
+Comments:
+=========
+
+.. code-block:: text
+
+   clang-repl> // Comments in Clang-Repl
+   clang-repl> /* Comments in Clang-Repl */
+
+Built in Commands:
+==================
+clang-repl has some special commands that are of the form ``%<something>``. To list all these commands, use the ``%help`` command:
+
+Help:
+-----
+The ``%help`` command lists all built in clang-repl commands.
+
+.. code-block:: text
+
+   clang-repl> %help
+
+Using Dynamic Libraries:
+------------------------
+The ``%lib`` command links a dynamic library.
 
 .. code-block:: text
 
@@ -189,21 +210,30 @@ Using Dynamic Library:
    clang++-17  -c -o print.o print.cpp
    clang-17 -shared print.o -o print.so
 
-Comments:
-=========
+Undo:
+-----
+The ``%undo`` command undoes the previous input.
 
 .. code-block:: text
 
-   clang-repl> // Comments in Clang-Repl
-   clang-repl> /* Comments in Clang-Repl */
+   clang-repl> int a = 1; a
+   (int) 1
+   clang-repl> %undo
+   clang-repl> a
+   In file included from <<< inputs >>>:1:
+   input_line_2:1:1: error: use of undeclared identifier 'a'
+   1 | a
+   * | ^
+   error: Parsing failed.
 
-
-Closure or Termination:
-=======================
+Quit:
+-----
+The ``%quit`` command terminates clang-repl.
 
 .. code-block:: text
 
-   clang-repl>%quit
+   clang-repl> %quit
+
 
 
 Just like Clang, Clang-Repl can be integrated in existing applications as a library

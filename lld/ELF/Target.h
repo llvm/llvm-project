@@ -20,23 +20,26 @@
 #include <array>
 
 namespace lld {
-std::string toString(elf::RelType type);
-
 namespace elf {
 class Defined;
 class InputFile;
 class Symbol;
+template <class RelTy> struct Relocs;
+
+std::string toStr(Ctx &, RelType type);
 
 class TargetInfo {
 public:
   TargetInfo(Ctx &ctx) : ctx(ctx) {}
   virtual uint32_t calcEFlags() const { return 0; }
+  // Create target-specific synthetic sections, defined in Arch/ files.
+  virtual void initTargetSpecificSections() {}
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
   virtual RelType getDynRel(RelType type) const { return 0; }
   virtual void writeGotPltHeader(uint8_t *buf) const {}
   virtual void writeGotHeader(uint8_t *buf) const {}
-  virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {};
+  virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
   virtual int getTlsGdRelaxSkip(RelType type) const { return 1; }
@@ -87,20 +90,34 @@ public:
   virtual bool inBranchRange(RelType type, uint64_t src,
                              uint64_t dst) const;
 
+  // Function for scanning relocation. Typically overridden by targets that
+  // require special type or addend adjustment.
+  virtual void scanSection(InputSectionBase &);
+  // Called by scanSection as a default implementation for specific ELF
+  // relocation types.
+  template <class ELFT> void scanSection1(InputSectionBase &);
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+
   virtual void relocate(uint8_t *loc, const Relocation &rel,
                         uint64_t val) const = 0;
   void relocateNoSym(uint8_t *loc, RelType type, uint64_t val) const {
     relocate(loc, Relocation{R_NONE, type, 0, 0, nullptr}, val);
   }
-  virtual void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const;
+  virtual void relocateAlloc(InputSection &sec, uint8_t *buf) const;
+  void relocateEh(EhInputSection &sec, uint8_t *buf) const;
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  virtual bool synthesizeAlign(uint64_t &dot, InputSection *sec) {
+    return false;
+  }
   // Do finalize relaxation after collecting relaxation infos.
   virtual void finalizeRelax(int passes) const {}
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
+  virtual void applyBranchToBranchOpt() const {}
 
   virtual ~TargetInfo();
 
@@ -109,7 +126,7 @@ public:
   // jump consecutively, it tries to flip the conditional jump to convert the
   // direct jump into a fall thru and delete it.  Returns true if a jump
   // instruction can be deleted.
-  virtual bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+  virtual bool deleteFallThruJmpInsn(InputSection &is,
                                      InputSection *nextIS) const {
     return false;
   }
@@ -130,6 +147,7 @@ public:
   RelType relativeRel = 0;
   RelType iRelativeRel = 0;
   RelType symbolicRel = 0;
+  RelType iRelSymbolicRel = 0;
   RelType tlsDescRel = 0;
   RelType tlsGotRel = 0;
   RelType tlsModuleIndexRel = 0;
@@ -211,8 +229,9 @@ static inline std::string getErrorLoc(Ctx &ctx, const uint8_t *loc) {
 void processArmCmseSymbols(Ctx &);
 
 template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
+uint8_t getMipsFpAbiFlag(Ctx &, InputFile *file, uint8_t oldFlag,
+                         uint8_t newFlag);
+uint64_t getMipsPageAddr(uint64_t addr);
 bool isMipsN32Abi(Ctx &, const InputFile &f);
 bool isMicroMips(Ctx &);
 bool isMipsR6(Ctx &);
@@ -229,7 +248,7 @@ unsigned getPPCDSFormOp(unsigned secondaryOp);
 // offset between GEP and LEP is encoded in a function's st_other flags.
 // This function will return the offset (in bytes) from the global entry-point
 // to the local entry-point.
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
+unsigned getPPC64GlobalEntryToLocalEntryOffset(Ctx &, uint8_t stOther);
 
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in
@@ -244,16 +263,19 @@ template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
+void mergeHexagonAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
-void sortArmMappingSymbols();
-void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
+void sortArmMappingSymbols(Ctx &);
+void convertArmInstructionstoBE8(Ctx &, InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(Ctx &);
 void initSymbolAnchors(Ctx &);
 
 void setTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
+
+const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 
 void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
                       const Twine &v, int64_t min, uint64_t max);
@@ -288,9 +310,9 @@ inline void checkIntUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
 inline void checkAlignment(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                            const Relocation &rel) {
   if ((v & (n - 1)) != 0)
-    error(getErrorLoc(ctx, loc) + "improper alignment for relocation " +
-          lld::toString(rel.type) + ": 0x" + llvm::utohexstr(v) +
-          " is not aligned to " + Twine(n) + " bytes");
+    Err(ctx) << getErrorLoc(ctx, loc) << "improper alignment for relocation "
+             << rel.type << ": 0x" << llvm::utohexstr(v)
+             << " is not aligned to " << n << " bytes";
 }
 
 // Endianness-aware read/write.
@@ -318,17 +340,6 @@ inline void write64(Ctx &ctx, void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 
-// Overwrite a ULEB128 value and keep the original length.
-inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
-  while (*bufLoc & 0x80) {
-    *bufLoc++ = 0x80 | (val & 0x7f);
-    val >>= 7;
-  }
-  *bufLoc = val;
-  return val;
-}
-
-const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 } // namespace elf
 } // namespace lld
 
@@ -336,21 +347,23 @@ const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 #define invokeELFT(f, ...)                                                     \
-  switch (ctx.arg.ekind) {                                                     \
-  case lld::elf::ELF32LEKind:                                                  \
-    f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF32BEKind:                                                  \
-    f<llvm::object::ELF32BE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF64LEKind:                                                  \
-    f<llvm::object::ELF64LE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  case lld::elf::ELF64BEKind:                                                  \
-    f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
-    break;                                                                     \
-  default:                                                                     \
-    llvm_unreachable("unknown ctx.arg.ekind");                                 \
-  }
+  do {                                                                         \
+    switch (ctx.arg.ekind) {                                                   \
+    case lld::elf::ELF32LEKind:                                                \
+      f<llvm::object::ELF32LE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF32BEKind:                                                \
+      f<llvm::object::ELF32BE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF64LEKind:                                                \
+      f<llvm::object::ELF64LE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    case lld::elf::ELF64BEKind:                                                \
+      f<llvm::object::ELF64BE>(__VA_ARGS__);                                   \
+      break;                                                                   \
+    default:                                                                   \
+      llvm_unreachable("unknown ctx.arg.ekind");                               \
+    }                                                                          \
+  } while (0)
 
 #endif

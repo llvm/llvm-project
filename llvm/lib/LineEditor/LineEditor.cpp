@@ -17,10 +17,10 @@
 #include <cstdio>
 #ifdef HAVE_LIBEDIT
 #include <histedit.h>
+constexpr int DefaultHistorySize = 800;
 #endif
 
 using namespace llvm;
-constexpr int DefaultHistorySize = 800;
 
 std::string LineEditor::getDefaultHistoryPath(StringRef ProgName) {
   SmallString<32> Path;

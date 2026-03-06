@@ -7,7 +7,7 @@
 
 target datalayout = "e-p:64:64:64"
 
-define i32 @pmat(i32 %m, i32 %n, ptr %y) nounwind {
+define i32 @pmat(i32 %m, i32 %n, ptr %y, i1 %arg) nounwind {
 ; CHECK-LABEL: @pmat(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[M:%.*]], 0
@@ -45,7 +45,7 @@ w.c2.p:
   br i1 false, label %bb.n, label %w.e
 
 w.c2:
-  br i1 undef, label %w.b6, label %w.c2.w.ec
+  br i1 %arg, label %w.b6, label %w.c2.w.ec
 
 w.c2.w.ec:
   br label %w.e

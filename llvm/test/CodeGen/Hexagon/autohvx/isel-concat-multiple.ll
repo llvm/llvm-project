@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This code generates a concat_vectors with more than 2 inputs. Make sure
 ; that this compiles successfully.
@@ -26,7 +26,7 @@ b0:
   %v15 = lshr <8 x i32> %v14, <i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18>
   %v16 = and <8 x i32> %v15, %v14
   %v17 = extractelement <8 x i32> %v16, i32 5
-  %v18 = getelementptr inbounds i8, ptr null, i32 %v17
+  %v18 = getelementptr inbounds i8, ptr %a0, i32 %v17
   %v19 = load i8, ptr %v18, align 1
   store i8 %v19, ptr %a2, align 1
   ret void

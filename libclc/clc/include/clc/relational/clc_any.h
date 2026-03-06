@@ -1,14 +1,18 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __CLC_RELATIONAL_CLC_ANY_H__
 #define __CLC_RELATIONAL_CLC_ANY_H__
 
-#if defined(CLC_CLSPV) || defined(CLC_SPIRV)
-// clspv and spir-v targets provide their own OpenCL-compatible any
-#define __clc_any any
-#else
-
 #include <clc/clcfunc.h>
 
-#define _CLC_ANY_DECL(TYPE) _CLC_OVERLOAD _CLC_DECL int __clc_any(TYPE v);
+#define _CLC_ANY_DECL(TYPE)                                                    \
+  _CLC_OVERLOAD _CLC_CONST _CLC_DECL int __clc_any(TYPE v);
 
 #define _CLC_VECTOR_ANY_DECL(TYPE)                                             \
   _CLC_ANY_DECL(TYPE)                                                          \
@@ -25,7 +29,5 @@ _CLC_VECTOR_ANY_DECL(long)
 
 #undef _CLC_ANY_DECL
 #undef _CLC_VECTOR_ANY_DECL
-
-#endif
 
 #endif // __CLC_RELATIONAL_CLC_ANY_H__

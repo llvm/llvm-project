@@ -9,8 +9,10 @@
 #ifndef LLVM_IR_MODULESUMMARYINDEXYAML_H
 #define LLVM_IR_MODULESUMMARYINDEXYAML_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 
 namespace llvm {
 namespace yaml {
@@ -77,7 +79,7 @@ struct CustomMappingTraits<
       }
       Args.push_back(Arg);
     }
-    io.mapRequired(Key.str().c_str(), V[Args]);
+    io.mapRequired(Key, V[Args]);
   }
   static void output(
       IO &io,
@@ -89,7 +91,7 @@ struct CustomMappingTraits<
           Key += ',';
         Key += llvm::utostr(Arg);
       }
-      io.mapRequired(Key.c_str(), P.second);
+      io.mapRequired(Key, P.second);
     }
   }
 };
@@ -120,11 +122,11 @@ struct CustomMappingTraits<std::map<uint64_t, WholeProgramDevirtResolution>> {
       io.setError("key not an integer");
       return;
     }
-    io.mapRequired(Key.str().c_str(), V[KeyInt]);
+    io.mapRequired(Key, V[KeyInt]);
   }
   static void output(IO &io, std::map<uint64_t, WholeProgramDevirtResolution> &V) {
     for (auto &P : V)
-      io.mapRequired(llvm::utostr(P.first).c_str(), P.second);
+      io.mapRequired(llvm::utostr(P.first), P.second);
   }
 };
 
@@ -140,6 +142,7 @@ struct GlobalValueSummaryYaml {
   unsigned Linkage, Visibility;
   bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
   unsigned ImportType;
+  bool NoRenameOnPromotion;
   // Fields for AliasSummary
   std::optional<uint64_t> Aliasee;
   // Fields for FunctionSummary
@@ -189,6 +192,7 @@ template <> struct MappingTraits<GlobalValueSummaryYaml> {
     io.mapOptional("Local", summary.IsLocal);
     io.mapOptional("CanAutoHide", summary.CanAutoHide);
     io.mapOptional("ImportType", summary.ImportType);
+    io.mapOptional("NoRenameOnPromotion", summary.NoRenameOnPromotion);
     io.mapOptional("Aliasee", summary.Aliasee);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
@@ -213,7 +217,7 @@ namespace yaml {
 template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
   static void inputOne(IO &io, StringRef Key, GlobalValueSummaryMapTy &V) {
     std::vector<GlobalValueSummaryYaml> GVSums;
-    io.mapRequired(Key.str().c_str(), GVSums);
+    io.mapRequired(Key, GVSums);
     uint64_t KeyInt;
     if (Key.getAsInteger(0, KeyInt)) {
       io.setError("key not an integer");
@@ -226,17 +230,17 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           static_cast<GlobalValue::VisibilityTypes>(GVSum.Visibility),
           GVSum.NotEligibleToImport, GVSum.Live, GVSum.IsLocal,
           GVSum.CanAutoHide,
-          static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType));
+          static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType),
+          GVSum.NoRenameOnPromotion);
       if (GVSum.Aliasee) {
         auto ASum = std::make_unique<AliasSummary>(GVFlags);
-        if (!V.count(*GVSum.Aliasee))
-          V.emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
+        V.try_emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
         ValueInfo AliaseeVI(/*IsAnalysis=*/false, &*V.find(*GVSum.Aliasee));
         // Note: Aliasee cannot be filled until all summaries are loaded.
         // This is done in fixAliaseeLinks() which is called in
         // MappingTraits<ModuleSummaryIndex>::mapping().
         ASum->setAliasee(AliaseeVI, /*Aliasee=*/nullptr);
-        Elem.SummaryList.push_back(std::move(ASum));
+        Elem.addSummary(std::move(ASum));
         continue;
       }
       SmallVector<ValueInfo, 0> Refs;
@@ -245,7 +249,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
         auto It = V.try_emplace(RefGUID, /*IsAnalysis=*/false).first;
         Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*It));
       }
-      Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
+      Elem.addSummary(std::make_unique<FunctionSummary>(
           GVFlags, /*NumInsts=*/0, FunctionSummary::FFlags{}, std::move(Refs),
           SmallVector<FunctionSummary::EdgeTy, 0>{}, std::move(GVSum.TypeTests),
           std::move(GVSum.TypeTestAssumeVCalls),
@@ -259,7 +263,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
     for (auto &P : V) {
       std::vector<GlobalValueSummaryYaml> GVSums;
-      for (auto &Sum : P.second.SummaryList) {
+      for (auto &Sum : P.second.getSummaryList()) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get())) {
           std::vector<uint64_t> Refs;
           Refs.reserve(FSum->refs().size());
@@ -271,9 +275,10 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(FSum->flags().Live),
               static_cast<bool>(FSum->flags().DSOLocal),
               static_cast<bool>(FSum->flags().CanAutoHide),
-              FSum->flags().ImportType, /*Aliasee=*/std::nullopt, Refs,
-              FSum->type_tests(), FSum->type_test_assume_vcalls(),
-              FSum->type_checked_load_vcalls(),
+              FSum->flags().ImportType,
+              static_cast<bool>(FSum->flags().NoRenameOnPromotion),
+              /*Aliasee=*/std::nullopt, Refs, FSum->type_tests(),
+              FSum->type_test_assume_vcalls(), FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),
               FSum->type_checked_load_const_vcalls()});
         } else if (auto *ASum = dyn_cast<AliasSummary>(Sum.get());
@@ -285,16 +290,17 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(ASum->flags().DSOLocal),
               static_cast<bool>(ASum->flags().CanAutoHide),
               ASum->flags().ImportType,
+              static_cast<bool>(ASum->flags().NoRenameOnPromotion),
               /*Aliasee=*/ASum->getAliaseeGUID()});
         }
       }
       if (!GVSums.empty())
-        io.mapRequired(llvm::utostr(P.first).c_str(), GVSums);
+        io.mapRequired(llvm::utostr(P.first), GVSums);
     }
   }
   static void fixAliaseeLinks(GlobalValueSummaryMapTy &V) {
     for (auto &P : V) {
-      for (auto &Sum : P.second.SummaryList) {
+      for (auto &Sum : P.second.getSummaryList()) {
         if (auto *Alias = dyn_cast<AliasSummary>(Sum.get())) {
           ValueInfo AliaseeVI = Alias->getAliaseeVI();
           auto AliaseeSL = AliaseeVI.getSummaryList();
@@ -312,12 +318,12 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
 template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
   static void inputOne(IO &io, StringRef Key, TypeIdSummaryMapTy &V) {
     TypeIdSummary TId;
-    io.mapRequired(Key.str().c_str(), TId);
-    V.insert({GlobalValue::getGUID(Key), {std::string(Key), TId}});
+    io.mapRequired(Key, TId);
+    V.insert({GlobalValue::getGUIDAssumingExternalLinkage(Key), {Key, TId}});
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
     for (auto &TidIter : V)
-      io.mapRequired(TidIter.second.first.c_str(), TidIter.second.second);
+      io.mapRequired(TidIter.second.first, TidIter.second.second);
   }
 };
 
@@ -327,16 +333,30 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
     if (!io.outputting())
       CustomMappingTraits<GlobalValueSummaryMapTy>::fixAliaseeLinks(
           index.GlobalValueMap);
-    io.mapOptional("TypeIdMap", index.TypeIdMap);
+
+    if (io.outputting()) {
+      io.mapOptional("TypeIdMap", index.TypeIdMap);
+    } else {
+      TypeIdSummaryMapTy TypeIdMap;
+      io.mapOptional("TypeIdMap", TypeIdMap);
+      for (auto &[TypeGUID, TypeIdSummaryMap] : TypeIdMap) {
+        // Save type id references in index and point TypeIdMap to use the
+        // references owned by index.
+        StringRef KeyRef = index.TypeIdSaver.save(TypeIdSummaryMap.first);
+        index.TypeIdMap.insert(
+            {TypeGUID, {KeyRef, std::move(TypeIdSummaryMap.second)}});
+      }
+    }
+
     io.mapOptional("WithGlobalValueDeadStripping",
                    index.WithGlobalValueDeadStripping);
 
     if (io.outputting()) {
-      std::vector<std::string> CfiFunctionDefs(index.CfiFunctionDefs.begin(),
-                                               index.CfiFunctionDefs.end());
+      auto CfiFunctionDefs = index.CfiFunctionDefs.symbols();
+      llvm::sort(CfiFunctionDefs);
       io.mapOptional("CfiFunctionDefs", CfiFunctionDefs);
-      std::vector<std::string> CfiFunctionDecls(index.CfiFunctionDecls.begin(),
-                                                index.CfiFunctionDecls.end());
+      auto CfiFunctionDecls(index.CfiFunctionDecls.symbols());
+      llvm::sort(CfiFunctionDecls);
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
     } else {
       std::vector<std::string> CfiFunctionDefs;

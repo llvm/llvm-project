@@ -990,7 +990,8 @@ define i1 @not_isnormalinf_or_inf(half %x) #0 {
 ; -> subnormal | zero | nan
 define i1 @not_isnormalinf_or_uno(half %x) #0 {
 ; CHECK-LABEL: @not_isnormalinf_or_uno(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 243)
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ult half [[FABS]], 0xH0400
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1003,7 +1004,8 @@ define i1 @not_isnormalinf_or_uno(half %x) #0 {
 ; -> subnormal | zero | nan
 define i1 @not_isnormalinf_or_uno_nofabs(half %x) #0 {
 ; CHECK-LABEL: @not_isnormalinf_or_uno_nofabs(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 243)
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ult half [[FABS]], 0xH0400
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -2219,5 +2221,5 @@ declare half @llvm.canonicalize.f16(half) #0
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #2 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #1 = { denormal_fpenv(ieee|preservesign) }
+attributes #2 = { denormal_fpenv(ieee|dynamic) }

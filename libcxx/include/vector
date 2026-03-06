@@ -304,67 +304,72 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 
 // clang-format on
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/vector>
+#else
+#  include <__config>
 
-#include <__vector/comparison.h>
-#include <__vector/swap.h>
-#include <__vector/vector.h>
-#include <__vector/vector_bool.h>
+#  include <__vector/comparison.h>
+#  include <__vector/swap.h>
+#  include <__vector/vector.h>
+#  include <__vector/vector_bool.h>
 
-#if _LIBCPP_STD_VER >= 17
-#  include <__vector/pmr.h>
-#endif
+#  if _LIBCPP_STD_VER >= 17
+#    include <__vector/pmr.h>
+#  endif
 
-#if _LIBCPP_STD_VER >= 20
-#  include <__vector/erase.h>
-#endif
+#  if _LIBCPP_STD_VER >= 20
+#    include <__vector/erase.h>
+#  endif
 
-#if _LIBCPP_STD_VER >= 23
-#  include <__vector/vector_bool_formatter.h>
-#endif
+#  if _LIBCPP_STD_VER >= 23
+#    include <__vector/vector_bool_formatter.h>
+#  endif
 
-#include <version>
+#  include <version>
 
 // standard-mandated includes
 
 // [iterator.range]
-#include <__iterator/access.h>
-#include <__iterator/data.h>
-#include <__iterator/empty.h>
-#include <__iterator/reverse_access.h>
-#include <__iterator/size.h>
+#  include <__iterator/access.h>
+#  include <__iterator/data.h>
+#  include <__iterator/empty.h>
+#  include <__iterator/reverse_access.h>
+#  include <__iterator/size.h>
 
 // [vector.syn]
-#include <compare>
-#include <initializer_list>
+#  include <compare>
+#  include <initializer_list>
 
 // [vector.syn], [unord.hash]
-#include <__functional/hash.h>
+#  include <__functional/hash.h>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <algorithm>
-#  include <array>
-#  include <atomic>
-#  include <cctype>
-#  include <cerrno>
-#  include <clocale>
-#  include <concepts>
-#  include <cstdint>
-#  include <cstdlib>
-#  include <iosfwd>
-#  if _LIBCPP_HAS_LOCALIZATION
-#    include <locale>
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
 #  endif
-#  include <string>
-#  include <string_view>
-#  include <tuple>
-#  include <type_traits>
-#  include <typeinfo>
-#  include <utility>
-#endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <algorithm>
+#    include <array>
+#    include <atomic>
+#    include <cctype>
+#    include <cerrno>
+#    include <clocale>
+#    include <concepts>
+#    include <cstdint>
+#    include <cstdlib>
+#    include <iosfwd>
+#    if _LIBCPP_HAS_LOCALIZATION
+#      include <locale>
+#    endif
+#    include <optional>
+#    include <string>
+#    include <string_view>
+#    include <tuple>
+#    include <type_traits>
+#    include <typeinfo>
+#    include <utility>
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_VECTOR

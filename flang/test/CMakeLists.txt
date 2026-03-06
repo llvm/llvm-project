@@ -4,9 +4,9 @@ add_subdirectory(lib)
 
 llvm_canonicalize_cmake_booleans(
   FLANG_STANDALONE_BUILD
-  LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
+  LLVM_INCLUDE_EXAMPLES
 )
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
@@ -59,22 +59,31 @@ set(FLANG_TEST_PARAMS
 
 set(FLANG_TEST_DEPENDS
   flang
-  llvm-config
-  FileCheck
-  count
-  not
   module_files
   fir-opt
   tco
   bbc
-  llvm-dis
-  llvm-objdump
-  llvm-readobj
-  split-file
-  FortranRuntime
   FortranDecimal
 )
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+
+if (NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS
+    llvm-config
+    FileCheck
+    count
+    not
+    llvm-bcanalyzer
+    llvm-dis
+    llvm-objcopy
+    llvm-objdump
+    llvm-profdata
+    llvm-readelf
+    llvm-readobj
+    split-file
+  )
+endif ()
+
+if (LLVM_INCLUDE_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -84,12 +93,16 @@ if (FLANG_INCLUDE_TESTS)
   endif()
 endif()
 
-if (LLVM_BUILD_EXAMPLES)
+if (LLVM_INCLUDE_EXAMPLES)
   list(APPEND FLANG_TEST_DEPENDS
     flangPrintFunctionNames
     flangOmpReport
     flangFeatureList
     )
+endif ()
+
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

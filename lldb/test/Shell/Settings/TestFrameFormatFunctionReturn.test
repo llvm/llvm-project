@@ -1,0 +1,61 @@
+# XFAIL: target-windows
+
+# Test the ${function.return-left} and ${function.return-right}
+# frame-format variables.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# RUN: %clangxx_host -O0 %t/main.cpp -o %t-nodebug.out
+# RUN: %lldb -x -b -s %t/commands.input %t-nodebug.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+namespace ns::ns2 {
+template<typename T>
+struct Foo {};
+
+template<typename T>
+Foo<int> qux(int) {
+  return {};
+}
+
+template<typename T>
+Foo<int> (*bar(Foo<float>))(int) {
+  qux<T>(5);
+  return qux<T>;
+}
+
+struct Bar {
+  template<typename T>
+  Foo<int> (* (*foo(int) const &&)(Foo<float>))(int) {
+    bar<T>(Foo<float>{});
+    return bar<T>;
+  }
+};
+}
+
+int main(int argc, char const *argv[]) {
+    ns::ns2::Bar{}.foo<int>(5);
+    return 0;
+}
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.return-left}'\n"
+break set -n qux
+
+run
+bt
+
+# CHECK: custom-frame 'ns::ns2::Foo<int> '
+# CHECK: custom-frame 'ns::ns2::Foo<int> (*'
+# CHECK: custom-frame 'ns::ns2::Foo<int> (* (*'
+
+settings set -f frame-format "other-frame '${function.return-right}'\n"
+bt
+
+# CHECK: other-frame ''
+# CHECK: other-frame ')(int)'
+# CHECK: other-frame ')(ns::ns2::Foo<float>))(int)'

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include <list>
@@ -32,6 +33,8 @@ class GCNSubtarget;
 class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
 public:
   typedef function_ref<bool(const MachineInstr &)> IsHazardFn;
+  typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
+  typedef function_ref<unsigned int(const MachineInstr &)> GetNumWaitStatesFn;
 
 private:
   // Distinguish if we are called from scheduler or hazard recognizer
@@ -47,9 +50,11 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const TargetSchedModel &TSchedModel;
+
+  // Loop info for V_NOP hoisting, passed from the pass manager.
+  MachineLoopInfo *MLI = nullptr;
+
   bool RunLdsBranchVmemWARHazardFixup;
-  BitVector VALUReadHazardSGPRs;
-  bool UseVALUReadHazardExhaustiveSearch;
 
   /// RegUnits of uses in the current soft memory clause.
   BitVector ClauseUses;
@@ -76,6 +81,8 @@ private:
   // used on a newly inserted instruction before returning from PreEmitNoops.
   void runOnInstruction(MachineInstr *MI);
 
+  int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
+                         GetNumWaitStatesFn GetNumWaitStates);
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
@@ -96,6 +103,10 @@ private:
   int checkReadM0Hazards(MachineInstr *SMovRel);
   int checkNSAtoVMEMHazard(MachineInstr *MI);
   int checkFPAtomicToDenormModeHazard(MachineInstr *MI);
+  // Emit \p WaitStatesNeeded V_NOP instructions before \p InsertPt.
+  // If IsHoisting is true, uses empty DebugLoc for compiler-inserted NOPs.
+  void emitVNops(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+                 int WaitStatesNeeded, bool IsHoisting = false);
   void fixHazards(MachineInstr *MI);
   bool fixVcmpxPermlaneHazards(MachineInstr *MI);
   bool fixVMEMtoScalarWriteHazards(MachineInstr *MI);
@@ -106,12 +117,26 @@ private:
   bool fixLdsDirectVMEMHazard(MachineInstr *MI);
   bool fixVALUPartialForwardingHazard(MachineInstr *MI);
   bool fixVALUTransUseHazard(MachineInstr *MI);
+  bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
+  int checkWMMACoexecutionHazards(MachineInstr *MI);
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
+  bool tryHoistWMMAVnopsFromLoop(MachineInstr *MI, int WaitStatesNeeded);
+  bool hasWMMAHazardInLoop(MachineLoop *L, MachineInstr *MI,
+                           bool IncludeSubloops = true);
+  bool hasWMMAToWMMARegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool hasWMMAToVALURegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool isCoexecutionHazardFor(const MachineInstr &I,
+                              const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
-  void computeVALUHazardSGPRs(MachineFunction *MMF);
-  bool fixVALUReadSGPRHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
+  bool fixGetRegWaitIdle(MachineInstr *MI);
+  bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
+  bool fixScratchBaseForwardingHazard(MachineInstr *MI);
+  bool fixSetRegMode(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);
@@ -134,9 +159,11 @@ private:
   int checkMFMAPadding(MachineInstr *MI);
   int checkMAIVALUHazards(MachineInstr *MI);
   int checkMAILdStHazards(MachineInstr *MI);
+  int checkPermlaneHazards(MachineInstr *MI);
 
 public:
-  GCNHazardRecognizer(const MachineFunction &MF);
+  GCNHazardRecognizer(const MachineFunction &MF,
+                      MachineLoopInfo *MLI = nullptr);
   // We can only issue one instruction per cycle.
   bool atIssueLimit() const override { return true; }
   void EmitInstruction(SUnit *SU) override;

@@ -19,9 +19,10 @@
 #include "llvm/IR/Intrinsics.h"
 #include <optional>
 
-namespace llvm {
+using namespace llvm;
 
-std::optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
+std::optional<RoundingMode>
+llvm::convertStrToRoundingMode(StringRef RoundingArg) {
   // For dynamic rounding mode, we use round to nearest but we will set the
   // 'exact' SDNodeFlag so that the value will not be rounded.
   return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
@@ -34,7 +35,8 @@ std::optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
       .Default(std::nullopt);
 }
 
-std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
+std::optional<StringRef>
+llvm::convertRoundingModeToStr(RoundingMode UseRounding) {
   std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
@@ -62,7 +64,7 @@ std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
 }
 
 std::optional<fp::ExceptionBehavior>
-convertStrToExceptionBehavior(StringRef ExceptionArg) {
+llvm::convertStrToExceptionBehavior(StringRef ExceptionArg) {
   return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
       .Case("fpexcept.ignore", fp::ebIgnore)
       .Case("fpexcept.maytrap", fp::ebMayTrap)
@@ -71,7 +73,7 @@ convertStrToExceptionBehavior(StringRef ExceptionArg) {
 }
 
 std::optional<StringRef>
-convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
+llvm::convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   std::optional<StringRef> ExceptStr;
   switch (UseExcept) {
   case fp::ebStrict:
@@ -87,7 +89,7 @@ convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   return ExceptStr;
 }
 
-Intrinsic::ID getConstrainedIntrinsicID(const Instruction &Instr) {
+Intrinsic::ID llvm::getConstrainedIntrinsicID(const Instruction &Instr) {
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
   switch (Instr.getOpcode()) {
   case Instruction::FCmp:
@@ -127,5 +129,3 @@ Intrinsic::ID getConstrainedIntrinsicID(const Instruction &Instr) {
 
   return IID;
 }
-
-} // namespace llvm

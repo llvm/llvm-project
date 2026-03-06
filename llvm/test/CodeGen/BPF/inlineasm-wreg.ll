@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpfel -mattr=+alu32 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=bpfeb -mattr=+alu32 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mattr=+alu32 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpfeb -mattr=+alu32 -verify-machineinstrs | FileCheck %s
 
 ; Test that %w works as input constraint
 ; CHECK-LABEL: test_inlineasm_w_input_constraint

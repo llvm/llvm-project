@@ -11,19 +11,39 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "WebAssemblySelectionDAGInfo.h"
 #include "WebAssemblyTargetMachine.h"
+
+#define GET_SDNODE_DESC
+#include "WebAssemblyGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-selectiondag-info"
 
+WebAssemblySelectionDAGInfo::WebAssemblySelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(WebAssemblyGenSDNodeInfo) {}
+
 WebAssemblySelectionDAGInfo::~WebAssemblySelectionDAGInfo() = default; // anchor
+
+const char *
+WebAssemblySelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+  switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
+  case WebAssemblyISD::CALL:
+    return "WebAssemblyISD::CALL";
+  case WebAssemblyISD::RET_CALL:
+    return "WebAssemblyISD::RET_CALL";
+  }
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
+}
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
-  if (!ST.hasBulkMemory())
+  if (!ST.hasBulkMemoryOpt())
     return SDValue();
 
   SDValue MemIdx = DAG.getConstant(0, DL, MVT::i32);
@@ -51,7 +71,7 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemset(
     SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo) const {
   auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
-  if (!ST.hasBulkMemory())
+  if (!ST.hasBulkMemoryOpt())
     return SDValue();
 
   SDValue MemIdx = DAG.getConstant(0, DL, MVT::i32);

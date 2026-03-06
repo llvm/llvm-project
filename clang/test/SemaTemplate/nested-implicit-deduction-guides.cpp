@@ -38,7 +38,7 @@ template<typename A, typename T>
 concept True = true;
 
 template<typename T>
-concept False = false;
+concept False = false; // #False
 
 template<class X> struct concepts {
     template<class Y> struct B {
@@ -68,7 +68,7 @@ template<typename X> struct nested_init_list {
         Y y;
     };
 
-    template<False F>
+    template<False F>  // #INIT_LIST_INNER_INVALID_HEADER
     struct concept_fail { // #INIT_LIST_INNER_INVALID
         X x;
         F f;
@@ -81,12 +81,14 @@ using NIL = nested_init_list<int>::B<int>;
 
 // expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'nested_init_list<int>::concept_fail'}}
 nested_init_list<int>::concept_fail nil_invalid{1, ""};
-// expected-note@#INIT_LIST_INNER_INVALID {{candidate template ignored: substitution failure [with F = const char *]: constraints not satisfied for class template 'concept_fail' [with F = const char *]}}
-// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(int, F) -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{candidate template ignored: constraints not satisfied [with F = const char *]}}
+// expected-note@#INIT_LIST_INNER_INVALID_HEADER {{because 'const char *' does not satisfy 'False'}}
+// expected-note@#False {{because 'false' evaluated to false}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(int, F) -> nested_init_list<int>::concept_fail<F>'}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 1 argument, but 2 were provided}}
-// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(concept_fail<F>) -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(nested_init_list<int>::concept_fail<F>) -> nested_init_list<int>::concept_fail<F>'}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 0 arguments, but 2 were provided}}
-// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail() -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail() -> nested_init_list<int>::concept_fail<F>'}}
 
 namespace GH88142 {
 

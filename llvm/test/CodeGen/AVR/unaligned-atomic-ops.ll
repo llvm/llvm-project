@@ -1,4 +1,4 @@
-; RUN: llc -mattr=addsubiw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=addsubiw < %s -mtriple=avr | FileCheck %s
 
 ; This verifies that the backend can handle an unaligned atomic load and store.
 ;

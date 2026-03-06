@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   BitstreamReader
   FrontendOpenMP
   )
+add_subdirectory(support)
 
 add_clang_library(clangDoc STATIC
   BitcodeReader.cpp
@@ -15,6 +16,8 @@ add_clang_library(clangDoc STATIC
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
+  JSONGenerator.cpp
+  MDMustacheGenerator.cpp
 
   DEPENDS
   omp_gen
@@ -23,6 +26,7 @@ add_clang_library(clangDoc STATIC
 
 clang_target_link_libraries(clangDoc
   PRIVATE
+  clangDocSupport
   clangAnalysis
   clangAST
   clangASTMatchers
@@ -34,4 +38,13 @@ clang_target_link_libraries(clangDoc
   clangToolingCore
   )
 
+target_link_libraries(clangDoc
+  PRIVATE
+  clangDocSupport      
+  )
+
 add_subdirectory(tool)
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()

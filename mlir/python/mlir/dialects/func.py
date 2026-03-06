@@ -105,6 +105,8 @@ class FuncOp(FuncOp):
 
     @property
     def arg_attrs(self):
+        if ARGUMENT_ATTRIBUTE_NAME not in self.attributes:
+            return ArrayAttr.get([DictAttr.get({}) for _ in self.type.inputs])
         return ArrayAttr(self.attributes[ARGUMENT_ATTRIBUTE_NAME])
 
     @arg_attrs.setter

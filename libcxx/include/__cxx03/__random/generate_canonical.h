@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_GENERATE_CANONICAL_H
-#define _LIBCPP___RANDOM_GENERATE_CANONICAL_H
+#ifndef _LIBCPP___CXX03___RANDOM_GENERATE_CANONICAL_H
+#define _LIBCPP___CXX03___RANDOM_GENERATE_CANONICAL_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/log2.h>
 #include <__cxx03/cstdint>
-#include <__cxx03/initializer_list>
 #include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -28,13 +27,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _RealType, size_t __bits, class _URNG>
 _LIBCPP_HIDE_FROM_ABI _RealType generate_canonical(_URNG& __g) {
-  const size_t __dt = numeric_limits<_RealType>::digits;
-  const size_t __b  = __dt < __bits ? __dt : __bits;
-#ifdef _LIBCPP_CXX03_LANG
+  const size_t __dt    = numeric_limits<_RealType>::digits;
+  const size_t __b     = __dt < __bits ? __dt : __bits;
   const size_t __log_r = __log2<uint64_t, _URNG::_Max - _URNG::_Min + uint64_t(1)>::value;
-#else
-  const size_t __log_r = __log2<uint64_t, _URNG::max() - _URNG::min() + uint64_t(1)>::value;
-#endif
   const size_t __k     = __b / __log_r + (__b % __log_r != 0) + (__b == 0);
   const _RealType __rp = static_cast<_RealType>(_URNG::max() - _URNG::min()) + _RealType(1);
   _RealType __base     = __rp;
@@ -48,4 +43,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_GENERATE_CANONICAL_H
+#endif // _LIBCPP___CXX03___RANDOM_GENERATE_CANONICAL_H

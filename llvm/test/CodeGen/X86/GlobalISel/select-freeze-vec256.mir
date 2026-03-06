@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            select_freeze_vec256
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: vecr, preferred-register: '', flags: [  ] }
+  - { id: 1, class: vecr, preferred-register: '', flags: [  ] }
+body:             |
+  bb.0:
+    liveins: $ymm0
+
+    ; CHECK-LABEL: name:            select_freeze_vec256
+    ; CHECK: [[COPY:%[0-9]+]]:vr256 = COPY $ymm0
+    ; CHECK-NOT: G_FREEZE
+    ; CHECK-NEXT: $ymm1 = COPY [[COPY]]
+    ; CHECK-NEXT: RET 0, implicit $ymm1
+    %0:vecr(<8 x s32>) = COPY $ymm0
+    %1:vecr(<8 x s32>) = G_FREEZE %0
+    $ymm1 = COPY %1(<8 x s32>)
+    RET 0, implicit $ymm1
+...

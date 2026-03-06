@@ -1,5 +1,4 @@
-// RUN: rm -rf %t
-// RUN: mkdir %t
+// RUN: rm -rf %t && mkdir -p %t
 // RUN: echo "" > %t/compile_flags.txt
 // RUN: cp "%s" "%t/test.cpp"
 // RUN: clang-doc --doxygen --public --executor=standalone -p %t %t/test.cpp -output=%t/docs
@@ -7,14 +6,13 @@
 //   (which we don't know in advance). This checks the record file by searching
 //   for a name with a 40-char USR name.
 // RUN: find %t/docs -regex ".*/[0-9A-F]*.yaml" -exec cat {} ";" | FileCheck %s --check-prefix=CHECK
-// RUN: rm -rf %t
 
 class Record {
 private:
-	void function_private();
+  void function_private();
 
 public:
-	void function_public();
+  void function_public();
 };
 
 void Record::function_private() {}
@@ -30,7 +28,7 @@ void Record::function_public() {}
 // CHECK-NEXT:     Name:             'GlobalNamespace'
 // CHECK-NEXT:     QualName:         'GlobalNamespace'
 // CHECK-NEXT: DefLocation:
-// CHECK-NEXT:   LineNumber:      12
+// CHECK-NEXT:   LineNumber:      10
 // CHECK-NEXT:   Filename:        '{{.*}}'
 // CHECK-NEXT: TagType:         Class
 // CHECK-NEXT: ChildFunctions:
@@ -45,10 +43,10 @@ void Record::function_public() {}
 // CHECK-NEXT:         Name:            'GlobalNamespace'
 // CHECK-NEXT:         QualName:        'GlobalNamespace'
 // CHECK-NEXT:     DefLocation:
-// CHECK-NEXT:         LineNumber:      22
+// CHECK-NEXT:         LineNumber:      20
 // CHECK-NEXT:         Filename:        '{{.*}}'
 // CHECK-NEXT:     Location:
-// CHECK-NEXT:       - LineNumber:      17
+// CHECK-NEXT:       - LineNumber:      15
 // CHECK-NEXT:         Filename:        '{{.*}}'
 // CHECK-NEXT:     IsMethod:        true
 // CHECK-NEXT:     Parent:

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Check that this testcase does not crash.
 ; CHECK: call foo0
@@ -19,7 +19,7 @@ entry:
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind "disable-tail-calls"="true" "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv5" "target-features"=",-hvx,-long-calls" }
+attributes #0 = { nounwind "disable-tail-calls"="true" "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv5" "target-features"="-hvx,-long-calls" }
 attributes #1 = { nounwind readnone speculatable }
 
 !llvm.dbg.cu = !{!0}

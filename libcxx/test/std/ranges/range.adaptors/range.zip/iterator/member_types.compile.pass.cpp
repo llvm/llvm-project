@@ -13,10 +13,11 @@
 #include <array>
 #include <ranges>
 #include <tuple>
+#include <utility>
 
 #include "test_iterators.h"
 
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
 template <class T>
 struct ForwardView : std::ranges::view_base {

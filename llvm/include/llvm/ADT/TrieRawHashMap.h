@@ -10,6 +10,7 @@
 #define LLVM_ADT_TRIERAWHASHMAP_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <optional>
 
@@ -72,7 +73,7 @@ public:
 private:
   template <class T> struct AllocValueType {
     char Base[TrieContentBaseSize];
-    std::aligned_union_t<sizeof(T), T> Content;
+    alignas(T) char Content[sizeof(T)];
   };
 
 protected:
@@ -90,8 +91,11 @@ public:
   static void *operator new(size_t Size) { return ::operator new(Size); }
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-  void print(raw_ostream &OS) const;
+#endif
+
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 protected:
   /// Result of a lookup. Suitable for an insertion hint. Maybe could be
@@ -118,17 +122,17 @@ protected:
   };
 
   /// Find the stored content with hash.
-  PointerBase find(ArrayRef<uint8_t> Hash) const;
+  LLVM_ABI PointerBase find(ArrayRef<uint8_t> Hash) const;
 
   /// Insert and return the stored content.
-  PointerBase
+  LLVM_ABI PointerBase
   insert(PointerBase Hint, ArrayRef<uint8_t> Hash,
          function_ref<const uint8_t *(void *Mem, ArrayRef<uint8_t> Hash)>
              Constructor);
 
   ThreadSafeTrieRawHashMapBase() = delete;
 
-  ThreadSafeTrieRawHashMapBase(
+  LLVM_ABI ThreadSafeTrieRawHashMapBase(
       size_t ContentAllocSize, size_t ContentAllocAlign, size_t ContentOffset,
       std::optional<size_t> NumRootBits = std::nullopt,
       std::optional<size_t> NumSubtrieBits = std::nullopt);
@@ -137,10 +141,10 @@ protected:
   /// call \a destroyImpl().
   ///
   /// \pre \a destroyImpl() was already called.
-  ~ThreadSafeTrieRawHashMapBase();
-  void destroyImpl(function_ref<void(void *ValueMem)> Destructor);
+  LLVM_ABI ~ThreadSafeTrieRawHashMapBase();
+  LLVM_ABI void destroyImpl(function_ref<void(void *ValueMem)> Destructor);
 
-  ThreadSafeTrieRawHashMapBase(ThreadSafeTrieRawHashMapBase &&RHS);
+  LLVM_ABI ThreadSafeTrieRawHashMapBase(ThreadSafeTrieRawHashMapBase &&RHS);
 
   // Move assignment is not supported as it is not thread-safe.
   ThreadSafeTrieRawHashMapBase &
@@ -153,14 +157,14 @@ protected:
 
   // Debug functions. Implementation details and not guaranteed to be
   // thread-safe.
-  PointerBase getRoot() const;
-  unsigned getStartBit(PointerBase P) const;
-  unsigned getNumBits(PointerBase P) const;
-  unsigned getNumSlotUsed(PointerBase P) const;
-  std::string getTriePrefixAsString(PointerBase P) const;
-  unsigned getNumTries() const;
+  LLVM_ABI PointerBase getRoot() const;
+  LLVM_ABI unsigned getStartBit(PointerBase P) const;
+  LLVM_ABI unsigned getNumBits(PointerBase P) const;
+  LLVM_ABI unsigned getNumSlotUsed(PointerBase P) const;
+  LLVM_ABI std::string getTriePrefixAsString(PointerBase P) const;
+  LLVM_ABI unsigned getNumTries() const;
   // Visit next trie in the allocation chain.
-  PointerBase getNextTrie(PointerBase P) const;
+  LLVM_ABI PointerBase getNextTrie(PointerBase P) const;
 
 private:
   friend class TrieRawHashMapTestHelper;
@@ -214,7 +218,10 @@ public:
   using ThreadSafeTrieRawHashMapBase::operator delete;
   using HashType = HashT;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   using ThreadSafeTrieRawHashMapBase::dump;
+#endif
+
   using ThreadSafeTrieRawHashMapBase::print;
 
 private:

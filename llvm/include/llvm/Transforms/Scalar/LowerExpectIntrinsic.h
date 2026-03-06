@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOWEREXPECTINTRINSIC_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -29,7 +30,7 @@ struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   /// of the probabilities and frequencies of the CFG. After running this pass,
   /// no more expect intrinsics remain, allowing the rest of the optimizer to
   /// ignore them.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 }

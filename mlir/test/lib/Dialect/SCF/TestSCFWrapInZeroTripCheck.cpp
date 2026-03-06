@@ -59,7 +59,7 @@ struct TestWrapWhileLoopInZeroTripCheckPass
     } else {
       RewritePatternSet patterns(context);
       scf::populateSCFRotateWhileLoopPatterns(patterns);
-      (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+      (void)applyPatternsGreedily(func, std::move(patterns));
     }
   }
 

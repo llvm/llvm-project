@@ -40,7 +40,7 @@ using namespace llvm::object;
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
                                sys::TimePoint<std::chrono::seconds> Timestamp,
                                uint8_t Type)
-    : Filename(std::string(ObjectFilename)), Timestamp(Timestamp), Type(Type) {}
+    : DebugMapObjectFilter(ObjectFilename), Timestamp(Timestamp), Type(Type) {}
 
 bool DebugMapObject::addSymbol(StringRef Name,
                                std::optional<uint64_t> ObjectAddress,
@@ -94,8 +94,9 @@ DebugMapObject &
 DebugMap::addDebugMapObject(StringRef ObjectFilePath,
                             sys::TimePoint<std::chrono::seconds> Timestamp,
                             uint8_t Type) {
-  Objects.emplace_back(new DebugMapObject(ObjectFilePath, Timestamp, Type));
-  return *Objects.back();
+  getObjects().emplace_back(
+      new DebugMapObject(ObjectFilePath, Timestamp, Type));
+  return *getObjects().back();
 }
 
 const DebugMapObject::DebugMapEntry *
@@ -123,6 +124,9 @@ void DebugMap::print(raw_ostream &OS) const {
 void DebugMap::dump() const { print(errs()); }
 #endif
 
+DebugMapObjectFilter::DebugMapObjectFilter(StringRef ObjectFilename)
+    : Filename(std::string(ObjectFilename)) {}
+
 namespace {
 
 struct YAMLContext {
@@ -134,6 +138,11 @@ struct YAMLContext {
 };
 
 } // end anonymous namespace
+
+DebugMap::DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
+                   ArrayRef<uint8_t> BinaryUUID)
+    : BinaryTriple(BinaryTriple), BinaryPath(std::string(BinaryPath)),
+      BinaryUUID(BinaryUUID.begin(), BinaryUUID.end()) {}
 
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 DebugMap::parseYAMLDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
@@ -161,12 +170,13 @@ namespace yaml {
 
 // Normalize/Denormalize between YAML and a DebugMapObject.
 struct MappingTraits<dsymutil::DebugMapObject>::YamlDMO {
-  YamlDMO(IO &io) { Timestamp = 0; }
+  YamlDMO(IO &io) {}
   YamlDMO(IO &io, dsymutil::DebugMapObject &Obj);
   dsymutil::DebugMapObject denormalize(IO &IO);
 
   std::string Filename;
-  int64_t Timestamp;
+  int64_t Timestamp = 0;
+  uint8_t Type = MachO::N_OSO;
   std::vector<dsymutil::DebugMapObject::YAMLSymbolMapping> Entries;
 };
 
@@ -183,6 +193,7 @@ void MappingTraits<dsymutil::DebugMapObject>::mapping(
   MappingNormalization<YamlDMO, dsymutil::DebugMapObject> Norm(io, DMO);
   io.mapRequired("filename", Norm->Filename);
   io.mapOptional("timestamp", Norm->Timestamp);
+  io.mapOptional("type", Norm->Type);
   io.mapRequired("symbols", Norm->Entries);
 }
 
@@ -212,6 +223,26 @@ SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObject>>>::element(
   return *seq[index];
 }
 
+size_t
+SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
+    size(IO &io,
+         std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq) {
+  return seq.size();
+}
+
+dsymutil::DebugMapObject &
+SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
+    element(IO &io,
+            std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
+            size_t index) {
+  auto &Objects = reinterpret_cast<
+      std::vector<std::unique_ptr<dsymutil::DebugMapObject>> &>(seq);
+  return SequenceTraits<
+      std::vector<std::unique_ptr<dsymutil::DebugMapObject>>>::element(io,
+                                                                       Objects,
+                                                                       index);
+}
+
 void MappingTraits<dsymutil::DebugMap>::mapping(IO &io,
                                                 dsymutil::DebugMap &DM) {
   io.mapRequired("triple", DM.BinaryTriple);
@@ -236,6 +267,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
     IO &io, dsymutil::DebugMapObject &Obj) {
   Filename = Obj.Filename;
   Timestamp = sys::toTimeT(Obj.getTimestamp());
+  Type = Obj.getType();
   Entries.reserve(Obj.Symbols.size());
   for (auto &Entry : Obj.Symbols)
     Entries.push_back(
@@ -286,7 +318,6 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
     }
   }
 
-  uint8_t Type = MachO::N_OSO;
   if (Path.ends_with(".dylib")) {
     // FIXME: find a more resilient way
     Type = MachO::N_LIB;

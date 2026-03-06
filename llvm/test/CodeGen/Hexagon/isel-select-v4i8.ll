@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This used to fail:
 ; LLVM ERROR: Cannot select: t54: v4i8 = select t50, t53, t52

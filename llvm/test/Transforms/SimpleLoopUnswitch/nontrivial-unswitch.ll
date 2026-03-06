@@ -1,6 +1,5 @@
 ; RUN: opt -passes='loop(simple-loop-unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck %s
-; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck %s
-; RUN: opt -passes='simple-loop-unswitch<nontrivial>' -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -S -verify-memoryssa < %s | FileCheck %s
 
 declare i32 @a()
 declare i32 @b()
@@ -3214,7 +3213,7 @@ body.c:
 ; CHECK-NEXT:    br label %[[BODY_C_C:.*]]
 ;
 ; CHECK:       [[BODY_C_C]]:
-; CHECK-NEXT:    %[[TMP_C_PHI_C:.*]] = phi i32 [ %[[TMP_C]], %[[DISPATCH_C]] ], [ %[[TMP_B_SUM_C]], %[[BODY_B_C]] ]
+; CHECK-NEXT:    %[[TMP_C_PHI_C:.*]] = phi i32 [ %[[TMP_B_SUM_C]], %[[BODY_B_C]] ], [ %[[TMP_C]], %[[DISPATCH_C]] ]
 ; CHECK-NEXT:    %[[TMP_C_C:.*]] = call i32 @c()
 ; CHECK-NEXT:    %[[TMP_C_SUM_C:.*]] = add i32 %[[TMP_C_PHI_C]], %[[TMP_C_C]]
 ; CHECK-NEXT:    br label %[[LATCH_C:.*]]
@@ -3336,7 +3335,7 @@ body.b:
 ; CHECK-NEXT:    br label %[[BODY_B_B:.*]]
 ;
 ; CHECK:       [[BODY_B_B]]:
-; CHECK-NEXT:    %[[TMP_B_PHI_B:.*]] = phi i32 [ %[[TMP_B]], %[[DISPATCH_B]] ], [ %[[TMP_A_SUM_B]], %[[BODY_A_B]] ]
+; CHECK-NEXT:    %[[TMP_B_PHI_B:.*]] = phi i32 [ %[[TMP_A_SUM_B]], %[[BODY_A_B]] ], [ %[[TMP_B]], %[[DISPATCH_B]] ]
 ; CHECK-NEXT:    %[[TMP_B_B:.*]] = call i32 @b()
 ; CHECK-NEXT:    %[[TMP_B_SUM_B:.*]] = add i32 %[[TMP_B_PHI_B]], %[[TMP_B_B]]
 ; CHECK-NEXT:    br label %[[LATCH_B:.*]]

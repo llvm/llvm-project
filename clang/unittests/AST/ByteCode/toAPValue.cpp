@@ -135,7 +135,7 @@ TEST(ToAPValue, FunctionPointers) {
 
   {
     const Pointer &GP = getGlobalPtr("func");
-    const FunctionPointer &FP = GP.deref<FunctionPointer>();
+    const Pointer &FP = GP.deref<Pointer>();
     ASSERT_FALSE(FP.isZero());
     APValue A = FP.toAPValue(ASTCtx);
     ASSERT_TRUE(A.hasValue());
@@ -193,7 +193,7 @@ TEST(ToAPValue, FunctionPointersC) {
     const ValueDecl *D = getDecl("func");
     const Pointer &GP = getGlobalPtr("func");
     ASSERT_TRUE(GP.isLive());
-    const FunctionPointer &FP = GP.deref<FunctionPointer>();
+    const Pointer &FP = GP.deref<Pointer>();
     ASSERT_FALSE(FP.isZero());
     APValue A = FP.toAPValue(ASTCtx);
     ASSERT_TRUE(A.hasValue());
@@ -209,11 +209,25 @@ TEST(ToAPValue, FunctionPointersC) {
 }
 
 TEST(ToAPValue, MemberPointers) {
-  constexpr char Code[] = "struct S {\n"
-                          "  int m, n;\n"
-                          "};\n"
-                          "constexpr int S::*pm = &S::m;\n"
-                          "constexpr int S::*nn = nullptr;\n";
+  constexpr char Code[] =
+      "struct S {\n"
+      "  int m, n;\n"
+      "};\n"
+      "constexpr int S::*pm = &S::m;\n"
+      "constexpr int S::*nn = nullptr;\n"
+
+      "struct B{int x;};\n"
+      "struct C : B {int z; };\n"
+      "constexpr auto c1 = (int C::*)&B::x;\n"
+      "constexpr auto D = (int B::*)c1;\n"
+
+      "template<int n> struct T : T<n-1> { const int X = n;};\n"
+      "template<> struct T<0> { int nn_; char kk;};\n"
+      "template<> struct T<30> : T<29> { int mm; };\n"
+      "constexpr auto t1 = (int(T<10>::*))&T<30>::mm;\n"
+      "constexpr auto t2 = (int(T<11>::*))t1;\n"
+      "constexpr auto t3 = (int(T<20>::*))&T<30>::mm;\n"
+      "constexpr int (T<10>::*t4) = &T<0>::nn_;\n";
 
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
@@ -243,6 +257,8 @@ TEST(ToAPValue, MemberPointers) {
     APValue A = FP.toAPValue(ASTCtx);
     ASSERT_EQ(A.getMemberPointerDecl(), getDecl("m"));
     ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 0u);
+    ASSERT_FALSE(A.isMemberPointerToDerivedMember());
   }
 
   {
@@ -252,5 +268,139 @@ TEST(ToAPValue, MemberPointers) {
     ASSERT_TRUE(NP.isZero());
     APValue A = NP.toAPValue(ASTCtx);
     ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 0u);
+    ASSERT_FALSE(A.isMemberPointerToDerivedMember());
+  }
+
+  {
+    const Pointer &GP = getGlobalPtr("c1");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &MP = GP.deref<MemberPointer>();
+    ASSERT_FALSE(MP.isZero());
+    APValue A = MP.toAPValue(ASTCtx);
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 1u);
+    ASSERT_FALSE(A.isMemberPointerToDerivedMember());
+  }
+
+  {
+    const Pointer &GP = getGlobalPtr("D");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &MP = GP.deref<MemberPointer>();
+    ASSERT_FALSE(MP.isZero());
+    APValue A = MP.toAPValue(ASTCtx);
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 0u);
+    ASSERT_FALSE(A.isMemberPointerToDerivedMember());
+  }
+
+  {
+    const Pointer &GP = getGlobalPtr("t1");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &MP = GP.deref<MemberPointer>();
+    ASSERT_FALSE(MP.isZero());
+    APValue A = MP.toAPValue(ASTCtx);
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 20u);
+    ASSERT_TRUE(A.isMemberPointerToDerivedMember());
+  }
+
+  {
+    const Pointer &GP = getGlobalPtr("t2");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &MP = GP.deref<MemberPointer>();
+    ASSERT_FALSE(MP.isZero());
+    APValue A = MP.toAPValue(ASTCtx);
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 19u);
+    ASSERT_TRUE(A.isMemberPointerToDerivedMember());
+  }
+
+  {
+    const Pointer &GP = getGlobalPtr("t3");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &MP = GP.deref<MemberPointer>();
+    ASSERT_FALSE(MP.isZero());
+    APValue A = MP.toAPValue(ASTCtx);
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 10u);
+    ASSERT_TRUE(A.isMemberPointerToDerivedMember());
+  }
+
+  {
+    const Pointer &GP = getGlobalPtr("t4");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &MP = GP.deref<MemberPointer>();
+    ASSERT_FALSE(MP.isZero());
+    APValue A = MP.toAPValue(ASTCtx);
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+    ASSERT_EQ(A.getMemberPointerPath().size(), 10u);
+    ASSERT_FALSE(A.isMemberPointerToDerivedMember());
+  }
+}
+
+/// Compare outputs between the two interpreters.
+TEST(ToAPValue, Comparison) {
+  constexpr char Code[] =
+      "constexpr int GI = 12;\n"
+      "constexpr const int *PI = &GI;\n"
+      "struct S{int a; };\n"
+      "constexpr S GS[] = {{}, {}};\n"
+      "constexpr const S* OS = GS + 1;\n"
+      "constexpr S DS = *OS;\n"
+      "constexpr int IA[2][2][2] = {{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}};\n"
+      "constexpr const int *PIA = IA[1][1];\n";
+
+  for (const char *Arg : {"", "-fexperimental-new-constant-interpreter"}) {
+    auto AST = tooling::buildASTFromCodeWithArgs(Code, {Arg});
+
+    auto getDecl = [&](const char *Name) -> const VarDecl * {
+      auto Nodes =
+          match(valueDecl(hasName(Name)).bind("var"), AST->getASTContext());
+      assert(Nodes.size() == 1);
+      const auto *D = Nodes[0].getNodeAs<ValueDecl>("var");
+      assert(D);
+      return cast<VarDecl>(D);
+    };
+
+    {
+      const VarDecl *GIDecl = getDecl("GI");
+      const APValue *V = GIDecl->evaluateValue();
+      ASSERT_TRUE(V->isInt());
+    }
+
+    {
+      const VarDecl *GIDecl = getDecl("GI");
+      const VarDecl *PIDecl = getDecl("PI");
+      const APValue *V = PIDecl->evaluateValue();
+      ASSERT_TRUE(V->isLValue());
+      ASSERT_TRUE(V->hasLValuePath());
+      ASSERT_EQ(V->getLValueBase().get<const ValueDecl *>(), GIDecl);
+      ASSERT_EQ(V->getLValuePath().size(), 0u);
+    }
+
+    {
+      const APValue *V = getDecl("OS")->evaluateValue();
+      ASSERT_TRUE(V->isLValue());
+      ASSERT_EQ(V->getLValueOffset().getQuantity(), (unsigned)sizeof(int));
+      ASSERT_TRUE(V->hasLValuePath());
+      ASSERT_EQ(V->getLValuePath().size(), 1u);
+      ASSERT_EQ(V->getLValuePath()[0].getAsArrayIndex(), 1u);
+    }
+
+    {
+      const APValue *V = getDecl("DS")->evaluateValue();
+      ASSERT_TRUE(V->isStruct());
+    }
+    {
+      const APValue *V = getDecl("PIA")->evaluateValue();
+      ASSERT_TRUE(V->isLValue());
+      ASSERT_TRUE(V->hasLValuePath());
+      ASSERT_EQ(V->getLValuePath().size(), 3u);
+      ASSERT_EQ(V->getLValuePath()[0].getAsArrayIndex(), 1u);
+      ASSERT_EQ(V->getLValuePath()[1].getAsArrayIndex(), 1u);
+      ASSERT_EQ(V->getLValuePath()[2].getAsArrayIndex(), 0u);
+      ASSERT_EQ(V->getLValueOffset().getQuantity(), (unsigned)sizeof(int) * 6);
+    }
   }
 }

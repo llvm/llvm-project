@@ -1,7 +1,5 @@
-! Basic offloading test with a target region
-! that checks constant indexing on device
-! correctly works (regression test for prior
-! bug).
+! Basic offloading test with a target region that checks constant indexing on
+! device correctly works (regression test for prior bug).
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

@@ -24,3 +24,25 @@ class TestSBCommandReturnObject(TestBase):
         # return exit code 0 to indicate success.  We can let this exception go
         # - the test harness will recognize it as a test failure.
         subprocess.check_call([self.driver_exe, self.driver_exe])
+
+    def test_get_command(self):
+        res = lldb.SBCommandReturnObject()
+        self.assertEqual(res.GetCommand(), "")
+
+        ci = self.dbg.GetCommandInterpreter()
+        ci.HandleCommand("help help", res)
+        self.assertTrue(res.Succeeded())
+        self.assertEqual(res.GetCommand(), "help help")
+
+        value_list = res.GetValues(lldb.eNoDynamicValues)
+        self.assertEqual(value_list.GetSize(), 0)
+
+    def test_get_value(self):
+        res = lldb.SBCommandReturnObject()
+        ci = self.dbg.GetCommandInterpreter()
+        ci.HandleCommand("p 1 + 1", res)
+        self.assertTrue(res.Succeeded())
+
+        value_list = res.GetValues(lldb.eNoDynamicValues)
+        self.assertEqual(value_list.GetSize(), 1)
+        self.assertEqual(value_list.GetValueAtIndex(0).GetValue(), "2")

@@ -275,7 +275,7 @@ define <4 x i8> @vslide1down_4xi8_inverted(<4 x i8> %v, i8 %b) {
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %v1 = shufflevector <4 x i8> %v, <4 x i8> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 2>
+  %v1 = shufflevector <4 x i8> %v, <4 x i8> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
   %v2 = insertelement <4 x i8> %v1, i8 %b, i64 1
   ret <4 x i8> %v2
 }

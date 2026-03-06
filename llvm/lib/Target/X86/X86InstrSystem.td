@@ -690,7 +690,7 @@ let Defs = [RAX, RDX, RSI], Uses = [RAX, RSI] in
 let SchedRW = [WriteSystem] in {
 let Defs = [EAX, EDX], Uses = [ECX] in
   def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru",
-                  [(set EAX, (X86rdpkru ECX)), (implicit EDX)]>, TB;
+                  [(set EAX, EDX, (X86rdpkru ECX))]>, TB;
 let Uses = [EAX, ECX, EDX] in
   def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru",
                   [(X86wrpkru EAX, EDX, ECX)]>, TB;
@@ -749,14 +749,14 @@ let Predicates = [HasINVPCID, NoEGPR] in {
   // type),/ so it doesn't hurt us that one can't supply a 64 bit value here.
   def : Pat<(int_x86_invpcid GR32:$src1, addr:$src2),
             (INVPCID64
-              (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src1), sub_32bit),
+              (SUBREG_TO_REG (MOV32rr GR32:$src1), sub_32bit),
               addr:$src2)>;
 }
 
 let Predicates = [HasINVPCID, HasEGPR] in {
   def : Pat<(int_x86_invpcid GR32:$src1, addr:$src2),
             (INVPCID64_EVEX
-              (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src1), sub_32bit),
+              (SUBREG_TO_REG (MOV32rr GR32:$src1), sub_32bit),
               addr:$src2)>;
 }
 

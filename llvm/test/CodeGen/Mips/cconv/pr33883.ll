@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mcpu=mips32 < %s -o /dev/null
+; RUN: llc -mtriple=mips -mcpu=mips32 < %s -o /dev/null
 
 ; Test that calls to vector intrinsics do not crash SelectionDAGBuilder.
 

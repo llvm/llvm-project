@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSTDBOOL
-#define _LIBCPP_CSTDBOOL
+#ifndef _LIBCPP___CXX03_CSTDBOOL
+#define _LIBCPP___CXX03_CSTDBOOL
 
 /*
     cstdbool synopsis
@@ -28,4 +28,4 @@ Macros:
 #undef __bool_true_false_are_defined
 #define __bool_true_false_are_defined 1
 
-#endif // _LIBCPP_CSTDBOOL
+#endif // _LIBCPP___CXX03_CSTDBOOL

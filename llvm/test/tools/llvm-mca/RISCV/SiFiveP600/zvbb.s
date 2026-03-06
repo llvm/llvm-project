@@ -151,13 +151,13 @@ vwsll.vi v8, v4, 8
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      133
-# CHECK-NEXT: Total Cycles:      166
+# CHECK-NEXT: Total Cycles:      330
 # CHECK-NEXT: Total uOps:        133
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.80
-# CHECK-NEXT: IPC:               0.80
-# CHECK-NEXT: Block RThroughput: 164.0
+# CHECK-NEXT: uOps Per Cycle:    0.40
+# CHECK-NEXT: IPC:               0.40
+# CHECK-NEXT: Block RThroughput: 328.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -169,76 +169,8 @@ vwsll.vi v8, v4, 8
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vandn.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vandn.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vbrev.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vbrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vclz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vctz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vcpop.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrol.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vrol.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vandn.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vandn.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vbrev.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vbrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vclz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vctz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vcpop.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrol.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vrol.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vandn.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vandn.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vbrev.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vbrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vclz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vctz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vcpop.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrol.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vrol.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vandn.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vandn.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vbrev.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vbrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrev8.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vclz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vctz.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vcpop.v	v4, v8
-# CHECK-NEXT:  1      2     0.50                        vrol.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vrol.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                        vandn.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     1.00                        vandn.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vandn.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vandn.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     1.00                        vbrev.v	v4, v8
 # CHECK-NEXT:  1      2     1.00                        vbrev8.v	v4, v8
 # CHECK-NEXT:  1      2     1.00                        vrev8.v	v4, v8
@@ -253,54 +185,122 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     1.00                        vwsll.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     1.00                        vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     1.00                        vwsll.vi	v4, v8, 8
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
+# CHECK-NEXT:  1      2     1.00                        vandn.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vandn.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vbrev.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vbrev8.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vrev8.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vclz.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vctz.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vcpop.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vrol.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vrol.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vror.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vror.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vror.vi	v4, v8, 8
+# CHECK-NEXT:  1      2     1.00                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vwsll.vi	v4, v8, 8
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
+# CHECK-NEXT:  1      2     1.00                        vandn.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vandn.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vbrev.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vbrev8.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vrev8.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vclz.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vctz.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vcpop.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vrol.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vrol.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vror.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vror.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vror.vi	v4, v8, 8
+# CHECK-NEXT:  1      2     1.00                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vwsll.vi	v4, v8, 8
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
+# CHECK-NEXT:  1      2     1.00                        vandn.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vandn.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vbrev.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vbrev8.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vrev8.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vclz.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vctz.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vcpop.v	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vrol.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vrol.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vror.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vror.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vror.vi	v4, v8, 8
+# CHECK-NEXT:  1      2     1.00                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vwsll.vi	v4, v8, 8
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
+# CHECK-NEXT:  1      2     2.00                        vandn.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     2.00                        vandn.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     2.00                        vbrev.v	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vbrev8.v	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vrev8.v	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vclz.v	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vctz.v	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vcpop.v	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vrol.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     2.00                        vrol.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     2.00                        vror.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     2.00                        vror.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     2.00                        vror.vi	v4, v8, 8
+# CHECK-NEXT:  1      2     2.00                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     2.00                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     2.00                        vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     2.00                        vandn.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     2.00                        vandn.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     2.00                        vbrev.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vbrev8.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vrev8.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vclz.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vctz.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vcpop.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vrol.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     2.00                        vrol.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     2.00                        vror.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     2.00                        vror.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     2.00                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      2     2.00                        vwsll.vv	v8, v4, v12
-# CHECK-NEXT:  1      2     2.00                        vwsll.vx	v8, v4, a0
-# CHECK-NEXT:  1      2     2.00                        vwsll.vi	v8, v4, 8
+# CHECK-NEXT:  1      4     4.00                        vandn.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vandn.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     4.00                        vbrev.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vbrev8.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vrev8.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vclz.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vctz.v	v4, v8
+# CHECK-NEXT:  1      2     4.00                        vcpop.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vrol.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vrol.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     4.00                        vror.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vror.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     4.00                        vror.vi	v4, v8, 8
+# CHECK-NEXT:  1      2     4.00                        vwsll.vv	v8, v4, v12
+# CHECK-NEXT:  1      2     4.00                        vwsll.vx	v8, v4, a0
+# CHECK-NEXT:  1      2     4.00                        vwsll.vi	v8, v4, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     4.00                        vandn.vv	v8, v16, v24
-# CHECK-NEXT:  1      1     4.00                        vandn.vx	v8, v16, a0
-# CHECK-NEXT:  1      2     4.00                        vbrev.v	v8, v16
-# CHECK-NEXT:  1      2     4.00                        vbrev8.v	v8, v16
-# CHECK-NEXT:  1      2     4.00                        vrev8.v	v8, v16
-# CHECK-NEXT:  1      2     4.00                        vclz.v	v8, v16
-# CHECK-NEXT:  1      2     4.00                        vctz.v	v8, v16
-# CHECK-NEXT:  1      2     4.00                        vcpop.v	v8, v16
-# CHECK-NEXT:  1      2     4.00                        vrol.vv	v8, v16, v24
-# CHECK-NEXT:  1      2     4.00                        vrol.vx	v8, v16, a0
-# CHECK-NEXT:  1      2     4.00                        vror.vv	v8, v16, v24
-# CHECK-NEXT:  1      2     4.00                        vror.vx	v8, v16, a0
-# CHECK-NEXT:  1      2     4.00                        vror.vi	v8, v16, 8
+# CHECK-NEXT:  1      8     8.00                        vandn.vv	v8, v16, v24
+# CHECK-NEXT:  1      8     8.00                        vandn.vx	v8, v16, a0
+# CHECK-NEXT:  1      8     8.00                        vbrev.v	v8, v16
+# CHECK-NEXT:  1      8     8.00                        vbrev8.v	v8, v16
+# CHECK-NEXT:  1      8     8.00                        vrev8.v	v8, v16
+# CHECK-NEXT:  1      8     8.00                        vclz.v	v8, v16
+# CHECK-NEXT:  1      8     8.00                        vctz.v	v8, v16
+# CHECK-NEXT:  1      2     8.00                        vcpop.v	v8, v16
+# CHECK-NEXT:  1      8     8.00                        vrol.vv	v8, v16, v24
+# CHECK-NEXT:  1      8     8.00                        vrol.vx	v8, v16, a0
+# CHECK-NEXT:  1      8     8.00                        vror.vv	v8, v16, v24
+# CHECK-NEXT:  1      8     8.00                        vror.vx	v8, v16, a0
+# CHECK-NEXT:  1      8     8.00                        vror.vi	v8, v16, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     2.00                        vandn.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     2.00                        vandn.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     2.00                        vbrev.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vbrev8.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vrev8.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vclz.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vctz.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vcpop.v	v4, v8
-# CHECK-NEXT:  1      2     2.00                        vrol.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     2.00                        vrol.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     2.00                        vror.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     2.00                        vror.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     2.00                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      2     2.00                        vwsll.vv	v8, v4, v12
-# CHECK-NEXT:  1      2     2.00                        vwsll.vx	v8, v4, a0
-# CHECK-NEXT:  1      2     2.00                        vwsll.vi	v8, v4, 8
+# CHECK-NEXT:  1      4     4.00                        vandn.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vandn.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     4.00                        vbrev.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vbrev8.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vrev8.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vclz.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vctz.v	v4, v8
+# CHECK-NEXT:  1      2     4.00                        vcpop.v	v4, v8
+# CHECK-NEXT:  1      4     4.00                        vrol.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vrol.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     4.00                        vror.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vror.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     4.00                        vror.vi	v4, v8, 8
+# CHECK-NEXT:  1      2     4.00                        vwsll.vv	v8, v4, v12
+# CHECK-NEXT:  1      2     4.00                        vwsll.vx	v8, v4, a0
+# CHECK-NEXT:  1      2     4.00                        vwsll.vi	v8, v4, 8
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFiveP600Div
@@ -322,140 +322,140 @@ vwsll.vi v8, v4, 8
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -     8.00    -      -      -      -      -      -     164.00 164.00  -      -      -
+# CHECK-NEXT:  -      -      -      -     8.00    -      -      -      -      -      -     328.00  -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vandn.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vbrev.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev8.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrev8.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrev8.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclz.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vctz.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vctz.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vcpop.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrol.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vandn.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vbrev.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev8.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrev8.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrev8.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclz.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vctz.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vctz.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vcpop.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrol.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vandn.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vbrev.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev8.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrev8.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrev8.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclz.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vctz.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vctz.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vcpop.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrol.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vandn.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vandn.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vbrev.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vbrev8.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrev8.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrev8.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclz.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vctz.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vctz.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vcpop.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vrol.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vrol.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vror.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vror.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vandn.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vandn.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vandn.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vbrev.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vbrev.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vbrev8.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vrev8.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vrev8.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vclz.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vctz.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vctz.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vcpop.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vrol.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vrol.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vrol.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vror.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vror.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vror.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vror.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vror.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vandn.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vandn.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vandn.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vbrev.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vbrev.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vbrev8.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vrev8.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vrev8.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vclz.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vctz.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vctz.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vcpop.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vrol.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vrol.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vrol.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vror.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vror.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vror.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vror.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vror.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vwsll.vv	v8, v4, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vwsll.vx	v8, v4, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vwsll.vx	v8, v4, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vwsll.vi	v8, v4, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vandn.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vandn.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vandn.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vbrev.v	v8, v16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vbrev8.v	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vbrev8.v	v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vrev8.v	v8, v16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vclz.v	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vclz.v	v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vctz.v	v8, v16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vcpop.v	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vcpop.v	v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vrol.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vrol.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vrol.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vror.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vror.vx	v8, v16, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vror.vi	v8, v16, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vror.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vror.vi	v8, v16, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vandn.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vandn.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vbrev.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vbrev.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vbrev8.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vrev8.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vrev8.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vclz.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vctz.v	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vctz.v	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vcpop.v	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vrol.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vrol.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vrol.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vror.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vror.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vror.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vror.vx	v4, v8, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vror.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vwsll.vv	v8, v4, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vwsll.vx	v8, v4, a0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vwsll.vx	v8, v4, a0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vwsll.vi	v8, v4, 8

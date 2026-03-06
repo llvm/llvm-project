@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -12,7 +13,7 @@ namespace std {
     const T *p; size_t n;
     initializer_list(const T *p, size_t n);
   };
-}
+} // namespace std
 
 namespace cwg930 { // cwg930: 2.7
 #if __cplusplus >= 201103L
@@ -48,7 +49,7 @@ namespace cwg948 { // cwg948: 3.7
      while (constexpr A i = 0) { }
   }
 #endif
-}
+} // namespace cwg948
 
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
@@ -58,29 +59,33 @@ struct A {
 struct B : private A { // #cwg952-B
 };
 struct C : B {
-  void f() {
-    I i1;
-    // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
-    //   expected-note@#cwg952-B {{constrained by private inheritance here}}
-    //   expected-note@#cwg952-I {{member is declared here}}
-  }
-  I i2;
+  void f();
+  I i1;
   // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
   //   expected-note@#cwg952-B {{constrained by private inheritance here}}
   //   expected-note@#cwg952-I {{member is declared here}}
   struct D {
-    I i3;
+    I i2;
     // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
     //   expected-note@#cwg952-B {{constrained by private inheritance here}}
     //   expected-note@#cwg952-I {{member is declared here}}
-    void g() {
-      I i4;
-      // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
-      //   expected-note@#cwg952-B {{constrained by private inheritance here}}
-      //   expected-note@#cwg952-I {{member is declared here}}
-    }
+    void g();
   };
 };
+
+void C::f() {
+  I i3;
+  // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
+  //   expected-note@#cwg952-B {{constrained by private inheritance here}}
+  //   expected-note@#cwg952-I {{member is declared here}}
+}
+
+void C::D::g() {
+  I i4;
+  // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
+  //   expected-note@#cwg952-B {{constrained by private inheritance here}}
+  //   expected-note@#cwg952-I {{member is declared here}}
+}
 } // namespace example1
 namespace example2 {
 struct A {
@@ -143,15 +148,15 @@ class B : A {
 
 } // namespace cwg960
 
-namespace cwg974 { // cwg974: yes
+namespace cwg974 { // cwg974: 3.3
 #if __cplusplus >= 201103L
   void test() {
     auto lam = [](int x = 42) { return x; };
   }
 #endif
-}
+} // namespace cwg974
 
-namespace cwg977 { // cwg977: yes
+namespace cwg977 { // cwg977: 2.7
 enum E { e = E() }; // #cwg977-E
 #if !defined(_WIN32) || defined(__MINGW32__)
 // expected-error@#cwg977-E {{invalid use of incomplete type 'E'}}
@@ -197,4 +202,4 @@ namespace cwg990 { // cwg990: 3.5
   };
   D d{};
 #endif
-}
+} // namespace cwg990

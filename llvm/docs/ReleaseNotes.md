@@ -1,6 +1,9 @@
 <!-- This document is written in Markdown and uses extra directives provided by
 MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 LLVM {{env.config.release}} Release Notes
 =========================================
 
@@ -56,52 +59,29 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
-* Types are no longer allowed to be recursive.
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
 
-* The `x86_mmx` IR type has been removed. It will be translated to
-  the standard vector type `<1 x i64>` in bitcode upgrade.
-* Renamed `llvm.experimental.stepvector` intrinsic to `llvm.stepvector`.
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
 
-* Added `usub_cond` and `usub_sat` operations to `atomicrmw`.
-
-* Introduced `noalias.addrspace` metadata.
-
-* Remove the following intrinsics which can be replaced with a `bitcast`:
-
-  * `llvm.nvvm.bitcast.f2i`
-  * `llvm.nvvm.bitcast.i2f`
-  * `llvm.nvvm.bitcast.d2ll`
-  * `llvm.nvvm.bitcast.ll2d`
-
-* Remove the following intrinsics which can be replaced with a funnel-shift:
-
-  * `llvm.nvvm.rotate.b32`
-  * `llvm.nvvm.rotate.right.b64`
-  * `llvm.nvvm.rotate.b64`
-
-* Remove the following intrinsics which can be replaced with an
-  `addrspacecast`:
-
-  * `llvm.nvvm.ptr.gen.to.global`
-  * `llvm.nvvm.ptr.gen.to.shared`
-  * `llvm.nvvm.ptr.gen.to.constant`
-  * `llvm.nvvm.ptr.gen.to.local`
-  * `llvm.nvvm.ptr.global.to.gen`
-  * `llvm.nvvm.ptr.shared.to.gen`
-  * `llvm.nvvm.ptr.constant.to.gen`
-  * `llvm.nvvm.ptr.local.to.gen`
-
-* Remove the following intrinsics which can be relaced with a load from
-  addrspace(1) with an !invariant.load metadata
-
-  * `llvm.nvvm.ldg.global.i`
-  * `llvm.nvvm.ldg.global.f`
-  * `llvm.nvvm.ldg.global.p`
-
-* Operand bundle values can now be metadata strings.
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
 
 Changes to LLVM infrastructure
 ------------------------------
+
+* Removed ``Constant::isZeroValue``. It was functionally identical to
+  ``Constant::isNullValue`` for all types except floating-point negative
+  zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
+  will be reintroduced in the future with bitwise-all-zeros semantics
+  to support non-zero null pointers.
+
+* Removed TypePromoteFloat legalization from SelectionDAG
+
+* Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
+  `llvm/utils/reduce_pipeline.py`.
 
 Changes to building LLVM
 ------------------------
@@ -112,41 +92,26 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+Changes to Vectorizers
+----------------------
+
 Changes to the AArch64 Backend
 ------------------------------
 
-* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
-  the required alignment space with a sequence of `0x0` bytes (the requested
-  fill value) rather than NOPs.
-
-* Assembler/disassembler support has been added for Armv9.6-A (2024)
-  architecture extensions.
+* The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
+  requiring the `+d128` feature gating.
 
 Changes to the AMDGPU Backend
 -----------------------------
 
-* Removed `llvm.amdgcn.flat.atomic.fadd` and
-  `llvm.amdgcn.global.atomic.fadd` intrinsics. Users should use the
-  {ref}`atomicrmw <i_atomicrmw>` instruction with `fadd` and
-  addrspace(0) or addrspace(1) instead.
+* Initial support for gfx1310
 
 Changes to the ARM Backend
 --------------------------
 
-* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
-  the required alignment space with a sequence of `0x0` bytes (the requested
-  fill value) rather than NOPs.
-
-* The default behavior for frame pointers in leaf functions has been updated.
-  When the `-fno-omit-frame-pointer` option is specified, `FPKeepKindStr` is
-  set to `-mframe-pointer=all`, meaning the frame pointer (FP) is now retained
-  in leaf functions by default. To eliminate the frame pointer in leaf functions,
-  you must explicitly use the `-momit-leaf-frame-pointer` option.
-
-* When using the `MOVT` or `MOVW` instructions, the Assembler will now check to
-  ensure that any addend that is used is within a 16-bit signed value range. If the
-  addend falls outside of this range, the LLVM backend will emit an error like so
-  `Relocation Not In Range`.
+* The `r14` register can now be used as an alias for the link register `lr`
+  in inline assembly. Clang always canonicalizes the name to `lr`, but other
+  frontends may not.
 
 Changes to the AVR Backend
 --------------------------
@@ -160,76 +125,53 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
 Changes to the MIPS Backend
 ---------------------------
+
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
 
 Changes to the PowerPC Backend
 ------------------------------
 
-* The Linux `ppc64` LLC default cpu is updated from `ppc` to `ppc64`.
-* The AIX LLC default cpu is updated from `generic` to `pwr7`.
-
 Changes to the RISC-V Backend
 -----------------------------
 
-* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
-  the required alignment space with a sequence of `0x0` bytes (the requested
-  fill value) rather than NOPs.
-* Added Syntacore SCR4 and SCR5 CPUs: `-mcpu=syntacore-scr4/5-rv32/64`
-* `-mcpu=sifive-p470` was added.
-* Added Hazard3 CPU as taped out for RP2350: `-mcpu=rp2350-hazard3` (32-bit
-  only).
-* Fixed length vector support using RVV instructions now requires VLEN>=64. This
-  means Zve32x and Zve32f will also require Zvl64b. The prior support was
-  largely untested.
-* The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
-* Added `Smctr`, `Ssctr` and `Svvptc` extensions.
-* `-mcpu=syntacore-scr7` was added.
-* The `Zacas` extension is no longer marked as experimental.
-* The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
-  are no longer marked as experimental.
-* The `Sha` extension is now supported.
-* The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
-  as experimental.
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
+* Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
+  Absolute Difference) extension.
+* `-mcpu=spacemit-a100` was added.
+* The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
+* `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
 
-The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
-and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
-and [Non-trapping float-to-int Conversions] language features, which are
-[widely implemented in engines].
-
-[Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
-[Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
-[widely implemented in engines]: https://webassembly.org/features/
-
 Changes to the Windows Target
 -----------------------------
+
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
 
 Changes to the X86 Backend
 --------------------------
 
-* `.balign N, 0x90`, `.p2align N, 0x90`, and `.align N, 0x90` in code sections
-  now fill the required alignment space with repeating `0x90` bytes, rather than
-  using optimised NOP filling. Optimised NOP filling fills the space with NOP
-  instructions of various widths, not just those that use the `0x90` byte
-  encoding. To use optimised NOP filling in a code section, leave off the
-  "fillval" argument, i.e. `.balign N`, `.p2align N` or `.align N` respectively.
-
-* Due to the removal of the `x86_mmx` IR type, functions with
-  `x86_mmx` arguments or return values will use a different,
-  incompatible, calling convention ABI. Such functions are not
-  generally seen in the wild (Clang never generates them!), so this is
-  not expected to result in real-world compatibility problems.
-
-* Support ISA of `AVX10.2-256` and `AVX10.2-512`.
-
-* Supported instructions of `MOVRS AND AVX10.2`
-
-* Supported ISA of `SM4(EVEX)`.
-
-* Supported ISA of `MSR_IMM`.
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -240,90 +182,73 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
-* The following symbols are deleted due to the removal of the `x86_mmx` IR type:
-
-  * `LLVMX86_MMXTypeKind`
-  * `LLVMX86MMXTypeInContext`
-  * `LLVMX86MMXType`
-
- * The following functions are added to further support non-null-terminated strings:
-
-  * `LLVMGetNamedFunctionWithLength`
-  * `LLVMGetNamedGlobalWithLength`
-
-* The following functions are added to access the `LLVMContextRef` associated
-   with `LLVMValueRef` and `LLVMBuilderRef` objects:
-
-  * `LLVMGetValueContext`
-  * `LLVMGetBuilderContext`
-
-* The new pass manager can now be invoked with a custom alias analysis pipeline, using
-  the `LLVMPassBuilderOptionsSetAAPipeline` function.
-
-* It is now also possible to run the new pass manager on a single function, by calling
-  `LLVMRunPassesOnFunction` instead of `LLVMRunPasses`.
-
-* Support for creating instructions with custom synchronization scopes has been added:
-
-  * `LLVMGetSyncScopeID` to map a synchronization scope name to an ID.
-  * `LLVMBuildFenceSyncScope`, `LLVMBuildAtomicRMWSyncScope` and
-    `LLVMBuildAtomicCmpXchgSyncScope` versions of the existing builder functions
-    with an additional synchronization scope ID parameter.
-  * `LLVMGetAtomicSyncScopeID` and `LLVMSetAtomicSyncScopeID` to get and set the
-    synchronization scope of any atomic instruction.
-  * `LLVMIsAtomic` to check if an instruction is atomic, for use with the above functions.
-    Because of backwards compatibility, `LLVMIsAtomicSingleThread` and
-    `LLVMSetAtomicSingleThread` continue to work with any instruction type.
-
-* The `LLVMSetPersonalityFn` and `LLVMSetInitializer` APIs now support clearing the
-  personality function and initializer respectively by passing a null pointer.
-
-* The following functions are added to allow iterating over debug records attached to
-  instructions:
-
-  * `LLVMGetFirstDbgRecord`
-  * `LLVMGetLastDbgRecord`
-  * `LLVMGetNextDbgRecord`
-  * `LLVMGetPreviousDbgRecord`
-
-* Added `LLVMAtomicRMWBinOpUSubCond` and `LLVMAtomicRMWBinOpUSubSat` to `LLVMAtomicRMWBinOp` enum for AtomicRMW instructions.
-
 Changes to the CodeGen infrastructure
 -------------------------------------
 
 Changes to the Metadata Info
----------------------------------
+----------------------------
 
 Changes to the Debug Info
----------------------------------
+-------------------------
 
 Changes to the LLVM tools
----------------------------------
+-------------------------
+
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
----------------------------------
+---------------
 
-* LLDB can now read the `fpmr` register from AArch64 Linux processes and core
-  files.
+### Deprecated APIs
 
-* Program stdout/stderr redirection will now open the file with O_TRUNC flag, make sure to truncate the file if path already exists.
-  * eg. `settings set target.output-path/target.error-path <path/to/file>`
+* ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
+  have been deprecated. They always return 1, as before.
 
-* A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
+### FreeBSD
+
+#### Userspace Debugging
+
+* Support for MIPS64 has been removed.
+* The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
+
+#### Kernel Debugging
+
+* The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin. 
+* Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
+  available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
+  from any platform.
+* Support for ARM, PPC64le, and RISCV64 has been added.
+* The crashed thread is now automatically selected on start.
+* Threads are listed in incrmental order by pid then by tid.
+* Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
+  when lldb is in the interactive mode (i.e. not in batch mode).
+* Writing to the core is now supported. For safety reasons, this feature is off by default. To enable it,
+  `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
+  using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
+  writes to a kernel dump will still fail when the setting is false.
+
+### Linux
+
+* On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+* Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
 
 Changes to BOLT
----------------------------------
+---------------
 
 Changes to Sanitizers
 ---------------------
+
+* Add a random delay into ThreadSanitizer to help find rare thread interleavings.
 
 Other Changes
 -------------
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
-
-* A project...
 
 Additional Information
 ======================

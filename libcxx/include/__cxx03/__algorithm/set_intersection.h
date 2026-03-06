@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SET_INTERSECTION_H
-#define _LIBCPP___ALGORITHM_SET_INTERSECTION_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SET_INTERSECTION_H
+#define _LIBCPP___CXX03___ALGORITHM_SET_INTERSECTION_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -18,7 +18,6 @@
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/next.h>
 #include <__cxx03/__type_traits/is_same.h>
-#include <__cxx03/__utility/exchange.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/swap.h>
 
@@ -38,8 +37,7 @@ struct __set_intersection_result {
   _OutIter __out_;
 
   // need a constructor as C++03 aggregate init is hard
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  __set_intersection_result(_InIter1&& __in_iter1, _InIter2&& __in_iter2, _OutIter&& __out_iter)
+  _LIBCPP_HIDE_FROM_ABI __set_intersection_result(_InIter1&& __in_iter1, _InIter2&& __in_iter2, _OutIter&& __out_iter)
       : __in1_(std::move(__in_iter1)), __in2_(std::move(__in_iter2)), __out_(std::move(__out_iter)) {}
 };
 
@@ -48,7 +46,7 @@ struct __set_intersection_result {
 // the way it is used and doesn't attempt to abstract that, it's not appropriate for general usage outside of its
 // context.
 template <class _InForwardIter1, class _InForwardIter2, class _OutIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_intersection_add_output_if_equal(
+_LIBCPP_HIDE_FROM_ABI void __set_intersection_add_output_if_equal(
     bool __may_be_equal,
     _InForwardIter1& __first1,
     _InForwardIter2& __first2,
@@ -84,8 +82,7 @@ template <class _AlgPolicy,
           class _InForwardIter2,
           class _Sent2,
           class _OutIter>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>
 __set_intersection(
     _InForwardIter1 __first1,
     _Sent1 __last1,
@@ -95,7 +92,7 @@ __set_intersection(
     _Compare&& __comp,
     std::forward_iterator_tag,
     std::forward_iterator_tag) {
-  _LIBCPP_CONSTEXPR std::__identity __proj;
+  std::__identity __proj;
   bool __prev_may_be_equal = false;
 
   while (__first2 != __last2) {
@@ -129,8 +126,7 @@ template <class _AlgPolicy,
           class _InInputIter2,
           class _Sent2,
           class _OutIter>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>
 __set_intersection(
     _InInputIter1 __first1,
     _Sent1 __last1,
@@ -160,9 +156,7 @@ __set_intersection(
 }
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __set_intersection_result<_InIter1, _InIter2, _OutIter>
-__set_intersection(
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI __set_intersection_result<_InIter1, _InIter2, _OutIter> __set_intersection(
     _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Sent2 __last2, _OutIter __result, _Compare&& __comp) {
   return std::__set_intersection<_AlgPolicy>(
       std::move(__first1),
@@ -176,7 +170,7 @@ __set_intersection(
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_intersection(
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator set_intersection(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -194,7 +188,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_i
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_intersection(
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator set_intersection(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -214,4 +208,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SET_INTERSECTION_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SET_INTERSECTION_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SHUFFLE_H
-#define _LIBCPP___ALGORITHM_SHUFFLE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SHUFFLE_H
+#define _LIBCPP___CXX03___ALGORITHM_SHUFFLE_H
 
 #include <__cxx03/__algorithm/iterator_operations.h>
 #include <__cxx03/__config>
@@ -46,8 +46,8 @@ public:
     return __oldstate >> 32;
   }
 
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  static _LIBCPP_HIDE_FROM_ABI result_type min() { return _Min; }
+  static _LIBCPP_HIDE_FROM_ABI result_type max() { return _Max; }
 
 private:
   uint_fast64_t __state_;
@@ -62,7 +62,6 @@ private:
   }
 };
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE) || defined(_LIBCPP_BUILDING_LIBRARY)
 class _LIBCPP_EXPORTED_FROM_ABI __rs_default;
 
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
@@ -83,8 +82,8 @@ public:
 
   result_type operator()();
 
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  static _LIBCPP_HIDE_FROM_ABI result_type min() { return _Min; }
+  static _LIBCPP_HIDE_FROM_ABI result_type max() { return _Max; }
 
   friend _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 };
@@ -92,8 +91,7 @@ public:
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 
 template <class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
-random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+_LIBCPP_HIDE_FROM_ABI void random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   typedef uniform_int_distribution<ptrdiff_t> _Dp;
   typedef typename _Dp::param_type _Pp;
@@ -110,15 +108,8 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 }
 
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
-random_shuffle(_RandomAccessIterator __first,
-               _RandomAccessIterator __last,
-#  ifndef _LIBCPP_CXX03_LANG
-               _RandomNumberGenerator&& __rand)
-#  else
-               _RandomNumberGenerator& __rand)
-#  endif
-{
+_LIBCPP_HIDE_FROM_ABI void
+random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _RandomNumberGenerator&& __rand) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __d = __last - __first;
   if (__d > 1) {
@@ -129,7 +120,6 @@ random_shuffle(_RandomAccessIterator __first,
     }
   }
 }
-#endif
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Sentinel, class _UniformRandomNumberGenerator>
 _LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
@@ -164,4 +154,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SHUFFLE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SHUFFLE_H

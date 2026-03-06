@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "src/errno/libc_errno.h"
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mincore.h"
 #include "src/sys/mman/mlock.h"
@@ -15,74 +13,69 @@
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munmap.h"
 #include "src/unistd/sysconf.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/mman.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcMincoreTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcMincoreTest, UnMappedMemory) {
-  LIBC_NAMESPACE::libc_errno = 0;
+const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+
+TEST_F(LlvmLibcMincoreTest, UnMappedMemory) {
   unsigned char vec;
   int res = LIBC_NAMESPACE::mincore(nullptr, 1, &vec);
   EXPECT_THAT(res, Fails(ENOMEM, -1));
 }
 
-TEST(LlvmLibcMincoreTest, UnalignedAddr) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+TEST_F(LlvmLibcMincoreTest, UnalignedAddr) {
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
   EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
-  LIBC_NAMESPACE::libc_errno = 0;
   int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, nullptr);
   EXPECT_THAT(res, Fails(EINVAL, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
 
-TEST(LlvmLibcMincoreTest, InvalidVec) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+TEST_F(LlvmLibcMincoreTest, InvalidVec) {
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, 4 * page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
   EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
-  LIBC_NAMESPACE::libc_errno = 0;
   int res = LIBC_NAMESPACE::mincore(addr, 1, nullptr);
   EXPECT_THAT(res, Fails(EFAULT, -1));
 }
 
-TEST(LlvmLibcMincoreTest, NoError) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+TEST_F(LlvmLibcMincoreTest, NoError) {
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
   EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
   unsigned char vec;
-  LIBC_NAMESPACE::libc_errno = 0;
   int res = LIBC_NAMESPACE::mincore(addr, 1, &vec);
   EXPECT_THAT(res, Succeeds());
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
 
-TEST(LlvmLibcMincoreTest, NegativeLength) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+TEST_F(LlvmLibcMincoreTest, NegativeLength) {
+  unsigned long page_size = PAGE_SIZE;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
   EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
   unsigned char vec;
-  LIBC_NAMESPACE::libc_errno = 0;
   int res = LIBC_NAMESPACE::mincore(addr, -1, &vec);
   EXPECT_THAT(res, Fails(ENOMEM, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
 
-TEST(LlvmLibcMincoreTest, PageOut) {
-  unsigned long page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+TEST_F(LlvmLibcMincoreTest, PageOut) {
+  unsigned long page_size = PAGE_SIZE;
   unsigned char vec;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
@@ -101,11 +94,9 @@ TEST(LlvmLibcMincoreTest, PageOut) {
 
   // page out the memory
   {
-    LIBC_NAMESPACE::libc_errno = 0;
     EXPECT_THAT(LIBC_NAMESPACE::madvise(addr, page_size, MADV_DONTNEED),
                 Succeeds());
 
-    LIBC_NAMESPACE::libc_errno = 0;
     int res = LIBC_NAMESPACE::mincore(addr, page_size, &vec);
     EXPECT_EQ(vec & 1u, 0u);
     EXPECT_THAT(res, Succeeds());

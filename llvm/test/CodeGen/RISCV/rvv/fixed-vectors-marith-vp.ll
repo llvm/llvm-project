@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
-declare <1 x i1> @llvm.vp.and.v1i1(<1 x i1>, <1 x i1>, <1 x i1>, i32)
-
 define <1 x i1> @and_v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: and_v1i1:
 ; CHECK:       # %bb.0:
@@ -15,8 +13,6 @@ define <1 x i1> @and_v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 zeroext %ev
   %v = call <1 x i1> @llvm.vp.and.v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 %evl)
   ret <1 x i1> %v
 }
-
-declare <2 x i1> @llvm.vp.and.v2i1(<2 x i1>, <2 x i1>, <2 x i1>, i32)
 
 define <2 x i1> @and_v2i1(<2 x i1> %b, <2 x i1> %c, <2 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: and_v2i1:
@@ -28,8 +24,6 @@ define <2 x i1> @and_v2i1(<2 x i1> %b, <2 x i1> %c, <2 x i1> %a, i32 zeroext %ev
   ret <2 x i1> %v
 }
 
-declare <4 x i1> @llvm.vp.and.v4i1(<4 x i1>, <4 x i1>, <4 x i1>, i32)
-
 define <4 x i1> @and_v4i1(<4 x i1> %b, <4 x i1> %c, <4 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: and_v4i1:
 ; CHECK:       # %bb.0:
@@ -39,8 +33,6 @@ define <4 x i1> @and_v4i1(<4 x i1> %b, <4 x i1> %c, <4 x i1> %a, i32 zeroext %ev
   %v = call <4 x i1> @llvm.vp.and.v4i1(<4 x i1> %b, <4 x i1> %c, <4 x i1> %a, i32 %evl)
   ret <4 x i1> %v
 }
-
-declare <8 x i1> @llvm.vp.and.v8i1(<8 x i1>, <8 x i1>, <8 x i1>, i32)
 
 define <8 x i1> @and_v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: and_v8i1:
@@ -52,8 +44,6 @@ define <8 x i1> @and_v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 zeroext %ev
   ret <8 x i1> %v
 }
 
-declare <16 x i1> @llvm.vp.and.v16i1(<16 x i1>, <16 x i1>, <16 x i1>, i32)
-
 define <16 x i1> @and_v16i1(<16 x i1> %b, <16 x i1> %c, <16 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: and_v16i1:
 ; CHECK:       # %bb.0:
@@ -63,8 +53,6 @@ define <16 x i1> @and_v16i1(<16 x i1> %b, <16 x i1> %c, <16 x i1> %a, i32 zeroex
   %v = call <16 x i1> @llvm.vp.and.v16i1(<16 x i1> %b, <16 x i1> %c, <16 x i1> %a, i32 %evl)
   ret <16 x i1> %v
 }
-
-declare <1 x i1> @llvm.vp.or.v1i1(<1 x i1>, <1 x i1>, <1 x i1>, i32)
 
 define <1 x i1> @or_v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: or_v1i1:
@@ -76,8 +64,6 @@ define <1 x i1> @or_v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 zeroext %evl
   ret <1 x i1> %v
 }
 
-declare <2 x i1> @llvm.vp.or.v2i1(<2 x i1>, <2 x i1>, <2 x i1>, i32)
-
 define <2 x i1> @or_v2i1(<2 x i1> %b, <2 x i1> %c, <2 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: or_v2i1:
 ; CHECK:       # %bb.0:
@@ -87,8 +73,6 @@ define <2 x i1> @or_v2i1(<2 x i1> %b, <2 x i1> %c, <2 x i1> %a, i32 zeroext %evl
   %v = call <2 x i1> @llvm.vp.or.v2i1(<2 x i1> %b, <2 x i1> %c, <2 x i1> %a, i32 %evl)
   ret <2 x i1> %v
 }
-
-declare <4 x i1> @llvm.vp.or.v4i1(<4 x i1>, <4 x i1>, <4 x i1>, i32)
 
 define <4 x i1> @or_v4i1(<4 x i1> %b, <4 x i1> %c, <4 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: or_v4i1:
@@ -100,8 +84,6 @@ define <4 x i1> @or_v4i1(<4 x i1> %b, <4 x i1> %c, <4 x i1> %a, i32 zeroext %evl
   ret <4 x i1> %v
 }
 
-declare <8 x i1> @llvm.vp.or.v8i1(<8 x i1>, <8 x i1>, <8 x i1>, i32)
-
 define <8 x i1> @or_v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: or_v8i1:
 ; CHECK:       # %bb.0:
@@ -111,8 +93,6 @@ define <8 x i1> @or_v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 zeroext %evl
   %v = call <8 x i1> @llvm.vp.or.v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 %evl)
   ret <8 x i1> %v
 }
-
-declare <16 x i1> @llvm.vp.or.v16i1(<16 x i1>, <16 x i1>, <16 x i1>, i32)
 
 define <16 x i1> @or_v16i1(<16 x i1> %b, <16 x i1> %c, <16 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: or_v16i1:
@@ -124,8 +104,6 @@ define <16 x i1> @or_v16i1(<16 x i1> %b, <16 x i1> %c, <16 x i1> %a, i32 zeroext
   ret <16 x i1> %v
 }
 
-declare <1 x i1> @llvm.vp.xor.v1i1(<1 x i1>, <1 x i1>, <1 x i1>, i32)
-
 define <1 x i1> @xor_v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: xor_v1i1:
 ; CHECK:       # %bb.0:
@@ -135,8 +113,6 @@ define <1 x i1> @xor_v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 zeroext %ev
   %v = call <1 x i1> @llvm.vp.xor.v1i1(<1 x i1> %b, <1 x i1> %c, <1 x i1> %a, i32 %evl)
   ret <1 x i1> %v
 }
-
-declare <2 x i1> @llvm.vp.xor.v2i1(<2 x i1>, <2 x i1>, <2 x i1>, i32)
 
 define <2 x i1> @xor_v2i1(<2 x i1> %b, <2 x i1> %c, <2 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: xor_v2i1:
@@ -148,8 +124,6 @@ define <2 x i1> @xor_v2i1(<2 x i1> %b, <2 x i1> %c, <2 x i1> %a, i32 zeroext %ev
   ret <2 x i1> %v
 }
 
-declare <4 x i1> @llvm.vp.xor.v4i1(<4 x i1>, <4 x i1>, <4 x i1>, i32)
-
 define <4 x i1> @xor_v4i1(<4 x i1> %b, <4 x i1> %c, <4 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: xor_v4i1:
 ; CHECK:       # %bb.0:
@@ -160,8 +134,6 @@ define <4 x i1> @xor_v4i1(<4 x i1> %b, <4 x i1> %c, <4 x i1> %a, i32 zeroext %ev
   ret <4 x i1> %v
 }
 
-declare <8 x i1> @llvm.vp.xor.v8i1(<8 x i1>, <8 x i1>, <8 x i1>, i32)
-
 define <8 x i1> @xor_v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: xor_v8i1:
 ; CHECK:       # %bb.0:
@@ -171,8 +143,6 @@ define <8 x i1> @xor_v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 zeroext %ev
   %v = call <8 x i1> @llvm.vp.xor.v8i1(<8 x i1> %b, <8 x i1> %c, <8 x i1> %a, i32 %evl)
   ret <8 x i1> %v
 }
-
-declare <16 x i1> @llvm.vp.xor.v16i1(<16 x i1>, <16 x i1>, <16 x i1>, i32)
 
 define <16 x i1> @xor_v16i1(<16 x i1> %b, <16 x i1> %c, <16 x i1> %a, i32 zeroext %evl) {
 ; CHECK-LABEL: xor_v16i1:

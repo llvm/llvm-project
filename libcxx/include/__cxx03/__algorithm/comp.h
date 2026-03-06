@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COMP_H
-#define _LIBCPP___ALGORITHM_COMP_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COMP_H
+#define _LIBCPP___CXX03___ALGORITHM_COMP_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/desugars_to.h>
@@ -20,7 +20,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __equal_to {
   template <class _T1, class _T2>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _T1& __x, const _T2& __y) const {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _T1& __x, const _T2& __y) const {
     return __x == __y;
   }
 };
@@ -36,7 +36,7 @@ struct __less {};
 template <>
 struct __less<void, void> {
   template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __lhs, const _Up& __rhs) const {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __lhs, const _Up& __rhs) const {
     return __lhs < __rhs;
   }
 };
@@ -46,4 +46,4 @@ inline const bool __desugars_to_v<__less_tag, __less<>, _Tp, _Tp> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COMP_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COMP_H

@@ -1,0 +1,14 @@
+add_entrypoint_object(
+  poll
+  SRCS
+    poll.cpp
+  HDRS
+    ../poll.h
+  DEPENDS
+    libc.hdr.types.nfds_t
+    libc.hdr.types.struct_pollfd
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

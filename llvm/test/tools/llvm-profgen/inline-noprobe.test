@@ -8,26 +8,48 @@
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-UPDATE-TOTAL-SAMPLE
 ; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t --mark-all-context-preinlined
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-MARK-PREINLINED
+
 ; RUN: echo -e "0\n0" > %t
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%t --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1 --fill-zero-for-all-funcs
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-ALL-ZERO
 ; RUN: llvm-profgen --format=text --unsymbolized-profile=%S/Inputs/out-of-bounds.raw.prof --binary=%S/Inputs/inline-noprobe.perfbin --output=%t1
 ; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-OB
 
-CHECK: main:2609:0
-CHECK:  0: 0
-CHECK:  2: 0
-CHECK:  1: foo:2609
-CHECK:   2.1: 42
-CHECK:   3: 62
-CHECK:   3.2: 21
-CHECK:   4: 0
-CHECK:   65526: 62
-CHECK:   3.1: bar:546
-CHECK:    1: 42
-CHECK:    65533: 42
-CHECK:   3.2: bar:189
-CHECK:    1: 21
+CHECK:      main:2609:0
+CHECK-NEXT:  0: 0
+CHECK-NEXT:  2: 0
+CHECK-NEXT:  1: foo:2609
+CHECK-NEXT:   2.1: 42
+CHECK-NEXT:   3: 62
+CHECK-NEXT:   3.2: 21
+CHECK-NEXT:   4: 0
+CHECK-NEXT:   65526: 62
+CHECK-NEXT:   3.1: bar:546
+CHECK-NEXT:    1: 42
+CHECK-NEXT:    65533: 42
+CHECK-NEXT:   3.2: bar:189
+CHECK-NEXT:    1: 21
+
+CHECK-MARK-PREINLINED:      main:2609:0
+CHECK-MARK-PREINLINED-NEXT:  0: 0
+CHECK-MARK-PREINLINED-NEXT:  2: 0
+CHECK-MARK-PREINLINED-NEXT:  1: foo:2609
+CHECK-MARK-PREINLINED-NEXT:   2.1: 42
+CHECK-MARK-PREINLINED-NEXT:   3: 62
+CHECK-MARK-PREINLINED-NEXT:   3.2: 21
+CHECK-MARK-PREINLINED-NEXT:   4: 0
+CHECK-MARK-PREINLINED-NEXT:   65526: 62
+CHECK-MARK-PREINLINED-NEXT:   3.1: bar:546
+CHECK-MARK-PREINLINED-NEXT:    1: 42
+CHECK-MARK-PREINLINED-NEXT:    65533: 42
+CHECK-MARK-PREINLINED-NEXT:    !Attributes: 2
+CHECK-MARK-PREINLINED-NEXT:   3.2: bar:189
+CHECK-MARK-PREINLINED-NEXT:    1: 21
+CHECK-MARK-PREINLINED-NEXT:    !Attributes: 2
+CHECK-MARK-PREINLINED-NEXT:   !Attributes: 2
+CHECK-MARK-PREINLINED-NEXT:  !Attributes: 2
 
 CHECK-UPDATE-TOTAL-SAMPLE: main:292:0
 CHECK-UPDATE-TOTAL-SAMPLE:  0: 0

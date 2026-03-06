@@ -58,7 +58,7 @@
 ; CHECK:          {{\.?}}LJTI0_0:
 ; I686-NEXT:      .long   LBB0_[[#]]
 ; X64-NEXT:       .long   .LBB0_[[#]]-.LJTI0_0
-; A32-NEXT:       .byte   (($MBB0_[[#]])-(.LCPI0_0+4))/2
+; A32-NEXT:       .byte   ($MBB0_[[#]]-(.LCPI0_0+4))/2
 ; A64-NEXT:       .byte   (.LBB0_[[FIRSTBLOCK:[0-9]+]]-.LBB0_[[FIRSTBLOCK]])>>2
 ; NOTE: thumbv7a places the jump tables just after the branch, so check for the other branch now
 ; A32:            .LCPI0_1:
@@ -66,7 +66,7 @@
 ; CHECK:          {{\.?}}LJTI0_1:
 ; I686-NEXT:      .long   LBB0_[[#]]
 ; X64-NEXT:       .long   .LBB0_[[#]]-.LJTI0_1
-; A32-NEXT:       .byte   (($MBB0_[[#]])-(.LCPI0_1+4))/2
+; A32-NEXT:       .byte   ($MBB0_[[#]]-(.LCPI0_1+4))/2
 ; A64-NEXT:       .byte   (.LBB0_[[SECONDBLOCK:[0-9]+]]-.LBB0_[[SECONDBLOCK]])>>2
 
 ; Verify CodeView
@@ -118,6 +118,15 @@
 ; CV:         GlobalProcIdSym {
 ; CV:           DisplayName: func
 ; CV-NOT:     GlobalProcIdSym
+; CV:           LabelSym {
+; CV-NEXT:        Kind: S_LABEL32 (0x1105)
+; CV-NEXT:        CodeOffset: 0xC0
+; CV-NEXT:        Segment: 0x0
+; CV-NEXT:        Flags: 0x0
+; CV-NEXT:        Flags [ (0x0)
+; CV-NEXT:        ]
+; CV-NEXT:        DisplayName:
+; CV-NEXT:      }
 ; CV:           JumpTableSym {
 ; CV-NEXT:        Kind: S_ARMSWITCHTABLE (0x1159)
 ; CV-NEXT:        BaseOffset: 0x0

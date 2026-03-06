@@ -28,7 +28,7 @@ module m
     integer, allocatable, device :: ia(:)
     logical :: plog
 
-    !ERROR: Object in ALLOCATE must have PINNED attribute when PINNED option is specified
+    !WARNING: Object in ALLOCATE should have PINNED attribute when PINNED option is specified
     allocate(ia(100), pinned = plog)
   end subroutine
 

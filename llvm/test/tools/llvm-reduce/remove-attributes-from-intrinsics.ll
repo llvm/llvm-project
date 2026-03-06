@@ -1,7 +1,7 @@
 ; We can't actually put attributes on intrinsic declarations, only on call sites.
 ;
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s
+; RUN: llvm-reduce -abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s < %t
 
 define i32 @t(i32 %a) {
 ; CHECK-ALL-LABEL: @t(
@@ -26,7 +26,7 @@ define i32 @t(i32 %a) {
 ; CHECK-ALL: declare i32 @llvm.uadd.sat.i32(i32, i32) #0
 declare i32 @llvm.uadd.sat.i32(i32, i32) #0
 
-; CHECK-ALL: attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK-ALL: attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 
 ; CHECK-INTERESTINGNESS: attributes #1 = {
 ; CHECK-INTERESTINGNESS-SAME: "arg4"

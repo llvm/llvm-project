@@ -583,7 +583,11 @@ struct ExceptionChecker {
     assert(ErrorIsImp(Err.code(), {expected_err}));
     assert(Err.path1() == expected_path1);
     assert(Err.path2() == expected_path2);
+#ifndef _WIN32
+    // On Windows, the error strings are windows error code strings, and don't
+    // match textually with the strings generated for generic std::errc::*.
     LIBCPP_ONLY(check_libcxx_string(Err));
+#endif
   }
 
   void check_libcxx_string(fs::filesystem_error const& Err) {

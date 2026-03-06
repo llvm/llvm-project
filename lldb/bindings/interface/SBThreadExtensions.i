@@ -41,9 +41,27 @@ STRING_EXTENSION_OUTSIDE(SBThread)
         def get_thread_frames(self):
             '''An accessor function that returns a list() that contains all frames in a lldb.SBThread object.'''
             frames = []
-            for frame in self:
+            frame_list = self.GetFrames()
+            for frame in frame_list:
                 frames.append(frame)
             return frames
+
+        def get_stop_description(self):
+            return self.GetStopDescription(1024)
+
+        def get_stop_reason_data(self):
+            return [
+                self.GetStopReasonDataAtIndex(idx)
+                for idx in range(self.GetStopReasonDataCount())
+            ]
+
+        def set_selected_frame(self, frame):
+            if isinstance(frame, SBFrame):
+                if frame.thread != self:
+                    raise ValueError("cannot select frame from different thread")
+                self.SetSelectedFrame(frame.idx)
+            else:
+                self.SetSelectedFrame(frame)
 
         id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
         idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
@@ -55,9 +73,12 @@ STRING_EXTENSION_OUTSIDE(SBThread)
         name = property(GetName, None, doc='''A read only property that returns the name of this thread as a string.''')
         queue = property(GetQueueName, None, doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
         queue_id = property(GetQueueID, None, doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
+        stop_description = property(get_stop_description, None, doc='''A read only property that returns a string describing the reason this thread stopped.''')
         stop_reason = property(GetStopReason, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
+        stop_reason_data = property(get_stop_reason_data, None, doc='''A read only property that returns the stop reason data as a list.''')
         is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
         is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
+        selected_frame = property(GetSelectedFrame, set_selected_frame, doc='''A read/write property that gets and sets the selected frame of this SBThread.''')
     %}
 #endif
 }

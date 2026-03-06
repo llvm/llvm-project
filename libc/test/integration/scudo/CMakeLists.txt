@@ -13,14 +13,23 @@ endif()
 add_entrypoint_library(
   libc_for_scudo_integration_test
   DEPENDS
-    libc.src.stdlib.malloc
-    libc.src.stdlib.calloc
-    libc.src.stdlib.realloc
-    libc.src.stdlib.aligned_alloc
-    libc.src.stdlib.free
     libc.src.errno.errno
-    libc.src.unistd.__llvm_libc_syscall
+    libc.src.fcntl.open
     libc.src.sched.__sched_getcpucount
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.calloc
+    libc.src.stdlib.free
+    libc.src.stdlib.malloc
+    libc.src.stdlib.realloc
+    libc.src.sys.auxv.getauxval
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.prctl.prctl
+    libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.src.unistd.sysconf
+    libc.src.unistd.write
 )
 
 add_executable(

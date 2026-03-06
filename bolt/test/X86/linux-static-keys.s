@@ -35,13 +35,13 @@ _start:
 .L0:
   jmp L1
 # CHECK:      jit
-# CHECK-SAME: # ID: 1 {{.*}} # Likely: 0 # InitValue: 1
+# CHECK-SAME: # ID: 1 {{.*}} # Likely: 1 # InitValue: 0
   nop
 L1:
   .nops 5
-  jmp .L0
 # CHECK:      jit
-# CHECK-SAME: # ID: 2 {{.*}} # Likely: 1 # InitValue: 1
+# CHECK-SAME: # ID: 2 {{.*}} # Likely: 0 # InitValue: 0
+  jmp .L0
 
 ## Check that a branch profile associated with a NOP is handled properly when
 ## dynamic branch is created.
@@ -67,17 +67,32 @@ foo:
   .type __start___jump_table, %object
 __start___jump_table:
 
-  .long .L0 - . # Jump address
-  .long L1 - . # Target address
-  .quad 1       # Key address
+  .long .L0 - .                   # Jump address
+  .long L1 - .                    # Target address
+  .quad fake_static_key + 1 - .   # Key address; LSB = 1 : likely
 
-  .long L1 - . # Jump address
-  .long L2 - . # Target address
-  .quad 0       # Key address
+  .long L1 - .                    # Jump address
+  .long L2 - .                    # Target address
+  .quad fake_static_key -.        # Key address; LSB = 0 : unlikely
 
   .globl __stop___jump_table
   .type __stop___jump_table, %object
 __stop___jump_table:
+
+## Staic keys (we just use the label ignoring the format of the keys).
+  .data
+  .align 8
+fake_static_key:
+  .quad 0
+
+## Linux kernel version
+  .rodata
+  .align 16
+  .globl linux_banner
+  .type  linux_banner, @object
+linux_banner:
+  .string  "Linux version 6.6.61\n"
+  .size  linux_banner, . - linux_banner
 
 ## Fake Linux Kernel sections.
   .section __ksymtab,"a",@progbits

@@ -14,12 +14,11 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: clang-modules-build
 
-#include "test_macros.h"
+// FIXME: using `#warning` causes diagnostics from system headers which include deprecated headers. This can only be
+// enabled again once https://github.com/llvm/llvm-project/pull/168041 (or a similar feature) has landed, since that
+// allows suppression in system headers.
+// XFAIL: *
 
 #include <cstdalign>
 
-#if TEST_STD_VER >= 20
-// expected-warning@cstdalign:* {{'__standard_header_cstdalign' is deprecated: removed in C++20.}}
-#else
-// expected-warning@cstdalign:* {{'__standard_header_cstdalign' is deprecated}}
-#endif
+// expected-warning@cstdalign:* {{<cstdalign> is deprecated in C++17 and removed in C++20.}}

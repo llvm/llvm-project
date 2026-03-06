@@ -806,7 +806,7 @@ define <2 x i64> @abd_cmp_v2i64_multiuse_cmp(<2 x i64> %a, <2 x i64> %b) nounwin
 ; AVX512-NEXT:    vpmaxsq %xmm1, %xmm0, %xmm3
 ; AVX512-NEXT:    vpsubq %xmm2, %xmm3, %xmm2
 ; AVX512-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %cmp = icmp sge <2 x i64> %a, %b

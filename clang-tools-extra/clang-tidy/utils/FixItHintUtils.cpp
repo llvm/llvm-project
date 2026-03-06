@@ -1,4 +1,4 @@
-//===--- FixItHintUtils.cpp - clang-tidy-----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,10 +19,15 @@ namespace clang::tidy::utils::fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
-  auto Token = utils::lexer::getPreviousToken(
+  const std::optional<Token> Token = utils::lexer::getPreviousToken(
       AmpLocation, Context.getSourceManager(), Context.getLangOpts());
-  if (!Token.is(tok::unknown))
-    AmpLocation = Lexer::getLocForEndOfToken(Token.getLocation(), 0,
+
+  // For parameter packs the '&' must go before the '...' token
+  if (Token && Token->is(tok::ellipsis))
+    return FixItHint::CreateInsertion(Token->getLocation(), "&");
+
+  if (Token)
+    AmpLocation = Lexer::getLocForEndOfToken(Token->getLocation(), 0,
                                              Context.getSourceManager(),
                                              Context.getLangOpts());
   return FixItHint::CreateInsertion(AmpLocation, "&");
@@ -48,10 +53,9 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
     return std::nullopt;
 
   auto PreviousTokenLParen = [&Start, &Context]() {
-    Token T;
-    T = lexer::getPreviousToken(Start, Context.getSourceManager(),
-                                Context.getLangOpts());
-    return T.is(tok::l_paren);
+    const std::optional<Token> T = lexer::getPreviousToken(
+        Start, Context.getSourceManager(), Context.getLangOpts());
+    return T && T->is(tok::l_paren);
   };
 
   while (Start.isValid() && PreviousTokenLParen())
@@ -135,7 +139,7 @@ changePointer(const VarDecl &Var, Qualifiers::TQ Qualifier, const Type *Pointee,
     // the `*` token and placing the `const` left of it.
     // (`int const* p = nullptr;`)
     if (QualPolicy == QualifierPolicy::Right) {
-      SourceLocation BeforeStar = lexer::findPreviousTokenKind(
+      const SourceLocation BeforeStar = lexer::findPreviousTokenKind(
           Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
           tok::star);
       if (locDangerous(BeforeStar))
@@ -156,7 +160,7 @@ changePointer(const VarDecl &Var, Qualifiers::TQ Qualifier, const Type *Pointee,
     // is the same as 'QualPolicy == Right && isValueType(Pointee)'.
     // The `const` must be left of the last `*` token.
     // (`int * const* p = nullptr;`)
-    SourceLocation BeforeStar = lexer::findPreviousTokenKind(
+    const SourceLocation BeforeStar = lexer::findPreviousTokenKind(
         Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
         tok::star);
     return fixIfNotDangerous(BeforeStar, buildQualifier(Qualifier, true));
@@ -173,7 +177,7 @@ changeReferencee(const VarDecl &Var, Qualifiers::TQ Qualifier, QualType Pointee,
     return fixIfNotDangerous(Var.getTypeSpecStartLoc(),
                              buildQualifier(Qualifier));
 
-  SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
+  const SourceLocation BeforeRef = lexer::findPreviousAnyTokenKind(
       Var.getLocation(), Context.getSourceManager(), Context.getLangOpts(),
       tok::amp, tok::ampamp);
   std::optional<SourceLocation> IgnoredParens =
@@ -196,7 +200,7 @@ std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
           QualTarget == QualifierTarget::Value) &&
          "Unexpected Target");
 
-  QualType ParenStrippedType = Var.getType().IgnoreParens();
+  const QualType ParenStrippedType = Var.getType().IgnoreParens();
   if (isValueType(ParenStrippedType))
     return changeValue(Var, Qualifier, QualTarget, QualPolicy, Context);
 
@@ -238,7 +242,7 @@ bool areParensNeededForStatement(const Stmt &Node) {
       isa<BinaryConditionalOperator>(&Node))
     return true;
 
-  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node)) {
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node))
     switch (Op->getOperator()) {
     case OO_PlusPlus:
       [[fallthrough]];
@@ -253,7 +257,6 @@ bool areParensNeededForStatement(const Stmt &Node) {
     default:
       return true;
     };
-  }
 
   if (isa<CStyleCastExpr>(&Node))
     return true;
@@ -296,9 +299,8 @@ std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
   Text.consume_back("->");
 
   // Add leading '*'.
-  if (needParensAfterUnaryOperator(ExprNode)) {
+  if (needParensAfterUnaryOperator(ExprNode))
     return (llvm::Twine("*(") + Text + ")").str();
-  }
   return (llvm::Twine("*") + Text).str();
 }
 

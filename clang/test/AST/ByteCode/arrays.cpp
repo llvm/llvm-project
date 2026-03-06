@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both            %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=c++20 %s
+// RUN: %clang_cc1 -verify=ref,both            %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 constexpr int m = 3;
@@ -106,7 +106,8 @@ constexpr int k1 = &arr[1] - &arr[0];
 static_assert(k1 == 1, "");
 static_assert((&arr[0] - &arr[1]) == -1, "");
 
-constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}}
+constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{arithmetic involving unrelated objects}}
 
 static_assert((arr + 0) == arr, "");
 static_assert(&arr[0] == arr, "");
@@ -637,10 +638,92 @@ static_assert(get2() == same_entity_2, "failed to find previous decl");
 
 constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 constexpr int fail(const int &p) {
-  return (&p)[64]; // both-note {{cannot refer to element 64 of array of 2 elements}}
+  return (&p)[64]; // both-note 2{{cannot refer to element 64 of array of 2 elements}} \
+                   // both-note {{cannot refer to element 65 of array of 2 elements}} \
+                   // both-note {{cannot refer to element 66 of array of 2 elements}}
 }
 static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, ""); // both-error {{not an integral constant expression}} \
                                                                                     // both-note {{in call to}}
+
+
+static_assert(fail( // both-error {{not an integral constant expression}} \
+                    // both-note {{in call to 'fail(zs[1][1][0][0])'}}
+      *(*(*((*
+  (zs + 1))     /// int[2][2][2]
+      + 1)      /// int[2][2]
+      + 2 - 2)  /// int[2]
+      + 2 - 2)  /// int
+      ));
+
+static_assert(fail( // both-error {{not an integral constant expression}} \
+                    // both-note {{in call to 'fail(zs[1][0][0][1])'}}
+      *(*(*((*
+  (zs + 1))     /// int[2][2][2]
+      + 0)      /// int[2][2]
+      + 2 - 2)  /// int[2]
+      + 1)      /// int
+      ));
+
+static_assert(fail( // both-error {{not an integral constant expression}} \
+                    // both-note {{in call to 'fail(zs[1][0][0][2])'}}
+      *(*(*((*
+  (zs + 1))     /// int[2][2][2]
+      + 0)      /// int[2][2]
+      + 2 - 2)  /// int[2]
+      + 2)      /// int
+      ));
+
+namespace ZeroIndex {
+  constexpr char foo(const char *a) {
+    return a[0];
+  }
+  constexpr const char *f = "abc";
+  static_assert(foo(f + 1) == 'b', "");
+}
+
+namespace MultiDimArrayOffset {
+#define assert(x) (x ? void(0) : __builtin_abort())
+  struct R {
+    int a;
+  };
+
+  template<typename T>
+  class view {
+  public:
+    T* V;
+    T* current;
+
+    constexpr view(T*V) : V(V), current(V) {}
+
+    constexpr void operator+=(unsigned N) {
+      current += N;
+    }
+
+    constexpr auto operator*() {
+      return *current;
+    }
+
+  };
+
+  constexpr int foo() {
+    R buffer[2][4] = {{1, 2, 3, 4}, {5, 6, 7, 8}};
+
+    auto A = buffer;
+    A += 1;
+    assert((**A).a == 5);
+    assert(buffer == buffer + 1 - 1);
+
+    assert(--A+0 == buffer+0);
+
+    view V(buffer);
+    assert(*V == &buffer[0][0]);
+    V += 1;
+    assert(*V == &buffer[1][0]);
+    assert(*(V.current) == &buffer[1][0]);
+    return 1;
+  }
+  static_assert(foo() == 1, "");
+}
 
 namespace ZeroSizeTypes {
   constexpr int (*p1)[0] = 0, (*p2)[0] = 0;
@@ -648,9 +731,107 @@ namespace ZeroSizeTypes {
                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
 
+  constexpr int k2 = p1 - p1; // both-error {{constexpr variable 'k2' must be initialized by a constant expression}} \
+                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
+                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
+
   int arr[5][0];
   constexpr int f() { // both-error {{never produces a constant expression}}
     return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                               // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
   }
+
+  constexpr int z[0]{};
+  static_assert((z - z) == 0);
+}
+
+namespace InvalidIndex {
+  constexpr int foo(int i) { // both-error {{no return statement in constexpr function}}
+    int a[] = {1,2,3};
+    return a[_z]; // both-error {{use of undeclared identifier}}
+  }
+  static_assert(foo(0) == 1, "");
+}
+
+namespace PointerSubscript {
+  template<typename T>
+  constexpr T foo() {
+    T ss[] = {{}, {}, {}};
+    T *s = &ss[0];
+
+    return s[2];
+  }
+  static_assert(foo<int>() == 0);
+  struct S{};
+  static_assert((foo<S>(), true));
+}
+
+namespace OnePastEndDiag {
+
+  constexpr int a(const int *b) {
+    return *b; // both-note {{read of dereferenced one-past-the-end pointer}}
+  }
+  constexpr int foo[] = {1,2};
+  constexpr int k = a(foo + 2); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{in call to 'a(&foo[2])'}}
+}
+
+namespace DiscardedSubScriptExpr {
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    int a[2] = {};
+    (void)a[3]; // both-note {{cannot refer to element 3 of array of 2 elements in a constant expression}}
+    return true;
+  }
+}
+
+namespace ZeroSizeArrayRead {
+  constexpr char str[0] = {};
+  constexpr  unsigned checksum(const char *s) {
+    unsigned result = 0;
+    for (const char *p = s; *p != '\0'; ++p) { // both-note {{read of dereferenced one-past-the-end pointer}}
+      result += *p;
+    }
+    return result;
+  }
+  constexpr unsigned C = checksum(str); // both-error {{must be initialized by a constant expression}} \
+                                        // both-note {{in call to}}
+
+  constexpr const char *p1 = &str[0];
+  constexpr const char *p2 = &str[1]; // both-error {{must be initialized by a constant expression}} \
+                                      // both-note {{cannot refer to element 1 of array of 0 elements in a constant expression}}
+
+  constexpr char s[] = {};
+  static_assert(s[0] == '0', ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of dereferenced one-past-the-end pointer}}
+}
+
+namespace FAM {
+  char *strchr(const char *, int);
+
+  struct A {
+    char n, a[2];
+  };
+  struct B {
+    int n;
+    struct A a[]; // both-note {{here}}
+  };
+
+  const struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}};
+  void foo(void) { int sch = 0 != strchr(b.a[1].a, '\0'); }
+
+  int foo2() {
+    struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}}; // both-error {{initialization of flexible array member is not allowed}}
+    return 1;
+  }
+}
+
+namespace MultiDimConstructExpr {
+  struct a {
+    a *p = this;
+  };
+  struct b {
+    a m[3][3];
+  };
+  constexpr b d;
+  static_assert(d.m[2][1].p == &d.m[2][1]);
 }

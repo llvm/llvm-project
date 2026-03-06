@@ -47,8 +47,7 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
         if (failed(info))
           continue;
         auto *originalOp = info->originalProducer.getOperation();
-        auto *originalOpInLinalgOpsVector =
-            std::find(linalgOps.begin(), linalgOps.end(), originalOp);
+        auto *originalOpInLinalgOpsVector = llvm::find(linalgOps, originalOp);
         *originalOpInLinalgOpsVector = info->fusedProducer;
         // Don't mark for erasure in the tensor case, let DCE handle this.
         changed = true;
@@ -74,8 +73,8 @@ struct TestLinalgGreedyFusion
   }
   void runOnOperation() override {
     MLIRContext *context = &getContext();
-    RewritePatternSet patterns =
-        linalg::getLinalgTilingCanonicalizationPatterns(context);
+    RewritePatternSet patterns(context);
+    linalg::populateLinalgTilingCanonicalizationPatterns(patterns);
     patterns.add<ExtractSliceOfPadTensorSwapPattern>(context);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
@@ -84,7 +83,7 @@ struct TestLinalgGreedyFusion
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createCSEPass());
     do {
-      (void)applyPatternsAndFoldGreedily(getOperation(), frozenPatterns);
+      (void)applyPatternsGreedily(getOperation(), frozenPatterns);
       if (failed(runPipeline(pm, getOperation())))
         this->signalPassFailure();
     } while (succeeded(fuseLinalgOpsGreedily(getOperation())));

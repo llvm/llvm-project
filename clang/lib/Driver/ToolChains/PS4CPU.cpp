@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "PS4CPU.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -183,6 +182,7 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
 
+  // Sanitizer runtimes must be supplied before all other objects and libs.
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
@@ -261,7 +261,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // index the symbols. `uuid` is the cheapest fool-proof method.
     // (The non-determinism and alternative methods are noted in the downstream
     // PlayStation docs).
-    CmdArgs.push_back("--build-id=uuid");
+    // Static executables are only used for a handful of specialized components,
+    // where the extra section is not wanted.
+    if (!Static)
+      CmdArgs.push_back("--build-id=uuid");
 
     // All references are expected to be resolved at static link time for both
     // executables and dynamic libraries. This has been the default linking
@@ -303,10 +306,12 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // with the SDK. The scripts are inside <sdkroot>/target/lib, which is
     // added as a search path elsewhere.
     // "PRX" has long stood for "PlayStation Relocatable eXecutable".
-    CmdArgs.push_back("--default-script");
-    CmdArgs.push_back(Static   ? "static.script"
-                      : Shared ? "prx.script"
-                               : "main.script");
+    if (!Args.hasArgNoClaim(options::OPT_T)) {
+      CmdArgs.push_back("--default-script");
+      CmdArgs.push_back(Static   ? "static.script"
+                        : Shared ? "prx.script"
+                                 : "main.script");
+    }
   }
 
   if (Static)
@@ -338,10 +343,17 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // whether or not that will be the case at this point. So, unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
+
+  tools::addDTLTOOptions(TC, Args, CmdArgs);
+
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
+
+  if (Args.hasFlag(options::OPT_ffat_lto_objects,
+                   options::OPT_fno_fat_lto_objects, false))
+    CmdArgs.push_back("--fat-lto-objects");
 
   AddLTOFlag("-emit-jump-table-sizes-section");
 
@@ -358,27 +370,73 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
     AddLTOFlag(Twine("jobs=") + Jobs);
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
-    TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
-
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
   TC.AddFilePathLibArgs(Args, CmdArgs);
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_T_Group, options::OPT_s, options::OPT_t});
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
-  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+  // Sanitizer runtimes must be supplied before all other objects and libs.
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
+    TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
-  if (Args.hasArg(options::OPT_pthread)) {
-    CmdArgs.push_back("-lpthread");
+  const bool AddStartFiles =
+      !Relocatable &&
+      !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib);
+
+  auto AddCRTObject = [&](StringRef Name) {
+    // CRT objects can be found on user supplied library paths. This is
+    // an entrenched expectation on PlayStation.
+    CmdArgs.push_back(Args.MakeArgString("-l:" + Name));
+  };
+
+  if (AddStartFiles) {
+    if (!Shared)
+      AddCRTObject("crt1.o");
+    AddCRTObject("crti.o");
+    AddCRTObject(Shared   ? "crtbeginS.o"
+                 : Static ? "crtbeginT.o"
+                          : "crtbegin.o");
   }
 
-  if (UseJMC) {
-    CmdArgs.push_back("--push-state");
-    CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lSceJmc_nosubmission");
-    CmdArgs.push_back("--pop-state");
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
+  if (!Relocatable &&
+      !Args.hasArg(options::OPT_nodefaultlibs, options::OPT_nostdlib)) {
+
+    if (UseJMC) {
+      CmdArgs.push_back("--push-state");
+      CmdArgs.push_back("--whole-archive");
+      CmdArgs.push_back("-lSceJmc_nosubmission");
+      CmdArgs.push_back("--pop-state");
+    }
+
+    if (Args.hasArg(options::OPT_pthread))
+      CmdArgs.push_back("-lpthread");
+
+    if (Static) {
+      if (!Args.hasArg(options::OPT_nostdlibxx))
+        CmdArgs.push_back("-lstdc++");
+      if (!Args.hasArg(options::OPT_nolibc)) {
+        CmdArgs.push_back("-lm");
+        CmdArgs.push_back("-lc");
+      }
+
+      CmdArgs.push_back("-lcompiler_rt");
+      CmdArgs.push_back("-lkernel");
+    } else {
+      // The C and C++ libraries are combined.
+      if (!Args.hasArg(options::OPT_nolibc, options::OPT_nostdlibxx))
+        CmdArgs.push_back("-lc_stub_weak");
+
+      CmdArgs.push_back("-lkernel_stub_weak");
+    }
+  }
+  if (AddStartFiles) {
+    AddCRTObject(Shared ? "crtendS.o" : "crtend.o");
+    AddCRTObject("crtn.o");
   }
 
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {
@@ -434,6 +492,9 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   // control of header or library search. If we're not linking, don't check
   // for missing libraries.
   auto CheckSDKPartExists = [&](StringRef Dir, StringRef Desc) {
+    // In ThinLTO code generation mode SDK files are not required.
+    if (Args.hasArgNoClaim(options::OPT_fthinlto_index_EQ))
+      return true;
     if (llvm::sys::fs::exists(Dir))
       return true;
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
@@ -443,7 +504,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 
   bool Linking = !Args.hasArg(options::OPT_E, options::OPT_c, options::OPT_S,
                               options::OPT_emit_ast);
-  if (!CustomSysroot && Linking) {
+  if (Linking) {
     SmallString<128> Dir(SDKLibraryRootDir);
     llvm::sys::path::append(Dir, "target/lib");
     if (CheckSDKPartExists(Dir, "system libraries"))

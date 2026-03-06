@@ -22,24 +22,25 @@ class DeviceImageTy;
 
 class OffloadEntryTy {
   DeviceImageTy &DeviceImage;
-  __tgt_offload_entry &OffloadEntry;
+  llvm::offloading::EntryTy &OffloadEntry;
 
 public:
-  OffloadEntryTy(DeviceImageTy &DeviceImage, __tgt_offload_entry &OffloadEntry)
+  OffloadEntryTy(DeviceImageTy &DeviceImage,
+                 llvm::offloading::EntryTy &OffloadEntry)
       : DeviceImage(DeviceImage), OffloadEntry(OffloadEntry) {}
 
   bool isGlobal() const { return getSize() != 0; }
-  size_t getSize() const { return OffloadEntry.size; }
+  size_t getSize() const { return OffloadEntry.Size; }
 
-  void *getAddress() const { return OffloadEntry.addr; }
-  llvm::StringRef getName() const { return OffloadEntry.name; }
-  const char *getNameAsCStr() const { return OffloadEntry.name; }
+  void *getnAddress() const { return OffloadEntry.Address; }
+  llvm::StringRef getName() const { return OffloadEntry.SymbolName; }
+  const char *getNameAsCStr() const { return OffloadEntry.SymbolName; }
   __tgt_bin_desc *getBinaryDescription() const;
 
   bool isLink() const { return hasFlags(OMP_DECLARE_TARGET_LINK); }
 
   bool hasFlags(OpenMPOffloadingDeclareTargetFlags Flags) const {
-    return Flags & OffloadEntry.flags;
+    return Flags & OffloadEntry.Flags;
   }
 };
 

@@ -37,8 +37,8 @@ SBModule::SBModule(const SBModuleSpec &module_spec) {
   LLDB_INSTRUMENT_VA(this, module_spec);
 
   ModuleSP module_sp;
-  Status error = ModuleList::GetSharedModule(
-      *module_spec.m_opaque_up, module_sp, nullptr, nullptr, nullptr);
+  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_up,
+                                             module_sp, nullptr, nullptr);
   if (module_sp)
     SetSP(module_sp);
 }
@@ -52,7 +52,14 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
 
   ProcessSP process_sp(process.GetSP());
   if (process_sp) {
-    m_opaque_sp = process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    llvm::Expected<ModuleSP> module_sp_or_err =
+        process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    if (auto err = module_sp_or_err.takeError()) {
+      llvm::consumeError(std::move(err));
+      return;
+    }
+
+    m_opaque_sp = *module_sp_or_err;
     if (m_opaque_sp) {
       Target &target = process_sp->GetTarget();
       bool changed = false;
@@ -670,4 +677,12 @@ void SBModule::GarbageCollectAllocatedModules() {
 
   const bool mandatory = false;
   ModuleList::RemoveOrphanSharedModules(mandatory);
+}
+
+const char *SBModule::GetObjectName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_sp)
+    return nullptr;
+  return m_opaque_sp->GetObjectName().AsCString();
 }

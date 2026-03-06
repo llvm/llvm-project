@@ -16,8 +16,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/TimeProfiler.h"
 
-#include "mach-o/compact_unwind_encoding.h"
-
 namespace lld::macho {
 
 using namespace llvm;
@@ -156,11 +154,11 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
       assert(isec->live && "We mark as live when pushing onto the worklist!");
 
       // Mark all symbols listed in the relocation table for this section.
-      for (const Reloc &r : isec->relocs) {
+      for (const Relocation &r : isec->relocs) {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s, entry);
         else
-          enqueue(r.referent.get<InputSection *>(), r.addend, entry);
+          enqueue(cast<InputSection *>(r.referent), r.addend, entry);
       }
       for (Defined *d : getInputSection(entry)->symbols)
         addSym(d, entry);
@@ -174,7 +172,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
       if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) || isec->live)
         continue;
 
-      for (const Reloc &r : isec->relocs) {
+      for (const Relocation &r : isec->relocs) {
         if (auto *s = r.referent.dyn_cast<Symbol *>()) {
           if (s->isLive()) {
             InputSection *referentIsec = nullptr;
@@ -183,7 +181,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
           }
         } else {
-          auto *referentIsec = r.referent.get<InputSection *>();
+          auto *referentIsec = cast<InputSection *>(r.referent);
           if (referentIsec->isLive(r.addend))
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
         }

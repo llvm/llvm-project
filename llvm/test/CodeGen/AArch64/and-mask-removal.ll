@@ -11,7 +11,6 @@ define void @new_position(i32 %pos) {
 ; CHECK-SD-LABEL: new_position:
 ; CHECK-SD:       ; %bb.0: ; %entry
 ; CHECK-SD-NEXT:    adrp x8, _board@GOTPAGE
-; CHECK-SD-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    ldr x8, [x8, _board@GOTPAGEOFF]
 ; CHECK-SD-NEXT:    ldrb w8, [x8, w0, sxtw]
 ; CHECK-SD-NEXT:    sub w8, w8, #1
@@ -484,9 +483,9 @@ define i64 @pr58109(i8 signext %0) {
 ; CHECK-SD-LABEL: pr58109:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    add w8, w0, #1
-; CHECK-SD-NEXT:    and w8, w8, #0xff
-; CHECK-SD-NEXT:    subs w8, w8, #1
-; CHECK-SD-NEXT:    csel w0, wzr, w8, lo
+; CHECK-SD-NEXT:    ands w8, w8, #0xff
+; CHECK-SD-NEXT:    cset w9, ne
+; CHECK-SD-NEXT:    sub w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: pr58109:

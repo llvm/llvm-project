@@ -16,10 +16,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SERIALIZE_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "clang/AST/CommentVisitor.h"
 #include <string>
-#include <vector>
 
 using namespace clang::comments;
 
@@ -37,32 +34,44 @@ namespace serialize {
 // its parent scope. For NamespaceDecl and RecordDecl both elements are not
 // nullptr.
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
+emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
+emitInfo(const CXXMethodDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
+emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
+emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
+emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
-
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
+emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly);
 
 // Function to hash a given USR value for storage.
 // As USRs (Unified Symbol Resolution) could be large, especially for functions
@@ -71,7 +80,7 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
 // memory (vs storing USRs directly).
 SymbolID hashUSR(llvm::StringRef USR);
 
-std::string serialize(std::unique_ptr<Info> &I);
+std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags);
 
 } // namespace serialize
 } // namespace doc

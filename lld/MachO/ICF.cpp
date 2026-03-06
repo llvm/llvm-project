@@ -12,10 +12,8 @@
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "UnwindInfoSection.h"
 
 #include "lld/Common/CommonLinkerContext.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -27,6 +25,8 @@ using namespace lld;
 using namespace lld::macho;
 
 static constexpr bool verboseDiagnostics = false;
+// This counter is used to generate unique thunk names.
+static uint64_t icfThunkCounter = 0;
 
 class ICF {
 public:
@@ -106,7 +106,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     return false;
   if (ia->relocs.size() != ib->relocs.size())
     return false;
-  auto f = [](const Reloc &ra, const Reloc &rb) {
+  auto f = [](const Relocation &ra, const Relocation &rb) {
     if (ra.type != rb.type)
       return false;
     if (ra.pcrel != rb.pcrel)
@@ -115,16 +115,16 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return false;
     if (ra.offset != rb.offset)
       return false;
-    if (ra.referent.is<Symbol *>() != rb.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))
       return false;
 
     InputSection *isecA, *isecB;
 
     uint64_t valueA = 0;
     uint64_t valueB = 0;
-    if (ra.referent.is<Symbol *>()) {
-      const auto *sa = ra.referent.get<Symbol *>();
-      const auto *sb = rb.referent.get<Symbol *>();
+    if (isa<Symbol *>(ra.referent)) {
+      const auto *sa = cast<Symbol *>(ra.referent);
+      const auto *sb = cast<Symbol *>(rb.referent);
       if (sa->kind() != sb->kind())
         return false;
       // ICF runs before Undefineds are treated (and potentially converted into
@@ -143,8 +143,8 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       isecB = db->isec();
       valueB = db->value;
     } else {
-      isecA = ra.referent.get<InputSection *>();
-      isecB = rb.referent.get<InputSection *>();
+      isecA = cast<InputSection *>(ra.referent);
+      isecB = cast<InputSection *>(rb.referent);
     }
 
     // Typically, we should not encounter sections marked with `keepUnique` at
@@ -167,62 +167,23 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return ra.addend == rb.addend;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
-    if (ra.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent))
       // For symbol relocs, we compare the contents at the symbol address. We
       // don't do `getOffset(value + addend)` because value + addend may not be
       // a valid offset in the literal section.
       return isecA->getOffset(valueA) == isecB->getOffset(valueB) &&
              ra.addend == rb.addend;
-    else {
-      assert(valueA == 0 && valueB == 0);
-      // For section relocs, we compare the content at the section offset.
-      return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
-    }
+    assert(valueA == 0 && valueB == 0);
+    // For section relocs, we compare the content at the section offset.
+    return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
   };
-  return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
-                    f);
-}
-
-// Compare the "moving" parts of two ConcatInputSections -- i.e. everything not
-// handled by equalsConstant().
-bool ICF::equalsVariable(const ConcatInputSection *ia,
-                         const ConcatInputSection *ib) {
-  if (verboseDiagnostics)
-    ++equalsVariableCount;
-  assert(ia->relocs.size() == ib->relocs.size());
-  auto f = [this](const Reloc &ra, const Reloc &rb) {
-    // We already filtered out mismatching values/addends in equalsConstant.
-    if (ra.referent == rb.referent)
-      return true;
-    const ConcatInputSection *isecA, *isecB;
-    if (ra.referent.is<Symbol *>()) {
-      // Matching DylibSymbols are already filtered out by the
-      // identical-referent check above. Non-matching DylibSymbols were filtered
-      // out in equalsConstant(). So we can safely cast to Defined here.
-      const auto *da = cast<Defined>(ra.referent.get<Symbol *>());
-      const auto *db = cast<Defined>(rb.referent.get<Symbol *>());
-      if (da->isAbsolute())
-        return true;
-      isecA = dyn_cast<ConcatInputSection>(da->isec());
-      if (!isecA)
-        return true; // literal sections were checked in equalsConstant.
-      isecB = cast<ConcatInputSection>(db->isec());
-    } else {
-      const auto *sa = ra.referent.get<InputSection *>();
-      const auto *sb = rb.referent.get<InputSection *>();
-      isecA = dyn_cast<ConcatInputSection>(sa);
-      if (!isecA)
-        return true;
-      isecB = cast<ConcatInputSection>(sb);
-    }
-    return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
-  };
-  if (!std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(), f))
+  if (!llvm::equal(ia->relocs, ib->relocs, f))
     return false;
 
-  // If there are symbols with associated unwind info, check that the unwind
-  // info matches. For simplicity, we only handle the case where there are only
-  // symbols at offset zero within the section (which is typically the case with
+  // Check unwind info structural compatibility: if there are symbols with
+  // associated unwind info, check that both sections have compatible symbol
+  // layouts. For simplicity, we only attempt folding when all symbols are at
+  // offset zero within the section (which is typically the case with
   // .subsections_via_symbols.)
   auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
   const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
@@ -233,15 +194,65 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
     return false;
   const Defined *da = *itA;
   const Defined *db = *itB;
-  if (da->unwindEntry()->icfEqClass[icfPass % 2] !=
-          db->unwindEntry()->icfEqClass[icfPass % 2] ||
-      da->value != 0 || db->value != 0)
+  if (da->value != 0 || db->value != 0)
     return false;
   auto isZero = [](Defined *d) { return d->value == 0; };
+  // Since symbols are stored in order of value, and since we have already
+  // checked that da/db have value zero, we just need to do the isZero check on
+  // the subsequent symbols.
   return std::find_if_not(std::next(itA), ia->symbols.end(), isZero) ==
              ia->symbols.end() &&
          std::find_if_not(std::next(itB), ib->symbols.end(), isZero) ==
              ib->symbols.end();
+}
+
+// Compare the "moving" parts of two ConcatInputSections -- i.e. everything not
+// handled by equalsConstant().
+bool ICF::equalsVariable(const ConcatInputSection *ia,
+                         const ConcatInputSection *ib) {
+  if (verboseDiagnostics)
+    ++equalsVariableCount;
+  assert(ia->relocs.size() == ib->relocs.size());
+  auto f = [this](const Relocation &ra, const Relocation &rb) {
+    // We already filtered out mismatching values/addends in equalsConstant.
+    if (ra.referent == rb.referent)
+      return true;
+    const ConcatInputSection *isecA, *isecB;
+    if (isa<Symbol *>(ra.referent)) {
+      // Matching DylibSymbols are already filtered out by the
+      // identical-referent check above. Non-matching DylibSymbols were filtered
+      // out in equalsConstant(). So we can safely cast to Defined here.
+      const auto *da = cast<Defined>(cast<Symbol *>(ra.referent));
+      const auto *db = cast<Defined>(cast<Symbol *>(rb.referent));
+      if (da->isAbsolute())
+        return true;
+      isecA = dyn_cast<ConcatInputSection>(da->isec());
+      if (!isecA)
+        return true; // literal sections were checked in equalsConstant.
+      isecB = cast<ConcatInputSection>(db->isec());
+    } else {
+      const auto *sa = cast<InputSection *>(ra.referent);
+      const auto *sb = cast<InputSection *>(rb.referent);
+      isecA = dyn_cast<ConcatInputSection>(sa);
+      if (!isecA)
+        return true;
+      isecB = cast<ConcatInputSection>(sb);
+    }
+    return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
+  };
+  if (!llvm::equal(ia->relocs, ib->relocs, f))
+    return false;
+
+  // Compare unwind info equivalence classes.
+  auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
+  const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
+  if (itA == ia->symbols.end())
+    return true;
+  const Defined *da = *itA;
+  // equalsConstant() guarantees that both sections have unwind info.
+  const Defined *db = *llvm::find_if(ib->symbols, hasUnwind);
+  return da->unwindEntry()->icfEqClass[icfPass % 2] ==
+         db->unwindEntry()->icfEqClass[icfPass % 2];
 }
 
 // Find the first InputSection after BEGIN whose equivalence class differs
@@ -263,6 +274,31 @@ void ICF::forEachClassRange(size_t begin, size_t end,
   }
 }
 
+// Find or create a symbol at offset 0 in the given section
+static Symbol *getThunkTargetSymbol(ConcatInputSection *isec) {
+  for (Symbol *sym : isec->symbols)
+    if (auto *d = dyn_cast<Defined>(sym))
+      if (d->value == 0)
+        return sym;
+
+  std::string thunkName;
+  if (isec->symbols.size() == 0)
+    thunkName = isec->getName().str() + ".icf.0";
+  else
+    thunkName = isec->getName().str() + "icf.thunk.target" +
+                std::to_string(icfThunkCounter++);
+
+  // If no symbol found at offset 0, create one
+  auto *sym = make<Defined>(thunkName, /*file=*/nullptr, isec,
+                            /*value=*/0, /*size=*/isec->getSize(),
+                            /*isWeakDef=*/false, /*isExternal=*/false,
+                            /*isPrivateExtern=*/false, /*isThumb=*/false,
+                            /*isReferencedDynamically=*/false,
+                            /*noDeadStrip=*/false);
+  isec->symbols.push_back(sym);
+  return sym;
+}
+
 // Given a range of identical icfInputs, replace address significant functions
 // with a thunk that is just a direct branch to the first function in the
 // series. This way we keep only one main body of the function but we still
@@ -270,15 +306,27 @@ void ICF::forEachClassRange(size_t begin, size_t end,
 // direct branch thunk rather than containing a full copy of the actual function
 // body.
 void ICF::applySafeThunksToRange(size_t begin, size_t end) {
-  // If the functions we're dealing with are smaller than the thunk size, then
-  // just leave them all as-is - creating thunks would be a net loss.
-  uint32_t thunkSize = target->getICFSafeThunkSize();
-  if (icfInputs[begin]->data.size() <= thunkSize)
-    return;
-
   // When creating a unique ICF thunk, use the first section as the section that
   // all thunks will branch to.
   ConcatInputSection *masterIsec = icfInputs[begin];
+
+  // If the first section is not address significant, sorting guarantees that
+  // there are no address significant functions. So we can skip this range.
+  if (!masterIsec->keepUnique)
+    return;
+
+  // Skip anything that is not a code section.
+  if (!isCodeSection(masterIsec))
+    return;
+
+  // If the functions we're dealing with are smaller than the thunk size, then
+  // just leave them all as-is - creating thunks would be a net loss.
+  uint32_t thunkSize = target->getICFSafeThunkSize();
+  if (masterIsec->data.size() <= thunkSize)
+    return;
+
+  // Get the symbol that all thunks will branch to.
+  Symbol *masterSym = getThunkTargetSymbol(masterIsec);
 
   for (size_t i = begin + 1; i < end; ++i) {
     ConcatInputSection *isec = icfInputs[i];
@@ -291,7 +339,7 @@ void ICF::applySafeThunksToRange(size_t begin, size_t end) {
         makeSyntheticInputSection(isec->getSegName(), isec->getName());
     addInputSection(thunk);
 
-    target->initICFSafeThunkBody(thunk, masterIsec);
+    target->initICFSafeThunkBody(thunk, masterSym);
     thunk->foldIdentical(isec, Symbol::ICFFoldKind::Thunk);
 
     // Since we're folding the target function into a thunk, we need to adjust
@@ -342,7 +390,7 @@ void ICF::run() {
   for (icfPass = 0; icfPass < 2; ++icfPass) {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint32_t hash = isec->icfEqClass[icfPass % 2];
-      for (const Reloc &r : isec->relocs) {
+      for (const Relocation &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec()) {
@@ -412,7 +460,7 @@ void ICF::run() {
 
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      // Skip keepUnique inputs when using safe_thunks (already handeled above)
+      // Skip keepUnique inputs when using safe_thunks (already handled above)
       if (useSafeThunks && icfInputs[i]->keepUnique) {
         // Assert keepUnique sections are either small or replaced with thunks.
         assert(!icfInputs[i]->live ||
@@ -472,7 +520,7 @@ void macho::markAddrSigSymbols() {
 
     const InputSection *isec = addrSigSection->subsections[0].isec;
 
-    for (const Reloc &r : isec->relocs) {
+    for (const Relocation &r : isec->relocs) {
       if (auto *sym = r.referent.dyn_cast<Symbol *>())
         markSymAsAddrSig(sym);
       else
@@ -481,6 +529,26 @@ void macho::markAddrSigSymbols() {
   }
 }
 
+// Given a symbol that was folded into a thunk, return the symbol pointing to
+// the actual body of the function. We use this approach rather than storing the
+// needed info in the Defined itself in order to minimize memory usage.
+Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
+  assert(isa<ConcatInputSection>(foldedSym->originalIsec) &&
+         "thunk-folded ICF symbol expected to be on a ConcatInputSection");
+  // foldedSec is the InputSection that was marked as deleted upon fold
+  ConcatInputSection *foldedSec =
+      cast<ConcatInputSection>(foldedSym->originalIsec);
+
+  // thunkBody is the actual live thunk, containing the code that branches to
+  // the actual body of the function.
+  InputSection *thunkBody = foldedSec->replacement;
+
+  // The symbol of the merged body of the function that the thunk jumps to. This
+  // will end up in the final binary.
+  Symbol *targetSym = target->getThunkBranchTarget(thunkBody);
+
+  return cast<Defined>(targetSym);
+}
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed
@@ -499,6 +567,8 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   // ICF::segregate()
   std::vector<ConcatInputSection *> foldable;
   uint64_t icfUniqueID = inputSections.size();
+  // Reset the thunk counter for each run of ICF.
+  icfThunkCounter = 0;
   for (ConcatInputSection *isec : inputSections) {
     bool isFoldableWithAddendsRemoved = isCfStringSection(isec) ||
                                         isClassRefsSection(isec) ||
@@ -539,7 +609,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
         // We have to do this copying serially as the BumpPtrAllocator is not
         // thread-safe. FIXME: Make a thread-safe allocator.
         MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
-        for (const Reloc &r : isec->relocs)
+        for (const Relocation &r : isec->relocs)
           target->relocateOne(copy.data() + r.offset, r, /*va=*/0,
                               /*relocVA=*/0);
         isec->data = copy;

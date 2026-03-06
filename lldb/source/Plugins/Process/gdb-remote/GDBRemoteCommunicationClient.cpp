@@ -41,7 +41,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/JSON.h"
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
 #include <compression.h>
 #endif
 
@@ -199,6 +199,24 @@ uint64_t GDBRemoteCommunicationClient::GetRemoteMaxPacketSize() {
   return m_max_packet_size;
 }
 
+bool GDBRemoteCommunicationClient::GetReverseContinueSupported() {
+  if (m_supports_reverse_continue == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_reverse_continue == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetReverseStepSupported() {
+  if (m_supports_reverse_step == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_reverse_step == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetMultiMemReadSupported() {
+  if (m_supports_multi_mem_read == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_multi_mem_read == eLazyBoolYes;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -275,7 +293,6 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_vCont_s = eLazyBoolCalculate;
     m_supports_vCont_S = eLazyBoolCalculate;
     m_supports_p = eLazyBoolCalculate;
-    m_supports_x = eLazyBoolCalculate;
     m_supports_QSaveRegisterState = eLazyBoolCalculate;
     m_qHostInfo_is_valid = eLazyBoolCalculate;
     m_curr_pid_is_valid = eLazyBoolCalculate;
@@ -295,6 +312,9 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_qXfer_siginfo_read = eLazyBoolCalculate;
     m_supports_augmented_libraries_svr4_read = eLazyBoolCalculate;
     m_uses_native_signals = eLazyBoolCalculate;
+    m_x_packet_state.reset();
+    m_supports_reverse_continue = eLazyBoolCalculate;
+    m_supports_reverse_step = eLazyBoolCalculate;
     m_supports_qProcessInfoPID = true;
     m_supports_qfProcessInfo = true;
     m_supports_qUserName = true;
@@ -325,6 +345,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supported_async_json_packets_is_valid = false;
     m_supported_async_json_packets_sp.reset();
     m_supports_jModulesInfo = true;
+    m_supports_multi_mem_read = eLazyBoolCalculate;
   }
 
   // These flags should be reset when we first connect to a GDB server and when
@@ -348,6 +369,10 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_memory_tagging = eLazyBoolNo;
   m_supports_qSaveCore = eLazyBoolNo;
   m_uses_native_signals = eLazyBoolNo;
+  m_x_packet_state.reset();
+  m_supports_reverse_continue = eLazyBoolNo;
+  m_supports_reverse_step = eLazyBoolNo;
+  m_supports_multi_mem_read = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -389,7 +414,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_qXfer_memory_map_read = eLazyBoolYes;
       else if (x == "qXfer:siginfo:read+")
         m_supports_qXfer_siginfo_read = eLazyBoolYes;
-      else if (x == "qEcho")
+      else if (x == "qEcho+")
         m_supports_qEcho = eLazyBoolYes;
       else if (x == "QPassSignals+")
         m_supports_QPassSignals = eLazyBoolYes;
@@ -401,6 +426,14 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_qSaveCore = eLazyBoolYes;
       else if (x == "native-signals+")
         m_uses_native_signals = eLazyBoolYes;
+      else if (x == "binary-upload+")
+        m_x_packet_state = xPacketState::Prefixed;
+      else if (x == "ReverseContinue+")
+        m_supports_reverse_continue = eLazyBoolYes;
+      else if (x == "ReverseStep+")
+        m_supports_reverse_step = eLazyBoolYes;
+      else if (x == "MultiMemRead+")
+        m_supports_multi_mem_read = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -447,7 +480,9 @@ bool GDBRemoteCommunicationClient::GetThreadSuffixSupported() {
   }
   return m_supports_thread_suffix;
 }
-bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
+
+bool GDBRemoteCommunicationClient::GetVContSupported(llvm::StringRef flavor) {
+  assert(!flavor.empty());
   if (m_supports_vCont_c == eLazyBoolCalculate) {
     StringExtractorGDBRemote response;
     m_supports_vCont_any = eLazyBoolNo;
@@ -458,18 +493,16 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     m_supports_vCont_S = eLazyBoolNo;
     if (SendPacketAndWaitForResponse("vCont?", response) ==
         PacketResult::Success) {
-      const char *response_cstr = response.GetStringRef().data();
-      if (::strstr(response_cstr, ";c"))
-        m_supports_vCont_c = eLazyBoolYes;
-
-      if (::strstr(response_cstr, ";C"))
-        m_supports_vCont_C = eLazyBoolYes;
-
-      if (::strstr(response_cstr, ";s"))
-        m_supports_vCont_s = eLazyBoolYes;
-
-      if (::strstr(response_cstr, ";S"))
-        m_supports_vCont_S = eLazyBoolYes;
+      for (llvm::StringRef token : llvm::split(response.GetStringRef(), ';')) {
+        if (token == "c")
+          m_supports_vCont_c = eLazyBoolYes;
+        if (token == "C")
+          m_supports_vCont_C = eLazyBoolYes;
+        if (token == "s")
+          m_supports_vCont_s = eLazyBoolYes;
+        if (token == "S")
+          m_supports_vCont_S = eLazyBoolYes;
+      }
 
       if (m_supports_vCont_c == eLazyBoolYes &&
           m_supports_vCont_C == eLazyBoolYes &&
@@ -487,23 +520,14 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     }
   }
 
-  switch (flavor) {
-  case 'a':
-    return m_supports_vCont_any;
-  case 'A':
-    return m_supports_vCont_all;
-  case 'c':
-    return m_supports_vCont_c;
-  case 'C':
-    return m_supports_vCont_C;
-  case 's':
-    return m_supports_vCont_s;
-  case 'S':
-    return m_supports_vCont_S;
-  default:
-    break;
-  }
-  return false;
+  return llvm::StringSwitch<bool>(flavor)
+      .Case("a", m_supports_vCont_any)
+      .Case("A", m_supports_vCont_all)
+      .Case("c", m_supports_vCont_c)
+      .Case("C", m_supports_vCont_C)
+      .Case("s", m_supports_vCont_s)
+      .Case("S", m_supports_vCont_S)
+      .Default(false);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -715,19 +739,20 @@ Status GDBRemoteCommunicationClient::WriteMemoryTags(
   return status;
 }
 
-bool GDBRemoteCommunicationClient::GetxPacketSupported() {
-  if (m_supports_x == eLazyBoolCalculate) {
+GDBRemoteCommunicationClient::xPacketState
+GDBRemoteCommunicationClient::GetxPacketState() {
+  if (!m_x_packet_state)
+    GetRemoteQSupported();
+  if (!m_x_packet_state) {
     StringExtractorGDBRemote response;
-    m_supports_x = eLazyBoolNo;
-    char packet[256];
-    snprintf(packet, sizeof(packet), "x0,0");
-    if (SendPacketAndWaitForResponse(packet, response) ==
+    m_x_packet_state = xPacketState::Unimplemented;
+    if (SendPacketAndWaitForResponse("x0,0", response) ==
         PacketResult::Success) {
       if (response.IsOKResponse())
-        m_supports_x = eLazyBoolYes;
+        m_x_packet_state = xPacketState::Bare;
     }
   }
-  return m_supports_x;
+  return *m_x_packet_state;
 }
 
 lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
@@ -1080,7 +1105,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   CompressionType avail_type = CompressionType::None;
   llvm::StringRef avail_name;
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzfse") {
@@ -1090,9 +1115,6 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
       }
     }
   }
-#endif
-
-#if defined(HAVE_LIBCOMPRESSION)
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "zlib-deflate") {
@@ -1116,7 +1138,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   }
 #endif
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lz4") {
@@ -1126,9 +1148,6 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
       }
     }
   }
-#endif
-
-#if defined(HAVE_LIBCOMPRESSION)
   if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzma") {
@@ -1549,7 +1568,7 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
   PacketResult packet_result =
       SendPacketAndWaitForResponse(packet.GetString(), response);
   if (packet_result != PacketResult::Success)
-    error = Status::FromErrorString("Sending isconnect packet failed.");
+    error = Status::FromErrorString("Sending disconnect packet failed.");
   return error;
 }
 
@@ -1621,6 +1640,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           region_info.SetName(name.c_str());
         } else if (name == "flags") {
           region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+          region_info.SetIsShadowStack(MemoryRegionInfo::eNo);
 
           llvm::StringRef flags = value;
           llvm::StringRef flag;
@@ -1629,10 +1649,10 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
             std::tie(flag, flags) = flags.split(' ');
             // To account for trailing whitespace
             if (flag.size()) {
-              if (flag == "mt") {
+              if (flag == "mt")
                 region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
-                break;
-              }
+              else if (flag == "ss")
+                region_info.SetIsShadowStack(MemoryRegionInfo::eYes);
             }
           }
         } else if (name == "type") {
@@ -2132,7 +2152,6 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       llvm::StringRef value;
       uint32_t cpu = LLDB_INVALID_CPUTYPE;
       uint32_t sub = 0;
-      std::string arch_name;
       std::string os_name;
       std::string environment;
       std::string vendor_name;
@@ -4340,7 +4359,9 @@ llvm::Expected<int> GDBRemoteCommunicationClient::KillProcess(lldb::pid_t pid) {
   StringExtractorGDBRemote response;
   GDBRemoteCommunication::ScopedTimeout(*this, seconds(3));
 
-  if (SendPacketAndWaitForResponse("k", response, GetPacketTimeout()) !=
+  // LLDB server typically sends no response for "k", so we shouldn't try
+  // to sync on timeout.
+  if (SendPacketAndWaitForResponse("k", response, GetPacketTimeout(), false) !=
       PacketResult::Success)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "failed to send k packet");

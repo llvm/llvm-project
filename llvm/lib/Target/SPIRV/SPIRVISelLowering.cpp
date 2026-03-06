@@ -16,14 +16,65 @@
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define DEBUG_TYPE "spirv-lower"
 
 using namespace llvm;
+
+SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
+                                         const SPIRVSubtarget &ST)
+    : TargetLowering(TM, ST), STI(ST) {
+  // Even with SPV_ALTERA_arbitrary_precision_integers enabled, atomic sizes are
+  // limited by atomicrmw xchg operation, which only supports operand up to 64
+  // bits wide, as defined in SPIR-V legalizer. Currently, spirv-val doesn't
+  // consider 128-bit OpTypeInt as valid either.
+  setMaxAtomicSizeInBitsSupported(64);
+  setMinCmpXchgSizeInBits(8);
+}
+
+// Returns true of the types logically match, as defined in
+// https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
+static bool typesLogicallyMatch(const SPIRVTypeInst Ty1,
+                                const SPIRVTypeInst Ty2,
+                                SPIRVGlobalRegistry &GR) {
+  if (Ty1->getOpcode() != Ty2->getOpcode())
+    return false;
+
+  if (Ty1->getNumOperands() != Ty2->getNumOperands())
+    return false;
+
+  if (Ty1->getOpcode() == SPIRV::OpTypeArray) {
+    // Array must have the same size.
+    if (Ty1->getOperand(2).getReg() != Ty2->getOperand(2).getReg())
+      return false;
+
+    SPIRVTypeInst ElemType1 =
+        GR.getSPIRVTypeForVReg(Ty1->getOperand(1).getReg());
+    SPIRVTypeInst ElemType2 =
+        GR.getSPIRVTypeForVReg(Ty2->getOperand(1).getReg());
+    return ElemType1 == ElemType2 ||
+           typesLogicallyMatch(ElemType1, ElemType2, GR);
+  }
+
+  if (Ty1->getOpcode() == SPIRV::OpTypeStruct) {
+    for (unsigned I = 1; I < Ty1->getNumOperands(); I++) {
+      SPIRVTypeInst ElemType1 =
+          GR.getSPIRVTypeForVReg(Ty1->getOperand(I).getReg());
+      SPIRVTypeInst ElemType2 =
+          GR.getSPIRVTypeForVReg(Ty2->getOperand(I).getReg());
+      if (ElemType1 != ElemType2 &&
+          !typesLogicallyMatch(ElemType1, ElemType2, GR))
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
 
 unsigned SPIRVTargetLowering::getNumRegistersForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
@@ -54,10 +105,10 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   return getRegisterType(Context, VT);
 }
 
-bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const CallInst &I,
-                                             MachineFunction &MF,
-                                             unsigned Intrinsic) const {
+void SPIRVTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   unsigned AlignIdx = 3;
   switch (Intrinsic) {
   case Intrinsic::spv_load:
@@ -73,13 +124,12 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i64;
     // TODO: take into account opaque pointers (don't use getElementType).
     // MVT::getVT(PtrTy->getElementType());
-    return true;
-    break;
+    Infos.push_back(Info);
+    return;
   }
   default:
     break;
   }
-  return false;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
@@ -101,43 +151,39 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 }
 
 inline Register getTypeReg(MachineRegisterInfo *MRI, Register OpReg) {
-  SPIRVType *TypeInst = MRI->getVRegDef(OpReg);
-  return TypeInst && TypeInst->getOpcode() == SPIRV::OpFunctionParameter
-             ? TypeInst->getOperand(1).getReg()
+  const MachineInstr *Inst = MRI->getVRegDef(OpReg);
+  return Inst && Inst->getOpcode() == SPIRV::OpFunctionParameter
+             ? Inst->getOperand(1).getReg()
              : OpReg;
 }
 
 static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                             SPIRVGlobalRegistry &GR, MachineInstr &I,
                             Register OpReg, unsigned OpIdx,
-                            SPIRVType *NewPtrType) {
-  Register NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+                            SPIRVTypeInst NewPtrType) {
   MachineIRBuilder MIB(I);
-  bool Res = MIB.buildInstr(SPIRV::OpBitcast)
-                 .addDef(NewReg)
-                 .addUse(GR.getSPIRVTypeID(NewPtrType))
-                 .addUse(OpReg)
-                 .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
-                                   *STI.getRegBankInfo());
-  if (!Res)
-    report_fatal_error("insert validation bitcast: cannot constrain all uses");
-  MRI->setRegClass(NewReg, &SPIRV::iIDRegClass);
-  GR.assignSPIRVTypeToVReg(NewPtrType, NewReg, MIB.getMF());
+  Register NewReg = createVirtualRegister(NewPtrType, &GR, MRI, MIB.getMF());
+  MIB.buildInstr(SPIRV::OpBitcast)
+      .addDef(NewReg)
+      .addUse(GR.getSPIRVTypeID(NewPtrType))
+      .addUse(OpReg)
+      .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
+                        *STI.getRegBankInfo());
   I.getOperand(OpIdx).setReg(NewReg);
 }
 
-static SPIRVType *createNewPtrType(SPIRVGlobalRegistry &GR, MachineInstr &I,
-                                   SPIRVType *OpType, bool ReuseType,
-                                   bool EmitIR, SPIRVType *ResType,
-                                   const Type *ResTy) {
+static SPIRVTypeInst createNewPtrType(SPIRVGlobalRegistry &GR, MachineInstr &I,
+                                      SPIRVTypeInst OpType, bool ReuseType,
+                                      SPIRVTypeInst ResType,
+                                      const Type *ResTy) {
   SPIRV::StorageClass::StorageClass SC =
       static_cast<SPIRV::StorageClass::StorageClass>(
           OpType->getOperand(1).getImm());
   MachineIRBuilder MIB(I);
-  SPIRVType *NewBaseType =
+  SPIRVTypeInst NewBaseType =
       ReuseType ? ResType
                 : GR.getOrCreateSPIRVType(
-                      ResTy, MIB, SPIRV::AccessQualifier::ReadWrite, EmitIR);
+                      ResTy, MIB, SPIRV::AccessQualifier::ReadWrite, false);
   return GR.getOrCreateSPIRVPointerType(NewBaseType, MIB, SC);
 }
 
@@ -146,17 +192,18 @@ static SPIRVType *createNewPtrType(SPIRVGlobalRegistry &GR, MachineInstr &I,
 static void validatePtrTypes(const SPIRVSubtarget &STI,
                              MachineRegisterInfo *MRI, SPIRVGlobalRegistry &GR,
                              MachineInstr &I, unsigned OpIdx,
-                             SPIRVType *ResType, const Type *ResTy = nullptr) {
+                             SPIRVTypeInst ResType,
+                             const Type *ResTy = nullptr) {
   // Get operand type
   MachineFunction *MF = I.getParent()->getParent();
   Register OpReg = I.getOperand(OpIdx).getReg();
   Register OpTypeReg = getTypeReg(MRI, OpReg);
-  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  const MachineInstr *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
   if (!ResType || !OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
     return;
   // Get operand's pointee type
   Register ElemTypeReg = OpType->getOperand(2).getReg();
-  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(ElemTypeReg, MF);
+  SPIRVTypeInst ElemType = GR.getSPIRVTypeForVReg(ElemTypeReg, MF);
   if (!ElemType)
     return;
   // Check if we need a bitcast to make a statement valid
@@ -167,8 +214,8 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
     return;
   // There is a type mismatch between results and operand types
   // and we insert a bitcast before the instruction to keep SPIR-V code valid
-  SPIRVType *NewPtrType =
-      createNewPtrType(GR, I, OpType, IsSameMF, false, ResType, ResTy);
+  SPIRVTypeInst NewPtrType =
+      createNewPtrType(GR, I, OpType, IsSameMF, ResType, ResTy);
   if (!GR.isBitcastCompatible(NewPtrType, OpType))
     report_fatal_error(
         "insert validation bitcast: incompatible result and operand types");
@@ -185,16 +232,17 @@ static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
   MachineFunction *MF = I.getParent()->getParent();
   Register OpReg = I.getOperand(OpIdx).getReg();
   Register OpTypeReg = getTypeReg(MRI, OpReg);
-  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
   if (!OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
     return;
-  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
+  SPIRVTypeInst ElemType =
+      GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
   if (!ElemType || ElemType->getOpcode() == SPIRV::OpTypeEvent)
     return;
   // Insert a bitcast before the instruction to keep SPIR-V code valid.
   LLVMContext &Context = MF->getFunction().getContext();
-  SPIRVType *NewPtrType =
-      createNewPtrType(GR, I, OpType, false, true, nullptr,
+  SPIRVTypeInst NewPtrType =
+      createNewPtrType(GR, I, OpType, false, nullptr,
                        TargetExtType::get(Context, "spirv.Event"));
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
@@ -205,8 +253,8 @@ static void validateLifetimeStart(const SPIRVSubtarget &STI,
   Register PtrReg = I.getOperand(0).getReg();
   MachineFunction *MF = I.getParent()->getParent();
   Register PtrTypeReg = getTypeReg(MRI, PtrReg);
-  SPIRVType *PtrType = GR.getSPIRVTypeForVReg(PtrTypeReg, MF);
-  SPIRVType *PonteeElemType = PtrType ? GR.getPointeeType(PtrType) : nullptr;
+  SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(PtrTypeReg, MF);
+  SPIRVTypeInst PonteeElemType = PtrType ? GR.getPointeeType(PtrType) : nullptr;
   if (!PonteeElemType || PonteeElemType->getOpcode() == SPIRV::OpTypeVoid ||
       (PonteeElemType->getOpcode() == SPIRV::OpTypeInt &&
        PonteeElemType->getOperand(1).getImm() == 8))
@@ -217,9 +265,8 @@ static void validateLifetimeStart(const SPIRVSubtarget &STI,
           PtrType->getOperand(1).getImm());
   MachineIRBuilder MIB(I);
   LLVMContext &Context = MF->getFunction().getContext();
-  SPIRVType *ElemType =
-      GR.getOrCreateSPIRVType(IntegerType::getInt8Ty(Context), MIB);
-  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(ElemType, MIB, SC);
+  SPIRVTypeInst NewPtrType =
+      GR.getOrCreateSPIRVPointerType(IntegerType::getInt8Ty(Context), MIB, SC);
   doInsertBitcast(STI, MRI, GR, I, PtrReg, 0, NewPtrType);
 }
 
@@ -230,15 +277,16 @@ static void validatePtrUnwrapStructField(const SPIRVSubtarget &STI,
   MachineFunction *MF = I.getParent()->getParent();
   Register OpReg = I.getOperand(OpIdx).getReg();
   Register OpTypeReg = getTypeReg(MRI, OpReg);
-  SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
+  SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpTypeReg, MF);
   if (!OpType || OpType->getOpcode() != SPIRV::OpTypePointer)
     return;
-  SPIRVType *ElemType = GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
+  SPIRVTypeInst ElemType =
+      GR.getSPIRVTypeForVReg(OpType->getOperand(2).getReg());
   if (!ElemType || ElemType->getOpcode() != SPIRV::OpTypeStruct ||
       ElemType->getNumOperands() != 2)
     return;
   // It's a structure-wrapper around another type with a single member field.
-  SPIRVType *MemberType =
+  SPIRVTypeInst MemberType =
       GR.getSPIRVTypeForVReg(ElemType->getOperand(1).getReg());
   if (!MemberType)
     return;
@@ -252,7 +300,8 @@ static void validatePtrUnwrapStructField(const SPIRVSubtarget &STI,
       static_cast<SPIRV::StorageClass::StorageClass>(
           OpType->getOperand(1).getImm());
   MachineIRBuilder MIB(I);
-  SPIRVType *NewPtrType = GR.getOrCreateSPIRVPointerType(MemberType, MIB, SC);
+  SPIRVTypeInst NewPtrType =
+      GR.getOrCreateSPIRVPointerType(MemberType, MIB, SC);
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
@@ -276,8 +325,9 @@ void validateFunCallMachineDef(const SPIRVSubtarget &STI,
        FunDef && FunDef->getOpcode() == SPIRV::OpFunctionParameter &&
        OpIdx < FunCall.getNumOperands();
        FunDef = FunDef->getNextNode(), OpIdx++) {
-    SPIRVType *DefPtrType = DefMRI->getVRegDef(FunDef->getOperand(1).getReg());
-    SPIRVType *DefElemType =
+    SPIRVTypeInst DefPtrType =
+        DefMRI->getVRegDef(FunDef->getOperand(1).getReg());
+    SPIRVTypeInst DefElemType =
         DefPtrType && DefPtrType->getOpcode() == SPIRV::OpTypePointer
             ? GR.getSPIRVTypeForVReg(DefPtrType->getOperand(2).getReg(),
                                      DefPtrType->getParent()->getParent())
@@ -332,9 +382,9 @@ void validateForwardCalls(const SPIRVSubtarget &STI,
 // Validation of an access chain.
 void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                          SPIRVGlobalRegistry &GR, MachineInstr &I) {
-  SPIRVType *BaseTypeInst = GR.getSPIRVTypeForVReg(I.getOperand(0).getReg());
+  SPIRVTypeInst BaseTypeInst = GR.getSPIRVTypeForVReg(I.getOperand(0).getReg());
   if (BaseTypeInst && BaseTypeInst->getOpcode() == SPIRV::OpTypePointer) {
-    SPIRVType *BaseElemType =
+    SPIRVTypeInst BaseElemType =
         GR.getSPIRVTypeForVReg(BaseTypeInst->getOperand(2).getReg());
     validatePtrTypes(STI, MRI, GR, I, 2, BaseElemType);
   }
@@ -353,7 +403,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   GR.setCurrentFunc(MF);
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
     MachineBasicBlock *MBB = &*I;
-    SmallPtrSet<MachineInstr *, 8> ToMove;
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
@@ -378,6 +427,9 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         // implies that %Op is a pointer to <ResType>
       case SPIRV::OpLoad:
         // OpLoad <ResType>, ptr %Op implies that %Op is a pointer to <ResType>
+        if (enforcePtrTypeCompatibility(MI, 2, 0))
+          break;
+
         validatePtrTypes(STI, MRI, GR, MI, 2,
                          GR.getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
         break;
@@ -394,8 +446,10 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         break;
       case SPIRV::OpPtrCastToGeneric:
       case SPIRV::OpGenericCastToPtr:
+      case SPIRV::OpGenericCastToPtrExplicit:
         validateAccessChain(STI, MRI, GR, MI);
         break;
+      case SPIRV::OpPtrAccessChain:
       case SPIRV::OpInBoundsPtrAccessChain:
         if (MI.getNumOperands() == 4)
           validateAccessChain(STI, MRI, GR, MI);
@@ -412,6 +466,17 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         // ensure there is no mismatch between actual and expected arg types:
         // calls ahead of a processed definition
         validateForwardCalls(STI, MRI, GR, MI);
+        break;
+
+      // ensure that LLVM IR add/sub instructions result in logical SPIR-V
+      // instructions when applied to bool type
+      case SPIRV::OpIAddS:
+      case SPIRV::OpIAddV:
+      case SPIRV::OpISubS:
+      case SPIRV::OpISubV:
+        if (GR.isScalarOrVectorOfType(MI.getOperand(1).getReg(),
+                                      SPIRV::OpTypeBool))
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
 
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
@@ -448,7 +513,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         validateGroupWaitEventsPtr(STI, MRI, GR, MI);
         break;
       case SPIRV::OpConstantI: {
-        SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+        SPIRVTypeInst Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
         if (Type->getOpcode() != SPIRV::OpTypeInt && MI.getOperand(2).isImm() &&
             MI.getOperand(2).getImm() == 0) {
           // Validate the null constant of a target extension type
@@ -457,38 +522,29 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
             MI.removeOperand(i);
         }
       } break;
-      case SPIRV::OpPhi: {
-        // Phi refers to a type definition that goes after the Phi
-        // instruction, so that the virtual register definition of the type
-        // doesn't dominate all uses. Let's place the type definition
-        // instruction at the end of the predecessor.
-        MachineBasicBlock *Curr = MI.getParent();
-        SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
-        if (Type->getParent() == Curr && !Curr->pred_empty())
-          ToMove.insert(const_cast<MachineInstr *>(Type));
-      } break;
       case SPIRV::OpExtInst: {
         // prefetch
         if (!MI.getOperand(2).isImm() || !MI.getOperand(3).isImm() ||
             MI.getOperand(2).getImm() != SPIRV::InstructionSet::OpenCL_std)
           continue;
         switch (MI.getOperand(3).getImm()) {
-        case SPIRV::OpenCLExtInst::remquo: {
-          // The last operand must be of a pointer to the return type.
-          MachineIRBuilder MIB(MI);
-          SPIRVType *Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
-          SPIRVType *RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
-          assert(RetType && "Expected return type");
-          validatePtrTypes(
-              STI, MRI, GR, MI, MI.getNumOperands() - 1,
-              RetType->getOpcode() != SPIRV::OpTypeVector
-                  ? Int32Type
-                  : GR.getOrCreateSPIRVVectorType(
-                        Int32Type, RetType->getOperand(2).getImm(), MIB));
-        } break;
-        case SPIRV::OpenCLExtInst::fract:
         case SPIRV::OpenCLExtInst::frexp:
         case SPIRV::OpenCLExtInst::lgamma_r:
+        case SPIRV::OpenCLExtInst::remquo: {
+          // The last operand must be of a pointer to i32 or vector of i32
+          // values.
+          MachineIRBuilder MIB(MI);
+          SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, MIB);
+          SPIRVTypeInst RetType = MRI->getVRegDef(MI.getOperand(1).getReg());
+          assert(RetType && "Expected return type");
+          validatePtrTypes(STI, MRI, GR, MI, MI.getNumOperands() - 1,
+                           RetType->getOpcode() != SPIRV::OpTypeVector
+                               ? Int32Type
+                               : GR.getOrCreateSPIRVVectorType(
+                                     Int32Type, RetType->getOperand(2).getImm(),
+                                     MIB, false));
+        } break;
+        case SPIRV::OpenCLExtInst::fract:
         case SPIRV::OpenCLExtInst::modf:
         case SPIRV::OpenCLExtInst::sincos:
           // The last operand must be of a pointer to the base type represented
@@ -512,12 +568,85 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       } break;
       }
     }
-    for (MachineInstr *MI : ToMove) {
-      MachineBasicBlock *Curr = MI->getParent();
-      MachineBasicBlock *Pred = *Curr->pred_begin();
-      Pred->insert(Pred->getFirstTerminator(), Curr->remove_instr(MI));
-    }
   }
   ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
+}
+
+// Modifies either operand PtrOpIdx or OpIdx so that the pointee type of
+// PtrOpIdx matches the type for operand OpIdx. Returns true if they already
+// match or if the instruction was modified to make them match.
+bool SPIRVTargetLowering::enforcePtrTypeCompatibility(
+    MachineInstr &I, unsigned int PtrOpIdx, unsigned int OpIdx) const {
+  SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
+  SPIRVTypeInst PtrType = GR.getResultType(I.getOperand(PtrOpIdx).getReg());
+  SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
+  SPIRVTypeInst OpType = GR.getResultType(I.getOperand(OpIdx).getReg());
+
+  if (PointeeType == OpType)
+    return true;
+
+  if (typesLogicallyMatch(PointeeType, OpType, GR)) {
+    // Apply OpCopyLogical to OpIdx.
+    if (I.getOperand(OpIdx).isDef() &&
+        insertLogicalCopyOnResult(I, PointeeType)) {
+      return true;
+    }
+
+    llvm_unreachable("Unable to add OpCopyLogical yet.");
+    return false;
+  }
+
+  return false;
+}
+
+bool SPIRVTargetLowering::insertLogicalCopyOnResult(
+    MachineInstr &I, SPIRVTypeInst NewResultType) const {
+  MachineRegisterInfo *MRI = &I.getMF()->getRegInfo();
+  SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
+
+  Register NewResultReg =
+      createVirtualRegister(NewResultType, &GR, MRI, *I.getMF());
+  Register NewTypeReg = GR.getSPIRVTypeID(NewResultType);
+
+  assert(llvm::size(I.defs()) == 1 && "Expected only one def");
+  MachineOperand &OldResult = *I.defs().begin();
+  Register OldResultReg = OldResult.getReg();
+  MachineOperand &OldType = *I.uses().begin();
+  Register OldTypeReg = OldType.getReg();
+
+  OldResult.setReg(NewResultReg);
+  OldType.setReg(NewTypeReg);
+
+  MachineIRBuilder MIB(*I.getNextNode());
+  MIB.buildInstr(SPIRV::OpCopyLogical)
+      .addDef(OldResultReg)
+      .addUse(OldTypeReg)
+      .addUse(NewResultReg)
+      .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
+                        *STI.getRegBankInfo());
+  return true;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+  switch (RMW->getOperation()) {
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMax:
+    return AtomicExpansionKind::None;
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+    return AtomicExpansionKind::CmpXChg;
+  default:
+    return TargetLowering::shouldExpandAtomicRMWInIR(RMW);
+  }
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+  // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
+  // SPIR-V only supports atomic exchange for integer and floating-point types.
+  return AtomicExpansionKind::None;
 }

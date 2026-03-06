@@ -1,8 +1,8 @@
 ! Test delayed privatization for variables that are storage associated via `EQUIVALENCE`.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %s 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %s 2>&1 \
 ! RUN:   | FileCheck %s
 
 subroutine private_common
@@ -13,13 +13,15 @@ subroutine private_common
   !$omp end parallel
 end subroutine
 
-! CHECK:  omp.private {type = firstprivate} @[[X_PRIVATIZER:.*]] : ![[X_TYPE:fir.ptr<f32>]] alloc {
-! CHECK:  ^bb0(%{{.*}}: ![[X_TYPE]]):
-! CHECK:    %[[PRIV_ALLOC:.*]] = fir.alloca f32 {bindc_name = "x", {{.*}}}
-! CHECK:    %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]] {{{.*}}} : (![[PRIV_TYPE:fir.ref<f32>]]) -> ({{.*}})
-! CHECK:    %[[PRIV_CONV:.*]] = fir.convert %[[PRIV_DECL]]#0 : (![[PRIV_TYPE]]) -> ![[X_TYPE]]
-! CHECK:    omp.yield(%[[PRIV_CONV]] : ![[X_TYPE]])
-! CHECK:  } copy {
+! TODO: the copy region for pointers is incorrect. OpenMP 5.2 says
+!
+! > If the original list item has the POINTER attribute, the new list items
+! > receive the same association status as the original list item
+!
+! Currently the original pointer is unconditionally loaded, which is undefined
+! behavior if that pointer is not associated.
+
+! CHECK:  omp.private {type = firstprivate} @[[X_PRIVATIZER:.*]] : ![[X_TYPE:fir.ptr<f32>]] copy {
 ! CHECK:  ^bb0(%[[ORIG_PTR:.*]]: ![[X_TYPE]], %[[PRIV_REF:.*]]: ![[X_TYPE]]):
 ! CHECK:    %[[ORIG_VAL:.*]] = fir.load %[[ORIG_PTR]] : !fir.ptr<f32>
 ! CHECK:    hlfir.assign %[[ORIG_VAL]] to %[[PRIV_REF]] : f32, ![[X_TYPE]]

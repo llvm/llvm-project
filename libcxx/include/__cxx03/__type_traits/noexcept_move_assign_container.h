@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
-#define _LIBCPP___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/allocator_traits.h>
@@ -23,15 +23,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <typename _Alloc, typename _Traits = allocator_traits<_Alloc> >
 struct __noexcept_move_assign_container
     : public integral_constant<bool,
-                               _Traits::propagate_on_container_move_assignment::value
-#if _LIBCPP_STD_VER >= 17
-                                   || _Traits::is_always_equal::value
-#else
-                                   && is_nothrow_move_assignable<_Alloc>::value
-#endif
-                               > {
-};
+                               _Traits::propagate_on_container_move_assignment::value &&
+                                   is_nothrow_move_assignable<_Alloc>::value> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_NOEXCEPT_MOVE_ASSIGN_CONTAINER_H

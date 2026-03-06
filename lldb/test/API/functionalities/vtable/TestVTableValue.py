@@ -2,7 +2,6 @@
 Make sure the getting a variable path works and doesn't crash.
 """
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
@@ -142,7 +141,12 @@ class TestVTableValue(TestBase):
             "\x01\x01\x01\x01\x01\x01\x01\x01" if is_64bit else "\x01\x01\x01\x01"
         )
         error = lldb.SBError()
-        process.WriteMemory(vtable_addr, data, error)
+        bytes_written = process.WriteMemory(vtable_addr, data, error)
+
+        self.assertSuccess(error)
+        self.assertGreater(
+            bytes_written, 0, "Failed to overwrite first entry in vtable"
+        )
 
         scribbled_child = vtable.GetChildAtIndex(0)
         self.assertEqual(

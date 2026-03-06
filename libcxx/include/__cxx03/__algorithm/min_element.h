@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_MIN_ELEMENT_H
-#define _LIBCPP___ALGORITHM_MIN_ELEMENT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_MIN_ELEMENT_H
+#define _LIBCPP___CXX03___ALGORITHM_MIN_ELEMENT_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/move.h>
 
@@ -28,8 +28,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Comp, class _Iter, class _Sent, class _Proj>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
-__min_element(_Iter __first, _Sent __last, _Comp __comp, _Proj& __proj) {
+inline _LIBCPP_HIDE_FROM_ABI _Iter __min_element(_Iter __first, _Sent __last, _Comp __comp, _Proj& __proj) {
   if (__first == __last)
     return __first;
 
@@ -42,13 +41,13 @@ __min_element(_Iter __first, _Sent __last, _Comp __comp, _Proj& __proj) {
 }
 
 template <class _Comp, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter __min_element(_Iter __first, _Sent __last, _Comp __comp) {
+_LIBCPP_HIDE_FROM_ABI _Iter __min_element(_Iter __first, _Sent __last, _Comp __comp) {
   auto __proj = __identity();
   return std::__min_element<_Comp>(std::move(__first), std::move(__last), __comp, __proj);
 }
 
 template <class _ForwardIterator, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 min_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
   static_assert(
       __has_forward_iterator_category<_ForwardIterator>::value, "std::min_element requires a ForwardIterator");
@@ -59,7 +58,7 @@ min_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) 
 }
 
 template <class _ForwardIterator>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 min_element(_ForwardIterator __first, _ForwardIterator __last) {
   return std::min_element(__first, __last, __less<>());
 }
@@ -68,4 +67,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_MIN_ELEMENT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_MIN_ELEMENT_H

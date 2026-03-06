@@ -1,4 +1,7 @@
 /* This test checks the handling of YAML profile with different block orders.
+
+# REQUIRES: system-linux
+
 # RUN: %clang %cflags %s -o %t.exe
 # RUN: link_fdata %s %t.exe %t.fdata
 # RUN: llvm-bolt %t.exe -o %t.null -data %t.fdata -w %t.yaml

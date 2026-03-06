@@ -14,7 +14,7 @@ let Component = "Refactoring" in {
 
 let CategoryName = "Refactoring Invocation Issue" in {
 
-def err_refactor_no_selection : Error<"refactoring action can't be initiated "
+def err_refactor_no_selection : Error<"refactoring action cannot be initiated "
   "without a selection">;
 def err_refactor_selection_no_symbol : Error<"there is no symbol at the given "
   "location">;
@@ -26,7 +26,7 @@ def err_refactor_code_outside_of_function : Error<"the selected code is not a "
 def err_refactor_extract_simple_expression : Error<"the selected expression "
   "is too simple to extract">;
 def err_refactor_extract_prohibited_expression : Error<"the selected "
-  "expression can't be extracted">;
+  "expression cannot be extracted">;
 
 }
 

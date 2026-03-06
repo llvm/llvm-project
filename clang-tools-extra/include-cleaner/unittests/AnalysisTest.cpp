@@ -397,6 +397,55 @@ TEST_F(AnalyzeTest, SpellingIncludesWithSymlinks) {
   }
 }
 
+// Make sure that the references to implicit operator new/delete are reported as
+// ambigious.
+TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotMissing) {
+  ExtraFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  ExtraFS->addFile("header.h",
+                   /*ModificationTime=*/{},
+                   llvm::MemoryBuffer::getMemBufferCopy(guard(R"cpp(
+  void* operator new(decltype(sizeof(int)));
+  )cpp")));
+  ExtraFS->addFile("wrapper.h",
+                   /*ModificationTime=*/{},
+                   llvm::MemoryBuffer::getMemBufferCopy(guard(R"cpp(
+  #include "header.h"
+  )cpp")));
+
+  Inputs.Code = R"cpp(
+      #include "wrapper.h"
+      void bar() {
+        operator new(3);
+      })cpp";
+  TestAST AST(Inputs);
+  std::vector<Decl *> DeclsInTU;
+  for (auto *D : AST.context().getTranslationUnitDecl()->decls())
+    DeclsInTU.push_back(D);
+  auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
+  EXPECT_THAT(Results.Missing, testing::IsEmpty());
+}
+
+TEST_F(AnalyzeTest, ImplicitOperatorNewDeleteNotUnused) {
+  ExtraFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  ExtraFS->addFile("header.h",
+                   /*ModificationTime=*/{},
+                   llvm::MemoryBuffer::getMemBufferCopy(guard(R"cpp(
+  void* operator new(decltype(sizeof(int)));
+  )cpp")));
+
+  Inputs.Code = R"cpp(
+      #include "header.h"
+      void bar() {
+        operator new(3);
+      })cpp";
+  TestAST AST(Inputs);
+  std::vector<Decl *> DeclsInTU;
+  for (auto *D : AST.context().getTranslationUnitDecl()->decls())
+    DeclsInTU.push_back(D);
+  auto Results = analyze(DeclsInTU, {}, PP.Includes, &PI, AST.preprocessor());
+  EXPECT_THAT(Results.Unused, testing::IsEmpty());
+}
+
 TEST(FixIncludes, Basic) {
   llvm::StringRef Code = R"cpp(#include "d.h"
 #include "a.h"
@@ -630,6 +679,32 @@ TEST_F(WalkUsedTest, IgnoresIdentityMacros) {
               UnorderedElementsAre(
                   // FIXME: we should have a reference from stdin to header.h
                   Pair(Code.point("bar"), UnorderedElementsAre(MainFile))));
+}
+
+TEST_F(WalkUsedTest, MacroConcat) {
+  llvm::Annotations Code(R"cpp(
+  #include "header.h"
+  void f() {
+    $xyz^FOO(xyz) = 1;
+    $bar^BAR = 2;
+  }
+  )cpp");
+  Inputs.Code = Code.code();
+  Inputs.ExtraFiles["header.h"] = guard(R"cpp(
+  #define FOO(x) FLAGS_##x
+  #define BAR FOO(bb)
+
+  int FLAGS_xyz;
+  int FLAGS_bb;
+  )cpp");
+
+  TestAST AST(Inputs);
+  auto &SM = AST.sourceManager();
+  auto Header = *SM.getFileManager().getOptionalFileRef("header.h");
+  EXPECT_THAT(
+      offsetToProviders(AST),
+      AllOf(Contains(Pair(Code.point("bar"), UnorderedElementsAre(Header))),
+            Contains(Pair(Code.point("xyz"), UnorderedElementsAre(Header)))));
 }
 } // namespace
 } // namespace clang::include_cleaner

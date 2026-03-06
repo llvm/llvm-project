@@ -1,13 +1,11 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+c %s -g -o - -riscv-no-aliases \
+# RUN: llvm-mc -triple riscv32 -mattr=+c %s -g -o - -M no-aliases \
 # RUN:   | FileCheck %s -check-prefixes=COMPRESS,BOTH
-# RUN: llvm-mc -triple riscv32 %s -g -o - -riscv-no-aliases \
+# RUN: llvm-mc -triple riscv32 %s -g -o - -M no-aliases \
 # RUN:   | FileCheck %s -check-prefixes=UNCOMPRESS,BOTH
 
 
 # This file ensures that compressing an instruction preserves its debug info.
 
-
-# BOTH-LABEL: .text
 
 # BOTH: .file 1
 # BOTH-SAME: "compress-debug-info.s"

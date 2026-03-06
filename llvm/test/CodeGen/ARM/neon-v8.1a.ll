@@ -138,7 +138,6 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulahq_lane_s16(<8 x i16> %acc, <8 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_vqrdmulahq_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmulh.s16 q8, q1, d4[2]
 ; CHECK-NEXT:    vqadd.s16 q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -165,7 +164,6 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulahq_lane_s32(<4 x i32> %acc,<4 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_vqrdmulahq_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmulh.s32 q8, q1, d4[0]
 ; CHECK-NEXT:    vqadd.s32 q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -192,7 +190,6 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulshq_lane_s16(<8 x i16> %acc, <8 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_vqrdmulshq_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmulh.s16 q8, q1, d4[2]
 ; CHECK-NEXT:    vqsub.s16 q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -219,7 +216,6 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulshq_lane_s32(<4 x i32> %acc,<4 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_vqrdmulshq_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmulh.s32 q8, q1, d4[0]
 ; CHECK-NEXT:    vqsub.s32 q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -297,7 +293,6 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vqrdmlahq_lane_s16(<8 x i16> %a, <8 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: test_vqrdmlahq_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmlah.s16 q0, q1, d4[3]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -309,7 +304,6 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vqrdmlahq_lane_s32(<4 x i32> %a, <4 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: test_vqrdmlahq_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmlah.s32 q0, q1, d4[1]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -383,7 +377,6 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @test_vqrdmlshq_lane_s16(<8 x i16> %a, <8 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: test_vqrdmlshq_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmlsh.s16 q0, q1, d4[3]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -395,7 +388,6 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vqrdmlshq_lane_s32(<4 x i32> %a, <4 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: test_vqrdmlshq_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vqrdmlsh.s32 q0, q1, d4[1]
 ; CHECK-NEXT:    bx lr
 entry:

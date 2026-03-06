@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_IOS_H
-#define _LIBCPP___FWD_IOS_H
+#ifndef _LIBCPP___CXX03___FWD_IOS_H
+#define _LIBCPP___CXX03___FWD_IOS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/string.h>
@@ -31,7 +31,7 @@ using wios = basic_ios<wchar_t>;
 template <class _CharT, class _Traits>
 class _LIBCPP_PREFERRED_NAME(ios) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wios)) basic_ios;
 
-#if defined(_NEWLIB_VERSION)
+#if _LIBCPP_LIBC_NEWLIB
 // On newlib, off_t is 'long int'
 using streamoff = long int; // for char_traits in <string>
 #else
@@ -40,4 +40,4 @@ using streamoff = long long; // for char_traits in <string>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_IOS_H
+#endif // _LIBCPP___CXX03___FWD_IOS_H

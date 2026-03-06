@@ -58,6 +58,13 @@ class TestToolBase(ToolBase):
             default=None,
             help="directory to save results (default: none)",
         )
+        parser.add_argument(
+            "--test-root-dir",
+            type=str,
+            metavar="<directory>",
+            default=None,
+            help="if passed, result names will include relative path from this directory",
+        )
 
     def handle_options(self, defaults):
         options = self.context.options
@@ -130,10 +137,10 @@ class TestToolBase(ToolBase):
         """Get the test name from either the test file, or the sub directory
         path it's stored in.
         """
-        # test names are distinguished by their relative path from the
-        # specified test path.
-        test_name = os.path.relpath(test_path, self.context.options.test_path)
-        if self._is_current_directory(test_name):
+        # Test names are either relative to an explicitly given test root directory, or else we just use the base name.
+        if self.context.options.test_root_dir is not None:
+            test_name = os.path.relpath(test_path, self.context.options.test_root_dir)
+        else:
             test_name = os.path.basename(test_path)
         return test_name
 

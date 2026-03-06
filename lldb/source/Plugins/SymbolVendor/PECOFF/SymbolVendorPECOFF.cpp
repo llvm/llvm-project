@@ -71,6 +71,9 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // If the module specified a filespec, use that.
   FileSpec fspec = module_sp->GetSymbolFileFileSpec();
+  // Otherwise, use the PDB path from CodeView.
+  if (!fspec)
+    fspec = obj_file->GetPDBPath().value_or(FileSpec());
   // Otherwise, try gnu_debuglink, if one exists.
   if (!fspec)
     fspec = obj_file->GetDebugLink().value_or(FileSpec());
@@ -85,47 +88,46 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   module_spec.GetSymbolFileSpec() = fspec;
   module_spec.GetUUID() = uuid;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-  FileSpec dsym_fspec =
-      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+  FileSpec dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+      module_spec, search_paths, module_sp->GetSymbolLocatorStatistics());
   if (!dsym_fspec)
     return nullptr;
 
-  DataBufferSP dsym_file_data_sp;
+  DataExtractorSP dsym_file_extractor_sp;
   lldb::offset_t dsym_file_data_offset = 0;
   ObjectFileSP dsym_objfile_sp = ObjectFile::FindPlugin(
       module_sp, &dsym_fspec, 0, FileSystem::Instance().GetByteSize(dsym_fspec),
-      dsym_file_data_sp, dsym_file_data_offset);
+      dsym_file_extractor_sp, dsym_file_data_offset);
   if (!dsym_objfile_sp)
     return nullptr;
 
   // This objfile is for debugging purposes.
   dsym_objfile_sp->SetType(ObjectFile::eTypeDebugInfo);
 
-  // Get the module unified section list and add our debug sections to
-  // that.
+  // For DWARF get the module unified section list and add our debug sections
+  // to that.
   SectionList *module_section_list = module_sp->GetSectionList();
   SectionList *objfile_section_list = dsym_objfile_sp->GetSectionList();
-  if (!objfile_section_list || !module_section_list)
-    return nullptr;
-
-  static const SectionType g_sections[] = {
-      eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAranges,
-      eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
-      eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
-      eSectionTypeDWARFDebugLocLists, eSectionTypeDWARFDebugMacInfo,
-      eSectionTypeDWARFDebugNames,    eSectionTypeDWARFDebugPubNames,
-      eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
-      eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugTypes,
-  };
-  for (SectionType section_type : g_sections) {
-    if (SectionSP section_sp =
-            objfile_section_list->FindSectionByType(section_type, true)) {
-      if (SectionSP module_section_sp =
-              module_section_list->FindSectionByType(section_type, true))
-        module_section_list->ReplaceSection(module_section_sp->GetID(),
-                                            section_sp);
-      else
-        module_section_list->AddSection(section_sp);
+  if (objfile_section_list && module_section_list) {
+    static const SectionType g_sections[] = {
+        eSectionTypeDWARFDebugAbbrev,   eSectionTypeDWARFDebugAranges,
+        eSectionTypeDWARFDebugFrame,    eSectionTypeDWARFDebugInfo,
+        eSectionTypeDWARFDebugLine,     eSectionTypeDWARFDebugLoc,
+        eSectionTypeDWARFDebugLocLists, eSectionTypeDWARFDebugMacInfo,
+        eSectionTypeDWARFDebugNames,    eSectionTypeDWARFDebugPubNames,
+        eSectionTypeDWARFDebugPubTypes, eSectionTypeDWARFDebugRanges,
+        eSectionTypeDWARFDebugStr,      eSectionTypeDWARFDebugTypes,
+    };
+    for (SectionType section_type : g_sections) {
+      if (SectionSP section_sp =
+              objfile_section_list->FindSectionByType(section_type, true)) {
+        if (SectionSP module_section_sp =
+                module_section_list->FindSectionByType(section_type, true))
+          module_section_list->ReplaceSection(module_section_sp->GetID(),
+                                              section_sp);
+        else
+          module_section_list->AddSection(section_sp);
+      }
     }
   }
 

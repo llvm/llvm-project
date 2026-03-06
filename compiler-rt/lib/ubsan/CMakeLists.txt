@@ -9,6 +9,10 @@ set(UBSAN_SOURCES
   ubsan_value.cpp
   )
 
+set(UBSAN_LOOP_DETECT_SOURCES
+  ubsan_loop_detect.cpp
+  )
+
 set(UBSAN_STANDALONE_SOURCES
   ubsan_diag_standalone.cpp
   ubsan_init_standalone.cpp
@@ -39,22 +43,20 @@ set(UBSAN_HEADERS
   )
 
 include_directories(..)
+include_directories(../../include)
 
 set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_list_if(MSVC /Zl UBSAN_CFLAGS)
 append_rtti_flag(OFF UBSAN_CFLAGS)
-append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CFLAGS)
 
 # Too many existing bugs, needs cleanup.
 append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format UBSAN_CFLAGS)
 
 set(UBSAN_STANDALONE_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF UBSAN_STANDALONE_CFLAGS)
-append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_STANDALONE_CFLAGS)
 
 set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(ON UBSAN_CXXFLAGS)
-append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
 
 # Silence warnings in system headers with MSVC.
 if(NOT CLANG_CL)
@@ -158,6 +160,13 @@ else()
     ADDITIONAL_HEADERS ${UBSAN_HEADERS}
     CFLAGS ${UBSAN_CXXFLAGS})
 
+  add_compiler_rt_object_libraries(RTUbsan_loop_detect
+    ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
+    SOURCES ${UBSAN_LOOP_DETECT_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
+    CFLAGS ${UBSAN_CXXFLAGS}
+    DEPS compiler-rt-headers)
+
   if (WIN32)
     set(RUNTIME_THUNK_CFLAGS -DSANITIZER_DYNAMIC_RUNTIME_THUNK -DSANITIZER_STATIC_RUNTIME_THUNK)
     add_compiler_rt_object_libraries(UbsanRuntimeThunk
@@ -198,6 +207,13 @@ else()
       STATIC
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTUbsan_cxx
+      CFLAGS ${UBSAN_CXXFLAGS}
+      PARENT_TARGET ubsan)
+
+    add_compiler_rt_runtime(clang_rt.ubsan_loop_detect
+      STATIC
+      ARCHS ${UBSAN_SUPPORTED_ARCH}
+      OBJECT_LIBS RTUbsan_loop_detect
       CFLAGS ${UBSAN_CXXFLAGS}
       PARENT_TARGET ubsan)
 
@@ -254,6 +270,9 @@ else()
         ARCHS ${ARCHS_FOR_SYMBOLS}
         PARENT_TARGET ubsan
         EXTRA ubsan.syms.extra)
+      add_sanitizer_rt_symbols(clang_rt.ubsan_loop_detect
+        ARCHS ${ARCHS_FOR_SYMBOLS}
+        PARENT_TARGET ubsan)
     endif()
   endif()
 endif()

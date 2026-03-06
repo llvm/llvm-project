@@ -7,7 +7,7 @@ declare hidden { i8, ptr } @getType(ptr) align 2
 ; CHECK-LABEL: @foo.specialized.1
 ; CHECK-LABEL: @foo.specialized.2
 
-define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset) {
+define internal void @foo(ptr %TLI, ptr %DL, ptr %Ty, ptr %ValueVTs, ptr %Offsets, i64 %StartingOffset, i1 %arg) {
 entry:
   %VT = alloca i64, align 8
   br i1 false, label %if.then, label %if.end4
@@ -21,7 +21,7 @@ if.end4:                                          ; preds = %entry
 
 for.body:                                         ; preds = %if.end4
   %add13 = add i64 %StartingOffset, undef
-  call void @foo(ptr %TLI, ptr %DL, ptr undef, ptr %ValueVTs, ptr %Offsets, i64 %add13)
+  call void @foo(ptr %TLI, ptr %DL, ptr undef, ptr %ValueVTs, ptr %Offsets, i64 %add13, i1 %arg)
   unreachable
 
 for.cond16:                                       ; preds = %for.cond34, %if.end4
@@ -29,14 +29,14 @@ for.cond16:                                       ; preds = %for.cond34, %if.end
   br label %for.cond34
 
 for.cond34:                                       ; preds = %for.body37, %for.cond16
-  br i1 undef, label %for.body37, label %for.cond16
+  br i1 %arg, label %for.body37, label %for.cond16
 
 for.body37:                                       ; preds = %for.cond34
   %tobool39 = icmp ne ptr %Offsets, null
   br label %for.cond34
 }
 
-define hidden { ptr, i32 } @bar(ptr %this) {
+define hidden { ptr, i32 } @bar(ptr %this, i1 %arg) {
 entry:
   %Offsets = alloca i64, align 8
   %cmp26 = call zeroext i1 @compare(ptr undef)
@@ -50,11 +50,11 @@ for.body28:                                       ; preds = %entry
   br i1 %call33, label %if.then34, label %if.end106
 
 if.then34:                                        ; preds = %for.body28
-  call void @foo(ptr %this, ptr undef, ptr undef, ptr undef, ptr null, i64 0)
+  call void @foo(ptr %this, ptr undef, ptr undef, ptr undef, ptr null, i64 0, i1 %arg)
   unreachable
 
 if.end106:                                        ; preds = %for.body28
-  call void @foo(ptr %this, ptr undef, ptr undef, ptr undef, ptr %Offsets, i64 0)
+  call void @foo(ptr %this, ptr undef, ptr undef, ptr undef, ptr %Offsets, i64 0, i1 %arg)
   unreachable
 }
 

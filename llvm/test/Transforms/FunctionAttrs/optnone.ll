@@ -4,7 +4,7 @@
 
 define void @test_opt(ptr %p) {
 ; CHECK-LABEL: @test_opt
-; CHECK: (ptr nocapture readnone %p) #0 {
+; CHECK: (ptr readnone captures(none) %p) #0 {
   ret void
 }
 

@@ -21,6 +21,7 @@ add_llvm_library(LLVMBOLTTargetX86
   X86MCPlusBuilder.cpp
   X86MCSymbolizer.cpp
 
+  NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 
   DEPENDS

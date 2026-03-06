@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+v,+m,+zvfbfmin -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-declare <2 x bfloat> @llvm.vp.select.v2bf16(<2 x i1>, <2 x bfloat>, <2 x bfloat>, i32)
-
 define <2 x bfloat> @select_v2bf16(<2 x i1> %a, <2 x bfloat> %b, <2 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v2bf16:
 ; CHECK:       # %bb.0:
@@ -15,8 +13,6 @@ define <2 x bfloat> @select_v2bf16(<2 x i1> %a, <2 x bfloat> %b, <2 x bfloat> %c
   %v = call <2 x bfloat> @llvm.vp.select.v2bf16(<2 x i1> %a, <2 x bfloat> %b, <2 x bfloat> %c, i32 %evl)
   ret <2 x bfloat> %v
 }
-
-declare <4 x bfloat> @llvm.vp.select.v4bf16(<4 x i1>, <4 x bfloat>, <4 x bfloat>, i32)
 
 define <4 x bfloat> @select_v4bf16(<4 x i1> %a, <4 x bfloat> %b, <4 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v4bf16:
@@ -28,8 +24,6 @@ define <4 x bfloat> @select_v4bf16(<4 x i1> %a, <4 x bfloat> %b, <4 x bfloat> %c
   ret <4 x bfloat> %v
 }
 
-declare <8 x bfloat> @llvm.vp.select.v8bf16(<8 x i1>, <8 x bfloat>, <8 x bfloat>, i32)
-
 define <8 x bfloat> @select_v8bf16(<8 x i1> %a, <8 x bfloat> %b, <8 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v8bf16:
 ; CHECK:       # %bb.0:
@@ -39,8 +33,6 @@ define <8 x bfloat> @select_v8bf16(<8 x i1> %a, <8 x bfloat> %b, <8 x bfloat> %c
   %v = call <8 x bfloat> @llvm.vp.select.v8bf16(<8 x i1> %a, <8 x bfloat> %b, <8 x bfloat> %c, i32 %evl)
   ret <8 x bfloat> %v
 }
-
-declare <16 x bfloat> @llvm.vp.select.v16bf16(<16 x i1>, <16 x bfloat>, <16 x bfloat>, i32)
 
 define <16 x bfloat> @select_v16bf16(<16 x i1> %a, <16 x bfloat> %b, <16 x bfloat> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: select_v16bf16:

@@ -24,7 +24,6 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 
 using namespace llvm;
 
@@ -53,21 +52,16 @@ public:
 class TailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {
-    initializeTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {}
 };
 
 class EarlyTailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
   static char ID;
-  EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {
-    initializeEarlyTailDuplicateLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {}
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties()
-      .set(MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -109,9 +103,6 @@ template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses TailDuplicatePassBase<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(static_cast<DerivedT &>(*this), MF);
-
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
 
   auto *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)

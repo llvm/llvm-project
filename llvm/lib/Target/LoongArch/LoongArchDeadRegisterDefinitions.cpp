@@ -11,14 +11,12 @@
 //===---------------------------------------------------------------------===//
 
 #include "LoongArch.h"
-#include "LoongArchInstrInfo.h"
 #include "LoongArchSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "loongarch-dead-defs"
@@ -39,8 +37,8 @@ public:
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveDebugVariables>();
-    AU.addPreserved<LiveStacks>();
+    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
+    AU.addPreserved<LiveStacksWrapperLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -62,7 +60,6 @@ bool LoongArchDeadRegisterDefinitions::runOnMachineFunction(
     return false;
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   LLVM_DEBUG(dbgs() << "***** LoongArchDeadRegisterDefinitions *****\n");
 
@@ -88,7 +85,7 @@ bool LoongArchDeadRegisterDefinitions::runOnMachineFunction(
           continue;
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
-        const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
+        const TargetRegisterClass *RC = TII->getRegClass(Desc, I);
         if (!(RC && RC->contains(LoongArch::R0))) {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;

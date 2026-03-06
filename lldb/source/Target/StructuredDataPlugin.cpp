@@ -43,7 +43,7 @@ ProcessSP StructuredDataPlugin::GetProcess() const {
 }
 
 void StructuredDataPlugin::InitializeBasePluginForDebugger(Debugger &debugger) {
-  // Create our mutliword command anchor if it doesn't already exist.
+  // Create our multiword command anchor if it doesn't already exist.
   auto &interpreter = debugger.GetCommandInterpreter();
   if (!interpreter.GetCommandObject("plugin structured-data")) {
     // Find the parent command.
@@ -52,7 +52,7 @@ void StructuredDataPlugin::InitializeBasePluginForDebugger(Debugger &debugger) {
     if (!parent_command)
       return;
 
-    // Create the structured-data ommand object.
+    // Create the structured-data command object.
     auto command_name = "structured-data";
     auto command_sp = CommandObjectSP(new CommandStructuredData(interpreter));
 

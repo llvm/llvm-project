@@ -18,13 +18,9 @@
 using namespace llvm;
 char llvm::GISelCSEAnalysisWrapperPass::ID = 0;
 GISelCSEAnalysisWrapperPass::GISelCSEAnalysisWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeGISelCSEAnalysisWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-INITIALIZE_PASS_BEGIN(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
-                      "Analysis containing CSE Info", false, true)
-INITIALIZE_PASS_END(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
-                    "Analysis containing CSE Info", false, true)
+    : MachineFunctionPass(ID) {}
+INITIALIZE_PASS(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
+                "Analysis containing CSE Info", false, true)
 
 /// -------- UniqueMachineInstr -------------//
 
@@ -65,6 +61,16 @@ bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
   case TargetOpcode::G_SEXT_INREG:
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FABS:
+  // TODO: support G_FNEG.
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINNUM_IEEE:
     return true;
   }
   return false;
@@ -163,7 +169,7 @@ MachineInstr *GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
                                                     void *&InsertPos) {
   handleRecordedInsts();
   if (auto *Inst = getNodeIfExists(ID, MBB, InsertPos)) {
-    LLVM_DEBUG(dbgs() << "CSEInfo::Found Instr " << *Inst->MI;);
+    LLVM_DEBUG(dbgs() << "CSEInfo::Found Instr " << *Inst->MI);
     return const_cast<MachineInstr *>(Inst->MI);
   }
   return nullptr;
@@ -171,10 +177,7 @@ MachineInstr *GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
 
 void GISelCSEInfo::countOpcodeHit(unsigned Opc) {
 #ifndef NDEBUG
-  if (OpcodeHitTable.count(Opc))
-    OpcodeHitTable[Opc] += 1;
-  else
-    OpcodeHitTable[Opc] = 1;
+  ++OpcodeHitTable[Opc];
 #endif
   // Else do nothing.
 }
@@ -313,11 +316,11 @@ Error GISelCSEInfo::verify() {
 }
 
 void GISelCSEInfo::print() {
-  LLVM_DEBUG(for (auto &It
-                  : OpcodeHitTable) {
-    dbgs() << "CSEInfo::CSE Hit for Opc " << It.first << " : " << It.second
-           << "\n";
-  };);
+  LLVM_DEBUG({
+    for (auto &It : OpcodeHitTable)
+      dbgs() << "CSEInfo::CSE Hit for Opc " << It.first << " : " << It.second
+             << "\n";
+  });
 }
 /// -----------------------------------------
 // ---- Profiling methods for FoldingSetNode --- //
@@ -378,7 +381,7 @@ GISelInstProfileBuilder::addNodeIDImmediate(int64_t Imm) const {
 
 const GISelInstProfileBuilder &
 GISelInstProfileBuilder::addNodeIDRegNum(Register Reg) const {
-  ID.AddInteger(Reg);
+  ID.AddInteger(Reg.id());
   return *this;
 }
 
@@ -432,9 +435,8 @@ const GISelInstProfileBuilder &GISelInstProfileBuilder::addNodeIDMachineOperand(
 }
 
 GISelCSEInfo &
-GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool Recompute) {
-  if (!AlreadyComputed || Recompute) {
+GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt) {
+  if (!AlreadyComputed) {
     Info.releaseMemory();
     Info.setCSEConfig(std::move(CSEOpt));
     Info.analyze(*MF);
@@ -442,6 +444,18 @@ GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
   }
   return Info;
 }
+
+AnalysisKey GISelCSEAnalysis::Key;
+
+GISelCSEAnalysis::Result
+GISelCSEAnalysis::run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM) {
+  std::unique_ptr<GISelCSEInfo> Info = std::make_unique<GISelCSEInfo>();
+  Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
+  Info->analyze(MF);
+  return Info;
+}
+
 void GISelCSEAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);

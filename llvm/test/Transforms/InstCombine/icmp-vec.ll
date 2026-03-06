@@ -394,7 +394,7 @@ define <2 x i1> @icmp_logical_or_vec(<2 x i64> %x, <2 x i64> %y, <2 x i1> %false
 define <vscale x 2 x i1> @icmp_logical_or_scalablevec(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y, <vscale x 2 x i1> %falseval) {
 ; CHECK-LABEL: @icmp_logical_or_scalablevec(
 ; CHECK-NEXT:    [[CMP_NE:%.*]] = icmp ne <vscale x 2 x i64> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SEL:%.*]] = select <vscale x 2 x i1> [[CMP_NE]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> [[FALSEVAL:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <vscale x 2 x i1> [[CMP_NE]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> [[FALSEVAL:%.*]]
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[SEL]]
 ;
   %cmp.ne = icmp ne <vscale x 2 x i64> %x, zeroinitializer

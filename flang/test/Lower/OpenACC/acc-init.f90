@@ -35,4 +35,7 @@ subroutine acc_init
    !$acc init device_type(nvidia)
 !CHECK: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
 
+  !$acc init device_type(host) device_type(multicore)
+!CHECK: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
+
 end subroutine acc_init

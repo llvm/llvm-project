@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/fenv/feclearexcept.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -13,7 +15,6 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fenv_macros.h"
-#include <stdint.h>
 
 #include "excepts.h"
 

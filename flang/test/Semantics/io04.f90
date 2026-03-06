@@ -3,6 +3,7 @@
   character(kind=1,len=100) msg
   character(20) sign
   character, parameter :: const_internal_file*(*) = "(I6)"
+  character(kind=1,len=50) internal_fileA(20)
   integer*1 stat1, id1
   integer*2 stat2
   integer*4 stat4
@@ -34,6 +35,7 @@
   write(unit=10) 'Ok'
   write(*, nnn)
   write(10, nnn)
+  !ERROR: If UNIT=internal-file appears, FMT or NML must also appear
   write(internal_file)
   write(internal_file, *)
   write(internal_file, fmt=*)
@@ -55,7 +57,7 @@
   allocate(a(8), stat=stat8)
 
   !ERROR: Duplicate UNIT specifier
-  write(internal_file, unit=*)
+  write(internal_file, unit=*, fmt=*)
 
   !ERROR: WRITE statement must have a UNIT specifier
   write(nml=nnn)
@@ -84,6 +86,7 @@
   !ERROR: If UNIT=internal-file appears, POS must not appear
   write(internal_file, err=9, pos=n, nml=nnn)
 
+  !ERROR: If UNIT=internal-file appears, FMT or NML must also appear
   !ERROR: If UNIT=internal-file appears, REC must not appear
   write(internal_file, rec=n, err=9)
 
@@ -106,7 +109,7 @@
   write(*, asynchronous='yes')
 
   !ERROR: If ASYNCHRONOUS='YES' appears, UNIT=number must also appear
-  write(internal_file, asynchronous='yes')
+  write(internal_file, *, asynchronous='yes')
 
   !ERROR: If ID appears, ASYNCHRONOUS='YES' must also appear
   write(10, *, id=id) "Ok"
@@ -135,6 +138,23 @@
   write(10, *, asynchronous='yes', id=const_id, iostat=stat2) 'Ok'
 
   write(*, '(X)')
+
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  write((msg), *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(KIND=1,LEN=8_8)
+  write("a string", *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  write(msg//msg, *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type LOGICAL(4)
+  write(.true., *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type REAL(4)
+  write(1.0, *)
+  write(internal_fileA, *)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression, but is an expression of type CHARACTER(1)
+  write((internal_fileA), *)
+  !ERROR: I/O unit number must be scalar
+  write([1,2,3], *)
+
 
   !ERROR: Output item must not be a procedure
   print*, procptr

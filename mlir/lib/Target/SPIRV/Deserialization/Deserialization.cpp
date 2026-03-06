@@ -12,9 +12,10 @@
 
 using namespace mlir;
 
-OwningOpRef<spirv::ModuleOp> spirv::deserialize(ArrayRef<uint32_t> binary,
-                                                MLIRContext *context) {
-  Deserializer deserializer(binary, context);
+OwningOpRef<spirv::ModuleOp>
+spirv::deserialize(ArrayRef<uint32_t> binary, MLIRContext *context,
+                   const DeserializationOptions &options) {
+  Deserializer deserializer(binary, context, options);
 
   if (failed(deserializer.deserialize()))
     return nullptr;

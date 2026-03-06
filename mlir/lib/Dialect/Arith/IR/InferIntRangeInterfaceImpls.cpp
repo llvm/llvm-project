@@ -10,7 +10,6 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
-#include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "int-range-analysis"
@@ -42,6 +41,12 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   }
   if (auto arrayCstAttr =
           llvm::dyn_cast_or_null<DenseIntElementsAttr>(getValue())) {
+    if (arrayCstAttr.isSplat()) {
+      setResultRange(getResult(), ConstantIntRanges::constant(
+                                      arrayCstAttr.getSplatValue<APInt>()));
+      return;
+    }
+
     std::optional<ConstantIntRanges> result;
     for (const APInt &val : arrayCstAttr) {
       auto range = ConstantIntRanges::constant(val);
@@ -324,7 +329,13 @@ void arith::SelectOp::inferResultRangesFromOptional(
       setResultRange(getResult(), trueCase);
     return;
   }
-  setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
+
+  // When one of the ranges is uninitialized, set the whole range to max
+  // otherwise the result will ignore the uninitialized range.
+  if (trueCase.isUninitialized() || falseCase.isUninitialized())
+    setResultRange(getResult(), IntegerValueRange::getMaxRange(getResult()));
+  else
+    setResultRange(getResult(), IntegerValueRange::join(trueCase, falseCase));
 }
 
 //===----------------------------------------------------------------------===//

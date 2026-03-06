@@ -780,6 +780,32 @@ define i1 @lshr_nonzero_ult(i32 %x) {
   ret i1 %cmp
 }
 
+define i1 @lshr_nonzero_ugt(i32 %x) {
+; CHECK-LABEL: @lshr_nonzero_ugt(
+; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_ne_0 = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %x_ne_0)
+  %lhs = lshr i32 %x, 1
+  %cmp = icmp ugt i32 %lhs, %x
+  ret i1 %cmp
+}
+
+define i1 @lshr_nonzero_ule(i32 %x) {
+; CHECK-LABEL: @lshr_nonzero_ule(
+; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
+; CHECK-NEXT:    ret i1 true
+;
+  %x_ne_0 = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %x_ne_0)
+  %lhs = lshr i32 %x, 1
+  %cmp = icmp ule i32 %lhs, %x
+  ret i1 %cmp
+}
+
 ; Negative test - unknown shift amount
 define i1 @lshr_nonzero_neg_unknown(i32 %x, i32 %c) {
 ; CHECK-LABEL: @lshr_nonzero_neg_unknown(
@@ -2661,10 +2687,7 @@ define i1 @icmp_nsw_false_2(i32 %V) {
 
 define i1 @icmp_nsw_false_3(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_false_3(
-; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[V]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add5 = add nsw i32 %V, 5
   %add6 = add i32 %V, 5
@@ -2695,6 +2718,45 @@ define i1 @icmp_nsw_false_5(i8 %V) {
   %add = add i8 %V, 121
   %addnsw = add nsw i8 %V, -104
   %cmp = icmp slt i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_6(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_6(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], 6
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, 6
+  %addnsw = add nsw i8 %V, -1
+  %cmp = icmp sgt i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_7(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_7(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], -1
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, -1
+  %addnsw = add nsw i8 %V, 3
+  %cmp = icmp sle i8 %add, %addnsw
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_false_8(i8 %V) {
+; CHECK-LABEL: @icmp_nsw_false_8(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[V:%.*]], -15
+; CHECK-NEXT:    [[ADDNSW:%.*]] = add nsw i8 [[V]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[ADD]], [[ADDNSW]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i8 %V, -15
+  %addnsw = add nsw i8 %V, 42
+  %cmp = icmp sge i8 %add, %addnsw
   ret i1 %cmp
 }
 
@@ -2740,10 +2802,7 @@ define <4 x i1> @icmp_nsw_vec(<4 x i32> %V) {
 
 define i1 @icmp_nsw_3(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_3(
-; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD5_2:%.*]] = add nsw i32 [[V]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD5_2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %add5 = add i32 %V, 5
   %add5_2 = add nsw i32 %V, 5
@@ -2818,10 +2877,7 @@ define i1 @icmp_nsw_9(i32 %V1, i32 %V2) {
 
 define i1 @icmp_nsw_10(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_10(
-; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
-; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD6]], [[ADD5]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add5 = add i32 %V, 5
   %add6 = add nsw i32 %V, 6
@@ -2839,6 +2895,36 @@ define i1 @icmp_nsw_11(i32 %V) {
   %add5 = add i32 %V, -125
   %add6 = add nsw i32 %V, -99
   %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_12(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_12(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, 2
+  %add6 = add nsw i32 %V, 3
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_13(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_13(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, 7
+  %add6 = add nsw i32 %V, 10
+  %cmp = icmp sle i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_14(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_14(
+; CHECK-NEXT:    ret i1 false
+;
+  %add5 = add i32 %V, 7
+  %add6 = add nsw i32 %V, 10
+  %cmp = icmp sge i32 %add5, %add6
   ret i1 %cmp
 }
 
@@ -2861,6 +2947,36 @@ define i1 @icmp_nsw_nonpos2(i32 %V) {
   %add5 = add i32 %V, 1
   %add6 = add nsw i32 %V, 0
   %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos3(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos3(
+; CHECK-NEXT:    ret i1 false
+;
+  %add5 = add i32 %V, -2
+  %add6 = add nsw i32 %V, -5
+  %cmp = icmp sle i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos4(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos4(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, -10
+  %add6 = add nsw i32 %V, -30
+  %cmp = icmp sgt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_nonpos5(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_nonpos5(
+; CHECK-NEXT:    ret i1 true
+;
+  %add5 = add i32 %V, -15
+  %add6 = add nsw i32 %V, -100
+  %cmp = icmp sge i32 %add5, %add6
   ret i1 %cmp
 }
 
@@ -3241,7 +3357,7 @@ define i1 @globals_inequal() {
 ; TODO: Never equal
 define i1 @globals_offset_inequal() {
 ; CHECK-LABEL: @globals_offset_inequal(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @A, i32 1), getelementptr inbounds (i8, ptr @B, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr getelementptr inbounds nuw (i8, ptr @A, i32 1), getelementptr inbounds nuw (i8, ptr @B, i32 1)
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.off = getelementptr i8, ptr @A, i32 1
@@ -3422,6 +3538,41 @@ define i1 @icmp_ult_vscale_false(i8 %x, i8 %y) {
   %x2 = shl nuw nsw i64 %vscale, 2
   %cmp = icmp ugt i64 %x1, %x2
   ret i1 %cmp
+}
+
+define i1 @icmp_eq_false_by_trunc(i8 %x) {
+; CHECK-LABEL: @icmp_eq_false_by_trunc(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %trunc = trunc i8 %x to i1
+  %not = xor i1 %trunc, true
+  call void @llvm.assume(i1 %not)
+  %cmp = icmp eq i8 %x, 1
+  ret i1 %cmp
+}
+
+define <vscale x 8 x i1> @icmp_ne_i1_vec_constant_expr() {
+; CHECK-LABEL: @icmp_ne_i1_vec_constant_expr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
+;
+entry:
+  %cmp = icmp ne <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), zeroinitializer
+  ret <vscale x 8 x i1> %cmp
+}
+
+define <vscale x 8 x i1> @icmp_eq_i1_vec_constant_expr_commuted() {
+; CHECK-LABEL: @icmp_eq_i1_vec_constant_expr_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i1> xor (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> splat (i1 true))
+;
+entry:
+  %cmp = icmp eq <vscale x 8 x i1> zeroinitializer, insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
+  ret <vscale x 8 x i1> %cmp
 }
 
 declare i64 @llvm.vscale.i64()

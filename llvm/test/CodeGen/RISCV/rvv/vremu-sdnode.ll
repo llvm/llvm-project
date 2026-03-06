@@ -711,8 +711,8 @@ define <vscale x 1 x i64> @vremu_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-V-NEXT:    vlse64.v v9, (a0), zero
-; RV32-V-NEXT:    vmulhu.vv v9, v8, v9
 ; RV32-V-NEXT:    li a0, 61
+; RV32-V-NEXT:    vmulhu.vv v9, v8, v9
 ; RV32-V-NEXT:    vsrl.vx v9, v9, a0
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v9
@@ -818,8 +818,8 @@ define <vscale x 2 x i64> @vremu_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-V-NEXT:    vlse64.v v10, (a0), zero
-; RV32-V-NEXT:    vmulhu.vv v10, v8, v10
 ; RV32-V-NEXT:    li a0, 61
+; RV32-V-NEXT:    vmulhu.vv v10, v8, v10
 ; RV32-V-NEXT:    vsrl.vx v10, v10, a0
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v10
@@ -925,8 +925,8 @@ define <vscale x 4 x i64> @vremu_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV32-V-NEXT:    vlse64.v v12, (a0), zero
-; RV32-V-NEXT:    vmulhu.vv v12, v8, v12
 ; RV32-V-NEXT:    li a0, 61
+; RV32-V-NEXT:    vmulhu.vv v12, v8, v12
 ; RV32-V-NEXT:    vsrl.vx v12, v12, a0
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v12
@@ -1032,8 +1032,8 @@ define <vscale x 8 x i64> @vremu_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-V-NEXT:    vlse64.v v16, (a0), zero
-; RV32-V-NEXT:    vmulhu.vv v16, v8, v16
 ; RV32-V-NEXT:    li a0, 61
+; RV32-V-NEXT:    vmulhu.vv v16, v8, v16
 ; RV32-V-NEXT:    vsrl.vx v16, v16, a0
 ; RV32-V-NEXT:    li a0, -7
 ; RV32-V-NEXT:    vnmsac.vx v8, a0, v16

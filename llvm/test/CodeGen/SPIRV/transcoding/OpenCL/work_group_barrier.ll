@@ -54,15 +54,15 @@
 
 ;; Scopes [4]:
 ;; 2 Workgroup
-; CHECK-SPIRV-DAG: %[[#SCOPE_WORK_GROUP:]] = OpConstant %[[#UINT]] 2
+; CHECK-SPIRV-DAG: %[[#SCOPE_WORK_GROUP:]] = OpConstant %[[#UINT]] 2{{$}}
 ;; 4 Invocation
-; CHECK-SPIRV-DAG: %[[#SCOPE_INVOCATION:]] = OpConstant %[[#UINT]] 4
+; CHECK-SPIRV-DAG: %[[#SCOPE_INVOCATION:]] = OpConstant %[[#UINT]] 4{{$}}
 ;; 1 Device
-; CHECK-SPIRV-DAG: %[[#SCOPE_DEVICE:]] = OpConstant %[[#UINT]] 1
+; CHECK-SPIRV-DAG: %[[#SCOPE_DEVICE:]] = OpConstant %[[#UINT]] 1{{$}}
 ;; 0 CrossDevice
-; CHECK-SPIRV-DAG: %[[#SCOPE_CROSS_DEVICE:]] = OpConstant %[[#UINT]] 0
+; CHECK-SPIRV-DAG: %[[#SCOPE_CROSS_DEVICE:]] = OpConstantNull %[[#UINT]]
 ;; 3 Subgroup
-; CHECK-SPIRV-DAG: %[[#SCOPE_SUBGROUP:]] = OpConstant %[[#UINT]] 3
+; CHECK-SPIRV-DAG: %[[#SCOPE_SUBGROUP:]] = OpConstant %[[#UINT]] 3{{$}}
 
 ; CHECK-SPIRV: %[[#TEST_CONST_FLAGS]] = OpFunction %[[#]]
 ; CHECK-SPIRV: OpControlBarrier %[[#SCOPE_WORK_GROUP]] %[[#SCOPE_WORK_GROUP]] %[[#LOCAL]]
