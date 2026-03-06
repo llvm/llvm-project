@@ -26,7 +26,7 @@
 // CHECK:           %[[VAL_12:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           %[[VAL_13:.*]] = llvm.mlir.constant(4 : index) : i64
 // CHECK:           %[[VAL_14:.*]] = llvm.mlir.constant(72 : i32) : i32
-// CHECK:           "llvm.intr.memcpy"(%[[VAL_10]], %[[VAL_0]], %[[VAL_14]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_10]], %[[VAL_0]], %[[VAL_14]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[VAL_15:.*]] = llvm.getelementptr %[[VAL_10]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_16:.*]] = llvm.load %[[VAL_15]] : !llvm.ptr -> i64
 // CHECK:           %[[VAL_17:.*]] = llvm.getelementptr %[[VAL_10]][0, 7, %[[VAL_12]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
@@ -119,7 +119,7 @@ func.func @test_char4(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.cha
 // CHECK:           %[[VAL_11:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:           %[[VAL_12:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           %[[VAL_13:.*]] = llvm.mlir.constant(72 : i32) : i32
-// CHECK:           "llvm.intr.memcpy"(%[[VAL_10]], %[[VAL_0]], %[[VAL_13]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_10]], %[[VAL_0]], %[[VAL_13]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[VAL_14:.*]] = llvm.getelementptr %[[VAL_10]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_15:.*]] = llvm.load %[[VAL_14]] : !llvm.ptr -> i64
 // CHECK:           %[[VAL_16:.*]] = llvm.getelementptr %[[VAL_10]][0, 7, %[[VAL_12]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>

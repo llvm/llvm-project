@@ -904,7 +904,7 @@ func.func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box
 // CHECK-SAME:  (%[[arg0:.*]]: !llvm.ptr,
 // CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr) {
 // CHECK-NEXT:  %[[size:.*]] = llvm.mlir.constant(72 : i32) : i32
-// CHECK-NEXT:  "llvm.intr.memcpy"(%[[arg0]], %[[arg1]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK-NEXT:  "llvm.intr.memcpy"(%[[arg0]], %[[arg1]], %[[size]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT:  }
 
@@ -918,13 +918,13 @@ func.func @store_unlimited_polymorphic_box(%arg0 : !fir.class<none>, %arg1 : !fi
 }
 // CHECK:   llvm.func @store_unlimited_polymorphic_box(%[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: !llvm.ptr, %[[VAL_2:.*]]: !llvm.ptr, %[[VAL_3:.*]]: !llvm.ptr, %[[VAL_4:.*]]: !llvm.ptr, %[[VAL_5:.*]]: !llvm.ptr, %[[VAL_6:.*]]: !llvm.ptr, %[[VAL_7:.*]]: !llvm.ptr) {
 // CHECK:     %[[VAL_8:.*]] = llvm.mlir.constant(40 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_4]], %[[VAL_0]], %[[VAL_8]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_4]], %[[VAL_0]], %[[VAL_8]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:     %[[VAL_9:.*]] = llvm.mlir.constant(64 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_5]], %[[VAL_1]], %[[VAL_9]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_5]], %[[VAL_1]], %[[VAL_9]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:     %[[VAL_10:.*]] = llvm.mlir.constant(40 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_6]], %[[VAL_2]], %[[VAL_10]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_6]], %[[VAL_2]], %[[VAL_10]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:     %[[VAL_11:.*]] = llvm.mlir.constant(64 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_7]], %[[VAL_3]], %[[VAL_11]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:     "llvm.intr.memcpy"(%[[VAL_7]], %[[VAL_3]], %[[VAL_11]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:     llvm.return
 // CHECK:   }
 
@@ -946,7 +946,7 @@ func.func @store_assumed_rank_box(%box: !fir.box<!fir.array<*:f32>>, %ref: !fir.
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(24 : i32) : i32
 // CHECK:           %[[VAL_7:.*]] = llvm.mul %[[VAL_6]], %[[VAL_5]] : i32
 // CHECK:           %[[VAL_8:.*]] = llvm.add %[[VAL_2]], %[[VAL_7]] : i32
-// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %[[VAL_8]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %[[VAL_8]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 
 // -----
 
@@ -979,7 +979,7 @@ func.func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
 // AMDGPU-NEXT:   %[[alloca_box_copy:.*]] = llvm.alloca %[[c1]] x !llvm.struct<([[DESC_TYPE:.*]])>{{.*}} : (i32) -> !llvm.ptr<5>
 // AMDGPU-NEXT:   %[[box_copy:.*]] = llvm.addrspacecast %[[alloca_box_copy]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK-NEXT:    %[[size:.*]] = llvm.mlir.constant(48 : i32) : i32
-// CHECK-NEXT:    "llvm.intr.memcpy"(%[[box_copy]], %[[arg0]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK-NEXT:    "llvm.intr.memcpy"(%[[box_copy]], %[[arg0]], %[[size]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK-NEXT:    llvm.call @takes_box(%[[box_copy]]) : (!llvm.ptr) -> ()
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
@@ -1006,7 +1006,7 @@ func.func private @some_assumed_rank_func(!fir.box<!fir.array<*:f64>>) -> ()
 // CHECK:           %[[VAL_7:.*]] = llvm.mlir.constant(24 : i32) : i32
 // CHECK:           %[[VAL_8:.*]] = llvm.mul %[[VAL_7]], %[[VAL_6]] : i32
 // CHECK:           %[[VAL_9:.*]] = llvm.add %[[VAL_3]], %[[VAL_8]] : i32
-// CHECK:           "llvm.intr.memcpy"(%[[VAL_2]], %[[VAL_0]], %[[VAL_9]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_2]], %[[VAL_0]], %[[VAL_9]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           llvm.call @some_assumed_rank_func(%[[VAL_2]]) : (!llvm.ptr) -> ()
 
 // -----
@@ -2975,3 +2975,23 @@ func.func @select_case_block_args(%arg0: !fir.ref<i32>, %arg1: !fir.ref<!fir.arr
 // CHECK-LABEL: llvm.func @select_case_block_args
 // CHECK: llvm.cond_br %{{.*}}, ^{{.*}}(%{{.*}} : !llvm.ptr), ^{{.*}}
 // CHECK: ^{{.*}}(%{{.*}}: !llvm.ptr):
+
+// -----
+
+// Check memcpy alignment
+
+module attributes {llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"} {
+
+func.func private @takes_box(!fir.box<!fir.array<10xf32>>) -> ()
+
+func.func @test_load_box_alignment(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
+  %0 = fir.load %addr : !fir.ref<!fir.box<!fir.array<10xf32>>>
+  fir.call @takes_box(%0) : (!fir.box<!fir.array<10xf32>>) -> ()
+  return
+}
+}
+// CHECK-LABEL:   llvm.func @test_load_box_alignment(
+// CHECK-SAME:                                      %[[arg0:.*]]: !llvm.ptr) {
+// CHECK:           "llvm.intr.memcpy"(%{{.*}}, %[[arg0]], %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}>
+// CHECK:           llvm.return
+// CHECK:         }

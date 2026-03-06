@@ -62,7 +62,7 @@ module attributes {omp.is_target_device = false} {
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:           %[[VAL_4:.*]] = llvm.mlir.constant(72 : i32) : i32
-// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[ARG0]], %[[VAL_4]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[ARG0]], %[[VAL_4]]) {{.*}} : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[VAL_5:.*]] = llvm.getelementptr %[[VAL_1]][0, 7, %[[VAL_3]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
 // CHECK:           %[[VAL_6:.*]] = llvm.load %[[VAL_5]] : !llvm.ptr -> i64
 // CHECK:           %[[VAL_7:.*]] = llvm.getelementptr %[[VAL_1]][0, 7, %[[VAL_3]], 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
