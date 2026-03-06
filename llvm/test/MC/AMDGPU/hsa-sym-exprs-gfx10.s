@@ -122,7 +122,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info (((((((((((((((((((((((((128|(defined_2_bits<<11))&~128)|(defined_boolean<<7))&~256)|(defined_boolean<<8))&~512)|(defined_boolean<<9))&~1024)|(defined_boolean<<10))&~16777216)|(defined_boolean<<24))&~33554432)|(defined_boolean<<25))&~67108864)|(defined_boolean<<26))&~134217728)|(defined_boolean<<27))&~268435456)|(defined_boolean<<28))&~536870912)|(defined_boolean<<29))&~1073741824)|(defined_boolean<<30))&~62)&1024)>>10
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id (((((((((((((((((((((((((128|(defined_2_bits<<11))&~128)|(defined_boolean<<7))&~256)|(defined_boolean<<8))&~512)|(defined_boolean<<9))&~1024)|(defined_boolean<<10))&~16777216)|(defined_boolean<<24))&~33554432)|(defined_boolean<<25))&~67108864)|(defined_boolean<<26))&~134217728)|(defined_boolean<<27))&~268435456)|(defined_boolean<<28))&~536870912)|(defined_boolean<<29))&~1073741824)|(defined_boolean<<30))&~62)&6144)>>11
 // ASM-NEXT: .amdhsa_next_free_vgpr defined_value+4
-// ASM-NEXT: .amdhsa_next_free_sgpr defined_value+5
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM-NEXT: .amdhsa_reserve_vcc defined_boolean
 // ASM-NEXT: .amdhsa_reserve_flat_scratch defined_boolean
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
@@ -173,7 +173,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info 1
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id 3
 // ASM-NEXT: .amdhsa_next_free_vgpr 44
-// ASM-NEXT: .amdhsa_next_free_sgpr 45
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM-NEXT: .amdhsa_reserve_vcc 1
 // ASM-NEXT: .amdhsa_reserve_flat_scratch 1
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1

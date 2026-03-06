@@ -110,7 +110,7 @@ max_vgprs:
 
 // ASM: .amdhsa_kernel minimal
 // ASM: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM: .end_amdhsa_kernel
 
 // Test that we can specify all available directives with non-default values.
@@ -175,8 +175,8 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info 1
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id 1
 // ASM-NEXT: .amdhsa_next_free_vgpr 9
-// ASM-NEXT: .amdhsa_next_free_sgpr 32
-// ASM-NEXT: .amdhsa_named_barrier_count 3
+// ASM-NOT: .amdhsa_next_free_sgpr
+// ASM: .amdhsa_named_barrier_count 3
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 1
@@ -210,8 +210,8 @@ max_vgprs:
 
 // ASM: .amdhsa_kernel special_sgpr
 // ASM: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 27
-// ASM-NEXT: .amdhsa_named_barrier_count 0
+// ASM-NOT: .amdhsa_next_free_sgpr
+// ASM: .amdhsa_named_barrier_count 0
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM: .amdhsa_float_denorm_mode_16_64 0
 // ASM: .end_amdhsa_kernel
@@ -226,7 +226,7 @@ max_vgprs:
 
 // ASM: .amdhsa_kernel disabled_user_sgpr
 // ASM: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM: .end_amdhsa_kernel
 
 .p2align 6

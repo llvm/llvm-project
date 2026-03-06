@@ -87,7 +87,7 @@ disabled_user_sgpr:
 
 // ASM: .amdhsa_kernel minimal
 // ASM: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM: .end_amdhsa_kernel
 
 // Test that we can specify all available directives with non-default values.
@@ -149,7 +149,7 @@ disabled_user_sgpr:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info 1
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id 1
 // ASM-NEXT: .amdhsa_next_free_vgpr 9
-// ASM-NEXT: .amdhsa_next_free_sgpr 27
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM-NEXT: .amdhsa_float_round_mode_32 1
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 1
@@ -183,7 +183,7 @@ disabled_user_sgpr:
 
 // ASM: .amdhsa_kernel special_sgpr
 // ASM: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 27
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM: .amdhsa_float_denorm_mode_16_64 0
 // ASM: .end_amdhsa_kernel
@@ -198,7 +198,7 @@ disabled_user_sgpr:
 
 // ASM: .amdhsa_kernel disabled_user_sgpr
 // ASM: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM-NOT: .amdhsa_next_free_sgpr
 // ASM: .end_amdhsa_kernel
 
 .section .foo
