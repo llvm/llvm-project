@@ -1310,7 +1310,15 @@ public:
   /// popCatchScope - Pops the catch scope at the top of the EHScope
   /// stack, emitting any required code (other than the catch handlers
   /// themselves).
-  void popCatchScope();
+  llvm::BasicBlock *popCatchScope();
+
+  // This function should be called after emitting all catch clauses and none
+  // of them were 'catch-all' clauses.
+  // Because in wasm we merge all catch clauses into one big catchpad, in case
+  // none of the types in catch handlers matches after we test against each of
+  // them, we should unwind to the next EH enclosing scope. We generate a call
+  // to rethrow function here to do that.
+  void WasmEmitFallthroughRethrow(llvm::BasicBlock *WasmCatchStartBlock);
 
   llvm::BasicBlock *getEHResumeBlock(bool isCleanup);
   llvm::BasicBlock *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
