@@ -356,9 +356,11 @@ def ConvertLayout():
             input_sg_layout=[6, 4],
             input_sg_data=[32, 32],
             input_inst_data=[32, 16],
+            input_order=[1, 0],
             target_sg_layout=[6, 4],
             target_sg_data=[32, 32],
             target_inst_data=[8, 16],
+            target_order=[0, 1],
         )
         transform.YieldOp()
     # CHECK-LABEL: TEST: ConvertLayout
@@ -366,6 +368,8 @@ def ConvertLayout():
     # CHECK: input_sg_layout = [6, 4]
     # CHECK: input_sg_data = [32, 32]
     # CHECK: input_inst_data = [32, 16]
+    # CHECK: input_order = [1, 0]
     # CHECK: target_sg_layout = [6, 4]
     # CHECK: target_sg_data = [32, 32]
     # CHECK: target_inst_data = [8, 16]
+    # CHECK: target_order = [0, 1]

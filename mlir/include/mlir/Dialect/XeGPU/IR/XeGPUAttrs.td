@@ -494,15 +494,6 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return 0;
     }
 
-    /// Derive a new layout with the same sg_layout, sg_data, inst_data,
-    /// lane_layout and lane_data but different order.
-    LayoutAttr cloneWithOrder(DenseI32ArrayAttr newOrder) const {
-      assert(getRank() == static_cast<int64_t>(newOrder.size())
-        && "The size of new order must match the layout rank.");
-      return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), getInstData(),
-                             getLaneLayout(), getLaneData(), newOrder);
-    }
-
     LayoutAttr dropSgLayoutAndData() const{
       // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getInstData() && !getLaneLayout())
