@@ -115,7 +115,7 @@ func.func @elementwise_conflict_uniform() -> vector<2xf16> {
 // CHECK-LABEL: func.func @broadcast_source_conflict
 // CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16]>} : () -> vector<16xf16>
 // CHECK:         %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16]>, target_layout = #xegpu.slice<#xegpu.layout<inst_data = [16, 16]>, dims = [0]>}>
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16]>, target_layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 16]>, dims = [0]>}>
 // CHECK-SAME:      : vector<16xf16>
 // CHECK:         %[[BC:.*]] = vector.broadcast %[[CVT]]
 // CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : vector<16xf16> to vector<16x16xf16>

@@ -143,20 +143,24 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
                                   ArrayRef<int64_t> srcShape) {
 
   SmallVector<int64_t> bcastDims;
-  auto returnLayout = resLayout;
 
   // Handling broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
-  int dimDiff = resShape.size() - srcShape.size();
+  size_t dimDiff = resShape.size() - srcShape.size();
+  for (size_t i = 0; i < dimDiff; i++)
+    bcastDims.push_back(i);
 
-  if (dimDiff > 0) {
-    // Adding the missing leading dims
-    for (int i = 0; i < dimDiff; i++)
+  for (size_t i = 0; i < resShape.size(); i++)
+    if ((i < dimDiff) || ((srcShape[i - dimDiff] == 1) && (resShape[i] != 1)))
       bcastDims.push_back(i);
 
-    // Create a slice layout for the source
+  auto returnLayout = resLayout.setUnitDimData(bcastDims);
+  if (dimDiff > 0) {
+    SmallVector<int64_t> sliceDims;
+    for (size_t i = 0; i < dimDiff; i++)
+      sliceDims.push_back(i);
     returnLayout = xegpu::SliceAttr::get(
-        resLayout.getContext(), resLayout,
-        DenseI64ArrayAttr::get(resLayout.getContext(), bcastDims));
+        resLayout.getContext(), returnLayout,
+        DenseI64ArrayAttr::get(resLayout.getContext(), sliceDims));
   }
   return returnLayout;
 }
