@@ -14,8 +14,9 @@
 
 #include "flang/Common/api-attrs.h"
 #include <cassert>
-#include <memory>
+#include <cstddef> // std::nullptr_t
 #include <type_traits>
+#include <utility>
 
 namespace Fortran::runtime {
 

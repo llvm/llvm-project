@@ -13,6 +13,7 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/type-info-cache.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang-rt/runtime/work-queue.h"
 
@@ -48,13 +49,18 @@ static inline RT_API_ATTRS bool MustDeallocateLHS(
     if (toDerived != fromDerived) {
       return true;
     }
-    if (fromDerived) {
-      // Distinct LEN parameters? Deallocate
-      std::size_t lenParms{fromDerived->LenParameters()};
-      for (std::size_t j{0}; j < lenParms; ++j) {
-        if (toAddendum->LenParameterValue(j) !=
-            fromAddendum->LenParameterValue(j)) {
-          return true;
+    // Fall-thru to check LEN parameters regardless of polymorphicLHS
+  }
+  // Distinct LEN parameters? Deallocate, per F2018 10.2.1.3
+  if (const DescriptorAddendum *fromAddendum{from.Addendum()}) {
+    if (const typeInfo::DerivedType *fromDerived{fromAddendum->derivedType()}) {
+      if (std::size_t lenParms{fromDerived->LenParameters()}) {
+        DescriptorAddendum *toAddendum{to.Addendum()};
+        for (std::size_t j{0}; j < lenParms; ++j) {
+          if (toAddendum->LenParameterValue(j) !=
+              fromAddendum->LenParameterValue(j)) {
+            return true;
+          }
         }
       }
     }
@@ -111,6 +117,10 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
   }
   to.raw().type = from.raw().type;
   if (derived) {
+    if (derived->LenParameters() > 0 && toAddendum) {
+      derived = typeInfo::GetConcreteType(*derived, to, terminator);
+      toAddendum->set_derivedType(derived);
+    }
     to.raw().elem_len = derived->sizeInBytes();
   } else if (!(flags & ExplicitLengthCharacterLHS)) {
     to.raw().elem_len = from.ElementBytes();

@@ -14,6 +14,7 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/type-info-cache.h"
 #include "flang-rt/runtime/type-info.h"
 
 namespace Fortran::runtime {
@@ -39,6 +40,15 @@ void RTDEF(PointerNullifyDerived)(Descriptor &pointer,
     const typeInfo::DerivedType &derivedType, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   pointer.Establish(derivedType, nullptr, rank, nullptr, CFI_attribute_pointer);
+  if (DescriptorAddendum * addendum{pointer.Addendum()}) {
+    if (derivedType.LenParameters() > 0) {
+      Terminator terminator{__FILE__, __LINE__};
+      const typeInfo::DerivedType *concrete{
+          typeInfo::GetConcreteType(derivedType, pointer, terminator)};
+      addendum->set_derivedType(concrete);
+      pointer.raw().elem_len = concrete->sizeInBytes();
+    }
+  }
 }
 
 void RTDEF(PointerSetBounds)(Descriptor &pointer, int zeroBasedDim,
@@ -162,6 +172,16 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
   Terminator terminator{sourceFile, sourceLine};
   if (!pointer.IsPointer()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
+  }
+  if (DescriptorAddendum * addendum{pointer.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (derived->LenParameters() > 0) {
+        const typeInfo::DerivedType *concrete{
+            typeInfo::GetConcreteType(*derived, pointer, terminator)};
+        addendum->set_derivedType(concrete);
+        pointer.raw().elem_len = concrete->sizeInBytes();
+      }
+    }
   }
   std::size_t elementBytes{pointer.ElementBytes()};
   if (static_cast<std::int64_t>(elementBytes) < 0) {

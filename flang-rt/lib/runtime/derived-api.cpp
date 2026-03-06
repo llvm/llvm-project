@@ -64,33 +64,42 @@ void RTDEF(Finalize)(
   }
 }
 
-bool RTDEF(ClassIs)(
-    const Descriptor &descriptor, const typeInfo::DerivedType &derivedType) {
-  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
-    if (const auto *derived{addendum->derivedType()}) {
-      if (derived == &derivedType) {
-        return true;
-      }
-      const typeInfo::DerivedType *parent{derived->GetParentType()};
-      while (parent) {
-        if (parent == &derivedType) {
-          return true;
-        }
-        parent = parent->GetParentType();
-      }
-    }
-  }
-  return false;
-}
-
 static RT_API_ATTRS const typeInfo::DerivedType *GetDerivedType(
     const Descriptor &desc) {
-  if (const DescriptorAddendum * addendum{desc.Addendum()}) {
+  if (const DescriptorAddendum *addendum{desc.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       return derived;
     }
   }
   return nullptr;
+}
+
+static RT_API_ATTRS bool DerivedTypesMatch(
+    const typeInfo::DerivedType *a, const typeInfo::DerivedType *b) {
+  if (a == b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  const auto *baseA{a->uninstantiatedType()};
+  const auto *baseB{b->uninstantiatedType()};
+  return (baseA ? baseA : a) == (baseB ? baseB : b);
+}
+
+bool RTDEF(ClassIs)(
+    const Descriptor &descriptor, const typeInfo::DerivedType &derivedType) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      for (const typeInfo::DerivedType *type{derived}; type;
+          type = type->GetParentType()) {
+        if (DerivedTypesMatch(type, &derivedType)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 bool RTDEF(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
@@ -145,7 +154,7 @@ bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
     // dynamic type of MOLD.
     for (const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
          derivedTypeA; derivedTypeA = derivedTypeA->GetParentType()) {
-      if (derivedTypeA == derivedTypeMold) {
+      if (DerivedTypesMatch(derivedTypeA, derivedTypeMold)) {
         return true;
       }
     }
