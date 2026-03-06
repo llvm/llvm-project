@@ -2247,27 +2247,6 @@ the configuration (without a prefix: ``Auto``).
 
     AttributeMacros: [__capability, __output, __unused]
 
-.. _BinPackArguments:
-
-**BinPackArguments** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackArguments>`
-  If ``false``, a function call's arguments will either be all on the
-  same line or will have one line each.
-
-  .. code-block:: c++
-
-    true:
-    void f() {
-      f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
-        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
-    }
-
-    false:
-    void f() {
-      f(aaaaaaaaaaaaaaaaaaaa,
-        aaaaaaaaaaaaaaaaaaaa,
-        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
-    }
-
 .. _BinPackLongBracedList:
 
 **BinPackLongBracedList** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BinPackLongBracedList>`
@@ -2285,44 +2264,6 @@ the configuration (without a prefix: ``Auto``).
                  ...,
                  20,
                  21};
-
-.. _BinPackParameters:
-
-**BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
-  The bin pack parameters style to use.
-
-  Possible values:
-
-  * ``BPPS_BinPack`` (in configuration: ``BinPack``)
-    Bin-pack parameters.
-
-    .. code-block:: c++
-
-       void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
-              int ccccccccccccccccccccccccccccccccccccccccccc);
-
-  * ``BPPS_OnePerLine`` (in configuration: ``OnePerLine``)
-    Put all parameters on the current line if they fit.
-    Otherwise, put each one on its own line.
-
-    .. code-block:: c++
-
-       void f(int a, int b, int c);
-
-       void f(int a,
-              int b,
-              int ccccccccccccccccccccccccccccccccccccc);
-
-  * ``BPPS_AlwaysOnePerLine`` (in configuration: ``AlwaysOnePerLine``)
-    Always put each parameter on its own line.
-
-    .. code-block:: c++
-
-       void f(int a,
-              int b,
-              int c);
-
-
 
 .. _BitFieldColonSpacing:
 
@@ -3937,37 +3878,6 @@ the configuration (without a prefix: ``Auto``).
        {};
 
 
-
-.. _BreakParametersAfter:
-
-**BreakParametersAfter** (``Unsigned``) :versionbadge:`clang-format 23` :ref:`¶ <BreakParametersAfter>`
-  If set to a value greater than 0, any parenthesized parameter or argument
-  list with more parameters than the specified number will be formatted with
-  one parameter per line. This applies to all parameter-like lists enclosed
-  in parentheses, including function declarations, function definitions,
-  function calls, and comma expressions.
-
-  .. code-block:: c++
-
-     BreakParametersAfter: 3
-
-     void foo(int a);
-
-     void bar(int a, int b, int c);
-
-     void baz(int a,
-              int b,
-              int c,
-              int d);
-
-     foo(1);
-
-     bar(1, 2, 3);
-
-     baz(1,
-         2,
-         3,
-         4);
 
 .. _BreakStringLiterals:
 
@@ -5867,6 +5777,71 @@ the configuration (without a prefix: ``Auto``).
      # define BAR
      #endif
 
+.. _PackArguments:
+
+**PackArguments** (``PackArgumentsStyle``) :versionbadge:`clang-format 23` :ref:`¶ <PackArguments>`
+  Options related to packing arguments of function calls.
+
+  Nested configuration flags:
+
+  Options related to packing arguments of function calls.
+
+  * ``BinPackArgumentsStyle BinPack`` :versionbadge:`clang-format 3.7`
+
+    The bin pack arguments style to use.
+
+    Possible values:
+
+    * ``BPAS_BinPack`` (in configuration: ``BinPack``)
+      Bin-pack arguments.
+
+      .. code-block:: c++
+
+        void f() {
+          f(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaa,
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+        }
+
+    * ``BPAS_OnePerLine`` (in configuration: ``OnePerLine``)
+      Put all arguments on the current line if they fit.
+      Otherwise, put each one on its own line.
+
+      .. code-block:: c++
+
+        void f() {
+          f(aaaaaaaaaaaaaaaaaaaa,
+            aaaaaaaaaaaaaaaaaaaa,
+            aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
+        }
+
+    * ``BPAS_UseBreakAfter`` (in configuration: ``UseBreakAfter``)
+      Use the ``BreakAfter`` option to handle argument packing instead.
+      If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
+
+
+  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23`
+  An argument list with more arguments than the specified number will be
+    formatted with one argument per line. This option must be used with
+    ``BinPack: UseBreakAfter``.
+
+    .. code-block:: c++
+
+      PackArguments:
+        BinPack: UseBreakAfter
+        BreakAfter: 3
+
+      void f() {
+        foo(1);
+
+        bar(1, 2, 3);
+
+        baz(1,
+            2,
+            3,
+            4);
+      }
+
+
 .. _PackConstructorInitializers:
 
 **PackConstructorInitializers** (``PackConstructorInitializersStyle``) :versionbadge:`clang-format 14` :ref:`¶ <PackConstructorInitializers>`
@@ -5938,6 +5913,78 @@ the configuration (without a prefix: ``Auto``).
              bbbbbbbbbbbbbbbbbbbb(),
              cccccccccccccccccccc()
 
+
+
+.. _PackParameters:
+
+**PackParameters** (``PackParametersStyle``) :versionbadge:`clang-format 23` :ref:`¶ <PackParameters>`
+  Options related to packing parameters of function declarations and
+  definitions.
+
+  Nested configuration flags:
+
+  Options related to packing parameters of function declarations and
+  definitions.
+
+  * ``BinPackParametersStyle BinPack`` :versionbadge:`clang-format 3.7`
+
+    The bin pack parameters style to use.
+
+    Possible values:
+
+    * ``BPPS_BinPack`` (in configuration: ``BinPack``)
+      Bin-pack parameters.
+
+      .. code-block:: c++
+
+         void f(int a, int bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+                int ccccccccccccccccccccccccccccccccccccccccccc);
+
+    * ``BPPS_OnePerLine`` (in configuration: ``OnePerLine``)
+      Put all parameters on the current line if they fit.
+      Otherwise, put each one on its own line.
+
+      .. code-block:: c++
+
+         void f(int a, int b, int c);
+
+         void f(int a,
+                int b,
+                int ccccccccccccccccccccccccccccccccccccc);
+
+    * ``BPPS_AlwaysOnePerLine`` (in configuration: ``AlwaysOnePerLine``)
+      Always put each parameter on its own line.
+
+      .. code-block:: c++
+
+         void f(int a,
+                int b,
+                int c);
+
+    * ``BPPS_UseBreakAfter`` (in configuration: ``UseBreakAfter``)
+      Use the ``BreakAfter`` option to handle parameter packing instead.
+      If the ``BreakAfter`` limit is not exceeded, behave like ``BinPack``.
+
+
+  * ``unsigned BreakAfter`` :versionbadge:`clang-format 23`
+  A parameter list with more parameters than the specified number will be
+    formatted with one parameter per line. This option must be used with
+    ``BinPack: UseBreakAfter``.
+
+    .. code-block:: c++
+
+      PackParameters:
+        BinPack: UseBreakAfter
+        BreakAfter: 3
+
+      void foo(int a);
+
+      void bar(int a, int b, int c);
+
+      void baz(int a,
+               int b,
+               int c,
+               int d);
 
 
 .. _PenaltyBreakAssignment:

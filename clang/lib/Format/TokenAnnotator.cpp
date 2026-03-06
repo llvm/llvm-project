@@ -4262,8 +4262,14 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
-    if (Style.BreakParametersAfter > 0 && Prev->is(tok::l_paren) &&
-        Prev->ParameterCount > Style.BreakParametersAfter) {
+    if ((Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter &&
+         Prev->MightBeFunctionDeclParen &&
+         Prev->ParameterCount > Style.PackParameters.BreakAfter) ||
+        (Style.PackArguments.BinPack == FormatStyle::BPAS_UseBreakAfter &&
+         !Prev->MightBeFunctionDeclParen &&
+         Prev->isOneOf(tok::l_paren, tok::l_brace,
+                       TT_ArrayInitializerLSquare) &&
+         Prev->ParameterCount > Style.PackArguments.BreakAfter)) {
       const auto *RParen = Prev->MatchingParen;
       for (auto *ParamTok = Current; ParamTok && ParamTok != RParen;
            ParamTok = ParamTok->Next) {
@@ -5760,7 +5766,7 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
 
   // Ignores the first parameter as this will be handled separately by
   // BreakFunctionDefinitionParameters or AlignAfterOpenBracket.
-  if (Style.BinPackParameters == FormatStyle::BPPS_AlwaysOnePerLine &&
+  if (Style.PackParameters.BinPack == FormatStyle::BPPS_AlwaysOnePerLine &&
       Line.MightBeFunctionDecl && !Left.opensScope() &&
       startsNextParameter(Right, Style)) {
     return true;

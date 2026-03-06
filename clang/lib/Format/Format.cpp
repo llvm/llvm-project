@@ -146,12 +146,25 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::BinPackArgumentsStyle> {
+  static void enumeration(IO &IO, FormatStyle::BinPackArgumentsStyle &Value) {
+    IO.enumCase(Value, "BinPack", FormatStyle::BPAS_BinPack);
+    IO.enumCase(Value, "OnePerLine", FormatStyle::BPAS_OnePerLine);
+    IO.enumCase(Value, "UseBreakAfter", FormatStyle::BPAS_UseBreakAfter);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "true", FormatStyle::BPAS_BinPack);
+    IO.enumCase(Value, "false", FormatStyle::BPAS_OnePerLine);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BinPackParametersStyle> {
   static void enumeration(IO &IO, FormatStyle::BinPackParametersStyle &Value) {
     IO.enumCase(Value, "BinPack", FormatStyle::BPPS_BinPack);
     IO.enumCase(Value, "OnePerLine", FormatStyle::BPPS_OnePerLine);
     IO.enumCase(Value, "AlwaysOnePerLine", FormatStyle::BPPS_AlwaysOnePerLine);
+    IO.enumCase(Value, "UseBreakAfter", FormatStyle::BPPS_UseBreakAfter);
 
     // For backward compatibility.
     IO.enumCase(Value, "true", FormatStyle::BPPS_BinPack);
@@ -593,6 +606,13 @@ template <> struct ScalarEnumerationTraits<FormatStyle::OperandAlignmentStyle> {
   }
 };
 
+template <> struct MappingTraits<FormatStyle::PackParametersStyle> {
+  static void mapping(IO &IO, FormatStyle::PackParametersStyle &Value) {
+    IO.mapOptional("BinPack", Value.BinPack);
+    IO.mapOptional("BreakAfter", Value.BreakAfter);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::PackConstructorInitializersStyle> {
   static void
@@ -602,6 +622,13 @@ struct ScalarEnumerationTraits<FormatStyle::PackConstructorInitializersStyle> {
     IO.enumCase(Value, "CurrentLine", FormatStyle::PCIS_CurrentLine);
     IO.enumCase(Value, "NextLine", FormatStyle::PCIS_NextLine);
     IO.enumCase(Value, "NextLineOnly", FormatStyle::PCIS_NextLineOnly);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::PackArgumentsStyle> {
+  static void mapping(IO &IO, FormatStyle::PackArgumentsStyle &Value) {
+    IO.mapOptional("BinPack", Value.BinPack);
+    IO.mapOptional("BreakAfter", Value.BreakAfter);
   }
 };
 
@@ -1213,9 +1240,9 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
                    Style.AlwaysBreakBeforeMultilineStrings);
     IO.mapOptional("AttributeMacros", Style.AttributeMacros);
-    IO.mapOptional("BinPackArguments", Style.BinPackArguments);
+    IO.mapOptional("BinPackArguments", Style.PackArguments.BinPack);
     IO.mapOptional("BinPackLongBracedList", Style.BinPackLongBracedList);
-    IO.mapOptional("BinPackParameters", Style.BinPackParameters);
+    IO.mapOptional("BinPackParameters", Style.PackParameters.BinPack);
     IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BracedInitializerIndentWidth",
                    Style.BracedInitializerIndentWidth);
@@ -1334,8 +1361,10 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
     IO.mapOptional("OneLineFormatOffRegex", Style.OneLineFormatOffRegex);
+    IO.mapOptional("PackArguments", Style.PackArguments);
     IO.mapOptional("PackConstructorInitializers",
                    Style.PackConstructorInitializers);
+    IO.mapOptional("PackParameters", Style.PackParameters);
     IO.mapOptional("PenaltyBreakAssignment", Style.PenaltyBreakAssignment);
     IO.mapOptional("PenaltyBreakBeforeFirstCallParameter",
                    Style.PenaltyBreakBeforeFirstCallParameter);
@@ -1440,7 +1469,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.WhitespaceSensitiveMacros);
     IO.mapOptional("WrapNamespaceBodyWithEmptyLines",
                    Style.WrapNamespaceBodyWithEmptyLines);
-    IO.mapOptional("BreakParametersAfter", Style.BreakParametersAfter);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // BreakAfterReturnType was not, initialize the latter from the former for
@@ -1782,9 +1810,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");
-  LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackLongBracedList = true;
-  LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BracedInitializerIndentWidth = -1;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
@@ -1830,7 +1856,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
-  LLVMStyle.BreakParametersAfter = 0;
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;
@@ -1894,7 +1919,11 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCSpaceAfterMethodDeclarationPrefix = true;
   LLVMStyle.ObjCSpaceAfterProperty = false;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
+  LLVMStyle.PackArguments = {/*BinPack=*/FormatStyle::BPAS_BinPack,
+                             /*BreakAfter=*/0};
   LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
+  LLVMStyle.PackParameters = {/*BinPack=*/FormatStyle::BPPS_BinPack,
+                              /*BreakAfter=*/0};
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
   LLVMStyle.PPIndentWidth = -1;
   LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
@@ -2192,7 +2221,7 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
         FormatStyle::ShortFunctionStyle::setEmptyAndInline();
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
-    ChromiumStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+    ChromiumStyle.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
     ChromiumStyle.DerivePointerAlignment = false;
     if (Language == FormatStyle::LK_ObjC)
       ChromiumStyle.ColumnLimit = 80;
@@ -2207,8 +2236,8 @@ FormatStyle getMozillaStyle() {
       FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
-  MozillaStyle.BinPackArguments = false;
-  MozillaStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  MozillaStyle.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  MozillaStyle.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   MozillaStyle.BreakAfterReturnType = FormatStyle::RTBS_TopLevel;
   MozillaStyle.BreakBeforeBraces = FormatStyle::BS_Mozilla;
   MozillaStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeComma;
@@ -2469,7 +2498,8 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   }
 
   if (Style->InsertTrailingCommas != FormatStyle::TCS_None &&
-      Style->BinPackArguments) {
+      (Style->PackArguments.BinPack == FormatStyle::BPAS_BinPack ||
+       Style->PackArguments.BinPack == FormatStyle::BPAS_UseBreakAfter)) {
     // See comment on FormatStyle::TSC_Wrapped.
     return make_error_code(ParseError::BinPackTrailingCommaConflict);
   }
