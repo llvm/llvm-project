@@ -229,7 +229,7 @@ define <4 x float> @test_mat4x4_vec4(<16 x float> %m, <4 x float> %v) {
   ret <4 x float> %r
 }
 
-; 2x2 double: scalar fmul + fadd chains.
+; 2x2 double: scalar fmul + fmuladd chains.
 define <4 x double> @test_double_2x2(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: define <4 x double> @test_double_2x2(
 ; CHECK-SAME: <4 x double> [[A:%.*]], <4 x double> [[B:%.*]]) {
@@ -242,28 +242,24 @@ define <4 x double> @test_double_2x2(<4 x double> %a, <4 x double> %b) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[B]], i64 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[B]], i64 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul double [[TMP1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul double [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd double [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> poison, double [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul double [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul double [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd double [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP12]], double [[TMP15]], i64 1
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul double [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP18:%.*]] = fmul double [[TMP3]], [[TMP8]]
-; CHECK-NEXT:    [[TMP19:%.*]] = fadd double [[TMP17]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x double> [[TMP16]], double [[TMP19]], i64 2
-; CHECK-NEXT:    [[TMP21:%.*]] = fmul double [[TMP2]], [[TMP7]]
-; CHECK-NEXT:    [[TMP22:%.*]] = fmul double [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP23:%.*]] = fadd double [[TMP21]], [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x double> [[TMP20]], double [[TMP23]], i64 3
-; CHECK-NEXT:    ret <4 x double> [[TMP24]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call double @llvm.fmuladd.f64(double [[TMP3]], double [[TMP6]], double [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> poison, double [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul double [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.fmuladd.f64(double [[TMP4]], double [[TMP6]], double [[TMP12]])
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> [[TMP11]], double [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul double [[TMP1]], [[TMP7]]
+; CHECK-NEXT:    [[TMP16:%.*]] = call double @llvm.fmuladd.f64(double [[TMP3]], double [[TMP8]], double [[TMP15]])
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP14]], double [[TMP16]], i64 2
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul double [[TMP2]], [[TMP7]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call double @llvm.fmuladd.f64(double [[TMP4]], double [[TMP8]], double [[TMP18]])
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x double> [[TMP17]], double [[TMP19]], i64 3
+; CHECK-NEXT:    ret <4 x double> [[TMP20]]
 ;
   %r = call <4 x double> @llvm.matrix.multiply.v4f64.v4f64.v4f64(<4 x double> %a, <4 x double> %b, i32 2, i32 2, i32 2)
   ret <4 x double> %r
 }
 
-; 2x2 double * 2x1 double: 2 scalar fmul + fadd chains.
+; 2x2 double * 2x1 double: 2 scalar fmul + fmuladd chains.
 define <2 x double> @test_double_mat_vec(<4 x double> %m, <2 x double> %v) {
 ; CHECK-LABEL: define <2 x double> @test_double_mat_vec(
 ; CHECK-SAME: <4 x double> [[M:%.*]], <2 x double> [[V:%.*]]) {
@@ -274,14 +270,12 @@ define <2 x double> @test_double_mat_vec(<4 x double> %m, <2 x double> %v) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[V]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[V]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul double [[TMP1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul double [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd double [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul double [[TMP2]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul double [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd double [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP10]], double [[TMP13]], i64 1
-; CHECK-NEXT:    ret <2 x double> [[TMP14]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call double @llvm.fmuladd.f64(double [[TMP3]], double [[TMP6]], double [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> poison, double [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul double [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call double @llvm.fmuladd.f64(double [[TMP4]], double [[TMP6]], double [[TMP10]])
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP9]], double [[TMP11]], i64 1
+; CHECK-NEXT:    ret <2 x double> [[TMP12]]
 ;
   %r = call <2 x double> @llvm.matrix.multiply.v2f64.v4f64.v2f64(<4 x double> %m, <2 x double> %v, i32 2, i32 2, i32 1)
   ret <2 x double> %r

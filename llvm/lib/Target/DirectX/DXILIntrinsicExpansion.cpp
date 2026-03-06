@@ -1110,11 +1110,11 @@ static Value *expandMatrixMultiply(CallInst *Orig) {
 
       Value *Dot;
       if (UseScalarFP) {
-        // Scalar fmul+fadd expansion for double types and K=1.
+        // Scalar fmul+fmuladd expansion for double types and K=1.
         Dot = Builder.CreateFMul(RowElts[0], ColElts[0]);
         for (unsigned K = 1; K < LHSCols; ++K)
-          Dot = Builder.CreateFAdd(Dot,
-                                   Builder.CreateFMul(RowElts[K], ColElts[K]));
+          Dot = Builder.CreateIntrinsic(EltTy, Intrinsic::fmuladd,
+                                        {RowElts[K], ColElts[K], Dot});
       } else if (IsFP) {
         // Emit scalar-arg DXIL dot directly (dx.dot2/dx.dot3/dx.dot4).
         SmallVector<Value *, 8> Args;
