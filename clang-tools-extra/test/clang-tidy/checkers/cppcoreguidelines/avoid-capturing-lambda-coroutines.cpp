@@ -33,4 +33,10 @@ void Safe() {
     [=] () -> task { co_return; };
 
     [&v]{++v;}();
+
+#if __cplusplus >= 202302L
+    // Lambda coroutines using C++23 deducing this are safe.
+    [&v] (this auto) -> task { co_return; };
+    [v] (this auto, int x) -> task { co_return; };
+#endif
 }

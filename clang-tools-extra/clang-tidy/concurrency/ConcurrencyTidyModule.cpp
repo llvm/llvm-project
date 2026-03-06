@@ -8,6 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "LambdaCoroutineCaptureCheck.h"
 #include "MtUnsafeCheck.h"
 #include "ThreadCanceltypeAsynchronousCheck.h"
 
@@ -18,6 +19,8 @@ namespace {
 class ConcurrencyModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<LambdaCoroutineCaptureCheck>(
+        "concurrency-lambda-coroutine-capture");
     CheckFactories.registerCheck<concurrency::MtUnsafeCheck>(
         "concurrency-mt-unsafe");
     CheckFactories.registerCheck<ThreadCanceltypeAsynchronousCheck>(

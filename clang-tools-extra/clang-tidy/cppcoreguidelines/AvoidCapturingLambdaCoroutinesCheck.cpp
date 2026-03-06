@@ -21,12 +21,18 @@ AST_MATCHER(LambdaExpr, hasCoroutineBody) {
 }
 
 AST_MATCHER(LambdaExpr, hasCaptures) { return Node.capture_size() != 0U; }
+
+AST_MATCHER(LambdaExpr, hasDeducingThis) {
+  return Node.getCallOperator()->isExplicitObjectMemberFunction();
+}
 } // namespace
 
 void AvoidCapturingLambdaCoroutinesCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
-      lambdaExpr(hasCaptures(), hasCoroutineBody()).bind("lambda"), this);
+      lambdaExpr(hasCaptures(), hasCoroutineBody(), unless(hasDeducingThis()))
+          .bind("lambda"),
+      this);
 }
 
 bool AvoidCapturingLambdaCoroutinesCheck::isLanguageVersionSupported(

@@ -52,3 +52,10 @@ captures or ensuring the lambda closure object has a guaranteed lifetime.
 
 Following these guidelines can help ensure the safe and reliable use of
 coroutine lambdas in C++ code.
+
+In C++23, the "deducing this" (explicit object parameter) syntax provides a
+solution to this problem by moving captures into the coroutine frame. Lambda
+coroutines using ``this auto`` as their first parameter are not flagged by
+this check. See :doc:`concurrency-lambda-coroutine-capture
+<../concurrency/lambda-coroutine-capture>` for a check that can automatically
+apply this fix.

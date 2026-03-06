@@ -111,6 +111,14 @@ New checks
   Finds functions where throwing exceptions is unsafe but the function is still
   marked as potentially throwing.
 
+- New :doc:`concurrency-lambda-coroutine-capture
+  <clang-tidy/checks/concurrency/lambda-coroutine-capture>` check.
+
+  Finds lambda coroutines that capture variables without using the C++23
+  "deducing this" (explicit object parameter) syntax, which can lead to
+  use-after-free bugs when the lambda object is destroyed while the coroutine
+  is still suspended.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
