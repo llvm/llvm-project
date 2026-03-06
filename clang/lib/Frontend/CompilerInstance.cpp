@@ -1456,9 +1456,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     Instance.GetDependencyDirectives =
         GetDependencyDirectives->cloneFor(Instance.getFileManager());
 
-  // Pass along the GenModuleActionWrapper callback
-  auto WrapGenModuleAction = getGenModuleActionWrapper();
-  Instance.setGenModuleActionWrapper(WrapGenModuleAction);
+  // Pass along the GenModuleActionWrapper callback.
+  Instance.setGenModuleActionWrapper(getGenModuleActionWrapper());
 
   assert(hasOutputManager() &&
          "Expected an output manager to already be set up");
@@ -1520,11 +1519,13 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
   // thread so that we get a stack large enough.
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
-        std::unique_ptr<FrontendAction> Action(
-            new GenerateModuleFromModuleMapAction);
+        std::unique_ptr<FrontendAction> Action =
+            std::make_unique<GenerateModuleFromModuleMapAction>();
+
         if (auto WrapGenModuleAction = Instance.getGenModuleActionWrapper())
           Action = WrapGenModuleAction(Instance.getFrontendOpts(),
                                        std::move(Action));
+
         Instance.ExecuteAction(*Action);
       },
       DesiredStackSize);
