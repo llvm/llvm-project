@@ -231,9 +231,7 @@ void DwarfUnit::addUInt(DIEValueList &Block, dwarf::Form Form,
   addUInt(Block, (dwarf::Attribute)0, Form, Integer);
 }
 
-void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val) {
-  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
-
+void DwarfUnit::addIntToBlock(DIEBlock &Block, const APInt &Val) {
   // Get the raw data form of the large APInt.
   const uint64_t *Ptr64 = Val.getRawData();
 
@@ -247,9 +245,14 @@ void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt 
       c = Ptr64[i / 8] >> (8 * (i & 7));
     else
       c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
-    addUInt(*Block, dwarf::DW_FORM_data1, c);
+    addUInt(Block, dwarf::DW_FORM_data1, c);
   }
+}
 
+void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute,
+                              const APInt &Val) {
+  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+  addIntToBlock(*Block, Val);
   Block->computeSize(Asm->getDwarfFormParams());
   addBlock(Die, Attribute, Block->BestForm(), Block);
 }
@@ -2042,15 +2045,14 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
     addConstantFPValue(StaticMemberDIE, CFP);
   else if (auto *CDS =
                dyn_cast_or_null<ConstantDataSequential>(DT->getConstant())) {
-    // Concatenate all array elements into a single APInt and emit using
-    // addIntAsBlock, which handles target endianness correctly.
-    unsigned NumElts = CDS->getNumElements();
-    unsigned ElemBits = CDS->getElementType()->getPrimitiveSizeInBits();
-    unsigned TotalBits = NumElts * ElemBits;
-    APInt Combined(TotalBits, 0);
-    for (unsigned I = 0; I < NumElts; ++I)
-      Combined.insertBits(CDS->getElementAsAPInt(I), I * ElemBits);
-    addIntAsBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Combined);
+    assert(CDS->getElementType()->isIntegerTy() &&
+           "Non-integer arrays not supported.");
+    DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+    for (unsigned I = 0; I != CDS->getNumElements(); ++I)
+      addIntToBlock(*Block, CDS->getElementAsAPInt(I));
+    Block->computeSize(Asm->getDwarfFormParams());
+    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block->BestForm(),
+             Block);
   }
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())
