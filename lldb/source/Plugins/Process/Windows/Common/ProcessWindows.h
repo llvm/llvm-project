@@ -49,6 +49,9 @@ public:
   Status DoAttachToProcessWithID(
       lldb::pid_t pid,
       const lldb_private::ProcessAttachInfo &attach_info) override;
+  Status
+  DoAttachToProcessWithName(const char *process_name,
+                            const ProcessAttachInfo &attach_info) override;
   Status DoResume(lldb::RunDirection direction) override;
   Status DoDestroy() override;
   Status DoHalt(bool &caused_stop) override;
