@@ -2200,3 +2200,127 @@ define <2 x i32> @test_vselect_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
   %res = select <2 x i1> %mask, <2 x i32> %c, <2 x i32> %b
   ret <2 x i32> %res
 }
+
+define <4 x i16> @test_bswap_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: test_bswap_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrli.h a1, a0, 8
+; CHECK-NEXT:    pslli.h a0, a0, 8
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> %a)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_bswap_v2i32(<2 x i32> %a) {
+; CHECK-LABEL: test_bswap_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrli.w a1, a0, 8
+; CHECK-NEXT:    lui a2, 16
+; CHECK-NEXT:    psrli.w a3, a0, 24
+; CHECK-NEXT:    addi a2, a2, -256
+; CHECK-NEXT:    padd.ws a2, zero, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a2, a0, a2
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    pslli.w a2, a2, 8
+; CHECK-NEXT:    pslli.w a0, a0, 24
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %a)
+  ret <2 x i32> %res
+}
+
+define <8 x i8> @test_bitreverse_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: test_bitreverse_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrli.b a1, a0, 4
+; CHECK-NEXT:    pli.b a2, 15
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    pli.b a2, 51
+; CHECK-NEXT:    pslli.b a0, a0, 4
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.b a1, a0, 2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 85
+; CHECK-NEXT:    pslli.b a0, a0, 2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.b a1, a0, 1
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pslli.b a0, a0, 1
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    ret
+  %res = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> %a)
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_bitreverse_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: test_bitreverse_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrli.h a1, a0, 8
+; CHECK-NEXT:    pslli.h a0, a0, 8
+; CHECK-NEXT:    pli.b a2, 15
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    psrli.h a1, a0, 4
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 51
+; CHECK-NEXT:    pslli.h a0, a0, 4
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.h a1, a0, 2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 85
+; CHECK-NEXT:    pslli.h a0, a0, 2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.h a1, a0, 1
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pslli.h a0, a0, 1
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    ret
+  %res = call <4 x i16> @llvm.bitreverse.v4i16(<4 x i16> %a)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_bitreverse_v2i32(<2 x i32> %a) {
+; CHECK-LABEL: test_bitreverse_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrli.w a1, a0, 8
+; CHECK-NEXT:    lui a2, 16
+; CHECK-NEXT:    psrli.w a3, a0, 24
+; CHECK-NEXT:    addi a2, a2, -256
+; CHECK-NEXT:    padd.ws a2, zero, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    and a2, a0, a2
+; CHECK-NEXT:    pslli.w a0, a0, 24
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:    pli.b a3, 15
+; CHECK-NEXT:    pslli.w a2, a2, 8
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    pli.b a2, 51
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    psrli.w a1, a0, 4
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:    pli.b a3, 85
+; CHECK-NEXT:    pslli.w a0, a0, 4
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.w a1, a0, 2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pslli.w a0, a0, 2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.w a1, a0, 1
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:    pslli.w a0, a0, 1
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    ret
+  %res = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
+  ret <2 x i32> %res
+}
