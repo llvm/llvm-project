@@ -174,7 +174,7 @@ public:
     }
 
     std::lock_guard<std::mutex> Lock(Mu);
-    auto RequestBroadcast = llvm::make_scope_exit([&, OldCDB(CDB.get())] {
+    llvm::scope_exit RequestBroadcast([&, OldCDB(CDB.get())] {
       // If we loaded a new CDB, it should be broadcast at some point.
       if (CDB != nullptr && CDB.get() != OldCDB)
         NeedsBroadcast = true;

@@ -47,18 +47,13 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{x.Subtract(correction, rounding)};
-          overflow |= next.flags.test(RealFlag::Overflow);
-          auto added{sum.Add(next.value, rounding)};
+          auto added{sum.KahanSummation(x, correction, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          correction = added.value.Subtract(sum, rounding)
-                           .value.Subtract(next.value, rounding)
-                           .value;
-          sum = std::move(added.value);
+          sum = added.value;
         } else {
           auto added{sum.Add(x, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          sum = std::move(added.value);
+          sum = added.value;
         }
       }
     } else if constexpr (T::category == TypeCategory::Logical) {
@@ -97,18 +92,13 @@ static Expr<T> FoldDotProduct(
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
-          auto next{x.Subtract(correction, rounding)};
-          overflow |= next.flags.test(RealFlag::Overflow);
-          auto added{sum.Add(next.value, rounding)};
+          auto added{sum.KahanSummation(x, correction, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          correction = added.value.Subtract(sum, rounding)
-                           .value.Subtract(next.value, rounding)
-                           .value;
-          sum = std::move(added.value);
+          sum = added.value;
         } else {
           auto added{sum.Add(x, rounding)};
           overflow |= added.flags.test(RealFlag::Overflow);
-          sum = std::move(added.value);
+          sum = added.value;
         }
       }
     }
@@ -357,14 +347,8 @@ public:
     } else if constexpr (T::category == TypeCategory::Unsigned) {
       element = element.AddUnsigned(array_.At(at)).value;
     } else { // Real & Complex: use Kahan summation
-      auto next{array_.At(at).Subtract(correction_, rounding_)};
-      overflow_ |= next.flags.test(RealFlag::Overflow);
-      auto sum{element.Add(next.value, rounding_)};
+      auto sum{element.KahanSummation(array_.At(at), correction_, rounding_)};
       overflow_ |= sum.flags.test(RealFlag::Overflow);
-      // correction = (sum - element) - next; algebraically zero
-      correction_ = sum.value.Subtract(element, rounding_)
-                        .value.Subtract(next.value, rounding_)
-                        .value;
       element = sum.value;
     }
   }

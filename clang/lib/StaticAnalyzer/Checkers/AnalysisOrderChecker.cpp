@@ -162,7 +162,8 @@ public:
         return;
 
       llvm::errs() << "CFGElement: ";
-      CFGStmtMap *Map = C.getCurrentAnalysisDeclContext()->getCFGStmtMap();
+      const CFGStmtMap *Map =
+          C.getCurrentAnalysisDeclContext()->getCFGStmtMap();
       CFGElement LastElement = Map->getBlock(S)->back();
 
       if (LastElement.getAs<CFGStmt>())

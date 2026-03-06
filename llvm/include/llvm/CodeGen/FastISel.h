@@ -212,6 +212,7 @@ protected:
   const TargetLowering &TLI;
   const TargetRegisterInfo &TRI;
   const TargetLibraryInfo *LibInfo;
+  const LibcallLoweringInfo *LibcallLowering;
   bool SkipTargetIndependentISel;
 
   /// The position of the last instruction for materializing constants
@@ -326,6 +327,7 @@ public:
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,
                     const TargetLibraryInfo *LibInfo,
+                    const LibcallLoweringInfo *LibcallLowering,
                     bool SkipTargetIndependentISel = false);
 
   /// This method is called by target-independent code when the normal

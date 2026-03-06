@@ -8,12 +8,16 @@
         <div class="navbar__menu">
             <ul class="navbar__links">
                 <li class="navbar__item">
-                    <a href="/" class="navbar__link">Namespace</a>
-                </li>
-                <li class="navbar__item">
-                    <a href="/" class="navbar__link">Class</a>
+                    <a href="{{Homepage}}" class="navbar__link">Home</a>
                 </li>
             </ul>
         </div>
     </div>
+    {{#HasContexts}}
+    <div class="navbar-breadcrumb-container">
+        {{#Contexts}}
+        <a href="{{RelativePath}}{{DocumentationFileName}}.html"><div class="navbar-breadcrumb-item">{{Name}}</div></a>{{^End}}::{{/End}}
+        {{/Contexts}}
+    </div>
+    {{/HasContexts}}
 </nav>

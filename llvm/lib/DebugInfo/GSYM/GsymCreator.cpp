@@ -169,11 +169,25 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   const off_t StrtabSize = O.tell() - StrtabOffset;
   std::vector<uint32_t> AddrInfoOffsets;
 
+  // Verify that the size of the string table does not exceed 32-bit max.
+  // This means the offsets in the string table will not exceed 32-bit max.
+  if (StrtabSize > UINT32_MAX) {
+    return createStringError(std::errc::invalid_argument,
+                             "string table size exceeded 32-bit max");
+  }
+
   // Write out the address infos for each function info.
   for (const auto &FuncInfo : Funcs) {
-    if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O))
-      AddrInfoOffsets.push_back(OffsetOrErr.get());
-    else
+    if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O)) {
+      // Verify that the address info offsets do not exceed 32-bit max.
+      uint64_t Offset = OffsetOrErr.get();
+      if (Offset > UINT32_MAX) {
+        return createStringError(std::errc::invalid_argument,
+                                 "address info offset exceeded 32-bit max");
+      }
+
+      AddrInfoOffsets.push_back(Offset);
+    } else
       return OffsetOrErr.takeError();
   }
   // Fixup the string table offset and size in the header
@@ -564,7 +578,6 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
       std::optional<uint64_t> FirstFuncAddr = GC->getFirstFunctionAddress();
       if (FirstFuncAddr) {
         SGP << Path << "-" << llvm::format_hex(*FirstFuncAddr, 1);
-        SGP.flush();
         Err = GC->save(SegmentedGsymPath, ByteOrder, std::nullopt);
         if (Err)
           return Err;

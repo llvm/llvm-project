@@ -417,6 +417,12 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
 
   for (Arg *A : Args) {
+    if (A->getOption().getID() == options::OPT_dxc_all_resources_bound) {
+      DAL->AddFlagArg(nullptr,
+                      Opts.getOption(options::OPT_hlsl_all_resources_bound));
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
@@ -588,4 +594,6 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
 
 void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
   CC1Args.push_back("-Wconversion");
+  CC1Args.push_back("-Wvector-conversion");
+  CC1Args.push_back("-Wmatrix-conversion");
 }

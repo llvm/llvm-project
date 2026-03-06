@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
 void f0(int len) {
@@ -21,7 +21,7 @@ void f0(int len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
-// LLVM: define{{.*}} void @f0(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f0(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
@@ -57,18 +57,17 @@ void f1(int len) {
 // CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
-// CIR:   %[[SIXTEEN:.*]] = cir.const #cir.int<16> : !s32i
-// CIR:   %[[SIXTEEN_SIZE_T:.*]] = cir.cast integral %[[SIXTEEN]] : !s32i -> !u64i
+// CIR:   %[[SIXTEEN:.*]] = cir.const #cir.int<16> : !u64i
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[TOTAL_LEN:.*]] = cir.binop(mul, %[[SIXTEEN_SIZE_T]], %[[LEN_SIZE_T]]) nuw
+// CIR:   %[[TOTAL_LEN:.*]] = cir.mul nuw %[[SIXTEEN]], %[[LEN_SIZE_T]]
 // CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TOTAL_LEN]] : !u64i, ["arr"]
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
-// LLVM: define{{.*}} void @f1(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f1(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
@@ -108,7 +107,7 @@ void f2(int len) {
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
-// CIR:   %[[TOTAL_LEN:.*]] = cir.binop(add, %[[LEN]], %[[FOUR]]) nsw : !s32i
+// CIR:   %[[TOTAL_LEN:.*]] = cir.add nsw %[[LEN]], %[[FOUR]] : !s32i
 // CIR:   %[[TOTAL_LEN_SIZE_T:.*]] = cir.cast integral %[[TOTAL_LEN]] : !s32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
@@ -116,7 +115,7 @@ void f2(int len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
   
-// LLVM: define{{.*}} void @f2(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f2(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
@@ -157,13 +156,13 @@ void f3(unsigned len) {
 // CIR: cir.func{{.*}} @f3(%[[LEN_ARG:.*]]: !u32i {{.*}})
 // CIR:   %[[LEN_ADDR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["len", init]
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[I:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["i", init]
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !u32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[S1:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, %[[LEN_SIZE_T]] : !u64i, ["s1"]
-// CIR:   %[[I:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["i", init]
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[I]]
 // CIR:   cir.scope {
@@ -191,17 +190,17 @@ void f3(unsigned len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
-// LLVM: define{{.*}} void @f3(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f3(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
+// LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN_SIZE_T:.*]] = zext i32 %[[LEN]] to i64
 // LLVM:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
 // LLVM:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]]
 // LLVM:   %[[S1:.*]] = alloca i8, i64 %[[LEN_SIZE_T]]
-// LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 0, ptr %[[I]]
 // LLVM:   br label %[[WHILE_START:.*]]
 // LLVM: [[WHILE_START]]:
@@ -306,7 +305,7 @@ int f5(unsigned long len) {
 // CIR:   %[[RET_VAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RET_VAL]] : !s32i
 
-// LLVM: define{{.*}} i32 @f5(i64 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} i32 @f5(i64 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i64
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
@@ -340,3 +339,57 @@ int f5(unsigned long len) {
 // OGCG:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
 // OGCG:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
 // OGCG:   ret i32 %[[ARR_VAL]]
+
+void vla_subscript_expr() {
+  int **a;
+  unsigned long n = 5;
+  (int (**)[n]){&a}[0][1][5] = 0;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, ["a"]
+// CIR: %[[N_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["n", init]
+// CIR: %[[COMPOUND_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, [".compoundliteral"]
+// CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !u64i
+// CIR: cir.store {{.*}} %[[CONST_5]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
+// CIR: %[[CONST_0_VAL:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !s32i
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
+// CIR: %[[A_VAL:.*]] = cir.cast bitcast %[[A_ADDR]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>> -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: cir.store {{.*}} %[[A_VAL]], %[[COMPOUND_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CIR: %[[TMP_COMPOUND:.*]] = cir.load {{.*}} %[[COMPOUND_ADDR]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[COMPOUND_PTR:.*]] = cir.ptr_stride %[[TMP_COMPOUND]], %[[CONST_0]] : (!cir.ptr<!cir.ptr<!s32i>>, !s32i) -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[TMP_COMPOUND:.*]] = cir.load {{.*}} %10 : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !u64i
+// CIR: %[[VLA_IDX:.*]] = cir.mul nsw %[[CONST_1]], %7 : !u64i
+// CIR: %[[VLA_A_PTR:.*]] = cir.ptr_stride %[[TMP_COMPOUND]], %[[VLA_IDX]] : (!cir.ptr<!s32i>, !u64i) -> !cir.ptr<!s32i>
+// CIR: %[[ELEM_5_PTR:.*]] = cir.ptr_stride %[[VLA_A_PTR]], %[[CONST_5]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: cir.store {{.*}} %[[CONST_0_VAL]], %[[ELEM_5_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
+// LLVM: %[[COMPOUND_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: store i64 5, ptr %[[N_ADDR]], align 8
+// LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
+// LLVM: store ptr %[[A_ADDR]], ptr %[[COMPOUND_ADDR]], align 8
+// LLVM: %[[TMP_COMPOUND:.*]] = load ptr, ptr %[[COMPOUND_ADDR]], align 8
+// LLVM: %[[COMPOUND_PTR:.*]] = getelementptr ptr, ptr %[[TMP_COMPOUND]], i64 0
+// LLVM: %[[TMP_COMPOUND:.*]] = load ptr, ptr %[[COMPOUND_PTR]], align 8
+// LLVM: %[[VLA_IDX:.*]] = mul nsw i64 1, %[[TMP_N]]
+// LLVM: %[[VLA_A_PTR:.*]] = getelementptr i32, ptr %[[TMP_COMPOUND]], i64 %[[VLA_IDX]]
+// LLVM: %[[ELEM_5_PTR:.*]] = getelementptr i32, ptr %[[VLA_A_PTR]], i64 5
+// LLVM: store i32 0, ptr %[[ELEM_5_PTR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca ptr, align 8
+// OGCG: %[[N_ADDR:.*]] = alloca i64, align 8
+// OGCG: %[[COMPOUND_ADDR:.*]] = alloca ptr, align 8
+// OGCG: store i64 5, ptr %[[N_ADDR]], align 8
+// OGCG: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
+// OGCG: store ptr %[[A_ADDR]], ptr %[[COMPOUND_ADDR]], align 8
+// OGCG: %[[TMP_COMPOUND:.*]] = load ptr, ptr %[[COMPOUND_ADDR]], align 8
+// OGCG: %[[COMPOUND_PTR:.*]] = getelementptr inbounds ptr, ptr %[[TMP_COMPOUND]], i64 0
+// OGCG: %[[TMP_COMPOUND:.*]] = load ptr, ptr %[[COMPOUND_PTR]], align 8
+// OGCG: %[[VLA_IDX:.*]] = mul nsw i64 1, %[[TMP_N]]
+// OGCG: %[[VLA_A_PTR:.*]] = getelementptr inbounds i32, ptr %[[TMP_COMPOUND]], i64 %[[VLA_IDX]]
+// OGCG: %[[ELEM_5_PTR:.*]] = getelementptr inbounds i32, ptr %[[VLA_A_PTR]], i64 5
+// OGCG: store i32 0, ptr %[[ELEM_5_PTR]], align 4

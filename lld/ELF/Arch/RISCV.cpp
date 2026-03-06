@@ -8,7 +8,6 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
-#include "RISCVInternalRelocations.h"
 #include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -42,7 +41,6 @@ public:
                 uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  template <class ELFT> void scanSection1(InputSectionBase &);
   void scanSection(InputSectionBase &) override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
@@ -280,17 +278,15 @@ RelType RISCV::getDynRel(RelType type) const {
                                          : static_cast<RelType>(R_RISCV_NONE);
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
   case R_RISCV_NONE:
-  case R_RISCV_VENDOR:
     return R_NONE;
   case R_RISCV_32:
   case R_RISCV_64:
-  case R_RISCV_HI20:
-  case R_RISCV_LO12_I:
-  case R_RISCV_LO12_S:
     return R_ABS;
   case R_RISCV_ADD8:
   case R_RISCV_ADD16:
@@ -306,57 +302,185 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB32:
   case R_RISCV_SUB64:
     return RE_RISCV_ADD;
-  case R_RISCV_JAL:
-  case R_RISCV_BRANCH:
-  case R_RISCV_PCREL_HI20:
-  case R_RISCV_RVC_BRANCH:
-  case R_RISCV_RVC_JUMP:
   case R_RISCV_32_PCREL:
     return R_PC;
-  case R_RISCV_CALL:
-  case R_RISCV_CALL_PLT:
-  case R_RISCV_PLT32:
-    return R_PLT_PC;
-  case R_RISCV_GOT_HI20:
-  case R_RISCV_GOT32_PCREL:
-    return R_GOT_PC;
-  case R_RISCV_PCREL_LO12_I:
-  case R_RISCV_PCREL_LO12_S:
-    return RE_RISCV_PC_INDIRECT;
-  case R_RISCV_TLSDESC_HI20:
-  case R_RISCV_TLSDESC_LOAD_LO12:
-  case R_RISCV_TLSDESC_ADD_LO12:
-    return R_TLSDESC_PC;
-  case R_RISCV_TLSDESC_CALL:
-    return R_TLSDESC_CALL;
-  case R_RISCV_TLS_GD_HI20:
-    return R_TLSGD_PC;
-  case R_RISCV_TLS_GOT_HI20:
-    return R_GOT_PC;
-  case R_RISCV_TPREL_HI20:
-  case R_RISCV_TPREL_LO12_I:
-  case R_RISCV_TPREL_LO12_S:
-    return R_TPREL;
-  case R_RISCV_ALIGN:
-    return R_RELAX_HINT;
-  case R_RISCV_TPREL_ADD:
-  case R_RISCV_RELAX:
-    return ctx.arg.relax ? R_RELAX_HINT : R_NONE;
   case R_RISCV_SET_ULEB128:
   case R_RISCV_SUB_ULEB128:
     return RE_RISCV_LEB128;
   default:
-    if (type.v & INTERNAL_RISCV_VENDOR_MASK) {
-      Err(ctx) << getErrorLoc(ctx, loc)
-               << "unsupported vendor-specific relocation " << type
-               << " against symbol " << &s;
-      return R_NONE;
-    }
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation ("
-             << (type.v & ~INTERNAL_RISCV_VENDOR_MASK) << ") against symbol "
-             << &s;
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
+}
+
+template <class ELFT, class RelTy>
+void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  // Many relocations end up in sec.relocations.
+  sec.relocations.reserve(rels.size());
+
+  StringRef vendor;
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    RelType type = it->getType(false);
+    uint32_t symIndex = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    uint64_t offset = it->r_offset;
+    if (sym.isUndefined() && symIndex != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_RISCV_NONE:
+      continue;
+
+    // Absolute relocations:
+    case R_RISCV_32:
+    case R_RISCV_64:
+    case R_RISCV_HI20:
+    case R_RISCV_LO12_I:
+    case R_RISCV_LO12_S:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_RISCV_JAL:
+    case R_RISCV_BRANCH:
+    case R_RISCV_PCREL_HI20:
+    case R_RISCV_RVC_BRANCH:
+    case R_RISCV_RVC_JUMP:
+    case R_RISCV_32_PCREL:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+    case R_RISCV_PCREL_LO12_I:
+    case R_RISCV_PCREL_LO12_S:
+      expr = RE_RISCV_PC_INDIRECT;
+      break;
+
+    // PLT-generating relocations:
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT:
+    case R_RISCV_PLT32:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT-generating relocations:
+    case R_RISCV_GOT_HI20:
+    case R_RISCV_GOT32_PCREL:
+      expr = R_GOT_PC;
+      break;
+
+    // TLS relocations:
+    case R_RISCV_TPREL_HI20:
+    case R_RISCV_TPREL_LO12_I:
+    case R_RISCV_TPREL_LO12_S:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_RISCV_TLS_GOT_HI20:
+      // There is no IE to LE optimization.
+      rs.handleTlsIe<false>(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_RISCV_TLS_GD_HI20:
+      // There is no GD to IE/LE optimization.
+      rs.handleTlsGd(R_TLSGD_PC, R_NONE, R_NONE, type, offset, addend, sym);
+      continue;
+
+    // TLSDESC relocations:
+    case R_RISCV_TLSDESC_HI20:
+      rs.handleTlsDesc(R_TLSDESC_PC, R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_RISCV_TLSDESC_LOAD_LO12:
+    case R_RISCV_TLSDESC_ADD_LO12:
+      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} reference a label, not the
+      // TLS symbol, so we cannot use handleTlsDesc (which sets NEEDS_TLSDESC).
+      // For TLSDESC->IE, use R_TPREL as well, but relocateAlloc uses isToLe
+      // (from HI20) to select the correct transform.
+      sec.addReloc({ctx.arg.shared ? R_TLSDESC_PC : R_TPREL, type, offset,
+                    addend, &sym});
+      continue;
+    case R_RISCV_TLSDESC_CALL:
+      if (!ctx.arg.shared)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+
+    // Relaxation hints:
+    case R_RISCV_ALIGN:
+      sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
+      continue;
+    case R_RISCV_TPREL_ADD:
+    case R_RISCV_RELAX:
+      if (ctx.arg.relax)
+        sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
+      continue;
+
+    // Misc relocations:
+    case R_RISCV_ADD8:
+    case R_RISCV_ADD16:
+    case R_RISCV_ADD32:
+    case R_RISCV_ADD64:
+    case R_RISCV_SET6:
+    case R_RISCV_SET8:
+    case R_RISCV_SET16:
+    case R_RISCV_SET32:
+    case R_RISCV_SUB6:
+    case R_RISCV_SUB8:
+    case R_RISCV_SUB16:
+    case R_RISCV_SUB32:
+    case R_RISCV_SUB64:
+      expr = RE_RISCV_ADD;
+      break;
+    case R_RISCV_SET_ULEB128:
+    case R_RISCV_SUB_ULEB128:
+      expr = RE_RISCV_LEB128;
+      break;
+
+    case R_RISCV_VENDOR: {
+      auto it1 = it;
+      ++it1;
+      if (it1 == rels.end() || it1->getType(false) - 192u > 63u) {
+        Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+                 << "R_RISCV_VENDOR is not followed by a relocation of code "
+                    "192 to 255";
+        continue;
+      }
+      vendor = sym.getName();
+    }
+      continue;
+    default:
+      auto diag = Err(ctx);
+      diag << getErrorLoc(ctx, sec.content().data() + offset);
+      if (!vendor.empty()) {
+        diag << "unknown vendor-specific relocation (" << type.v
+             << ") in namespace '" << vendor << "' against symbol '" << &sym
+             << "'";
+        vendor = "";
+      } else {
+        diag << "unknown relocation (" << type.v << ") against symbol " << &sym;
+      }
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+
+  // Sort relocations by offset for more efficient searching for
+  // R_RISCV_PCREL_HI20.
+  llvm::stable_sort(sec.relocs(),
+                    [](const Relocation &lhs, const Relocation &rhs) {
+                      return lhs.offset < rhs.offset;
+                    });
+}
+
+void RISCV::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.is64)
+    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
+  else
+    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
 }
 
 void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -627,47 +751,52 @@ void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
     uint8_t *loc = buf + rel.offset;
     uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
-    switch (rel.expr) {
-    case R_RELAX_HINT:
+    switch (rel.type) {
+    case R_RISCV_ALIGN:
+    case R_RISCV_RELAX:
+    case R_RISCV_TPREL_ADD:
       continue;
-    case R_TLSDESC_PC:
-      // For R_RISCV_TLSDESC_HI20, store &got(sym)-PC to be used by the
-      // following two instructions L[DW] and ADDI.
-      if (rel.type == R_RISCV_TLSDESC_HI20)
+    case R_RISCV_TLSDESC_HI20:
+      if (rel.expr == R_TLSDESC_PC) {
+        // Shared object: store &got(sym)-PC for the following L[DW]/ADDI.
         tlsdescVal = val;
-      else
-        val = tlsdescVal;
-      break;
-    case R_RELAX_TLS_GD_TO_IE:
-      // Only R_RISCV_TLSDESC_HI20 reaches here. tlsdescVal will be finalized
-      // after we see R_RISCV_TLSDESC_ADD_LO12 in the R_RELAX_TLS_GD_TO_LE case.
-      // The net effect is that tlsdescVal will be smaller than `val` to take
-      // into account of NOP instructions (in the absence of R_RISCV_RELAX)
-      // before AUIPC.
-      tlsdescVal = val + rel.offset;
-      isToLe = false;
-      tlsdescRelax = relaxable(relocs, i);
-      if (!tlsdescRelax)
-        tlsdescToIe(ctx, loc, rel, val);
-      continue;
-    case R_RELAX_TLS_GD_TO_LE:
-      // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToLe is
-      // false, this is actually TLSDESC=>IE optimization.
-      if (rel.type == R_RISCV_TLSDESC_HI20) {
-        tlsdescVal = val;
-        isToLe = true;
-        tlsdescRelax = relaxable(relocs, i);
-      } else {
-        if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
-          tlsdescVal -= rel.offset;
-        val = tlsdescVal;
+        break;
       }
+      // Executable: TLSDESC->LE (R_TPREL) or TLSDESC->IE (R_GOT_PC).
+      isToLe = rel.expr == R_TPREL;
+      if (isToLe) {
+        tlsdescVal = val;
+      } else {
+        // tlsdescVal will be finalized after we see R_RISCV_TLSDESC_ADD_LO12.
+        // The net effect is that tlsdescVal will be smaller than `val` to
+        // take into account of NOP instructions (in the absence of
+        // R_RISCV_RELAX) before AUIPC.
+        tlsdescVal = val + rel.offset;
+      }
+      tlsdescRelax = relaxable(relocs, i);
+      if (!tlsdescRelax) {
+        if (isToLe)
+          tlsdescToLe(loc, rel, val);
+        else
+          tlsdescToIe(ctx, loc, rel, val);
+      }
+      continue;
+    case R_RISCV_TLSDESC_LOAD_LO12:
+    case R_RISCV_TLSDESC_ADD_LO12:
+    case R_RISCV_TLSDESC_CALL:
+      if (rel.expr == R_TLSDESC_PC) {
+        // Shared object: propagate the stored GOT value.
+        val = tlsdescVal;
+        break;
+      }
+      // Executable: IE or LE instruction rewrite.
+      if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
+        tlsdescVal -= rel.offset;
+      val = tlsdescVal;
       // When NOP conversion is eligible and relaxation applies, don't write a
       // NOP in case an unrelated instruction follows the current instruction.
       if (tlsdescRelax &&
-          (rel.type == R_RISCV_TLSDESC_HI20 ||
-           rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
+          (rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
            (rel.type == R_RISCV_TLSDESC_ADD_LO12 && isToLe && !hi20(val))))
         continue;
       if (isToLe)
@@ -675,11 +804,10 @@ void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
       else
         tlsdescToIe(ctx, loc, rel, val);
       continue;
-    case RE_RISCV_LEB128:
+    case R_RISCV_SET_ULEB128:
       if (i + 1 < size) {
         const Relocation &rel1 = relocs[i + 1];
-        if (rel.type == R_RISCV_SET_ULEB128 &&
-            rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
+        if (rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
           auto val = rel.sym->getVA(ctx, rel.addend) -
                      rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
@@ -691,7 +819,7 @@ void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
         }
       }
       Err(ctx) << sec.getLocation(rel.offset)
-               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128";
       return;
     default:
       break;
@@ -715,28 +843,33 @@ void elf::initSymbolAnchors(Ctx &ctx) {
       }
     }
   }
-  // Store anchors (st_value and st_value+st_size) for symbols relative to text
-  // sections.
+  // Store symbol anchors for adjusting st_value/st_size during relaxation.
+  // We include symbols where d->file == file for the prevailing copies.
   //
   // For a defined symbol foo, we may have `d->file != file` with --wrap=foo.
   // We should process foo, as the defining object file's symbol table may not
-  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. To
-  // avoid adding a Defined that is undefined in one object file, use
-  // `!d->scriptDefined` to exclude symbols that are definitely not wrapped.
+  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. Use
+  // `d->scriptDefined` to include such symbols.
   //
   // `relaxAux->anchors` may contain duplicate symbols, but that is fine.
+  auto addAnchor = [](Defined *d) {
+    if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
+      if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
+        // If sec is discarded, relaxAux will be nullptr.
+        sec->relaxAux->anchors.push_back({d->value, d, false});
+        sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
+      }
+  };
   for (InputFile *file : ctx.objectFiles)
     for (Symbol *sym : file->getSymbols()) {
       auto *d = dyn_cast<Defined>(sym);
-      if (!d || (d->file != file && !d->scriptDefined))
-        continue;
-      if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
-        if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
-          // If sec is discarded, relaxAux will be nullptr.
-          sec->relaxAux->anchors.push_back({d->value, d, false});
-          sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
-        }
+      if (d && (d->file == file || d->scriptDefined))
+        addAnchor(d);
     }
+  // Add anchors for IRELATIVE symbols (see `handleNonPreemptibleIfunc`).
+  // Their values must be adjusted so IRELATIVE addends remain correct.
+  for (Defined *d : ctx.irelativeSyms)
+    addAnchor(d);
   // Sort anchors by offset so that we can find the closest relocation
   // efficiently. For a zero size symbol, ensure that its start anchor precedes
   // its end anchor. For two symbols with anchors at the same offset, their
@@ -867,7 +1000,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto [i, r] : llvm::enumerate(riscv_vendor_relocs(relocs))) {
+  for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -914,7 +1047,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
       tlsdescRelax = relaxable(relocs, i);
-      toLeShortForm = tlsdescRelax && r.expr == R_RELAX_TLS_GD_TO_LE &&
+      toLeShortForm = tlsdescRelax && r.expr == R_TPREL &&
                       !hi20(r.sym->getVA(ctx, r.addend));
       [[fallthrough]];
     case R_RISCV_TLSDESC_LOAD_LO12:
@@ -1490,79 +1623,3 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
 }
 
 void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
-
-template <class ELFT, class RelTy>
-void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
-  // Many relocations end up in sec.relocations.
-  sec.relocations.reserve(rels.size());
-
-  StringRef rvVendor;
-  for (auto it = rels.begin(); it != rels.end(); ++it) {
-    RelType type = it->getType(false);
-    uint32_t symIndex = it->getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
-    const uint8_t *loc = sec.content().data() + it->r_offset;
-
-    if (type == R_RISCV_VENDOR) {
-      if (!rvVendor.empty())
-        Err(ctx) << getErrorLoc(ctx, loc)
-                 << "malformed consecutive R_RISCV_VENDOR relocations";
-      rvVendor = sym.getName();
-      continue;
-    } else if (!rvVendor.empty()) {
-      uint32_t VendorFlag = getRISCVVendorRelMarker(rvVendor);
-      if (!VendorFlag) {
-        Err(ctx) << getErrorLoc(ctx, loc)
-                 << "unknown vendor-specific relocation (" << type.v
-                 << ") in namespace '" << rvVendor << "' against symbol '"
-                 << &sym << "'";
-        rvVendor = "";
-        continue;
-      }
-
-      rvVendor = "";
-      assert((type.v < 256) && "Out of range relocation detected!");
-      type.v |= VendorFlag;
-    }
-
-    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
-  }
-
-  // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20.
-  llvm::stable_sort(sec.relocs(),
-                    [](const Relocation &lhs, const Relocation &rhs) {
-                      return lhs.offset < rhs.offset;
-                    });
-}
-
-template <class ELFT> void RISCV::scanSection1(InputSectionBase &sec) {
-  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
-  if (rels.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, rels.crels);
-  else
-    scanSectionImpl<ELFT>(sec, rels.relas);
-}
-
-void RISCV::scanSection(InputSectionBase &sec) {
-  invokeELFT(scanSection1, sec);
-}
-
-namespace lld::elf {
-uint32_t getRISCVVendorRelMarker(StringRef rvVendor) {
-  return StringSwitch<uint32_t>(rvVendor)
-      .Case("QUALCOMM", INTERNAL_RISCV_VENDOR_QUALCOMM)
-      .Case("ANDES", INTERNAL_RISCV_VENDOR_ANDES)
-      .Default(0);
-}
-
-std::optional<StringRef> getRISCVVendorString(RelType ty) {
-  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_QUALCOMM)
-    return "QUALCOMM";
-  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_ANDES)
-    return "ANDES";
-  return std::nullopt;
-}
-
-} // namespace lld::elf

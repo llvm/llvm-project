@@ -39,12 +39,19 @@ private:
   const SourceManager &SM;
 };
 
+AST_MATCHER_P(Stmt, stripLabelLikeStatements,
+              ast_matchers::internal::Matcher<Stmt>, InnerMatcher) {
+  const Stmt *S = Node.stripLabelLikeStatements();
+  return InnerMatcher.matches(*S, Finder, Builder);
+}
+
 } // namespace
 
-static const char InterruptingStr[] = "interrupting";
-static const char WarningMessage[] = "do not use 'else' after '%0'";
-static const char WarnOnUnfixableStr[] = "WarnOnUnfixable";
-static const char WarnOnConditionVariablesStr[] = "WarnOnConditionVariables";
+static constexpr char InterruptingStr[] = "interrupting";
+static constexpr char WarningMessage[] = "do not use 'else' after '%0'";
+static constexpr char WarnOnUnfixableStr[] = "WarnOnUnfixable";
+static constexpr char WarnOnConditionVariablesStr[] =
+    "WarnOnConditionVariables";
 
 static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
   if (!Node)
@@ -53,10 +60,9 @@ static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
     if (DeclRef->getDecl()->getID() == DeclIdentifier)
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier))
         return Result;
-    }
   }
   return nullptr;
 }
@@ -70,11 +76,10 @@ findUsageRange(const Stmt *Node,
     if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID()))
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result =
               findUsageRange(ChildNode, DeclIdentifiers))
         return Result;
-    }
   }
   return nullptr;
 }
@@ -170,16 +175,18 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto InterruptsControlFlow = stmt(anyOf(
       returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
       breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
-  Finder->addMatcher(
-      compoundStmt(
-          forEach(ifStmt(unless(isConstexpr()), unless(isConsteval()),
-                         hasThen(stmt(
-                             anyOf(InterruptsControlFlow,
-                                   compoundStmt(has(InterruptsControlFlow))))),
-                         hasElse(stmt().bind("else")))
-                      .bind("if")))
-          .bind("cs"),
-      this);
+
+  const auto IfWithInterruptingThenElse =
+      ifStmt(unless(isConstexpr()), unless(isConsteval()),
+             hasThen(stmt(anyOf(InterruptsControlFlow,
+                                compoundStmt(has(InterruptsControlFlow))))),
+             hasElse(stmt().bind("else")))
+          .bind("if");
+
+  Finder->addMatcher(compoundStmt(forEach(stripLabelLikeStatements(
+                                      IfWithInterruptingThenElse)))
+                         .bind("cs"),
+                     this);
 }
 
 static bool hasPreprocessorBranchEndBetweenLocations(

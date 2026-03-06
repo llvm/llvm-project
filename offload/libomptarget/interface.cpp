@@ -25,7 +25,6 @@
 #include "Utils/ExponentialBackoff.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Support/Format.h"
 
 #include <cassert>
 #include <cstdint>
@@ -138,9 +137,9 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                          RegionTypeMsg);
   ODBG_OS(ODT_Kernel, [&](llvm::raw_ostream &Os) {
     for (int I = 0; I < ArgNum; ++I) {
-      Os << "Entry " << llvm::format_decimal(I, 2) << ": Base=" << ArgsBase[I]
+      Os << "Entry " << llvm::format("%2d", I) << ": Base=" << ArgsBase[I]
          << ", Begin=" << Args[I] << ", Size=" << ArgSizes[I]
-         << ", Type=" << llvm::format_hex(ArgTypes[I], 8) << ", Name="
+         << ", Type=" << llvm::format("0x%" PRIx64, ArgTypes[I]) << ", Name="
          << ((ArgNames) ? getNameFromMapping(ArgNames[I]) : "unknown") << "\n";
     }
   });
@@ -169,19 +168,22 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
 
   int Rc = OFFLOAD_SUCCESS;
 
-  // Only allocate AttachInfo for targetDataBegin
-  std::unique_ptr<AttachInfoTy> AttachInfo;
-  if (TargetDataFunction == targetDataBegin)
-    AttachInfo = std::make_unique<AttachInfoTy>();
+  // Allocate StateInfo for targetDataBegin and targetDataEnd to track
+  // allocations, pointer attachments and deferred transfers.
+  // This is not needed for targetDataUpdate.
+  std::unique_ptr<StateInfoTy> StateInfo;
+  if (TargetDataFunction == targetDataBegin ||
+      TargetDataFunction == targetDataEnd)
+    StateInfo = std::make_unique<StateInfoTy>();
 
   Rc = TargetDataFunction(Loc, *DeviceOrErr, ArgNum, ArgsBase, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, AsyncInfo,
-                          AttachInfo.get(), /*FromMapper=*/false);
+                          StateInfo.get(), /*FromMapper=*/false);
 
   if (Rc == OFFLOAD_SUCCESS) {
     // Process deferred ATTACH entries BEFORE synchronization
-    if (AttachInfo && !AttachInfo->AttachEntries.empty())
-      Rc = processAttachEntries(*DeviceOrErr, *AttachInfo, AsyncInfo);
+    if (StateInfo && !StateInfo->AttachEntries.empty())
+      Rc = processAttachEntries(*DeviceOrErr, *StateInfo, AsyncInfo);
 
     if (Rc == OFFLOAD_SUCCESS)
       Rc = AsyncInfo.synchronize();
@@ -358,11 +360,11 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   ODBG_OS(ODT_Kernel, [&](llvm::raw_ostream &Os) {
     for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {
-      Os << "Entry " << llvm::format_decimal(I, 2)
-         << " Base=" << KernelArgs->ArgBasePtrs[I]
+      Os << "Entry" << llvm::format("%2d", I)
+         << ": Base=" << KernelArgs->ArgBasePtrs[I]
          << ", Begin=" << KernelArgs->ArgPtrs[I]
          << ", Size=" << KernelArgs->ArgSizes[I]
-         << ", Type=" << llvm::format_hex(KernelArgs->ArgTypes[I], 8)
+         << ", Type=" << llvm::format("0x%" PRIx64, KernelArgs->ArgTypes[I])
          << ", Name="
          << (KernelArgs->ArgNames
                  ? getNameFromMapping(KernelArgs->ArgNames[I]).c_str()
@@ -508,7 +510,8 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
   ODBG(ODT_Interface) << "__tgt_push_mapper_component(Handle=" << RtMapperHandle
                       << ") adds an entry (Base=" << Base << ", Begin=" << Begin
                       << ", Size=" << Size
-                      << ", Type=" << llvm::format_hex(Type, 8) << ", Name="
+                      << ", Type=" << llvm::format("0x%" PRIx64, Type)
+                      << ", Name="
                       << ((Name) ? getNameFromMapping(Name) : "unknown") << ")";
   auto *MapperComponentsPtr = (struct MapperComponentsTy *)RtMapperHandle;
   MapperComponentsPtr->Components.push_back(
@@ -572,4 +575,11 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   // Delete the handle and unset it from the OpenMP task data.
   delete AsyncInfo;
   *AsyncHandle = nullptr;
+}
+
+EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
+                                                             unsigned)) {
+  for (auto &Plugin : PM->plugins())
+    if (Plugin.is_initialized())
+      Plugin.getRPCServer().registerCallback(Callback);
 }

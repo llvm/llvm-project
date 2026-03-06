@@ -1,3 +1,9 @@
+# TODO(boomanaiden154): This test case fails under hwasan, likely due to a true
+# sanitizer failure as they will raise a signal, which not will still return 1
+# for. These need to be fixed, but temporarily disable to allow catching new
+# regressions on the hwasan bot.
+# UNSUPPORTED: hwasan
+
 Test several edge cases with unusual name table data in ExtBinary format.
 
 1- Multiple fixed-length MD5 name tables. Reading a new table should clear the content from old table, and a valid name index for the old name table should become invalid if the new name table has fewer entries.

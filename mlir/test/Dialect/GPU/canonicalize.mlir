@@ -13,13 +13,57 @@ func.func @fold_wait_op_test1() {
 
 // -----
 
-// Erase duplicate barriers.
 // CHECK-LABEL: func @erase_barriers
-//       CHECK-NEXT: gpu.barrier
+//       CHECK-NEXT: gpu.barrier{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers() {
   gpu.barrier
   gpu.barrier
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_first_full_fence
+//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: return
+func.func @erase_barriers_first_full_fence() {
+  gpu.barrier
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_second_full_fence
+//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: return
+func.func @erase_barriers_second_full_fence() {
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  gpu.barrier
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_merge_memfence
+//       CHECK-NEXT: gpu.barrier memfence [#gpu.address_space<workgroup>, #gpu.address_space<global>]
+//       CHECK-NEXT: return
+func.func @erase_barriers_merge_memfence() {
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  gpu.barrier memfence [#gpu.address_space<global>]
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_merge_memfence_same
+//       CHECK-NEXT: gpu.barrier memfence [#gpu.address_space<workgroup>]
+//       CHECK-NEXT: return
+func.func @erase_barriers_merge_memfence_same() {
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_empty_memfence
+//       CHECK-NEXT: gpu.barrier memfence []
+//       CHECK-NEXT: return
+func.func @erase_barriers_empty_memfence() {
+  gpu.barrier memfence []
+  gpu.barrier memfence []
   return
 }
 
@@ -288,4 +332,27 @@ func.func @gpu_launch_without_side_effects() {
     gpu.terminator
   }
   return
+}
+
+// -----
+
+
+// CHECK-LABEL: func @broadcast_of_broadcast1
+//  CHECK-SAME:   (%[[VALUE:.*]]: f32, %[[LANE:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = gpu.subgroup_broadcast %[[VALUE]], first_active_lane : f32
+//       CHECK:   return %[[RES:.*]]
+func.func @broadcast_of_broadcast1(%value : f32, %lane : i32) -> f32 {
+  %0 = gpu.subgroup_broadcast %value, first_active_lane : f32
+  %1 = gpu.subgroup_broadcast %0, specific_lane %lane : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @broadcast_of_broadcast2
+//  CHECK-SAME:   (%[[VALUE:.*]]: f32, %[[LANE:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = gpu.subgroup_broadcast %[[VALUE]], specific_lane %[[LANE]] : f32
+//       CHECK:   return %[[RES:.*]]
+func.func @broadcast_of_broadcast2(%value : f32, %lane : i32) -> f32 {
+  %0 = gpu.subgroup_broadcast %value, specific_lane %lane : f32
+  %1 = gpu.subgroup_broadcast %0, first_active_lane : f32
+  return %1 : f32
 }

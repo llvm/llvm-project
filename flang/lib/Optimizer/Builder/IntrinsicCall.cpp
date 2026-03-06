@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
@@ -192,6 +193,12 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genCFProcPointer,
      {{{"cptr", asValue}, {"fptr", asInquired}}},
      /*isElemental=*/false},
+    {"c_f_strpointer",
+     &I::genCFStrPointer,
+     {{{"cstrptr_or_cstrarray", asValue},
+       {"fstrptr", asInquired},
+       {"nchars", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_ptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
@@ -297,6 +304,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"extends_type_of",
      &I::genExtendsTypeOf,
      {{{"a", asBox}, {"mold", asBox}}},
+     /*isElemental=*/false},
+    {"f_c_string",
+     &I::genFCString,
+     {{{"string", asAddr}, {"asis", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
@@ -674,6 +685,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"order", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"rrspacing", &I::genRRSpacing},
+    {"rtc", &I::genRtc, {}, /*isElemental=*/false},
     {"same_type_as",
      &I::genSameTypeAs,
      {{{"a", asBox}, {"b", asBox}}},
@@ -729,7 +741,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
     {"show_descriptor",
      &I::genShowDescriptor,
-     {{{"d", asBox}}},
+     {{{"d", asInquired}}},
      /*isElemental=*/false},
     {"sign", &I::genSign},
     {"signal",
@@ -785,6 +797,13 @@ static constexpr IntrinsicHandler handlers[]{
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"tokenize",
+     &I::genTokenize,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"out1", asInquired},
+       {"out2", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -3245,6 +3264,99 @@ void IntrinsicLibrary::genCFProcPointer(
   fir::StoreOp::create(builder, loc, cptrBox, fptr);
 }
 
+// C_F_STRPOINTER
+void IntrinsicLibrary::genCFStrPointer(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+
+  mlir::Value cStrAddr;
+  mlir::Value strLen;
+
+  const mlir::Value firstArg = fir::getBase(args[0]);
+  const mlir::Type firstArgType = fir::unwrapRefType(firstArg.getType());
+  const bool isCstrptr = mlir::isa<fir::RecordType>(firstArgType);
+
+  if (isCstrptr) {
+    // CSTRPTR form: Extract address from C_PTR
+    cStrAddr = fir::factory::genCPtrOrCFunptrValue(builder, loc, firstArg);
+
+    assert(isStaticallyPresent(args[2]));
+    mlir::Value nchars = fir::getBase(args[2]);
+    if (fir::isa_ref_type(nchars.getType())) {
+      strLen = fir::LoadOp::create(builder, loc, nchars);
+    } else {
+      strLen = nchars;
+    }
+  } else {
+    // CSTRARRAY form: Get address from CHARACTER array
+    if (const auto boxCharTy =
+            mlir::dyn_cast<fir::BoxCharType>(firstArg.getType())) {
+      const auto charTy = mlir::cast<fir::CharacterType>(boxCharTy.getEleTy());
+      const auto addrTy = builder.getRefType(charTy);
+      auto unboxed = fir::UnboxCharOp::create(
+          builder, loc, mlir::TypeRange{addrTy, builder.getIndexType()},
+          firstArg);
+      cStrAddr = unboxed.getResult(0);
+    } else if (mlir::isa<fir::BoxType>(firstArg.getType())) {
+      cStrAddr = fir::BoxAddrOp::create(builder, loc, firstArg);
+    } else {
+      cStrAddr = firstArg;
+    }
+
+    // Handle optional NCHARS argument
+    if (isStaticallyPresent(args[2])) {
+      mlir::Value nchars = fir::getBase(args[2]);
+      if (fir::isa_ref_type(nchars.getType())) {
+        strLen = fir::LoadOp::create(builder, loc, nchars);
+      } else {
+        strLen = nchars;
+      }
+    } else {
+      const mlir::Type i8PtrTy = builder.getRefType(builder.getIntegerType(8));
+      const mlir::Value strPtr = builder.createConvert(loc, i8PtrTy, cStrAddr);
+
+      const mlir::Type i64Ty = builder.getIntegerType(64);
+      const mlir::FunctionType strlenType =
+          mlir::FunctionType::get(builder.getContext(), {i8PtrTy}, {i64Ty});
+
+      mlir::func::FuncOp strlenFunc = builder.getNamedFunction("strlen");
+      if (!strlenFunc) {
+        strlenFunc = builder.createFunction(loc, "strlen", strlenType);
+        strlenFunc->setAttr(
+            fir::getSymbolAttrName(),
+            mlir::StringAttr::get(builder.getContext(), "strlen"));
+      }
+      auto call = fir::CallOp::create(builder, loc, strlenFunc, {strPtr});
+      strLen = call.getResult(0);
+    }
+  }
+
+  // Handle FSTRPTR (second argument)
+  const auto *fStrPtr = args[1].getBoxOf<fir::MutableBoxValue>();
+  assert(fStrPtr && "FSTRPTR must be a pointer");
+
+  const mlir::Value lenIdx =
+      builder.createConvert(loc, builder.getIndexType(), strLen);
+
+  const mlir::Type charPtrType = fir::PointerType::get(fir::CharacterType::get(
+      builder.getContext(), 1, fir::CharacterType::unknownLen()));
+  const mlir::Value charPtr = builder.createConvert(loc, charPtrType, cStrAddr);
+
+  const fir::CharBoxValue charBox{charPtr, lenIdx};
+  fir::factory::associateMutableBox(builder, loc, *fStrPtr, charBox,
+                                    /*lbounds=*/mlir::ValueRange{});
+
+  // CUDA synchronization if needed
+  if (auto declare = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+          fStrPtr->getAddr().getDefiningOp()))
+    if (declare.getMemref().getDefiningOp() &&
+        mlir::isa<fir::AddrOfOp>(declare.getMemref().getDefiningOp()))
+      if (cuf::isRegisteredDeviceAttr(declare.getDataAttr()) &&
+          !cuf::isCUDADeviceContext(builder.getRegion()))
+        fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc,
+                                                    declare.getMemref());
+}
+
 // C_FUNLOC
 fir::ExtendedValue
 IntrinsicLibrary::genCFunLoc(mlir::Type resultType,
@@ -3852,9 +3964,6 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           EXIT_SUCCESS)
           : fir::getBase(args[0]);
 
-  assert(status.getType() == builder.getDefaultIntegerType() &&
-         "STATUS parameter must be an INTEGER of default kind");
-
   fir::runtime::genExit(builder, loc, status);
 }
 
@@ -3879,6 +3988,32 @@ IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
                                      fir::getBase(args[1])));
+}
+
+// F_C_STRING
+fir::ExtendedValue
+IntrinsicLibrary::genFCString(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() >= 1 && args.size() <= 2);
+
+  mlir::Value string = builder.createBox(loc, args[0]);
+
+  // Handle optional ASIS argument
+  mlir::Value asis = isStaticallyAbsent(args, 1)
+                         ? builder.createBool(loc, false)
+                         : fir::getBase(args[1]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genFCString(builder, loc, resultIrBox, string, asis);
+
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType, "F_C_STRING");
 }
 
 // FINDLOC
@@ -7635,6 +7770,14 @@ IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
   return {};
 }
 
+// RTC
+mlir::Value IntrinsicLibrary::genRtc(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty());
+  mlir::Value time = fir::runtime::genTime(builder, loc);
+  return builder.createConvert(loc, resultType, time);
+}
+
 // SELECTED_CHAR_KIND
 fir::ExtendedValue
 IntrinsicLibrary::genSelectedCharKind(mlir::Type resultType,
@@ -7891,11 +8034,42 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
 void IntrinsicLibrary::genShowDescriptor(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1 && "expected single argument for show_descriptor");
-  const mlir::Value descriptor = fir::getBase(args[0]);
+  const mlir::Value arg = fir::getBase(args[0]);
 
-  assert(fir::isa_box_type(descriptor.getType()) &&
-         "argument must have been lowered to box type");
-  fir::runtime::genShowDescriptor(builder, loc, descriptor);
+  // Use consistent !fir.ref<!fir.box<none>> argument type
+  auto targetType = fir::BoxType::get(builder.getNoneType());
+  auto targetRefType = fir::ReferenceType::get(targetType);
+
+  mlir::Value descrAddr = nullptr;
+  if (fir::isBoxAddress(arg.getType())) {
+    // If it's already a reference to a box, convert it to correct type and
+    // pass it directly
+    descrAddr = builder.createConvert(loc, targetRefType, arg);
+  } else {
+    // At this point, arg is either SSA descriptor or a non-descriptor entity.
+    // If necessary, wrap non-descriptor entity in a descriptor.
+    mlir::Value descriptor = nullptr;
+    if (fir::isa_box_type(arg.getType())) {
+      descriptor = arg;
+    } else if (fir::isa_ref_type(arg.getType())) {
+      // Note: here use full extended value args[0]
+      descriptor = builder.createBox(loc, args[0]);
+    } else {
+      // arg is a value (e.g. constant), spill it to a temporary
+      // because createBox expects a memory reference.
+      mlir::Value temp = builder.createTemporary(loc, arg.getType());
+      builder.createStoreWithConvert(loc, arg, temp);
+
+      // Note: here use full extended value args[0]
+      descriptor = builder.createBox(loc, fir::substBase(args[0], temp));
+    }
+
+    // Spill it to the stack
+    descrAddr = builder.createTemporary(loc, targetType);
+    builder.createStoreWithConvert(loc, descriptor, descrAddr);
+  }
+
+  fir::runtime::genShowDescriptor(builder, loc, descrAddr);
 }
 
 // SIGNAL
@@ -8056,12 +8230,14 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
 
 // TEAM_NUMBER
 fir::ExtendedValue
-IntrinsicLibrary::genTeamNumber(mlir::Type,
+IntrinsicLibrary::genTeamNumber(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 1);
-  return mif::TeamNumberOp::create(builder, loc,
-                                   /*team*/ fir::getBase(args[0]));
+
+  mlir::Value res = mif::TeamNumberOp::create(builder, loc,
+                                              /*team*/ fir::getBase(args[0]));
+  return builder.createConvert(loc, resultType, res);
 }
 
 // THIS_IMAGE
@@ -8358,6 +8534,101 @@ void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
 void IntrinsicLibrary::genSleep(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1 && "SLEEP has one compulsory argument");
   fir::runtime::genSleep(builder, loc, fir::getBase(args[0]));
+}
+
+// TOKENIZE
+void IntrinsicLibrary::genTokenize(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4 && "TOKENIZE requires 3 or 4 arguments");
+
+  const fir::ExtendedValue &string = args[0];
+  const fir::ExtendedValue &set = args[1];
+
+  // Distinguish forms by the element type of the third argument.  For form 1,
+  // TOKENS is CHARACTER.  For form 2, FIRST is INTEGER.
+  mlir::Type thirdArgEleTy = fir::getElementTypeOf(args[2]);
+  bool isForm1 = fir::isa_char(thirdArgEleTy);
+  [[maybe_unused]] bool isForm2 = fir::isa_integer(thirdArgEleTy);
+  assert((isForm1 || isForm2) &&
+         "TOKENIZE third argument must be CHARACTER or INTEGER");
+
+  mlir::Value stringBox = builder.createBox(loc, string);
+  mlir::Value setBox = builder.createBox(loc, set);
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Type boxNoneRefTy = fir::ReferenceType::get(boxNoneTy);
+
+  // A lambda to return the address of the descriptor storage to pass to the
+  // runtime. For MutableBoxValue, this also handles any required syncing
+  // before/after the runtime call.
+  auto getBoxStorageAddr =
+      [&](const fir::ExtendedValue &exv, llvm::StringRef what,
+          const fir::MutableBoxValue **mutableBoxOut) -> mlir::Value {
+    if (const auto *mb = exv.getBoxOf<fir::MutableBoxValue>()) {
+      if (mutableBoxOut)
+        *mutableBoxOut = mb;
+      mlir::Value addr = fir::factory::getMutableIRBox(builder, loc, *mb);
+      return builder.createConvert(loc, boxNoneRefTy, addr);
+    }
+    if (const auto *bv = exv.getBoxOf<fir::BoxValue>()) {
+      mlir::Value addr = bv->getAddr();
+      if (auto boxTy = fir::dyn_cast_ptrEleTy(addr.getType())) {
+        if (mlir::isa<fir::BaseBoxType>(boxTy))
+          return builder.createConvert(loc, boxNoneRefTy, addr);
+      }
+      fir::emitFatalError(loc, llvm::Twine("TOKENIZE: ") + what +
+                                   " must be a descriptor address");
+    }
+    fir::emitFatalError(loc, llvm::Twine("TOKENIZE: ") + what +
+                                 " not lowered as a boxed entity");
+  };
+
+  if (isForm1) {
+    // Form 1: TOKENIZE(STRING, SET, TOKENS [, SEPARATOR])
+    const fir::ExtendedValue &tokens = args[2];
+    const fir::MutableBoxValue *tokensMutableBox{nullptr};
+    mlir::Value tokensBoxAddr =
+        getBoxStorageAddr(tokens, "TOKENS", &tokensMutableBox);
+
+    // Handle optional SEPARATOR argument
+    mlir::Value separatorBoxAddr;
+    const fir::MutableBoxValue *separatorMutableBox{nullptr};
+    if (!isStaticallyAbsent(args[3])) {
+      const fir::ExtendedValue &separator = args[3];
+      separatorBoxAddr =
+          getBoxStorageAddr(separator, "SEPARATOR", &separatorMutableBox);
+    } else {
+      separatorBoxAddr = builder.createNullConstant(loc, boxNoneRefTy);
+    }
+
+    // Call the Form 1 runtime function
+    fir::runtime::genTokenize(builder, loc, tokensBoxAddr, separatorBoxAddr,
+                              stringBox, setBox);
+
+    if (tokensMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *tokensMutableBox);
+    if (separatorMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *separatorMutableBox);
+
+  } else {
+    // Form 2: TOKENIZE(STRING, SET, FIRST, LAST)
+    const fir::ExtendedValue &first = args[2];
+    const fir::ExtendedValue &last = args[3];
+
+    const fir::MutableBoxValue *firstMutableBox{nullptr};
+    const fir::MutableBoxValue *lastMutableBox{nullptr};
+    mlir::Value firstBoxAddr =
+        getBoxStorageAddr(first, "FIRST", &firstMutableBox);
+    mlir::Value lastBoxAddr = getBoxStorageAddr(last, "LAST", &lastMutableBox);
+
+    // Call the Form 2 runtime function
+    fir::runtime::genTokenizePositions(builder, loc, firstBoxAddr, lastBoxAddr,
+                                       stringBox, setBox);
+
+    if (firstMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *firstMutableBox);
+    if (lastMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *lastMutableBox);
+  }
 }
 
 // TRANSFER

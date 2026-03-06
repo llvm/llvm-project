@@ -153,7 +153,8 @@ llvm::Value *CodeGen::emitRoundPointerUpToAlignment(CodeGenFunction &CGF,
       CGF.Builder.getInt8Ty(), Ptr, Align.getQuantity() - 1);
   return CGF.Builder.CreateIntrinsic(
       llvm::Intrinsic::ptrmask, {Ptr->getType(), CGF.IntPtrTy},
-      {RoundUp, llvm::ConstantInt::get(CGF.IntPtrTy, -Align.getQuantity())},
+      {RoundUp,
+       llvm::ConstantInt::getSigned(CGF.IntPtrTy, -Align.getQuantity())},
       nullptr, Ptr->getName() + ".aligned");
 }
 

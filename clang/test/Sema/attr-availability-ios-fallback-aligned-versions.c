@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 "-triple" "arm64-apple-tvos26" -fsyntax-only -verify %s
 
 // VisionOS requires SDKSettings support to enable remappings.
-// RUN: %clang_cc1 "-triple" "arm64-apple-visionos26" -isysroot %S/Inputs/XROS.sdk -fsyntax-only -verify %s
+// RUN: %clang_cc1 "-triple" "arm64-apple-visionos26" -isysroot %S/Inputs/XROS26.0.sdk -fsyntax-only -verify %s
 
 // expected-no-diagnostics
 

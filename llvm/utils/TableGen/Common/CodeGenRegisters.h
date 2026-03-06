@@ -169,6 +169,8 @@ private:
 
 /// CodeGenRegister - Represents a register definition.
 class CodeGenRegister {
+  friend class CodeGenRegBank;
+
 public:
   const Record *TheDef;
   unsigned EnumValue;
@@ -256,6 +258,10 @@ public:
   // Get the list of register units.
   // This is only valid after computeSubRegs() completes.
   const RegUnitList &getRegUnits() const { return RegUnits; }
+
+  void setNewRegUnits(const RegUnitList &NewRegUnits) {
+    RegUnits = NewRegUnits;
+  }
 
   ArrayRef<LaneBitmask> getRegUnitLaneMasks() const {
     return ArrayRef(RegUnitLaneMasks).slice(0, NativeRegUnits.count());
@@ -497,11 +503,20 @@ public:
     const CodeGenRegister::Vec *Members;
     RegSizeInfoByHwMode RSI;
 
-    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I)
-        : Members(M), RSI(I) {}
+    // Ignore artificial registers when comparing classes. We use this
+    // to find existing classes that contain the same non-artificial
+    // members, but may differ in presence of artificial ones, thus
+    // avoiding creating extra register classes for codegen needs.
+    bool IgnoreArtificialMembers;
 
-    Key(const CodeGenRegisterClass &RC)
-        : Members(&RC.getMembers()), RSI(RC.RSI) {}
+    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I,
+        bool IgnoreArtificialMembers = false)
+        : Members(M), RSI(I), IgnoreArtificialMembers(IgnoreArtificialMembers) {
+    }
+
+    Key(const CodeGenRegisterClass &RC, bool IgnoreArtificialMembers = false)
+        : Members(&RC.getMembers()), RSI(RC.RSI),
+          IgnoreArtificialMembers(IgnoreArtificialMembers) {}
 
     // Lexicographical order of (Members, RegSizeInfoByHwMode).
     bool operator<(const Key &) const;
@@ -612,6 +627,8 @@ class CodeGenRegBank {
 
   const CodeGenHwModes &CGH;
 
+  const bool RegistersAreIntervals;
+
   std::deque<CodeGenSubRegIndex> SubRegIndices;
   DenseMap<const Record *, CodeGenSubRegIndex *> Def2SubRegIdx;
 
@@ -693,6 +710,9 @@ class CodeGenRegBank {
   // Compute a weight for each register unit created during getSubRegs.
   void computeRegUnitWeights();
 
+  // Enforce that all registers are intervals of regunits if requested.
+  void enforceRegUnitIntervals();
+
   // Create a RegUnitSet for each RegClass and infer superclasses.
   void computeRegUnitSets();
 
@@ -714,7 +734,8 @@ class CodeGenRegBank {
   void printRegUnitNames(ArrayRef<unsigned> Units) const;
 
 public:
-  CodeGenRegBank(const RecordKeeper &, const CodeGenHwModes &);
+  CodeGenRegBank(const RecordKeeper &, const CodeGenHwModes &,
+                 const bool RegistersAreIntervals);
   CodeGenRegBank(CodeGenRegBank &) = delete;
 
   SetTheory &getSets() { return Sets; }
@@ -824,6 +845,13 @@ public:
   /// classes have a superset-subset relationship and the same set of types,
   /// return the superclass.  Otherwise return null.
   const CodeGenRegisterClass *getRegClassForRegister(const Record *R);
+
+  /// Returns whether \p RegClass contains register \p Reg, handling
+  /// RegClassByHwMode and RegisterByHwMode correctly.
+  /// This should be preferred instead of
+  /// `RegBank.getRegClass(RC).contains(RegBank.getReg(R))`.
+  bool regClassContainsReg(const Record *RegClass, const Record *RegDef,
+                           ArrayRef<SMLoc> Loc = {});
 
   // Analog of TargetRegisterInfo::getMinimalPhysRegClass. Unlike
   // getRegClassForRegister, this tries to find the smallest class containing

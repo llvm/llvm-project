@@ -35,8 +35,12 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_legacyf16tof32:
+  case Intrinsic::dx_legacyf32tof16:
+  case Intrinsic::dx_wave_all_equal:
     return OpdIdx == 0;
   default:
+    // All DX intrinsics are overloaded on return type unless specified
+    // otherwise
     return OpdIdx == -1;
   }
 }
@@ -52,16 +56,22 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_legacyf16tof32:
+  case Intrinsic::dx_legacyf32tof16:
   case Intrinsic::dx_rsqrt:
   case Intrinsic::dx_saturate:
   case Intrinsic::dx_splitdouble:
+  case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_min:
   case Intrinsic::dx_wave_reduce_sum:
+  case Intrinsic::dx_wave_prefix_sum:
+  case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_reduce_umax:
   case Intrinsic::dx_wave_reduce_umin:
   case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_wave_prefix_usum:
+  case Intrinsic::dx_wave_prefix_uproduct:
   case Intrinsic::dx_imad:
   case Intrinsic::dx_umad:
   case Intrinsic::dx_ddx_coarse:

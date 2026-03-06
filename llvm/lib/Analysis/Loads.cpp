@@ -357,7 +357,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *AccessSizeSCEV = nullptr;
   if (const SCEVUnknown *NewBase = dyn_cast<SCEVUnknown>(AccessStart)) {
     Base = NewBase->getValue();
-    AccessSize = MaxPtrDiff;
+    AccessSize = std::move(MaxPtrDiff);
     AccessSizeSCEV = PtrDiff;
   } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
     if (MinAdd->getNumOperands() != 2)
@@ -827,15 +827,18 @@ static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
   return Limit != 0;
 }
 
-// Returns true if `To` is a null pointer, constant dereferenceable pointer or
-// both pointers have the same underlying objects.
 static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
                                        const DataLayout &DL) {
   // This is not strictly correct, but we do it for now to retain important
   // optimizations.
   if (isa<ConstantPointerNull>(To))
     return true;
-  if (isa<Constant>(To) &&
+  // Conversely, replacing null in the default address space with destination
+  // pointer is always valid.
+  if (isa<ConstantPointerNull>(From) &&
+      From->getType()->getPointerAddressSpace() == 0)
+    return true;
+  if (isa<Constant>(To) && To->getType()->isPointerTy() &&
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
     return true;
   return getUnderlyingObjectAggressive(From) ==
@@ -847,7 +850,7 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
   Type *Ty = To->getType();
   assert(U->getType() == Ty && "values must have matching types");
   // Not a pointer, just return true.
-  if (!Ty->isPointerTy())
+  if (!Ty->isPtrOrPtrVectorTy())
     return true;
 
   // Do not perform replacements in lifetime intrinsic arguments.
@@ -866,7 +869,7 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
                                      const DataLayout &DL) {
   assert(From->getType() == To->getType() && "values must have matching types");
   // Not a pointer, just return true.
-  if (!From->getType()->isPointerTy())
+  if (!From->getType()->isPtrOrPtrVectorTy())
     return true;
 
   return isPointerAlwaysReplaceable(From, To, DL);

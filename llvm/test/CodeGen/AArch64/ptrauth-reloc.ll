@@ -176,19 +176,19 @@
 @g = external global i32
 @g.ref.ia.65536 = constant ptr ptrauth (ptr @g, i32 0, i64 65536)
 
-;--- err-disc-elf.ll
+;--- err-disc-gnu.ll
 
-; RUN: not llc < err-disc-elf.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC-ELF
-; RUN: not llc < err-disc-elf.ll -mtriple aarch64-elf -mattr=+pauth \
+; RUN: not llc < err-disc-gnu.ll -mtriple aarch64-linux-gnu -mattr=+pauth 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC-GNU
+; RUN: not llc < err-disc-gnu.ll -mtriple aarch64-linux-gnu -mattr=+pauth \
 ; RUN:   -global-isel -verify-machineinstrs -global-isel-abort=1 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC-ELF
+; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-DISC-GNU
 
 @g = external global i32
 
 @ds = external global i8
-; CHECK-ERR-DISC-ELF-NOT: error: AArch64 PAC Discriminator '65537' out of range [0, 0xFFFF]
+; CHECK-ERR-DISC-GNU-NOT: error: AArch64 PAC Discriminator '65537' out of range [0, 0xFFFF]
 @g.ref.da.65537 = constant ptr ptrauth (ptr @g, i32 2, i64 65537, ptr @g.ref.da.65537, ptr @ds)
 
-; CHECK-ERR-DISC-ELF: error: AArch64 PAC Discriminator '65538' out of range [0, 0xFFFF]
+; CHECK-ERR-DISC-GNU: error: AArch64 PAC Discriminator '65538' out of range [0, 0xFFFF]
 @g.ref.da.65538 = constant ptr ptrauth (ptr @g, i32 2, i64 65538, ptr null, ptr @ds)

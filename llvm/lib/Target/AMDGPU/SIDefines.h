@@ -46,6 +46,7 @@ enum {
   GFX11 = 10,
   GFX12 = 11,
   GFX1250 = 12,
+  GFX13 = 13,
 };
 }
 
@@ -207,6 +208,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP16,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
+  OPERAND_REG_IMM_V2FP16_SPLAT,
   OPERAND_REG_IMM_V2INT16,
   OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
@@ -448,7 +450,6 @@ enum Id { // Message ID, width(4) [3:0].
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
-  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1250
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
@@ -462,6 +463,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_SE_AID_ID = 135,
 
   ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
+  ID_RTN_SAVE_WAVE_HAS_TDM = 152,         // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -498,6 +500,14 @@ enum StreamId : unsigned { // Stream ID, (2) [9:8].
 };
 
 } // namespace SendMsg
+
+namespace WaitEvent { // Encoding of SIMM16 used in s_wait_event
+enum Id {
+  DONT_WAIT_EXPORT_READY = 1 << 0, // Only used in gfx11
+  EXPORT_READY = 1 << 1,           // gfx12+
+};
+
+} // namespace WaitEvent
 
 namespace Hwreg { // Encoding of SIMM16 used in s_setreg/getreg* insns.
 
@@ -582,11 +592,11 @@ enum ModeRegisterMasks : uint32_t {
   CSP_MASK = 0x7u << 29, // Bits 29..31
 
   // GFX1250
-  DST_VGPR_MSB = 1 << 12,
-  SRC0_VGPR_MSB = 1 << 13,
-  SRC1_VGPR_MSB = 1 << 14,
-  SRC2_VGPR_MSB = 1 << 15,
-  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+  DST_VGPR_MSB = 0x3 << 12,
+  SRC0_VGPR_MSB = 0x3 << 14,
+  SRC1_VGPR_MSB = 0x3 << 16,
+  SRC2_VGPR_MSB = 0x3 << 18,
+  VGPR_MSB_MASK = 0xff << 12, // Bits 12..19
 
   REPLAY_MODE = 1 << 25,
   FLAT_SCRATCH_IS_NV = 1 << 26,

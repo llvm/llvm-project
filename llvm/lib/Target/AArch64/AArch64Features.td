@@ -564,9 +564,6 @@ def FeatureLSUI: ExtensionWithMArch<"lsui", "LSUI", "FEAT_LSUI",
 def FeatureOCCMO: ExtensionWithMArch<"occmo", "OCCMO", "FEAT_OCCMO",
   "Enable Armv9.6-A Outer cacheable cache maintenance operations">;
 
-def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
-  "Enable Armv9.6-A Producer Consumer Data Placement hints">;
-
 def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
   "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
 
@@ -586,8 +583,6 @@ def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSV
 //  Armv9.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureCMH : ExtensionWithMArch<"cmh", "CMH", "FEAT_CMH",
-  "Enable Armv9.7-A Contention Management Hints">;
 
 def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
   "Enable Armv9.7-A Load-acquire and store-release pair extension">;
@@ -599,7 +594,7 @@ def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
   "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
 
 def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
-  "Enable Virtual Memory Tagging Extension">;
+  "Enable Virtual Memory Tagging Extension", [FeatureMTE]>;
 
 def FeatureGCIE: ExtensionWithMArch<"gcie", "GCIE", "FEAT_GCIE",
   "Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension">;
@@ -627,7 +622,7 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
 //===----------------------------------------------------------------------===//
 
 def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
-  "Enable memset acceleration granule only">;
+  "Enable memset acceleration granule only", [FeatureMOPS, FeatureMTE]>;
 
 def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
   "Enable Enhanced Branch Target Identification extension">;
@@ -853,6 +848,10 @@ def FeatureALULSLFast : SubtargetFeature<
     "alu-lsl-fast", "HasALULSLFast", "true",
     "Add/Sub operations with lsl shift <= 4 are cheap">;
 
+def FeatureFastLD1Single : SubtargetFeature<
+    "fast-ld1-single", "HasFastLD1Single", "true",
+    "Single-element LD1 to vector lane has same performance as regular load">;
+
 def FeatureAggressiveFMA :
   SubtargetFeature<"aggressive-fma",
                    "HasAggressiveFMA",
@@ -918,6 +917,14 @@ def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
 def FeatureDisableUnpredicatedLdStLower : SubtargetFeature<
     "disable-unpredicated-ld-st-lower", "DisableUnpredicatedLdStLower",
     "true", "Disable lowering unpredicated loads/stores as LDR/STR">;
+
+def FeatureAggressiveInterleaving : SubtargetFeature<"aggressive-interleaving",
+                                                     "AggressiveInterleaving", "true",
+                                                     "Make use of aggressive interleaving during vectorization">;
+
+def FeatureMaxInterleaveFactor4 : SubtargetFeature<
+    "max-interleave-factor-4", "MaxInterleaveFactor", "4",
+    "Set the MaxInterleaveFactor to 4 (from the default 2)">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

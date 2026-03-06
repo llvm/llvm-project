@@ -20,12 +20,12 @@
 
 ## Check we use information from .debug_info in messages.
 # RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
-# CHECK:      duplicate symbol: bar
+# CHECK:      error: duplicate symbol: bar
 # CHECK-NEXT: >>> defined at test.c:2
 # CHECK-NEXT: >>>            {{.*}}:(bar)
 # CHECK-NEXT: >>> defined at test.c:2
 # CHECK-NEXT: >>>            {{.*}}:(.data+0x0)
-# CHECK:      duplicate symbol: foo
+# CHECK:      error: duplicate symbol: foo
 # CHECK-NEXT: >>> defined at test.c:1
 # CHECK-NEXT: >>>            {{.*}}:(foo)
 # CHECK-NEXT: >>> defined at test.c:1

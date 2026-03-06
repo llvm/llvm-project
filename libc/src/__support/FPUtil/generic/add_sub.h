@@ -96,6 +96,8 @@ add_or_sub(InType x, InType y) {
 
     if (x_bits.is_zero()) {
       if (y_bits.is_zero()) {
+        if (is_effectively_add)
+          return OutFPBits::zero(x_bits.sign()).get_val();
         switch (quick_get_round()) {
         case FE_DOWNWARD:
           return OutFPBits::zero(Sign::NEG).get_val();
@@ -143,10 +145,9 @@ add_or_sub(InType x, InType y) {
   if (x_abs > y_abs) {
     result_sign = x_bits.sign();
   } else if (x_abs < y_abs) {
-    if (is_effectively_add)
-      result_sign = y_bits.sign();
-    else if (y_bits.is_pos())
-      result_sign = Sign::NEG;
+    result_sign = y_bits.sign();
+    if constexpr (IsSub)
+      result_sign = result_sign.negate();
   } else if (is_effectively_add) {
     result_sign = x_bits.sign();
   }

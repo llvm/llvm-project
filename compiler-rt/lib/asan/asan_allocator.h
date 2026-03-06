@@ -198,7 +198,11 @@ const uptr kAllocatorSpace = ~(uptr)0;
 #    endif  // SANITIZER_APPLE
 
 #    if defined(__powerpc64__)
+#      if SANITIZER_AIX
+const uptr kAllocatorSize = 1ULL << 38;  // 256G.
+#      else
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
+#      endif
 typedef DefaultSizeClassMap SizeClassMap;
 #    elif defined(__aarch64__) && \
         (SANITIZER_ANDROID || defined(SANITIZER_AARCH64_39BIT_VA))
@@ -276,6 +280,10 @@ void asan_free(void *ptr, BufferedStackTrace *stack);
 
 void *asan_malloc(uptr size, BufferedStackTrace *stack);
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
+#if SANITIZER_AIX
+void* asan_vec_malloc(uptr size, BufferedStackTrace* stack);
+void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack);
+#endif
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack);
 void *asan_reallocarray(void *p, uptr nmemb, uptr size,
                         BufferedStackTrace *stack);

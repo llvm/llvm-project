@@ -519,7 +519,8 @@ static bool isThumb(const MCSubtargetInfo& STI) {
 }
 
 void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                     const MCSubtargetInfo *EndInfo) const {
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
   // If either end mode is unknown (EndInfo == NULL) or different than
   // the start mode, then restore the start mode.
   const bool WasThumb = isThumb(StartInfo);
@@ -650,13 +651,12 @@ static bool checkFunctionsAttributeConsistency(const Module &M, StringRef Attr,
 }
 // Returns true if all functions definitions have the same denormal mode.
 // It also returns true when the module has no functions.
-static bool checkDenormalAttributeConsistency(const Module &M, StringRef Attr,
-                                              DenormalMode Value) {
+static bool checkDenormalAttributeConsistency(const Module &M,
+                                              DenormalFPEnv Value) {
   return !any_of(M, [&](const Function &F) {
     if (F.isDeclaration())
       return false;
-    StringRef AttrVal = F.getFnAttribute(Attr).getValueAsString();
-    return parseDenormalFPAttribute(AttrVal) != Value;
+    return F.getDenormalFPEnv() != Value;
   });
 }
 
@@ -666,10 +666,10 @@ static bool checkDenormalAttributeInconsistency(const Module &M) {
   auto E = M.functions().end();
   if (F == E)
     return false;
-  DenormalMode Value = F->getDenormalModeRaw();
+  DenormalFPEnv Value = F->getDenormalFPEnv();
   ++F;
   return std::any_of(F, E, [&](const Function &F) {
-    return !F.isDeclaration() && F.getDenormalModeRaw() != Value;
+    return !F.isDeclaration() && F.getDenormalFPEnv() != Value;
   });
 }
 
@@ -730,18 +730,21 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP Denormals.
-  if (checkDenormalAttributeConsistency(*MMI->getModule(), "denormal-fp-math",
-                                        DenormalMode::getPreserveSign()))
+  if (auto *DM = mdconst::extract_or_null<ConstantInt>(
+          MMI->getModule()->getModuleFlag("arm-eabi-fp-denormal"))) {
+    if (unsigned TagVal = DM->getZExtValue())
+      ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal, TagVal);
+  } else if (checkDenormalAttributeConsistency(*MMI->getModule(),
+                                               DenormalMode::getPreserveSign()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PreserveFPSign);
   else if (checkDenormalAttributeConsistency(*MMI->getModule(),
-                                             "denormal-fp-math",
                                              DenormalMode::getPositiveZero()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PositiveZero);
   else if (checkDenormalAttributeInconsistency(*MMI->getModule()) ||
-           checkDenormalAttributeConsistency(
-               *MMI->getModule(), "denormal-fp-math", DenormalMode::getIEEE()))
+           checkDenormalAttributeConsistency(*MMI->getModule(),
+                                             DenormalMode::getIEEE()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::IEEEDenormals);
   else {
@@ -771,9 +774,13 @@ void ARMAsmPrinter::emitAttributes() {
   }
 
   // Set FP exceptions and rounding
-  if (checkFunctionsAttributeConsistency(*MMI->getModule(),
-                                         "no-trapping-math", "true") ||
-      TM.Options.NoTrappingFPMath)
+  if (auto *Ex = mdconst::extract_or_null<ConstantInt>(
+          MMI->getModule()->getModuleFlag("arm-eabi-fp-exceptions"))) {
+    if (unsigned TagVal = Ex->getZExtValue())
+      ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions, TagVal);
+  } else if (checkFunctionsAttributeConsistency(*MMI->getModule(),
+                                                "no-trapping-math", "true") ||
+             TM.Options.NoTrappingFPMath)
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_exceptions,
                       ARMBuildAttrs::Not_Allowed);
   else {
@@ -785,12 +792,12 @@ void ARMAsmPrinter::emitAttributes() {
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_rounding, ARMBuildAttrs::Allowed);
   }
 
-  // TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath is the
-  // equivalent of GCC's -ffinite-math-only flag.
-  if (TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath)
-    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
-                      ARMBuildAttrs::Allowed);
-  else
+  // Generate ABI tags from module flags.
+  if (auto *NumModel = mdconst::extract_or_null<ConstantInt>(
+          MMI->getModule()->getModuleFlag("arm-eabi-fp-number-model"))) {
+    if (unsigned TagVal = NumModel->getZExtValue())
+      ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model, TagVal);
+  } else
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
                       ARMBuildAttrs::AllowIEEE754);
 
@@ -813,13 +820,13 @@ void ARMAsmPrinter::emitAttributes() {
   if (const Module *SourceModule = MMI->getModule()) {
     // ABI_PCS_wchar_t to indicate wchar_t width
     // FIXME: There is no way to emit value 0 (wchar_t prohibited).
+    int WCharWidth = TM.getTargetTriple().getDefaultWCharSize();
     if (auto WCharWidthValue = mdconst::extract_or_null<ConstantInt>(
-            SourceModule->getModuleFlag("wchar_size"))) {
-      int WCharWidth = WCharWidthValue->getZExtValue();
-      assert((WCharWidth == 2 || WCharWidth == 4) &&
-             "wchar_t width must be 2 or 4 bytes");
-      ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
-    }
+            SourceModule->getModuleFlag("wchar_size")))
+      WCharWidth = WCharWidthValue->getZExtValue();
+    assert((WCharWidth == 2 || WCharWidth == 4) &&
+           "wchar_t width must be 2 or 4 bytes");
+    ATS.emitAttribute(ARMBuildAttrs::ABI_PCS_wchar_t, WCharWidth);
 
     // ABI_enum_size to indicate enum width
     // FIXME: There is no way to emit value 0 (enums prohibited) or value 3

@@ -65,10 +65,10 @@ class ConstantData : public Constant {
 protected:
   explicit ConstantData(Type *Ty, ValueTy VT) : Constant(Ty, VT, AllocMarker) {}
 
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void *operator new(size_t S) { return ::operator new(S); }
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   ConstantData(const ConstantData &) = delete;
 
@@ -113,9 +113,8 @@ public:
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
   /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
-  // TODO: Make ImplicitTrunc default to false.
   LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false,
-                                bool ImplicitTrunc = true);
+                                bool ImplicitTrunc = false);
 
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended
@@ -123,21 +122,22 @@ public:
   /// be interpreted as a 64-bit signed integer and sign-extended to fit
   /// the type.
   /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
-  // TODO: Make ImplicitTrunc default to false.
   LLVM_ABI static ConstantInt *get(IntegerType *Ty, uint64_t V,
                                    bool IsSigned = false,
-                                   bool ImplicitTrunc = true);
+                                   bool ImplicitTrunc = false);
 
   /// Return a ConstantInt with the specified value for the specified type. The
   /// value V will be canonicalized to an unsigned APInt. Accessing it with
   /// either getSExtValue() or getZExtValue() will yield a correctly sized and
   /// signed value for the type Ty.
   /// Get a ConstantInt for a specific signed value.
-  static ConstantInt *getSigned(IntegerType *Ty, int64_t V) {
-    return get(Ty, V, true);
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  static ConstantInt *getSigned(IntegerType *Ty, int64_t V,
+                                bool ImplicitTrunc = false) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
-  static Constant *getSigned(Type *Ty, int64_t V) {
-    return get(Ty, V, true);
+  static Constant *getSigned(Type *Ty, int64_t V, bool ImplicitTrunc = false) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
   }
 
   /// Return a ConstantInt with the specified value and an implied Type. The
@@ -914,7 +914,7 @@ class BlockAddress final : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return a BlockAddress for the specified function and basic block.
   LLVM_ABI static BlockAddress *get(Function *F, BasicBlock *BB);
@@ -967,7 +967,7 @@ class DSOLocalEquivalent final : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return a DSOLocalEquivalent for the specified global value.
   LLVM_ABI static DSOLocalEquivalent *get(GlobalValue *GV);
@@ -1306,6 +1306,16 @@ public:
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
+  /// Create a getelementptr i8, ptr, offset constant expression.
+  static Constant *
+  getPtrAdd(Constant *Ptr, Constant *Offset,
+            GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+            std::optional<ConstantRange> InRange = std::nullopt,
+            Type *OnlyIfReduced = nullptr) {
+    return getGetElementPtr(Type::getInt8Ty(Ptr->getContext()), Ptr, Offset, NW,
+                            InRange, OnlyIfReduced);
+  }
+
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
@@ -1322,6 +1332,11 @@ public:
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Value *> IdxList) {
     return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
+  }
+
+  /// Create a getelementptr inbounds i8, ptr, offset constant expression.
+  static Constant *getInBoundsPtrAdd(Constant *Ptr, Constant *Offset) {
+    return getPtrAdd(Ptr, Offset, GEPNoWrapFlags::inBounds());
   }
 
   LLVM_ABI static Constant *getExtractElement(Constant *Vec, Constant *Idx,

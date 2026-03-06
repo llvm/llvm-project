@@ -104,3 +104,59 @@ define i64 @not_redundant_mask(ptr %ptr) {
   %mask = and i64 %int, -5
   ret i64 %mask
 }
+
+define i1 @trunc1_ptrtoint(ptr %ptr) {
+; CHECK-LABEL: define i1 @trunc1_ptrtoint(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INT]] to i1
+; CHECK-NEXT:    ret i1 false
+;
+  %load = load i16, ptr %ptr, align 2
+  %int = ptrtoint ptr %ptr to i64
+  %trunc = trunc i64 %int to i1
+  ret i1 %trunc
+}
+
+define i1 @neg_trunc1_ptrtoint(ptr %ptr) {
+; CHECK-LABEL: define i1 @neg_trunc1_ptrtoint(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INT]] to i1
+; CHECK-NEXT:    ret i1 [[TRUNC]]
+;
+  %load = load i8, ptr %ptr, align 1
+  %int = ptrtoint ptr %ptr to i64
+  %trunc = trunc i64 %int to i1
+  ret i1 %trunc
+}
+
+define i4 @trunc4_ptrtoint(ptr %ptr) {
+; CHECK-LABEL: define i4 @trunc4_ptrtoint(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INT]] to i4
+; CHECK-NEXT:    ret i4 0
+;
+  %load = load i32, ptr %ptr, align 16
+  %int = ptrtoint ptr %ptr to i64
+  %trunc = trunc i64 %int to i4
+  ret i4 %trunc
+}
+
+define i1 @trunc1_ptrtoaddr(ptr %ptr) {
+; CHECK-LABEL: define i1 @trunc1_ptrtoaddr(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[PTR]] to i64
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INT]] to i1
+; CHECK-NEXT:    ret i1 false
+;
+  %load = load i16, ptr %ptr, align 2
+  %int = ptrtoaddr ptr %ptr to i64
+  %trunc = trunc i64 %int to i1
+  ret i1 %trunc
+}

@@ -6,14 +6,14 @@
 - (void) run;
 @end
 
-// CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\01\00"
+// CHECK-MODERN: @OBJC_LAYOUT_BITMAP_{{.*}} = {{.*}} c"\01\00"
 // CHECK-MODERN: @"_OBJC_CLASS_RO_$_Foo" = {{.*}} { i32 772
 //   772 == 0x304
 //            ^ HasMRCWeakIvars
 //            ^ HasCXXDestructorOnly
 //              ^ HasCXXStructors
 
-// CHECK-FRAGILE: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\01\00"
+// CHECK-FRAGILE: @OBJC_LAYOUT_BITMAP_{{.*}} = {{.*}} c"\01\00"
 // CHECK-FRAGILE: @OBJC_CLASS_Foo = {{.*}} i32 134225921,
 //   134225921 == 0x08002001
 //                   ^ HasMRCWeakIvars

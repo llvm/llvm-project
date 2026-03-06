@@ -81,8 +81,9 @@ static StringRef getDestTypeString(const SourceManager &SM,
   } else if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
     BeginLoc = CastExpr->getBeginLoc();
     EndLoc = CastExpr->getLParenLoc().getLocWithOffset(-1);
-  } else
+  } else {
     llvm_unreachable("Unsupported CastExpr");
+  }
 
   return Lexer::getSourceText(CharSourceRange::getTokenRange(BeginLoc, EndLoc),
                               SM, LangOpts);
@@ -212,11 +213,10 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
     ReplaceWithNamedCast("static_cast");
     return;
   case CK_ConstructorConversion:
-    if (ConstructorCast) {
+    if (ConstructorCast)
       ReplaceWithConstructorCall();
-    } else {
+    else
       ReplaceWithNamedCast("static_cast");
-    }
     return;
   case CK_NoOp:
     if (FnToFnCast) {

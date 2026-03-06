@@ -74,6 +74,13 @@ bool LoongArch::getArchFeatures(StringRef Arch,
     return true;
   }
 
+  if (Arch == "la32v1.0" || Arch == "la32rv1.0") {
+    Features.push_back("+32bit");
+    if (Arch == "la32v1.0")
+      Features.push_back("+32s");
+    return true;
+  }
+
   return false;
 }
 
@@ -85,6 +92,5 @@ void LoongArch::fillValidCPUList(SmallVectorImpl<StringRef> &Values) {
 }
 
 StringRef LoongArch::getDefaultArch(bool Is64Bit) {
-  // TODO: use a real 32-bit arch name.
-  return Is64Bit ? "loongarch64" : "";
+  return Is64Bit ? "loongarch64" : "loongarch32";
 }

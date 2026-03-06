@@ -44,7 +44,7 @@
 ; CHECK: remark: source.cpp:29:7: loop not vectorized: Control flow cannot be substituted for a select
 ; CHECK: remark: source.cpp:27:3: loop not vectorized
 
-; CHECK: loop not vectorized: cannot prove it is safe to reorder memory operations
+; CHECK: loop not vectorized: too many memory checks needed
 
 ; YAML:       --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
@@ -119,15 +119,6 @@
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
-; YAML-NEXT: Name:            NonReductionValueUsedOutsideLoop
-; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }
-; YAML-NEXT: Function:        test_multiple_failures
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          value that could not be identified as reduction is used outside the loop
-; YAML-NEXT: ...
-; YAML-NEXT: --- !Analysis
-; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            CantVectorizeLibcall
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 29, Column: 11 }
 ; YAML-NEXT: Function:        test_multiple_failures
@@ -172,10 +163,10 @@
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !AnalysisAliasing
 ; YAML-NEXT: Pass:            loop-vectorize
-; YAML-NEXT: Name:            CantReorderMemOps
+; YAML-NEXT: Name:            TooManyMemoryRuntimeChecks
 ; YAML-NEXT: Function:        test_runtime_checks_threshold
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'loop not vectorized: cannot prove it is safe to reorder memory operations'
+; YAML-NEXT:   - String:          'loop not vectorized: too many memory checks needed'
 ; YAML-NEXT: ...
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
-
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
 
 #include "ScriptedPythonInterface.h"
 #include "lldb/Core/PluginInterface.h"
@@ -43,6 +39,8 @@ public:
 
   std::string GetDescription(llvm::StringRef class_name) override;
 
+  std::optional<uint32_t> GetPriority(llvm::StringRef class_name) override;
+
   StructuredData::ObjectSP GetFrameAtIndex(uint32_t index) override;
 
   static void Initialize();
@@ -59,5 +57,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDFRAMEPROVIDERPYTHONINTERFACE_H

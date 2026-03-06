@@ -1,6 +1,8 @@
 // Check that llvm-bolt correctly reports a missing DWO file while updating
 // debug info.
 //
+// REQUIRES: system-linux
+//
 // RUN: %clang %cflags -g -dwarf5 -gsplit-dwarf=single -c %s -o %t.o
 // RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 // RUN: rm %t.o

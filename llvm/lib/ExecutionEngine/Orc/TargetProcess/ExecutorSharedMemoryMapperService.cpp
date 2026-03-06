@@ -321,7 +321,7 @@ void ExecutorSharedMemoryMapperService::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&releaseWrapper);
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::reserveWrapper(const char *ArgData,
                                                   size_t ArgSize) {
   return shared::WrapperFunction<
@@ -332,7 +332,7 @@ ExecutorSharedMemoryMapperService::reserveWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::initializeWrapper(const char *ArgData,
                                                      size_t ArgSize) {
   return shared::WrapperFunction<
@@ -343,7 +343,7 @@ ExecutorSharedMemoryMapperService::initializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::deinitializeWrapper(const char *ArgData,
                                                        size_t ArgSize) {
   return shared::WrapperFunction<
@@ -354,7 +354,7 @@ ExecutorSharedMemoryMapperService::deinitializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 ExecutorSharedMemoryMapperService::releaseWrapper(const char *ArgData,
                                                   size_t ArgSize) {
   return shared::WrapperFunction<

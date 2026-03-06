@@ -1,6 +1,9 @@
-math/clc_ldexp_override.cl
+address_space/qualifier.cl
+math/clc_ldexp.cl
 mem_fence/clc_mem_fence.cl
+subgroup/sub_group_broadcast.cl
 synchronization/clc_work_group_barrier.cl
+workitem/clc_get_enqueued_local_size.cl
 workitem/clc_get_global_offset.cl
 workitem/clc_get_global_size.cl
 workitem/clc_get_group_id.cl

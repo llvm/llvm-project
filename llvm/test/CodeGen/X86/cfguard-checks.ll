@@ -1,7 +1,9 @@
 ; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC
+; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_SELDAG
+; RUN: llc < %s --fast-isel -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64,X64_MSVC,X64_FISEL
 ; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefixes=X86,X86_MINGW
-; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW
+; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_SELDAG
+; RUN: llc < %s --fast-isel -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefixes=X64,X64_MINGW,X64_FISEL
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are correctly added when required.
@@ -27,7 +29,8 @@ entry:
   ; X64-LABEL: func_guard_nocf
   ; X64:       leaq	target_func(%rip), %rax
   ; X64-NOT: __guard_dispatch_icall_fptr
-  ; X64:       callq	*%rax
+  ; X64_SELDAG: callq	*%rax
+  ; X64_FISEL: callq	*32(%rsp)
 }
 attributes #0 = { "guard_nocf" }
 
@@ -53,8 +56,7 @@ entry:
   ; On x86_64, __guard_dispatch_icall_fptr tail calls the function, so there should be only one call instruction.
   ; X64-LABEL: func_optnone_cf
   ; X64:       leaq	target_func(%rip), %rax
-  ; X64:       movq __guard_dispatch_icall_fptr(%rip), %rcx
-  ; X64:       callq *%rcx
+  ; X64:       callq *__guard_dispatch_icall_fptr(%rip)
   ; X64-NOT:   callq
 }
 attributes #1 = { noinline optnone }
@@ -122,6 +124,38 @@ lpad:                                             ; preds = %entry
 
 declare void @h()
 
+; Regression test: even if the invoke has many arguments, we should be calling
+; via a rip wrapper, rather than loading the CFG func into a register.
+define i32 @invoke_many_args(ptr %func_ptr, ptr %pass_thru1, ptr %pass_thru2) personality ptr @h {
+  %stack_arg1 = alloca ptr, align 8
+  %stack_arg2 = alloca ptr, align 8
+  %stack_arg3 = alloca ptr, align 8
+  invoke void %func_ptr(ptr %pass_thru1, ptr %pass_thru2, ptr %stack_arg1, ptr %stack_arg2, ptr %stack_arg3)
+          to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  ret i32 2
+
+lpad:
+  %tmp = landingpad { ptr, i32 }
+          catch ptr null
+  ret i32 -1
+
+  ; On i686, the call to __guard_check_icall_fptr should come immediately before the call to the target function.
+  ; X86-LABEL: invoke_many_args
+  ; X86:         calll *___guard_check_icall_fptr
+  ; X86_MINGW-NEXT: Ltmp3:
+  ; X86:         calll *%ecx
+  ; X86:       # %invoke.cont
+  ; X86:       # %lpad
+
+  ; On x86_64, __guard_dispatch_icall_fptr tail calls the function, so there should be only one call instruction.
+  ; X64-LABEL: invoke_many_args
+  ; X64:       callq *__guard_dispatch_icall_fptr(%rip)
+  ; X64-NOT:   callq
+  ; X64:       # %invoke.cont
+  ; X64:       # %lpad
+}
 
 ; Test that Control Flow Guard preserves floating point arguments.
 declare double @target_func_doubles(double, double, double, double)
@@ -149,10 +183,10 @@ entry:
   ; X64_MSVC:  movsd __real@4000000000000000(%rip), %xmm1
   ; X64_MSVC:  movsd __real@4008000000000000(%rip), %xmm2
   ; X64_MSVC:  movsd __real@4010000000000000(%rip), %xmm3
-  ; X64_MINGW: movsd .LCPI4_0(%rip), %xmm0
-  ; X64_MINGW: movsd .LCPI4_1(%rip), %xmm1
-  ; X64_MINGW: movsd .LCPI4_2(%rip), %xmm2
-  ; X64_MINGW: movsd .LCPI4_3(%rip), %xmm3
+  ; X64_MINGW: movsd .LCPI5_0(%rip), %xmm0
+  ; X64_MINGW: movsd .LCPI5_1(%rip), %xmm1
+  ; X64_MINGW: movsd .LCPI5_2(%rip), %xmm2
+  ; X64_MINGW: movsd .LCPI5_3(%rip), %xmm3
   ; X64:       callq *__guard_dispatch_icall_fptr(%rip)
   ; X64-NOT:   callq
 
@@ -210,8 +244,7 @@ entry:
   ; X64-LABEL: vmptr_thunk:
   ; X64:            movq (%rcx), %rax
   ; X64-NEXT:       movq 8(%rax), %rax
-  ; X64-NEXT:       movq __guard_dispatch_icall_fptr(%rip), %rdx
-  ; X64-NEXT:       rex64 jmpq *%rdx            # TAILCALL
+  ; X64-NEXT:       rex64 jmpq      *__guard_dispatch_icall_fptr(%rip)            # TAILCALL
   ; X64-NOT:   callq
 }
 

@@ -197,8 +197,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
   llvm::Expected<uint32_t>
   CalculateNumChildrenForOldCompressedPairLayout(ValueObject &pair);
@@ -274,8 +272,8 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   if (m_tree == nullptr)
     return 0;
 
-  auto [size_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      *m_tree, /*anon_struct_idx=*/2, "__size_", "__pair3_");
+  auto [size_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*m_tree, "__size_", "__pair3_");
   if (!size_sp)
     return llvm::createStringError("Unexpected std::map layout");
 
@@ -388,16 +386,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
       m_tree->GetCompilerType().GetDirectNestedTypeWithName("__node_pointer");
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *

@@ -50,6 +50,7 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_private
     0,   // hlsl_device
     0,   // hlsl_input
+    0,   // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -805,6 +806,16 @@ public:
       HasSizeMismatch = RegSize != 64;
       return true;
     }
+
+    // -ffixed-r8 through -ffixed-r31 are lowered to reserve-r8 through
+    // reserve-r31 target features, so canonicalize subregister spellings
+    // like r15d/r15w/r15b back to the corresponding 64-bit register first.
+    StringRef Reg64 = RegName;
+    if (Reg64.back() == 'd' || Reg64.back() == 'w' || Reg64.back() == 'b') {
+      Reg64 = Reg64.substr(0, Reg64.size() - 1);
+    }
+    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str()))
+      return true;
 
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,

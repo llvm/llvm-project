@@ -65,7 +65,7 @@ void SimpleExecutorDylibManager::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&resolveWrapper);
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorDylibManager::openWrapper(const char *ArgData, size_t ArgSize) {
   return shared::
       WrapperFunction<rt::SPSSimpleExecutorDylibManagerOpenSignature>::handle(
@@ -75,7 +75,7 @@ SimpleExecutorDylibManager::openWrapper(const char *ArgData, size_t ArgSize) {
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorDylibManager::resolveWrapper(const char *ArgData,
                                            size_t ArgSize) {
   using ResolveResult = ExecutorResolver::ResolveResult;

@@ -3,7 +3,7 @@
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo
 # GCN:        $sgpr0 = S_MOV_B32 $exec_lo
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65310
+# GFX10-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo
@@ -21,7 +21,7 @@ body:            |
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec
 # GCN:        $sgpr0_sgpr1 = S_MOV_B64 $exec
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65310
+# GFX10-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec
@@ -109,7 +109,7 @@ body:            |
 
 # GCN-LABEL: name: no_hazard_vcmpx_smov_exec_lo_depctr_fffe
 # GCN:      $sgpr0 = S_MOV_B32 $exec_lo
-# GCN-NEXT: S_WAITCNT_DEPCTR 65534
+# GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
 # GCN-NEXT: V_CMPX_LE_F32_nosdst_e32
 ---
 name:            no_hazard_vcmpx_smov_exec_lo_depctr_fffe
@@ -118,7 +118,7 @@ body:            |
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
-    S_WAITCNT_DEPCTR 65534
+    S_WAITCNT_DEPCTR .SaSdst_0
     V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
@@ -128,8 +128,8 @@ body:            |
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo_depctr_ffff
 # GCN:        $sgpr0 = S_MOV_B32 $exec_lo
-# GCN-NEXT:   S_WAITCNT_DEPCTR 65535
-# GFX10-NEXT: S_WAITCNT_DEPCTR 65310
+# GCN-NEXT:   S_WAITCNT_DEPCTR .AllOff
+# GFX10-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_ffff
@@ -138,7 +138,7 @@ body:            |
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
-    S_WAITCNT_DEPCTR 65535
+    S_WAITCNT_DEPCTR .AllOff
     V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
@@ -148,7 +148,7 @@ body:            |
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo_depctr_effe
 # GCN:        $sgpr0 = S_MOV_B32 $exec_lo
-# GCN-NEXT:   S_WAITCNT_DEPCTR 61438
+# GCN-NEXT:   S_WAITCNT_DEPCTR .VaVdst_14_SaSdst_0
 # GCN-NEXT:   V_CMPX_LE_F32_nosdst_e32
 ---
 name:            hazard_vcmpx_smov_exec_lo_depctr_effe
@@ -157,7 +157,7 @@ body:            |
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr0 = S_MOV_B32 $exec_lo
-    S_WAITCNT_DEPCTR 61438
+    S_WAITCNT_DEPCTR .VaVdst_14_SaSdst_0
     V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 

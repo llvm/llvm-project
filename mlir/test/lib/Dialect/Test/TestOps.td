@@ -831,6 +831,13 @@ def OperandZeroAndResultHaveSameElementCount :
   let results = (outs AnyShaped:$res);
 }
 
+def OperandAndResultHaveSameElementCountAnyType :
+    TEST_Op<"operand_and_result_have_same_element_count_any_type",
+            [AllElementCountsMatch<["x", "res"]>]> {
+  let arguments = (ins AnyType:$x);
+  let results = (outs AnyType:$res);
+}
+
 def FourEqualsFive :
     TEST_Op<"four_equals_five", [AllMatch<["5", "4"], "4 equals 5">]>;
 
@@ -2232,6 +2239,17 @@ def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
     [{ build($_builder, $_state, {}); }]>
   ];
 }
+// A return-like terminator used to test FuncOp verifier ordering.
+// When 'valid' unit-attr is absent the op is malformed; its verifier
+// emits an error, but getMutableSuccessorOperands() calls report_fatal_error
+// to expose the fact that FuncOp::verify() runs before the region is checked.
+def TestCrashingReturnOp : TEST_Op<"crashing_return", [
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+    Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+  let hasVerifier = 1;
+}
 def TestCastOp : TEST_Op<"cast">,
   Arguments<(ins Variadic<AnyType>)>, Results<(outs AnyType)>;
 def TestInvalidOp : TEST_Op<"invalid", [Terminator]>,
@@ -2635,7 +2653,8 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 def RegionIfOp : TEST_Op<"region_if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                  ["getRegionInvocationBounds",
-                                  "getEntrySuccessorOperands"]>,
+                                  "getEntrySuccessorOperands",
+                                  "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveMemoryEffects]> {
   let description =[{
@@ -2665,7 +2684,8 @@ def RegionIfOp : TEST_Op<"region_if",
 
 def AnyCondOp : TEST_Op<"any_cond",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getRegionInvocationBounds"]>,
+                                 ["getRegionInvocationBounds",
+                                  "getSuccessorInputs"]>,
        RecursiveMemoryEffects]> {
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$region);
@@ -2673,7 +2693,8 @@ def AnyCondOp : TEST_Op<"any_cond",
 
 def LoopBlockOp : TEST_Op<"loop_block",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands"]>, RecursiveMemoryEffects]> {
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     RecursiveMemoryEffects]> {
 
   let results = (outs F32:$floatResult);
   let arguments = (ins I32:$init);
@@ -3180,6 +3201,23 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
   let results = (outs InferIntRangeType:$fakeVal);
 
   let assemblyFormat = "attr-dict `:` type($fakeVal)";
+}
+
+def TestWithoutBoundsOp : TEST_Op<"without_bounds",
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
+                          NoMemoryEffect]> {
+  let description = [{
+    Creates a value with uninitialized range for integer range analysis tests.
+
+    Example:
+
+    ```mlir
+    %0 = test.without_bounds : index
+    ```
+  }];
+  let results = (outs InferIntRangeType:$result);
+
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
@@ -3741,7 +3779,7 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
 }
 
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {
   let arguments = (ins
     Arg<AnyMemRef, "", [MemWrite]>:$address,
@@ -3753,7 +3791,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
 }
 
 def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {
   let arguments = (ins
     Arg<AnyMemRef, "", [MemWrite]>:$address,

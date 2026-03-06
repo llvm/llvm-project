@@ -159,12 +159,11 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
     return {};
 
   unsigned int ParenCount = 1;
-  while (ParenCount && !Lexer.LexFromRawLexer(Token)) {
+  while (ParenCount && !Lexer.LexFromRawLexer(Token))
     if (Token.is(tok::l_paren))
       ++ParenCount;
     else if (Token.is(tok::r_paren))
       --ParenCount;
-  }
 
   return Token.getLocation();
 }

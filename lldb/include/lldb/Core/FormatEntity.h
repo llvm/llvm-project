@@ -11,6 +11,7 @@
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cstddef>
@@ -229,14 +230,50 @@ struct Entry {
   bool deref = false;
 };
 
-bool Format(const Entry &entry, Stream &s, const SymbolContext *sc,
-            const ExecutionContext *exe_ctx, const Address *addr,
-            ValueObject *valobj, bool function_changed, bool initial_function);
+class Formatter {
+public:
+  Formatter(const SymbolContext *sc, const ExecutionContext *exe_ctx,
+            const Address *addr, bool function_changed, bool initial_function)
+      : m_sc(sc), m_exe_ctx(exe_ctx), m_addr(addr),
+        m_function_changed(function_changed),
+        m_initial_function(initial_function) {}
 
-bool FormatStringRef(const llvm::StringRef &format, Stream &s,
-                     const SymbolContext *sc, const ExecutionContext *exe_ctx,
-                     const Address *addr, ValueObject *valobj,
-                     bool function_changed, bool initial_function);
+  bool Format(const Entry &entry, Stream &s, ValueObject *valobj = nullptr);
+
+  bool FormatStringRef(const llvm::StringRef &format, Stream &s,
+                       ValueObject *valobj);
+
+private:
+  bool DumpValue(Stream &s, const FormatEntity::Entry &entry,
+                 ValueObject *valobj);
+
+  bool FormatFunctionNameForLanguage(Stream &s);
+
+  /// Returns \c true if \a Format has been called for an \a Entry
+  /// with the specified \c type recusrively. Some types are permitted
+  /// to be formatted recursively, in which case this function returns
+  /// \c false.
+  bool IsInvalidRecursiveFormat(Entry::Type type);
+
+  /// While the returned \a llvm::scope_exit is alive, the specified \c type
+  /// is tracked by this \c Formatter object for recursion. Once the returned
+  /// scope guard is destructed, the entry stops being tracked.
+  auto PushEntryType(Entry::Type type) {
+    m_entry_type_stack.push_back(type);
+    return llvm::scope_exit([this] {
+      assert(!m_entry_type_stack.empty());
+      m_entry_type_stack.pop_back();
+    });
+  }
+
+  const SymbolContext *const m_sc = nullptr;
+  const ExecutionContext *const m_exe_ctx = nullptr;
+  const Address *const m_addr = nullptr;
+  const bool m_function_changed = false;
+  const bool m_initial_function = false;
+
+  llvm::SmallVector<Entry::Type, 1> m_entry_type_stack;
+};
 
 Status Parse(const llvm::StringRef &format, Entry &entry);
 

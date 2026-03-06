@@ -123,7 +123,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
     Replacers.push_back(Replacer);
     assert(!Replacer->getReplacementSignatures().empty() &&
            llvm::all_of(Replacer->getReplacementSignatures(),
-                        [](auto Index) { return !Index.empty(); }));
+                        [](const Signature &Index) { return !Index.empty(); }));
     std::vector<StringRef> Names(1, I->getKey());
     for (auto J = std::next(I); J != E; ++J)
       if (J->getValue() == Replacer)
@@ -200,9 +200,8 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
     Function = Value.get<FunctionDecl>();
     size_t Index = 0;
-    if (NodeStr.getAsInteger(10, Index)) {
+    if (NodeStr.getAsInteger(10, Index))
       llvm_unreachable("Unable to extract replacer index");
-    }
     assert(Index < Replacers.size());
     Replacer = Replacers[Index].get();
     break;

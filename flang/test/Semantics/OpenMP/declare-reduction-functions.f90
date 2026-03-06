@@ -23,7 +23,7 @@ contains
     x%a=n
     x%b=n
   end subroutine inittwo
-  
+
   subroutine initthree(x,n)
     integer :: n
     type(three) :: x
@@ -45,7 +45,7 @@ contains
     res%c = x%c + y%c
     add_three = res
   end function add_three
-  
+
 !CHECK-LABEL: Subprogram scope: functwo
   function functwo(x, n)
     type(two) functwo
@@ -61,8 +61,8 @@ contains
 !CHECK OtherConstruct scope
 !CHECK: omp_orig size=8 offset=0: ObjectEntity type: TYPE(two)
 !CHECK: omp_priv size=8 offset=8: ObjectEntity type: TYPE(two)
-    
-  
+
+
     !$omp simd reduction(adder:res)
     do i=1,n
        res=add_two(res,x(i))
@@ -78,14 +78,14 @@ contains
     integer :: i
     integer :: n
     !$omp declare reduction(adder:three:omp_out=add_three(omp_out,omp_in)) initializer(initthree(omp_priv,1))
-    
+
     !$omp simd reduction(adder:res)
     do i=1,n
        res=add_three(res,x(i))
     enddo
     functhree=res
   end function functhree
-  
+
   function functwothree(x, n)
     type(twothree) :: functwothree
     type(twothree) :: x(n)
@@ -96,9 +96,9 @@ contains
     integer :: i
 
     !$omp declare reduction(adder:two:omp_out=add_two(omp_out,omp_in)) initializer(inittwo(omp_priv,0))
-    
+
     !$omp declare reduction(adder:three:omp_out=add_three(omp_out,omp_in)) initializer(initthree(omp_priv,1))
-    
+
 !CHECK: adder: UserReductionDetails TYPE(two) TYPE(three)
 !CHECK OtherConstruct scope
 !CHECK: omp_in size=8 offset=0: ObjectEntity type: TYPE(two)
@@ -142,8 +142,8 @@ contains
 !CHECK OtherConstruct scope
 !CHECK: omp_orig size=8 offset=0: ObjectEntity type: TYPE(two)
 !CHECK: omp_priv size=8 offset=8: ObjectEntity type: TYPE(two)
-    
-  
+
+
     !$omp simd reduction(+:res)
     do i=1,n
        res=add_two(res,x(i))
@@ -161,9 +161,9 @@ contains
     integer :: i
 
     !$omp declare reduction(+:two:omp_out=add_two(omp_out,omp_in)) initializer(inittwo(omp_priv,0))
-    
+
     !$omp declare reduction(+:three:omp_out=add_three(omp_out,omp_in)) initializer(initthree(omp_priv,1))
-    
+
 !CHECK: op.+: UserReductionDetails TYPE(two) TYPE(three)
 !CHECK OtherConstruct scope
 !CHECK: omp_in size=8 offset=0: ObjectEntity type: TYPE(two)
@@ -207,5 +207,5 @@ contains
     !$omp declare reduction (rr : integer : omp_out = omp_out + omp_in) initializer (omp_priv = 0)
     reduction = .false.
   end function reduction
-  
+
 end module mm
