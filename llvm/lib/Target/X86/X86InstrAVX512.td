@@ -12846,7 +12846,7 @@ defm VP2INTERSECTQ : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i64_info>, R
 
 let ExeDomain = SSEPackedSingle in
 defm VCVTNE2PS2BF16 : avx512_binop_all<0x72, "vcvtne2ps2bf16",
-                                       SchedWriteCvtPD2PS, //FIXME: Should be SchedWriteCvtPS2BF
+                                       SchedWriteCvtPS2BF,
                                        avx512vl_f32_info, avx512vl_bf16_info,
                                        X86vfpround2, [HasBF16], [HasVLX, HasBF16]>, T8, XD,
                                        EVEX_CD8<32, CD8VF>;
@@ -12926,7 +12926,7 @@ multiclass avx512_cvt_trunc_ne<bits<8> opc, string OpcodeStr,
 
 defm VCVTNEPS2BF16 : avx512_cvt_trunc_ne<0x72, "vcvtneps2bf16",
                                          avx512vl_bf16_info, avx512vl_f32_info,
-                                         SchedWriteCvtPD2PS, X86cvtneps2bf16,
+                                         SchedWriteCvtPS2BF, X86cvtneps2bf16,
                                          X86mcvtneps2bf16, [HasBF16, HasVLX],
                                          [HasBF16]>, T8, XS, EVEX_CD8<32, CD8VF>;
 
