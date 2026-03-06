@@ -11497,7 +11497,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
 
     TargetLowering::ArgListTy Args;
-    Args.emplace_back(DAG.getUNDEF(VT), Ty);
+    Args.emplace_back(DAG.getUNDEF(MVT::i64),
+                      Type::getInt64Ty(*DAG.getContext()));
     Args.emplace_back(CmpVal, Ty);
     Args.emplace_back(NewVal, Ty);
     Args.emplace_back(Ptr, IntPtrTy);
@@ -11507,8 +11508,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     // by lwat/ldat FC=16, avoiding a new register class for 3 adjacent
     // registers.
     const char *SymName = IntrinsicID == Intrinsic::ppc_amo_ldat_csne
-                              ? "__ldat_csne_dummy"
-                              : "__lwat_csne_dummy";
+                              ? "__ldat_csne_pseudo"
+                              : "__lwat_csne_pseudo";
     SDValue Callee =
         DAG.getExternalSymbol(SymName, getPointerTy(DAG.getDataLayout()));
 

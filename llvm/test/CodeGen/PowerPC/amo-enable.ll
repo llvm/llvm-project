@@ -112,20 +112,16 @@ entry:
   ret void
 }
 
-define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %value2, ptr nocapture %resp) {
+define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %value2, ptr nocapture %resp) nounwind {
 ; CHECK-LABEL: test_lwat_csne:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    mr r30, r6
-; CHECK-NEXT:    mr r6, r3
 ; CHECK-NEXT:    clrldi r4, r4, 32
 ; CHECK-NEXT:    clrldi r5, r5, 32
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    mr r6, r3
 ; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    lwat r3, r6, 16
 ; CHECK-NEXT:    stw r3, 0(r30)
@@ -143,7 +139,6 @@ define void @test_lwat_csne(ptr noundef %ptr, i32 noundef %value1, i32 noundef %
 ; CHECK-BE-NEXT:    std r31, 120(r1) # 8-byte Folded Spill
 ; CHECK-BE-NEXT:    mr r31, r6
 ; CHECK-BE-NEXT:    mr r6, r3
-; CHECK-BE-NEXT:    li r3, 0
 ; CHECK-BE-NEXT:    clrldi r4, r4, 32
 ; CHECK-BE-NEXT:    clrldi r5, r5, 32
 ; CHECK-BE-NEXT:    lwat r3, r6, 16
@@ -159,13 +154,10 @@ entry:
   ret void
 }
 
-define void @test_ldat_csne(ptr noundef %ptr, i64 noundef %value1, i64 noundef %value2, ptr nocapture %resp) {
+define void @test_ldat_csne(ptr noundef %ptr, i64 noundef %value1, i64 noundef %value2, ptr nocapture %resp) nounwind {
 ; CHECK-LABEL: test_ldat_csne:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    mr r30, r6

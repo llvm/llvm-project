@@ -1681,8 +1681,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       StringRef Name = MO.getSymbolName();
       Name.consume_front(".");
       Name.consume_back("[PR]");
-      bool IsLWAT = Name == "__lwat_csne_dummy";
-      bool IsLDAT = Name == "__ldat_csne_dummy";
+      bool IsLWAT = Name == "__lwat_csne_pseudo";
+      bool IsLDAT = Name == "__ldat_csne_pseudo";
       if (IsLWAT || IsLDAT) {
         EmitToStreamer(*OutStreamer,
                        MCInstBuilder(IsLWAT ? PPC::LWAT : PPC::LDAT)
