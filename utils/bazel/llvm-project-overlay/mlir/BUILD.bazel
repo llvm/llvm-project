@@ -14289,7 +14289,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/UB/IR/UBMatchers.h",
-        "include/mlir/Dialect/UB/IR/UBOps.h"
+        "include/mlir/Dialect/UB/IR/UBOps.h",
     ],
     includes = ["include"],
     deps = [
