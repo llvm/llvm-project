@@ -4069,7 +4069,7 @@ static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
       if (!CanNegateL && !CanNegateR)
         return false;
       // If we the result of the OR will be negated and we can naturally negate
-      // the leafs, then this sub-tree as a whole negates naturally.
+      // the leaves, then this sub-tree as a whole negates naturally.
       CanNegate = WillNegate && CanNegateL && CanNegateR;
       // If we cannot naturally negate the whole sub-tree, then this must be
       // emitted first.
