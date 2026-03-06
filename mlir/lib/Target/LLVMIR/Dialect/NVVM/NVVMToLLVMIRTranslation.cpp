@@ -446,20 +446,14 @@ getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
                    nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
 }
 
-void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
+                                     Value res, NVVM::FPRoundingMode rndMode,
+                                     NVVM::SaturationMode satMode, bool isFTZ,
+                                     LLVM::ModuleTranslation &mt,
                                      llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::AddFOp>(op);
-  NVVM::FPRoundingMode rndMode = thisOp.getRnd();
-  NVVM::SaturationMode satMode = thisOp.getSat();
-  bool isFTZ = thisOp.getFtz();
+  llvm::Type *opTypeLLVM = argLHS->getType();
+  bool isVectorOp = opTypeLLVM->isVectorTy();
   bool isSat = satMode != NVVM::SaturationMode::NONE;
-
-  llvm::Value *argLHS = mt.lookupValue(thisOp.getLhs());
-  llvm::Value *argRHS = mt.lookupValue(thisOp.getRhs());
-
-  mlir::Type opType = thisOp.getLhs().getType();
-  llvm::Type *opTypeLLVM = mt.convertType(opType);
-  bool isVectorAdd = opTypeLLVM->isVectorTy();
 
   // FIXME: Add intrinsics for add.rn.ftz.f16x2 and add.rn.ftz.f16 here when
   // they are available.
@@ -507,8 +501,8 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
       return createIntrinsicCall(builder, IID, callArgs);
     };
 
-    if (isVectorAdd && (opTypeLLVM->getScalarType()->isFloatTy() ||
-                        opTypeLLVM->getScalarType()->isDoubleTy())) {
+    if (isVectorOp && (opTypeLLVM->getScalarType()->isFloatTy() ||
+                       opTypeLLVM->getScalarType()->isDoubleTy())) {
       llvm::Value *result = llvm::PoisonValue::get(
           llvm::FixedVectorType::get(opTypeLLVM->getScalarType(), 2));
       for (int64_t i = 0; i < 2; ++i) {
@@ -531,25 +525,25 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   if (opTypeLLVM->getScalarType()->isHalfTy()) {
     llvm::Value *result;
     if (isSat) {
-      unsigned index = (isVectorAdd << 1) | isFTZ;
+      unsigned index = (isVectorOp << 1) | isFTZ;
       result = addIntrinsic(f16IDs[index]);
     } else {
       result = builder.CreateFAdd(argLHS, argRHS);
     }
-    mt.mapValue(thisOp.getRes(), result);
+    mt.mapValue(res, result);
     return;
   }
 
   // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
   if (opTypeLLVM->getScalarType()->isBFloatTy()) {
-    mt.mapValue(thisOp.getRes(), builder.CreateFAdd(argLHS, argRHS));
+    mt.mapValue(res, builder.CreateFAdd(argLHS, argRHS));
     return;
   }
 
   // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
   if (opTypeLLVM->getScalarType()->isDoubleTy()) {
     unsigned index = static_cast<unsigned>(rndMode);
-    mt.mapValue(thisOp.getRes(), addIntrinsic(f64IDs[index]));
+    mt.mapValue(res, addIntrinsic(f64IDs[index]));
     return;
   }
 
@@ -558,7 +552,7 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   if (opTypeLLVM->getScalarType()->isFloatTy()) {
     unsigned index =
         ((isFTZ << 1) | isSat) * numRndModes + static_cast<unsigned>(rndMode);
-    mt.mapValue(thisOp.getRes(), addIntrinsic(f32IDs[index]));
+    mt.mapValue(res, addIntrinsic(f32IDs[index]));
     return;
   }
 }

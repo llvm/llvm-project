@@ -3059,33 +3059,34 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
-LogicalResult NVVM::AddFOp::verify() {
-  mlir::NVVM::FPRoundingMode rndMode = getRnd();
-  mlir::NVVM::SaturationMode satMode = getSat();
-  bool isFTZ = getFtz();
+template <typename OpType>
+static LogicalResult verifyAddSubFOp(OpType op) {
+  mlir::NVVM::FPRoundingMode rndMode = op.getRnd();
+  mlir::NVVM::SaturationMode satMode = op.getSat();
+  bool isFTZ = op.getFtz();
 
-  mlir::Type opType = getRes().getType();
+  mlir::Type opType = op.getRes().getType();
   mlir::Type opBaseType = isa<VectorType>(opType)
                               ? cast<VectorType>(opType).getElementType()
                               : opType;
 
   if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
-    return emitOpError("FTZ and saturation are not supported for additions "
-                       "involving f64 type");
+    return op.emitOpError("FTZ and saturation are not supported for "
+                          "additions/subtractions involving f64 type");
 
   if (opBaseType.isF16() && !(rndMode == NVVM::FPRoundingMode::RN ||
                               rndMode == NVVM::FPRoundingMode::NONE))
-    return emitOpError("only RN rounding mode is supported for f16 and "
-                       "vector<2xf16> additions");
+    return op.emitOpError("only RN rounding mode is supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
 
   if (opBaseType.isBF16()) {
     if (rndMode != NVVM::FPRoundingMode::RN &&
         rndMode != NVVM::FPRoundingMode::NONE)
-      return emitOpError("only RN rounding mode is supported for bf16 and "
-                         "vector<2xbf16> additions");
+      return op.emitOpError("only RN rounding mode is supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
     if (satMode != NVVM::SaturationMode::NONE || isFTZ)
-      return emitOpError("FTZ and saturation are not supported for bf16 and "
-                         "vector<2xbf16> additions");
+      return op.emitOpError("FTZ and saturation are not supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
   }
 
   // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
@@ -3093,11 +3094,15 @@ LogicalResult NVVM::AddFOp::verify() {
   // should be removed once the intrinsics for f16 addition (with FTZ only) are
   // available.
   if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
-    return emitOpError("FTZ with no saturation is not supported for f16 and "
-                       "vector<2xf16> additions");
+    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
 
   return success();
 }
+
+LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
+
+LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
 
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
