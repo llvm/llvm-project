@@ -798,7 +798,7 @@ bool SIPreEmitPeephole::removeUnconditionalBranchBlocks(MachineFunction &MF) {
         // branch may be created. Using the block difference is a crude but
         // cheap estimate for the distance.  A very conservative limit has been
         // chosen.
-        constexpr unsigned BlockNumDiffLimit = 20;
+        constexpr int BlockNumDiffLimit = 20;
         if (!FuncInfo->getLongBranchReservedReg() ||
             std::abs(Pred->getNumber() - Succ->getNumber()) <
                 BlockNumDiffLimit) {
