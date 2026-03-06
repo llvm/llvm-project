@@ -590,6 +590,11 @@ public:
   /// potentially set the return value.
   bool SawAsmBlock = false;
 
+  /// List of features to accept when the current function emits a late-resolved
+  /// target feature intrinsic like __builtin_is_invocable(). This suppresses
+  /// errors when the required feature is missing as it will be handled by LLVM.
+  llvm::StringSet<> CheckedTargetFeatures;
+
   GlobalDecl CurSEHParent;
 
   /// True if the current function is an outlined SEH helper. This can be a

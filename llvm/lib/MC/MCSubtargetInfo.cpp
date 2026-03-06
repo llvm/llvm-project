@@ -332,6 +332,13 @@ bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
   });
 }
 
+bool MCSubtargetInfo::hasFeatureString(StringRef FeatureName) const {
+  auto It = llvm::lower_bound(ProcFeatures, FeatureName);
+  if (It != ProcFeatures.end() && StringRef(It->Key) == FeatureName)
+    return FeatureBits.test(It->Value);
+  return false;
+}
+
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
   assert(llvm::is_sorted(ProcDesc) &&
          "Processor machine model table is not sorted");

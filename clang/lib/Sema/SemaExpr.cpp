@@ -6758,6 +6758,34 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Result.isInvalid()) return ExprError();
   Fn = Result.get();
 
+  // __builtin_is_invocable takes an unevaluated builtin function reference.
+  // We must resolve it before CheckArgsForPlaceholders rejects BuiltinFnTy.
+  // Replace the argument with an integer literal holding the builtin ID;
+  // CodeGen resolves the required features from the ID at emission time.
+  if (Fn->getType() == Context.BuiltinFnTy && ArgExprs.size() == 1) {
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Fn->IgnoreParenImpCasts())) {
+      auto *CalleeFD = dyn_cast<FunctionDecl>(DRE->getDecl());
+      if (CalleeFD &&
+          CalleeFD->getBuiltinID() == Builtin::BI__builtin_is_invocable) {
+        if (ArgExprs[0]->getType() != Context.BuiltinFnTy) {
+          Diag(ArgExprs[0]->getExprLoc(), diag::err_expr_not_builtin)
+              << ArgExprs[0]->getSourceRange();
+          return ExprError();
+        }
+        auto *ArgDecl = ArgExprs[0]->getReferencedDeclOfCallee();
+        auto *ArgFD = dyn_cast_or_null<FunctionDecl>(ArgDecl);
+        if (!ArgFD || !ArgFD->getBuiltinID()) {
+          Diag(ArgExprs[0]->getExprLoc(), diag::err_expr_not_builtin)
+              << ArgExprs[0]->getSourceRange();
+          return ExprError();
+        }
+        ArgExprs[0] = IntegerLiteral::Create(
+            Context, llvm::APInt(32, ArgFD->getBuiltinID()),
+            Context.UnsignedIntTy, ArgExprs[0]->getExprLoc());
+      }
+    }
+  }
+
   if (CheckArgsForPlaceholders(ArgExprs))
     return ExprError();
 

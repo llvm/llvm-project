@@ -2913,9 +2913,17 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
     StringRef FeatureList(CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     if (!Builtin::evaluateRequiredTargetFeatures(
         FeatureList, CallerFeatureMap) && !IsHipStdPar) {
-      CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
-          << TargetDecl->getDeclName()
-          << FeatureList;
+      // Suppress the diagnostic if every required feature has been checked
+      // via a late-resolved intrinsic in this function.
+      bool AllFeaturesChecked =
+          !FeatureList.empty() &&
+          llvm::all_of(llvm::split(FeatureList, ','), [this](StringRef F) {
+            return CheckedTargetFeatures.contains(F);
+          });
+      if (!AllFeaturesChecked) {
+        CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
+            << TargetDecl->getDeclName() << FeatureList;
+      }
     }
   } else if (!TargetDecl->isMultiVersion() &&
              TargetDecl->hasAttr<TargetAttr>()) {

@@ -108,6 +108,7 @@ add_llvm_component_library(LLVMCodeGen
   LoopTraversal.cpp
   LowLevelTypeUtils.cpp
   LowerEmuTLS.cpp
+  LowerTargetIntrinsics.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
   MachineBlockHashInfo.cpp

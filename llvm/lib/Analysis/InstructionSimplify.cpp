@@ -4429,6 +4429,11 @@ static Value *simplifyWithOpsReplaced(Value *V,
   if (match(I, m_Intrinsic<Intrinsic::is_constant>()))
     return nullptr;
 
+  // Don't fold target reflection intrinsics based on assumptions.
+  if (match(I, m_Intrinsic<Intrinsic::target_has_feature>()) ||
+      match(I, m_Intrinsic<Intrinsic::target_is_cpu>()))
+    return nullptr;
+
   // Don't simplify freeze.
   if (isa<FreezeInst>(I))
     return nullptr;

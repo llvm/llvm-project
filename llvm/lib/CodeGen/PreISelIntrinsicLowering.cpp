@@ -19,9 +19,11 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExpandVectorPredication.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
+#include "llvm/CodeGen/LowerTargetIntrinsics.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
@@ -701,6 +703,17 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         bool Changed = lowerConstantIntrinsics(*Parent, TLI, /*DT=*/nullptr);
         return Changed;
       });
+      break;
+    case Intrinsic::target_has_feature:
+    case Intrinsic::target_is_cpu:
+      if (TM) {
+        SmallPtrSet<Function *, 4> Visited;
+        for (User *U : F.users())
+          if (auto *CI = dyn_cast<CallInst>(U))
+            Visited.insert(CI->getFunction());
+        for (Function *Fn : Visited)
+          Changed |= lowerTargetIntrinsics(*Fn, *TM);
+      }
       break;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, MASKPOS, VLENPOS)                    \
   case Intrinsic::VPID:
