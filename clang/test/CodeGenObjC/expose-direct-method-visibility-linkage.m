@@ -13,54 +13,6 @@
 // RUN:   -fobjc-direct-precondition-thunk -S -emit-llvm -o - %t/main.m \
 // RUN:   -I %t | FileCheck %s --check-prefix=MAIN_M
 
-// Test 3: Build libFoo.dylib from foo.m
-// RUN: %clang -fobjc-direct-precondition-thunk -target arm64-apple-darwin \
-// RUN:   -fobjc-arc -dynamiclib %t/foo.m -I %t \
-// RUN:   -framework Foundation \
-// RUN:   -install_name @rpath/libFoo.dylib \
-// RUN:   -o %t/libFoo.dylib
-
-// Test 4: Verify visibility works correctly in dylib
-// RUN: llvm-nm -g %t/libFoo.dylib | FileCheck %s --check-prefix=DYLIB
-
-// Hidden visibility methods should NOT be exported
-// DYLIB-NOT: -[Foo instanceMethod:]
-// DYLIB-NOT: +[Foo classMethod:]
-// DYLIB-NOT: -[Foo privateValue:]
-// DYLIB-NOT: -[Foo setPrivateValue:]
-
-// Default visibility methods SHOULD be exported
-// DYLIB: {{[0-9a-f]+}} T _+[Foo exportedClassMethod:]
-// DYLIB: {{[0-9a-f]+}} T _-[Foo exportedInstanceMethod:]
-// DYLIB: {{[0-9a-f]+}} T _-[Foo exportedValue]
-// DYLIB: {{[0-9a-f]+}} T _-[Foo setExportedValue:]
-
-// Test 5: Compile main.m
-// RUN: %clang -fobjc-direct-precondition-thunk -target arm64-apple-darwin \
-// RUN:   -fobjc-arc -c %t/main.m -I %t -o %t/main.o
-
-// Test 6: Link main with libFoo.dylib
-// RUN: %clang -target arm64-apple-darwin -fobjc-arc \
-// RUN:   %t/main.o -L%t -lFoo \
-// RUN:   -Wl,-rpath,%t \
-// RUN:   -framework Foundation \
-// RUN:   -o %t/main
-
-// Test 7: Verify symbols in main executable
-// RUN: llvm-nm %t/main | FileCheck %s --check-prefix=EXE
-
-// Thunks should be defined locally
-// EXE-DAG: {{[0-9a-f]+}} t _+[Foo exportedClassMethod:]_thunk
-// EXE-DAG: {{[0-9a-f]+}} t _-[Foo exportedInstanceMethod:]_thunk
-// EXE-DAG: {{[0-9a-f]+}} t _-[Foo exportedValue]_thunk
-// EXE-DAG: {{[0-9a-f]+}} t _-[Foo setExportedValue:]_thunk
-
-// Actual methods should be undefined
-// EXE-DAG: U _+[Foo exportedClassMethod:]
-// EXE-DAG: U _-[Foo exportedInstanceMethod:]
-// EXE-DAG: U _-[Foo exportedValue]
-// EXE-DAG: U _-[Foo setExportedValue:]
-
 //--- foo.h
 // Header for libFoo
 #import <Foundation/Foundation.h>

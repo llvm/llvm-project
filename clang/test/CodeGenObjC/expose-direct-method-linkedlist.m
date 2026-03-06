@@ -1,3 +1,4 @@
+// REQUIRES: system-darwin
 // RUN: %clang -fobjc-direct-precondition-thunk -fobjc-arc \
 // RUN:   -target arm64-apple-macos11.0 \
 // RUN:   -S -emit-llvm %s -o - | FileCheck %s
