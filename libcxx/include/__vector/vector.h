@@ -698,7 +698,7 @@ private:
     return std::__make_bounded_iter(
         std::__wrap_iter<pointer>(__p),
         std::__wrap_iter<pointer>(this->__layout_.__begin_ptr()),
-        std::__wrap_iter<pointer>(this->__capacity_ptr()));
+        std::__wrap_iter<pointer>(this->__layout_.__capacity_ptr()));
 #else
     return iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -710,7 +710,7 @@ private:
     return std::__make_bounded_iter(
         std::__wrap_iter<const_pointer>(__p),
         std::__wrap_iter<const_pointer>(this->__layout_.__begin_ptr()),
-        std::__wrap_iter<const_pointer>(this->__capacity_ptr()));
+        std::__wrap_iter<const_pointer>(this->__layout_.__capacity_ptr()));
 #else
     return const_iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
