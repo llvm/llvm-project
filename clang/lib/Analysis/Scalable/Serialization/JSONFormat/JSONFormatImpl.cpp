@@ -651,9 +651,8 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
   const auto &InfoEntry = InfoIt->second;
   assert(InfoEntry.ForSummary == SN);
 
-  return InfoEntry.Deserialize(
-      EntitySummaryObject, IdTable,
-      [](const Object &Obj) { return entityIdFromJSONObject(Obj); });
+  return InfoEntry.Deserialize(EntitySummaryObject, IdTable,
+                               entityIdFromJSONObject);
 }
 
 llvm::Expected<Object>
@@ -670,8 +669,7 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
   const auto &InfoEntry = InfoIt->second;
   assert(InfoEntry.ForSummary == SN);
 
-  return InfoEntry.Serialize(
-      ES, [](EntityId EI) { return entityIdToJSONObject(EI); });
+  return InfoEntry.Serialize(ES, entityIdToJSONObject);
 }
 
 //----------------------------------------------------------------------------

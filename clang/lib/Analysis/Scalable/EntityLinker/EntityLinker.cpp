@@ -187,9 +187,5 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
 
   auto EntityResolutionTable = resolve(SummaryRef);
   auto PatchTargets = merge(SummaryRef, EntityResolutionTable);
-  if (auto Err = patch(PatchTargets, EntityResolutionTable)) {
-    return Err;
-  }
-
-  return llvm::Error::success();
+  return patch(PatchTargets, EntityResolutionTable);
 }

@@ -123,7 +123,7 @@
   ],
   "data": [
     {
-      "summary_name": "CallGraph",
+      "summary_name": "Analysis1",
       "summary_data": [
         {
           "entity_id": 0,
@@ -212,7 +212,7 @@
       ]
     },
     {
-      "summary_name": "TypeInfo",
+      "summary_name": "Analysis2",
       "summary_data": [
         {
           "entity_id": 0,

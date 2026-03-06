@@ -154,7 +154,7 @@
           }
         }
       ],
-      "summary_name": "CallGraph"
+      "summary_name": "Analysis1"
     },
     {
       "summary_data": [
@@ -395,7 +395,7 @@
           }
         }
       ],
-      "summary_name": "TypeInfo"
+      "summary_name": "Analysis2"
     }
   ],
   "id_table": [

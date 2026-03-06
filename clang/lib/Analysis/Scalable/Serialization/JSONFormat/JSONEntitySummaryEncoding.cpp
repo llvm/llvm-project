@@ -11,13 +11,9 @@
 
 namespace clang::ssaf {
 
-llvm::Expected<bool> JSONEntitySummaryEncoding::patchEntityIdObject(
-    llvm::json::Object &Obj, const std::map<EntityId, EntityId> &Table) {
-
-  llvm::json::Value *AtVal = Obj.get(JSONEntityIdKey);
-  if (!AtVal) {
-    return false;
-  }
+llvm::Error JSONEntitySummaryEncoding::patchEntityIdObject(
+    llvm::json::Object &Obj, const std::map<EntityId, EntityId> &Table,
+    llvm::json::Value *AtVal) {
 
   if (Obj.size() != 1) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -45,29 +41,25 @@ llvm::Expected<bool> JSONEntitySummaryEncoding::patchEntityIdObject(
 
   *AtVal = static_cast<uint64_t>(JSONFormat::getIndex(It->second));
 
-  return true;
+  return llvm::Error::success();
+}
+
+llvm::Error JSONEntitySummaryEncoding::patchRegularObject(
+    llvm::json::Object &Obj, const std::map<EntityId, EntityId> &Table) {
+  for (auto &[Key, Val] : Obj) {
+    if (auto Err = patchValue(Val, Table)) {
+      return Err;
+    }
+  }
+  return llvm::Error::success();
 }
 
 llvm::Error JSONEntitySummaryEncoding::patchObject(
     llvm::json::Object &Obj, const std::map<EntityId, EntityId> &Table) {
 
-  auto ExpectedIsEntityId = patchEntityIdObject(Obj, Table);
-
-  if (!ExpectedIsEntityId) {
-    return ExpectedIsEntityId.takeError();
-  }
-
-  bool IsEntityId = *ExpectedIsEntityId;
-
-  if (!IsEntityId) {
-    for (auto &[Key, Val] : Obj) {
-      if (auto Err = patchValue(Val, Table)) {
-        return Err;
-      }
-    }
-  }
-
-  return llvm::Error::success();
+  llvm::json::Value *AtVal = Obj.get(JSONEntityIdKey);
+  return AtVal ? patchEntityIdObject(Obj, Table, AtVal)
+               : patchRegularObject(Obj, Table);
 }
 
 llvm::Error JSONEntitySummaryEncoding::patchValue(

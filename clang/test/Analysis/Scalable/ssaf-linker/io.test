@@ -5,20 +5,19 @@
 
 // Malformed JSON input.
 // RUN: not ssaf-linker %S/Inputs/tu-malformed.json -o %t/out.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=BAD-JSON -DPATH=%S/Inputs/tu-malformed.json
-// BAD-JSON: ssaf-linker: error: reading TUSummary from file '[[PATH]]'
-// BAD-JSON: Invalid JSON value
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=BAD-JSON
+// BAD-JSON:      ssaf-linker: error: reading TUSummary from file '{{.*}}tu-malformed.json'
+// BAD-JSON-NEXT: {{.*}}: Invalid JSON value{{.*}}
 
 // Missing required fields in otherwise valid JSON.
 // RUN: not ssaf-linker %S/Inputs/tu-missing-fields.json -o %t/out.json 2>&1 \
-//        | FileCheck %s --check-prefix=MISSING-FIELDS -DPATH=%S/Inputs/tu-missing-fields.json
-// MISSING-FIELDS: ssaf-linker: error: reading TUSummary from file '[[PATH]]'
-// MISSING-FIELDS: failed to read IdTable from field 'id_table': expected JSON array
+// RUN:        | FileCheck %s --match-full-lines --check-prefix=MISSING-FIELDS
+// MISSING-FIELDS:      ssaf-linker: error: reading TUSummary from file '{{.*}}tu-missing-fields.json'
+// MISSING-FIELDS-NEXT: failed to read IdTable from field 'id_table': expected JSON array
 
 // Output file already exists.
 // RUN: touch %t/out.json
-// RUN: ssaf-linker %S/Inputs/tu-empty.json -o %t/out.json
 // RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %t/out.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=OUTPUT-EXISTS -DPATH=%t/out.json
-// OUTPUT-EXISTS: ssaf-linker: error: writing LUSummary to file '[[PATH]]'
-// OUTPUT-EXISTS: failed to write file '[[PATH]]': file already exists
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-EXISTS
+// OUTPUT-EXISTS:      ssaf-linker: error: writing LUSummary to file '{{.*}}out.json'
+// OUTPUT-EXISTS-NEXT: failed to write file '{{.*}}out.json': file already exists

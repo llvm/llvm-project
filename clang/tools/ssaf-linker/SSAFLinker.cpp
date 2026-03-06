@@ -66,18 +66,18 @@ cl::opt<bool> Time("time", cl::desc("Enable timing"), cl::init(false),
 namespace ErrorMessages {
 
 constexpr const char *CannotValidateSummary =
-    "failed to validate summary '{0}': {1}.";
+    "failed to validate summary '{0}': {1}";
 
 constexpr const char *OutputDirectoryMissing =
-    "Parent directory does not exist.";
+    "Parent directory does not exist";
 
 constexpr const char *OutputDirectoryNotWritable =
-    "Parent directory is not writable.";
+    "Parent directory is not writable";
 
-constexpr const char *ExtensionNotSupplied = "Extension not supplied.";
+constexpr const char *ExtensionNotSupplied = "Extension not supplied";
 
 constexpr const char *NoFormatForExtension =
-    "Format not registered for extension '{0}'.";
+    "Format not registered for extension '{0}'";
 
 constexpr const char *LinkingSummary = "Linking summary '{0}'";
 
@@ -91,24 +91,23 @@ constexpr unsigned IndentationWidth = 2;
 
 llvm::StringRef ToolName;
 
-template <typename... Ts> [[noreturn]] void Fail(const char *Msg) {
+template <typename... Ts> [[noreturn]] void fail(const char *Msg) {
   llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
   llvm::sys::Process::Exit(1);
 }
 
 template <typename... Ts>
-[[noreturn]] void Fail(const char *Fmt, Ts &&...Args) {
+[[noreturn]] void fail(const char *Fmt, Ts &&...Args) {
   std::string Message = llvm::formatv(Fmt, std::forward<Ts>(Args)...);
-  Fail(Message.data());
+  fail(Message.data());
 }
 
-template <typename... Ts> [[noreturn]] void Fail(llvm::Error Err) {
-  std::string Message = toString(std::move(Err));
-  Fail(Message.data());
+template <typename... Ts> [[noreturn]] void fail(llvm::Error Err) {
+  fail(toString(std::move(Err)).data());
 }
 
 template <typename... Ts>
-void Info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
+void info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
   if (Verbose) {
     llvm::WithColor::note()
         << std::string(IndentationLevel * IndentationWidth, ' ') << "- "
@@ -120,7 +119,7 @@ void Info(unsigned IndentationLevel, const char *Fmt, Ts &&...Args) {
 // Format Registry
 //===----------------------------------------------------------------------===//
 
-SerializationFormat *GetFormatForExtension(llvm::StringRef Extension) {
+SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
   static llvm::SmallVector<
       std::pair<std::string, std::unique_ptr<SerializationFormat>>, 4>
       ExtensionFormatList;
@@ -158,18 +157,18 @@ struct SummaryFile {
   std::string Path;
   SerializationFormat *Format = nullptr;
 
-  static SummaryFile FromPath(llvm::StringRef Path) {
+  static SummaryFile fromPath(llvm::StringRef Path) {
     llvm::StringRef Extension = path::extension(Path);
     if (Extension.empty()) {
-      Fail(ErrorMessages::CannotValidateSummary, Path,
+      fail(ErrorMessages::CannotValidateSummary, Path,
            ErrorMessages::ExtensionNotSupplied);
     }
     Extension = Extension.drop_front();
-    SerializationFormat *Format = GetFormatForExtension(Extension);
+    SerializationFormat *Format = getFormatForExtension(Extension);
     if (!Format) {
       std::string BadExtension =
           llvm::formatv(ErrorMessages::NoFormatForExtension, Extension);
-      Fail(ErrorMessages::CannotValidateSummary, Path, BadExtension);
+      fail(ErrorMessages::CannotValidateSummary, Path, BadExtension);
     }
     return {Path.str(), Format};
   }
@@ -181,13 +180,13 @@ struct LinkerInput {
   std::string LinkUnitName;
 };
 
-static void PrintVersion(llvm::raw_ostream &OS) { OS << ToolName << " 0.1\n"; }
+static void printVersion(llvm::raw_ostream &OS) { OS << ToolName << " 0.1\n"; }
 
 //===----------------------------------------------------------------------===//
 // Pipeline
 //===----------------------------------------------------------------------===//
 
-LinkerInput Validate(llvm::TimerGroup &TG) {
+LinkerInput validate(llvm::TimerGroup &TG) {
   llvm::Timer TValidate("validate", "Validate Input", TG);
   LinkerInput LI;
 
@@ -197,20 +196,20 @@ LinkerInput Validate(llvm::TimerGroup &TG) {
     llvm::StringRef DirToCheck = ParentDir.empty() ? "." : ParentDir;
 
     if (!fs::exists(DirToCheck)) {
-      Fail(ErrorMessages::CannotValidateSummary, OutputPath,
+      fail(ErrorMessages::CannotValidateSummary, OutputPath,
            ErrorMessages::OutputDirectoryMissing);
     }
 
     if (fs::access(DirToCheck, fs::AccessMode::Write)) {
-      Fail(ErrorMessages::CannotValidateSummary, OutputPath,
+      fail(ErrorMessages::CannotValidateSummary, OutputPath,
            ErrorMessages::OutputDirectoryNotWritable);
     }
 
-    LI.OutputFile = SummaryFile::FromPath(OutputPath);
+    LI.OutputFile = SummaryFile::fromPath(OutputPath);
     LI.LinkUnitName = path::stem(LI.OutputFile.Path).str();
   }
 
-  Info(2, "Validated output summary path '{0}'.", LI.OutputFile.Path);
+  info(2, "Validated output summary path '{0}'.", LI.OutputFile.Path);
 
   {
     llvm::TimeRegion _(Time ? &TValidate : nullptr);
@@ -218,19 +217,19 @@ LinkerInput Validate(llvm::TimerGroup &TG) {
       llvm::SmallString<256> RealPath;
       std::error_code EC = fs::real_path(InputPath, RealPath, true);
       if (EC) {
-        Fail(ErrorMessages::CannotValidateSummary, InputPath, EC.message());
+        fail(ErrorMessages::CannotValidateSummary, InputPath, EC.message());
       }
-      LI.InputFiles.push_back(SummaryFile::FromPath(RealPath));
+      LI.InputFiles.push_back(SummaryFile::fromPath(RealPath));
     }
   }
 
-  Info(2, "Validated {0} input summary paths.", LI.InputFiles.size());
+  info(2, "Validated {0} input summary paths.", LI.InputFiles.size());
 
   return LI;
 }
 
-void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
-  Info(2, "Constructing linker.");
+void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
+  info(2, "Constructing linker.");
 
   EntityLinker EL(NestedBuildNamespace(
       BuildNamespace(BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
@@ -239,13 +238,13 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
   llvm::Timer TLink("link", "Link Summaries", TG);
   llvm::Timer TWrite("write", "Write Summary", TG);
 
-  Info(2, "Linking summaries.");
+  info(2, "Linking summaries.");
 
   for (auto [Index, InputFile] : llvm::enumerate(LI.InputFiles)) {
     std::unique_ptr<TUSummaryEncoding> Summary;
 
     {
-      Info(3, "[{0}/{1}] Reading '{2}'.", (Index + 1), LI.InputFiles.size(),
+      info(3, "[{0}/{1}] Reading '{2}'.", (Index + 1), LI.InputFiles.size(),
            InputFile.Path);
 
       llvm::TimeRegion _(Time ? &TRead : nullptr);
@@ -253,7 +252,7 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
       auto ExpectedSummaryEncoding =
           InputFile.Format->readTUSummaryEncoding(InputFile.Path);
       if (!ExpectedSummaryEncoding) {
-        Fail(ExpectedSummaryEncoding.takeError());
+        fail(ExpectedSummaryEncoding.takeError());
       }
 
       Summary = std::make_unique<TUSummaryEncoding>(
@@ -261,13 +260,13 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
     }
 
     {
-      Info(3, "[{0}/{1}] Linking '{2}'.", (Index + 1), LI.InputFiles.size(),
+      info(3, "[{0}/{1}] Linking '{2}'.", (Index + 1), LI.InputFiles.size(),
            InputFile.Path);
 
       llvm::TimeRegion _(Time ? &TLink : nullptr);
 
       if (auto Err = EL.link(std::move(Summary))) {
-        Fail(ErrorBuilder::wrap(std::move(Err))
+        fail(ErrorBuilder::wrap(std::move(Err))
                  .context(ErrorMessages::LinkingSummary, InputFile.Path)
                  .build());
       }
@@ -275,14 +274,14 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
   }
 
   {
-    Info(2, "Writing output summary to '{0}'.", LI.OutputFile.Path);
+    info(2, "Writing output summary to '{0}'.", LI.OutputFile.Path);
 
     llvm::TimeRegion _(Time ? &TWrite : nullptr);
 
     auto Output = std::move(EL).getOutput();
     if (auto Err = LI.OutputFile.Format->writeLUSummaryEncoding(
             Output, LI.OutputFile.Path)) {
-      Fail(std::move(Err));
+      fail(std::move(Err));
     }
   }
 }
@@ -295,12 +294,13 @@ void Link(const LinkerInput &LI, llvm::TimerGroup &TG) {
 
 int main(int argc, const char **argv) {
   InitLLVM X(argc, argv);
-  ToolName = llvm::sys::path::filename(argv[0]);
+  // path::stem strips the .exe extension on Windows so ToolName is consistent.
+  ToolName = llvm::sys::path::stem(argv[0]);
 
   // Hide options unrelated to ssaf-linker from --help output.
   cl::HideUnrelatedOptions(SsafLinkerCategory);
   // Register a custom version printer for the --version flag.
-  cl::SetVersionPrinter(PrintVersion);
+  cl::SetVersionPrinter(printVersion);
   // Parse command-line arguments and exit with an error if they are invalid.
   cl::ParseCommandLineOptions(argc, argv, "SSAF Linker\n");
 
@@ -310,19 +310,19 @@ int main(int argc, const char **argv) {
   LinkerInput LI;
 
   {
-    Info(0, "Linking started.");
+    info(0, "Linking started.");
 
     {
-      Info(1, "Validating input.");
-      LI = Validate(LinkerTimers);
+      info(1, "Validating input.");
+      LI = validate(LinkerTimers);
     }
 
     {
-      Info(1, "Linking input.");
-      Link(LI, LinkerTimers);
+      info(1, "Linking input.");
+      link(LI, LinkerTimers);
     }
 
-    Info(0, "Linking finished.");
+    info(0, "Linking finished.");
   }
 
   return 0;

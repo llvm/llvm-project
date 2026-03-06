@@ -5,24 +5,24 @@
 
 // Linking the same TU namespace twice produces an error.
 // RUN: not ssaf-linker %S/Inputs/tu-empty.json %S/Inputs/tu-empty.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=DUP-NS -DPATH=%S/Inputs/tu-empty.json
-// DUP-NS: ssaf-linker: error: Linking summary '[[PATH]]'
-// DUP-NS: failed to link TU summary: duplicate BuildNamespace(CompilationUnit, empty.cpp)
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUP-NS
+// DUP-NS:      ssaf-linker: error: Linking summary '{{.*}}tu-empty.json'
+// DUP-NS-NEXT: failed to link TU summary: duplicate BuildNamespace(CompilationUnit, empty.cpp)
 
 // Entity ID object in summary data blob with '@' key alongside extra keys is a fatal error.
 // RUN: not ssaf-linker %S/Inputs/tu-invalid-entity-id-multikey.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=INVALID-ID-MULTIKEY -DPATH=%S/Inputs/tu-invalid-entity-id-multikey.json
-// INVALID-ID-MULTIKEY: ssaf-linker: error: Linking summary '[[PATH]]'
-// INVALID-ID-MULTIKEY: failed to read EntityId: expected JSON object with a single '@' key mapped to a number (unsigned 64-bit integer)
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-MULTIKEY
+// INVALID-ID-MULTIKEY:      ssaf-linker: error: Linking summary '{{.*}}tu-invalid-entity-id-multikey.json'
+// INVALID-ID-MULTIKEY-NEXT: failed to read EntityId: expected JSON object with a single '@' key mapped to a number (unsigned 64-bit integer)
 
 // Entity ID object in summary data blob with a non-uint64 '@' value is a fatal error.
 // RUN: not ssaf-linker %S/Inputs/tu-invalid-entity-id-value.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=INVALID-ID-VALUE -DPATH=%S/Inputs/tu-invalid-entity-id-value.json
-// INVALID-ID-VALUE: ssaf-linker: error: Linking summary '[[PATH]]'
-// INVALID-ID-VALUE: failed to read EntityId: expected JSON object with a single '@' key mapped to a number (unsigned 64-bit integer)
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-VALUE
+// INVALID-ID-VALUE:      ssaf-linker: error: Linking summary '{{.*}}tu-invalid-entity-id-value.json'
+// INVALID-ID-VALUE-NEXT: failed to read EntityId: expected JSON object with a single '@' key mapped to a number (unsigned 64-bit integer)
 
 // Entity ID reference in summary data blob pointing to an ID absent from the resolution table
 // RUN: not ssaf-linker %S/Inputs/tu-invalid-entity-id-ref.json -o %t/lu.json 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=INVALID-ID-REF -DPATH=%S/Inputs/tu-invalid-entity-id-ref.json
-// INVALID-ID-REF: ssaf-linker: error: Linking summary '[[PATH]]'
-// INVALID-ID-REF: failed to patch EntityId: 'EntityId(99)' not found in entity resolution table
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-REF
+// INVALID-ID-REF:      ssaf-linker: error: Linking summary '{{.*}}tu-invalid-entity-id-ref.json'
+// INVALID-ID-REF-NEXT: failed to patch EntityId: 'EntityId(99)' not found in entity resolution table

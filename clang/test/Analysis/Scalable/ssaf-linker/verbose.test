@@ -4,17 +4,17 @@
 // RUN: mkdir -p %t
 
 // RUN: ssaf-linker --verbose %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
-// RUN:           | FileCheck %s -DINPUT=%S/Inputs -DOUTPUT=%t
-// CHECK: note: - Linking started.
-// CHECK: note:   - Validating input.
-// CHECK: note:     - Validated output summary path '[[OUTPUT]]/lu-1+2.json'.
-// CHECK: note:     - Validated 2 input summary paths.
-// CHECK: note:   - Linking input.
-// CHECK: note:     - Constructing linker.
-// CHECK: note:     - Linking summaries.
-// CHECK: note:       - [1/2] Reading '[[INPUT]]/tu-1.json'.
-// CHECK: note:       - [1/2] Linking '[[INPUT]]/tu-1.json'.
-// CHECK: note:       - [2/2] Reading '[[INPUT]]/tu-2.json'.
-// CHECK: note:       - [2/2] Linking '[[INPUT]]/tu-2.json'.
-// CHECK: note:     - Writing output summary to '[[OUTPUT]]/lu-1+2.json'.
-// CHECK: note: - Linking finished.
+// RUN:           | FileCheck %s --match-full-lines
+// CHECK:      note: - Linking started.
+// CHECK-NEXT: note:   - Validating input.
+// CHECK-NEXT: note:     - Validated output summary path '{{.*}}lu-1+2.json'.
+// CHECK-NEXT: note:     - Validated 2 input summary paths.
+// CHECK-NEXT: note:   - Linking input.
+// CHECK-NEXT: note:     - Constructing linker.
+// CHECK-NEXT: note:     - Linking summaries.
+// CHECK-NEXT: note:       - [1/2] Reading '{{.*}}tu-1.json'.
+// CHECK-NEXT: note:       - [1/2] Linking '{{.*}}tu-1.json'.
+// CHECK-NEXT: note:       - [2/2] Reading '{{.*}}tu-2.json'.
+// CHECK-NEXT: note:       - [2/2] Linking '{{.*}}tu-2.json'.
+// CHECK-NEXT: note:     - Writing output summary to '{{.*}}lu-1+2.json'.
+// CHECK-NEXT: note: - Linking finished.

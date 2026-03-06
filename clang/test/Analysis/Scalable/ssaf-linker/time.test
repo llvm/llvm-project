@@ -4,14 +4,14 @@
 // RUN: mkdir -p %t
 
 // RUN: ssaf-linker --time %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
-// RUN:           | FileCheck %s
-// CHECK: ===-------------------------------------------------------------------------===
-// CHECK:                                   SSAF Linker
-// CHECK: ===-------------------------------------------------------------------------===
-// CHECK: Total Execution Time: {{[0-9.]+}} seconds ({{[0-9.]+}} wall clock)
-// CHECK: ---User Time---   --System Time--   --User+System--   ---Wall Time---
-// CHECK-DAG: {{.*}}Write Summary
-// CHECK-DAG: {{.*}}Read Summaries
-// CHECK-DAG: {{.*}}Link Summaries
-// CHECK-DAG: {{.*}}Validate Input
-// CHECK: {{.*}}Total
+// RUN:           | FileCheck %s --match-full-lines
+// CHECK:      ===-------------------------------------------------------------------------===
+// CHECK-NEXT: {{[ ]+}}SSAF Linker
+// CHECK-NEXT: ===-------------------------------------------------------------------------===
+// CHECK-NEXT:   Total Execution Time: {{[0-9.]+}} seconds ({{[0-9.]+}} wall clock)
+// CHECK:      {{.*}}---Wall Time---{{.*}}
+// CHECK-DAG:  {{.*}}Write Summary
+// CHECK-DAG:  {{.*}}Read Summaries
+// CHECK-DAG:  {{.*}}Link Summaries
+// CHECK-DAG:  {{.*}}Validate Input
+// CHECK:      {{.*}}Total
