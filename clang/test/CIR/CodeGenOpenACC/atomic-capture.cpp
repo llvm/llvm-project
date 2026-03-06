@@ -20,7 +20,7 @@ void use(int x, int v, float f, HasOps ops) {
 
   // CHECK-NEXT: %[[X_LOAD:.*]] = cir.load{{.*}} %[[X_ALLOCA]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[V_LOAD:.*]] = cir.load{{.*}} %[[V_ALLOCA]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[X_LOAD]], %[[V_LOAD]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp ne %[[X_LOAD]], %[[V_LOAD]] : !s32i
   // CHECK-NEXT: %[[IF_COND_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP:.*]] : !cir.bool to i1
   // CHECK-NEXT: acc.atomic.capture if(%[[IF_COND_CAST]]) {
   // CHECK-NEXT: acc.atomic.read %[[V_ALLOCA]] = %[[X_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !s32i

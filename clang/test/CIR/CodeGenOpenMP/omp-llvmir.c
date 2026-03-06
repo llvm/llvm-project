@@ -16,7 +16,7 @@
 // CIR:       cir.for : cond {
 // CIR:         [[LOAD1:%.*]] = cir.load align(4) [[I]] : !cir.ptr<!s32i>, !s32i
 // CIR:         [[LIMIT:%.*]] = cir.const #cir.int<10000> : !s32i
-// CIR:         [[CMP:%.*]] = cir.cmp(lt, [[LOAD1]], [[LIMIT]]) : !s32i, !cir.bool
+// CIR:         [[CMP:%.*]] = cir.cmp lt [[LOAD1]], [[LIMIT]] : !s32i
 // CIR:         cir.condition([[CMP]])
 // CIR:       } body {
 // CIR:         [[ZERO2:%.*]] = cir.const #cir.int<0> : !s32i
