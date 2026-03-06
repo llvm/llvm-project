@@ -47,6 +47,19 @@ public:
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
+  /// This function merges the user overwrite features (provided via -Y option)
+  /// with the subtarget features retrieved from the ELF. It also validates the
+  /// user overwrite feature string and only valid flags are included in the
+  /// final feature string.
+  /// \param[in] subtarget_features
+  ///     Sub-target feature string retrieved from ELF attributes.
+  /// \param[in,out] subtarget_features
+  ///     The feature string contains the user-specified overrides, on
+  ///     return, this string updated to contain the fully merged and validated
+  ///     feature string.
+  static void UpdateSubtargetFeatures(const llvm::StringRef &subtarget_features,
+                                      std::string &user_feature_overrides);
+
 protected:
   friend class InstructionLLVMC;
 

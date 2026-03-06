@@ -275,7 +275,7 @@ private:
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
 
-  static void ParseRISCVAttributes(lldb_private::DataExtractor &data,
+  static void ParseRISCVAttributes(const lldb_private::DataExtractor &data,
                                    uint64_t length,
                                    lldb_private::ArchSpec &arch_spec);
 

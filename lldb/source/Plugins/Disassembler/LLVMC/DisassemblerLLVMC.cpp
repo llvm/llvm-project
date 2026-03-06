@@ -30,6 +30,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -1465,6 +1466,86 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
   return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
+void DisassemblerLLVMC::UpdateSubtargetFeatures(
+    const llvm::StringRef &subtarget_features,
+    std::string &user_feature_overrides) {
+
+  std::string warning_reason;
+  llvm::raw_string_ostream ostream(warning_reason);
+  std::vector<std::string> valid_user_flags;
+  std::set<std::string> user_disabled_features;
+
+  for (llvm::StringRef flag : llvm::split(user_feature_overrides, ",")) {
+    bool is_valid = true;
+    flag = flag.trim();
+
+    if (flag.empty())
+      continue;
+
+    // 1. Must be at least 2 chars (e.g., "+a").
+    // 2. Name cannot start with a digit (e.g. "+123" is invalid).
+    // 3. Must start with '+' or '-'.
+    // 4. All characters after the sign must be alphabets.
+    if (flag.size() < 2) {
+      is_valid = false;
+      ostream << "must have a name";
+    } else if (std::isdigit(static_cast<unsigned char>(flag[1]))) {
+      is_valid = false;
+      ostream << "name cannot start with a digit";
+    } else if (flag.front() != '+' && flag.front() != '-') {
+      is_valid = false;
+      ostream << "must start with '+' or '-'";
+    } else if (!std::all_of(flag.begin() + 1, flag.end(), [](unsigned char c) {
+                 return std::isalnum(c) || c == '_';
+               })) {
+      is_valid = false;
+      ostream << "contains invalid characters";
+    }
+    if (!is_valid) {
+      std::string message =
+          (" Feature flag '" + flag + "': " + warning_reason + ". Ignoring.")
+              .str();
+      lldb_private::Debugger::ReportWarning(message, std::nullopt);
+      continue;
+    }
+    valid_user_flags.push_back(flag.str());
+
+    if (flag.starts_with('-'))
+      user_disabled_features.insert(flag.substr(1).str());
+  }
+
+  // User feature string with only valid flags.
+  std::vector<std::string> final_features;
+
+  // Allow users to override default additional features.
+  if (!subtarget_features.empty()) {
+    for (llvm::StringRef flag : llvm::split(subtarget_features, ",")) {
+      flag = flag.trim();
+      if (flag.empty())
+        continue;
+      // By default, if both +flag and -flag are present in the feature string,
+      // disassembler keeps the feature enabled (+flag).
+      // To respect user intent, we make -flag(user) take priority over the
+      // default +flag coming from ELF.
+      bool add_flag = true;
+      if (flag.size() >= 2 && flag.starts_with('+')) {
+        llvm::StringRef feature_name = flag.substr(1);
+        if (user_disabled_features.count(feature_name.str())) {
+          add_flag = false;
+        }
+      }
+      if (add_flag) {
+        final_features.push_back(flag.str());
+      }
+    }
+  }
+
+  // Append user flags.
+  final_features.insert(final_features.end(), valid_user_flags.begin(),
+                        valid_user_flags.end());
+  user_feature_overrides = llvm::join(final_features, ",");
+}
+
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
                                      const char *flavor_string,
                                      const char *cpu_string,
@@ -1592,28 +1673,33 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       cpu = "apple-latest";
   }
 
-  if (triple.isRISCV() && !cpu_or_features_overriden) {
+  if (triple.isRISCV()) {
     auto subtarget_features = arch.GetSubtargetFeatures().getString();
-    if (!subtarget_features.empty()) {
-      features_str += subtarget_features;
+    if (!cpu_or_features_overriden) {
+      if (!subtarget_features.empty()) {
+        features_str += subtarget_features;
+      } else {
+        uint32_t arch_flags = arch.GetFlags();
+        if (arch_flags & ArchSpec::eRISCV_rvc)
+          features_str += "+c,";
+        if (arch_flags & ArchSpec::eRISCV_rve)
+          features_str += "+e,";
+        if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
+            ArchSpec::eRISCV_float_abi_single)
+          features_str += "+f,";
+        if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
+            ArchSpec::eRISCV_float_abi_double)
+          features_str += "+f,+d,";
+        if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
+            ArchSpec::eRISCV_float_abi_quad)
+          features_str += "+f,+d,+q,";
+        // FIXME: how do we detect features such as `+a`, `+m`?
+        // Turn them on by default now, since everyone seems to use them
+        features_str += "+a,+m,";
+      }
     } else {
-      uint32_t arch_flags = arch.GetFlags();
-      if (arch_flags & ArchSpec::eRISCV_rvc)
-        features_str += "+c,";
-      if (arch_flags & ArchSpec::eRISCV_rve)
-        features_str += "+e,";
-      if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
-          ArchSpec::eRISCV_float_abi_single)
-        features_str += "+f,";
-      if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
-          ArchSpec::eRISCV_float_abi_double)
-        features_str += "+f,+d,";
-      if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
-          ArchSpec::eRISCV_float_abi_quad)
-        features_str += "+f,+d,+q,";
-      // FIXME: how do we detect features such as `+a`, `+m`?
-      // Turn them on by default now, since everyone seems to use them
-      features_str += "+a,+m,";
+      // Merges default subtarget features with user overrides.
+      UpdateSubtargetFeatures(subtarget_features, features_str);
     }
   }
 

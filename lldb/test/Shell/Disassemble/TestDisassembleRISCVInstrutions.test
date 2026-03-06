@@ -1,0 +1,45 @@
+# REQUIRES: target=riscv32-{{.*}}
+
+# RUN: yaml2obj %s -o %t
+
+# Explicitly Enable via -Y (+zca).
+# RUN: %lldb -b -o "disassemble -b -n main -Y +zca" %t | FileCheck %s --check-prefix=CHECK-ZCA
+
+# Explicitly Disable via -Y (-zca).
+# RUN: %lldb -b -o "disassemble -b -n main -Y -zca" %t | FileCheck %s --check-prefix=CHECK-NOZCA
+
+# Verify target.disassembly-features setting works.
+# RUN: %lldb -b -o "settings set target.disassembly-features +zca" -o "disassemble -b -n main" %t | FileCheck %s --check-prefix=CHECK-ZCA
+
+# Ensure that the feature is implicitly enabled by reading the ELF
+# attribute, even when no explicit enable flag is provided.
+# RUN: %lldb -b -o "disassemble -b -n main" %t | FileCheck %s --check-prefix=CHECK-ZCA
+
+# CHECK-ZCA:      4505   li     a0, 0x1
+# CHECK-ZCA-NEXT: 0505   addi   a0, a0, 0x1
+
+# CHECK-NOZCA:     <unknown>
+# CHECK-NOZCA-NOT: li
+# CHECK-NOZCA-NOT: addi
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         05450505
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    # This hex encodes: Format=A, Section Length=32, Vendor="riscv", Tag_File=1, Size=21, Tag_Arch=rv32i2p1_zca1p0
+    Content:         412000000072697363760001150000000572763332693270315F7A636131703000
+Symbols:
+  - Name:            main
+    Section:         .text
+    Value:           0x0
+    Size:            0x4

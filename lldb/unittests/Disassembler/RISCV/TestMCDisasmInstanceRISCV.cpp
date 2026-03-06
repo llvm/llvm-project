@@ -28,6 +28,13 @@ public:
   static void TearDownTestCase();
 
 protected:
+  // Helper wrapper to call the UpdateSubtargetFeatures function under test.
+  void CheckFeatures(llvm::StringRef defaults, std::string user_input,
+                     llvm::StringRef expected) {
+    std::string features = user_input;
+    DisassemblerLLVMC::UpdateSubtargetFeatures(defaults, features);
+    EXPECT_EQ(features, expected.str());
+  }
 };
 
 void TestMCDisasmInstanceRISCV::SetUpTestCase() {
@@ -139,4 +146,40 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
     inst_sp->GetOpcode().Dump(&s, 1);
     ASSERT_STREQ(s.GetString().str().c_str(), expected_outputs[i]);
   }
+}
+
+// Unit test cases to validate UpdateSubtargetFeatures.
+TEST_F(TestMCDisasmInstanceRISCV, IgnoresInvalidFlagsWithoutStopping) {
+  // "bad" is invalid (no +/-).
+  // It should be ignored, but "+valid" should still be processed.
+  // Console output should show: Warning: Malformed feature 'bad'...
+  CheckFeatures("", "+valid,bad", "+valid");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, IgnoresShortFlags) {
+  // "+" is too short.
+  // "+a" is valid.
+  CheckFeatures("", "+, +a", "+a");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, KeepsValidOverridesAmidstGarbage) {
+  // garbage (ignored), -m (valid disable), +c (valid enable)
+  CheckFeatures("+m", "garbage,-m,+c", "-m,+c");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, MergesDefaults) {
+  // Ensure normal functionality still works
+  CheckFeatures("+m,+c", "", "+m,+c");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, UpdateFeatureString_AddSingle) {
+  CheckFeatures("", "+a,-b", "+a,-b");
+
+  // Should remove invalid flags.
+  CheckFeatures("", "a,+,+123,-,good", "");
+}
+
+TEST_F(TestMCDisasmInstanceRISCV, FiltersGarbageUserFlags) {
+  // Mixed valid and invalid
+  CheckFeatures("", "+valid,garbage,-alsovalid,++", "+valid,-alsovalid");
 }
