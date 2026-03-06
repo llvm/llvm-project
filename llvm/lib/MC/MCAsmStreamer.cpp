@@ -2581,6 +2581,9 @@ void MCAsmStreamer::emitRawTextImpl(StringRef String) {
 }
 
 void MCAsmStreamer::finishImpl() {
+  if (LFIRewriter)
+    LFIRewriter->finish(*this);
+
   // If we are generating dwarf for assembly source files dump out the sections.
   if (getContext().getGenDwarfForAssembly())
     MCGenDwarfInfo::Emit(this);

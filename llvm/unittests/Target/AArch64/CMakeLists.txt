@@ -29,6 +29,7 @@ add_llvm_target_unittest(AArch64Tests
   DecomposeStackOffsetTest.cpp
   InstSizes.cpp
   MatrixRegisterAliasing.cpp
+  MemOpAddrModeTest.cpp
   SMEAttributesTest.cpp
   AArch64RegisterInfoTest.cpp
   AArch64SVESchedPseudoTest.cpp
