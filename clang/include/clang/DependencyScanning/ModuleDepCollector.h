@@ -169,9 +169,6 @@ struct ModuleDeps {
   /// for computing this value.
   bool IsInStableDirectories;
 
-  /// Whether current working directory is ignored.
-  bool IgnoreCWD;
-
   /// The path to the modulemap file which defines this module.
   ///
   /// This can be used to explicitly build this module. This file will
