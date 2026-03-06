@@ -60,7 +60,7 @@ private:
 
   struct DataDescriptor_64 {
     uint64_t _used : 58;
-    uint32_t _szidx : 6;
+    uint64_t _szidx : 6;
   };
 
   struct SetItemDescriptor {
