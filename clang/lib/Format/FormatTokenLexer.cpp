@@ -23,6 +23,18 @@
 namespace clang {
 namespace format {
 
+namespace {
+
+CommentKind classifyBlockComment(StringRef Text) {
+  if (Text.starts_with("/**") || Text.starts_with("/*!"))
+    return CommentKind::DocString;
+  const StringRef Content = Text.drop_back(2).trim();
+  if (Content.ends_with('='))
+    return CommentKind::Parameter;
+  return CommentKind::Plain;
+}
+} // namespace
+
 FormatTokenLexer::FormatTokenLexer(
     const SourceManager &SourceMgr, FileID ID, unsigned Column,
     const FormatStyle &Style, encoding::Encoding Encoding,
@@ -1399,6 +1411,11 @@ FormatToken *FormatTokenLexer::getNextToken() {
     StringRef UntrimmedText = FormatTok->TokenText;
     FormatTok->TokenText = FormatTok->TokenText.rtrim(" \t\v\f");
     TrailingWhitespace = UntrimmedText.size() - FormatTok->TokenText.size();
+    if (FormatTok->TokenText.starts_with("/*") &&
+        FormatTok->TokenText.ends_with("*/")) {
+      FormatTok->setBlockCommentKind(
+          classifyBlockComment(FormatTok->TokenText));
+    }
   } else if (FormatTok->is(tok::raw_identifier)) {
     IdentifierInfo &Info = IdentTable.get(FormatTok->TokenText);
     FormatTok->Tok.setIdentifierInfo(&Info);

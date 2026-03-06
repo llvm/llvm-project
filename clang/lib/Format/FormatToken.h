@@ -314,6 +314,18 @@ struct MacroExpansion {
 class TokenRole;
 class AnnotatedLine;
 
+// Describes the kind of a block comment.
+enum class CommentKind {
+  // A plain comment, i.e. /* ... */.
+  Plain,
+  // A comment that starts with /*! or /**.
+  // The SpacesInComments option is not applied to them.
+  DocString,
+  // A comment that ends with '=' before the closing '*/'.
+  // The SpacesInComments option is not applied to them.
+  Parameter,
+};
+
 /// A wrapper around a \c Token storing information about the
 /// whitespace characters preceding it.
 struct FormatToken {
@@ -325,6 +337,7 @@ struct FormatToken {
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
         ContinuesLineCommentSection(false), Finalized(false),
         ClosesRequiresClause(false), EndsCppAttributeGroup(false),
+        BlockCommentKind(static_cast<unsigned>(CommentKind::Plain)),
         BlockKind(BK_Unknown), Decision(FD_Unformatted),
         PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
         Type(TT_Unknown) {}
@@ -402,6 +415,19 @@ struct FormatToken {
 
   /// \c true if this token ends a group of C++ attributes.
   unsigned EndsCppAttributeGroup : 1;
+
+private:
+  /// Kind of block comment.
+  unsigned BlockCommentKind : 2;
+
+public:
+  CommentKind getBlockCommentKind() const {
+    return static_cast<CommentKind>(BlockCommentKind);
+  }
+  void setBlockCommentKind(CommentKind Kind) {
+    BlockCommentKind = static_cast<unsigned>(Kind);
+    assert(getBlockCommentKind() == Kind && "CommentKind overflow!");
+  }
 
 private:
   /// Contains the kind of block if this token is a brace.

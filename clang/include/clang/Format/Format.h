@@ -5277,6 +5277,33 @@ struct FormatStyle {
   /// \version 3.4
   SpacesInAnglesStyle SpacesInAngles;
 
+  /// Specifies spacing behavior for different block comment forms.
+  enum SpacesInCommentsStyle : int8_t {
+    /// Ensure no space is present in block comments.
+    /// \code
+    ///   /*comment*/
+    /// \endcode
+    SICS_Never,
+    /// Ensure a space is present in block comments.
+    /// \code
+    ///   /* comment */
+    /// \endcode
+    SICS_Always,
+    /// Preserve existing spaces, making no formatting changes.
+    /// \code
+    ///   /* comment */
+    ///   /*comment*/
+    /// \endcode
+    SICS_Leave
+  };
+  /// Controls whitespace around block comment delimiters.
+  /// \note
+  ///  This option is not applied to comments starting with ``/*!`` or ``/**``,
+  ///  or to comments ending with ``=`` before the closing ``*/``.
+  /// \endnote
+  /// \version 21
+  SpacesInCommentsStyle SpacesInComments;
+
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
   /// This option is **deprecated**. See ``InConditionalStatements`` of
@@ -5920,6 +5947,7 @@ struct FormatStyle {
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
+           SpacesInComments == R.SpacesInComments &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInLineCommentPrefix.Minimum ==
                R.SpacesInLineCommentPrefix.Minimum &&
