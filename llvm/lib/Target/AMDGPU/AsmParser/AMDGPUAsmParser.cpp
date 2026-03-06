@@ -10520,7 +10520,7 @@ ParseStatus AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands,
   case MCK_idxen:
     return parseTokenOp("idxen", Operands);
   case MCK_lds:
-    return parseTokenOp("lds", Operands);
+    return parseNamedBit("lds", Operands, AMDGPUOperand::ImmTyLDS, true);
   case MCK_offen:
     return parseTokenOp("offen", Operands);
   case MCK_off:
