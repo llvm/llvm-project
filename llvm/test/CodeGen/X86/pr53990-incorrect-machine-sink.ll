@@ -14,7 +14,8 @@ define void @test(i1 %c, ptr %p, ptr noalias %p2) nounwind {
 ; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    movq (%rsi), %r14
-; CHECK-NEXT:    movb $1, %r15b
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq .LJTI0_0(,%rax,8), %r15
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %sink
@@ -22,9 +23,8 @@ define void @test(i1 %c, ptr %p, ptr noalias %p2) nounwind {
 ; CHECK-NEXT:    movq %r14, (%rbx)
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %r15b, %r15b
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %split.3
+; CHECK-NEXT:    jmpq *%r15
+; CHECK-NEXT:  .LBB0_2: # %split.3
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb $1, %bpl
 ; CHECK-NEXT:    je .LBB0_4
