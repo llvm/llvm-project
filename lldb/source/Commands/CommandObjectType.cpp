@@ -291,9 +291,9 @@ static const char *g_synth_addreader_instructions =
     "You must define a Python class with these methods:\n"
     "    def __init__(self, valobj: lldb.SBValue, internal_dict):\n"
     "    def num_children(self) -> int:\n"
-    "    def get_child_at_index(self, index: int) -> lldb.SBValue:\n"
+    "    def get_child_at_index(self, index: int) -> lldb.SBValue | None:\n"
     "    def get_child_index(self, name: str) -> int:\n"
-    "    def update(self) -> int | None:\n"
+    "    def update(self) -> bool:\n"
     "        '''Optional'''\n"
     "class synthProvider:\n";
 
