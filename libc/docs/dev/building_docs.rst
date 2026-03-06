@@ -40,7 +40,7 @@ invocation:
 .. code-block:: bash
 
    cmake ../runtimes \
-     -DLLVM_ENABLE_PROJECTS="libc" \
+     -DLLVM_ENABLE_RUNTIMES="libc" \
      -DLLVM_ENABLE_SPHINX=ON \
      -DLIBC_INCLUDE_DOCS=ON \
      ...
