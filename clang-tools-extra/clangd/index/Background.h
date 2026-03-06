@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_H
 
 #include "GlobalCompilationDatabase.h"
+#include "PathMapping.h"
 #include "SourceCode.h"
 #include "index/BackgroundRebuild.h"
 #include "index/FileIndex.h"
@@ -61,8 +62,10 @@ public:
   // CDBDirectory + ".cache/clangd/index/" as the folder to save shards.
   // CDBDirectory is the first directory containing a CDB in parent directories
   // of a file, or user cache directory if none was found, e.g. stdlib headers.
+  // If Mappings are given, paths are remapped before shards are saved to disk.
   static Factory createDiskBackedStorageFactory(
-      std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo);
+      std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo,
+      PathMappings Mappings);
 };
 
 // A priority queue of tasks which can be run on (external) worker threads.
@@ -148,6 +151,9 @@ public:
     // Whether the index needs to support the containedRefs() operation.
     // May use extra memory.
     bool SupportContainedRefs = true;
+    // Whether background index path mappings are active. Used to surface
+    // a diagnostic when no cached shards are found.
+    bool HasPathMappings = false;
   };
 
   /// Creates a new background index and starts its threads.
@@ -202,6 +208,7 @@ private:
   const GlobalCompilationDatabase &CDB;
   llvm::ThreadPriority IndexingPriority;
   std::function<Context(PathRef)> ContextProvider;
+  bool HasPathMappings;
 
   llvm::Error index(tooling::CompileCommand);
 

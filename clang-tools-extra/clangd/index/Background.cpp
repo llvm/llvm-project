@@ -74,6 +74,7 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
     llvm::sys::path::append(AbsolutePath, Cmd.Filename);
     llvm::sys::path::remove_dots(AbsolutePath, true);
   }
+  llvm::sys::path::native(AbsolutePath);
   return AbsolutePath;
 }
 
@@ -96,6 +97,7 @@ BackgroundIndex::BackgroundIndex(
     : SwapIndex(std::make_unique<MemIndex>()), TFS(TFS), CDB(CDB),
       IndexingPriority(Opts.IndexingPriority),
       ContextProvider(std::move(Opts.ContextProvider)),
+      HasPathMappings(Opts.HasPathMappings),
       IndexedSymbols(IndexContents::All, Opts.SupportContainedRefs),
       Rebuilder(this, &IndexedSymbols, Opts.ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
@@ -395,6 +397,11 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
   }
   Rebuilder.loadedShard(LoadedShards);
   Rebuilder.doneLoading();
+
+  if (HasPathMappings && LoadedShards == 0 && !MainFiles.empty())
+    log("BackgroundIndex: path mappings are configured but no cached shards "
+        "were loaded. Verify mapping direction (local=canonical) and that "
+        "shards exist on disk.");
 
   auto FS = TFS.view(/*CWD=*/std::nullopt);
   llvm::DenseSet<PathRef> TUsToIndex;

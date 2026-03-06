@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalCompilationDatabase.h"
+#include "PathMapping.h"
 #include "index/Background.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -24,22 +25,77 @@ namespace clang {
 namespace clangd {
 namespace {
 
+// Apply path mapping to file:// URIs or raw file paths. Returns std::nullopt
+// if no mapping was applied.
+std::optional<std::string> applyPathMapping(llvm::StringRef S,
+                                            PathMapping::Direction Direction,
+                                            const PathMappings &Mappings) {
+  // URIs use the URI-aware mapper and don't fall through to raw paths
+  if (S.starts_with("file://"))
+    return doPathMapping(S, Direction, Mappings);
+
+  // For raw paths only match where the absolute path begins. This avoids over-
+  // matching midpath while allowing -I, -isystem, etc. paths to be remapped.
+  size_t FirstSlash = S.find('/');
+  if (FirstSlash == llvm::StringRef::npos)
+    return std::nullopt;
+
+  for (const auto &Mapping : Mappings) {
+    const std::string &From =
+        Direction == PathMapping::Direction::ClientToServer
+            ? Mapping.ClientPath
+            : Mapping.ServerPath;
+    const std::string &To = Direction == PathMapping::Direction::ClientToServer
+                                ? Mapping.ServerPath
+                                : Mapping.ClientPath;
+    size_t Pos = S.find(From);
+    if (Pos == FirstSlash) {
+      llvm::StringRef After = S.substr(Pos + From.size());
+      if (After.empty() || After.front() == '/')
+        return (S.substr(0, Pos) + To + After).str();
+    }
+  }
+  return std::nullopt;
+}
+
 std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
-                                     llvm::StringRef FilePath) {
+                                     llvm::StringRef FilePath,
+                                     const PathMappings &Mappings) {
+  std::string HashInput;
+  if (auto Remapped = doFilePathMapping(
+          FilePath, PathMapping::Direction::ClientToServer, Mappings))
+    HashInput = std::move(*Remapped);
+  else
+    HashInput = FilePath.str();
   llvm::SmallString<128> ShardRootSS(ShardRoot);
-  llvm::sys::path::append(ShardRootSS, llvm::sys::path::filename(FilePath) +
-                                           "." + llvm::toHex(digest(FilePath)) +
-                                           ".idx");
+  llvm::sys::path::append(ShardRootSS,
+                          llvm::sys::path::filename(FilePath) + "." +
+                              llvm::toHex(digest(HashInput)) + ".idx");
   return std::string(ShardRootSS);
 }
 
 // Uses disk as a storage for index shards.
 class DiskBackedIndexStorage : public BackgroundIndexStorage {
   std::string DiskShardRoot;
+  PathMappings Mappings;
+  PathTransform LoadTransform;
+  PathTransform StoreTransform;
 
 public:
   // Creates `DiskShardRoot` and any parents during construction.
-  DiskBackedIndexStorage(llvm::StringRef Directory) : DiskShardRoot(Directory) {
+  DiskBackedIndexStorage(llvm::StringRef Directory, PathMappings Mappings)
+      : DiskShardRoot(Directory), Mappings(std::move(Mappings)) {
+    // Background path mappings are specified as /local/path=/canonical/path.
+    // During load we transform from canonical to local (ServerToClient).
+    LoadTransform = [this](llvm::StringRef S) -> std::optional<std::string> {
+      return applyPathMapping(S, PathMapping::Direction::ServerToClient,
+                              this->Mappings);
+    };
+    // During store we transform from local to canonical (ClientToServer).
+    StoreTransform = [this](llvm::StringRef S) -> std::optional<std::string> {
+      return applyPathMapping(S, PathMapping::Direction::ClientToServer,
+                              this->Mappings);
+    };
     std::error_code OK;
     std::error_code EC = llvm::sys::fs::create_directories(DiskShardRoot);
     if (EC != OK) {
@@ -60,12 +116,14 @@ public:
   std::unique_ptr<IndexFileIn>
   loadShard(llvm::StringRef ShardIdentifier) const override {
     const std::string ShardPath =
-        getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+        getShardPathFromFilePath(DiskShardRoot, ShardIdentifier, Mappings);
     auto Buffer = llvm::MemoryBuffer::getFile(ShardPath);
     if (!Buffer)
       return nullptr;
-    if (auto I =
-            readIndexFile(Buffer->get()->getBuffer(), SymbolOrigin::Background))
+    const PathTransform *Transform =
+        Mappings.empty() ? nullptr : &LoadTransform;
+    if (auto I = readIndexFile(Buffer->get()->getBuffer(),
+                               SymbolOrigin::Background, Transform))
       return std::make_unique<IndexFileIn>(std::move(*I));
     else
       elog("Error while reading shard {0}: {1}", ShardIdentifier,
@@ -75,7 +133,10 @@ public:
 
   llvm::Error storeShard(llvm::StringRef ShardIdentifier,
                          IndexFileOut Shard) const override {
-    auto ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+    auto ShardPath =
+        getShardPathFromFilePath(DiskShardRoot, ShardIdentifier, Mappings);
+    if (!Mappings.empty())
+      Shard.Transform = &StoreTransform;
     return llvm::writeToOutput(ShardPath, [&Shard](llvm::raw_ostream &OS) {
       OS << Shard;
       return llvm::Error::success();
@@ -106,9 +167,11 @@ public:
 class DiskBackedIndexStorageManager {
 public:
   DiskBackedIndexStorageManager(
-      std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo)
+      std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo,
+      PathMappings Mappings)
       : IndexStorageMapMu(std::make_unique<std::mutex>()),
-        GetProjectInfo(std::move(GetProjectInfo)) {
+        GetProjectInfo(std::move(GetProjectInfo)),
+        Mappings(std::move(Mappings)) {
     llvm::SmallString<128> FallbackDir;
     if (llvm::sys::path::cache_directory(FallbackDir))
       llvm::sys::path::append(FallbackDir, "clangd", "index");
@@ -135,7 +198,7 @@ private:
       elog("Tried to create storage for empty directory!");
       return std::make_unique<NullStorage>();
     }
-    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory);
+    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory, Mappings);
   }
 
   Path FallbackDir;
@@ -144,14 +207,17 @@ private:
   std::unique_ptr<std::mutex> IndexStorageMapMu;
 
   std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo;
+  PathMappings Mappings;
 };
 
 } // namespace
 
 BackgroundIndexStorage::Factory
 BackgroundIndexStorage::createDiskBackedStorageFactory(
-    std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo) {
-  return DiskBackedIndexStorageManager(std::move(GetProjectInfo));
+    std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo,
+    PathMappings Mappings) {
+  return DiskBackedIndexStorageManager(std::move(GetProjectInfo),
+                                       std::move(Mappings));
 }
 
 } // namespace clangd

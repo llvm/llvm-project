@@ -28,11 +28,17 @@
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
 namespace clang {
 namespace clangd {
+
+// Used to remap URIs and paths during serialization/deserialization.
+// Return std::nullopt if the path was not transformed.
+using PathTransform =
+    llvm::unique_function<std::optional<std::string>(llvm::StringRef) const>;
 
 enum class IndexFileFormat {
   RIFF, // Versioned binary format, suitable for production use.
@@ -50,7 +56,10 @@ struct IndexFileIn {
   std::optional<tooling::CompileCommand> Cmd;
 };
 // Parse an index file. The input must be a RIFF or YAML file.
-llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef, SymbolOrigin);
+// If Transform is provided, use it to remap all URIs.
+llvm::Expected<IndexFileIn>
+readIndexFile(llvm::StringRef, SymbolOrigin,
+              const PathTransform *Transform = nullptr);
 
 // Specifies the contents of an index file to be written.
 struct IndexFileOut {
@@ -62,6 +71,7 @@ struct IndexFileOut {
   // TODO: Support serializing Dex posting lists.
   IndexFileFormat Format = IndexFileFormat::RIFF;
   const tooling::CompileCommand *Cmd = nullptr;
+  const PathTransform *Transform = nullptr;
 
   IndexFileOut() = default;
   IndexFileOut(const IndexFileIn &I)

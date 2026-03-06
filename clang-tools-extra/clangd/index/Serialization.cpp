@@ -163,12 +163,16 @@ void writeVar(uint32_t I, llvm::raw_ostream &OS) {
 // These are sorted to improve compression.
 
 // Maps each string to a canonical representation.
-// Strings remain owned externally (e.g. by SymbolSlab).
+// Strings remain owned externally (e.g. by SymbolSlab), except for strings
+// that are transformed by path remapping.
 class StringTableOut {
   llvm::DenseSet<llvm::StringRef> Unique;
   std::vector<llvm::StringRef> Sorted;
   // Since strings are interned, look up can be by pointer.
   llvm::DenseMap<std::pair<const char *, size_t>, unsigned> Index;
+  llvm::BumpPtrAllocator Arena;
+  llvm::StringSaver TransformSaver{Arena};
+  const PathTransform *Transform = nullptr;
 
 public:
   StringTableOut() {
@@ -176,8 +180,16 @@ public:
     // Table size zero is reserved to indicate no compression.
     Unique.insert("");
   }
+  void setTransform(const PathTransform *T) { Transform = T; }
   // Add a string to the table. Overwrites S if an identical string exists.
-  void intern(llvm::StringRef &S) { S = *Unique.insert(S).first; };
+  // If path remapping is enabled, transform and store the new value.
+  void intern(llvm::StringRef &S) {
+    if (Transform) {
+      if (auto Transformed = (*Transform)(S))
+        S = TransformSaver.save(std::move(*Transformed));
+    }
+    S = *Unique.insert(S).first;
+  }
   // Finalize the table and write it to OS. No more strings may be added.
   void finalize(llvm::raw_ostream &OS) {
     Sorted = {Unique.begin(), Unique.end()};
@@ -214,7 +226,9 @@ struct StringTableIn {
   std::vector<llvm::StringRef> Strings;
 };
 
-llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
+llvm::Expected<StringTableIn>
+readStringTable(llvm::StringRef Data,
+                const PathTransform *Transform = nullptr) {
   Reader R(Data);
   size_t UncompressedSize = R.consume32();
   if (R.err())
@@ -249,7 +263,10 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
     auto Len = R.rest().find(0);
     if (Len == llvm::StringRef::npos)
       return error("Bad string table: not null terminated");
-    Table.Strings.push_back(Saver.save(R.consume(Len)));
+    llvm::StringRef S = R.consume(Len);
+    auto Transformed = Transform ? (*Transform)(S) : std::nullopt;
+    Table.Strings.push_back(
+        Saver.save(Transformed ? std::move(*Transformed) : llvm::StringRef(S)));
     R.consume8();
   }
   if (R.err())
@@ -459,8 +476,8 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // data. Later we may want to support some backward compatibility.
 constexpr static uint32_t Version = 20;
 
-llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
-                                     SymbolOrigin Origin) {
+llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data, SymbolOrigin Origin,
+                                     const PathTransform *Transform) {
   auto RIFF = riff::readFile(Data);
   if (!RIFF)
     return RIFF.takeError();
@@ -483,7 +500,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
     if (!Chunks.count(RequiredChunk))
       return error("missing required chunk {0}", RequiredChunk);
 
-  auto Strings = readStringTable(Chunks.lookup("stri"));
+  auto Strings = readStringTable(Chunks.lookup("stri"), Transform);
   if (!Strings)
     return Strings.takeError();
 
@@ -570,6 +587,8 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
   RIFF.Chunks.push_back({riff::fourCC("meta"), Meta});
 
   StringTableOut Strings;
+  if (Data.Transform)
+    Strings.setTransform(Data.Transform);
   std::vector<Symbol> Symbols;
   for (const auto &Sym : *Data.Symbols) {
     Symbols.emplace_back(Sym);
@@ -691,9 +710,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
 }
 
 llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data,
-                                          SymbolOrigin Origin) {
+                                          SymbolOrigin Origin,
+                                          const PathTransform *Transform) {
   if (Data.starts_with("RIFF")) {
-    return readRIFF(Data, Origin);
+    return readRIFF(Data, Origin, Transform);
   }
   if (auto YAMLContents = readYAML(Data, Origin)) {
     return std::move(*YAMLContents);

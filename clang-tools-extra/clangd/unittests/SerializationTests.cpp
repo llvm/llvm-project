@@ -444,6 +444,63 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
               testing::HasSubstr("bytes is implausible"));
 }
 
+// Verify path transformation for both load and store, and that non-matching
+// strings are preserved.
+TEST(SerializationTest, PathTransformRoundTrip) {
+  // The YAML fixture uses file:///path/ URIs. Our load transform remaps
+  // /path/ -> /workarea/ and the store transform reverses it.
+  PathTransform Load = [](llvm::StringRef S) -> std::optional<std::string> {
+    std::string R = S.str();
+    if (size_t P = R.find("/path/"); P != std::string::npos) {
+      R.replace(P, 6, "/workarea/");
+      return R;
+    }
+    return std::nullopt;
+  };
+  PathTransform Store = [](llvm::StringRef S) -> std::optional<std::string> {
+    std::string R = S.str();
+    if (size_t P = R.find("/workarea/"); P != std::string::npos) {
+      R.replace(P, 10, "/path/");
+      return R;
+    }
+    return std::nullopt;
+  };
+
+  // Serialize the existing YAML fixture to binary RIFF
+  auto In = readIndexFile(YAML);
+  ASSERT_TRUE(bool(In)) << In.takeError();
+  IndexFileOut Out(*In);
+  Out.Format = IndexFileFormat::RIFF;
+  std::string Serialized = llvm::to_string(Out);
+
+  // Every string containing "/path/" is remapped on load
+  auto Loaded = readIndexFile(Serialized, SymbolOrigin::Background, &Load);
+  ASSERT_TRUE(bool(Loaded)) << Loaded.takeError();
+
+  ASSERT_TRUE(Loaded->Symbols);
+  auto &Sym =
+      *Loaded->Symbols->find(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")));
+  EXPECT_EQ(llvm::StringRef(Sym.CanonicalDeclaration.FileURI),
+            "file:///workarea/foo.h");
+  EXPECT_EQ(Sym.Name, "Foo1");
+
+  // Every string containing "/workarea/" is remapped back on store
+  IndexFileOut Out2(*Loaded);
+  Out2.Format = IndexFileFormat::RIFF;
+  Out2.Transform = &Store;
+  std::string Reserialized = llvm::to_string(Out2);
+
+  // Load without transform; canonical paths should be restored
+  auto Restored = readIndexFile(Reserialized, SymbolOrigin::Background);
+  ASSERT_TRUE(bool(Restored)) << Restored.takeError();
+  ASSERT_TRUE(Restored->Symbols);
+  EXPECT_EQ(llvm::StringRef(
+                Restored->Symbols
+                    ->find(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")))
+                    ->CanonicalDeclaration.FileURI),
+            "file:///path/foo.h");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

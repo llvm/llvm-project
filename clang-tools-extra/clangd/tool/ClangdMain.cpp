@@ -435,6 +435,16 @@ opt<bool> EnableTestScheme{
     Hidden,
 };
 
+opt<std::string> BackgroundIndexPathMappings{
+    "background-index-path-mappings",
+    cat(Protocol),
+    desc("Translate client paths when reading and writing background index "
+         "files. Enables sharing of background index files between clients. "
+         "Format is identical to --path-mappings. "
+         "e.g. /home/project=/workarea/project"),
+    init(""),
+};
+
 opt<std::string> PathMappingsArg{
     "path-mappings",
     cat(Protocol),
@@ -937,6 +947,20 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 #endif
   Opts.BackgroundIndex = EnableBackgroundIndex;
   Opts.BackgroundIndexPriority = BackgroundIndexPriority;
+  if (!BackgroundIndexPathMappings.empty()) {
+    auto Mappings = parsePathMappings(BackgroundIndexPathMappings);
+    if (!Mappings) {
+      elog("Invalid --background-index-path-mappings: {0}",
+           Mappings.takeError());
+      return 1;
+    }
+    Opts.BackgroundIndexPathMappings = std::move(*Mappings);
+    for (const auto &M : Opts.BackgroundIndexPathMappings) {
+      if (!llvm::sys::fs::exists(M.ClientPath))
+        log("BackgroundIndex: local mapping path does not exist: {0}",
+            M.ClientPath);
+    }
+  }
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
   auto PAI = createProjectAwareIndex(
