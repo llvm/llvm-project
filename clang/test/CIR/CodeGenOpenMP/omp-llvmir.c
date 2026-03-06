@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// CIR-LABEL: cir.func no_inline no_proto dso_local @main() -> !s32i {
+// CIR-LABEL: cir.func no_inline no_proto dso_local @main() -> !s32i{{.*}}{
 // CIR: [[RETVAL:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR: [[J:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["j"] {alignment = 4 : i64}
 // CIR:   omp.parallel {

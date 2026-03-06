@@ -40,7 +40,7 @@ extern "C" {
     // CIR: cir.call{{.*}}@optnone()
     // CIR-NOT: optsize
     // CIR-NOT: minsize
-    // LLVM: call void @optnone() #[[OPTNONE_ATTR]]
+    // LLVM: call void @optnone() #[[OPTNONE_CALL_ATTR:.*]]
     // OGCG: call void @optnone() #[[OPTNONE_CALL_ATTR:.*]]
 
     // CIR: cir.return
@@ -58,10 +58,13 @@ extern "C" {
 // attributes for caller, to block the 'NOT'.
 // BOTH: attributes
 //
-// CIR doesn't have sufficiently different 'attributes' implemented for the
-// caller and the callee to be different when doing -O settings (as 'optnone'
-// is the only difference).  So the below call attributes are only necessary
-// for classic codegen.
+// Call-site attributes differ from definition attributes because optnone,
+// noinline, etc. are definition-only. Verify the call attrs separately.
+// LLVM: attributes #[[OPTNONE_CALL_ATTR]]
+// LLVM-NOT: optsize
+// LLVM-NOT: minsize
+// LLVM: !llvm.
+//
 // OGCG: attributes #[[NORMAL_CALL_ATTR]]
 // OGCGOZ-SAME: minsize
 // OGCG-SAME: optsize
@@ -71,4 +74,4 @@ extern "C" {
 // OGCG-NOT: minsize
 //
 // to block the 'NOT'.
-// BOTH: !llvm.
+// OGCG: !llvm.

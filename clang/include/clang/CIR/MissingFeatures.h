@@ -72,19 +72,16 @@ struct MissingFeatures {
   static bool opFuncArmStreamingAttr() { return false; }
   static bool opFuncAstDeclAttr() { return false; }
   static bool opFuncCallingConv() { return false; }
-  static bool opFuncColdHotAttr() { return false; }
   static bool opFuncCPUAndFeaturesAttributes() { return false; }
   static bool opFuncExceptions() { return false; }
   static bool opFuncExtraAttrs() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
-  static bool opFuncMinSizeAttr() { return false; }
   static bool opFuncMultipleReturnVals() { return false; }
   static bool opFuncNakedAttr() { return false; }
-  static bool opFuncNoDuplicateAttr() { return false; }
+  static bool opFuncNoOutlineAttr() { return false; }
   static bool opFuncNoUnwind() { return false; }
   static bool opFuncOpenCLKernelMetadata() { return false; }
   static bool opFuncOperandBundles() { return false; }
-  static bool opFuncOptNoneAttr() { return false; }
   static bool opFuncParameterAttributes() { return false; }
   static bool opFuncReadOnly() { return false; }
   static bool opFuncSection() { return false; }
