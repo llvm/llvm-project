@@ -1296,46 +1296,32 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
-// Prior to SSE4.1, performing equality comparison on v2i64 types require a
-// comparison on v4i32 types using the following pattern:
+// Prior to SSE4.1, to perform equality comparisons between two
+// v2i64 values, the comparison is performed on v4i32 values:
 //
-// %3 = icmp eq <4 x i32> %1, %2
+// (A1, A2) -> (A1Lower, A1Upper, A2Lower, A2Upper)
+// (B1, B2) -> (B1Lower, B1Upper, B2Lower, B2Upper)
+// (Result1, Result2) -> (Result1, Result1, Result2, Result2)
 //
-// %4 = sext <4 x i1> %3 to <4 x i32>
+// where,
 //
-// %5 = shufflevector <4 x i32> %4, <4 x i32> poison, <4 x i32> <i32 1, i32 0,
-// i32 3, i32 2>
+// ResultX = EqLowerX & EqUpperX
+// EqLowerX = AXLower == BXLower
+// EqUpperX = AXUpper == BXUpper
 //
-// %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> zeroinitializer
-//
-// OR
-//
-// %6 = and <4 x i32> %sext, %shuffle
-//
-// We should detect such patterns and fold them into:
-//
-// %3 = bitcast <4 x i32> %1 to <2 x i64>
-//
-// %4 = bitcast <4 x i32> %2 to <2 x i64>
-//
-// %5 = icmp eq <2 x i64> %3, %4
-//
-// %6 = bitcast <2 x i64> %5 to <4 x i32>
-//
+// Bitwise AND between the upper and lower parts can be achived by performing
+// the operation between the original and shuffled equality vector.
 Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
-  Value *Equal, *Shuffle, *L, *R;
+  Value *L, *R;
   CmpPredicate Pred;
   SmallVector<int> Mask = {1, 0, 3, 2};
 
   // Check pattern existance
-  if (!match(&I,
-             m_CombineOr(m_c_And(m_SExt(m_Value(Equal)),
-                                 m_SExtOrSelf(m_Value(Shuffle))),
-                         m_Select(m_Value(Equal),
-                                  m_SExtOrSelf(m_Value(Shuffle)), m_Zero()))) ||
-      !match(Shuffle, m_Shuffle(m_SExtOrSelf(m_Specific(Equal)), m_Poison(),
-                                m_SpecificMask(Mask))) ||
-      !match(Equal, m_ICmp(Pred, m_Value(L), m_Value(R))) ||
+  auto Equal = m_ICmp(Pred, m_Value(L), m_Value(R));
+  auto Shuffle = m_SExtOrSelf(
+      m_Shuffle(m_SExtOrSelf(Equal), m_Poison(), m_SpecificMask(Mask)));
+  if (!match(&I, m_CombineOr(m_c_And(m_SExt(Equal), Shuffle),
+                             m_Select(Equal, Shuffle, m_Zero()))) ||
       Pred != CmpInst::ICMP_EQ)
     return nullptr;
 
@@ -1343,34 +1329,15 @@ Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
   auto *OldVecType = cast<VectorType>(L->getType());
 
   if (OldVecType->isScalableTy() ||
-      !OldVecType->getElementType()->isIntegerTy())
+      !OldVecType->getElementType()->isIntegerTy(32) ||
+      OldVecType->getElementCount().getFixedValue() != 4)
     return nullptr;
-
-  int ElementCount = OldVecType->getElementCount().getFixedValue();
-  int ElementBitWidth = OldVecType->getElementType()->getIntegerBitWidth();
-
-  if (ElementCount != 4 || ElementBitWidth != 32)
-    return nullptr;
-
-  // Check uses outside pattern
-  if (!Shuffle->hasOneUse())
-    return nullptr;
-
-  for (auto *U : Equal->users()) {
-    if (U == &I || U == Shuffle)
-      continue;
-    if (!isa<llvm::CastInst>(U))
-      return nullptr;
-    for (auto *U : U->users())
-      if (U != &I && U != Shuffle)
-        return nullptr;
-  }
 
   LLVM_DEBUG(dbgs() << "IC: Folding equal-shuffle-and pattern" << '\n');
 
   // Perform folding
-  auto *NewElementType = IntegerType::get(I.getContext(), ElementBitWidth * 2);
-  auto *NewVecType = VectorType::get(NewElementType, ElementCount / 2, false);
+  auto *NewElementType = IntegerType::get(I.getContext(), 64);
+  auto *NewVecType = VectorType::get(NewElementType, 2, false);
   auto *BitCastL = Builder.CreateBitCast(L, NewVecType);
   auto *BitCastR = Builder.CreateBitCast(R, NewVecType);
   auto *Cmp = Builder.CreateICmp(Pred, BitCastL, BitCastR);
@@ -1394,7 +1361,11 @@ Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
 // GtUpperX = AXUpper OP BXUpper
 // EqUpperX = AXUpper EQ BXUpper
 //
-// Upper and lower values are obtained through vector shuffles.
+// Upper and lower parts are obtained through vector shuffles.
+//
+// Note that comparison of the lower parts are always unsigned comparisons
+// regardless of the resulting signedness. Also note that, unsigned comparison
+// can be derived from signed comparison by flipping the MSB of both operands.
 Instruction *
 InstCombinerImpl::foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I) {
   if (I.getOpcode() != Instruction::Or)
