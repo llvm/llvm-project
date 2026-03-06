@@ -1,0 +1,35 @@
+// RUN: cir-opt %s --cir-to-llvm -o - | FileCheck %s
+
+module {
+  // CHECK: llvm.func @optimize_none_func() attributes {no_inline, optimize_none}
+  cir.func no_inline @optimize_none_func() attributes {optimize_none} {
+    cir.return
+  }
+
+  // CHECK: llvm.func @cold_func() attributes {cold, optsize}
+  cir.func @cold_func() attributes {cold, optsize} {
+    cir.return
+  }
+
+  // CHECK: llvm.func @hot_func() attributes {hot}
+  cir.func @hot_func() attributes {hot} {
+    cir.return
+  }
+
+  // CHECK: llvm.func @noduplicate_func() attributes {noduplicate}
+  cir.func @noduplicate_func() attributes {noduplicate} {
+    cir.return
+  }
+
+  // CHECK: llvm.func @minsize_func() attributes {minsize}
+  cir.func @minsize_func() attributes {minsize} {
+    cir.return
+  }
+
+  // optnone + cold: optimize_none is set, cold is preserved, but no optsize.
+  // CHECK: llvm.func @optnone_cold_func() attributes {cold, no_inline, optimize_none}
+  // CHECK-NOT: optsize
+  cir.func no_inline @optnone_cold_func() attributes {cold, optimize_none} {
+    cir.return
+  }
+}

@@ -54,6 +54,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoCallerSavedRegsAttrName() { return "no_caller_saved_registers"; }
     static llvm::StringRef getNoCallbackAttrName() { return "nocallback"; }
     static llvm::StringRef getAllocSizeAttrName() { return "allocsize"; }
+    static llvm::StringRef getOptimizeNoneAttrName() { return "optimize_none"; }
     static llvm::StringRef getOptimizeForSizeAttrName() { return "optsize"; }
     static llvm::StringRef getMinSizeAttrName() { return "minsize"; }
     // Note: we have to name this with the underscore instead of the dash like
