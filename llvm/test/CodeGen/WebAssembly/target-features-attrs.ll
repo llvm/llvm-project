@@ -53,7 +53,7 @@ attributes #2 = { "target-features"="+reference-types" }
 ; CHECK:       i32.store
 
 ; Features in function attributes:
-; +atomics, +nontrapping-fptoint, +reference-types
+; +atomics, +nontrapping-fptoint, +reference-types, -component-model-thread-context
 ; CHECK-LABEL: .custom_section.target_features,"",@
 ; CHECK-NEXT: .int8  4
 ; CHECK-NEXT: .int8  43
@@ -70,7 +70,7 @@ attributes #2 = { "target-features"="+reference-types" }
 ; CHECK-NEXT: .ascii  "reference-types"
 
 ; Features in function attributes + features specified by -mattr= option:
-; +atomics, +nontrapping-fptoint, +reference-types, +simd128
+; +atomics, +nontrapping-fptoint, +reference-types, +simd128, -component-model-thread-context
 ; SIMD128-LABEL: .custom_section.target_features,"",@
 ; SIMD128-NEXT: .int8  5
 ; SIMD128-NEXT: .int8  43

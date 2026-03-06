@@ -2046,17 +2046,11 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       model == GlobalValue::LocalDynamicTLSModel ||
       (model == GlobalValue::GeneralDynamicTLSModel &&
        getTargetMachine().shouldAssumeDSOLocal(GV))) {
-    // For DSO-local TLS variables we use offset from __tls_base
+    // For DSO-local TLS variables we use offset from __tls_base, or
+    // context.get(1) if using component model threading intrinsics.
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *BaseName = MF.createExternalSymbolName("__tls_base");
-
-    SDValue BaseAddr(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(BaseName, PtrVT)),
-        0);
+    SDValue BaseAddr(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
 
     SDValue TLSOffset = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
@@ -2242,14 +2236,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   }
 
   case Intrinsic::thread_pointer: {
-    MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *TlsBase = MF.createExternalSymbolName("__tls_base");
-    return SDValue(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
-        0);
+    return SDValue(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
   }
   }
 }

@@ -135,13 +135,19 @@ bool WebAssemblyFrameLowering::needsSPForLocalFrame(
       any_of(MRI.use_operands(getSPReg(MF)),
              [](MachineOperand &MO) { return !MO.isImplicit(); });
 
+  // With component model thread context, we need SP in the prolog when debug
+  // info is present so we can allocate a local for DWARF to reference.
+  bool NeedsSPForDebug =
+      MF.getFunction().getSubprogram() &&
+      MF.getSubtarget<WebAssemblySubtarget>().hasComponentModelThreadContext();
+
   return MFI.getStackSize() || MFI.adjustsStack() || hasFP(MF) ||
-         HasExplicitSPUse;
+         HasExplicitSPUse || NeedsSPForDebug;
 }
 
 // In function with EH pads, we need to make a copy of the value of
-// __stack_pointer global in SP32/64 register, in order to use it when
-// restoring __stack_pointer after an exception is caught.
+// the stack pointer in the SP32/64 register, in order to use it when
+// restoring the stack pointer after an exception is caught.
 bool WebAssemblyFrameLowering::needsPrologForEH(
     const MachineFunction &MF) const {
   auto EHType = MF.getTarget().getMCAsmInfo()->getExceptionHandlingType();
@@ -151,15 +157,16 @@ bool WebAssemblyFrameLowering::needsPrologForEH(
 
 /// Returns true if this function needs a local user-space stack pointer.
 /// Unlike a machine stack pointer, the wasm user stack pointer is a global
-/// variable, so it is loaded into a register in the prolog.
+/// variable or stored in the component model thread context, so it is loaded
+/// into a register in the prolog.
 bool WebAssemblyFrameLowering::needsSP(const MachineFunction &MF) const {
   return needsSPForLocalFrame(MF) || needsPrologForEH(MF);
 }
 
 /// Returns true if the local user-space stack pointer needs to be written back
-/// to __stack_pointer global by this function (this is not meaningful if
-/// needsSP is false). If false, the stack red zone can be used and only a local
-/// SP is needed.
+/// to the stack pointer global/thread context by this function (this is not
+/// meaningful if needsSP is false). If false, the stack red zone can be used
+/// and only a local SP is needed.
 bool WebAssemblyFrameLowering::needsSPWriteback(
     const MachineFunction &MF) const {
   auto &MFI = MF.getFrameInfo();
@@ -227,17 +234,26 @@ WebAssemblyFrameLowering::getOpcGlobSet(const MachineFunction &MF) {
              : WebAssembly::GLOBAL_SET_I32;
 }
 
-void WebAssemblyFrameLowering::writeSPToGlobal(
+void WebAssemblyFrameLowering::writeBackSP(
     unsigned SrcReg, MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator &InsertStore, const DebugLoc &DL) const {
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-  const char *ES = "__stack_pointer";
-  auto *SPSymbol = MF.createExternalSymbolName(ES);
+  if (MF.getSubtarget<WebAssemblySubtarget>()
+          .hasComponentModelThreadContext()) {
+    const char *ES = "__wasm_component_model_builtin_context_set_0";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
+    BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))
+        .addExternalSymbol(SPSymbol)
+        .addReg(SrcReg);
+  } else {
+    const char *ES = "__stack_pointer";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
 
-  BuildMI(MBB, InsertStore, DL, TII->get(getOpcGlobSet(MF)))
-      .addExternalSymbol(SPSymbol)
-      .addReg(SrcReg);
+    BuildMI(MBB, InsertStore, DL, TII->get(getOpcGlobSet(MF)))
+        .addExternalSymbol(SPSymbol)
+        .addReg(SrcReg);
+  }
 }
 
 MachineBasicBlock::iterator
@@ -251,7 +267,7 @@ WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
   if (I->getOpcode() == TII->getCallFrameDestroyOpcode() &&
       needsSPWriteback(MF)) {
     DebugLoc DL = I->getDebugLoc();
-    writeSPToGlobal(getSPReg(MF), MF, MBB, I, DL);
+    writeBackSP(getSPReg(MF), MF, MBB, I, DL);
   }
   return MBB.erase(I);
 }
@@ -283,10 +299,17 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
 
-  const char *ES = "__stack_pointer";
-  auto *SPSymbol = MF.createExternalSymbolName(ES);
-  BuildMI(MBB, InsertPt, DL, TII->get(getOpcGlobGet(MF)), SPReg)
-      .addExternalSymbol(SPSymbol);
+  if (ST.hasComponentModelThreadContext()) {
+    const char *ES = "__wasm_component_model_builtin_context_get_0";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)
+        .addExternalSymbol(SPSymbol);
+  } else {
+    const char *ES = "__stack_pointer";
+    auto *SPSymbol = MF.createExternalSymbolName(ES);
+    BuildMI(MBB, InsertPt, DL, TII->get(getOpcGlobGet(MF)), SPReg)
+        .addExternalSymbol(SPSymbol);
+  }
 
   bool HasBP = hasBP(MF);
   if (HasBP) {
@@ -322,7 +345,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(getSPReg(MF));
   }
   if (StackSize && needsSPWriteback(MF)) {
-    writeSPToGlobal(getSPReg(MF), MF, MBB, InsertPt, DL);
+    writeBackSP(getSPReg(MF), MF, MBB, InsertPt, DL);
   }
 }
 
@@ -364,7 +387,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
     SPReg = SPFPReg;
   }
 
-  writeSPToGlobal(SPReg, MF, MBB, InsertPt, DL);
+  writeBackSP(SPReg, MF, MBB, InsertPt, DL);
 }
 
 bool WebAssemblyFrameLowering::isSupportedStackID(

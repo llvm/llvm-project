@@ -119,7 +119,7 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:            Index:           3
 ; CHECK-NEXT:          - Kind:            DATA
 ; CHECK-NEXT:            Index:           0
-; CHECK-NEXT: ...
+; CHECK-NEXT:        ... 
 
 
 ; ASM:        .section        .text.basicInlineFn,"G",@,basicInlineFn,comdat

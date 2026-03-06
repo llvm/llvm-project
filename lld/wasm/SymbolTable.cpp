@@ -222,7 +222,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
                                                    uint32_t flags,
                                                    InputFunction *function) {
   LLVM_DEBUG(dbgs() << "addSyntheticFunction: " << name << "\n");
-  assert(!find(name));
+  assert(!find(name) || find(name)->isUndefined());
   ctx.syntheticFunctions.emplace_back(function);
   return replaceSymbol<DefinedFunction>(insertName(name).first, name, flags,
                                         nullptr, function);
@@ -250,7 +250,7 @@ DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name,
 DefinedData *SymbolTable::addSyntheticDataSymbol(StringRef name,
                                                  uint32_t flags) {
   LLVM_DEBUG(dbgs() << "addSyntheticDataSymbol: " << name << "\n");
-  assert(!find(name));
+  assert(!find(name) || find(name)->isUndefined());
   return replaceSymbol<DefinedData>(insertName(name).first, name,
                                     flags | WASM_SYMBOL_ABSOLUTE);
 }
@@ -259,7 +259,7 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
                                                InputGlobal *global) {
   LLVM_DEBUG(dbgs() << "addSyntheticGlobal: " << name << " -> " << global
                     << "\n");
-  assert(!find(name));
+  assert(!find(name) || find(name)->isUndefined());
   ctx.syntheticGlobals.emplace_back(global);
   return replaceSymbol<DefinedGlobal>(insertName(name).first, name, flags,
                                       nullptr, global);

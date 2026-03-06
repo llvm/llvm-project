@@ -57,11 +57,11 @@ _start:
 # CHECK-SP-NEXT:      - Name:            memory
 # CHECK-SP-NEXT:        Kind:            MEMORY
 # CHECK-SP-NEXT:        Index:           0
-# CHECK-SP-NEXT:      - Name:            __stack_pointer
-# CHECK-SP-NEXT:        Kind:            GLOBAL
-# CHECK-SP-NEXT:        Index:           0
 # CHECK-SP-NEXT:      - Name:            _start
 # CHECK-SP-NEXT:        Kind:            FUNCTION
+# CHECK-SP-NEXT:        Index:           0
+# CHECK-SP-NEXT:      - Name:            __stack_pointer
+# CHECK-SP-NEXT:        Kind:            GLOBAL
 # CHECK-SP-NEXT:        Index:           0
 # CHECK-SP-NEXT:  - Type:            CODE
 
@@ -73,9 +73,6 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            __wasm_call_ctors
 # CHECK-ALL-NEXT:        Kind:            FUNCTION
 # CHECK-ALL-NEXT:        Index:           0
-# CHECK-ALL-NEXT:      - Name:            __stack_pointer
-# CHECK-ALL-NEXT:        Kind:            GLOBAL
-# CHECK-ALL-NEXT:        Index:           0
 # CHECK-ALL-NEXT:      - Name:            _start
 # CHECK-ALL-NEXT:        Kind:            FUNCTION
 # CHECK-ALL-NEXT:        Index:           1
@@ -85,6 +82,9 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            bar_global
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           5
+# CHECK-ALL-NEXT:      - Name:            __stack_pointer
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           0
 # CHECK-ALL-NEXT:      - Name:            __dso_handle
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           6
