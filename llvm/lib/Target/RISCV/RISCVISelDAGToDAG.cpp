@@ -1871,6 +1871,35 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::WSLL:
+  case RISCVISD::WSLA: {
+    // Custom select (S/U)MUL_LOHI to WMUL(U) for RV32P.
+    assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
+           "Unexpected opcode");
+
+    bool IsSigned = Node->getOpcode() == RISCVISD::WSLA;
+
+    SDValue ShAmt = Node->getOperand(1);
+
+    unsigned Opc;
+
+    auto *ShAmtC = dyn_cast<ConstantSDNode>(ShAmt);
+    if (ShAmtC && ShAmtC->getZExtValue() < 64) {
+      Opc = IsSigned ? RISCV::WSLAI : RISCV::WSLLI;
+      ShAmt = CurDAG->getTargetConstant(ShAmtC->getZExtValue(), DL, XLenVT);
+    } else {
+      Opc = IsSigned ? RISCV::WSLA : RISCV::WSLL;
+    }
+
+    SDNode *WShift = CurDAG->getMachineNode(Opc, DL, MVT::Untyped,
+                                            Node->getOperand(0), ShAmt);
+
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(WShift, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::LOAD: {
     if (tryIndexedLoad(Node))
       return;

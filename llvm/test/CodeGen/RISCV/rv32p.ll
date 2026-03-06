@@ -784,14 +784,7 @@ define i64 @wmulsu_i32(i32 %x, i32 %y) {
 define i64 @wsla_i32(i32 %x, i64 %y) {
 ; CHECK-LABEL: wsla_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a2, a0, 31
-; CHECK-NEXT:    slx a2, a0, a1
-; CHECK-NEXT:    sll a0, a0, a1
-; CHECK-NEXT:    slli a1, a1, 26
-; CHECK-NEXT:    srai a3, a1, 31
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    merge a1, a2, a0
-; CHECK-NEXT:    andn a0, a0, a3
+; CHECK-NEXT:    wsla a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = sext i32 %x to i64
   %b = shl i64 %a, %y
@@ -801,14 +794,7 @@ define i64 @wsla_i32(i32 %x, i64 %y) {
 define i64 @wsll_i32(i32 %x, i64 %y) {
 ; CHECK-LABEL: wsll_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    sll a3, a0, a1
-; CHECK-NEXT:    slx a2, a0, a1
-; CHECK-NEXT:    slli a1, a1, 26
-; CHECK-NEXT:    srai a0, a1, 31
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    merge a1, a2, a3
-; CHECK-NEXT:    andn a0, a3, a0
+; CHECK-NEXT:    wsll a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = zext i32 %x to i64
   %b = shl i64 %a, %y
@@ -818,9 +804,7 @@ define i64 @wsll_i32(i32 %x, i64 %y) {
 define i64 @wslai_i32(i32 %x) {
 ; CHECK-LABEL: wslai_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a0, 31
-; CHECK-NEXT:    nsrli a1, a0, 9
-; CHECK-NEXT:    slli a0, a0, 23
+; CHECK-NEXT:    wslai a0, a0, 23
 ; CHECK-NEXT:    ret
   %a = sext i32 %x to i64
   %b = shl i64 %a, 23
@@ -830,9 +814,7 @@ define i64 @wslai_i32(i32 %x) {
 define i64 @wslli_i32(i32 %x, i64 %y) {
 ; CHECK-LABEL: wslli_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    nsrli a1, a0, 22
-; CHECK-NEXT:    slli a0, a0, 10
+; CHECK-NEXT:    wslli a0, a0, 10
 ; CHECK-NEXT:    ret
   %a = zext i32 %x to i64
   %b = shl i64 %a, 10
