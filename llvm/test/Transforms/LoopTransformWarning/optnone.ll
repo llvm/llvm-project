@@ -38,9 +38,9 @@ attributes #0 = { noinline optnone }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.unroll.enable"}
-!2 = !{!"llvm.loop.distribute.enable"}
+!2 = !{!"llvm.loop.distribute.enable", i1 1}
 !3 = !{!"llvm.loop.unroll_and_jam.enable"}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.enable", i1 1}
 
 
 ; CHECK-NOT: warning

@@ -49,4 +49,4 @@ exit:
 }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.unroll.disable", i1 true}
+!1 = !{!"llvm.loop.unroll.disable"}
