@@ -2720,7 +2720,6 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
-  // TODO: We can extract index 0 from a mask vector without a slide.
   if (EltVT == MVT::i1)
     return false;
 
@@ -8859,14 +8858,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRA:
     if (Op.getSimpleValueType().isFixedLengthVector()) {
       if (Subtarget.hasStdExtP()) {
-        // We have patterns for scalar/immediate shift amount, so no lowering
-        // needed.
-        if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
-          return Op;
-
         // There's no vector-vector version of shift instruction in P extension
         // so we need to unroll to scalar computation and pack them back.
-        return DAG.UnrollVectorOp(Op.getNode());
+        if (Op.getOperand(1)->getOpcode() != ISD::SPLAT_VECTOR)
+          return DAG.UnrollVectorOp(Op.getNode());
+
+        unsigned Opc;
+        switch (Op.getOpcode()) {
+        default:
+          llvm_unreachable("Unexpected opcode");
+        case ISD::SHL:
+          Opc = RISCVISD::PSHL;
+          break;
+        case ISD::SRL:
+          Opc = RISCVISD::PSRL;
+          break;
+        case ISD::SRA:
+          Opc = RISCVISD::PSRA;
+          break;
+        }
+        return DAG.getNode(Opc, SDLoc(Op), Op.getValueType(), Op.getOperand(0),
+                           Op.getOperand(1).getOperand(0));
       }
       return lowerToScalableOp(Op, DAG);
     }

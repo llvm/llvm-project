@@ -137,23 +137,24 @@ public:
   }
 
   // Handle TLS General-Dynamic relocation. Returns true if the __tls_get_addr
-  // call should be skipped (i.e., caller should ++it).
+  // call should be skipped (i.e., caller should ++it). Pass R_NONE for
+  // ieExpr/leExpr to disable GD-to-IE/LE optimization (e.g. ARM, RISC-V).
   bool handleTlsGd(RelExpr sharedExpr, RelExpr ieExpr, RelExpr leExpr,
                    RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
-    if (ctx.arg.shared) {
-      sym.setFlags(NEEDS_TLSGD);
-      sec->addReloc({sharedExpr, type, offset, addend, &sym});
-      return false;
+    if (!ctx.arg.shared && ieExpr != R_NONE) {
+      if (sym.isPreemptible) {
+        // Optimize to Initial Exec.
+        sym.setFlags(NEEDS_TLSIE);
+        sec->addReloc({ieExpr, type, offset, addend, &sym});
+      } else {
+        // Optimize to Local Exec.
+        sec->addReloc({leExpr, type, offset, addend, &sym});
+      }
+      return true;
     }
-    if (sym.isPreemptible) {
-      // Optimize to Initial Exec.
-      sym.setFlags(NEEDS_TLSIE);
-      sec->addReloc({ieExpr, type, offset, addend, &sym});
-    } else {
-      // Optimize to Local Exec.
-      sec->addReloc({leExpr, type, offset, addend, &sym});
-    }
-    return true;
+    sym.setFlags(NEEDS_TLSGD);
+    sec->addReloc({sharedExpr, type, offset, addend, &sym});
+    return false;
   }
 
   // Handle TLSDESC relocation.
