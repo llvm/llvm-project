@@ -365,8 +365,6 @@ struct_padding_arg func_struct_padding_ret()
 
 // CHECK: define{{.*}} %struct.struct_char_x8 @func_struct_char_x8_ret()
 // CHECK: ret %struct.struct_char_x8 zeroinitializer
- struct_char_x8 func_struct_char_x8_ret()
- {
 struct_char_x8 func_struct_char_x8_ret()
 {
   struct_char_x8 s = { 0 };
