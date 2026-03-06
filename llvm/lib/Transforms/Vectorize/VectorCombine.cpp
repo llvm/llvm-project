@@ -5662,19 +5662,24 @@ Value *VectorCombine::getOrCreateShuffle(Value *V0, Value *V1,
   SmallVector<int, 8> MaskVec(Mask.begin(), Mask.end());
   std::tuple<Value *, Value *, SmallVector<int>> Key =
       std::make_tuple(V0, V1, MaskVec);
-  auto It = ShuffleCache.find(Key);
-  if (It != ShuffleCache.end()) {
-    Value *Cached = It->getSecond();
-    // Validate cached instruction still exists
-    if (auto *CachedInst = dyn_cast<Instruction>(Cached)) {
-      if (!CachedInst->getParent()) {
-        // Dead instruction, remove from cache
-        ShuffleCache.erase(It);
-      } else {
+
+  // Safe to cache when at least one operand is a constant,
+  // or when both operands are instructions in the same block
+  Instruction *I0 = dyn_cast<Instruction>(V0);
+  Instruction *I1 = dyn_cast<Instruction>(V1);
+  bool SafeToCache = !I0 || !I1 || I0->getParent() == I1->getParent();
+
+  if (SafeToCache) {
+    auto It = ShuffleCache.find(Key);
+    if (It != ShuffleCache.end()) {
+      Value *Cached = It->second;
+      auto *CachedInst = dyn_cast<Instruction>(Cached);
+      // Return cached value if it's a constant or a live instruction
+      if (!CachedInst || CachedInst->getParent()) {
         return Cached;
       }
-    } else {
-      return Cached;
+      // Cached instruction was deleted, remove from cache
+      ShuffleCache.erase(It);
     }
   }
 
@@ -5690,8 +5695,9 @@ Value *VectorCombine::getOrCreateShuffle(Value *V0, Value *V1,
 
   LLVM_DEBUG(dbgs() << "VectorCombine: Created shuffle: " << *Shuf << '\n');
 
-  // Cache and add to worklist
-  ShuffleCache[Key] = Shuf;
+  if (SafeToCache) {
+    ShuffleCache[Key] = Shuf;
+  }
   Worklist.pushValue(Shuf);
 
   return Shuf;
