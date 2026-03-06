@@ -507,8 +507,7 @@ FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
 //   object size. If C is negative, we cannot make any useful assumptions based
 //   on the offset, since it would need to be extremely large.
 static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
-                                   const Value *Idx,
-                                   const BinaryOperator *Add,
+                                   const Value *Idx, const BinaryOperator *Add,
                                    const DataLayout &DL) {
   if (isKnownNonNegative(Idx, DL))
     return true;
@@ -518,8 +517,8 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
 
   const Value *Ptr = GEP->getPointerOperand();
   int64_t Offset = 0;
-  const Value *Base = GetPointerBaseWithConstantOffset(
-      const_cast<Value *>(Ptr), Offset, DL);
+  const Value *Base =
+      GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset, DL);
 
   // We need one of the operands to be a constant to be able to trace into the
   // operator.
@@ -669,8 +668,8 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
   // since visiting the LHS didn't pan out.
   UserChain.resize(ChainLength);
 
-  ConstantOffset = find(BO->getOperand(1), nullptr, nullptr, SignExtended,
-                        ZeroExtended);
+  ConstantOffset =
+      find(BO->getOperand(1), nullptr, nullptr, SignExtended, ZeroExtended);
   // If U is a sub operator, negate the constant offset found in the right
   // operand.
   if (BO->getOpcode() == Instruction::Sub)
@@ -704,13 +703,13 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
     if (canTraceInto(SignExtended, ZeroExtended, BO, GEP, Idx))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
   } else if (isa<TruncInst>(V)) {
-    ConstantOffset = find(U->getOperand(0), GEP, Idx, SignExtended,
-                          ZeroExtended)
-                         .trunc(BitWidth);
+    ConstantOffset =
+        find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
+            .trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
-    ConstantOffset = find(U->getOperand(0), GEP, Idx, /* SignExtended */ true,
-                          ZeroExtended)
-                         .sext(BitWidth);
+    ConstantOffset =
+        find(U->getOperand(0), GEP, Idx, /* SignExtended */ true, ZeroExtended)
+            .sext(BitWidth);
   } else if (isa<ZExtInst>(V)) {
     // As an optimization, we can clear the SignExtended flag because
     // sext(zext(a)) = zext(a). Verified in @sext_zext in split-gep.ll.
@@ -885,9 +884,8 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(GEP->getIterator());
   // Find a non-zero constant offset first.
-  APInt ConstantOffset =
-      Extractor.find(Idx, GEP, Idx, /* SignExtended */ false,
-                     /* ZeroExtended */ false);
+  APInt ConstantOffset = Extractor.find(Idx, GEP, Idx, /* SignExtended */ false,
+                                        /* ZeroExtended */ false);
   if (ConstantOffset == 0) {
     UserChainTail = nullptr;
     PreservesNUW = true;
