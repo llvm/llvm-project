@@ -109,6 +109,8 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
         : size(size), buffer(size), curpos(0), AP(AP),
           EmitGeneric(AP.EmitGeneric) {}
 
+    unsigned getSize() const { return size; }
+
     // Copy Num bytes from Ptr.
     // if Bytes > Num, zero fill up to Bytes.
     void addBytes(const unsigned char *Ptr, unsigned Num, unsigned Bytes) {
@@ -220,6 +222,7 @@ private:
   void printFPConstant(const ConstantFP *Fp, raw_ostream &O) const;
   void bufferLEByte(const Constant *CPV, int Bytes, AggBuffer *aggBuffer);
   void bufferAggregateConstant(const Constant *CV, AggBuffer *aggBuffer);
+  void bufferAggregateConstVec(const ConstantVector *CV, AggBuffer *aggBuffer);
 
   void emitLinkageDirective(const GlobalValue *V, raw_ostream &O);
   void emitDeclarations(const Module &, raw_ostream &O);

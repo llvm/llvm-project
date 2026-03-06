@@ -1707,10 +1707,16 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     }
   }
 
-  // Old constants
-  if (isa<ConstantArray>(CPV) || isa<ConstantVector>(CPV)) {
+  // Buffer arrays one element at a time.
+  if (isa<ConstantArray>(CPV)) {
     for (const auto &Op : CPV->operands())
       bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // Constant vectors
+  if (const auto *CVec = dyn_cast<ConstantVector>(CPV)) {
+    bufferAggregateConstVec(CVec, aggBuffer);
     return;
   }
 
@@ -1735,6 +1741,60 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     return;
   }
   llvm_unreachable("unsupported constant type in printAggregateConstant()");
+}
+
+void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
+                                              AggBuffer *aggBuffer) {
+  unsigned NumElems = CV->getType()->getNumElements();
+  const unsigned BuffSize = aggBuffer->getSize();
+
+  // Buffer one element at a time if we have allocated enough buffer space.
+  if (BuffSize >= NumElems) {
+    for (const auto &Op : CV->operands())
+      bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // We have more elements than allocated buffer space, this implies sub-byte
+  // datatype in the vector. Merge consecutive elements to form a full byte. We
+  // expect that 8 % sub-byte-elem-size should be 0 and current expected usage
+  // is for i4 (for e2m1-fp4 types).
+  Type *ElemTy = CV->getType()->getElementType();
+  assert(ElemTy->isIntegerTy() && "Expected integer data type.");
+  unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
+  assert(ElemTySize < 8 && "Expected sub-byte data type.");
+  assert(8 % ElemTySize == 0 && "Element type size must evenly divide a byte.");
+  // Number of elements to merge to form a full byte.
+  unsigned ChunkSize = 8 / ElemTySize;
+
+  // Iterate through elements of vector one chunk at a time and buffer that
+  // chunk.
+  for (unsigned I = 0; I < NumElems; I += ChunkSize) {
+    // Collect elements in chunk to create sub-vector.
+    SmallVector<Constant *, 8> SubCVElems;
+    for (unsigned J = I; J < std::min(I + ChunkSize, NumElems); ++J)
+      SubCVElems.push_back(CV->getAggregateElement(J));
+
+    // For unevenly sized vectors add padding zeros.
+    unsigned PaddingZeroCount = ChunkSize - SubCVElems.size();
+    for (unsigned I = 0; I < PaddingZeroCount; ++I)
+      SubCVElems.push_back(ConstantInt::getNullValue(ElemTy));
+
+    auto SubCV = ConstantVector::get(SubCVElems);
+    Type *Int8Ty = IntegerType::get(CV->getContext(), 8);
+
+    // Merge elements of the chunk using ConstantFolding and buffer it.
+    ConstantInt *MergedElem =
+        dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
+            ConstantExpr::getBitCast(const_cast<Constant *>(SubCV), Int8Ty),
+            getDataLayout()));
+
+    if (!MergedElem)
+      report_fatal_error(
+          "Cannot lower vector global with unusual element type");
+
+    bufferLEByte(MergedElem, 0, aggBuffer);
+  }
 }
 
 /// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly
