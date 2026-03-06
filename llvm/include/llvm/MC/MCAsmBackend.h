@@ -143,12 +143,6 @@ public:
                                             const MCValue &, uint64_t,
                                             bool Resolved) const;
 
-  /// Simple predicate for targets where !Resolved implies requiring relaxation
-  virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                                    uint64_t Value) const {
-    llvm_unreachable("Needed if mayNeedRelaxation may return true");
-  }
-
   /// Relax the instruction in the given fragment to the next wider instruction.
   ///
   /// \param [out] Inst The instruction to relax, which is also the relaxed
@@ -156,9 +150,7 @@ public:
   /// \param STI the subtarget information for the associated instruction.
   virtual void relaxInstruction(MCInst &Inst,
                                 const MCSubtargetInfo &STI) const {
-    llvm_unreachable(
-        "Needed if fixupNeedsRelaxation/fixupNeedsRelaxationAdvanced may "
-        "return true");
+    llvm_unreachable("Needed if fixupNeedsRelaxationAdvanced may return true");
   }
 
   // Defined by linker relaxation targets.

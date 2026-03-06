@@ -1,5 +1,5 @@
 """
-Specification, compiler, disassembler, and interpreter
+Specification, assembler, disassembler, and interpreter
 for LLDB dataformatter bytecode.
 
 See https://lldb.llvm.org/resources/formatterbytecode.html for more details.
@@ -12,10 +12,13 @@ from __future__ import annotations
 import os, sys
 
 path = os.path.abspath(os.path.dirname(__file__))
-sys.path.remove(path)
+if path in sys.path:
+    sys.path.remove(path)
 
 import re
 import io
+import textwrap
+from dataclasses import dataclass
 from typing import BinaryIO, TextIO, Tuple, Union
 
 BINARY_VERSION = 1
@@ -142,7 +145,7 @@ define_selector(0x52, "strlen")
 
 
 ################################################################################
-# Compiler.
+# Assembler.
 ################################################################################
 
 _SIGNATURE_LABEL = re.compile(f"@(?:{SIGNATURE_NAMES}):$")
@@ -190,36 +193,119 @@ def _segment_by_signature(input: list[str]) -> list[Tuple[str, list[str]]]:
     return segments
 
 
-def compile_file(type_name: str, input: TextIO, output: BinaryIO) -> None:
+@dataclass
+class BytecodeSection:
+    """Abstraction of the data serialized to __lldbformatters sections."""
+
+    type_name: str
+    flags: int
+    signatures: list[Tuple[str, bytes]]
+
+    def validate(self):
+        seen = set()
+        for sig, _ in self.signatures:
+            if sig in seen:
+                raise ValueError(f"duplicate signature: {sig}")
+            seen.add(sig)
+
+    def _to_binary(self) -> bytes:
+        bin = bytearray()
+        bin.extend(_to_uleb(len(self.type_name)))
+        bin.extend(bytes(self.type_name, encoding="utf-8"))
+        bin.extend(_to_byte(self.flags))
+        for sig, bc in self.signatures:
+            bin.extend(_to_byte(SIGNATURES[sig]))
+            bin.extend(_to_uleb(len(bc)))
+            bin.extend(bc)
+
+        return bytes(bin)
+
+    def write_binary(self, output: BinaryIO) -> None:
+        self.validate()
+
+        bin = self._to_binary()
+        output.write(_to_byte(BINARY_VERSION))
+        output.write(_to_uleb(len(bin)))
+        output.write(self._to_binary())
+
+    class _CBuilder:
+        """Helper class for emitting binary data as a C-string literal."""
+
+        entries: list[Tuple[str, str]]
+
+        def __init__(self) -> None:
+            self.entries = []
+
+        def add_byte(self, x: int, comment: str) -> None:
+            self.add_bytes(_to_byte(x), comment)
+
+        def add_uleb(self, x: int, comment: str) -> None:
+            self.add_bytes(_to_uleb(x), comment)
+
+        def add_bytes(self, x: bytes, comment: str) -> None:
+            # Construct zero padded hex values with length two.
+            string = "".join(f"\\x{b:02x}" for b in x)
+            self.add_string(string, comment)
+
+        def add_string(self, string: str, comment: str) -> None:
+            self.entries.append((f'"{string}"', comment))
+
+    def write_source(self, output: TextIO) -> None:
+        self.validate()
+
+        size = len(self._to_binary())
+
+        b = self._CBuilder()
+        b.add_byte(BINARY_VERSION, "version")
+        b.add_uleb(size, "remaining record size")
+        b.add_uleb(len(self.type_name), "type name size")
+        b.add_string(self.type_name, "type name")
+        b.add_byte(self.flags, "flags")
+        for sig, bc in self.signatures:
+            b.add_byte(SIGNATURES[sig], f"sig_{sig}")
+            b.add_uleb(len(bc), "program size")
+            b.add_bytes(bc, "program")
+
+        print(
+            textwrap.dedent(
+                """
+                #ifdef __APPLE__
+                #define FORMATTER_SECTION "__DATA_CONST,__lldbformatters"
+                #else
+                #define FORMATTER_SECTION ".lldbformatters"
+                #endif
+                """
+            ),
+            file=output,
+        )
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(
+            "__attribute__((used, section(FORMATTER_SECTION)))",
+            file=output,
+        )
+        print(f"unsigned char _{var_name}_synthetic[] =", file=output)
+        indent = "    "
+        for string, comment in b.entries:
+            print(f"{indent}// {comment}", file=output)
+            print(f"{indent}{string}", file=output)
+        print(";", file=output)
+
+
+def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
     input_tokens = _tokenize(input.read())
-
-    signatures = {}
+    signatures = []
     for sig, tokens in _segment_by_signature(input_tokens):
-        if sig in signatures:
-            raise ValueError(f"duplicate signature: {sig}")
-        signatures[sig] = compile_tokens(tokens)
+        signatures.append((sig, assemble_tokens(tokens)))
 
-    bin = bytearray()
-    bin.extend(_to_uleb(len(type_name)))
-    bin.extend(bytes(type_name, encoding="utf-8"))
-    flags = 0
-    bin.extend(_to_byte(flags))
-    for sig, bc in signatures.items():
-        bin.extend(_to_byte(SIGNATURES[sig]))
-        bin.extend(_to_uleb(len(bc)))
-        bin.extend(bc)
-
-    output.write(_to_byte(BINARY_VERSION))
-    output.write(_to_uleb(len(bin)))
-    output.write(bin)
+    return BytecodeSection(type_name, flags=0, signatures=signatures)
 
 
-def compile(assembler: str) -> bytearray:
-    return compile_tokens(_tokenize(assembler))
+def assemble(assembly: str) -> bytes:
+    return assemble_tokens(_tokenize(assembly))
 
 
-def compile_tokens(tokens: list[str]) -> bytearray:
-    """Compile assembler into bytecode"""
+def assemble_tokens(tokens: list[str]) -> bytes:
+    """Assemble assembly into bytecode"""
     # This is a stack of all in-flight/unterminated blocks.
     bytecode = [bytearray()]
 
@@ -257,7 +343,7 @@ def compile_tokens(tokens: list[str]) -> bytearray:
         else:
             emit(opcode[tok])
     assert len(bytecode) == 1  # unterminated {
-    return bytecode[0]
+    return bytes(bytecode[0])
 
 
 ################################################################################
@@ -290,8 +376,8 @@ def disassemble_file(input: BinaryIO, output: TextIO) -> None:
         print(f"@{sig_name}: {asm}", file=output)
 
 
-def disassemble(bytecode: Union[bytes, bytearray]) -> Tuple[str, list[int]]:
-    """Disassemble bytecode into (assembler, token starts)"""
+def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
+    """Disassemble bytecode into (assembly, token starts)"""
     asm = ""
     all_bytes = list(bytecode)
     all_bytes.reverse()
@@ -364,7 +450,7 @@ def count_fmt_params(fmt: str) -> int:
     return n
 
 
-def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = False):
+def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False):
     """Interpret bytecode"""
     frame = []
     frame.append((0, len(bytecode)))
@@ -582,7 +668,7 @@ def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = Fa
 ################################################################################
 
 
-def _to_uleb(value: int) -> bytearray:
+def _to_uleb(value: int) -> bytes:
     """Encode an integer to ULEB128 bytes."""
     if value < 0:
         raise ValueError(f"negative number cannot be encoded to ULEB128: {value}")
@@ -597,7 +683,7 @@ def _to_uleb(value: int) -> bytearray:
         if value == 0:
             break
 
-    return result
+    return bytes(result)
 
 
 def _from_uleb(stream: BinaryIO) -> int:
@@ -623,7 +709,7 @@ def _main():
 
     parser = argparse.ArgumentParser(
         description="""
-    Compiler, disassembler, and interpreter for LLDB dataformatter bytecode.
+    Assembler, disassembler, and interpreter for LLDB dataformatter bytecode.
     See https://lldb.llvm.org/resources/formatterbytecode.html for more details.
     """
     )
@@ -631,9 +717,9 @@ def _main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "-c",
-        "--compile",
+        "--assemble",
         action="store_true",
-        help="compile assembler into bytecode",
+        help="assemble assembly into bytecode",
     )
     mode.add_argument(
         "-d",
@@ -644,19 +730,29 @@ def _main():
     parser.add_argument(
         "-o",
         "--output",
-        help="output file (required for --compile)",
+        help="output file (required for --assemble)",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=("binary", "c"),
+        default="binary",
+        help="output file format",
     )
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
-    if args.compile:
+    if args.assemble:
         if not args.output:
-            parser.error("--output is required with --compile")
-        with (
-            open(args.input) as input,
-            open(args.output, "wb") as output,
-        ):
-            compile_file(args.type_name, input, output)
+            parser.error("--output is required with --assemble")
+        with open(args.input) as input:
+            section = assemble_file(args.type_name, input)
+        if args.format == "binary":
+            with open(args.output, "wb") as output:
+                section.write_binary(output)
+        else:  # args.format == "c"
+            with open(args.output, "w") as output:
+                section.write_source(output)
     elif args.disassemble:
         if args.output:
             with (
@@ -679,16 +775,16 @@ if __name__ == "__main__":
     ############################################################################
     import unittest
 
-    class TestCompiler(unittest.TestCase):
+    class TestAssembler(unittest.TestCase):
 
-        def test_compile(self):
-            self.assertEqual(compile("1u dup").hex(), "200101")
-            self.assertEqual(compile('"1u dup"').hex(), "2206317520647570")
-            self.assertEqual(compile("16 < { dup } if").hex(), "21105210010111")
-            self.assertEqual(compile('{ { " } " } }').hex(), "100710052203207d20")
+        def test_assemble(self):
+            self.assertEqual(assemble("1u dup").hex(), "200101")
+            self.assertEqual(assemble('"1u dup"').hex(), "2206317520647570")
+            self.assertEqual(assemble("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(assemble('{ { " } " } }').hex(), "100710052203207d20")
 
             def roundtrip(asm):
-                self.assertEqual(disassemble(compile(asm))[0], asm)
+                self.assertEqual(disassemble(assemble(asm))[0], asm)
 
             roundtrip("1u dup")
             roundtrip("16 < { dup } if")
@@ -699,16 +795,17 @@ if __name__ == "__main__":
             roundtrip('"a  b"')
             roundtrip('"a \\" b"')
 
-            self.assertEqual(interpret(compile("1 1 +"), [], []), 2)
-            self.assertEqual(interpret(compile("2 1 1 + *"), [], []), 4)
+            self.assertEqual(interpret(assemble("1 1 +"), [], []), 2)
+            self.assertEqual(interpret(assemble("2 1 1 + *"), [], []), 4)
             self.assertEqual(
-                interpret(compile('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
+                interpret(assemble('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
             )
 
-        def test_compile_file(self):
-            def run_compile(type_name, asm):
+        def test_assemble_file(self):
+            def run_assemble(type_name, asm):
                 out = io.BytesIO()
-                compile_file(type_name, io.StringIO(asm), out)
+                section = assemble_file(type_name, io.StringIO(asm))
+                section.write_binary(out)
                 out.seek(0)
                 return out
 
@@ -718,14 +815,14 @@ if __name__ == "__main__":
                 out.seek(0)
                 return out
 
-            # compile -> disassemble -> compile round-trip: binary is identical.
+            # assemble -> disassemble -> assemble round-trip: binary is identical.
             asm = "@summary: dup @get_value_as_unsigned call return\n@get_num_children: drop 5u return"
-            binary1 = run_compile("MyType", asm)
+            binary1 = run_assemble("MyType", asm)
             dis = run_disassemble(binary1)
-            binary2 = run_compile("MyType", dis.read())
+            binary2 = run_assemble("MyType", dis.read())
             self.assertEqual(binary1.getvalue(), binary2.getvalue())
 
-            # disassemble -> compile -> disassemble round-trip: text is identical.
+            # disassemble -> assemble -> disassemble round-trip: text is identical.
             dis2 = run_disassemble(binary2)
             self.assertEqual(dis.getvalue(), dis2.getvalue())
 
@@ -735,6 +832,44 @@ if __name__ == "__main__":
 
             # Duplicate signature is an error.
             with self.assertRaises(ValueError):
-                run_compile("MyType", "@summary: 1u return\n@summary: 2u return")
+                run_assemble("MyType", "@summary: 1u return\n@summary: 2u return")
+
+        def test_write_source(self):
+            # Use the Account example from main.cpp as a reference, whose
+            # exact byte values are known.
+            section = BytecodeSection(
+                type_name="Account",
+                flags=0,
+                signatures=[
+                    ("get_num_children", bytes([0x20, 0x01])),
+                    ("get_child_at_index", bytes([0x02, 0x20, 0x00, 0x23, 0x11, 0x60])),
+                ],
+            )
+            out = io.StringIO()
+            section.write_source(out)
+            src = out.getvalue()
+
+            self.assertIn("__attribute__((used, section(FORMATTER_SECTION)))", src)
+            self.assertIn("unsigned char _Account_synthetic[] =", src)
+            self.assertIn('"\\x01"', src)  # version
+            self.assertIn('"\\x15"', src)  # record size (21)
+            self.assertIn('"\\x07"', src)  # type name size (7)
+            self.assertIn('"Account"', src)  # type name
+            self.assertIn('"\\x00"', src)  # flags
+            self.assertIn('"\\x02"', src)  # sig_get_num_children
+            self.assertIn('"\\x20\\x01"', src)  # program
+            self.assertIn('"\\x04"', src)  # sig_get_child_at_index
+            self.assertIn('"\\x06"', src)  # program size
+            self.assertIn('"\\x02\\x20\\x00\\x23\\x11\\x60"', src)  # program
+            self.assertIn("// version", src)
+            self.assertIn("// type name", src)
+            self.assertIn("// program", src)
+            # Semicolon terminates the array initializer.
+            self.assertEqual(src.count(";"), 1)
+
+            # Non-identifier characters in the type name are replaced with '_'.
+            out2 = io.StringIO()
+            BytecodeSection("std::vector<int>", 0, []).write_source(out2)
+            self.assertIn("_std__vector_int__synthetic[] =", out2.getvalue())
 
     unittest.main(argv=[__file__])

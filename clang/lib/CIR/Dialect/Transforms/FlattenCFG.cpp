@@ -208,9 +208,8 @@ public:
 
     cir::ConstantOp lowerBoundValue = cir::ConstantOp::create(
         rewriter, op.getLoc(), cir::IntAttr::get(sIntType, lowerBound));
-    cir::BinOp diffValue =
-        cir::BinOp::create(rewriter, op.getLoc(), sIntType, cir::BinOpKind::Sub,
-                           op.getCondition(), lowerBoundValue);
+    mlir::Value diffValue = cir::SubOp::create(
+        rewriter, op.getLoc(), op.getCondition(), lowerBoundValue);
 
     // Use unsigned comparison to check if the condition is in the range.
     cir::CastOp uDiffValue = cir::CastOp::create(
@@ -1555,6 +1554,15 @@ public:
 
     // If there are no handlers, we're done.
     if (!handlerTypes || handlerTypes.empty()) {
+      rewriter.eraseOp(tryOp);
+      return mlir::success();
+    }
+
+    // If there are no throwing calls and no resume ops from inner cleanup
+    // scopes, exceptions cannot reach the catch handlers. Skip handler and
+    // dispatch block creation — the handler regions will be dropped when
+    // the try op is erased.
+    if (callsToRewrite.empty() && resumeOpsToChain.empty()) {
       rewriter.eraseOp(tryOp);
       return mlir::success();
     }

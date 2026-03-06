@@ -382,7 +382,8 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
     rewriter.replaceOp(unPackOp, extractSliceOp->getResults());
 
     return LowerUnPackOpResult{/*emptyOp=*/nullptr, /*transposeOp=*/nullptr,
-                               /*reshapeOp=*/nullptr, extractSliceOp};
+                               /*reshapeOp=*/nullptr, extractSliceOp,
+                               /*copyOp=*/nullptr};
   }
 
   // 1. Compute the permutation vector to shuffle packed shape into the shape
@@ -444,7 +445,8 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
   // 7. Replace unPackOp by copyOp.
   rewriter.replaceOp(unPackOp, copyOp->getResults());
 
-  return LowerUnPackOpResult{emptyOp, transposeOp, reshapeOp, extractSliceOp};
+  return LowerUnPackOpResult{emptyOp, transposeOp, reshapeOp, extractSliceOp,
+                             copyOp};
 }
 
 SmallVector<int64_t>
