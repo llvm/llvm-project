@@ -61,11 +61,16 @@ export int test_vec_vec_muli(int3 a, int3 b) { return mul(a, b); }
 export uint test_vec_vec_mulu(uint3 a, uint3 b) { return mul(a, b); }
 
 // Double vector dot product: DXIL uses fmul + fmuladd, SPIR-V uses fdot.
-// The initial fmul may be vectorized by VectorCombine depending on build configuration (the fallback TTI used).
 // CHECK-LABEL: test_vec_vec_muld
-// DXIL-NOT: @llvm.dx.fdot
-// DXIL: %hlsl.mul1 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %hlsl.mul)
-// DXIL: %hlsl.mul2 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %hlsl.mul1)
+// DXIL: [[A0:%.*]] = extractelement <3 x double> %a, i64 0
+// DXIL: [[B0:%.*]] = extractelement <3 x double> %b, i64 0
+// DXIL: %hlsl.mul = fmul {{.*}} double [[B0]], [[A0]]
+// DXIL: [[A1:%.*]] = extractelement <3 x double> %a, i64 1
+// DXIL: [[B1:%.*]] = extractelement <3 x double> %b, i64 1
+// DXIL: %hlsl.mul1 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double [[A1]], double [[B1]], double %hlsl.mul)
+// DXIL: [[A2:%.*]] = extractelement <3 x double> %a, i64 2
+// DXIL: [[B2:%.*]] = extractelement <3 x double> %b, i64 2
+// DXIL: %hlsl.mul2 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double [[A2]], double [[B2]], double %hlsl.mul1)
 // DXIL: ret double %hlsl.mul2
 // SPIRV: %hlsl.mul = {{.*}}call {{.*}} double @llvm.spv.fdot.v3f64(<3 x double> %a, <3 x double> %b)
 // SPIRV: ret double %hlsl.mul
