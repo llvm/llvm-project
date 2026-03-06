@@ -3,7 +3,7 @@
 
 REQUIRES: system-linux
 
-RUN: %clangxx %p/Inputs/bolt_icf.cpp -g -Wl,-q -o %t.exe
+RUN: %clangxx %p/Inputs/bolt_icf.cpp -g -Wl,-q -fPIC -pie -o %t.exe
 RUN: llvm-bolt %t.exe --relocs -o %t --max-funcs=2
 RUN: llvm-objdump -d -j .text %t | FileCheck %s
 
