@@ -73,6 +73,9 @@ private:
   /// Incoming ByVal arguments
   SmallVector<SDValue, 8> IncomingByValArgs;
 
+  /// Incoming indirect argument pointers (for musttail forwarding)
+  SmallVector<SDValue, 4> IncomingIndirectArgs;
+
   /// Is there any vector argument or return?
   bool IsVectorCall = false;
 
@@ -156,6 +159,16 @@ public:
   void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
   SDValue getIncomingByValArgs(unsigned Idx) { return IncomingByValArgs[Idx]; }
   unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
+
+  void addIncomingIndirectArg(SDValue Val) {
+    IncomingIndirectArgs.push_back(Val);
+  }
+  SDValue getIncomingIndirectArg(unsigned Idx) {
+    return IncomingIndirectArgs[Idx];
+  }
+  unsigned getIncomingIndirectArgsSize() const {
+    return IncomingIndirectArgs.size();
+  }
 
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 
