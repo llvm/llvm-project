@@ -1,4 +1,4 @@
-//===-- Implementation header for sin using integer-only --------*- C++ -*-===//
+//===-- Implementation header for cos using integer-only --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SIN_INTEGER_EVAL_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_SIN_INTEGER_EVAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_COS_INTEGER_EVAL_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_COS_INTEGER_EVAL_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -22,7 +22,7 @@ namespace math {
 
 namespace integer_only {
 
-LIBC_INLINE constexpr double sin(double x) {
+LIBC_INLINE constexpr double cos(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -32,14 +32,14 @@ LIBC_INLINE constexpr double sin(double x) {
 
   Frac128 x_frac({0, 0});
   unsigned k = 0;
-  bool is_neg = xbits.is_neg();
+  bool is_neg = false;
   bool x_frac_is_neg = false;
 
   // x < 0.5
   if (x_e < FPBits::EXP_BIAS - 1) {
-    // |x| < 2^-26, sin(x) ~ x.
+    // |x| < 2^-26, cos(x) ~ 1.
     if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 26))
-      return x;
+      return 1.0;
     // Normalize so that the MSB is 0.5.
     x_u <<= 10;
     unsigned shifts = FPBits::EXP_BIAS - 2 - x_e;
@@ -73,7 +73,8 @@ LIBC_INLINE constexpr double sin(double x) {
     x_frac_is_neg = trig_range_reduction(x_u, x_e, k, x_frac);
   }
 
-  return sin_eval(x_frac, k, is_neg, x_frac_is_neg);
+  // cos(x) = sin(x + pi/2)
+  return sin_eval(x_frac, k + 1, is_neg, x_frac_is_neg);
 }
 
 } // namespace integer_only

@@ -53,7 +53,7 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT 0x10
 
 #ifndef LIBC_MATH
-#define LIBC_MATH 0
+#define LIBC_MATH LIBC_MATH_FAST
 #endif // LIBC_MATH
 
 #if (LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS)
