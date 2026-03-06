@@ -406,6 +406,9 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
           targetDiag(*Locs.begin(), diag::err_thread_unsupported);
   }
 
+  if (LangOpts.SYCLIsDevice && isa<FunctionDecl>(D))
+    SYCL().CheckDeviceUseOfDecl(D, Loc);
+
   return false;
 }
 
@@ -8892,9 +8895,9 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   // C99 6.5.15p5: "If both operands have void type, the result has void type."
   // The following || allows only one side to be void (a GCC-ism).
   if (LHSTy->isVoidType() || RHSTy->isVoidType()) {
-    QualType ResTy;
     if (LHSTy->isVoidType() && RHSTy->isVoidType()) {
-      ResTy = Context.getCommonSugaredType(LHSTy, RHSTy);
+      // UsualArithmeticConversions already handled the case where both sides
+      // are the same type.
     } else if (RHSTy->isVoidType()) {
       ResTy = RHSTy;
       Diag(RHS.get()->getBeginLoc(), diag::ext_typecheck_cond_one_void)

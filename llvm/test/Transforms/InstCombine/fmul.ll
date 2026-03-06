@@ -1099,7 +1099,7 @@ define void @fmul_loop_invariant_fdiv(ptr %a, float %x) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[I_08]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[F:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[M:%.*]] = fdiv fast float [[F]], [[X:%.*]]
 ; CHECK-NEXT:    store float [[M]], ptr [[ARRAYIDX]], align 4
@@ -1257,7 +1257,7 @@ define float @fmul_select_strict(float %x, i1 %c) {
 define double @fmul_sqrt_select(double %x, i1 %c) {
 ; CHECK-LABEL: @fmul_sqrt_select(
 ; CHECK-NEXT:    [[SQR:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = select fast i1 [[C:%.*]], double [[X]], double [[SQR]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C:%.*]], double [[X]], double [[SQR]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
   %sqr = call double @llvm.sqrt.f64(double %x)

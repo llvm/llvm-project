@@ -2700,29 +2700,14 @@ public:
       counts.push_back(count);
     }
 
-    // New attribute constructed by the sliced values.
-    DenseElementsAttr newAttr;
-
-    if (auto elems = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
-      SmallVector<APInt> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::IntElementIterator, APInt>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    } else if (auto elems = llvm::dyn_cast<DenseFPElementsAttr>(attr)) {
-      SmallVector<APFloat> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::FloatElementIterator, APFloat>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    }
-
-    if (newAttr) {
-      rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
-      return success();
-    }
-
-    return failure();
+    // Slice the elements and construct a new attribute.
+    SmallVector<Attribute> outValues;
+    outValues.reserve(resultType.getNumElements());
+    sliceElements(attr.value_begin<Attribute>(), counts, offsets, sizes,
+                  strides, &outValues);
+    auto newAttr = DenseElementsAttr::get(resultType, outValues);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
+    return success();
   }
 
 private:

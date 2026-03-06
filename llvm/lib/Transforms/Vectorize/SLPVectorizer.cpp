@@ -10613,6 +10613,23 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     return TreeEntry::Vectorize;
   }
   case Instruction::Select:
+    if (SLPReVec) {
+      SmallPtrSet<Type *, 4> CondTypes;
+      for (Value *V : VL) {
+        Value *Cond;
+        if (!match(V, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+            !match(V, m_ZExt(m_Value(Cond))))
+          continue;
+        CondTypes.insert(Cond->getType());
+      }
+      if (CondTypes.size() > 1) {
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: Gathering select with different condition types.\n");
+        return TreeEntry::NeedToGather;
+      }
+    }
+    [[fallthrough]];
   case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::FAdd:
@@ -13573,6 +13590,8 @@ bool BoUpSLP::matchesInversedZExtSelect(
     if (CmpPredicate::getMatching(MainPred, Pred))
       continue;
     if (!CmpPredicate::getMatching(InversedPred, Pred))
+      return false;
+    if (!V->hasOneUse())
       return false;
     InversedCmpsIndices.push_back(Idx);
   }
@@ -21779,6 +21798,7 @@ Value *BoUpSLP::vectorizeTree(
     // to adjust insertion point again to the end of block.
     if (isa<PHINode>(UserI) ||
         (TE->UserTreeIndex.UserTE->hasState() &&
+         TE->UserTreeIndex.UserTE->State != TreeEntry::SplitVectorize &&
          TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
@@ -26963,13 +26983,22 @@ private:
           VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");
           return;
         }
-        if (VecRes->getType()->getScalarType() != DestTy->getScalarType())
+        if (VecRes->getType()->getScalarType() != DestTy->getScalarType()) {
+          assert(getNumElements(VecRes->getType()) % getNumElements(DestTy) ==
+                     0 &&
+                 "Expected the number of elements in VecRes to be a multiple "
+                 "of the number of elements in DestTy");
           VecRes = Builder.CreateIntCast(
-              VecRes, getWidenedType(DestTy, getNumElements(VecRes->getType())),
+              VecRes,
+              getWidenedType(DestTy->getScalarType(),
+                             getNumElements(VecRes->getType())),
               VecResSignedness);
+        }
         if (ScalarTy != DestTy->getScalarType())
           Vec = Builder.CreateIntCast(
-              Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
+              Vec,
+              getWidenedType(DestTy->getScalarType(),
+                             getNumElements(Vec->getType())),
               IsSigned);
         unsigned VecResVF = getNumElements(VecRes->getType());
         unsigned VecVF = getNumElements(Vec->getType());

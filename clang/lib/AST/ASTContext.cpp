@@ -50,6 +50,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CommentOptions.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -9223,9 +9224,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/AMDGPUTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
-        unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                                "cannot yet @encode type %0");
-        Diags.Report(DiagID) << BT->getName(C->getPrintingPolicy());
+        Diags.Report(diag::err_unsupported_objc_primitive_encoding)
+            << QualType(BT, 0);
         return ' ';
       }
 
@@ -13013,11 +13013,20 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
 
   if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
       isa<CXXConstructorDecl>(FD) &&
-      cast<CXXConstructorDecl>(FD)->isInheritingConstructor())
-    // Our approach to inheriting constructors is fundamentally different from
-    // that used by the MS ABI, so keep our inheriting constructor thunks
-    // internal rather than trying to pick an unambiguous mangling for them.
+      cast<CXXConstructorDecl>(FD)->isInheritingConstructor() &&
+      !FD->hasAttr<DLLExportAttr>()) {
+    // Both Clang and MSVC implement inherited constructors as forwarding
+    // thunks that delegate to the base constructor. Keep non-dllexport
+    // inheriting constructor thunks internal since they are not needed
+    // outside the translation unit.
+    //
+    // dllexport inherited constructors are exempted so they are externally
+    // visible, matching MSVC's export behavior. Inherited constructors
+    // whose parameters prevent ABI-compatible forwarding (e.g. callee-
+    // cleanup types) are excluded from export in Sema to avoid silent
+    // runtime mismatches.
     return GVA_Internal;
+  }
 
   return GVA_DiscardableODR;
 }

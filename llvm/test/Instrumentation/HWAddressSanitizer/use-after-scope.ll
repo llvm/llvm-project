@@ -25,7 +25,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; X86-SCOPE-NEXT:    [[TMP10:%.*]] = or i64 [[TMP8]], [[TMP9]]
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
 ; X86-SCOPE-NEXT:    br label [[TMP11:%.*]]
-; X86-SCOPE:       11:
+; X86-SCOPE:       loop:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP12]], i64 16)
@@ -34,7 +34,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP14]], i64 16)
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    br i1 [[TMP13]], label [[TMP15:%.*]], label [[TMP11]]
-; X86-SCOPE:       15:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    ret i32 0
 ;
@@ -55,10 +55,10 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; X86-NOSCOPE-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-NOSCOPE:       12:
+; X86-NOSCOPE:       loop:
 ; X86-NOSCOPE-NEXT:    [[TMP13:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP12]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
@@ -95,7 +95,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SCOPE-NEXT:    br label [[TMP25:%.*]]
-; AARCH64-SCOPE:       25:
+; AARCH64-SCOPE:       loop:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -112,7 +112,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP36]], i8 [[TMP32]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP31]], label [[TMP37:%.*]], label [[TMP25]]
-; AARCH64-SCOPE:       37:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    ret i32 0
 ;
@@ -153,10 +153,10 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-NOSCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-NOSCOPE:       30:
+; AARCH64-NOSCOPE:       loop:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP31:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP31]], label [[TMP32:%.*]], label [[TMP30]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -197,7 +197,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP25:%.*]]
-; AARCH64-SHORT-SCOPE:       25:
+; AARCH64-SHORT-SCOPE:       loop:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -217,7 +217,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP38]], i8 [[TMP34]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP33]], label [[TMP39:%.*]], label [[TMP25]]
-; AARCH64-SHORT-SCOPE:       39:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    ret i32 0
 ;
@@ -261,10 +261,10 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-NOSCOPE:       32:
+; AARCH64-SHORT-NOSCOPE:       loop:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP33:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP33]], label [[TMP34:%.*]], label [[TMP32]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP35:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -275,17 +275,17 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SHORT-NOSCOPE-NEXT:    ret i32 0
 ;
   %1 = alloca i8, align 1
-  br label %2
+  br label %loop
 
-2:                                                ; preds = %2, %0
+loop:                                                ; preds = %loop, %0
 ; We should tag the memory after the br (in the loop).
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   %3 = tail call i1 (...) @cond() #2
 ; We should tag the memory before the next br (before the jump back).
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br i1 %3, label %4, label %2
+  br i1 %3, label %exit, label %loop
 
-4:                                                ; preds = %2
+exit:                                                ; preds = %loop
   call void @use(ptr nonnull %1) #2
   ret i32 0
 }
@@ -306,7 +306,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; X86-SCOPE-NEXT:    [[TMP10:%.*]] = or i64 [[TMP8]], [[TMP9]]
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
 ; X86-SCOPE-NEXT:    br label [[TMP11:%.*]]
-; X86-SCOPE:       11:
+; X86-SCOPE:       loop:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP12:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP12]], i64 16)
@@ -315,7 +315,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP14]], i64 16)
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    br i1 [[TMP13]], label [[TMP15:%.*]], label [[TMP11]]
-; X86-SCOPE:       15:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    ret i32 0
 ;
@@ -336,10 +336,10 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; X86-NOSCOPE-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-NOSCOPE:       12:
+; X86-NOSCOPE:       loop:
 ; X86-NOSCOPE-NEXT:    [[TMP13:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP12]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
@@ -376,7 +376,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SCOPE-NEXT:    br label [[TMP25:%.*]]
-; AARCH64-SCOPE:       25:
+; AARCH64-SCOPE:       loop:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -393,7 +393,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP36]], i8 [[TMP32]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP31]], label [[TMP37:%.*]], label [[TMP25]]
-; AARCH64-SCOPE:       37:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    ret i32 0
 ;
@@ -434,10 +434,10 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-NOSCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-NOSCOPE:       30:
+; AARCH64-NOSCOPE:       loop:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP31:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP31]], label [[TMP32:%.*]], label [[TMP30]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -478,7 +478,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP25:%.*]]
-; AARCH64-SHORT-SCOPE:       25:
+; AARCH64-SHORT-SCOPE:       loop:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -498,7 +498,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP38]], i8 [[TMP34]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP33]], label [[TMP39:%.*]], label [[TMP25]]
-; AARCH64-SHORT-SCOPE:       39:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    ret i32 0
 ;
@@ -542,10 +542,10 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-NOSCOPE:       32:
+; AARCH64-SHORT-NOSCOPE:       loop:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP33:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP33]], label [[TMP34:%.*]], label [[TMP32]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP35:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -556,17 +556,17 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SHORT-NOSCOPE-NEXT:    ret i32 0
 ;
   %1 = alloca i8, align 1
-  br label %2
+  br label %loop
 
-2:                                                ; preds = %2, %0
+loop:                                                ; preds = %loop, %0
 ; We should tag the memory after the br (in the loop).
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   %3 = tail call i1 (...) @cond() #2
 ; We should tag the memory before the next br (before the jump back).
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br i1 %3, label %4, label %2
+  br i1 %3, label %exit, label %loop
 
-4:                                                ; preds = %2
+exit:                                                ; preds = %loop
   call void @use(ptr nonnull %1) #2
   ret i32 0
 }
@@ -1162,12 +1162,12 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-SCOPE-NEXT:    [[TMP12:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP15:%.*]]
-; X86-SCOPE:       13:
+; X86-SCOPE:       then:
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    [[TMP17:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP17]], i64 16)
 ; X86-SCOPE-NEXT:    ret i32 0
-; X86-SCOPE:       15:
+; X86-SCOPE:       else:
 ; X86-SCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
 ; X86-SCOPE-NEXT:    ret i32 0
@@ -1190,12 +1190,12 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    [[TMP12:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP15:%.*]]
-; X86-NOSCOPE:       13:
+; X86-NOSCOPE:       then:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    [[TMP14:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP14]], i64 16)
 ; X86-NOSCOPE-NEXT:    ret i32 0
-; X86-NOSCOPE:       15:
+; X86-NOSCOPE:       else:
 ; X86-NOSCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
 ; X86-NOSCOPE-NEXT:    ret i32 0
@@ -1239,7 +1239,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    [[TMP30:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP30]], label [[TMP31:%.*]], label [[TMP37:%.*]]
-; AARCH64-SCOPE:       31:
+; AARCH64-SCOPE:       then:
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    [[TMP43:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -1248,7 +1248,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP47:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP46]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP47]], i8 [[TMP43]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    ret i32 0
-; AARCH64-SCOPE:       37:
+; AARCH64-SCOPE:       else:
 ; AARCH64-SCOPE-NEXT:    [[TMP38:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP39:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP40:%.*]] = and i64 [[TMP39]], 72057594037927935
@@ -1295,7 +1295,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    [[TMP30:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP30]], label [[TMP31:%.*]], label [[TMP37:%.*]]
-; AARCH64-NOSCOPE:       31:
+; AARCH64-NOSCOPE:       then:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    [[TMP32:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP33:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -1304,7 +1304,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-NOSCOPE-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP35]]
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP36]], i8 [[TMP32]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    ret i32 0
-; AARCH64-NOSCOPE:       37:
+; AARCH64-NOSCOPE:       else:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP38:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP39:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-NOSCOPE-NEXT:    [[TMP40:%.*]] = and i64 [[TMP39]], 72057594037927935
@@ -1355,7 +1355,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP32:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP32]], label [[TMP33:%.*]], label [[TMP39:%.*]]
-; AARCH64-SHORT-SCOPE:       33:
+; AARCH64-SHORT-SCOPE:       then:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP45:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP46:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -1364,7 +1364,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP48]]
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP49]], i8 [[TMP45]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    ret i32 0
-; AARCH64-SHORT-SCOPE:       39:
+; AARCH64-SHORT-SCOPE:       else:
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP40:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP41:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP42:%.*]] = and i64 [[TMP41]], 72057594037927935
@@ -1414,7 +1414,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP32:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP32]], label [[TMP33:%.*]], label [[TMP39:%.*]]
-; AARCH64-SHORT-NOSCOPE:       33:
+; AARCH64-SHORT-NOSCOPE:       then:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP34:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -1423,7 +1423,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP37]]
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP38]], i8 [[TMP34]], i64 1, i1 false)
 ; AARCH64-SHORT-NOSCOPE-NEXT:    ret i32 0
-; AARCH64-SHORT-NOSCOPE:       39:
+; AARCH64-SHORT-NOSCOPE:       else:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP40:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP41:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP42:%.*]] = and i64 [[TMP41]], 72057594037927935
@@ -1435,14 +1435,14 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
   %1 = alloca i8, align 1
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   %2 = tail call i1 (...) @cond() #2
-  br i1 %2, label %3, label %4
+  br i1 %2, label %then, label %else
 
-3:
+then:
   call void @use(ptr nonnull %1) #2
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
   ret i32 0
 
-4:
+else:
   ret i32 0
 }
 
@@ -1466,18 +1466,18 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-SCOPE-NEXT:    [[TMP12:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP15:%.*]]
-; X86-SCOPE:       13:
+; X86-SCOPE:       then:
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    [[TMP14:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP14]], i64 16)
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    br label [[TMP17:%.*]]
-; X86-SCOPE:       15:
+; X86-SCOPE:       else:
 ; X86-SCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    br label [[TMP17]]
-; X86-SCOPE:       17:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    ret i32 0
 ;
 ; X86-NOSCOPE-LABEL: @diamond_lifetime(
@@ -1498,12 +1498,12 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    [[TMP12:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP14:%.*]]
-; X86-NOSCOPE:       13:
+; X86-NOSCOPE:       then:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    br label [[TMP15:%.*]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       else:
 ; X86-NOSCOPE-NEXT:    br label [[TMP15]]
-; X86-NOSCOPE:       15:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
 ; X86-NOSCOPE-NEXT:    ret i32 0
@@ -1547,7 +1547,7 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    [[TMP30:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP30]], label [[TMP31:%.*]], label [[TMP37:%.*]]
-; AARCH64-SCOPE:       31:
+; AARCH64-SCOPE:       then:
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    [[TMP32:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP33:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -1557,7 +1557,7 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP36]], i8 [[TMP32]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    br label [[TMP43:%.*]]
-; AARCH64-SCOPE:       37:
+; AARCH64-SCOPE:       else:
 ; AARCH64-SCOPE-NEXT:    [[TMP38:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP39:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP40:%.*]] = and i64 [[TMP39]], 72057594037927935
@@ -1566,7 +1566,7 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP42]], i8 [[TMP38]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    br label [[TMP43]]
-; AARCH64-SCOPE:       43:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    ret i32 0
 ;
 ; AARCH64-NOSCOPE-LABEL: @diamond_lifetime(
@@ -1607,12 +1607,12 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    [[TMP30:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP30]], label [[TMP31:%.*]], label [[TMP32:%.*]]
-; AARCH64-NOSCOPE:       31:
+; AARCH64-NOSCOPE:       then:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP33:%.*]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       else:
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP33]]
-; AARCH64-NOSCOPE:       33:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-NOSCOPE-NEXT:    [[TMP36:%.*]] = and i64 [[TMP35]], 72057594037927935
@@ -1663,7 +1663,7 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP32:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP32]], label [[TMP33:%.*]], label [[TMP39:%.*]]
-; AARCH64-SHORT-SCOPE:       33:
+; AARCH64-SHORT-SCOPE:       then:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP34:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -1673,7 +1673,7 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP38]], i8 [[TMP34]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP45:%.*]]
-; AARCH64-SHORT-SCOPE:       39:
+; AARCH64-SHORT-SCOPE:       else:
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP40:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP41:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP42:%.*]] = and i64 [[TMP41]], 72057594037927935
@@ -1682,7 +1682,7 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP44]], i8 [[TMP40]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP45]]
-; AARCH64-SHORT-SCOPE:       45:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    ret i32 0
 ;
 ; AARCH64-SHORT-NOSCOPE-LABEL: @diamond_lifetime(
@@ -1726,12 +1726,12 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP32:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP32]], label [[TMP33:%.*]], label [[TMP34:%.*]]
-; AARCH64-SHORT-NOSCOPE:       33:
+; AARCH64-SHORT-NOSCOPE:       then:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP35:%.*]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       else:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP35]]
-; AARCH64-SHORT-NOSCOPE:       35:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP38:%.*]] = and i64 [[TMP37]], 72057594037927935
@@ -1743,18 +1743,18 @@ define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
   %1 = alloca i8, align 1
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   %2 = tail call i1 (...) @cond() #2
-  br i1 %2, label %3, label %4
+  br i1 %2, label %then, label %else
 
-3:
+then:
   call void @use(ptr nonnull %1) #2
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br label %5
+  br label %exit
 
-4:
+else:
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br label %5
+  br label %exit
 
-5:
+exit:
   ret i32 0
 }
 
@@ -2178,18 +2178,18 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
 ; X86-SCOPE-NEXT:    [[TMP11:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP14:%.*]]
-; X86-SCOPE:       12:
+; X86-SCOPE:       then:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP13]], i64 16)
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    br label [[TMP16:%.*]]
-; X86-SCOPE:       14:
+; X86-SCOPE:       else:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
 ; X86-SCOPE-NEXT:    br label [[TMP16]]
-; X86-SCOPE:       16:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    [[TMP17:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP17]], i64 16)
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
@@ -2213,12 +2213,12 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    [[TMP12:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP14:%.*]]
-; X86-NOSCOPE:       13:
+; X86-NOSCOPE:       then:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    br label [[TMP15:%.*]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       else:
 ; X86-NOSCOPE-NEXT:    br label [[TMP15]]
-; X86-NOSCOPE:       15:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
 ; X86-NOSCOPE-NEXT:    ret i32 0
@@ -2255,7 +2255,7 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SCOPE-NEXT:    [[TMP25:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP32:%.*]]
-; AARCH64-SCOPE:       26:
+; AARCH64-SCOPE:       then:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2265,7 +2265,7 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP31]], i8 [[TMP27]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    br label [[TMP38:%.*]]
-; AARCH64-SCOPE:       32:
+; AARCH64-SCOPE:       else:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2274,7 +2274,7 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP37:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP36]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP37]], i8 [[TMP33]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    br label [[TMP38]]
-; AARCH64-SCOPE:       38:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    [[TMP39:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP40:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP41:%.*]] = and i64 [[TMP40]], 72057594037927935
@@ -2322,12 +2322,12 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    [[TMP30:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP30]], label [[TMP31:%.*]], label [[TMP32:%.*]]
-; AARCH64-NOSCOPE:       31:
+; AARCH64-NOSCOPE:       then:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP33:%.*]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       else:
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP33]]
-; AARCH64-NOSCOPE:       33:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-NOSCOPE-NEXT:    [[TMP36:%.*]] = and i64 [[TMP35]], 72057594037927935
@@ -2368,7 +2368,7 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP25:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP34:%.*]]
-; AARCH64-SHORT-SCOPE:       26:
+; AARCH64-SHORT-SCOPE:       then:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2381,7 +2381,7 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    store i8 [[TMP27]], ptr [[TMP33]], align 1
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP42:%.*]]
-; AARCH64-SHORT-SCOPE:       34:
+; AARCH64-SHORT-SCOPE:       else:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP35:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2393,7 +2393,7 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-SCOPE-NEXT:    store i8 [[TMP35]], ptr [[TMP41]], align 1
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP42]]
-; AARCH64-SHORT-SCOPE:       42:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP43:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP45:%.*]] = and i64 [[TMP44]], 72057594037927935
@@ -2444,12 +2444,12 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP32:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP32]], label [[TMP33:%.*]], label [[TMP34:%.*]]
-; AARCH64-SHORT-NOSCOPE:       33:
+; AARCH64-SHORT-NOSCOPE:       then:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP35:%.*]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       else:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP35]]
-; AARCH64-SHORT-NOSCOPE:       35:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP38:%.*]] = and i64 [[TMP37]], 72057594037927935
@@ -2460,18 +2460,18 @@ define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ;
   %1 = alloca i8, align 1
   %2 = tail call i1 (...) @cond() #2
-  br i1 %2, label %3, label %4
+  br i1 %2, label %then, label %else
 
-3:
+then:
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   call void @use(ptr nonnull %1) #2
-  br label %5
+  br label %exit
 
-4:
+else:
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
-  br label %5
+  br label %exit
 
-5:
+exit:
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
   ret i32 0
 }
@@ -2493,7 +2493,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
 ; X86-SCOPE-NEXT:    [[TMP11:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15:%.*]]
-; X86-SCOPE:       12:
+; X86-SCOPE:       then:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP13]], i64 16)
@@ -2501,12 +2501,12 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; X86-SCOPE-NEXT:    [[TMP14:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP14]], i64 16)
 ; X86-SCOPE-NEXT:    br label [[TMP17:%.*]]
-; X86-SCOPE:       15:
+; X86-SCOPE:       else:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
 ; X86-SCOPE-NEXT:    br label [[TMP17]]
-; X86-SCOPE:       17:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    [[TMP18:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP18]], i64 16)
 ; X86-SCOPE-NEXT:    ret i32 0
@@ -2529,12 +2529,12 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    [[TMP12:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP14:%.*]]
-; X86-NOSCOPE:       13:
+; X86-NOSCOPE:       then:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    br label [[TMP15:%.*]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       else:
 ; X86-NOSCOPE-NEXT:    br label [[TMP15]]
-; X86-NOSCOPE:       15:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
 ; X86-NOSCOPE-NEXT:    ret i32 0
@@ -2571,7 +2571,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SCOPE-NEXT:    [[TMP25:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP37:%.*]]
-; AARCH64-SCOPE:       26:
+; AARCH64-SCOPE:       then:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2587,7 +2587,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-SCOPE-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP35]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP36]], i8 [[TMP32]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    br label [[TMP43:%.*]]
-; AARCH64-SCOPE:       37:
+; AARCH64-SCOPE:       else:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP38:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP39:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2596,7 +2596,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-SCOPE-NEXT:    [[TMP42:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP41]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP42]], i8 [[TMP38]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    br label [[TMP43]]
-; AARCH64-SCOPE:       43:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    [[TMP44:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP45:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP46:%.*]] = and i64 [[TMP45]], 72057594037927935
@@ -2643,12 +2643,12 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    [[TMP30:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP30]], label [[TMP31:%.*]], label [[TMP32:%.*]]
-; AARCH64-NOSCOPE:       31:
+; AARCH64-NOSCOPE:       then:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP33:%.*]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       else:
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP33]]
-; AARCH64-NOSCOPE:       33:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-NOSCOPE-NEXT:    [[TMP36:%.*]] = and i64 [[TMP35]], 72057594037927935
@@ -2689,7 +2689,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP25:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP39:%.*]]
-; AARCH64-SHORT-SCOPE:       26:
+; AARCH64-SHORT-SCOPE:       then:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2708,7 +2708,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP38:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP37]]
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP38]], i8 [[TMP34]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP47:%.*]]
-; AARCH64-SHORT-SCOPE:       39:
+; AARCH64-SHORT-SCOPE:       else:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP40:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP41:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2720,7 +2720,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP46:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-SCOPE-NEXT:    store i8 [[TMP40]], ptr [[TMP46]], align 1
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP47]]
-; AARCH64-SHORT-SCOPE:       47:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP48:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP49:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP50:%.*]] = and i64 [[TMP49]], 72057594037927935
@@ -2770,12 +2770,12 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP32:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP32]], label [[TMP33:%.*]], label [[TMP34:%.*]]
-; AARCH64-SHORT-NOSCOPE:       33:
+; AARCH64-SHORT-NOSCOPE:       then:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP35:%.*]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       else:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP35]]
-; AARCH64-SHORT-NOSCOPE:       35:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP37:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP38:%.*]] = and i64 [[TMP37]], 72057594037927935
@@ -2786,19 +2786,19 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
 ;
   %1 = alloca i8, align 1
   %2 = tail call i1 (...) @cond() #2
-  br i1 %2, label %3, label %4
+  br i1 %2, label %then, label %else
 
-3:
+then:
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   call void @use(ptr nonnull %1) #2
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br label %5
+  br label %exit
 
-4:
+else:
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
-  br label %5
+  br label %exit
 
-5:
+exit:
   ret i32 0
 }
 
@@ -2818,7 +2818,7 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    [[TMP10:%.*]] = or i64 [[TMP8]], [[TMP9]]
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
 ; X86-SCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-SCOPE:       11:
+; X86-SCOPE:       loop:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP13]], i64 16)
@@ -2827,7 +2827,7 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    br i1 [[TMP14]], label [[TMP16:%.*]], label [[TMP12]]
-; X86-SCOPE:       15:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP17]], i64 16)
@@ -2854,10 +2854,10 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-NOSCOPE-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-NOSCOPE:       12:
+; X86-NOSCOPE:       loop:
 ; X86-NOSCOPE-NEXT:    [[TMP13:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP12]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
@@ -2894,7 +2894,7 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-SCOPE:       25:
+; AARCH64-SCOPE:       loop:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP31:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP32:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2911,7 +2911,7 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP41]], i8 [[TMP37]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP36]], label [[TMP42:%.*]], label [[TMP30]]
-; AARCH64-SCOPE:       37:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP43:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -2966,10 +2966,10 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-NOSCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-NOSCOPE:       30:
+; AARCH64-NOSCOPE:       loop:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP31:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP31]], label [[TMP32:%.*]], label [[TMP30]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3010,7 +3010,7 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-SCOPE:       25:
+; AARCH64-SHORT-SCOPE:       loop:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3030,7 +3030,7 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP45]], i8 [[TMP41]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP40]], label [[TMP46:%.*]], label [[TMP32]]
-; AARCH64-SHORT-SCOPE:       39:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP47:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP48:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3091,10 +3091,10 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-NOSCOPE:       32:
+; AARCH64-SHORT-NOSCOPE:       loop:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP33:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP33]], label [[TMP34:%.*]], label [[TMP32]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP35:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3105,17 +3105,17 @@ define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    ret i32 0
 ;
   %1 = alloca i8, align 1
-  br label %2
+  br label %loop
 
-2:                                                ; preds = %2, %0
+loop:                                                ; preds = %loop, %0
 ; We should tag the memory after the br (in the loop).
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   %3 = tail call i1 (...) @cond() #2
 ; We should tag the memory before the next br (before the jump back).
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br i1 %3, label %4, label %2
+  br i1 %3, label %exit, label %loop
 
-4:                                                ; preds = %2
+exit:                                                ; preds = %loop
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   call void @use(ptr nonnull %1) #2
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
@@ -3140,14 +3140,14 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-SCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-SCOPE:       12:
+; X86-SCOPE:       loop:
 ; X86-SCOPE-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP13]], i64 16)
 ; X86-SCOPE-NEXT:    [[TMP14:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
 ; X86-SCOPE-NEXT:    br i1 [[TMP14]], label [[TMP16:%.*]], label [[TMP12]]
-; X86-SCOPE:       16:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    [[TMP17:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP17]], i64 16)
@@ -3172,10 +3172,10 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-NOSCOPE-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-NOSCOPE:       12:
+; X86-NOSCOPE:       loop:
 ; X86-NOSCOPE-NEXT:    [[TMP13:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP12]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
@@ -3218,7 +3218,7 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-SCOPE:       30:
+; AARCH64-SCOPE:       loop:
 ; AARCH64-SCOPE-NEXT:    [[TMP31:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP32:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP33:%.*]] = and i64 [[TMP32]], 72057594037927935
@@ -3233,7 +3233,7 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP40]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP41]], i8 [[TMP37]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP36]], label [[TMP42:%.*]], label [[TMP30]]
-; AARCH64-SCOPE:       42:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    [[TMP43:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3286,10 +3286,10 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-NOSCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-NOSCOPE:       30:
+; AARCH64-NOSCOPE:       loop:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP31:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP31]], label [[TMP32:%.*]], label [[TMP30]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3339,7 +3339,7 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-SCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-SCOPE:       32:
+; AARCH64-SHORT-SCOPE:       loop:
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP35:%.*]] = and i64 [[TMP34]], 72057594037927935
@@ -3357,7 +3357,7 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP45:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP44]]
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP45]], i8 [[TMP41]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP40]], label [[TMP46:%.*]], label [[TMP32]]
-; AARCH64-SHORT-SCOPE:       46:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP47:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP48:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3413,10 +3413,10 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-NOSCOPE:       32:
+; AARCH64-SHORT-NOSCOPE:       loop:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP33:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP33]], label [[TMP34:%.*]], label [[TMP32]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP35:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3427,17 +3427,17 @@ define dso_local i32 @bad_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    ret i32 0
 ;
   %1 = alloca i8, align 1
-  br label %2
+  br label %loop
 
-2:                                                ; preds = %2, %0
+loop:                                                ; preds = %loop, %0
 ; We should tag the memory after the br (in the loop).
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   %3 = tail call i1 (...) @cond() #2
 ; We should tag the memory before the next br (before the jump back).
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br i1 %3, label %4, label %2
+  br i1 %3, label %exit, label %loop
 
-4:                                                ; preds = %2
+exit:                                                ; preds = %loop
   call void @use(ptr nonnull %1) #2
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
   ret i32 0
@@ -3458,23 +3458,20 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP6]], 57
 ; X86-SCOPE-NEXT:    [[TMP10:%.*]] = or i64 [[TMP8]], [[TMP9]]
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
-; X86-SCOPE-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
-; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-SCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-SCOPE:       12:
+; X86-SCOPE:       loop:
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP13]], i64 16)
 ; X86-SCOPE-NEXT:    [[TMP14:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
-; X86-SCOPE-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP16]], i64 16)
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-SCOPE-NEXT:    br i1 [[TMP14]], label [[TMP17:%.*]], label [[TMP12]]
-; X86-SCOPE:       17:
+; X86-SCOPE:       exit:
 ; X86-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
-; X86-SCOPE-NEXT:    [[TMP18:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP18]], i64 16)
 ; X86-SCOPE-NEXT:    ret i32 0
 ;
 ; X86-NOSCOPE-LABEL: @double_end(
@@ -3494,11 +3491,12 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; X86-NOSCOPE-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP11]], i64 16)
 ; X86-NOSCOPE-NEXT:    br label [[TMP12:%.*]]
-; X86-NOSCOPE:       12:
+; X86-NOSCOPE:       loop:
 ; X86-NOSCOPE-NEXT:    [[TMP13:%.*]] = tail call i1 (...) @cond()
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
+; X86-NOSCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP4]])
 ; X86-NOSCOPE-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP12]]
-; X86-NOSCOPE:       14:
+; X86-NOSCOPE:       exit:
 ; X86-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; X86-NOSCOPE-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; X86-NOSCOPE-NEXT:    call void @__hwasan_tag_memory(ptr [[TMP4]], i8 [[TMP15]], i64 16)
@@ -3534,14 +3532,9 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP23:%.*]] = shl i64 [[TMP20]], 56
 ; AARCH64-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
-; AARCH64-SCOPE-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP20]] to i8
-; AARCH64-SCOPE-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[TMP18]] to i64
-; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
-; AARCH64-SCOPE-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
-; AARCH64-SCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
-; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-SCOPE:       30:
+; AARCH64-SCOPE:       loop:
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    [[TMP31:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP32:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP33:%.*]] = and i64 [[TMP32]], 72057594037927935
@@ -3555,22 +3548,12 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP40:%.*]] = lshr i64 [[TMP39]], 4
 ; AARCH64-SCOPE-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP40]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP41]], i8 [[TMP37]], i64 1, i1 false)
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
-; AARCH64-SCOPE-NEXT:    [[TMP42:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; AARCH64-SCOPE-NEXT:    [[TMP43:%.*]] = ptrtoint ptr [[TMP18]] to i64
-; AARCH64-SCOPE-NEXT:    [[TMP44:%.*]] = and i64 [[TMP43]], 72057594037927935
-; AARCH64-SCOPE-NEXT:    [[TMP45:%.*]] = lshr i64 [[TMP44]], 4
-; AARCH64-SCOPE-NEXT:    [[TMP46:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP45]]
-; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP46]], i8 [[TMP42]], i64 1, i1 false)
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP36]], label [[TMP47:%.*]], label [[TMP30]]
-; AARCH64-SCOPE:       47:
+; AARCH64-SCOPE:       exit:
 ; AARCH64-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
-; AARCH64-SCOPE-NEXT:    [[TMP48:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; AARCH64-SCOPE-NEXT:    [[TMP49:%.*]] = ptrtoint ptr [[TMP18]] to i64
-; AARCH64-SCOPE-NEXT:    [[TMP50:%.*]] = and i64 [[TMP49]], 72057594037927935
-; AARCH64-SCOPE-NEXT:    [[TMP51:%.*]] = lshr i64 [[TMP50]], 4
-; AARCH64-SCOPE-NEXT:    [[TMP52:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP51]]
-; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP52]], i8 [[TMP48]], i64 1, i1 false)
 ; AARCH64-SCOPE-NEXT:    ret i32 0
 ;
 ; AARCH64-NOSCOPE-LABEL: @double_end(
@@ -3610,11 +3593,12 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-NOSCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
 ; AARCH64-NOSCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 1, i1 false)
 ; AARCH64-NOSCOPE-NEXT:    br label [[TMP30:%.*]]
-; AARCH64-NOSCOPE:       30:
+; AARCH64-NOSCOPE:       loop:
 ; AARCH64-NOSCOPE-NEXT:    [[TMP31:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
+; AARCH64-NOSCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-NOSCOPE-NEXT:    br i1 [[TMP31]], label [[TMP32:%.*]], label [[TMP30]]
-; AARCH64-NOSCOPE:       32:
+; AARCH64-NOSCOPE:       exit:
 ; AARCH64-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-NOSCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-NOSCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3654,17 +3638,9 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP23:%.*]] = shl i64 [[TMP20]], 56
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP24:%.*]] = or i64 [[TMP22]], [[TMP23]]
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP24]] to ptr
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP25:%.*]] = trunc i64 [[TMP20]] to i8
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[TMP18]] to i64
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP28]]
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[TMP29]], i32 0
-; AARCH64-SHORT-SCOPE-NEXT:    store i8 1, ptr [[TMP30]], align 1
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
-; AARCH64-SHORT-SCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-SCOPE:       32:
+; AARCH64-SHORT-SCOPE:       loop:
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP33:%.*]] = trunc i64 [[TMP20]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP34:%.*]] = ptrtoint ptr [[TMP18]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP35:%.*]] = and i64 [[TMP34]], 72057594037927935
@@ -3681,22 +3657,12 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP44:%.*]] = lshr i64 [[TMP43]], 4
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP45:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP44]]
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP45]], i8 [[TMP41]], i64 1, i1 false)
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP46:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP47:%.*]] = ptrtoint ptr [[TMP18]] to i64
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP48:%.*]] = and i64 [[TMP47]], 72057594037927935
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP49:%.*]] = lshr i64 [[TMP48]], 4
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP49]]
-; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP50]], i8 [[TMP46]], i64 1, i1 false)
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP40]], label [[TMP51:%.*]], label [[TMP32]]
-; AARCH64-SHORT-SCOPE:       51:
+; AARCH64-SHORT-SCOPE:       exit:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP52:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP53:%.*]] = ptrtoint ptr [[TMP18]] to i64
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP54:%.*]] = and i64 [[TMP53]], 72057594037927935
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP55:%.*]] = lshr i64 [[TMP54]], 4
-; AARCH64-SHORT-SCOPE-NEXT:    [[TMP56:%.*]] = getelementptr i8, ptr [[TMP17]], i64 [[TMP55]]
-; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP56]], i8 [[TMP52]], i64 1, i1 false)
 ; AARCH64-SHORT-SCOPE-NEXT:    ret i32 0
 ;
 ; AARCH64-SHORT-NOSCOPE-LABEL: @double_end(
@@ -3739,11 +3705,12 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP18]], i32 15
 ; AARCH64-SHORT-NOSCOPE-NEXT:    store i8 [[TMP25]], ptr [[TMP31]], align 1
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br label [[TMP32:%.*]]
-; AARCH64-SHORT-NOSCOPE:       32:
+; AARCH64-SHORT-NOSCOPE:       loop:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP33:%.*]] = tail call i1 (...) @cond()
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
+; AARCH64-SHORT-NOSCOPE-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP18]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    br i1 [[TMP33]], label [[TMP34:%.*]], label [[TMP32]]
-; AARCH64-SHORT-NOSCOPE:       34:
+; AARCH64-SHORT-NOSCOPE:       exit:
 ; AARCH64-SHORT-NOSCOPE-NEXT:    call void @use(ptr nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP35:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; AARCH64-SHORT-NOSCOPE-NEXT:    [[TMP36:%.*]] = ptrtoint ptr [[TMP18]] to i64
@@ -3754,9 +3721,9 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-NOSCOPE-NEXT:    ret i32 0
 ;
   %1 = alloca i8, align 1
-  br label %2
+  br label %loop
 
-2:                                                ; preds = %2, %0
+loop:                                                ; preds = %loop, %0
 ; We should tag the memory after the br (in the loop).
   call void @llvm.lifetime.start.p0(ptr nonnull %1)
   %3 = tail call i1 (...) @cond() #2
@@ -3764,9 +3731,9 @@ define dso_local i32 @double_end() local_unnamed_addr sanitize_hwaddress {
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
   call void @use(ptr nonnull %1) #2
   call void @llvm.lifetime.end.p0(ptr nonnull %1)
-  br i1 %3, label %4, label %2
+  br i1 %3, label %exit, label %loop
 
-4:                                                ; preds = %2
+exit:                                                ; preds = %loop
   call void @use(ptr nonnull %1) #2
   ret i32 0
 }

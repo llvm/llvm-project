@@ -122,6 +122,7 @@ public:
   const clang::Decl *curFuncDecl = nullptr;
   /// This is the inner-most code context, which includes blocks.
   const clang::Decl *curCodeDecl = nullptr;
+  const CIRGenFunctionInfo *curFnInfo = nullptr;
 
   /// The current function or global initializer that is generated code for.
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
@@ -185,6 +186,10 @@ public:
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
+
+  /// In C++, whether we are code generating a thunk. This controls whether we
+  /// should emit cleanups.
+  bool curFuncIsThunk = false;
 
   mlir::Type convertTypeForMem(QualType t);
 
@@ -965,6 +970,16 @@ public:
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
+  /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
+  /// it if it's the top of the stack.
+  ///
+  /// \param DominatingIP - An instruction which is known to
+  ///   dominate the current IP (if set) and which lies along
+  ///   all paths of execution between the current IP and the
+  ///   the point at which the cleanup comes into scope.
+  void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
+                              mlir::Operation *dominatingIP);
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
@@ -1234,6 +1249,18 @@ public:
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
+  /// Start generating a thunk function.
+  void startThunk(cir::FuncOp fn, GlobalDecl gd,
+                  const CIRGenFunctionInfo &fnInfo, bool isUnprototyped);
+
+  /// Finish generating a thunk function.
+  void finishThunk();
+
+  /// Generate code for a thunk function.
+  void generateThunk(cir::FuncOp fn, const CIRGenFunctionInfo &fnInfo,
+                     GlobalDecl gd, const ThunkInfo &thunk,
+                     bool isUnprototyped);
+
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
@@ -1425,6 +1452,11 @@ public:
 
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
+
+  /// Emit the call and return for a thunk function.
+  void emitCallAndReturnForThunk(cir::FuncOp callee, const ThunkInfo *thunk,
+                                 bool isUnprototyped);
+
   void emitCallArg(CallArgList &args, const clang::Expr *e,
                    clang::QualType argType);
   void emitCallArgs(
@@ -1441,6 +1473,8 @@ public:
                                              mlir::ArrayAttr value,
                                              cir::CaseOpKind kind,
                                              bool buildingTopLevelCase);
+
+  LValue emitCXXTypeidLValue(const CXXTypeidExpr *e);
 
   mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
                                    mlir::Type condType,
@@ -1579,6 +1613,7 @@ public:
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
+  mlir::Value emitCXXTypeidExpr(const CXXTypeidExpr *e);
   mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -1616,7 +1651,8 @@ public:
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
 
   mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
-                              llvm::ArrayRef<mlir::Value> args = {});
+                              llvm::ArrayRef<mlir::Value> args = {},
+                              mlir::NamedAttrList attrs = {});
 
   void emitInvariantStart(CharUnits size, mlir::Value addr, mlir::Location loc);
 
@@ -1769,6 +1805,10 @@ public:
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
   LValue emitMemberExpr(const MemberExpr *e);
+
+  /// Emit a musttail call for a thunk with a potentially different ABI.
+  void emitMustTailThunk(GlobalDecl gd, mlir::Value adjustedThisPtr,
+                         cir::FuncOp callee);
 
   /// Emit a call to an AMDGPU builtin function.
   std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
@@ -1988,9 +2028,7 @@ public:
   ///
   /// \param vaList A reference to the \c va_list as emitted by either
   /// \c emitVAListRef or \c emitMSVAListRef.
-  ///
-  /// \param count The number of arguments in \c vaList
-  void emitVAStart(mlir::Value vaList, mlir::Value count);
+  void emitVAStart(mlir::Value vaList);
 
   /// Emits the end of a CIR variable-argument operation (`cir.va_start`)
   ///

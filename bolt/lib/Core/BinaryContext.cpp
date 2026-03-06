@@ -2039,33 +2039,38 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
   }
 }
 
-MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
+MarkerSymType BinaryContext::getMarkerType(unsigned SymbolType,
+                                           uint64_t SymbolSize,
+                                           StringRef SymbolName) const {
   // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
   // in the code section (see IHI0056B). $x identifies a symbol starting code or
   // the end of a data chunk inside code, $d identifies start of data.
-  if (isX86() || ELFSymbolRef(Symbol).getSize())
+  if (isX86() || SymbolSize)
     return MarkerSymType::NONE;
 
-  Expected<StringRef> NameOrError = Symbol.getName();
-  Expected<object::SymbolRef::Type> TypeOrError = Symbol.getType();
-
-  if (!TypeOrError || !NameOrError)
+  if (SymbolType != ELF::STT_NOTYPE)
     return MarkerSymType::NONE;
 
-  if (*TypeOrError != SymbolRef::ST_Unknown)
-    return MarkerSymType::NONE;
-
-  if (*NameOrError == "$x" || NameOrError->starts_with("$x."))
+  if (SymbolName == "$x" || SymbolName.starts_with("$x."))
     return MarkerSymType::CODE;
 
   // $x<ISA>
-  if (isRISCV() && NameOrError->starts_with("$x"))
+  if (isRISCV() && SymbolName.starts_with("$x"))
     return MarkerSymType::CODE;
 
-  if (*NameOrError == "$d" || NameOrError->starts_with("$d."))
+  if (SymbolName == "$d" || SymbolName.starts_with("$d."))
     return MarkerSymType::DATA;
 
   return MarkerSymType::NONE;
+}
+
+MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
+  Expected<StringRef> NameOrError = Symbol.getName();
+  if (!NameOrError)
+    return MarkerSymType::NONE;
+
+  return getMarkerType(ELFSymbolRef(Symbol).getELFType(),
+                       ELFSymbolRef(Symbol).getSize(), *NameOrError);
 }
 
 bool BinaryContext::isMarker(const SymbolRef &Symbol) const {
@@ -2518,8 +2523,10 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
     return nullptr;
 
   BinaryFunction *BF = BFI->second;
-  if (EntryDesc)
-    *EntryDesc = BF->getEntryIDForSymbol(Symbol);
+  if (EntryDesc) {
+    std::optional<uint64_t> EntryID = BF->getEntryIDForSymbol(Symbol);
+    *EntryDesc = EntryID.value_or(0);
+  }
 
   return BF;
 }
