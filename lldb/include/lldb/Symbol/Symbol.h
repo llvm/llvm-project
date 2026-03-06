@@ -221,7 +221,7 @@ public:
 
   // If m_type is "Code" or "Function" then this will return the prologue size
   // in bytes, else it will return zero.
-  uint32_t GetPrologueByteSize();
+  uint32_t GetPrologueByteSize() const;
 
   bool GetDemangledNameIsSynthesized() const {
     return m_demangled_is_synthesized;
@@ -320,9 +320,9 @@ protected:
 
   uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
                                            // symbol table index)
-  uint16_t m_type_data = 0; // data specific to m_type
-  uint16_t m_type_data_resolved : 1, // True if the data in m_type_data has
-                                     // already been calculated
+  mutable uint16_t m_type_data = 0;        // data specific to m_type
+  mutable uint16_t m_type_data_resolved : 1, // True if the data in m_type_data
+                                             // has already been calculated
       m_is_synthetic : 1, // non-zero if this symbol is not actually in the
                           // symbol table, but synthesized from other info in
                           // the object file.
