@@ -2529,6 +2529,10 @@ void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
+void ASTStmtReader::VisitOMPSplitDirective(OMPSplitDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
 void ASTStmtReader::VisitOMPFuseDirective(OMPFuseDirective *D) {
   VisitOMPCanonicalLoopSequenceTransformationDirective(D);
 }

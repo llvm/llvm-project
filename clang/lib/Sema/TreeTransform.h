@@ -9761,6 +9761,17 @@ StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPSplitDirective(OMPSplitDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPFuseDirective(OMPFuseDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
