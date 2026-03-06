@@ -501,6 +501,10 @@ ConstArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError, Type type,
   const auto arrayTy = mlir::cast<ArrayType>(type);
 
   // Make sure both number of elements and subelement types match type.
+  if (arrayAttr.size() > arrayTy.getSize())
+    return emitError() << "constant array has " << arrayAttr.size()
+                       << " values but array type has size "
+                       << arrayTy.getSize();
   if (arrayTy.getSize() != arrayAttr.size() + trailingZerosNum)
     return emitError() << "constant array size should match type size";
   return success();

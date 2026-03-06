@@ -16,7 +16,7 @@ define void @dstzero(ptr nocapture %A, i32 %N) {
 ; CHECK-NEXT:  Src: store i32 0, ptr %A, align 4 --> Dst: store i32 0, ptr %A, align 4
 ; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 0, ptr %A, align 4 --> Dst: store i32 1, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - output [p=>|<]!
+; CHECK-NEXT:    da analyze - output [=>|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx1, align 4 --> Dst: store i32 1, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -47,7 +47,7 @@ define void @weakzerosrc0(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - flow [p=>|<]!
+; CHECK-NEXT:    da analyze - flow [=>|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
@@ -90,7 +90,7 @@ define void @weakzerosrc1(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - flow [p=>|<]!
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
@@ -184,7 +184,7 @@ define void @weakzerosrc3(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - flow [<=p|<]!
+; CHECK-NEXT:    da analyze - flow [<=|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4

@@ -779,9 +779,9 @@ test_move() {
 // CHECK-P10: call zeroext i32 @vec_extractm(unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_pd
-// CHECK-LE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef bitcast (<4 x i32> <i32 -2139094976, i32 -2139062144, i32 -2139062144, i32 -2139062144> to <16 x i8>))
+// CHECK-LE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef <i8 64, i8 0, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>)
 // CHECK-LE: extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK-BE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef bitcast (<4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656> to <16 x i8>))
+// CHECK-BE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 64, i8 0>)
 // CHECK-BE: extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
 
 // CHECK-LABEL: define available_externally i64 @_mm_movepi64_pi64

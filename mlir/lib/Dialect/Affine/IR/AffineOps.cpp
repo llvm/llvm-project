@@ -2204,6 +2204,11 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
 }
 
 LogicalResult AffineForOp::verifyRegions() {
+  // Step must be a strictly positive integer.
+  if (getStepAsInt() <= 0)
+    return emitOpError("expected step to be a positive integer, got ")
+           << getStepAsInt();
+
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = getBody();
@@ -2370,7 +2375,7 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
                               result.attributes))
       return failure();
 
-    if (stepAttr.getValue().isNegative())
+    if (!stepAttr.getValue().isStrictlyPositive())
       return parser.emitError(
           stepLoc,
           "expected step to be representable as a positive signed integer");

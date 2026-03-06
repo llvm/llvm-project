@@ -1216,22 +1216,14 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc DL;
 
-  if (FuncInfo->isChainFunction()) {
-    // Functions with the amdgpu_cs_chain[_preserve] CC don't receive a SP, but
-    // are free to set one up if they need it.
-    bool UseSP = requiresStackPointerReference(MF);
-    if (UseSP) {
-      assert(StackPtrReg != AMDGPU::SP_REG);
-
-      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), StackPtrReg)
-          .addImm(MFI.getStackSize() * getScratchScaleFactor(ST));
-    }
-  }
-
   bool HasFP = false;
   bool HasBP = false;
   uint32_t NumBytes = MFI.getStackSize();
   uint32_t RoundedSize = NumBytes;
+
+  // Chain functions never return, so there's no need to save and restore the FP
+  // or BP.
+  bool SavesStackRegs = !FuncInfo->isChainFunction();
 
   if (TRI.hasStackRealignment(MF))
     HasFP = true;
@@ -1239,10 +1231,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   Register FramePtrRegScratchCopy;
   if (!HasFP && !hasFP(MF)) {
     // Emit the CSR spill stores with SP base register.
-    emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits,
-                       FuncInfo->isChainFunction() ? Register() : StackPtrReg,
+    emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
                        FramePtrRegScratchCopy);
-  } else {
+  } else if (SavesStackRegs) {
     // CSR spill stores will use FP as base register.
     Register SGPRForFPSaveRestoreCopy =
         FuncInfo->getScratchSGPRCopyDstReg(FramePtrReg);
@@ -1327,17 +1318,17 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
   (void)FPSaved;
-  assert((!HasFP || FPSaved) &&
+  assert((!HasFP || FPSaved || !SavesStackRegs) &&
          "Needed to save FP but didn't save it anywhere");
 
   // If we allow spilling to AGPRs we may have saved FP but then spill
   // everything into AGPRs instead of the stack.
-  assert((HasFP || !FPSaved || EnableSpillVGPRToAGPR) &&
+  assert((HasFP || !FPSaved || !SavesStackRegs || EnableSpillVGPRToAGPR) &&
          "Saved FP but didn't need it");
 
   bool BPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(BasePtrReg);
   (void)BPSaved;
-  assert((!HasBP || BPSaved) &&
+  assert((!HasBP || BPSaved || !SavesStackRegs) &&
          "Needed to save BP but didn't save it anywhere");
 
   assert((HasBP || !BPSaved) && "Saved BP but didn't need it");
@@ -1352,6 +1343,10 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (FuncInfo->isEntryFunction())
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (FuncInfo->isChainFunction() && !MFI.hasTailCall())
     return;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -1371,7 +1366,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     MBBI = MBB.getFirstTerminator();
   }
 
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();
   uint32_t RoundedSize = FuncInfo->isStackRealigned()
                              ? NumBytes + MFI.getMaxAlign().value()
@@ -1427,8 +1421,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       MIB.setMIFlag(MachineInstr::FrameDestroy);
   } else {
     // Insert the CSR spill restores with SP as the base register.
-    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits,
-                         FuncInfo->isChainFunction() ? Register() : StackPtrReg,
+    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
                          FramePtrRegScratchCopy);
   }
 }
@@ -1655,6 +1648,11 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
     // encountered.
     MFI->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
+
+  // Chain functions don't return to the caller, so they don't need to preserve
+  // the FP and BP.
+  if (MFI->isChainFunction())
+    return;
 
   // hasFP only knows about stack objects that already exist. We're now
   // determining the stack slots that will be created, so we have to predict
@@ -2154,11 +2152,10 @@ static bool frameTriviallyRequiresSP(const MachineFrameInfo &MFI) {
 bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  // For entry & chain functions we can use an immediate offset in most cases,
+  // For entry functions we can use an immediate offset in most cases,
   // so the presence of calls doesn't imply we need a distinct frame pointer.
   if (MFI.hasCalls() &&
-      !MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() &&
-      !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) {
+      !MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction()) {
     // All offsets are unsigned, so need to be addressed in the same direction
     // as stack growth.
 
@@ -2167,9 +2164,7 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return (frameTriviallyRequiresSP(MFI) &&
-          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
-         MFI.isFrameAddressTaken() ||
+  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          mayReserveScratchForCWSR(MF) ||
@@ -2188,21 +2183,18 @@ bool SIFrameLowering::mayReserveScratchForCWSR(
 // register. We may need to initialize the stack pointer depending on the frame
 // properties, which logically overlaps many of the cases where an ordinary
 // function would require an FP.
-// Also used for chain functions. While not technically entry functions, chain
-// functions may need to set up a stack pointer in some situations.
 bool SIFrameLowering::requiresStackPointerReference(
     const MachineFunction &MF) const {
   // Callable functions always require a stack pointer reference.
-  assert((MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() ||
-          MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) &&
-         "only expected to call this for entry points and chain functions");
+  assert(MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction() &&
+         "only expected to call this for entry points functions");
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Entry points ordinarily don't need to initialize SP. We have to set it up
-  // for callees if there are any. Also note tail calls are impossible/don't
-  // make any sense for kernels.
-  if (MFI.hasCalls())
+  // for callees if there are any. Also note tail calls are only possible via
+  // the `llvm.amdgcn.cs.chain` intrinsic.
+  if (MFI.hasCalls() || MFI.hasTailCall())
     return true;
 
   // We still need to initialize the SP if we're doing anything weird that

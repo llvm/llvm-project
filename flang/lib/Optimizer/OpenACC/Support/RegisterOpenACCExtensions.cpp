@@ -77,6 +77,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::FieldIndexOp::attachInterface<
         OutlineRematerializationModel<fir::FieldIndexOp>>(*ctx);
+    fir::ConvertOp::attachInterface<
+        OutlineRematerializationModel<fir::ConvertOp>>(*ctx);
   });
 
   // Register HLFIR operation interfaces

@@ -2627,8 +2627,11 @@ static bool EvaluateAsBooleanCondition(const Expr *E, bool &Result,
 template<typename T>
 static bool HandleOverflow(EvalInfo &Info, const Expr *E,
                            const T &SrcValue, QualType DestType) {
-  Info.CCEDiag(E, diag::note_constexpr_overflow)
-    << SrcValue << DestType;
+  Info.CCEDiag(E, diag::note_constexpr_overflow) << SrcValue << DestType;
+  if (const auto *OBT = DestType->getAs<OverflowBehaviorType>();
+      OBT && OBT->isTrapKind()) {
+    return false;
+  }
   return Info.noteUndefinedBehavior();
 }
 
@@ -5172,14 +5175,16 @@ struct IncDecSubobjectHandler {
     if (AccessKind == AK_Increment) {
       ++Value;
 
-      if (!WasNegative && Value.isNegative() && E->canOverflow()) {
+      if (!WasNegative && Value.isNegative() && E->canOverflow() &&
+          !SubobjType.isWrapType()) {
         APSInt ActualValue(Value, /*IsUnsigned*/true);
         return HandleOverflow(Info, E, ActualValue, SubobjType);
       }
     } else {
       --Value;
 
-      if (WasNegative && !Value.isNegative() && E->canOverflow()) {
+      if (WasNegative && !Value.isNegative() && E->canOverflow() &&
+          !SubobjType.isWrapType()) {
         unsigned BitWidth = Value.getBitWidth();
         APSInt ActualValue(Value.sext(BitWidth + 1), /*IsUnsigned*/false);
         ActualValue.setBit(BitWidth);
@@ -7771,6 +7776,7 @@ class APValueToBufferConverter {
     case APValue::FixedPoint:
       // FIXME: We should support these.
 
+    case APValue::LValue:
     case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
@@ -7780,9 +7786,6 @@ class APValueToBufferConverter {
           << Ty;
       return false;
     }
-
-    case APValue::LValue:
-      llvm_unreachable("LValue subobject in bit_cast?");
     }
     llvm_unreachable("Unhandled APValue::ValueKind");
   }

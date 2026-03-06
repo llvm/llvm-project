@@ -683,7 +683,8 @@ private:
   ///
   /// Prefer to use BinaryContext::getFunctionForSymbol(EntrySymbol, &ID)
   /// instead of calling this function directly.
-  uint64_t getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
+  std::optional<uint64_t>
+  getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
 
   /// If the function represents a secondary split function fragment, set its
   /// parent fragment to \p BF.

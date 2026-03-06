@@ -24,13 +24,13 @@ func.func @unroll(%arg0: !fir.ref<!fir.array<1000 x index>> {fir.bindc_name = "a
     // CHECK-NEXT: %[[IND:.*]] = phi i64 [ 0, %{{.*}} ], [ %[[NIV:.*]], %[[BLK]] ]
     // CHECK-NEXT: %[[VIND:.*]] = phi <2 x i64> [ <i64 1, i64 2>, %{{.*}} ], [ %[[NVIND:.*]], %[[BLK]] ]
 
-    // NO-UNROLL-NEXT: %[[GEP:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]
+    // NO-UNROLL-NEXT: %[[GEP:.*]] = getelementptr [8 x i8], ptr %[[ARG0]], i64 %[[IND]]
     // NO-UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP]]
     // NO-UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %{{.*}}, 2
     // NO-UNROLL-NEXT: %[[NVIND]] = add nuw nsw <2 x i64> %[[VIND]], splat (i64 2)
 
     // UNROLL-NEXT: %[[VIND1:.*]] = add <2 x i64> %[[VIND]], splat (i64 2)
-    // UNROLL-NEXT: %[[GEP0:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]
+    // UNROLL-NEXT: %[[GEP0:.*]] = getelementptr [8 x i8], ptr %[[ARG0]], i64 %[[IND]]
     // UNROLL-NEXT: %[[GEP1:.*]] = getelementptr i8, ptr %[[GEP0]], i64 16
     // UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP0]]
     // UNROLL-NEXT: store <2 x i64> %[[VIND1]], ptr %[[GEP1]]

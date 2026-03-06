@@ -177,7 +177,7 @@ int test6(void) {
 // LLVM:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
 
 // OGCG: define {{.*}} i32 @test6()
-// OGCG:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds ([3 x i32], ptr @arr, i64 0, i64 2)
+// OGCG:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8)
 // OGCG:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
 
 const int c_arr[] = { 1, 2, 3 };

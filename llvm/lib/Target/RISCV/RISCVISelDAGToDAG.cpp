@@ -2868,6 +2868,54 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case ISD::SPLAT_VECTOR: {
+    if (!Subtarget->hasStdExtP())
+      break;
+    auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0));
+    if (!ConstNode)
+      break;
+
+    if (ConstNode->isZero()) {
+      SDValue New =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
+      ReplaceNode(Node, New.getNode());
+      return;
+    }
+
+    unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+    APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+
+    // Find the smallest splat.
+    if (Val.getBitWidth() > 16 && Val.isSplat(16))
+      Val = Val.trunc(16);
+    if (Val.getBitWidth() > 8 && Val.isSplat(8))
+      Val = Val.trunc(8);
+
+    EltSize = Val.getBitWidth();
+    int64_t Imm = Val.getSExtValue();
+
+    unsigned Opc = 0;
+    if (EltSize == 8) {
+      Opc = RISCV::PLI_B;
+    } else if (isInt<10>(Imm)) {
+      Opc = EltSize == 32 ? RISCV::PLI_W : RISCV::PLI_H;
+    } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
+      Opc = RISCV::PLUI_H;
+      Imm = Imm >> 6;
+    } else if (EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
+      Opc = RISCV::PLUI_W;
+      Imm = Imm >> 22;
+    }
+
+    if (Opc) {
+      SDNode *NewNode = CurDAG->getMachineNode(
+          Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
+      ReplaceNode(Node, NewNode);
+      return;
+    }
+
+    break;
+  }
   case ISD::SCALAR_TO_VECTOR:
     if (Subtarget->hasStdExtP()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();

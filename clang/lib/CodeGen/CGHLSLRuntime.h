@@ -175,6 +175,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpClamp, resource_samplecmp_clamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpLevelZero,
                                    resource_samplecmplevelzero)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Gather, resource_gather)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GatherCmp, resource_gather_cmp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,

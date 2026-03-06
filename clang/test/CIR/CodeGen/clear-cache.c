@@ -25,7 +25,7 @@ char buffer[32] = "This is a largely unused buffer";
 // LLVM:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
 
 // OGCG-LABEL: main
-// OGCG:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds (i8, ptr @buffer, i64 32))
+// OGCG:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
 
 int main(void) {
   __builtin___clear_cache(buffer, buffer + 32);

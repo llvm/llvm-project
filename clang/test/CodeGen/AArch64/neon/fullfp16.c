@@ -17,10 +17,6 @@
 // hence for CIR we use `opt -passes=simplifycfg` to reduce the control flow
 // and to make LLVM IR match for all paths.
 //
-// Minor differences between RUN lines (e.g., the presence of `noundef` on
-// arguments or the `align` attribute on pointers) are matched using
-// catch-alls such as `{{.*}}`.
-//
 // TODO: Remove `-simplifycfg` once CIR lowering includes the relevant
 //       optimizations to reduce the CFG.
 //

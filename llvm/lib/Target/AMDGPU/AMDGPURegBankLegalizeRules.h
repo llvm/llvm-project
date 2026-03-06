@@ -267,6 +267,9 @@ enum LoweringMethodID {
   VerifyAllSgpr,
   ApplyAllVgpr,
   UnmergeToShiftTrunc,
+  AextToS32InIncomingBlockGPHI,
+  VerifyAllSgprGPHI,
+  VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE
 };
 

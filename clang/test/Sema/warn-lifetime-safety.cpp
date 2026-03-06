@@ -1746,3 +1746,41 @@ View test3(std::string a) {
   return b;                 // expected-note {{returned here}}
 }
 } // namespace non_trivial_views
+
+namespace OwnerArrowOperator {
+void test_optional_arrow() {
+  const char* p;
+  {
+    std::optional<std::string> opt;
+    p = opt->data();  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                   // expected-note {{destroyed here}}
+  (void)*p;           // expected-note {{later used here}}
+}
+
+void test_optional_arrow_lifetimebound() {
+  View v;
+  {
+    std::optional<MyObj> opt;
+    v = opt->getView();  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                      // expected-note {{destroyed here}}
+  v.use();               // expected-note {{later used here}}
+}
+
+void test_unique_ptr_arrow() {
+  const char* p;
+  {
+    std::unique_ptr<std::string> up;
+    p = up->data();  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void test_optional_view_arrow() {
+    const char* p;
+    {
+        std::optional<std::string_view> opt;
+        p = opt->data();
+    }
+    (void)*p;
+}
+} // namespace OwnerArrowOperator

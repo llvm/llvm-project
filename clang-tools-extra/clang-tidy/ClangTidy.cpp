@@ -37,6 +37,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Process.h"
+#include <memory>
 #include <utility>
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -445,8 +446,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (!Context.getOptions().SystemHeaders.value_or(false))
     FinderOptions.IgnoreSystemHeaders = true;
 
-  std::unique_ptr<ast_matchers::MatchFinder> Finder(
-      new ast_matchers::MatchFinder(std::move(FinderOptions)));
+  auto Finder =
+      std::make_unique<ast_matchers::MatchFinder>(std::move(FinderOptions));
 
   Preprocessor *PP = &Compiler.getPreprocessor();
   Preprocessor *ModuleExpanderPP = PP;

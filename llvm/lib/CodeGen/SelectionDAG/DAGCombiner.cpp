@@ -13802,7 +13802,7 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
   if (!TLI.isTargetCanonicalSelect(N))
     if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
-      return DAG.getSelect(DL, VT, F, N2, N1);
+      return DAG.getSelect(DL, VT, F, N2, N1, N->getFlags());
 
   // select (sext m), (add X, C), X --> (add X, (and C, (sext m))))
   if (N1.getOpcode() == ISD::ADD && N1.getOperand(0) == N2 && N1->hasOneUse() &&

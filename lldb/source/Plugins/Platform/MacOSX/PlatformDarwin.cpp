@@ -200,7 +200,7 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
+FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
   FileSpecList file_list;

@@ -27,7 +27,7 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -2199,7 +2199,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     for (auto const &[untypedAttr, elementOrTensorType] :
          llvm::zip(getPaddingValues(), linalgTarget->getOperandTypes())) {
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }
@@ -2452,7 +2452,7 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
       auto attr = dyn_cast<TypedAttr>(untypedAttr);
       Type elementType = getElementTypeOrSelf(elementOrTensorType);
 
-      if (isa<ub::PoisonAttr>(untypedAttr)) {
+      if (matchPattern(untypedAttr, ub::m_Poison())) {
         paddingValues.push_back(untypedAttr);
         continue;
       }

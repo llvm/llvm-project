@@ -70,8 +70,10 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
     
     // Specialization path is not guaranteed.
     Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
-           "convert linalg.generic to equivalent named ops"> ];
-    //  TODOs: `generic-to-category`, `category-to-named`
+           "convert linalg.generic to equivalent named ops">,
+    Option<"genericToCategory", "generic-to-category", "bool", /*default=*/"false",
+           "convert linalg.generic to equivalent category ops"> ];
+    //  TODOs: `category-to-named`
 }
 
 def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops">,

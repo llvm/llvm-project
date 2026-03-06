@@ -365,9 +365,9 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
-  CheckDescriptorEqStr(cmdMsg.get(), "cmd msg buffer XXXXXXXX");
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
+  CheckDescriptorEqStr(cmdMsg.get(), "Command not found.");
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 4);
@@ -394,9 +394,9 @@ TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
-  CheckDescriptorEqStr(cmdMsg.get(), "unmodified buffer XXXXXXXXX");
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
+  CheckDescriptorEqStr(cmdMsg.get(), "Command not found.");
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
@@ -412,7 +412,7 @@ TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
 #ifdef _WIN32
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
                    *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
-      "Invalid command quit with exit status code: 1");
+      "Command not found.");
 #else
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
                    *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
@@ -490,7 +490,7 @@ TEST_F(ZeroArguments, SystemInvalidCommandExitStat) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), nullptr);
 #ifdef _WIN32
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
 #endif

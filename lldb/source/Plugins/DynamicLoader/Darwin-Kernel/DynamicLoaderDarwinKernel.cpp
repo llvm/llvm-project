@@ -1561,7 +1561,8 @@ void DynamicLoaderDarwinKernel::PrivateInitialize(Process *process) {
 }
 
 void DynamicLoaderDarwinKernel::SetNotificationBreakpointIfNeeded() {
-  if (m_break_id == LLDB_INVALID_BREAK_ID && m_kernel.GetModule()) {
+  if (m_break_id == LLDB_INVALID_BREAK_ID && m_kernel.GetModule() &&
+      m_process->IsLiveDebugSession()) {
     DEBUG_PRINTF("DynamicLoaderDarwinKernel::%s() process state = %s\n",
                  __FUNCTION__, StateAsCString(m_process->GetState()));
 

@@ -243,7 +243,14 @@ public:
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
                              mlir::Value val, mlir::Value len) {
     assert(val.getType() == getUInt8Ty());
-    return cir::MemSetOp::create(*this, loc, dst, val, len);
+    return cir::MemSetOp::create(*this, loc, dst, {}, val, len);
+  }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, Address dst, mlir::Value val,
+                             mlir::Value len) {
+    mlir::IntegerAttr align = getAlignmentAttr(dst.getAlignment());
+    assert(val.getType() == getUInt8Ty());
+    return cir::MemSetOp::create(*this, loc, dst.getPointer(), align, val, len);
   }
   // ---------------------------
 

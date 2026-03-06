@@ -33,7 +33,7 @@ void scalar_to_complex() {
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: store double %[[REAL]], ptr {{.*}}, align 8
-// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw ({ double, double }, ptr @cd, i32 0, i32 1), align 8
+// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw (i8, ptr @cd, i64 8), align 8
 
 // CIR-BEFORE: %[[INT_TO_COMPLEX:.*]] = cir.cast int_to_complex %{{.*}} : !s32i -> !cir.complex<!s32i>
 
@@ -48,7 +48,7 @@ void scalar_to_complex() {
 
 // OGCG:  %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: store i32 %[[REAL]], ptr {{.*}}, align 4
-// OGCG: store i32 0, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci, i32 0, i32 1), align 4
+// OGCG: store i32 0, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4), align 4
 
 // CIR-BEFORE: %[[INT_TO_FP:.*]] = cir.cast int_to_float %{{.*}} : !s32i -> !cir.double
 // CIR-BEFORE: %[[FP_TO_COMPLEX:.*]] = cir.cast float_to_complex %[[INT_TO_FP]] : !cir.double -> !cir.complex<!cir.double>
@@ -67,7 +67,7 @@ void scalar_to_complex() {
 // OGCG: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
 // OGCG: store double %[[REAL]], ptr {{.*}}, align 8
-// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw ({ double, double }, ptr {{.*}}, i32 0, i32 1), align 8
+// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 8), align 8
 
 // CIR-BEFORE: %[[FP_TO_INT:.*]] = cir.cast float_to_int %{{.*}} : !cir.double -> !s32i
 // CIR-BEFORE: %[[INT_TO_COMPLEX:.*]] = cir.cast int_to_complex %[[FP_TO_INT]] : !s32i -> !cir.complex<!s32i>
@@ -86,7 +86,7 @@ void scalar_to_complex() {
 // OGCG: %[[TMP:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: %[[REAL:.*]] = fptosi double %[[TMP]] to i32
 // OGCG: store i32 %[[REAL]], ptr {{.*}}, align 4
-// OGCG: store i32 0, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: store i32 0, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 
 void scalar_to_complex_explicit() {
   cd = (double _Complex)sd;
@@ -108,7 +108,7 @@ void scalar_to_complex_explicit() {
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: store double %[[REAL]], ptr {{.*}}, align 8
-// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw ({ double, double }, ptr @cd, i32 0, i32 1), align 8
+// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw (i8, ptr @cd, i64 8), align 8
 
 // CIR-BEFORE: %[[INT_TO_COMPLEX:.*]] = cir.cast int_to_complex %{{.*}} : !s32i -> !cir.complex<!s32i>
 
@@ -123,7 +123,7 @@ void scalar_to_complex_explicit() {
 
 // OGCG:  %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: store i32 %[[REAL]], ptr {{.*}}, align 4
-// OGCG: store i32 0, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @ci, i32 0, i32 1), align 4
+// OGCG: store i32 0, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4), align 4
 
 // CIR-BEFORE: %[[INT_TO_FP:.*]] = cir.cast int_to_float %{{.*}} : !s32i -> !cir.double
 // CIR-BEFORE: %[[FP_TO_COMPLEX:.*]] = cir.cast float_to_complex %[[INT_TO_FP]] : !cir.double -> !cir.complex<!cir.double>
@@ -142,7 +142,7 @@ void scalar_to_complex_explicit() {
 // OGCG: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
 // OGCG: store double %[[REAL]], ptr {{.*}}, align 8
-// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw ({ double, double }, ptr {{.*}}, i32 0, i32 1), align 8
+// OGCG: store double 0.000000e+00, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 8), align 8
 
 // CIR-BEFORE: %[[FP_TO_INT:.*]] = cir.cast float_to_int %{{.*}} : !cir.double -> !s32i
 // CIR-BEFORE: %[[INT_TO_COMPLEX:.*]] = cir.cast int_to_complex %[[FP_TO_INT]] : !s32i -> !cir.complex<!s32i>
@@ -161,7 +161,7 @@ void scalar_to_complex_explicit() {
 // OGCG: %[[TMP:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: %[[REAL:.*]] = fptosi double %[[TMP]] to i32
 // OGCG: store i32 %[[REAL]], ptr {{.*}}, align 4
-// OGCG: store i32 0, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: store i32 0, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 
 void complex_to_scalar() {
   sd = (double)cd;
@@ -241,7 +241,7 @@ void complex_to_bool() {
 // LLVM-NEXT: store i8 %[[RESULT]], ptr {{.*}}, align 1
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
-// OGCG: %[[IMAG:.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr {{.*}}, i32 0, i32 1), align 8
+// OGCG: %[[IMAG:.*]] = load double, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 8), align 8
 // OGCG: %[[REAL_TO_BOOL:.*]] = fcmp une double %[[REAL]], 0.000000e+00
 // OGCG: %[[IMAG_TO_BOOL:.*]] = fcmp une double %[[IMAG]], 0.000000e+00
 // OGCG: %[[COMPLEX_TO_BOOL:.*]] = or i1 %[[REAL_TO_BOOL]], %[[IMAG_TO_BOOL]]
@@ -266,7 +266,7 @@ void complex_to_bool() {
 // LLVM-NEXT: store i8 %[[RESULT]], ptr {{.*}}, align 1
 
 // OGCG: %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
-// OGCG: %[[IMAG:.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: %[[IMAG:.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 // OGCG: %[[REAL_TO_BOOL:.*]] = icmp ne i32 %[[REAL]], 0
 // OGCG: %[[IMAG_TO_BOOL:.*]] = icmp ne i32 %[[IMAG]], 0
 // OGCG: %[[COMPLEX_TO_BOOL:.*]] = or i1 %[[REAL_TO_BOOL]], %[[IMAG_TO_BOOL]]
@@ -296,11 +296,11 @@ void complex_to_complex_cast() {
 // LLVM: store { double, double } %[[COMPLEX]], ptr {{.*}}, align 8
 
 // OGCG: %[[REAL:.*]] = load float, ptr {{.*}}, align 4
-// OGCG: %[[IMAG:.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: %[[IMAG:.*]] = load float, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 // OGCG: %[[REAL_FP_CAST:.*]] = fpext float %[[REAL]] to double
 // OGCG: %[[IMAG_FP_CAST:.*]] = fpext float %[[IMAG]] to double
 // OGCG: store double %[[REAL_FP_CAST]], ptr {{.*}}, align 8
-// OGCG: store double %[[IMAG_FP_CAST]], ptr getelementptr inbounds nuw ({ double, double }, ptr {{.*}}, i32 0, i32 1), align 8
+// OGCG: store double %[[IMAG_FP_CAST]], ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 8), align 8
 
 // CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.complex<!s16i>>, !cir.complex<!s16i>
 // CIR-BEFORE: %[[INT_COMPLEX:.*]] = cir.cast int_complex %[[TMP]] : !cir.complex<!s16i> -> !cir.complex<!s32i>
@@ -320,11 +320,11 @@ void complex_to_complex_cast() {
 // LLVM: store { i32, i32 } %[[COMPLEX]], ptr {{.*}}, align 4
 
 // OGCG:  %[[REAL:.*]] = load i16, ptr {{.*}}, align 2
-// OGCG: %[[IMAG:.*]] = load i16, ptr getelementptr inbounds nuw ({ i16, i16 }, ptr {{.*}}, i32 0, i32 1), align 2
+// OGCG: %[[IMAG:.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // OGCG: %[[REAL_INT_CAST:.*]] = sext i16 %[[REAL]] to i32
 // OGCG: %[[IMAG_INT_CAST:.*]] = sext i16 %[[IMAG]] to i32
 // OGCG: store i32 %[[REAL_INT_CAST]], ptr {{.*}}, align 4
-// OGCG: store i32 %[[IMAG_INT_CAST]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: store i32 %[[IMAG_INT_CAST]], ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 
 struct CX {
   double real;

@@ -9,6 +9,11 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
+// SPIR-V backend generates incorrect printf ops after
+// https://github.com/llvm/llvm-project/pull/178980 changed the way variadic arguments.
+// are handled. Test is expected to fail until the issue is resolved.
+
+// XFAIL: *
 module @test attributes {gpu.container_module} {
   gpu.module @test_module {
     gpu.func @test_printf(%arg0: i32, %arg1: f32) kernel {

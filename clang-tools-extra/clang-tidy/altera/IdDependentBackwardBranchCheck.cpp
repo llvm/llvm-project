@@ -142,7 +142,7 @@ void IdDependentBackwardBranchCheck::saveIdDepVarFromReference(
     const DeclRefExpr *RefExpr, const MemberExpr *MemExpr,
     const VarDecl *PotentialVar) {
   // If the variable is already in IdDepVarsMap, ignore it.
-  if (IdDepVarsMap.find(PotentialVar) != IdDepVarsMap.end())
+  if (IdDepVarsMap.contains(PotentialVar))
     return;
   std::string Message;
   llvm::raw_string_ostream StringStream(Message);
@@ -151,13 +151,13 @@ void IdDependentBackwardBranchCheck::saveIdDepVarFromReference(
   if (RefExpr) {
     const auto *RefVar = dyn_cast<VarDecl>(RefExpr->getDecl());
     // If variable isn't ID-dependent, but RefVar is.
-    if (IdDepVarsMap.find(RefVar) != IdDepVarsMap.end())
+    if (IdDepVarsMap.contains(RefVar))
       StringStream << "variable " << RefVar->getNameAsString();
   }
   if (MemExpr) {
     const auto *RefField = dyn_cast<FieldDecl>(MemExpr->getMemberDecl());
     // If variable isn't ID-dependent, but RefField is.
-    if (IdDepFieldsMap.find(RefField) != IdDepFieldsMap.end())
+    if (IdDepFieldsMap.contains(RefField))
       StringStream << "member " << RefField->getNameAsString();
   }
   IdDepVarsMap[PotentialVar] =
@@ -168,7 +168,7 @@ void IdDependentBackwardBranchCheck::saveIdDepFieldFromReference(
     const DeclRefExpr *RefExpr, const MemberExpr *MemExpr,
     const FieldDecl *PotentialField) {
   // If the field is already in IdDepFieldsMap, ignore it.
-  if (IdDepFieldsMap.find(PotentialField) != IdDepFieldsMap.end())
+  if (IdDepFieldsMap.contains(PotentialField))
     return;
   std::string Message;
   llvm::raw_string_ostream StringStream(Message);
@@ -177,12 +177,12 @@ void IdDependentBackwardBranchCheck::saveIdDepFieldFromReference(
   if (RefExpr) {
     const auto *RefVar = dyn_cast<VarDecl>(RefExpr->getDecl());
     // If field isn't ID-dependent, but RefVar is.
-    if (IdDepVarsMap.find(RefVar) != IdDepVarsMap.end())
+    if (IdDepVarsMap.contains(RefVar))
       StringStream << "variable " << RefVar->getNameAsString();
   }
   if (MemExpr) {
     const auto *RefField = dyn_cast<FieldDecl>(MemExpr->getMemberDecl());
-    if (IdDepFieldsMap.find(RefField) != IdDepFieldsMap.end())
+    if (IdDepFieldsMap.contains(RefField))
       StringStream << "member " << RefField->getNameAsString();
   }
   IdDepFieldsMap[PotentialField] = IdDependencyRecord(

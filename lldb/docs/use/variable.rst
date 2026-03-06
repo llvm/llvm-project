@@ -958,7 +958,8 @@ be implemented by the Python class):
       def get_child_index(self, name: str) -> int:
          """
          This call should return the index of the synthetic child whose name is
-         given as the argument.
+         given as the argument. Array subscripting, names in the form "[N]", is
+         automatically supported.
          Return -1 if there is no child at the index.
          """
 

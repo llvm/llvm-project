@@ -241,8 +241,8 @@ void foo(int arg) {
   //
   // &gb.b[0], &gb.b[0], 3 * sizeof(gb.b[0]), TO
   //
-  // CK1: [[B_LOAD:%.+]] = load ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1)
-  // CK1: [[B_LOAD1:%.+]] = load ptr, ptr getelementptr inbounds nuw (%struct.ST, ptr @gb, i32 0, i32 1)
+  // CK1: [[B_LOAD:%.+]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @gb, i{{64|32}} {{8|4}})
+  // CK1: [[B_LOAD1:%.+]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @gb, i{{64|32}} {{8|4}})
   // CK1: [[B0:%.+]] = getelementptr inbounds nuw double, ptr [[B_LOAD1]], i[[sz]] 0
   // CK1: [[BP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK1: store ptr [[B_LOAD]], ptr [[BP0]],

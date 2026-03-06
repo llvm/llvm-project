@@ -1253,25 +1253,25 @@ int foobar() {
 // CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK1:       invoke.cont:
-// CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // CHECK1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK1:       invoke.cont2:
-// CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // CHECK1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK1:       invoke.cont3:
-// CHECK1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
-// CHECK1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8
+// CHECK1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // CHECK1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK1:       invoke.cont7:
-// CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // CHECK1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK1:       invoke.cont8:
-// CHECK1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // CHECK1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK1:       invoke.cont9:
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -1288,7 +1288,7 @@ int foobar() {
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]]
@@ -1302,13 +1302,13 @@ int foobar() {
 // CHECK1-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1
 // CHECK1-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]]
+// CHECK1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]]
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]]
 // CHECK1:       arraydestroy.body11:
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ]
 // CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1
 // CHECK1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]]
-// CHECK1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1)
+// CHECK1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12)
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]]
 // CHECK1:       arraydestroy.done15:
 // CHECK1-NEXT:    br label [[EHCLEANUP]]
@@ -1340,8 +1340,8 @@ int foobar() {
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK1:       arraydestroy.body:
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -1776,25 +1776,25 @@ int foobar() {
 // CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK2:       invoke.cont:
-// CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // CHECK2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK2:       invoke.cont2:
-// CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // CHECK2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK2:       invoke.cont3:
-// CHECK2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
-// CHECK2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8
+// CHECK2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // CHECK2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK2:       invoke.cont7:
-// CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // CHECK2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK2:       invoke.cont8:
-// CHECK2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // CHECK2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK2:       invoke.cont9:
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -1811,7 +1811,7 @@ int foobar() {
 // CHECK2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]]
@@ -1825,13 +1825,13 @@ int foobar() {
 // CHECK2-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1
 // CHECK2-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4
 // CHECK2-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]]
+// CHECK2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]]
 // CHECK2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]]
 // CHECK2:       arraydestroy.body11:
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ]
 // CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1
 // CHECK2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]]
-// CHECK2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1)
+// CHECK2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12)
 // CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]]
 // CHECK2:       arraydestroy.done15:
 // CHECK2-NEXT:    br label [[EHCLEANUP]]
@@ -1863,8 +1863,8 @@ int foobar() {
 // CHECK2-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK2:       arraydestroy.body:
-// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -2448,25 +2448,25 @@ int foobar() {
 // SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // SIMD1:       invoke.cont:
-// SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // SIMD1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // SIMD1:       invoke.cont2:
-// SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // SIMD1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // SIMD1:       invoke.cont3:
-// SIMD1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
-// SIMD1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8
+// SIMD1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // SIMD1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // SIMD1:       invoke.cont7:
-// SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // SIMD1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // SIMD1:       invoke.cont8:
-// SIMD1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// SIMD1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // SIMD1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // SIMD1:       invoke.cont9:
 // SIMD1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -2483,7 +2483,7 @@ int foobar() {
 // SIMD1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]]
 // SIMD1:       arraydestroy.body:
 // SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // SIMD1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // SIMD1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // SIMD1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]]
@@ -2497,13 +2497,13 @@ int foobar() {
 // SIMD1-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1
 // SIMD1-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4
 // SIMD1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]]
+// SIMD1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]]
 // SIMD1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]]
 // SIMD1:       arraydestroy.body11:
 // SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ]
 // SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1
 // SIMD1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]]
-// SIMD1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1)
+// SIMD1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12)
 // SIMD1-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]]
 // SIMD1:       arraydestroy.done15:
 // SIMD1-NEXT:    br label [[EHCLEANUP]]
@@ -2535,8 +2535,8 @@ int foobar() {
 // SIMD1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // SIMD1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // SIMD1:       arraydestroy.body:
-// SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// SIMD1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // SIMD1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // SIMD1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // SIMD1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -2586,7 +2586,7 @@ int foobar() {
 // SIMD1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]]
 // SIMD1-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
-// SIMD1-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD1-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4
 // SIMD1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]]
 // SIMD1-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4
@@ -2663,7 +2663,7 @@ int foobar() {
 // SIMD1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]]
 // SIMD1-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4
-// SIMD1-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD1-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4
 // SIMD1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]]
 // SIMD1-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
@@ -2912,25 +2912,25 @@ int foobar() {
 // SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG158:![0-9]+]]
 // SIMD2:       invoke.cont:
-// SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // SIMD2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG159:![0-9]+]]
 // SIMD2:       invoke.cont2:
-// SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // SIMD2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG160:![0-9]+]]
 // SIMD2:       invoke.cont3:
-// SIMD2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG155]]
-// SIMD2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161:![0-9]+]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG155]]
+// SIMD2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161:![0-9]+]]
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // SIMD2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG162:![0-9]+]]
 // SIMD2:       invoke.cont7:
-// SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // SIMD2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG163:![0-9]+]]
 // SIMD2:       invoke.cont8:
-// SIMD2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
-// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
+// SIMD2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // SIMD2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG164:![0-9]+]]
 // SIMD2:       invoke.cont9:
 // SIMD2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG165:![0-9]+]]
@@ -2947,7 +2947,7 @@ int foobar() {
 // SIMD2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG157]]
 // SIMD2:       arraydestroy.body:
 // SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG157]]
-// SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG157]]
+// SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG157]]
 // SIMD2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG157]]
 // SIMD2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[DBG157]]
 // SIMD2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG157]]
@@ -2961,13 +2961,13 @@ int foobar() {
 // SIMD2-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1, !dbg [[DBG166]]
 // SIMD2-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG166]]
 // SIMD2-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
-// SIMD2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]], !dbg [[DBG161]]
+// SIMD2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]], !dbg [[DBG161]]
 // SIMD2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]], !dbg [[DBG161]]
 // SIMD2:       arraydestroy.body11:
 // SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ], !dbg [[DBG161]]
 // SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1, !dbg [[DBG161]]
 // SIMD2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]], !dbg [[DBG161]]
-// SIMD2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), !dbg [[DBG161]]
+// SIMD2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), !dbg [[DBG161]]
 // SIMD2-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]], !dbg [[DBG161]]
 // SIMD2:       arraydestroy.done15:
 // SIMD2-NEXT:    br label [[EHCLEANUP]], !dbg [[DBG161]]
@@ -3000,8 +3000,8 @@ int foobar() {
 // SIMD2-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META171:![0-9]+]], !DIExpression(), [[META172:![0-9]+]])
 // SIMD2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[META172]]
 // SIMD2:       arraydestroy.body:
-// SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META172]]
-// SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META172]]
+// SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META172]]
+// SIMD2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META172]]
 // SIMD2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[META172]]
 // SIMD2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[META172]]
 // SIMD2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[META172]]
@@ -3052,7 +3052,7 @@ int foobar() {
 // SIMD2-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG188:![0-9]+]]
 // SIMD2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]], !dbg [[DBG188]]
 // SIMD2-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG188]]
-// SIMD2-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG189:![0-9]+]]
+// SIMD2-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4, !dbg [[DBG189:![0-9]+]]
 // SIMD2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG190:![0-9]+]]
 // SIMD2-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]], !dbg [[DBG190]]
 // SIMD2-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4, !dbg [[DBG190]]
@@ -3133,7 +3133,7 @@ int foobar() {
 // SIMD2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG223:![0-9]+]]
 // SIMD2-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]], !dbg [[DBG223]]
 // SIMD2-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4, !dbg [[DBG223]]
-// SIMD2-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG224:![0-9]+]]
+// SIMD2-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4, !dbg [[DBG224:![0-9]+]]
 // SIMD2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG225:![0-9]+]]
 // SIMD2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]], !dbg [[DBG225]]
 // SIMD2-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG225]]
@@ -3441,25 +3441,25 @@ int foobar() {
 // CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-TLS1:       invoke.cont:
-// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK-TLS1:       invoke.cont2:
-// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK-TLS1:       invoke.cont3:
-// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
-// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8
+// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK-TLS1:       invoke.cont7:
-// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS1:       invoke.cont8:
-// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK-TLS1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // CHECK-TLS1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS1:       invoke.cont9:
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -3476,7 +3476,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK-TLS1:       arraydestroy.body:
 // CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK-TLS1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK-TLS1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK-TLS1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]]
@@ -3490,13 +3490,13 @@ int foobar() {
 // CHECK-TLS1-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1
 // CHECK-TLS1-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4
 // CHECK-TLS1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]]
+// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]]
 // CHECK-TLS1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]]
 // CHECK-TLS1:       arraydestroy.body11:
 // CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ]
 // CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1
 // CHECK-TLS1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]]
-// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1)
+// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12)
 // CHECK-TLS1-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]]
 // CHECK-TLS1:       arraydestroy.done15:
 // CHECK-TLS1-NEXT:    br label [[EHCLEANUP]]
@@ -3528,8 +3528,8 @@ int foobar() {
 // CHECK-TLS1-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-TLS1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK-TLS1:       arraydestroy.body:
-// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK-TLS1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK-TLS1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK-TLS1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK-TLS1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -4172,25 +4172,25 @@ int foobar() {
 // CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-TLS2:       invoke.cont:
-// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // CHECK-TLS2:       invoke.cont2:
-// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // CHECK-TLS2:       invoke.cont3:
-// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
-// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8
+// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // CHECK-TLS2:       invoke.cont7:
-// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS2:       invoke.cont8:
-// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// CHECK-TLS2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // CHECK-TLS2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // CHECK-TLS2:       invoke.cont9:
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR4]]
@@ -4207,7 +4207,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK-TLS2:       arraydestroy.body:
 // CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK-TLS2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK-TLS2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK-TLS2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]]
@@ -4221,13 +4221,13 @@ int foobar() {
 // CHECK-TLS2-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1
 // CHECK-TLS2-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4
 // CHECK-TLS2-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]]
+// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]]
 // CHECK-TLS2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]]
 // CHECK-TLS2:       arraydestroy.body11:
 // CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ]
 // CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1
 // CHECK-TLS2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR4]]
-// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1)
+// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12)
 // CHECK-TLS2-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]]
 // CHECK-TLS2:       arraydestroy.done15:
 // CHECK-TLS2-NEXT:    br label [[EHCLEANUP]]
@@ -4259,8 +4259,8 @@ int foobar() {
 // CHECK-TLS2-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-TLS2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // CHECK-TLS2:       arraydestroy.body:
-// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// CHECK-TLS2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // CHECK-TLS2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]]
 // CHECK-TLS2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // CHECK-TLS2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -4515,25 +4515,25 @@ int foobar() {
 // CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG189:![0-9]+]]
 // CHECK-TLS3:       invoke.cont:
-// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG188]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG188]]
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG190:![0-9]+]]
 // CHECK-TLS3:       invoke.cont2:
-// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG188]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG188]]
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG191:![0-9]+]]
 // CHECK-TLS3:       invoke.cont3:
-// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG186]]
-// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG192:![0-9]+]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG186]]
+// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG192:![0-9]+]]
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG193:![0-9]+]]
 // CHECK-TLS3:       invoke.cont7:
-// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG192]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG192]]
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG194:![0-9]+]]
 // CHECK-TLS3:       invoke.cont8:
-// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG192]]
-// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG192]]
+// CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // CHECK-TLS3-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG195:![0-9]+]]
 // CHECK-TLS3:       invoke.cont9:
 // CHECK-TLS3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG196:![0-9]+]]
@@ -4550,7 +4550,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG188]]
 // CHECK-TLS3:       arraydestroy.body:
 // CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG188]]
-// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG188]]
+// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG188]]
 // CHECK-TLS3-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG188]]
 // CHECK-TLS3-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[DBG188]]
 // CHECK-TLS3-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG188]]
@@ -4564,13 +4564,13 @@ int foobar() {
 // CHECK-TLS3-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1, !dbg [[DBG197]]
 // CHECK-TLS3-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG197]]
 // CHECK-TLS3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG192]]
-// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]], !dbg [[DBG192]]
+// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]], !dbg [[DBG192]]
 // CHECK-TLS3-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]], !dbg [[DBG192]]
 // CHECK-TLS3:       arraydestroy.body11:
 // CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ], !dbg [[DBG192]]
 // CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1, !dbg [[DBG192]]
 // CHECK-TLS3-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]], !dbg [[DBG192]]
-// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), !dbg [[DBG192]]
+// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), !dbg [[DBG192]]
 // CHECK-TLS3-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]], !dbg [[DBG192]]
 // CHECK-TLS3:       arraydestroy.done15:
 // CHECK-TLS3-NEXT:    br label [[EHCLEANUP]], !dbg [[DBG192]]
@@ -4603,8 +4603,8 @@ int foobar() {
 // CHECK-TLS3-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META202:![0-9]+]], !DIExpression(), [[META203:![0-9]+]])
 // CHECK-TLS3-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[META203]]
 // CHECK-TLS3:       arraydestroy.body:
-// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META203]]
-// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META203]]
+// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META203]]
+// CHECK-TLS3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META203]]
 // CHECK-TLS3-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[META203]]
 // CHECK-TLS3-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[META203]]
 // CHECK-TLS3-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[META203]]
@@ -5278,25 +5278,25 @@ int foobar() {
 // CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG261:![0-9]+]]
 // CHECK-TLS4:       invoke.cont:
-// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG260]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG260]]
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG262:![0-9]+]]
 // CHECK-TLS4:       invoke.cont2:
-// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG260]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG260]]
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG263:![0-9]+]]
 // CHECK-TLS4:       invoke.cont3:
-// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG258]]
-// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG264:![0-9]+]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG258]]
+// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG264:![0-9]+]]
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG265:![0-9]+]]
 // CHECK-TLS4:       invoke.cont7:
-// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG264]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG264]]
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG266:![0-9]+]]
 // CHECK-TLS4:       invoke.cont8:
-// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG264]]
-// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// CHECK-TLS4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG264]]
+// CHECK-TLS4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // CHECK-TLS4-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG267:![0-9]+]]
 // CHECK-TLS4:       invoke.cont9:
 // CHECK-TLS4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR4]], !dbg [[DBG268:![0-9]+]]
@@ -5313,7 +5313,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG260]]
 // CHECK-TLS4:       arraydestroy.body:
 // CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG260]]
-// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG260]]
+// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG260]]
 // CHECK-TLS4-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]], !dbg [[DBG260]]
 // CHECK-TLS4-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[DBG260]]
 // CHECK-TLS4-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG260]]
@@ -5327,13 +5327,13 @@ int foobar() {
 // CHECK-TLS4-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1, !dbg [[DBG269]]
 // CHECK-TLS4-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG269]]
 // CHECK-TLS4-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG264]]
-// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]], !dbg [[DBG264]]
+// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]], !dbg [[DBG264]]
 // CHECK-TLS4-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]], !dbg [[DBG264]]
 // CHECK-TLS4:       arraydestroy.body11:
 // CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ], !dbg [[DBG264]]
 // CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1, !dbg [[DBG264]]
 // CHECK-TLS4-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR4]], !dbg [[DBG264]]
-// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), !dbg [[DBG264]]
+// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), !dbg [[DBG264]]
 // CHECK-TLS4-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]], !dbg [[DBG264]]
 // CHECK-TLS4:       arraydestroy.done15:
 // CHECK-TLS4-NEXT:    br label [[EHCLEANUP]], !dbg [[DBG264]]
@@ -5366,8 +5366,8 @@ int foobar() {
 // CHECK-TLS4-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META274:![0-9]+]], !DIExpression(), [[META275:![0-9]+]])
 // CHECK-TLS4-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[META275]]
 // CHECK-TLS4:       arraydestroy.body:
-// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META275]]
-// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META275]]
+// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META275]]
+// CHECK-TLS4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META275]]
 // CHECK-TLS4-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR4]], !dbg [[META275]]
 // CHECK-TLS4-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[META275]]
 // CHECK-TLS4-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[META275]]
@@ -5569,25 +5569,25 @@ int foobar() {
 // SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // SIMD3:       invoke.cont:
-// SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // SIMD3-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]]
 // SIMD3:       invoke.cont2:
-// SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // SIMD3-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]]
 // SIMD3:       invoke.cont3:
-// SIMD3-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8
-// SIMD3-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8
+// SIMD3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // SIMD3-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]]
 // SIMD3:       invoke.cont7:
-// SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // SIMD3-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]]
 // SIMD3:       invoke.cont8:
-// SIMD3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD3-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8
+// SIMD3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // SIMD3-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]]
 // SIMD3:       invoke.cont9:
 // SIMD3-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]]
@@ -5604,7 +5604,7 @@ int foobar() {
 // SIMD3-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]]
 // SIMD3:       arraydestroy.body:
 // SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // SIMD3-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // SIMD3-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // SIMD3-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]]
@@ -5618,13 +5618,13 @@ int foobar() {
 // SIMD3-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1
 // SIMD3-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4
 // SIMD3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8
-// SIMD3-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]]
+// SIMD3-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]]
 // SIMD3-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]]
 // SIMD3:       arraydestroy.body11:
 // SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ]
 // SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1
 // SIMD3-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]]
-// SIMD3-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1)
+// SIMD3-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12)
 // SIMD3-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]]
 // SIMD3:       arraydestroy.done15:
 // SIMD3-NEXT:    br label [[EHCLEANUP]]
@@ -5656,8 +5656,8 @@ int foobar() {
 // SIMD3-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // SIMD3-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]]
 // SIMD3:       arraydestroy.body:
-// SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
-// SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
+// SIMD3-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
 // SIMD3-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // SIMD3-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x
 // SIMD3-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
@@ -5707,7 +5707,7 @@ int foobar() {
 // SIMD3-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]]
 // SIMD3-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
-// SIMD3-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD3-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4
 // SIMD3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]]
 // SIMD3-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4
@@ -5784,7 +5784,7 @@ int foobar() {
 // SIMD3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]]
 // SIMD3-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4
-// SIMD3-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD3-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4
 // SIMD3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]]
 // SIMD3-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
@@ -6033,25 +6033,25 @@ int foobar() {
 // SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // SIMD4-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG158:![0-9]+]]
 // SIMD4:       invoke.cont:
-// SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// SIMD4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // SIMD4-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG159:![0-9]+]]
 // SIMD4:       invoke.cont2:
-// SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// SIMD4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG157]]
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // SIMD4-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG160:![0-9]+]]
 // SIMD4:       invoke.cont3:
-// SIMD4-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG155]]
-// SIMD4-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161:![0-9]+]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// SIMD4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG155]]
+// SIMD4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161:![0-9]+]]
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // SIMD4-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG162:![0-9]+]]
 // SIMD4:       invoke.cont7:
-// SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// SIMD4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // SIMD4-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG163:![0-9]+]]
 // SIMD4:       invoke.cont8:
-// SIMD4-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
-// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// SIMD4-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
+// SIMD4-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // SIMD4-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG164:![0-9]+]]
 // SIMD4:       invoke.cont9:
 // SIMD4-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG165:![0-9]+]]
@@ -6068,7 +6068,7 @@ int foobar() {
 // SIMD4-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG157]]
 // SIMD4:       arraydestroy.body:
 // SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG157]]
-// SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG157]]
+// SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG157]]
 // SIMD4-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG157]]
 // SIMD4-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[DBG157]]
 // SIMD4-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG157]]
@@ -6082,13 +6082,13 @@ int foobar() {
 // SIMD4-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1, !dbg [[DBG166]]
 // SIMD4-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG166]]
 // SIMD4-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG161]]
-// SIMD4-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]], !dbg [[DBG161]]
+// SIMD4-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]], !dbg [[DBG161]]
 // SIMD4-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]], !dbg [[DBG161]]
 // SIMD4:       arraydestroy.body11:
 // SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ], !dbg [[DBG161]]
 // SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1, !dbg [[DBG161]]
 // SIMD4-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]], !dbg [[DBG161]]
-// SIMD4-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), !dbg [[DBG161]]
+// SIMD4-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), !dbg [[DBG161]]
 // SIMD4-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]], !dbg [[DBG161]]
 // SIMD4:       arraydestroy.done15:
 // SIMD4-NEXT:    br label [[EHCLEANUP]], !dbg [[DBG161]]
@@ -6121,8 +6121,8 @@ int foobar() {
 // SIMD4-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META171:![0-9]+]], !DIExpression(), [[META172:![0-9]+]])
 // SIMD4-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[META172]]
 // SIMD4:       arraydestroy.body:
-// SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META172]]
-// SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META172]]
+// SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META172]]
+// SIMD4-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META172]]
 // SIMD4-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[META172]]
 // SIMD4-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[META172]]
 // SIMD4-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[META172]]
@@ -6173,7 +6173,7 @@ int foobar() {
 // SIMD4-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG188:![0-9]+]]
 // SIMD4-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]], !dbg [[DBG188]]
 // SIMD4-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG188]]
-// SIMD4-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG189:![0-9]+]]
+// SIMD4-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4, !dbg [[DBG189:![0-9]+]]
 // SIMD4-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG190:![0-9]+]]
 // SIMD4-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]], !dbg [[DBG190]]
 // SIMD4-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4, !dbg [[DBG190]]
@@ -6254,7 +6254,7 @@ int foobar() {
 // SIMD4-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG223:![0-9]+]]
 // SIMD4-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]], !dbg [[DBG223]]
 // SIMD4-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4, !dbg [[DBG223]]
-// SIMD4-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x [[STRUCT_S1:%.*]]], ptr getelementptr inbounds ([2 x [3 x [[STRUCT_S1]]]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG224:![0-9]+]]
+// SIMD4-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), align 4, !dbg [[DBG224:![0-9]+]]
 // SIMD4-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG225:![0-9]+]]
 // SIMD4-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]], !dbg [[DBG225]]
 // SIMD4-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG225]]
@@ -6735,25 +6735,25 @@ int foobar() {
 // DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG221:![0-9]+]]
 // DEBUG1:       invoke.cont:
-// DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG220]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// DEBUG1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG220]]
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG222:![0-9]+]]
 // DEBUG1:       invoke.cont2:
-// DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG220]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// DEBUG1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG220]]
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG223:![0-9]+]]
 // DEBUG1:       invoke.cont3:
-// DEBUG1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG218]]
-// DEBUG1-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG224:![0-9]+]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// DEBUG1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG218]]
+// DEBUG1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG224:![0-9]+]]
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG225:![0-9]+]]
 // DEBUG1:       invoke.cont7:
-// DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG224]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// DEBUG1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG224]]
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG226:![0-9]+]]
 // DEBUG1:       invoke.cont8:
-// DEBUG1-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG224]]
-// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// DEBUG1-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG224]]
+// DEBUG1-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // DEBUG1-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG227:![0-9]+]]
 // DEBUG1:       invoke.cont9:
 // DEBUG1-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG228:![0-9]+]]
@@ -6770,7 +6770,7 @@ int foobar() {
 // DEBUG1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG220]]
 // DEBUG1:       arraydestroy.body:
 // DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP4]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG220]]
-// DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG220]]
+// DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG220]]
 // DEBUG1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG220]]
 // DEBUG1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[DBG220]]
 // DEBUG1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG220]]
@@ -6784,13 +6784,13 @@ int foobar() {
 // DEBUG1-NEXT:    [[TMP7:%.*]] = extractvalue { ptr, i32 } [[TMP5]], 1, !dbg [[DBG229]]
 // DEBUG1-NEXT:    store i32 [[TMP7]], ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG229]]
 // DEBUG1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG224]]
-// DEBUG1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP8]], !dbg [[DBG224]]
+// DEBUG1-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP8]], !dbg [[DBG224]]
 // DEBUG1-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]], !dbg [[DBG224]]
 // DEBUG1:       arraydestroy.body11:
 // DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP8]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ], !dbg [[DBG224]]
 // DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1, !dbg [[DBG224]]
 // DEBUG1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]], !dbg [[DBG224]]
-// DEBUG1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), !dbg [[DBG224]]
+// DEBUG1-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), !dbg [[DBG224]]
 // DEBUG1-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]], !dbg [[DBG224]]
 // DEBUG1:       arraydestroy.done15:
 // DEBUG1-NEXT:    br label [[EHCLEANUP]], !dbg [[DBG224]]
@@ -6823,8 +6823,8 @@ int foobar() {
 // DEBUG1-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META233:![0-9]+]], !DIExpression(), [[META234:![0-9]+]])
 // DEBUG1-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[META234]]
 // DEBUG1:       arraydestroy.body:
-// DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META234]]
-// DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META234]]
+// DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META234]]
+// DEBUG1-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META234]]
 // DEBUG1-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[META234]]
 // DEBUG1-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[META234]]
 // DEBUG1-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[META234]]
@@ -7281,25 +7281,25 @@ int foobar() {
 // DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG171:![0-9]+]]
 // DEBUG2:       invoke.cont:
-// DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG170]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
+// DEBUG2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG170]]
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 4), i32 noundef 2)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD]], !dbg [[DBG172:![0-9]+]]
 // DEBUG2:       invoke.cont2:
-// DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG170]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 2), i32 noundef 3)
+// DEBUG2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG170]]
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 8), i32 noundef 3)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT3:%.*]] unwind label [[LPAD]], !dbg [[DBG173:![0-9]+]]
 // DEBUG2:       invoke.cont3:
-// DEBUG2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG168]]
-// DEBUG2-NEXT:    store ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG174:![0-9]+]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i32 noundef 4)
+// DEBUG2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG168]]
+// DEBUG2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG174:![0-9]+]]
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), i32 noundef 4)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT7:%.*]] unwind label [[LPAD6:%.*]], !dbg [[DBG175:![0-9]+]]
 // DEBUG2:       invoke.cont7:
-// DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG174]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 1), i32 noundef 5)
+// DEBUG2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG174]]
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 16), i32 noundef 5)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT8:%.*]] unwind label [[LPAD6]], !dbg [[DBG176:![0-9]+]]
 // DEBUG2:       invoke.cont8:
-// DEBUG2-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG174]]
-// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), i64 2), i32 noundef 6)
+// DEBUG2-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG174]]
+// DEBUG2-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds nuw (i8, ptr @arr_x, i64 20), i32 noundef 6)
 // DEBUG2-NEXT:            to label [[INVOKE_CONT9:%.*]] unwind label [[LPAD6]], !dbg [[DBG177:![0-9]+]]
 // DEBUG2:       invoke.cont9:
 // DEBUG2-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3]], !dbg [[DBG167]]
@@ -7316,7 +7316,7 @@ int foobar() {
 // DEBUG2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY]], label [[ARRAYDESTROY_DONE4:%.*]], label [[ARRAYDESTROY_BODY:%.*]], !dbg [[DBG170]]
 // DEBUG2:       arraydestroy.body:
 // DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ [[TMP5]], [[LPAD]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[DBG170]]
-// DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG170]]
+// DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[DBG170]]
 // DEBUG2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[DBG170]]
 // DEBUG2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[DBG170]]
 // DEBUG2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE4]], label [[ARRAYDESTROY_BODY]], !dbg [[DBG170]]
@@ -7330,13 +7330,13 @@ int foobar() {
 // DEBUG2-NEXT:    [[TMP8:%.*]] = extractvalue { ptr, i32 } [[TMP6]], 1, !dbg [[DBG178]]
 // DEBUG2-NEXT:    store i32 [[TMP8]], ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG178]]
 // DEBUG2-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[ARRAYINIT_ENDOFINIT5]], align 8, !dbg [[DBG174]]
-// DEBUG2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), [[TMP9]], !dbg [[DBG174]]
+// DEBUG2-NEXT:    [[ARRAYDESTROY_ISEMPTY10:%.*]] = icmp eq ptr getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), [[TMP9]], !dbg [[DBG174]]
 // DEBUG2-NEXT:    br i1 [[ARRAYDESTROY_ISEMPTY10]], label [[ARRAYDESTROY_DONE15:%.*]], label [[ARRAYDESTROY_BODY11:%.*]], !dbg [[DBG174]]
 // DEBUG2:       arraydestroy.body11:
 // DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST12:%.*]] = phi ptr [ [[TMP9]], [[LPAD6]] ], [ [[ARRAYDESTROY_ELEMENT13:%.*]], [[ARRAYDESTROY_BODY11]] ], !dbg [[DBG174]]
 // DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENT13]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST12]], i64 -1, !dbg [[DBG174]]
 // DEBUG2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT13]]) #[[ATTR3]], !dbg [[DBG174]]
-// DEBUG2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds ([3 x [[STRUCT_S1]]], ptr @arr_x, i64 1), !dbg [[DBG174]]
+// DEBUG2-NEXT:    [[ARRAYDESTROY_DONE14:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT13]], getelementptr inbounds nuw (i8, ptr @arr_x, i64 12), !dbg [[DBG174]]
 // DEBUG2-NEXT:    br i1 [[ARRAYDESTROY_DONE14]], label [[ARRAYDESTROY_DONE15]], label [[ARRAYDESTROY_BODY11]], !dbg [[DBG174]]
 // DEBUG2:       arraydestroy.done15:
 // DEBUG2-NEXT:    br label [[EHCLEANUP]], !dbg [[DBG174]]
@@ -7491,8 +7491,8 @@ int foobar() {
 // DEBUG2-NEXT:      #dbg_declare(ptr [[DOTADDR]], [[META199:![0-9]+]], !DIExpression(), [[META200:![0-9]+]])
 // DEBUG2-NEXT:    br label [[ARRAYDESTROY_BODY:%.*]], !dbg [[META200]]
 // DEBUG2:       arraydestroy.body:
-// DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 6), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META200]]
-// DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META200]]
+// DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arr_x, i64 24), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ], !dbg [[META200]]
+// DEBUG2-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_S1:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1, !dbg [[META200]]
 // DEBUG2-NEXT:    call void @_ZN2S1D1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]], !dbg [[META200]]
 // DEBUG2-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @arr_x, !dbg [[META200]]
 // DEBUG2-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]], !dbg [[META200]]

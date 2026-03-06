@@ -139,7 +139,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
 
   // FIXME: Instead of re-lexing and looking for the 'virtual' token,
   // store the location of 'virtual' in each FunctionDecl.
-  SmallVector<Token, 16> Tokens = parseTokens(FileRange, Result);
+  const SmallVector<Token, 16> Tokens = parseTokens(FileRange, Result);
 
   // Add 'override' on inline declarations that don't already have it.
   if (!HasFinal && !HasOverride) {

@@ -193,6 +193,11 @@ public:
         continue;
       Operation *definingOp = allocValue.getDefiningOp();
       assert(definingOp && "No defining op");
+      // Skip allocations in blocks that are not reachable from the function
+      // entry. Such blocks are dead code and the dominator tree analysis may
+      // not have nodes for them, which would cause crashes below.
+      if (!dominators.isReachableFromEntry(allocValue.getParentBlock()))
+        continue;
       auto operands = definingOp->getOperands();
       auto resultAliases = aliases.resolve(allocValue);
       // Determine the common dominator block of all aliases.

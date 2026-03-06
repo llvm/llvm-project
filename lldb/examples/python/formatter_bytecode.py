@@ -1,5 +1,5 @@
 """
-Specification, compiler, disassembler, and interpreter
+Specification, assembler, disassembler, and interpreter
 for LLDB dataformatter bytecode.
 
 See https://lldb.llvm.org/resources/formatterbytecode.html for more details.
@@ -145,7 +145,7 @@ define_selector(0x52, "strlen")
 
 
 ################################################################################
-# Compiler.
+# Assembler.
 ################################################################################
 
 _SIGNATURE_LABEL = re.compile(f"@(?:{SIGNATURE_NAMES}):$")
@@ -291,21 +291,21 @@ class BytecodeSection:
         print(";", file=output)
 
 
-def compile_file(type_name: str, input: TextIO) -> BytecodeSection:
+def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
     input_tokens = _tokenize(input.read())
     signatures = []
     for sig, tokens in _segment_by_signature(input_tokens):
-        signatures.append((sig, compile_tokens(tokens)))
+        signatures.append((sig, assemble_tokens(tokens)))
 
     return BytecodeSection(type_name, flags=0, signatures=signatures)
 
 
-def compile(assembler: str) -> bytes:
-    return compile_tokens(_tokenize(assembler))
+def assemble(assembly: str) -> bytes:
+    return assemble_tokens(_tokenize(assembly))
 
 
-def compile_tokens(tokens: list[str]) -> bytes:
-    """Compile assembler into bytecode"""
+def assemble_tokens(tokens: list[str]) -> bytes:
+    """Assemble assembly into bytecode"""
     # This is a stack of all in-flight/unterminated blocks.
     bytecode = [bytearray()]
 
@@ -377,7 +377,7 @@ def disassemble_file(input: BinaryIO, output: TextIO) -> None:
 
 
 def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
-    """Disassemble bytecode into (assembler, token starts)"""
+    """Disassemble bytecode into (assembly, token starts)"""
     asm = ""
     all_bytes = list(bytecode)
     all_bytes.reverse()
@@ -709,7 +709,7 @@ def _main():
 
     parser = argparse.ArgumentParser(
         description="""
-    Compiler, disassembler, and interpreter for LLDB dataformatter bytecode.
+    Assembler, disassembler, and interpreter for LLDB dataformatter bytecode.
     See https://lldb.llvm.org/resources/formatterbytecode.html for more details.
     """
     )
@@ -717,9 +717,9 @@ def _main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
         "-c",
-        "--compile",
+        "--assemble",
         action="store_true",
-        help="compile assembler into bytecode",
+        help="assemble assembly into bytecode",
     )
     mode.add_argument(
         "-d",
@@ -730,7 +730,7 @@ def _main():
     parser.add_argument(
         "-o",
         "--output",
-        help="output file (required for --compile)",
+        help="output file (required for --assemble)",
     )
     parser.add_argument(
         "-f",
@@ -742,11 +742,11 @@ def _main():
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
-    if args.compile:
+    if args.assemble:
         if not args.output:
-            parser.error("--output is required with --compile")
+            parser.error("--output is required with --assemble")
         with open(args.input) as input:
-            section = compile_file(args.type_name, input)
+            section = assemble_file(args.type_name, input)
         if args.format == "binary":
             with open(args.output, "wb") as output:
                 section.write_binary(output)
@@ -775,16 +775,16 @@ if __name__ == "__main__":
     ############################################################################
     import unittest
 
-    class TestCompiler(unittest.TestCase):
+    class TestAssembler(unittest.TestCase):
 
-        def test_compile(self):
-            self.assertEqual(compile("1u dup").hex(), "200101")
-            self.assertEqual(compile('"1u dup"').hex(), "2206317520647570")
-            self.assertEqual(compile("16 < { dup } if").hex(), "21105210010111")
-            self.assertEqual(compile('{ { " } " } }').hex(), "100710052203207d20")
+        def test_assemble(self):
+            self.assertEqual(assemble("1u dup").hex(), "200101")
+            self.assertEqual(assemble('"1u dup"').hex(), "2206317520647570")
+            self.assertEqual(assemble("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(assemble('{ { " } " } }').hex(), "100710052203207d20")
 
             def roundtrip(asm):
-                self.assertEqual(disassemble(compile(asm))[0], asm)
+                self.assertEqual(disassemble(assemble(asm))[0], asm)
 
             roundtrip("1u dup")
             roundtrip("16 < { dup } if")
@@ -795,16 +795,16 @@ if __name__ == "__main__":
             roundtrip('"a  b"')
             roundtrip('"a \\" b"')
 
-            self.assertEqual(interpret(compile("1 1 +"), [], []), 2)
-            self.assertEqual(interpret(compile("2 1 1 + *"), [], []), 4)
+            self.assertEqual(interpret(assemble("1 1 +"), [], []), 2)
+            self.assertEqual(interpret(assemble("2 1 1 + *"), [], []), 4)
             self.assertEqual(
-                interpret(compile('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
+                interpret(assemble('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
             )
 
-        def test_compile_file(self):
-            def run_compile(type_name, asm):
+        def test_assemble_file(self):
+            def run_assemble(type_name, asm):
                 out = io.BytesIO()
-                section = compile_file(type_name, io.StringIO(asm))
+                section = assemble_file(type_name, io.StringIO(asm))
                 section.write_binary(out)
                 out.seek(0)
                 return out
@@ -815,14 +815,14 @@ if __name__ == "__main__":
                 out.seek(0)
                 return out
 
-            # compile -> disassemble -> compile round-trip: binary is identical.
+            # assemble -> disassemble -> assemble round-trip: binary is identical.
             asm = "@summary: dup @get_value_as_unsigned call return\n@get_num_children: drop 5u return"
-            binary1 = run_compile("MyType", asm)
+            binary1 = run_assemble("MyType", asm)
             dis = run_disassemble(binary1)
-            binary2 = run_compile("MyType", dis.read())
+            binary2 = run_assemble("MyType", dis.read())
             self.assertEqual(binary1.getvalue(), binary2.getvalue())
 
-            # disassemble -> compile -> disassemble round-trip: text is identical.
+            # disassemble -> assemble -> disassemble round-trip: text is identical.
             dis2 = run_disassemble(binary2)
             self.assertEqual(dis.getvalue(), dis2.getvalue())
 
@@ -832,7 +832,7 @@ if __name__ == "__main__":
 
             # Duplicate signature is an error.
             with self.assertRaises(ValueError):
-                run_compile("MyType", "@summary: 1u return\n@summary: 2u return")
+                run_assemble("MyType", "@summary: 1u return\n@summary: 2u return")
 
         def test_write_source(self):
             # Use the Account example from main.cpp as a reference, whose

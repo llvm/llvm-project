@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
 
 // These tests validate that the kernel name type argument provided to the
@@ -7,6 +9,11 @@
 // specification.
 
 struct S1;
+
+// A generic kernel launch function.
+template<typename KernelName, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
+
 // expected-warning@+3 {{redundant 'clang::sycl_kernel_entry_point' attribute}}
 // expected-note@+1  {{previous attribute is here}}
 [[clang::sycl_kernel_entry_point(S1),

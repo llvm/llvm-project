@@ -2084,7 +2084,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
     ContextDisambiguation.run(
-        ThinLTO.CombinedIndex, isPrevailing,
+        ThinLTO.CombinedIndex, isPrevailing, RegularLTO.Ctx,
         [&](StringRef PassName, StringRef RemarkName, const Twine &Msg) {
           auto R = OptimizationRemark(PassName.data(), RemarkName,
                                       LinkerRemarkFunction);

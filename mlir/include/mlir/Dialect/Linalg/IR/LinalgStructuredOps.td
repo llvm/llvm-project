@@ -889,6 +889,13 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+                          attributes, regionBuilder);
+      }]>,
     OpBuilder<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
       "ValueRange":$outputs, "ArrayAttr":$indexingMaps,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),

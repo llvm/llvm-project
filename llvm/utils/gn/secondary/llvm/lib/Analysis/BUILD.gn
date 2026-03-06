@@ -4,6 +4,7 @@ static_library("Analysis") {
     # Must be a public_dep because Analysis's headers include
     # TargetLibraryInfo.inc.
     "//llvm/include/llvm/Analysis:TargetLibraryInfo",
+
     # Must be a public_dep because Analysis's headers include llvm-config.h.
     "//llvm/include/llvm/Config:llvm-config",
   ]

@@ -95,6 +95,7 @@ add_mlir_library(MLIRLoopLikeInterface
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
 )
 

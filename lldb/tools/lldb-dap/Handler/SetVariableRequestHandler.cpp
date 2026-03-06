@@ -81,7 +81,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
     body.memoryReference = addr;
 
   if (ValuePointsToCode(variable))
-    body.valueLocationReference = new_var_ref.AsUInt32();
+    body.valueLocationReference = PackLocation(new_var_ref.AsUInt32(), true);
 
   // Also send invalidated event to signal client that some variables
   // (e.g. references) can be changed.

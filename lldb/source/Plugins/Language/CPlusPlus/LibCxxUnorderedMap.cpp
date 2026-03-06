@@ -40,8 +40,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
   CompilerType GetNodeType();
   CompilerType GetElementType(CompilerType table_type);
@@ -283,17 +281,6 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
     m_next_element = m_tree;
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t>
-lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *

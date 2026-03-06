@@ -178,6 +178,14 @@ xegpu::inferMultiReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return sliceLayout.getParent();
 }
 
+/// Infers the source layout attribute for a transpose operation given the
+/// result layout attribute and permutation.
+xegpu::DistributeLayoutAttr
+xegpu::inferTransposeSourceLayout(xegpu::DistributeLayoutAttr resLayout,
+                                  ArrayRef<int64_t> permutation) {
+  return resLayout.transposeDims(permutation);
+}
+
 /// Infers the source layout attribute for a bitcast operation given the
 /// result layout attribute, result element type bitwidth, and source element
 /// type bitwidth.
@@ -1144,6 +1152,16 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
     if (idx == 1)
       return resLayout;
   }
+
+  // For vector::TransposeOp, infer source layout from result layout using
+  // permutation.
+  if (auto transpose = dyn_cast<vector::TransposeOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    return xegpu::inferTransposeSourceLayout(resLayout,
+                                             transpose.getPermutation());
+  }
+
   // For elementwise operations, all operands must have the same layout as the
   // result.
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
