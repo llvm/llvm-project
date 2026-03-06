@@ -230,6 +230,8 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     return failure();
 
   // Only mul+add contraction is supported.
+  // Currently, there is no way to control the contraction body type in named
+  // and category ops which all default to mul+add only.
   if (!mlir::linalg::detail::isContractionBody(
           *genericOp.getBlock(), [](Operation *first, Operation *second) {
             return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
@@ -460,9 +462,11 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
   }
 
   // Early exit in case of category specialization.
-  // TODO: Remove when all variants account for both named and category.
+  // TODO: Remove when matches for other ops account for both named and
+  // category.
   if (options.emitCategoryOps)
-    return failure();
+    return rewriter.notifyMatchFailure(
+        genericOp, "no matching category op specialization");
 
   // Copy
   if (isaCopyOpInterface(genericOp)) {
@@ -533,10 +537,11 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
   }
 
   // Convolution - e.g. *conv/pooling*
-  if (isaConvolutionOpInterface(genericOp)) {
+  if (isaConvolutionOpInterface(genericOp))
     return specializeLinalgConvolutions(rewriter, genericOp);
-  }
-  return failure();
+
+  return rewriter.notifyMatchFailure(genericOp,
+                                     "no matching named op specialization");
 }
 
 namespace {
