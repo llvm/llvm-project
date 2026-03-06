@@ -308,7 +308,7 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #ifdef _WIN32
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
 
-  llvm::ArrayRef<const char *> args_arr = llvm::ArrayRef(argv + 1, argc);
+  llvm::ArrayRef<const char *> args_arr = llvm::ArrayRef(argv, argc);
   auto wcommandLineOrErr =
       lldb_private::GetFlattenedWindowsCommandStringW(args_arr);
   if (!wcommandLineOrErr)

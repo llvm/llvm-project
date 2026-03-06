@@ -81,9 +81,7 @@ GetFlattenedWindowsCommandStringW(llvm::ArrayRef<const char *> args) {
   if (args.empty())
     return L"";
 
-  std::vector<llvm::StringRef> args_ref;
-  for (int i = 0; args[i] != nullptr; ++i)
-    args_ref.push_back(args[i]);
+  std::vector<llvm::StringRef> args_ref(args.begin(), args.end());
 
   return llvm::sys::flattenWindowsCommandLine(args_ref);
 }

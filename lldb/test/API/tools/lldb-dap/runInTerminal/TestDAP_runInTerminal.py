@@ -237,7 +237,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             self.read_pid_message(comm_file, pipe)
             self.send_did_attach_message(comm_file, pipe)
 
-        stdout, _ = proc.communicate()
+            stdout, _ = proc.communicate()
+
         self.assertIn("foo", stdout)
 
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
@@ -252,7 +253,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             self.read_pid_message(comm_file, pipe)
             self.send_did_attach_message(comm_file, pipe)
 
-        stdout, _ = proc.communicate()
+            stdout, _ = proc.communicate()
+
         self.assertIn("FOO=BAR", stdout)
 
     def test_NonAttachedRunInTerminalLauncher(self):
@@ -273,7 +275,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
             self.read_pid_message(comm_file, pipe)
 
-        _, stderr = proc.communicate()
+            _, stderr = proc.communicate()
+
         self.assertIn("Timed out trying to get messages from the debug adapter", stderr)
 
     def test_client_missing_runInTerminal_feature(self):
