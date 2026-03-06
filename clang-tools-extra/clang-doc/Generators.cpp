@@ -19,7 +19,7 @@ using namespace llvm::mustache;
 namespace clang {
 namespace doc {
 
-llvm::Expected<std::unique_ptr<Generator>>
+llvm::Expected<OwnedPtr<Generator>>
 findGeneratorByName(llvm::StringRef Format) {
   for (const auto &Generator : GeneratorRegistry::entries()) {
     if (Generator.getName() != Format)
@@ -53,7 +53,7 @@ Error createFileOpenError(StringRef FileName, std::error_code EC) {
 }
 
 Error MustacheGenerator::setupTemplate(
-    std::unique_ptr<MustacheTemplateFile> &Template, StringRef TemplatePath,
+    OwnedPtr<MustacheTemplateFile> &Template, StringRef TemplatePath,
     std::vector<std::pair<StringRef, StringRef>> Partials) {
   auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
   if (Error Err = T.takeError())

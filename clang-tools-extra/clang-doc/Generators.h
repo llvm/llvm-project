@@ -48,8 +48,7 @@ public:
 
 typedef llvm::Registry<Generator> GeneratorRegistry;
 
-llvm::Expected<std::unique_ptr<Generator>>
-findGeneratorByName(llvm::StringRef Format);
+llvm::Expected<OwnedPtr<Generator>> findGeneratorByName(llvm::StringRef Format);
 
 llvm::StringRef getTagType(TagTypeKind AS);
 
@@ -60,12 +59,12 @@ class MustacheTemplateFile {
   llvm::StringSaver Saver;
   llvm::mustache::MustacheContext Ctx;
   llvm::mustache::Template T;
-  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+  OwnedPtr<llvm::MemoryBuffer> Buffer;
 
 public:
-  static Expected<std::unique_ptr<MustacheTemplateFile>>
+  static Expected<OwnedPtr<MustacheTemplateFile>>
   createMustacheFile(StringRef FileName) {
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferOrError =
+    llvm::ErrorOr<OwnedPtr<llvm::MemoryBuffer>> BufferOrError =
         llvm::MemoryBuffer::getFile(FileName);
     if (auto EC = BufferOrError.getError())
       return createFileOpenError(FileName, EC);
@@ -74,12 +73,12 @@ public:
   }
 
   llvm::Error registerPartialFile(StringRef Name, StringRef FileName) {
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferOrError =
+    llvm::ErrorOr<OwnedPtr<llvm::MemoryBuffer>> BufferOrError =
         llvm::MemoryBuffer::getFile(FileName);
     if (auto EC = BufferOrError.getError())
       return createFileOpenError(FileName, EC);
 
-    std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrError.get());
+    OwnedPtr<llvm::MemoryBuffer> Buffer = std::move(BufferOrError.get());
     StringRef FileContent = Buffer->getBuffer();
     T.registerPartial(Name.str(), FileContent.str());
     return llvm::Error::success();
@@ -91,7 +90,7 @@ public:
     T.overrideEscapeCharacters(Characters);
   }
 
-  MustacheTemplateFile(std::unique_ptr<llvm::MemoryBuffer> &&B)
+  MustacheTemplateFile(OwnedPtr<llvm::MemoryBuffer> &&B)
       : Saver(Allocator), Ctx(Allocator, Saver), T(B->getBuffer(), Ctx),
         Buffer(std::move(B)) {}
 };
@@ -120,7 +119,7 @@ struct MustacheGenerator : public Generator {
 
   /// Registers partials to templates.
   llvm::Error
-  setupTemplate(std::unique_ptr<MustacheTemplateFile> &Template,
+  setupTemplate(OwnedPtr<MustacheTemplateFile> &Template,
                 StringRef TemplatePath,
                 std::vector<std::pair<StringRef, StringRef>> Partials);
 

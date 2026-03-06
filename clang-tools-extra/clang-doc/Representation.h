@@ -28,7 +28,7 @@
 namespace clang {
 namespace doc {
 
-// An abstraction for owned pointers. Initially mapped to std::unique_ptr,
+// An abstraction for owned pointers. Initially mapped to OwnedPtr,
 // to be eventually transitioned to bare pointers in an arena.
 template <typename T> using OwnedPtr = std::unique_ptr<T>;
 

@@ -28,7 +28,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TemplateParamInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::SmallString<16>)
 
 namespace llvm {
@@ -327,8 +327,8 @@ template <> struct MappingTraits<CommentInfo> {
   static void mapping(IO &IO, CommentInfo &I) { commentInfoMapping(IO, I); }
 };
 
-template <> struct MappingTraits<std::unique_ptr<CommentInfo>> {
-  static void mapping(IO &IO, std::unique_ptr<CommentInfo> &I) {
+template <> struct MappingTraits<OwnedPtr<CommentInfo>> {
+  static void mapping(IO &IO, OwnedPtr<CommentInfo> &I) {
     if (I)
       commentInfoMapping(IO, *I);
   }
