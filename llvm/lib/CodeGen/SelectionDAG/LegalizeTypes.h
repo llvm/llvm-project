@@ -1155,6 +1155,11 @@ private:
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
   SDValue convertMask(SDValue InMask, EVT MaskVT, EVT ToMaskVT);
 
+  /// Recursively widen a mask expression tree to ToVT. Handles SETCC,
+  /// logical ops (AND/OR/XOR), VECTOR_SHUFFLE, FREEZE, SELECT/VSELECT,
+  /// and constant BUILD_VECTORs.
+  SDValue widenMaskTree(SDValue V, EVT ToVT, unsigned Depth = 0);
+
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp
   //===--------------------------------------------------------------------===//

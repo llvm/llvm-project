@@ -23,13 +23,11 @@ define <4 x i32> @freeze_or_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x
 define <4 x i32> @select_allones_or_setcc(<4 x i32> %a, <4 x i32> %x, <4 x i32> %y, i1 %cond) {
 ; CHECK-LABEL: select_allones_or_setcc:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmgt.4s v0, v0, #0
 ; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    cmgt.4s v0, v0, #0
 ; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    dup.4h v3, w8
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    orr.8b v0, v0, v3
-; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    dup.4s v3, w8
+; CHECK-NEXT:    orr.16b v0, v0, v3
 ; CHECK-NEXT:    bsl.16b v0, v1, v2
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <4 x i32> %a, zeroinitializer
@@ -41,13 +39,11 @@ define <4 x i32> @select_allones_or_setcc(<4 x i32> %a, <4 x i32> %x, <4 x i32> 
 define <4 x i32> @select_setcc_or_allzeros(<4 x i32> %a, <4 x i32> %x, <4 x i32> %y, i1 %cond) {
 ; CHECK-LABEL: select_setcc_or_allzeros:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cmgt.4s v0, v0, #0
 ; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    cmgt.4s v0, v0, #0
 ; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    dup.4h v3, w8
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    and.8b v0, v0, v3
-; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    dup.4s v3, w8
+; CHECK-NEXT:    and.16b v0, v0, v3
 ; CHECK-NEXT:    bsl.16b v0, v1, v2
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <4 x i32> %a, zeroinitializer
@@ -61,10 +57,8 @@ define <4 x i32> @select_allzeros_or_allones(<4 x i32> %x, <4 x i32> %y, i1 %con
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    dup.4h v2, w8
-; CHECK-NEXT:    mvn.8b v2, v2
-; CHECK-NEXT:    sshll.4s v2, v2, #0
-; CHECK-NEXT:    bif.16b v0, v1, v2
+; CHECK-NEXT:    dup.4s v2, w8
+; CHECK-NEXT:    bit.16b v0, v1, v2
 ; CHECK-NEXT:    ret
   %mask = select i1 %cond, <4 x i1> zeroinitializer, <4 x i1> <i1 true, i1 true, i1 true, i1 true>
   %sel = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %y
@@ -78,13 +72,7 @@ define <4 x i32> @vselect_of_setccs(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4
 ; CHECK-NEXT:    cmgt.4s v5, v0, #0
 ; CHECK-NEXT:    cmeq.4s v1, v1, #0
 ; CHECK-NEXT:    cmgt.4s v0, v4, v0
-; CHECK-NEXT:    xtn.4h v4, v1
-; CHECK-NEXT:    and.16b v1, v5, v1
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    bic.8b v0, v0, v4
-; CHECK-NEXT:    orr.8b v0, v1, v0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    bit.16b v0, v5, v1
 ; CHECK-NEXT:    bsl.16b v0, v2, v3
 ; CHECK-NEXT:    ret
   %cmp1 = icmp sgt <4 x i32> %a, zeroinitializer
@@ -99,15 +87,12 @@ define <4 x i32> @select_scalar_cond_setccs(<4 x i32> %a, <4 x i32> %x, <4 x i32
 ; CHECK-LABEL: select_scalar_cond_setccs:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.4s v3, #100
-; CHECK-NEXT:    cmgt.4s v4, v0, #0
 ; CHECK-NEXT:    tst w0, #0x1
+; CHECK-NEXT:    cmgt.4s v4, v0, #0
 ; CHECK-NEXT:    csetm w8, ne
 ; CHECK-NEXT:    cmgt.4s v0, v3, v0
-; CHECK-NEXT:    xtn.4h v3, v4
-; CHECK-NEXT:    dup.4h v4, w8
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    bif.8b v0, v3, v4
-; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    dup.4s v3, w8
+; CHECK-NEXT:    bif.16b v0, v4, v3
 ; CHECK-NEXT:    bsl.16b v0, v1, v2
 ; CHECK-NEXT:    ret
 entry:
@@ -139,17 +124,21 @@ define <3 x i64> @or_setcc_i16_i32_sel_i64(<3 x i16> %a, <3 x i16> %b, <3 x i32>
 ; CHECK-NEXT:    ; kill: def $d6 killed $d6 def $q6
 ; CHECK-NEXT:    mov.d v4[1], v5[0]
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    orr.16b v1, v0, v1
-; CHECK-NEXT:    ldp d0, d2, [sp]
-; CHECK-NEXT:    mov.d v7[1], v0[0]
-; CHECK-NEXT:    sshll.2d v0, v1, #0
-; CHECK-NEXT:    sshll2.2d v1, v1, #0
-; CHECK-NEXT:    bit.16b v2, v6, v1
+; CHECK-NEXT:    ext.16b v2, v1, v1, #8
+; CHECK-NEXT:    ext.16b v3, v0, v0, #8
+; CHECK-NEXT:    orr.8b v0, v0, v1
+; CHECK-NEXT:    ldp d1, d16, [sp]
+; CHECK-NEXT:    sshll.2d v0, v0, #0
+; CHECK-NEXT:    mov.d v7[1], v1[0]
+; CHECK-NEXT:    orr.8b v1, v3, v2
+; CHECK-NEXT:    sshll.2d v1, v1, #0
 ; CHECK-NEXT:    bsl.16b v0, v4, v7
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
+; CHECK-NEXT:    mov.16b v2, v1
 ; CHECK-NEXT:    ext.16b v1, v0, v0, #8
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    bsl.16b v2, v6, v16
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
   %cmp0 = icmp sgt <3 x i16> %a, %b
   %cmp1 = icmp sgt <3 x i32> %c, %d
@@ -168,17 +157,21 @@ define <3 x i64> @and_setcc_i32_i32_sel_i64(<3 x i32> %a, <3 x i32> %b, <3 x i32
 ; CHECK-NEXT:    ; kill: def $d5 killed $d5 def $q5
 ; CHECK-NEXT:    ; kill: def $d6 killed $d6 def $q6
 ; CHECK-NEXT:    mov.d v4[1], v5[0]
-; CHECK-NEXT:    and.16b v1, v0, v2
-; CHECK-NEXT:    ldp d0, d2, [sp]
-; CHECK-NEXT:    mov.d v7[1], v0[0]
-; CHECK-NEXT:    sshll.2d v0, v1, #0
-; CHECK-NEXT:    sshll2.2d v1, v1, #0
-; CHECK-NEXT:    bit.16b v2, v6, v1
+; CHECK-NEXT:    ext.16b v1, v2, v2, #8
+; CHECK-NEXT:    ext.16b v3, v0, v0, #8
+; CHECK-NEXT:    and.8b v0, v0, v2
+; CHECK-NEXT:    ldp d2, d16, [sp]
+; CHECK-NEXT:    sshll.2d v0, v0, #0
+; CHECK-NEXT:    and.8b v1, v3, v1
+; CHECK-NEXT:    mov.d v7[1], v2[0]
+; CHECK-NEXT:    sshll.2d v1, v1, #0
 ; CHECK-NEXT:    bsl.16b v0, v4, v7
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
+; CHECK-NEXT:    mov.16b v2, v1
 ; CHECK-NEXT:    ext.16b v1, v0, v0, #8
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    bsl.16b v2, v6, v16
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
   %cmp0 = icmp sgt <3 x i32> %a, %b
   %cmp1 = icmp sgt <3 x i32> %c, %d
@@ -197,18 +190,23 @@ define <3 x i64> @or_setcc_i16_i16_sel_i64(<3 x i16> %a, <3 x i16> %b, <3 x i16>
 ; CHECK-NEXT:    ; kill: def $d5 killed $d5 def $q5
 ; CHECK-NEXT:    ; kill: def $d6 killed $d6 def $q6
 ; CHECK-NEXT:    mov.d v4[1], v5[0]
-; CHECK-NEXT:    orr.8b v0, v0, v2
-; CHECK-NEXT:    sshll.4s v1, v0, #0
-; CHECK-NEXT:    ldp d0, d2, [sp]
-; CHECK-NEXT:    mov.d v7[1], v0[0]
-; CHECK-NEXT:    sshll.2d v0, v1, #0
-; CHECK-NEXT:    sshll2.2d v1, v1, #0
-; CHECK-NEXT:    bit.16b v2, v6, v1
+; CHECK-NEXT:    sshll.4s v1, v2, #0
+; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    ext.16b v2, v1, v1, #8
+; CHECK-NEXT:    ext.16b v3, v0, v0, #8
+; CHECK-NEXT:    orr.8b v0, v0, v1
+; CHECK-NEXT:    ldp d1, d16, [sp]
+; CHECK-NEXT:    sshll.2d v0, v0, #0
+; CHECK-NEXT:    mov.d v7[1], v1[0]
+; CHECK-NEXT:    orr.8b v1, v3, v2
+; CHECK-NEXT:    sshll.2d v1, v1, #0
 ; CHECK-NEXT:    bsl.16b v0, v4, v7
-; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
+; CHECK-NEXT:    mov.16b v2, v1
 ; CHECK-NEXT:    ext.16b v1, v0, v0, #8
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    bsl.16b v2, v6, v16
 ; CHECK-NEXT:    ; kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
   %cmp0 = icmp sgt <3 x i16> %a, %b
   %cmp1 = icmp sgt <3 x i16> %c, %d
