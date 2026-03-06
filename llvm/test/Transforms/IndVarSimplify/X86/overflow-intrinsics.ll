@@ -199,8 +199,8 @@ define void @f_ssub(ptr nocapture %a) {
 ; CHECK-NEXT:    tail call void @llvm.trap(), !nosanitize [[META0]]
 ; CHECK-NEXT:    unreachable, !nosanitize [[META0]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[INDVARS_IV_NEXT]], -1
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], -1
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]]
 ;
 entry:
   br label %for.body
@@ -291,7 +291,7 @@ define void @f_usub(ptr nocapture %a) {
 ; CHECK-NEXT:    tail call void @llvm.trap(), !nosanitize [[META0]]
 ; CHECK-NEXT:    unreachable, !nosanitize [[META0]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[INDVARS_IV_NEXT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ne i64 [[INDVARS_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP]]
 ;
 entry:
