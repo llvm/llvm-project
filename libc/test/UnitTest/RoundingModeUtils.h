@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H
 #define LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H
 
-#include "hdr/stdint_proxy.h"
+#include <stdint.h>
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
