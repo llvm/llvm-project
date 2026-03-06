@@ -1336,16 +1336,14 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
     int64_t dim0Idx = sourceRank - 2;
     int64_t dim1Idx = sourceRank - 1;
     ArrayRef<int64_t> reductionDims = reductionOp.getReductionDims();
-    // Find effective reduction dims among the last 2 dims (skip leading dims).
-    SmallVector<int64_t> effectiveReductionDims;
-    for (int64_t d : reductionDims) {
-      if (d == dim0Idx || d == dim1Idx)
-        effectiveReductionDims.push_back(d);
-    }
-    if (effectiveReductionDims.size() != 1)
+    if (reductionDims.size() != 1)
+      return rewriter.notifyMatchFailure(warpOp,
+                                         "Only 1 reduction dim is supported.");
+    int64_t reductionDim = reductionDims[0];
+    // The reduction dim must be among the last 2 dims.
+    if (reductionDim != dim0Idx && reductionDim != dim1Idx)
       return rewriter.notifyMatchFailure(
-          warpOp, "Only 1 non-trivial effective reduction dim is supported.");
-    int64_t reductionDim = effectiveReductionDims[0];
+          warpOp, "Reduction dim must be among the last 2 dimensions.");
     VectorType distributedResultType =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     VectorType resultType = cast<VectorType>(reductionOp.getType());
