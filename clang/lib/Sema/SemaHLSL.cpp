@@ -3326,32 +3326,7 @@ static bool CheckVectorElementCount(Sema *S, QualType PassedType,
 
 enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
 
-static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
-  unsigned MinArgs, MaxArgs;
-  if (Kind == SampleKind::Sample) {
-    MinArgs = 3;
-    MaxArgs = 5;
-  } else if (Kind == SampleKind::Bias) {
-    MinArgs = 4;
-    MaxArgs = 6;
-  } else if (Kind == SampleKind::Grad) {
-    MinArgs = 5;
-    MaxArgs = 7;
-  } else if (Kind == SampleKind::Level) {
-    MinArgs = 4;
-    MaxArgs = 5;
-  } else if (Kind == SampleKind::Cmp) {
-    MinArgs = 4;
-    MaxArgs = 6;
-  } else {
-    assert(Kind == SampleKind::CmpLevelZero);
-    MinArgs = 4;
-    MaxArgs = 5;
-  }
-
-  if (S.checkArgCountRange(TheCall, MinArgs, MaxArgs))
-    return true;
-
+static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
   // Check the texture handle.
   if (CheckResourceHandle(&S, TheCall, 0,
                           [](const HLSLAttributedResourceType *ResType) {
@@ -3378,6 +3353,127 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
                               S.Context.FloatTy, ExpectedDim,
                               TheCall->getBeginLoc()))
     return true;
+
+  return false;
+}
+
+static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
+  if (S.checkArgCountRange(TheCall, IsCmp ? 5 : 4, IsCmp ? 6 : 5))
+    return true;
+
+  if (CheckTextureSamplerAndLocation(S, TheCall))
+    return true;
+
+  unsigned NextIdx = 3;
+  if (IsCmp) {
+    // Check the compare value.
+    QualType CmpTy = TheCall->getArg(NextIdx)->getType();
+    if (!CmpTy->isFloatingType() || CmpTy->isVectorType()) {
+      S.Diag(TheCall->getArg(NextIdx)->getBeginLoc(),
+             diag::err_typecheck_convert_incompatible)
+          << CmpTy << S.Context.FloatTy << 1 << 0 << 0;
+      return true;
+    }
+    NextIdx++;
+  }
+
+  // Check the component operand.
+  Expr *ComponentArg = TheCall->getArg(NextIdx);
+  QualType ComponentTy = ComponentArg->getType();
+  if (!ComponentTy->isIntegerType() || ComponentTy->isVectorType()) {
+    S.Diag(ComponentArg->getBeginLoc(),
+           diag::err_typecheck_convert_incompatible)
+        << ComponentTy << S.Context.UnsignedIntTy << 1 << 0 << 0;
+    return true;
+  }
+
+  // GatherCmp operations on Vulkan target must use component 0 (Red).
+  if (IsCmp && S.getASTContext().getTargetInfo().getTriple().isSPIRV()) {
+    std::optional<llvm::APSInt> ComponentOpt =
+        ComponentArg->getIntegerConstantExpr(S.getASTContext());
+    if (ComponentOpt) {
+      int64_t ComponentVal = ComponentOpt->getSExtValue();
+      if (ComponentVal != 0) {
+        // Issue an error if the component is not 0 (Red).
+        // 0 -> Red, 1 -> Green, 2 -> Blue, 3 -> Alpha
+        assert(ComponentVal >= 0 && ComponentVal <= 3 &&
+               "The component is not in the expected range.");
+        S.Diag(ComponentArg->getBeginLoc(),
+               diag::err_hlsl_gathercmp_invalid_component)
+            << ComponentVal;
+        return true;
+      }
+    }
+  }
+
+  NextIdx++;
+
+  // Check the offset operand.
+  const HLSLAttributedResourceType *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+  if (TheCall->getNumArgs() > NextIdx) {
+    unsigned ExpectedDim =
+        getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
+                                S.Context.IntTy, ExpectedDim,
+                                TheCall->getArg(NextIdx)->getBeginLoc()))
+      return true;
+    NextIdx++;
+  }
+
+  assert(ResourceTy->hasContainedType() &&
+         "Expecting a contained type for resource with a dimension "
+         "attribute.");
+  QualType ReturnType = ResourceTy->getContainedType();
+
+  if (IsCmp) {
+    if (!ReturnType->hasFloatingRepresentation()) {
+      S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_samplecmp_requires_float);
+      return true;
+    }
+  }
+
+  if (const auto *VecTy = ReturnType->getAs<VectorType>())
+    ReturnType = VecTy->getElementType();
+  ReturnType = S.Context.getExtVectorType(ReturnType, 4);
+
+  TheCall->setType(ReturnType);
+
+  return false;
+}
+static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
+  unsigned MinArgs, MaxArgs;
+  if (Kind == SampleKind::Sample) {
+    MinArgs = 3;
+    MaxArgs = 5;
+  } else if (Kind == SampleKind::Bias) {
+    MinArgs = 4;
+    MaxArgs = 6;
+  } else if (Kind == SampleKind::Grad) {
+    MinArgs = 5;
+    MaxArgs = 7;
+  } else if (Kind == SampleKind::Level) {
+    MinArgs = 4;
+    MaxArgs = 5;
+  } else if (Kind == SampleKind::Cmp) {
+    MinArgs = 4;
+    MaxArgs = 6;
+  } else {
+    assert(Kind == SampleKind::CmpLevelZero);
+    MinArgs = 4;
+    MaxArgs = 5;
+  }
+
+  if (S.checkArgCountRange(TheCall, MinArgs, MaxArgs))
+    return true;
+
+  if (CheckTextureSamplerAndLocation(S, TheCall))
+    return true;
+
+  const HLSLAttributedResourceType *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+  unsigned ExpectedDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
 
   unsigned NextIdx = 3;
   if (Kind == SampleKind::Bias || Kind == SampleKind::Level ||
@@ -3577,6 +3673,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Cmp);
   case Builtin::BI__builtin_hlsl_resource_sample_cmp_level_zero:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::CmpLevelZero);
+  case Builtin::BI__builtin_hlsl_resource_gather:
+    return CheckGatherBuiltin(SemaRef, TheCall, /*IsCmp=*/false);
+  case Builtin::BI__builtin_hlsl_resource_gather_cmp:
+    return CheckGatherBuiltin(SemaRef, TheCall, /*IsCmp=*/true);
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
     // Update return type to be the attributed resource type from arg0.
@@ -3807,6 +3907,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType ArgTyA = A.get()->getType();
     // return type is the same as the input type
     TheCall->setType(ArgTyA);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_all_equal: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    QualType InputTy = TheCall->getArg(0)->getType();
+    ASTContext &Ctx = getASTContext();
+
+    QualType RetTy;
+
+    // If vector, construct bool vector of same size
+    if (const auto *VecTy = InputTy->getAs<ExtVectorType>()) {
+      unsigned NumElts = VecTy->getNumElements();
+      RetTy = Ctx.getExtVectorType(Ctx.BoolTy, NumElts);
+    } else {
+      // Scalar case
+      RetTy = Ctx.BoolTy;
+    }
+
+    TheCall->setType(RetTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_active_max:
@@ -4510,6 +4635,11 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
         }
       }
     }
+
+    // Mark groupshared variables as extern so they will have
+    // external storage and won't be default initialized
+    if (VD->hasAttr<HLSLGroupSharedAddressSpaceAttr>())
+      VD->setStorageClass(StorageClass::SC_Extern);
   }
 
   deduceAddressSpace(VD);
