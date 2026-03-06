@@ -903,7 +903,8 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
 //
 // If we drop sliced-space dim 1 (the 2nd dim), that corresponds to dropping
 // parent dim 2, result in parent layout [V0, V1, V3, V4] after dropping.
-// After parent dim 2 is removed, sliced dims [1, 3] must be reindexed to [1, 2].
+// After parent dim 2 is removed, sliced dims [1, 3] must be reindexed to [1,
+// 2].
 //
 // Result:
 //   xegpu.layout = slice<layout<[0, 1, 3, 4]>, [1, 2]>
@@ -915,9 +916,13 @@ DistributeLayoutAttr SliceAttr::dropDims(SmallVector<int64_t> dimGroup) {
 
   auto droppedParent = getParent().dropDims(dimsInParentSpace);
 
+  // Adjust the sliced dims after dropping dims in parent space. For example, if
+  // we drop dim 2 in parent space, the dims after dim 2 will all be shifted by
+  // 1, so sliced dim 3 will be adjusted to 2.
   SmallVector<int64_t> newSliceDims;
   for (int64_t d : sliceDims) {
-    int64_t offset = llvm::count_if(dimsInParentSpace, [&](int64_t s) { return s < d; });
+    int64_t offset =
+        llvm::count_if(dimsInParentSpace, [&](int64_t s) { return s < d; });
     newSliceDims.push_back(d - offset);
   }
 
