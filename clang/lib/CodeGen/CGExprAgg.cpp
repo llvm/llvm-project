@@ -293,15 +293,12 @@ void AggExprEmitter::withReturnValueSlot(
   // destination is already in the alloca AS.
   unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
       CGF.CGM.getASTAllocaAddressSpace());
-  bool DestASMismatch = false;
-  if (!Dest.isIgnored()) {
-    unsigned DestAS = Dest.getAddress()
-                          .getBasePointer()
-                          ->stripPointerCasts()
-                          ->getType()
-                          ->getPointerAddressSpace();
-    DestASMismatch = DestAS != SRetAS;
-  }
+  bool DestASMismatch =
+      !Dest.isIgnored() && Dest.getAddress()
+                                   .getBasePointer()
+                                   ->stripPointerCasts()
+                                   ->getType()
+                                   ->getPointerAddressSpace() != SRetAS;
   bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
                  (RequiresDestruction && Dest.isIgnored()) || DestASMismatch;
 
