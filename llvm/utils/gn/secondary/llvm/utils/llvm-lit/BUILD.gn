@@ -121,6 +121,6 @@ write_cmake_config("llvm-lit") {
     "Python3_EXECUTABLE=/usr/bin/env $python_path",
     "BUILD_MODE=.",
     "LLVM_LIT_CONFIG_MAP=" + config_map,
-    "LLVM_WINDOWS_PREFER_FORWARD_SLASH="
+    "LLVM_WINDOWS_PREFER_FORWARD_SLASH=",
   ]
 }
