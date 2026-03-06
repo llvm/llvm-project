@@ -7,7 +7,12 @@
     {
       "id": 0,
       "name": {
-        "namespace": [{ "kind": "CompilationUnit", "name": "tu2.cpp" }],
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          }
+        ],
         "suffix": "",
         "usr": "c:@F@shared_ext#"
       }
@@ -15,7 +20,12 @@
     {
       "id": 1,
       "name": {
-        "namespace": [{ "kind": "CompilationUnit", "name": "tu2.cpp" }],
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          }
+        ],
         "suffix": "",
         "usr": "c:@F@shared_int#"
       }
@@ -23,7 +33,12 @@
     {
       "id": 2,
       "name": {
-        "namespace": [{ "kind": "CompilationUnit", "name": "tu2.cpp" }],
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          }
+        ],
         "suffix": "",
         "usr": "c:@F@shared_none#"
       }
@@ -31,7 +46,12 @@
     {
       "id": 3,
       "name": {
-        "namespace": [{ "kind": "CompilationUnit", "name": "tu2.cpp" }],
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          }
+        ],
         "suffix": "",
         "usr": "c:@F@unique_ext_tu2#"
       }
@@ -39,7 +59,12 @@
     {
       "id": 4,
       "name": {
-        "namespace": [{ "kind": "CompilationUnit", "name": "tu2.cpp" }],
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          }
+        ],
         "suffix": "",
         "usr": "c:@F@unique_int_tu2#"
       }
@@ -47,19 +72,54 @@
     {
       "id": 5,
       "name": {
-        "namespace": [{ "kind": "CompilationUnit", "name": "tu2.cpp" }],
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "tu2.cpp"
+          }
+        ],
         "suffix": "",
         "usr": "c:@F@unique_none_tu2#"
       }
     }
   ],
   "linkage_table": [
-    { "id": 0, "linkage": { "type": "External" } },
-    { "id": 1, "linkage": { "type": "Internal" } },
-    { "id": 2, "linkage": { "type": "None" } },
-    { "id": 3, "linkage": { "type": "External" } },
-    { "id": 4, "linkage": { "type": "Internal" } },
-    { "id": 5, "linkage": { "type": "None" } }
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "type": "None"
+      }
+    },
+    {
+      "id": 3,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 4,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 5,
+      "linkage": {
+        "type": "None"
+      }
+    }
   ],
   "data": [
     {
@@ -67,27 +127,87 @@
       "summary_data": [
         {
           "entity_id": 0,
-          "entity_summary": { "call_count": 3, "callees": [{ "@": 1 }, { "@": 2 }, { "@": 5 }] }
+          "entity_summary": {
+            "call_count": 3,
+            "callees": [
+              {
+                "@": 1
+              },
+              {
+                "@": 2
+              },
+              {
+                "@": 5
+              }
+            ]
+          }
         },
         {
           "entity_id": 1,
-          "entity_summary": { "call_count": 2, "callees": [{ "@": 0 }, { "@": 3 }] }
+          "entity_summary": {
+            "call_count": 2,
+            "callees": [
+              {
+                "@": 0
+              },
+              {
+                "@": 3
+              }
+            ]
+          }
         },
         {
           "entity_id": 2,
-          "entity_summary": { "call_count": 1, "callees": [{ "@": 4 }] }
+          "entity_summary": {
+            "call_count": 1,
+            "callees": [
+              {
+                "@": 4
+              }
+            ]
+          }
         },
         {
           "entity_id": 3,
-          "entity_summary": { "call_count": 2, "callees": [{ "@": 0 }, { "@": 2 }] }
+          "entity_summary": {
+            "call_count": 2,
+            "callees": [
+              {
+                "@": 0
+              },
+              {
+                "@": 2
+              }
+            ]
+          }
         },
         {
           "entity_id": 4,
-          "entity_summary": { "call_count": 1, "callees": [{ "@": 3 }] }
+          "entity_summary": {
+            "call_count": 1,
+            "callees": [
+              {
+                "@": 3
+              }
+            ]
+          }
         },
         {
           "entity_id": 5,
-          "entity_summary": { "call_count": 3, "callees": [{ "@": 1 }, { "@": 2 }, { "@": 3 }] }
+          "entity_summary": {
+            "call_count": 3,
+            "callees": [
+              {
+                "@": 1
+              },
+              {
+                "@": 2
+              },
+              {
+                "@": 3
+              }
+            ]
+          }
         }
       ]
     },
@@ -97,60 +217,132 @@
         {
           "entity_id": 0,
           "entity_summary": {
-            "direct": { "@": 3 },
+            "direct": {
+              "@": 3
+            },
             "indirect": [
-              { "entity": { "@": 2 }, "level": 1 },
-              { "entity": { "@": 5 }, "level": 2 }
+              {
+                "entity": {
+                  "@": 2
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 5
+                },
+                "level": 2
+              }
             ]
           }
         },
         {
           "entity_id": 1,
           "entity_summary": {
-            "direct": { "@": 0 },
+            "direct": {
+              "@": 0
+            },
             "indirect": [
-              { "entity": { "@": 4 }, "level": 1 }
+              {
+                "entity": {
+                  "@": 4
+                },
+                "level": 1
+              }
             ]
           }
         },
         {
           "entity_id": 2,
           "entity_summary": {
-            "direct": { "@": 5 },
+            "direct": {
+              "@": 5
+            },
             "indirect": [
-              { "entity": { "@": 0 }, "level": 1 },
-              { "entity": { "@": 3 }, "level": 2 }
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 3
+                },
+                "level": 2
+              }
             ]
           }
         },
         {
           "entity_id": 3,
           "entity_summary": {
-            "direct": { "@": 1 },
+            "direct": {
+              "@": 1
+            },
             "indirect": [
-              { "entity": { "@": 2 }, "level": 1 },
-              { "entity": { "@": 0 }, "level": 2 }
+              {
+                "entity": {
+                  "@": 2
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 2
+              }
             ]
           }
         },
         {
           "entity_id": 4,
           "entity_summary": {
-            "direct": { "@": 2 },
+            "direct": {
+              "@": 2
+            },
             "indirect": [
-              { "entity": { "@": 5 }, "level": 1 },
-              { "entity": { "@": 3 }, "level": 2 }
+              {
+                "entity": {
+                  "@": 5
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 3
+                },
+                "level": 2
+              }
             ]
           }
         },
         {
           "entity_id": 5,
           "entity_summary": {
-            "direct": { "@": 4 },
+            "direct": {
+              "@": 4
+            },
             "indirect": [
-              { "entity": { "@": 1 }, "level": 1 },
-              { "entity": { "@": 2 }, "level": 2 },
-              { "entity": { "@": 0 }, "level": 3 }
+              {
+                "entity": {
+                  "@": 1
+                },
+                "level": 1
+              },
+              {
+                "entity": {
+                  "@": 2
+                },
+                "level": 2
+              },
+              {
+                "entity": {
+                  "@": 0
+                },
+                "level": 3
+              }
             ]
           }
         }

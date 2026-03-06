@@ -7,14 +7,24 @@
     {
       "id": 0,
       "name": {
-        "namespace": [{"kind": "CompilationUnit", "name": "invalid-entity-id-ref.cpp"}],
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "invalid-entity-id-ref.cpp"
+          }
+        ],
         "suffix": "",
         "usr": "c:@F@foo#"
       }
     }
   ],
   "linkage_table": [
-    {"id": 0, "linkage": {"type": "External"}}
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    }
   ],
   "data": [
     {
@@ -23,7 +33,9 @@
         {
           "entity_id": 0,
           "entity_summary": {
-            "ref": {"@": 99}
+            "ref": {
+              "@": 99
+            }
           }
         }
       ]
