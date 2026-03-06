@@ -61,3 +61,7 @@ module SwiftImportAs {
 module SwiftReturnOwnershipForObjC {
   header "SwiftReturnOwnershipForObjC.h"
 }
+
+module SwiftAttributes {
+  header "SwiftAttributes.h"
+}

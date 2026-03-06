@@ -92,6 +92,16 @@ public:
   }
 };
 
+/// Read serialized Attribute from a SwiftAttributes sequence.
+void ReadSwiftAttribute(const uint8_t *&Data, std::string &Attribute) {
+  unsigned AttributeLength =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Attribute =
+      std::string(reinterpret_cast<const char *>(Data),
+                  reinterpret_cast<const char *>(Data) + AttributeLength);
+  Data += AttributeLength;
+}
+
 /// Read serialized CommonEntityInfo.
 void ReadCommonEntityInfo(const uint8_t *&Data, CommonEntityInfo &Info) {
   uint8_t EncodedBits = *Data++;
@@ -116,6 +126,15 @@ void ReadCommonEntityInfo(const uint8_t *&Data, CommonEntityInfo &Info) {
       std::string(reinterpret_cast<const char *>(Data),
                   reinterpret_cast<const char *>(Data) + SwiftNameLength);
   Data += SwiftNameLength;
+
+  unsigned NumSwiftAttributes =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  while (NumSwiftAttributes > 0) {
+    std::string Attribute;
+    ReadSwiftAttribute(Data, Attribute);
+    Info.SwiftAttributes.push_back(Attribute);
+    --NumSwiftAttributes;
+  }
 }
 
 /// Read serialized CommonTypeInfo.

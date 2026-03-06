@@ -1,0 +1,24 @@
+Name: SwiftAttributes
+Tags:
+- Name: IntWrapperStruct
+  SwiftAttributes: ["some Swift struct attribute"]
+  Fields:
+  - Name: value
+    SwiftAttributes: ["some Swift field attribute"]
+  Methods:
+  - Name: do_something
+    SwiftAttributes: ["some Swift struct method attribute"]
+- Name: some_ns
+  SwiftAttributes: ["some Swift namespace attribute"]
+Functions:
+- Name: some_operation
+  SwiftAttributes: [
+    "some Swift function attribute",
+    "some other Swift function attribute"
+  ]
+Globals:
+- Name: global_int
+  SwiftAttributes: ["some Swift global variable attribute"]
+Typedefs:
+- Name: int_typedef
+  SwiftAttributes: ["some Swift typedef attribute"]
