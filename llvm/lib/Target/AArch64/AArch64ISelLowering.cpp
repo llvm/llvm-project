@@ -5920,14 +5920,14 @@ static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
 }
 
 // Transform mul<v2i64, splat(2^n +-1)> into a SHL and ADD/SUB
-// this transormation is much faster when vector mul is not supported
+// this transformation is much faster when vector mul is not supported
 static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
   const SDNode *Operand = N->getOperand(1).getNode();
   APInt SplatValue;
-  ISD::isConstantSplatVector(Operand, SplatValue);
 
-  // Not a constant splat so should just stay as a mulitplcation operation
-  if (!SplatValue.getBoolValue())
+  // Not a constant splat so should just stay as a multiplication operation
+  if (!ISD::isConstantSplatVector(Operand, SplatValue) ||
+      !SplatValue.getBoolValue())
     return SDValue();
 
   // If (Value - 1) is a power of 2, we need an ADD (e.g., 257)
@@ -5951,10 +5951,7 @@ static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
   SDValue ShiftNode = DAG.getNode(ISD::SHL, DL, VT, LHS, VecShiftAmt);
 
   // Emit: (LHS << ShiftAmt) +- LHS
-  if (NeedsAdd) {
-    return DAG.getNode(ISD::ADD, DL, VT, ShiftNode, LHS);
-  }
-  return DAG.getNode(ISD::SUB, DL, VT, ShiftNode, LHS);
+  return DAG.getNode(NeedsAdd ? ISD::ADD : ISD::SUB, DL, VT, ShiftNode, LHS);
 }
 
 SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
@@ -6003,8 +6000,10 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
       // legal.
       if (Subtarget->hasSVE())
         return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
+      // Try to optimize the mul to a shift left and add instead of scalarizing.
       if (SDValue ShlAdd = convertMulToShlAdd(Op.getNode(), DAG))
         return ShlAdd;
+      // Fall through to expanding as the mul is not legal.
       return SDValue();
     } else
       // Other vector multiplications are legal.
