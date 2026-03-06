@@ -54,11 +54,13 @@ func.func @gather_memref_1d_i32_index(%base: memref<?xf32>, %v: vector<2xi32>, %
 // CHECK-DAG:     %[[C0:.+]]    = arith.constant 0 : index
 // CHECK-DAG:     %[[C1:.+]]    = arith.constant 1 : index
 // CHECK-DAG:     [[PTV0:%.+]]  = vector.extract [[PASS]][0] : vector<3xf32> from vector<2x3xf32>
+// CHECK:         %[[LIN:.+]]   = affine.linearize_index [%[[C0]], %[[C1]]] by
 // CHECK-DAG:     [[M0:%.+]]    = vector.extract [[MASK]][0, 0] : i1 from vector<2x3xi1>
 // CHECK-DAG:     [[IDX0:%.+]]  = vector.extract [[IDXVEC]][0, 0] : index from vector<2x3xindex>
-// CHECK-NEXT:    %[[OFF0:.+]]  = arith.addi [[IDX0]], %[[C1]] : index
-// CHECK-NEXT:    [[RES0:%.+]]  = scf.if [[M0]] -> (vector<3xf32>)
-// CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[C0]], %[[OFF0]]] : memref<?x?xf32>, vector<1xf32>
+// CHECK:         %[[FLAT0:.+]] = arith.addi %[[LIN]], [[IDX0]] : index
+// CHECK:         %[[DL0:.+]]:2 = affine.delinearize_index %[[FLAT0]] into
+// CHECK:         [[RES0:%.+]]  = scf.if [[M0]] -> (vector<3xf32>)
+// CHECK-NEXT:      [[LD0:%.+]]   = vector.load [[BASE]][%[[DL0]]#0, %[[DL0]]#1] : memref<?x?xf32>, vector<1xf32>
 // CHECK-NEXT:      [[ELEM0:%.+]] = vector.extract [[LD0]][0] : f32 from vector<1xf32>
 // CHECK-NEXT:      [[INS0:%.+]]  = vector.insert [[ELEM0]], [[PTV0]] [0] : f32 into vector<3xf32>
 // CHECK-NEXT:      scf.yield [[INS0]] : vector<3xf32>
