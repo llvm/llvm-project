@@ -8,32 +8,6 @@ using namespace llvm::json;
 namespace clang {
 namespace doc {
 
-// FIXME: These static methods should be refactored into methods for
-// `JSONGenerator`. It's cumbersome to pass around important properties from
-// ClangDocContext using these static methods.
-class JSONGenerator : public Generator {
-public:
-  static const char *Format;
-  bool Markdown = false;
-
-  Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-                              const ClangDocContext &CDCtx,
-                              std::string DirName) override;
-  Error createResources(ClangDocContext &CDCtx) override;
-  Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
-                           const ClangDocContext &CDCtx) override;
-};
-
-const char *JSONGenerator::Format = "json";
-
-static void serializeInfo(const ConstraintInfo &I, Object &Obj);
-static void serializeInfo(const RecordInfo &I, Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl,
-                          const std::optional<StringRef> &RepositoryLinePrefix);
-
-static void serializeReference(const Reference &Ref, Object &ReferenceObj);
-
 template <typename Container, typename SerializationFunc>
 static void serializeArray(
     const Container &Records, Object &Obj, const StringRef Key,
@@ -92,7 +66,7 @@ public:
   bool Markdown;
 
   Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                              llvm::StringMap<OwnedPtr<doc::Info>> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
