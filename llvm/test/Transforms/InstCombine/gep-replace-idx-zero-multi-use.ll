@@ -7,8 +7,8 @@ declare void @init(ptr)
 
 ; When a variable-indexed inbounds GEP into a single-element allocation is
 ; dereferenced, the index is provably zero. If the GEP and the dereference
-; are in the same basic block, replaceGEPIdxWithZero should modify the GEP
-; in place so that all users benefit -- not just the triggering load/store.
+; are in the same basic block, replaceGEPIdxWithZero should replace the GEP
+; for all users -- not just the triggering load/store.
 ;
 ; Here %gep feeds both a direct load and a constant-offset GEP (%off) used
 ; by a second load. Both should resolve to constant offsets from %base.
