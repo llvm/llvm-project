@@ -710,7 +710,7 @@ public:
   /// Return the CFG element corresponding to the worklist element
   /// that is currently being processed by ExprEngine.
   CFGElement getCurrentCFGElement() {
-    return (*currBldrCtx->getBlock())[currStmtIdx];
+    return (*getCurrentBlock())[currStmtIdx];
   }
 
   /// Create a new state in which the call return value is binded to the

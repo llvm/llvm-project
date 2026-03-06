@@ -1144,7 +1144,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
@@ -1159,7 +1159,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   LoopExit PP(S, Pred->getLocationContext());
   ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
   if (N && !N->isSink())
-    Engine.enqueueStmtNode(N, currBldrCtx->getBlock(), currStmtIdx);
+    Engine.enqueueStmtNode(N, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1248,7 +1248,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   for (ExplodedNode *Pred : Tmp)
     Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 std::pair<ProgramStateRef, uint64_t>
@@ -1312,7 +1312,7 @@ void ExprEngine::ProcessImplicitDtor(const CFGImplicitDtor D,
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
@@ -1331,7 +1331,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
                         getCFGElementRef());
     Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
   }
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
@@ -1844,7 +1844,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPMetaDirectiveClass:
     case Stmt::HLSLOutArgExprClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
-      Engine.addAbortedBlock(node, currBldrCtx->getBlock());
+      Engine.addAbortedBlock(node, getCurrentBlock());
       break;
     }
 
@@ -2120,7 +2120,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         Bldr.addNodes(Dst);
       } else {
         const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
-        Engine.addAbortedBlock(node, currBldrCtx->getBlock());
+        Engine.addAbortedBlock(node, getCurrentBlock());
       }
       break;
 
