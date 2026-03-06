@@ -291,12 +291,12 @@ func.func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
   // Test one dynamic size and dynamic offset.
   // CHECK: memref.view {{.*}} : memref<2048xi8> to memref<4x?xf32>
-  %3 = memref.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
+  %3 = memref.view %0[%arg2][4, %arg1] : memref<2048xi8> to memref<4x?xf32>
 
   // Test static sizes and static offset.
   // CHECK: memref.view {{.*}} : memref<2048xi8> to memref<64x4xf32>
   %c0 = arith.constant 0: index
-  %5 = memref.view %0[%c0][] : memref<2048xi8> to memref<64x4xf32>
+  %5 = memref.view %0[%c0][64, 4] : memref<2048xi8> to memref<64x4xf32>
   return
 }
 

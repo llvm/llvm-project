@@ -3818,6 +3818,33 @@ void ViewOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "view");
 }
 
+void ViewOp::build(OpBuilder &b, OperationState &result, MemRefType resultType,
+                   Value source, Value byte_shift, ArrayRef<OpFoldResult> sizes,
+                   ArrayRef<NamedAttribute> attrs) {
+  SmallVector<int64_t> staticSizes;
+  SmallVector<Value> dynamicSizes;
+  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
+  result.addAttributes(attrs);
+  build(b, result, resultType, source, byte_shift, dynamicSizes,
+        b.getDenseI64ArrayAttr(staticSizes));
+}
+
+void ViewOp::build(OpBuilder &b, OperationState &result, MemRefType resultType,
+                   Value source, Value byte_shift, ArrayRef<int64_t> sizes,
+                   ArrayRef<NamedAttribute> attrs) {
+  SmallVector<OpFoldResult> sizeValues = llvm::map_to_vector<4>(
+      sizes, [&](int64_t v) -> OpFoldResult { return b.getI64IntegerAttr(v); });
+  build(b, result, resultType, source, byte_shift, sizeValues, attrs);
+}
+
+void ViewOp::build(OpBuilder &b, OperationState &result, MemRefType resultType,
+                   Value source, Value byte_shift, ValueRange sizes,
+                   ArrayRef<NamedAttribute> attrs) {
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  build(b, result, resultType, source, byte_shift, sizeValues, attrs);
+}
+
 LogicalResult ViewOp::verify() {
   auto baseType = llvm::cast<MemRefType>(getOperand(0).getType());
   auto viewType = getType();
@@ -3836,9 +3863,31 @@ LogicalResult ViewOp::verify() {
                      "type ")
            << baseType << " and view memref type " << viewType;
 
-  // Verify that we have the correct number of sizes for the result type.
-  if (failed(verifyDynamicDimensionCount(getOperation(), viewType, getSizes())))
-    return failure();
+  // Verify that static_sizes length matches the result type rank.
+  unsigned resultRank = viewType.getRank();
+  if (getStaticSizes().size() != resultRank)
+    return emitError("incorrect number of size values, has ")
+           << getStaticSizes().size() << ", expected " << resultRank;
+
+  // Verify that the number of dynamic sizes matches the number of dynamic
+  // entries in static_sizes.
+  unsigned numDynamicSizes = llvm::count_if(
+      getStaticSizes(), [](int64_t v) { return ShapedType::isDynamic(v); });
+  if (getSizes().size() != numDynamicSizes)
+    return emitError("incorrect number of dynamic sizes, has ")
+           << getSizes().size() << ", expected " << numDynamicSizes;
+
+  // Verify consistency between static_sizes and result type shape.
+  unsigned idx = 0;
+  for (auto [resultSize, expectedSize] :
+       llvm::zip_equal(viewType.getShape(), getStaticSizes())) {
+    if (!ShapedType::isDynamic(expectedSize) &&
+        !ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
+      return emitError("expected result type with size = ")
+             << expectedSize << " instead of " << resultSize
+             << " in dim = " << idx;
+    ++idx;
+  }
 
   return success();
 }
@@ -3857,82 +3906,71 @@ OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
 }
 
 SmallVector<OpFoldResult> ViewOp::getMixedSizes() {
-  SmallVector<OpFoldResult> result;
-  unsigned ctr = 0;
   Builder b(getContext());
-  for (int64_t dim : getType().getShape()) {
-    if (ShapedType::isDynamic(dim)) {
-      result.push_back(getSizes()[ctr++]);
-    } else {
-      result.push_back(b.getIndexAttr(dim));
-    }
-  }
-  return result;
+  return getMixedValues(getStaticSizes(), getSizes(), b);
 }
 
 namespace {
-/// Given a memref type and a range of values that defines its dynamic
-/// dimension sizes, turn all dynamic sizes that have a constant value into
-/// static dimension sizes.
+/// Given a memref type and its associated static_sizes attribute and the
+/// dynamic size operands, turn all dynamic sizes that have a constant value
+/// into static sizes. Returns a new MemRefType with the folded shape and
+/// populates `foldedSizes` with the surviving mixed static/dynamic sizes.
 static MemRefType
-foldDynamicToStaticDimSizes(MemRefType type, ValueRange dynamicSizes,
-                            SmallVectorImpl<Value> &foldedDynamicSizes) {
-  SmallVector<int64_t> staticShape(type.getShape());
+foldDynamicToStaticDimSizes(MemRefType type, ArrayRef<int64_t> staticSizes,
+                            ValueRange dynamicSizes,
+                            SmallVectorImpl<OpFoldResult> &foldedSizes) {
+  SmallVector<int64_t> newShape(staticSizes);
   assert(type.getNumDynamicDims() == dynamicSizes.size() &&
          "incorrect number of dynamic sizes");
+  Builder builder(type.getContext());
 
-  // Compute new static and dynamic sizes.
-  unsigned ctr = 0;
-  for (auto [dim, dimSize] : llvm::enumerate(type.getShape())) {
-    if (ShapedType::isStatic(dimSize))
+  unsigned dynamicIdx = 0;
+  for (auto [dim, dimSize] : llvm::enumerate(staticSizes)) {
+    if (ShapedType::isStatic(dimSize)) {
+      foldedSizes.push_back(builder.getI64IntegerAttr(dimSize));
       continue;
-
-    Value dynamicSize = dynamicSizes[ctr++];
-    if (auto cst = getConstantIntValue(dynamicSize)) {
-      // Dynamic size must be non-negative.
-      if (cst.value() < 0) {
-        foldedDynamicSizes.push_back(dynamicSize);
-        continue;
-      }
-      staticShape[dim] = cst.value();
-    } else {
-      foldedDynamicSizes.push_back(dynamicSize);
     }
+    assert(ShapedType::isDynamic(dimSize) && "expected dynamic size");
+    Value dynVal = dynamicSizes[dynamicIdx++];
+    std::optional<int64_t> cst = getConstantIntValue(dynVal);
+    if (!cst.has_value() || cst.value() < 0) {
+      foldedSizes.push_back(dynVal);
+      continue;
+    }
+    newShape[dim] = cst.value();
+    foldedSizes.push_back(builder.getI64IntegerAttr(cst.value()));
   }
 
-  return MemRefType::Builder(type).setShape(staticShape);
+  return MemRefType::Builder(type).setShape(newShape);
 }
 
-/// Change the result type of a `memref.view` by making originally dynamic
-/// dimensions static when their sizes come from `constant` ops.
+/// Fold dynamic sizes into static_sizes when they are constants.
 /// Example:
 ///  ```
 ///  %c5 = arith.constant 5: index
-///  %0 = memref.view %src[%offset][%c5] : memref<?xi8> to memref<?x4xf32>
+///  %0 = memref.view %src[%offset][%c5, 4] : memref<?xi8> to memref<?x4xf32>
 ///  ```
 ///  to
 ///  ```
-///  %0 = memref.view %src[%offset][] : memref<?xi8> to memref<5x4xf32>
+///  %0 = memref.view %src[%offset][5, 4] : memref<?xi8> to memref<5x4xf32>
 ///  ```
 struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
   using Base::Base;
 
   LogicalResult matchAndRewrite(ViewOp viewOp,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Value> foldedDynamicSizes;
+    SmallVector<OpFoldResult> foldedSizes;
     MemRefType resultType = viewOp.getType();
     MemRefType foldedMemRefType = foldDynamicToStaticDimSizes(
-        resultType, viewOp.getSizes(), foldedDynamicSizes);
+        resultType, viewOp.getStaticSizes(), viewOp.getSizes(), foldedSizes);
 
     // Stop here if no dynamic size was promoted to static.
     if (foldedMemRefType == resultType)
       return failure();
 
-    // Create new ViewOp.
-    auto newViewOp = ViewOp::create(rewriter, viewOp.getLoc(), foldedMemRefType,
-                                    viewOp.getSource(), viewOp.getByteShift(),
-                                    foldedDynamicSizes);
-    // Insert a cast so we have the same type as the old memref type.
+    auto newViewOp =
+        ViewOp::create(rewriter, viewOp.getLoc(), foldedMemRefType,
+                       viewOp.getSource(), viewOp.getByteShift(), foldedSizes);
     rewriter.replaceOpWithNewOp<CastOp>(viewOp, resultType, newViewOp);
     return success();
   }
@@ -3950,7 +3988,7 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
 
     rewriter.replaceOpWithNewOp<ViewOp>(
         viewOp, viewOp.getType(), memrefCastOp.getSource(),
-        viewOp.getByteShift(), viewOp.getSizes());
+        viewOp.getByteShift(), viewOp.getMixedSizes());
     return success();
   }
 };

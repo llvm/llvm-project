@@ -1582,7 +1582,7 @@ func.func @fold_view_same_source_result_types(%0: memref<128xi8>) -> memref<128x
   %c0 = arith.constant 0 : index
   // CHECK-NOT: memref.view
   // CHECK: return %[[ARG]]
-  %res = memref.view %0[%c0][] : memref<128xi8> to memref<128xi8>
+  %res = memref.view %0[%c0][128] : memref<128xi8> to memref<128xi8>
   return %res : memref<128xi8>
 }
 
@@ -1593,9 +1593,9 @@ func.func @fold_view_same_source_result_types(%0: memref<128xi8>) -> memref<128x
 func.func @non_fold_view_non_zero_offset(%0: memref<128xi8>) -> memref<128xi8> {
   %c1 = arith.constant 1 : index
   // CHECK: %[[C1:.*]] = arith.constant 1 : index
-  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C1]]][] : memref<128xi8> to memref<128xi8>
+  // CHECK: %[[RES:.*]] = memref.view %[[ARG]][%[[C1]]][128] : memref<128xi8> to memref<128xi8>
   // CHECK: return %[[RES]]
-  %res = memref.view %0[%c1][] : memref<128xi8> to memref<128xi8>
+  %res = memref.view %0[%c1][128] : memref<128xi8> to memref<128xi8>
   return %res : memref<128xi8>
 }
 
@@ -1616,13 +1616,13 @@ func.func @non_fold_view_same_source_dynamic_size(%0: memref<?xi8>, %arg0 : inde
 
 // CHECK-LABEL:   func.func @replace_view_static_dims(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xi8>, %[[ARG1:.*]]: index) -> memref<?x4xi32> {
-// CHECK:           %[[VIEW_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[ARG1]]][] : memref<?xi8> to memref<5x4xi32>
+// CHECK:           %[[VIEW_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[ARG1]]][5, 4] : memref<?xi8> to memref<5x4xi32>
 // CHECK:           %[[CAST_0:.*]] = memref.cast %[[VIEW_0]] : memref<5x4xi32> to memref<?x4xi32>
 // CHECK:           return %[[CAST_0]] : memref<?x4xi32>
 // CHECK:         }
 func.func @replace_view_static_dims(%src: memref<?xi8>, %offset : index) -> memref<?x4xi32> {
   %c5 = arith.constant 5: index
-  %res = memref.view %src[%offset][%c5] : memref<?xi8> to memref<?x4xi32>
+  %res = memref.view %src[%offset][%c5, 4] : memref<?xi8> to memref<?x4xi32>
   return %res : memref<?x4xi32>
 }
 
@@ -1631,12 +1631,12 @@ func.func @replace_view_static_dims(%src: memref<?xi8>, %offset : index) -> memr
 // CHECK-LABEL:   func.func @non_replace_view_negative_static_dims(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<?xi8>, %[[ARG1:.*]]: index) -> memref<?x4xi32> {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant -1 : index
-// CHECK:           %[[VIEW_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[ARG1]]]{{\[}}%[[CONSTANT_0]]] : memref<?xi8> to memref<?x4xi32>
+// CHECK:           %[[VIEW_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[ARG1]]]{{\[}}%[[CONSTANT_0]], 4] : memref<?xi8> to memref<?x4xi32>
 // CHECK:           return %[[VIEW_0]] : memref<?x4xi32>
 // CHECK:         }
 func.func @non_replace_view_negative_static_dims(%src: memref<?xi8>, %offset : index) -> memref<?x4xi32> {
   %c-1 = arith.constant -1: index
-  %res = memref.view %src[%offset][%c-1] : memref<?xi8> to memref<?x4xi32>
+  %res = memref.view %src[%offset][%c-1, 4] : memref<?xi8> to memref<?x4xi32>
   return %res : memref<?x4xi32>
 }
 
