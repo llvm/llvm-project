@@ -42,10 +42,10 @@ llvm.func @fma_invalid_oob_f64(%a : f64, %b : f64, %c : f64) -> f64 {
 
 // -----
 
-llvm.func @fma_invalid_relu_oob(%a : f16, %b : f16, %c : f16) -> f16 {
+llvm.func @fma_invalid_relu_oob(%a : f32, %b : f32, %c : f32) -> f32 {
   // expected-error@+1 {{relu and oob are only supported for f16 and bf16 fused multiply-add operations}}
-  %f1 = nvvm.fma %a, %b, %c {relu = true, oob = true, rnd = #nvvm.fp_rnd_mode<rn>} : f16
-  llvm.return %f1 : f16
+  %f1 = nvvm.fma %a, %b, %c {relu = true, rnd = #nvvm.fp_rnd_mode<rn>} : f32
+  llvm.return %f1 : f32
 }
 
 // -----

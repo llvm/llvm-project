@@ -446,6 +446,41 @@ getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
                    nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
 }
 
+// Calls an LLVM intrinsic on the given operands. For f32/f64 vector types,
+// the intrinsic is called per-element and the results are packed back into a
+// vector. If retType is non-null, it is forwarded as the return-type
+// overload to `createIntrinsicCall`.
+static llvm::Value *
+createScalarizedIntrinsicCall(llvm::IRBuilderBase &builder,
+                              llvm::Intrinsic::ID IID, llvm::Type *opTypeLLVM,
+                              ArrayRef<llvm::Value *> operands,
+                              llvm::Type *retType = nullptr) {
+  auto callIntrinsic = [&](ArrayRef<llvm::Value *> args) -> llvm::CallInst * {
+    llvm::SmallVector<llvm::Value *> callArgs(args);
+    if (retType)
+      return createIntrinsicCall(builder, IID, retType,
+                                 callArgs); // overloaded intrinsic call
+    return createIntrinsicCall(builder, IID, callArgs);
+  };
+
+  if (opTypeLLVM->isVectorTy() && (opTypeLLVM->getScalarType()->isFloatTy() ||
+                                   opTypeLLVM->getScalarType()->isDoubleTy())) {
+    llvm::Value *result = llvm::PoisonValue::get(
+        llvm::FixedVectorType::get(opTypeLLVM->getScalarType(), 2));
+    for (int64_t i = 0; i < 2; ++i) {
+      llvm::SmallVector<llvm::Value *> scalarArgs;
+      for (llvm::Value *op : operands)
+        scalarArgs.push_back(
+            builder.CreateExtractElement(op, builder.getInt32(i)));
+      llvm::Value *res = callIntrinsic(scalarArgs);
+      result = builder.CreateInsertElement(result, res, builder.getInt32(i));
+    }
+    return result;
+  }
+
+  return callIntrinsic(operands);
+}
+
 void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
                                      llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::AddFOp>(op);
@@ -499,31 +534,9 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
       llvm::Intrinsic::nvvm_add_rp_d, llvm::Intrinsic::nvvm_add_rz_d};
 
   auto addIntrinsic = [&](llvm::Intrinsic::ID IID) -> llvm::Value * {
-    auto createAddIntrinsicCall = [&](llvm::Intrinsic::ID IID, llvm::Value *LHS,
-                                      llvm::Value *RHS) -> llvm::CallInst * {
-      llvm::SmallVector<llvm::Value *, 2> callArgs;
-      callArgs.push_back(LHS);
-      callArgs.push_back(RHS);
-      return createIntrinsicCall(builder, IID, callArgs);
-    };
-
-    if (isVectorAdd && (opTypeLLVM->getScalarType()->isFloatTy() ||
-                        opTypeLLVM->getScalarType()->isDoubleTy())) {
-      llvm::Value *result = llvm::PoisonValue::get(
-          llvm::FixedVectorType::get(opTypeLLVM->getScalarType(), 2));
-      for (int64_t i = 0; i < 2; ++i) {
-        llvm::Value *lhsElemi =
-            builder.CreateExtractElement(argLHS, builder.getInt32(i));
-        llvm::Value *rhsElemi =
-            builder.CreateExtractElement(argRHS, builder.getInt32(i));
-        llvm::Value *sum = createAddIntrinsicCall(IID, lhsElemi, rhsElemi);
-        result = builder.CreateInsertElement(result, sum, builder.getInt32(i));
-      };
-      return result;
-    }
-
-    return createAddIntrinsicCall(IID, argLHS, argRHS);
-  }; // addIntrinsic end
+    return createScalarizedIntrinsicCall(builder, IID, opTypeLLVM,
+                                         {argLHS, argRHS});
+  };
 
   // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
   // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
@@ -566,7 +579,6 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
 void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
                                    llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::FmaOp>(op);
-  llvm::SmallVector<llvm::Value *> args;
   mlir::NVVM::FPRoundingMode rndMode = thisOp.getRnd();
   unsigned rndIndex = static_cast<unsigned>(rndMode) - 1; // 1-4 mapped to 0-3
   mlir::NVVM::SaturationMode satMode = thisOp.getSat();
@@ -625,37 +637,12 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
       llvm::Intrinsic::nvvm_fma_rn_d, llvm::Intrinsic::nvvm_fma_rm_d,
       llvm::Intrinsic::nvvm_fma_rp_d, llvm::Intrinsic::nvvm_fma_rz_d};
 
-  auto fmaIntrinsic = [&](llvm::Intrinsic::ID IID) -> llvm::Value * {
-    auto createFmaIntrinsicCall = [&](llvm::Intrinsic::ID IID, llvm::Value *a,
-                                      llvm::Value *b,
-                                      llvm::Value *c) -> llvm::CallInst * {
-      llvm::SmallVector<llvm::Value *, 3> callArgs;
-      callArgs.push_back(a);
-      callArgs.push_back(b);
-      callArgs.push_back(c);
-      return createIntrinsicCall(builder, IID, opTypeLLVM, callArgs);
-    };
-
-    if (isVectorAdd && (opTypeLLVM->getScalarType()->isFloatTy() ||
-                        opTypeLLVM->getScalarType()->isDoubleTy())) {
-      llvm::Value *result = llvm::PoisonValue::get(
-          llvm::FixedVectorType::get(opTypeLLVM->getScalarType(), 2));
-      for (int64_t i = 0; i < 2; ++i) {
-        llvm::Value *argAElemi =
-            builder.CreateExtractElement(argA, builder.getInt32(i));
-        llvm::Value *argBElemi =
-            builder.CreateExtractElement(argB, builder.getInt32(i));
-        llvm::Value *argCElemi =
-            builder.CreateExtractElement(argC, builder.getInt32(i));
-        llvm::Value *sum =
-            createFmaIntrinsicCall(IID, argAElemi, argBElemi, argCElemi);
-        result = builder.CreateInsertElement(result, sum, builder.getInt32(i));
-      };
-      return result;
-    }
-
-    return createFmaIntrinsicCall(IID, argA, argB, argC);
-  }; // fmaIntrinsic end
+  auto fmaIntrinsic = [&](llvm::Intrinsic::ID IID,
+                          llvm::Type *retType) -> llvm::Value * {
+    return createScalarizedIntrinsicCall(builder, IID, opTypeLLVM,
+                                         {argA, argB, argC},
+                                         /*retType=*/retType);
+  };
 
   // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
   // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
@@ -664,12 +651,13 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
     llvm::Value *result;
     if (isOOB) {
       result = fmaIntrinsic(isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
-                                   : llvm::Intrinsic::nvvm_fma_rn_oob);
+                                   : llvm::Intrinsic::nvvm_fma_rn_oob,
+                            opTypeLLVM);
     } else {
       unsigned index =
           (isRelu << 3) | (isSat << 2) | (isFTZ << 1) |
           isVectorAdd; // Op verifier ensures that this index is valid
-      result = fmaIntrinsic(f16IDs[index]);
+      result = fmaIntrinsic(f16IDs[index], opTypeLLVM);
     }
     mt.mapValue(thisOp.getRes(), result);
     return;
@@ -680,12 +668,13 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
     llvm::Value *result;
     if (isOOB) {
       result = fmaIntrinsic(isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
-                                   : llvm::Intrinsic::nvvm_fma_rn_oob);
+                                   : llvm::Intrinsic::nvvm_fma_rn_oob,
+                            opTypeLLVM);
     } else {
       unsigned index =
           (isRelu << 1) |
           isVectorAdd; // Op verifier ensures that this index is valid
-      result = fmaIntrinsic(bf16IDs[index]);
+      result = fmaIntrinsic(bf16IDs[index], opTypeLLVM);
     }
     mt.mapValue(thisOp.getRes(), result);
     return;
@@ -693,7 +682,8 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
 
   // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
   if (opTypeLLVM->getScalarType()->isDoubleTy()) {
-    mt.mapValue(thisOp.getRes(), fmaIntrinsic(f64IDs[rndIndex]));
+    mt.mapValue(thisOp.getRes(),
+                fmaIntrinsic(f64IDs[rndIndex], opTypeLLVM->getScalarType()));
     return;
   }
 
@@ -701,7 +691,8 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   const unsigned numRndModes = 4; // RN, RM, RP, RZ
   if (opTypeLLVM->getScalarType()->isFloatTy()) {
     unsigned index = ((isFTZ << 1) | isSat) * numRndModes + rndIndex;
-    mt.mapValue(thisOp.getRes(), fmaIntrinsic(f32IDs[index]));
+    mt.mapValue(thisOp.getRes(),
+                fmaIntrinsic(f32IDs[index], opTypeLLVM->getScalarType()));
     return;
   }
 }
