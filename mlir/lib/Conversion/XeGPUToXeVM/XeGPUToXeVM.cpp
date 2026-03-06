@@ -908,20 +908,24 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
     if (!chipStr)
       return rewriter.notifyMatchFailure(op, "cannot determine target chip");
 
-    const auto *uArch= mlir::xegpu::uArch::getUArch(*chipStr);
+    const auto *uArch = mlir::xegpu::uArch::getUArch(*chipStr);
     if (!uArch)
       return rewriter.notifyMatchFailure(op, "unsupported target uArch");
 
-    auto *dpasInst = const_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc*>(
+    auto *dpasInst = const_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc *>(
         llvm::dyn_cast_or_null<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
             uArch->getInstruction(
                 xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc)));
     if (!dpasInst)
-      return rewriter.notifyMatchFailure(op, "DPAS not supported by target uArch");
+      return rewriter.notifyMatchFailure(op,
+                                         "DPAS not supported by target uArch");
 
-    auto supportedA = dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixA);
-    auto supportedB = dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixB);
-    auto supportedD = dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixD);
+    auto supportedA =
+      dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixA);
+    auto supportedB =
+      dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixB);
+    auto supportedD =
+      dpasInst->getSupportedTypes(*ctxt, xegpu::uArch::MMAOpndKind::MatrixD);
     // NOTE: Supported types for MatrixC and MatrixD are identical
 
     if (llvm::find(supportedA, aTy.getElementType()) == supportedA.end())
