@@ -5531,6 +5531,7 @@ libc_support_library(
     name = "__support_math_tanbf16",
     hdrs = ["src/__support/math/tanbf16.h"],
     deps = [
+        ":__support_fputil_bfloat16",
         ":__support_fputil_cast",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -5540,7 +5541,6 @@ libc_support_library(
         ":__support_math_sincosf16_utils",
         ":hdr_errno_macros",
         ":hdr_fenv_macros",
-        ":__support_fputil_bfloat16",
     ],
 )
 
@@ -7941,7 +7941,6 @@ libc_math_function(
         ":__support_math_tanbf16",
     ],
 )
-
 
 libc_math_function(
     name = "tanf",
