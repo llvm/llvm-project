@@ -3037,6 +3037,13 @@ DEF_TRAVERSE_STMT(ParenListExpr, {})
 DEF_TRAVERSE_STMT(SYCLUniqueStableNameExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
+DEF_TRAVERSE_STMT(UnresolvedSYCLKernelCallStmt, {
+  if (getDerived().shouldVisitImplicitCode()) {
+    TRY_TO(TraverseStmt(S->getOriginalStmt()));
+    TRY_TO(TraverseStmt(S->getKernelLaunchIdExpr()));
+    ShouldVisitChildren = false;
+  }
+})
 DEF_TRAVERSE_STMT(OpenACCAsteriskSizeExpr, {})
 DEF_TRAVERSE_STMT(PredefinedExpr, {})
 DEF_TRAVERSE_STMT(ShuffleVectorExpr, {})
@@ -3074,6 +3081,7 @@ DEF_TRAVERSE_STMT(CapturedStmt, { TRY_TO(TraverseDecl(S->getCapturedDecl())); })
 DEF_TRAVERSE_STMT(SYCLKernelCallStmt, {
   if (getDerived().shouldVisitImplicitCode()) {
     TRY_TO(TraverseStmt(S->getOriginalStmt()));
+    TRY_TO(TraverseStmt(S->getKernelLaunchStmt()));
     TRY_TO(TraverseDecl(S->getOutlinedFunctionDecl()));
     ShouldVisitChildren = false;
   }
