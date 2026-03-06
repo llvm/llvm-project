@@ -19,6 +19,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -36,7 +37,8 @@ bool AlwaysInlineImpl(
     FunctionAnalysisManager *FAM,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<AAResults &(Function &)> GetAAR,
-    function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+    function_ref<TargetTransformInfo &(Function &)> GetTTI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedComdatFunctions;
@@ -153,12 +155,12 @@ bool AlwaysInlineImpl(
         continue;
       }
 
-      if (Callee->isPresplitCoroutine() || !isInlineViable(*Callee).isSuccess())
-        continue;
-
-      // Check TTI for target-specific inlining restrictions (e.g., SME ABI).
-      TargetTransformInfo &TTI = GetTTI(*Callee);
-      if (!TTI.areInlineCompatible(F, Callee))
+      // Use getAttributeBasedInliningDecision for all attribute-based checks
+      // including TTI/TLI compatibility and isInlineViable.
+      TargetTransformInfo &CalleeTTI = GetTTI(*Callee);
+      auto Decision =
+          getAttributeBasedInliningDecision(*CB, Callee, CalleeTTI, GetTLI);
+      if (!Decision || !Decision->isSuccess())
         continue;
 
       if (!TryInline(*CB, *Callee, ORE, "flatten attribute", &NewCallSites))
@@ -218,9 +220,12 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     auto GetTTI = [&](Function &F) -> TargetTransformInfo & {
       return getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     };
+    auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+      return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    };
 
     return AlwaysInlineImpl(M, InsertLifetime, PSI, /*FAM=*/nullptr,
-                            GetAssumptionCache, GetAAR, GetTTI);
+                            GetAssumptionCache, GetAAR, GetTTI, GetTLI);
   }
 
   static char ID; // Pass identification, replacement for typeid
@@ -229,6 +234,7 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 };
@@ -241,6 +247,7 @@ INITIALIZE_PASS_BEGIN(AlwaysInlinerLegacyPass, "always-inline",
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(AlwaysInlinerLegacyPass, "always-inline",
                     "Inliner for always_inline functions", false, false)
@@ -262,10 +269,13 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   auto GetTTI = [&](Function &F) -> TargetTransformInfo & {
     return FAM.getResult<TargetIRAnalysis>(F);
   };
+  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
   auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
 
   bool Changed = AlwaysInlineImpl(M, InsertLifetime, PSI, &FAM,
-                                  GetAssumptionCache, GetAAR, GetTTI);
+                                  GetAssumptionCache, GetAAR, GetTTI, GetTLI);
   if (!Changed)
     return PreservedAnalyses::all();
 

@@ -3229,6 +3229,15 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
     return InlineResult::failure("conflicting attributes");
 
+  // Flatten: inline all viable calls from flatten functions regardless of cost.
+  // Checked before optnone so that flatten takes priority.
+  if (Caller->hasFnAttribute(Attribute::Flatten)) {
+    auto IsViable = isInlineViable(*Callee);
+    if (IsViable.isSuccess())
+      return InlineResult::success();
+    return InlineResult::failure(IsViable.getFailureReason());
+  }
+
   // Don't inline this call if the caller has the optnone attribute.
   if (Caller->hasOptNone())
     return InlineResult::failure("optnone attribute");
@@ -3253,14 +3262,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // Don't inline functions that are loader replaceable.
   if (Callee->hasFnAttribute("loader-replaceable"))
     return InlineResult::failure("loader replaceable function attribute");
-
-  // Flatten: inline all viable calls from flatten functions regardless of cost.
-  if (Caller->hasFnAttribute(Attribute::Flatten)) {
-    auto IsViable = isInlineViable(*Callee);
-    if (IsViable.isSuccess())
-      return InlineResult::success();
-    return InlineResult::failure(IsViable.getFailureReason());
-  }
 
   return std::nullopt;
 }
