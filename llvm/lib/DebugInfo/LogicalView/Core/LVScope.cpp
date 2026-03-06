@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
@@ -971,6 +972,16 @@ bool LVScope::equals(const LVScopes *References, const LVScopes *Targets) {
   return false;
 }
 
+bool LVScope::isChildScopeOf(const LVScope *Scope) const {
+  const LVScope *Self = this;
+  while (Self) {
+    Self = Self->getParentScope();
+    if (Self == Scope)
+      return true;
+  }
+  return false;
+}
+
 void LVScope::report(LVComparePass Pass) {
   getComparator().printItem(this, Pass);
   getComparator().push(this);
@@ -1698,6 +1709,13 @@ void LVScopeCompileUnit::printMatchedElements(raw_ostream &OS,
   }
 }
 
+void LVScopeCompileUnit::printDebugger(raw_ostream &OS) const {
+  outs() << formattedKind(kind()) << " " << getName() << "\n";
+  for (const LVScope *ChildScope : *getScopes()) {
+    ChildScope->printDebugger(OS);
+  }
+}
+
 void LVScopeCompileUnit::print(raw_ostream &OS, bool Full) const {
   // Reset counters for printed and found elements.
   const_cast<LVScopeCompileUnit *>(this)->Found.reset();
@@ -1900,6 +1918,95 @@ void LVScopeFunction::printExtra(raw_ostream &OS, bool Full) const {
                        const_cast<LVScopeFunction *>(this));
     if (Reference)
       Reference->printReference(OS, Full, const_cast<LVScopeFunction *>(this));
+  }
+}
+
+void LVScopeFunction::printDebugger(raw_ostream &OS) const {
+  const LVLines *Lines = getLines();
+  // If there's no lines, this function has no body.
+  if (!Lines)
+    return;
+
+  OS << formattedKind(kind()) << " " << getName() << "\n";
+
+  std::vector<const LVLine *> AllLines;
+  std::unordered_map<LVAddress, std::vector<const LVLocation *>> LifetimeBegins;
+  std::unordered_map<LVAddress, std::vector<const LVLocation *>>
+      LifetimeEndsExclusive;
+
+  // Collect all child scope lines and symbols
+  std::vector<const LVScope *> Worklist = {this};
+  for (unsigned i = 0; i < Worklist.size(); i++) {
+    const LVScope *Scope = Worklist[i];
+    if (Scope->scopeCount()) {
+      for (const LVScope *ChildScope : *Scope->getScopes())
+        Worklist.push_back(ChildScope);
+    }
+    if (Scope->lineCount()) {
+      for (const LVLine *Line : *Scope->getLines()) {
+        AllLines.push_back(Line);
+      }
+    }
+    if (Scope->symbolCount()) {
+      for (const LVSymbol *Symbol : *Scope->getSymbols()) {
+        LVLocations SymbolLocations;
+        Symbol->getLocations(SymbolLocations);
+        if (SymbolLocations.empty())
+          continue;
+
+        for (const LVLocation *Loc : SymbolLocations) {
+          if (Loc->getIsGapEntry())
+            continue;
+
+          LVAddress Begin = Loc->getLowerAddress();
+          LVAddress End = Loc->getUpperAddress();
+          LifetimeBegins[Begin].push_back(Loc);
+          LifetimeEndsExclusive[End].push_back(Loc);
+        }
+      }
+    }
+  }
+
+  // Sort all lines by their address.
+  std::sort(AllLines.begin(), AllLines.end(),
+            [](const LVLine *a, const LVLine *b) -> bool {
+              return std::make_tuple(a->getAddress(), a->getIsLineDebug(),
+                                     a->getID()) <
+                     std::make_tuple(b->getAddress(), b->getIsLineDebug(),
+                                     b->getID());
+            });
+
+  // Print everything out
+  const bool IncludeVars = options().getPrintSymbols();
+  const bool IncludeCode = options().getPrintInstructions();
+  SetVector<const LVLocation *>
+      LiveSymbols; // This needs to be ordered since we're iterating over it.
+  for (const LVLine *Line : AllLines) {
+    if (IncludeVars) {
+      // Update live list: Add lives
+      for (auto Loc : LifetimeBegins[Line->getAddress()])
+        LiveSymbols.insert(Loc);
+      // Update live list: remove dead
+      for (auto Loc : LifetimeEndsExclusive[Line->getAddress()])
+        LiveSymbols.remove(Loc);
+    }
+
+    if (Line->getIsNewStatement() && Line->getIsLineDebug() &&
+        Line->getLineNumber() != 0) {
+      Line->printDebugger(OS, 1);
+      if (IncludeVars) {
+        for (auto SymLoc : LiveSymbols) {
+          const LVSymbol *Sym = SymLoc->getParentSymbol();
+          auto SymScope = Sym->getParentScope();
+          auto LineScope = Line->getParentScope();
+          if (SymScope != LineScope && !LineScope->isChildScopeOf(SymScope))
+            continue;
+          SymLoc->printDebugger(OS, 2);
+        }
+      }
+    } else if (IncludeCode && Line->getIsLineAssembler()) {
+      Line->printDebugger(OS, 1);
+    }
   }
 }
 
@@ -2116,6 +2223,28 @@ Error LVScopeRoot::doPrintMatches(bool Split, raw_ostream &OS,
       options().setPrintFormatting();
   }
 
+  return Error::success();
+}
+
+Error LVScopeRoot::doPrintDebugger(bool Split, raw_ostream &OS) const {
+  OS << "\nLogical View:\n";
+  static raw_ostream *StreamSplit = &OS;
+  for (LVScope *Scope : *Scopes) {
+    if (Split) {
+      std::string ScopeName(Scope->getName());
+      if (std::error_code EC =
+              getReaderSplitContext().open(ScopeName, ".txt", OS))
+        return createStringError(EC, "Unable to create split output file %s",
+                                 ScopeName.c_str());
+      StreamSplit = static_cast<raw_ostream *>(&getReaderSplitContext().os());
+    }
+    *StreamSplit << formattedKind(kind()) << " " << getName() << "\n";
+    Scope->printDebugger(*StreamSplit);
+    if (Split) {
+      getReaderSplitContext().close();
+      StreamSplit = &getReader().outputStream();
+    }
+  }
   return Error::success();
 }
 
