@@ -149,7 +149,7 @@ protected:
 ///
 /// \param args The Args object to flatten.
 /// \returns A wide string containing the flattened command line.
-llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(Args args);
+llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(const Args &args);
 
 /// Flattens an Args object into a Windows command-line wide string.
 ///
@@ -157,7 +157,8 @@ llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(Args args);
 ///
 /// \param args The Args object to flatten.
 /// \returns A wide string containing the flattened command line.
-llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(char *args[]);
+llvm::ErrorOr<std::wstring>
+GetFlattenedWindowsCommandStringW(llvm::ArrayRef<const char *> args);
 }
 
 #endif

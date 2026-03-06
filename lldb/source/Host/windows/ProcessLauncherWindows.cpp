@@ -64,7 +64,8 @@ static std::vector<wchar_t> CreateEnvironmentBufferW(const Environment &env) {
 }
 
 namespace lldb_private {
-llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(Args args) {
+llvm::ErrorOr<std::wstring>
+GetFlattenedWindowsCommandStringW(const Args &args) {
   if (args.empty())
     return L"";
 
@@ -75,11 +76,14 @@ llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(Args args) {
   return llvm::sys::flattenWindowsCommandLine(args_ref);
 }
 
-llvm::ErrorOr<std::wstring> GetFlattenedWindowsCommandStringW(char *args[]) {
+llvm::ErrorOr<std::wstring>
+GetFlattenedWindowsCommandStringW(llvm::ArrayRef<const char *> args) {
+  if (args.empty())
+    return L"";
+
   std::vector<llvm::StringRef> args_ref;
-  for (int i = 0; args[i] != nullptr; ++i) {
+  for (int i = 0; args[i] != nullptr; ++i)
     args_ref.push_back(args[i]);
-  }
 
   return llvm::sys::flattenWindowsCommandLine(args_ref);
 }
