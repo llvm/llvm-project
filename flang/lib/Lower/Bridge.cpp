@@ -6454,6 +6454,8 @@ private:
     builder->setComplexDivisionToRuntimeFlag(
         bridge.getLoweringOptions().getComplexDivisionToRuntime());
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
+    builder->setFPMaxminBehavior(
+        bridge.getLoweringOptions().getFPMaxminBehavior());
     builder->setInsertionPointToStart(&func.front());
     if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
       // Give internal linkage to internal functions. There are no name clash
@@ -6737,6 +6739,8 @@ private:
     builder = new fir::FirOpBuilder(func, bridge.getKindMap(), symbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
+    builder->setFPMaxminBehavior(
+        bridge.getLoweringOptions().getFPMaxminBehavior());
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();
