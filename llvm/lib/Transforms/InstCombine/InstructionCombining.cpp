@@ -1387,11 +1387,15 @@ InstCombinerImpl::foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I) {
       m_SExtOrSelf(m_Value(Greater1)), m_Poison(), m_SpecificMask(MaskLower)));
   auto GreaterUpper = m_SExtOrSelf(m_Shuffle(
       m_SExtOrSelf(m_Value(Greater2)), m_Poison(), m_SpecificMask(MaskUpper)));
-  auto EqUpper = m_SExtOrSelf(
+  auto EqUpper = m_Shuffle(m_c_ICmp(PredEq, m_Value(A), m_Value(B)), m_Poison(),
+                           m_SpecificMask(MaskUpper));
+  auto EqUpperSExt = m_SExtOrSelf(
       m_Shuffle(m_SExtOrSelf(m_c_ICmp(PredEq, m_Value(A), m_Value(B))),
                 m_Poison(), m_SpecificMask(MaskUpper)));
 
-  if (!match(&I, m_c_Or(m_c_And(GreaterLower, EqUpper), GreaterUpper)) ||
+  if (!match(&I, m_c_Or(m_CombineOr(m_c_And(GreaterLower, EqUpperSExt),
+                                    m_Select(EqUpper, GreaterLower, m_Zero())),
+                        GreaterUpper)) ||
       Greater1 != Greater2 || PredEq != ICmpInst::ICMP_EQ)
     return nullptr;
 
