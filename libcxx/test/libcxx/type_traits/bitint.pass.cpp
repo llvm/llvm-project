@@ -11,6 +11,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: gcc
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
 #include <bit>
 #include <cassert>
