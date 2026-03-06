@@ -78,10 +78,14 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
 
   void *getRawPointer() const { return getOpaqueValue(); }
 
+  bool isCanonical() const;
+
+  const SCEV *getCanonical() const;
+
   unsigned getFlags() const { return getInt(); }
 
   bool operator==(const SCEVUse &RHS) const {
-    return getRawPointer() == RHS.getRawPointer();
+    return getCanonical() == RHS.getCanonical();
   }
 
   bool operator==(const SCEV *RHS) const { return getRawPointer() == RHS; }
@@ -120,13 +124,23 @@ template <> struct DenseMapInfo<SCEVUse> {
   }
 
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getRawPointer());
+    return hash_value(U.getCanonical());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
-    return LHS.getRawPointer() == RHS.getRawPointer();
+    void *L = LHS.getRawPointer();
+    void *R = RHS.getRawPointer();
+    if (L == reinterpret_cast<void *>(-1) ||
+        L == reinterpret_cast<void *>(-2) ||
+        R == reinterpret_cast<void *>(-1) || R == reinterpret_cast<void *>(-2))
+      return L == R;
+    return LHS.getCanonical() == RHS.getCanonical();
   }
 };
+
+inline bool SCEVUse::isCanonical() const {
+  return getCanonical() == getPointer();
+}
 
 template <> struct simplify_type<SCEVUse> {
   using SimpleType = const SCEV *;
@@ -156,6 +170,11 @@ protected:
   /// This field is initialized to zero and may be used in subclasses to store
   /// miscellaneous information.
   unsigned short SubclassData = 0;
+
+private:
+  /// Pointer to the canonical SCEV for this node. SCEVs that differ only in
+  /// no-wrap flags share the same canonical SCEV.
+  const SCEV *CanonicalSCEV;
 
 public:
   /// NoWrapFlags are bitfield indices into SubclassData.
@@ -204,7 +223,8 @@ public:
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
-      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize) {}
+      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize),
+        CanonicalSCEV(nullptr) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
@@ -247,6 +267,10 @@ public:
 
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
+
+  const SCEV *getCanonical() const { return CanonicalSCEV; }
+
+  LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 };
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
@@ -266,6 +290,11 @@ template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const SCEV &S) {
   S.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, SCEVUse U) {
+  U.print(OS);
   return OS;
 }
 
@@ -2635,6 +2664,10 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
     return LHS == RHS;
   }
 };
+
+inline const SCEV *SCEVUse::getCanonical() const {
+  return getPointer()->getCanonical();
+}
 
 } // end namespace llvm
 
