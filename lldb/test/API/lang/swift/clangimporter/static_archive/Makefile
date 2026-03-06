@@ -41,4 +41,4 @@ lib%.a: lib%.o
 	$(AR) $(ARFLAGS) $@ -L$(shell pwd) $<
 
 clean::
-	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.a a.out *.o
+	$(call RM_RF,*.swiftmodule *.swiftdoc *.dSYM *~ lib*.a a.out *.o)

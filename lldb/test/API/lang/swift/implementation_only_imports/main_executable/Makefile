@@ -13,5 +13,5 @@ SomeLibrary.swiftmodule: SomeLibrary.swift
 		VPATH=$(SRCDIR) -f $(SRCDIR)/../dylib.mk all
 
 clean::
-	rm -rf *.o *.dylib *.so *.dll *.dSYM *.swiftdoc *.swiftmodule *.swiftinterface
+	$(call RM_RF,*.o *.dylib *.so *.dll *.dSYM *.swiftdoc *.swiftmodule *.swiftinterface)
 

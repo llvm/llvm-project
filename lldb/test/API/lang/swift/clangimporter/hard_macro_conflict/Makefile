@@ -18,6 +18,7 @@ Framework.framework: Framework.swift
 		DYLIB_ONLY=YES DYLIB_SWIFT_SOURCES=Framework.swift \
 		SWIFT_OBJC_INTEROP=1 \
 		SWIFTFLAGS_EXTRAS="$(FOO_FLAGS)" \
-		FRAMEWORK=Framework
-	rm -f $(BUILDDIR)/Framework.swiftmodule
-	ln -s $(BUILDDIR)/Framework.framework/Framework $(BUILDDIR)/Framework # FIXME
+		FRAMEWORK=Framework \
+		DYLIB_INSTALL_NAME="@executable_path/Framework"
+	$(call RM_F,$(BUILDDIR)/Framework.swiftmodule)
+	$(call LN_SF,$(BUILDDIR)/Framework.framework/Framework,$(BUILDDIR)/Framework) #FIXME

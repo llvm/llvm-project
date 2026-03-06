@@ -16,4 +16,4 @@ libLibrary:
 	"$(MAKE)" -f $(SRCDIR)/Library.mk VPATH=$(SRCDIR) -I $(SRCDIR)
 
 clean::
-	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
+	$(call RM_RF,*.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o)

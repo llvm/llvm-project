@@ -11,5 +11,4 @@ libDylib.dylib: dylib.swift
 		-f $(SRCDIR)/dylib.mk all
 
 clean::
-	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
-
+	$(call RM_RF,*.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o)

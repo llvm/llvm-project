@@ -26,4 +26,4 @@ lib%.dylib: %.swift
 		SWIFTFLAGS_EXTRAS="-target $(ARCH)-apple-macosx11.1"
 
 clean::
-	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out dlopen_module *.o
+	$(call RM_RF,*.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out dlopen_module *.o)

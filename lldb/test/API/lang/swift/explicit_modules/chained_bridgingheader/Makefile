@@ -25,4 +25,6 @@ B.framework:
 		DYLIB_NAME=B \
 		FRAMEWORK=B \
 		DYLIB_ONLY=YES \
+		DYLIB_INSTALL_NAME="@executable_path/B" \
 		all
+	$(call LN_SF,$(BUILDDIR)/B.framework/B,$(BUILDDIR)/B)

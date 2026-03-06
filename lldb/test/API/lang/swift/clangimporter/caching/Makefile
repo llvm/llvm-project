@@ -6,5 +6,7 @@ all: a.out cas-config
 
 include Makefile.rules
 
+CAS_CONFIG_CONTENT := {"CASPath": "$(BUILDDIR)/cas"}
+
 cas-config:
-	echo "{\"CASPath\": \"$(BUILDDIR)/cas\"}" > .cas-config
+	$(call ECHO_TO_FILE,'$(CAS_CONFIG_CONTENT)',.cas-config)

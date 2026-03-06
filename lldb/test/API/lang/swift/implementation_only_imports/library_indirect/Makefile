@@ -15,5 +15,5 @@ SomeLibrary.swiftmodule: SomeLibrary.swift SomeLibraryCore.swiftmodule
 		VPATH=$(SRCDIR) LD_EXTRAS="-L$(BUILDDIR) -Xlinker -rpath -Xlinker $(BUILDDIR)" -f $(SRCDIR)/../dylib.mk all
 
 clean::
-	rm -rf *.o *.dylib *.so *.dll *.dSYM *.swiftdoc *.swiftmodule *.swiftinterface
+	$(call RM_RF,*.o *.dylib *.so *.dll *.dSYM *.swiftdoc *.swiftmodule *.swiftinterface)
 

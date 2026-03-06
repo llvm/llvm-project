@@ -8,10 +8,10 @@ SWIFTFLAGS += -Xcc -F$(SRCDIR) -I$(SRCDIR) -I$(BUILDDIR)
 
 # Create a nonmodular include by removing the modulemap after building.
 all:
-	rm module.modulemap
+	$(call RM,module.modulemap)
 
 conflict.h: conflict.h.in
-	cp $< $@
+	$(call CP,$<,$@)
 
 module.modulemap:
-	echo 'module Baz { header "conflict.h" }' >$@
+	$(call ECHO_TO_FILE,'module Baz { header "conflict.h" }',$@)

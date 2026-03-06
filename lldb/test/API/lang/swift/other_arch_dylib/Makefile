@@ -16,5 +16,5 @@ OtherArch.framework/Versions/A/OtherArch: $(SRCDIR)/OtherArch.swift
 		FRAMEWORK_MODULES=OtherArch.swiftinterface \
 		FRAMEWORK_HEADERS=OtherArch.h \
 		SWIFTFLAGS_EXTRAS="-target arm64e-apple-macos15"
-	rm -f $(BUILDDIR)/OtherArch.swiftmodule $(BUILDDIR)/OtherArch.swiftinterface
-	rm -f OtherArch.o OtherArch.h OtherArch.partial.swiftmodule
+	$(call RM_F,$(BUILDDIR)/OtherArch.swiftmodule $(BUILDDIR)/OtherArch.swiftinterface)
+	$(call RM_F,OtherArch.o OtherArch.h OtherArch.partial.swiftmodule)

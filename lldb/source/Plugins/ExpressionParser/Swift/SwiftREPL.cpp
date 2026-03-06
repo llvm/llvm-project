@@ -464,7 +464,8 @@ bool isThrownError(ValueObjectSP valobj_sp) {
   return true;
 }
 
-bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
+bool SwiftREPL::PrintOneVariable(Debugger &debugger,
+                                 LockableStreamFileSP &output_stream_sp,
                                  ValueObjectSP &valobj_sp,
                                  ExpressionVariable *var) {
   bool is_computed = false;
@@ -562,20 +563,26 @@ bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
           new StringSummaryFormat(flags, "<computed property>")));
     }
 
-    if (colorize_out) {
-      const char *color = isThrownError(valobj_sp)
-                              ? ANSI_ESCAPE1(ANSI_FG_COLOR_RED)
-                              : ANSI_ESCAPE1(ANSI_FG_COLOR_CYAN);
-      fprintf(output_sp->GetFile().GetStream(), "%s", color);
+    {
+      // Suspend the statusline while printing to prevent its ANSI cursor
+      // save/restore sequences from interleaving with the output.
+      LockedStreamFile locked_stream = output_stream_sp->Lock();
+      if (colorize_out) {
+        const char *color = isThrownError(valobj_sp)
+                                ? ANSI_ESCAPE1(ANSI_FG_COLOR_RED)
+                                : ANSI_ESCAPE1(ANSI_FG_COLOR_CYAN);
+        fprintf(locked_stream.GetFile().GetStream(), "%s", color);
+      }
+
+      if (llvm::Error error = valobj_sp->Dump(locked_stream, options))
+        locked_stream << "error: " << toString(std::move(error));
+
+      if (colorize_out)
+        fprintf(locked_stream.GetFile().GetStream(),
+                ANSI_ESCAPE1(ANSI_CTRL_NORMAL));
+
+      handled = true;
     }
-
-    if (llvm::Error error = valobj_sp->Dump(*output_sp, options))
-      *output_sp << "error: " << toString(std::move(error));
-
-    if (colorize_out)
-      fprintf(output_sp->GetFile().GetStream(), ANSI_ESCAPE1(ANSI_CTRL_NORMAL));
-
-    handled = true;
   }
 
   return handled;

@@ -17,7 +17,8 @@ class TestSwiftExplicitModulesChainedBridgingHeader(lldbtest.TestBase):
         os.unlink(secret)
 
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, 'break here', lldb.SBFileSpec('main.swift'),
+            extra_images=['B'])
         log = self.getBuildArtifact("types.log")
         self.expect('log enable lldb types -f "%s"' % log)
         self.expect("frame variable a", substrs=['a = 23'])

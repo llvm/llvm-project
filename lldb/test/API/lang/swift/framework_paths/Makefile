@@ -16,8 +16,8 @@ Discovered.framework: Discovered.h
 		FRAMEWORK=Discovered
 
 Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework
-	mkdir -p $(BUILDDIR)/secret_path
-	cp $< $(BUILDDIR)/Direct.swift
+	$(call MKDIR_P,$(BUILDDIR)/secret_path)
+	$(call CP,$<,$(BUILDDIR)/Direct.swift)
 	mv Discovered.framework $(BUILDDIR)/secret_path
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Direct \
@@ -25,4 +25,4 @@ Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework
 		DYLIB_MODULENAME=Direct \
 		FRAMEWORK=Direct \
 		SWIFTFLAGS_EXTRAS="-F$(BUILDDIR)/secret_path"
-	rm -f $(BUILDDIR)/Direct.swiftmodule $(BUILDDIR)/Direct.swiftinterface $(BUILDDIR)/Direct.swift
+	$(call RM_F,$(BUILDDIR)/Direct.swiftmodule $(BUILDDIR)/Direct.swiftinterface $(BUILDDIR)/Direct.swift)

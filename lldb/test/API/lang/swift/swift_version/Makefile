@@ -18,5 +18,5 @@ libmod%.dylib: mod%.swift
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
 clean::
-	rm -rf main main.a main.b *.dylib *.dSYM *.swiftdoc *.swiftmodule mod.swift
+	$(call RM_RF,main main.a main.b *.dylib *.dSYM *.swiftdoc *.swiftmodule mod.swift)
 

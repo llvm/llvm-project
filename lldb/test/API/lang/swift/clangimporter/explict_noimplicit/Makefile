@@ -9,7 +9,7 @@ include Makefile.rules
 
 # Note that this is being built with implicit modules!
 libDylib: Dylib.swift
-	mkdir -p $(BUILDDIR)/$(shell basename $< .swift)
+	$(call MKDIR_P,$(BUILDDIR)/$(shell basename $< .swift))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		DYLIB_NAME=Dylib DYLIB_SWIFT_SOURCES=Dylib.swift \

@@ -10,6 +10,7 @@ class TestSwiftResilienceSuperclassOtherMod(TestBase):
     def test(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('ModWithClass.swift'))
+            self, 'break here', lldb.SBFileSpec('ModWithClass.swift'),
+            extra_images=['ModWithClass', 'ModWithSuper'])
 
         self.expect("expression c.v", substrs=["Int", "42"])

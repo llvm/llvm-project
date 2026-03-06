@@ -24,4 +24,4 @@ libBuilder.dylib: $(SRCDIR)/Builder.swift libGeneric.dylib
 		SWIFTFLAGS_EXTRAS="-I$(BUILDDIR)" \
 		LD_EXTRAS="-L$(BUILDDIR) -lGeneric" \
 		MAKE_DSYM=NO
-	rm -f $(BUILDDIR)/Builder.swiftmodule
+	$(call RM_F,$(BUILDDIR)/Builder.swiftmodule)

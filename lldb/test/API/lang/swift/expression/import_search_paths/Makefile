@@ -8,7 +8,7 @@ all: libDirect $(EXE)
 include Makefile.rules
 
 libHidden: $(SRCDIR)/hidden/Indirect.swift
-	mkdir -p $(BUILDDIR)/hidden
+	$(call MKDIR_P,$(BUILDDIR)/hidden)
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		-C $(BUILDDIR)/hidden VPATH=$(SRCDIR)/hidden \
 		DYLIB_ONLY=YES \

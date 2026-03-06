@@ -5,8 +5,8 @@ include Makefile.rules
 
 $(EXE):
 	$(CC) $(ASAN_LDFLAGS) $(CFLAGS) -install_name $(shell pwd)/MyFramework.framework/Versions/A/MyFramework -dynamiclib -o MyFramework $(SRCDIR)/myframework.c
-	mkdir -p MyFramework.framework/Versions/A/Headers
-	mkdir -p MyFramework.framework/Versions/A/Resources
+	$(call MKDIR_P,MyFramework.framework/Versions/A/Headers)
+	$(call MKDIR_P,MyFramework.framework/Versions/A/Resources)
 	cp MyFramework MyFramework.framework/Versions/A
 	cp $(SRCDIR)/MyFramework.h MyFramework.framework/Versions/A/Headers
 	cp $(SRCDIR)/Info.plist MyFramework.framework/Versions/A/Resources

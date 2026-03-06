@@ -8,7 +8,7 @@ $(EXE):
 	$(CC) $(ASAN_LDFLAGS) $(CFLAGS) -dynamiclib -o com.apple.sbd $(SRCDIR)/bundle.c
 	mkdir com.apple.sbd.xpc
 	mv com.apple.sbd com.apple.sbd.xpc/
-	mkdir -p com.apple.sbd.xpc.dSYM/Contents/Resources/DWARF
+	$(call MKDIR_P,com.apple.sbd.xpc.dSYM/Contents/Resources/DWARF)
 	mv com.apple.sbd.dSYM/Contents/Resources/DWARF/com.apple.sbd com.apple.sbd.xpc.dSYM/Contents/Resources/DWARF/
 	rm -rf com.apple.sbd.dSYM
 	mkdir hide.app

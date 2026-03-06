@@ -9,15 +9,15 @@ include Makefile.rules
 
 OVERLAY := $(BUILDDIR)/overlay.yaml
 lib%.dylib: %.swift
-	echo "struct S {};">$(BUILDDIR)/header.h
+	$(call ECHO_TO_FILE,'struct S {};',$(BUILDDIR)/header.h)
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \
 	        DISABLE_SWIFT_INTERFACE=YES \
 		SWIFTFLAGS_EXTRAS="-import-objc-header header.h -enable-bridging-pch -pch-output-dir $(BUILDDIR)" \
                 VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
-	rm -f $(OVERLAY)
-	rm header*.pch
+	$(call RM_F,$(OVERLAY))
+	$(call RM_F,header*.pch)
 
 clean::
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \

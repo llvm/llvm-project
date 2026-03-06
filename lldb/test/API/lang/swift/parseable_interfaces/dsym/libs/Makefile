@@ -16,5 +16,5 @@ endif
 include Makefile.rules
 
 clean::
-	rm -f $(BASENAME).swiftinterface
-	rm -f $(CLANG_MODULE_CACHE_DIR)/$(BASENAME)-*.swiftmodule
+	$(call RM_F,$(BASENAME).swiftinterface)
+	$(call RM_F,$(CLANG_MODULE_CACHE_DIR)/$(BASENAME)-*.swiftmodule)

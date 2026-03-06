@@ -12,15 +12,11 @@ all: setup sharedA sharedB sharedC clear_modules
 include Makefile.rules
 
 setup:
-	# copy the source files into the build directory because we delete them
-	# to be really sure we only have/use the .dylibs and .swiftinterfaces
-	mkdir -p libs
-	cp $(SRCDIR)/libs/A.swift libs/AA.swift
-	cp $(SRCDIR)/libs/B.swift libs/BB.swift
-	cp $(SRCDIR)/libs/C.swift libs/CC.swift
-
-	# record the used SDKROOT, to use from the python test file
-	echo $(SWIFTSDKROOT) > $(BUILDDIR)/sdk-root.txt
+	$(call MKDIR_P,libs)
+	$(call CP,$(SRCDIR)/libs/A.swift,libs/AA.swift)
+	$(call CP,$(SRCDIR)/libs/B.swift,libs/BB.swift)
+	$(call CP,$(SRCDIR)/libs/C.swift,libs/CC.swift)
+	$(call ECHO_TO_FILE,'$(SWIFTSDKROOT)',$(BUILDDIR)/sdk-root.txt)
 
 sharedA:
 	"$(MAKE)" MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
@@ -41,16 +37,14 @@ sharedC:
 		BASENAME=CC -f $(SRCDIR)/libs/Makefile
 
 clear_modules:
-	# make sure we only have .swiftinterface files for the generated modules:
-	# remove the copied sources and the swiftmodules from the build directory
-	rm -f *.swiftmodule
-	rm -rf libs
-	rm -rf MCP
+	$(call RM_F,*.swiftmodule)
+	$(call RM_RF,libs)
+	$(call RM_RF,MCP)
 
 clean::
 	"$(MAKE)" VPATH=$(BUILDDIR) SWIFTC=$(SWIFTC) BASENAME=AA -f $(SRCDIR)/libs/Makefile clean
 	"$(MAKE)" VPATH=$(BUILDDIR) SWIFTC=$(SWIFTC) BASENAME=BB -f $(SRCDIR)/libs/Makefile clean
 	"$(MAKE)" VPATH=$(BUILDDIR) SWIFTC=$(SWIFTC) BASENAME=CC -f $(SRCDIR)/libs/Makefile clean
-	rm -rf libs
-	rm -rf MCP
-	rm -f sdk-root.txt
+	$(call RM_RF,libs)
+	$(call RM_RF,MCP)
+	$(call RM_F,sdk-root.txt)

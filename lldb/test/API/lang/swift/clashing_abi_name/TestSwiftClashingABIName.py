@@ -29,7 +29,8 @@ class TestSwiftClashingABIName(TestBase):
         self.build()
 
         lldbutil.run_to_source_breakpoint(
-            self, 'break for self', lldb.SBFileSpec('main.swift'))
+            self, 'break for self', lldb.SBFileSpec('main.swift'),
+            extra_images=['Library'])
 
         self.expect('expr --bind-generic-types true -- self', 
                     substrs=['a.Generic<a.One>', 't =', 'j = 98'])

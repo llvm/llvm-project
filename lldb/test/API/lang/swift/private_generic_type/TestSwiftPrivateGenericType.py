@@ -23,7 +23,7 @@ class TestSwiftPrivateGenericType(TestBase):
 
         target, process, _, _ = lldbutil.run_to_source_breakpoint(self, 
                 'break here for struct', lldb.SBFileSpec('Public.swift'),
-                extra_images=['Public'])
+                extra_images=['Public', 'Private'])
         # Make sure this fails without generic expression evaluation.
         self.expect("expr --bind-generic-types true -- self", 
                     substrs=["Couldn't realize Swift AST type of self."], 

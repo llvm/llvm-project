@@ -46,7 +46,8 @@ class TestLibraryResilient(TestBase):
         """
 
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
+        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info(),
+                                           extra_images=['SomeLibrary', 'SomeLibraryCore'])
 
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.
@@ -67,7 +68,8 @@ class TestLibraryResilient(TestBase):
         self.build()
         os.remove(self.getBuildArtifact("SomeLibraryCore.swiftmodule"))
         os.remove(self.getBuildArtifact("SomeLibraryCore.swiftinterface"))
-        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info())
+        lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.swift"), self.launch_info(),
+                                           extra_images=['SomeLibrary', 'SomeLibraryCore'])
 
         # This test is deliberately checking what the user will see, rather than
         # the structure provided by the Python API, in order to test the recovery.

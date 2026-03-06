@@ -12,7 +12,7 @@ class TestSwiftExpressionNoDebugInfo(TestBase):
         """Test running a Swift expression in a non-Swift context"""
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(
-            self, 'foo')
+            self, 'foo', extra_images=['Dylib'])
 
         types_log = self.getBuildArtifact("types.log")
         self.expect("log enable lldb types -f " + types_log)

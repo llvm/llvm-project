@@ -2,5 +2,5 @@ SWIFT_SOURCES := main.swift
 include Makefile.rules
 
 cleanup:
-	rm -f Makefile *.d
+	$(call RM_F,Makefile *.d)
 

@@ -24,7 +24,8 @@ class TestSwiftProgressReporting(TestBase):
         self.build()
 
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(self, 'break here',
-                                          lldb.SBFileSpec('main.swift'))
+                                          lldb.SBFileSpec('main.swift'),
+                                          extra_images=['Invisible'])
 
         self.assertGreater(thread.GetNumFrames(), 0)
         frame = thread.GetSelectedFrame()

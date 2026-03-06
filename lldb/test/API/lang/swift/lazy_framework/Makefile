@@ -12,4 +12,4 @@ Lazy.framework: $(SRCDIR)/Lazy.swift
 		DYLIB_SWIFT_SOURCES=Lazy.swift \
 		DYLIB_MODULENAME=Lazy \
 		FRAMEWORK=Lazy
-	rm -f $(BUILDDIR)/Lazy.swiftmodule $(BUILDDIR)/Lazy.swiftinterface
+	$(call RM_F,$(BUILDDIR)/Lazy.swiftmodule $(BUILDDIR)/Lazy.swiftinterface)

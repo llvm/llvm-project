@@ -24,4 +24,4 @@ $(ARCHIVE_NAME): $(ARCHIVE_OBJECTS) $(BASENAME).swiftmodule
 static_only: $(ARCHIVE_NAME)
 
 clean::
-	rm -f $(BASENAME).swiftinterface
+	$(call RM_F,$(BASENAME).swiftinterface)

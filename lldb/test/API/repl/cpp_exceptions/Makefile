@@ -7,7 +7,7 @@ all: sdkroot.txt libWrapper.dylib a.out
 include Makefile.rules
 
 libCppLib.dylib: CppLib/CppLib.cpp
-	mkdir -p CppLib
+	$(call MKDIR_P,CppLib)
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=CppLib DYLIB_ONLY=YES CXXFLAGS_EXTRAS=-fPIC \
 		DYLIB_CXX_SOURCES="CppLib/CppLib.cpp CppLib/CppLibWrapper.cpp"

@@ -15,15 +15,22 @@
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-SWIFTC ?= $(shell $(VPATH)/$(LEVEL)/find-swift.py)
+PYTHON ?= python3
+
+SWIFTC ?= $(shell $(PYTHON) "$(VPATH)/$(LEVEL)/find-swift.py")
 ifeq "$(SDKROOT)" ""
-	SWIFTSDKROOT = $(shell $(VPATH)/$(LEVEL)/find-swift.py -s)
+	SWIFTSDKROOT = $(shell $(PYTHON) "$(VPATH)/$(LEVEL)/find-swift.py" -s)
 else
 	SWIFTSDKROOT = $(SDKROOT)
 endif
-PYTHON ?= python3
 
-SWIFTFLAGS ?= $(DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-options
+ifeq "$(OS)" "Windows_NT"
+	SWIFT_DEBUG_INFO_FLAG ?= -g
+else
+	SWIFT_DEBUG_INFO_FLAG ?= $(DEBUG_INFO_FLAG)
+endif
+
+SWIFTFLAGS ?= $(SWIFT_DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-options
 
 SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
 SWIFTFLAGS += $(FRAMEWORK_INCLUDES)
@@ -77,7 +84,10 @@ endif
 # If C++ interop is enabled, the generated header file will try to include 
 # SWIFT_LIBS_DIR/swiftToCxx/_SwiftCxxInteroperability.h
 ifneq "$(SWIFT_CXX_INTEROP)" ""
-  CFLAGS += -I$(SWIFT_LIBS_DIR)
+	CFLAGS += -I$(SWIFT_LIBS_DIR)
+	ifeq "$(OS)" "Windows_NT"
+		CXXFLAGS += -D_MT -D_DLL
+	endif
 endif
 
 
@@ -101,7 +111,7 @@ endif
 
 ifeq "$(USESWIFTDRIVER)" "1"
 	LDFLAGS +=-L"$(SWIFTLIBS)"
-	ifeq "$(OS)" "Darwin"
+	ifeq ($(filter $(OS),Darwin Windows_NT),$(OS))
 		SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
 	endif
 	SWIFTFLAGS += -tools-directory "$(shell dirname $(CC))"
@@ -282,20 +292,20 @@ endif # Darwin
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(FRAMEWORK)" ""
-	mkdir -p $(FRAMEWORK).framework/Versions/A/Headers
-	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules
-	mkdir -p $(FRAMEWORK).framework/Versions/A/Resources
+	$(call MKDIR_P,$(FRAMEWORK).framework/Versions/A/Headers)
+	$(call MKDIR_P,$(FRAMEWORK).framework/Versions/A/Modules)
+	$(call MKDIR_P,$(FRAMEWORK).framework/Versions/A/Resources)
 ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
 ifneq "$(MODULENAME)" ""
-	mkdir -p $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule
-	cp -r $(MODULENAME).swiftmodule $(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule/$(ARCH).swiftmodule
+	$(call MKDIR_P,$(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule)
+	$(call CP_R,$(MODULENAME).swiftmodule,$(FRAMEWORK).framework/Versions/A/Modules/$(MODULENAME).swiftmodule/$(ARCH).swiftmodule)
 endif
 endif
-	(cd $(FRAMEWORK).framework/Versions; ln -sf A Current)
-	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Headers Headers)
-	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Modules Modules)
-	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/Resources Resources)
-	(cd $(FRAMEWORK).framework/; ln -sf Versions/A/$(FRAMEWORK) $(FRAMEWORK))
+	cd $(FRAMEWORK).framework/Versions && $(call LN_SF,A,Current)
+	cd $(FRAMEWORK).framework && $(call LN_SF,Versions/A/Headers,Headers)
+	cd $(FRAMEWORK).framework && $(call LN_SF,Versions/A/Modules,Modules)
+	cd $(FRAMEWORK).framework && $(call LN_SF,Versions/A/Resources,Resources)
+	cd $(FRAMEWORK).framework && $(call LN_SF,Versions/A/$(FRAMEWORK),$(FRAMEWORK))
 endif
 	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) \
             -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $(DYLIB_OBJECTS)

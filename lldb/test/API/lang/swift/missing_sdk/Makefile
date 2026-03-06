@@ -5,9 +5,9 @@ all: fakesdk a.out
 include Makefile.rules
 
 fakesdk:
-	ln -s $(SDKROOT) $@
+	$(call LN_SF,$(SDKROOT),$@)
 
 SWIFTFLAGS := $(subst $(SDKROOT),$(shell pwd)/fakesdk,$(SWIFTFLAGS))
 
 clean::
-	rm -f fakesdk a.out *.dSYM
+	$(call RM_F,fakesdk a.out *.dSYM)

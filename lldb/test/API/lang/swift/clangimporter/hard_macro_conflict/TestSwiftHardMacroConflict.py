@@ -18,7 +18,7 @@ class TestSwiftHardMacroConflict(TestBase):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'),
-            extra_images=['Framework.framework'])
+            extra_images=['Framework'])
         b_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Framework.swift'))
         log = self.getBuildArtifact("types.log")

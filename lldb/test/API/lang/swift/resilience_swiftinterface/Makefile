@@ -8,7 +8,7 @@ LD_EXTRAS = -lImpl -L$(BUILDDIR) -Xlinker -add_ast_path -Xlinker Impl.swiftmodul
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 
 ImplB: ImplB.swift
-	echo "Building an out-of-date swift interface"
+	$(call ECHO,"Building an out-of-date swift interface")
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		SWIFTFLAGS_EXTRAS="-I$(BUILDDIR) -enable-library-evolution" \
@@ -17,7 +17,7 @@ ImplB: ImplB.swift
 		DYLIB_SWIFT_SOURCES:=ImplB.swift \
 		-f $(MAKEFILE_RULES)
 	mv Impl.swiftinterface ImplB.swiftinterface
-	rm Impl.swiftmodule Impl.private.swiftinterface libImpl.dylib 
+	$(call RM,Impl.swiftmodule Impl.private.swiftinterface libImpl.dylib )
 
 ImplA: ImplB ImplA.swift
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
@@ -27,14 +27,14 @@ ImplA: ImplB ImplA.swift
 		DYLIB_ONLY:=YES DYLIB_NAME=Impl \
 		DYLIB_SWIFT_SOURCES:=ImplA.swift \
 		-f $(MAKEFILE_RULES)
-	echo "Moving out-of-date-swiftinterface into place"
-	rm -rf libImpl.dylib.dSYM Impl.swiftmodule Impl.private.swiftinterface
-	rm ImplA.swift.o ImplB.swift.o
+	$(call ECHO,"Moving out-of-date-swiftinterface into place")
+	$(call RM_RF,libImpl.dylib.dSYM Impl.swiftmodule Impl.private.swiftinterface)
+	$(call RM,ImplA.swift.o ImplB.swift.o)
 	mv ImplB.swiftinterface Impl.swiftinterface
 
 Postprocess:
-	echo "Compiling Impl.swiftinterfact to Impl.swiftmodule"
-	echo "import Impl" >trigger.swift
+	$(call ECHO,"Compiling Impl.swiftinterfact to Impl.swiftmodule")
+	$(call ECHO_TO_FILE,'import Impl',trigger.swift)
 	$(SWIFT_FE) -module-cache-path cache -c trigger.swift -o trigger -I.
 	mv cache/Impl*.swiftmodule Impl.swiftmodule
-	rm Impl.swiftinterface
+	$(call RM,Impl.swiftinterface)

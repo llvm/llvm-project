@@ -9,6 +9,6 @@ lib%.dylib: %.swift
 		DYLIB_NAME=$(shell basename $< .swift) \
 		DYLIB_SWIFT_SOURCES=$(shell basename $<) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(MAKEFILE_RULES) all
-	rm -f Library.private.swiftinterface
+	$(call RM_F,Library.private.swiftinterface)
 
 include Makefile.rules
