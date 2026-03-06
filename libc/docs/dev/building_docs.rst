@@ -39,10 +39,9 @@ invocation:
 
 .. code-block:: bash
 
-   cmake ../llvm \
+   cmake ../runtimes \
      -DLLVM_ENABLE_PROJECTS="libc" \
      -DLLVM_ENABLE_SPHINX=ON \
-     -DSPHINX_WARNINGS_AS_ERRORS=OFF \
      -DLIBC_INCLUDE_DOCS=ON \
      ...
 
@@ -78,30 +77,6 @@ The per-header implementation status pages under ``docs/headers/`` are
 If you add a new function and regenerate, these pages update automatically.
 Do **not** hand-edit the generated RST files in ``docs/headers/`` — your
 changes will be overwritten the next time the docs are built.
-
-Viewing Locally Without a Full Build
-=====================================
-
-For quick iteration on RST or Markdown prose you can run Sphinx directly,
-skipping the CMake step.  From the ``libc/docs/`` directory:
-
-.. code-block:: bash
-
-   # One-time setup
-   pip install -r ../../llvm/docs/requirements.txt
-
-   # Build HTML directly (no docgen — header pages will be stubs)
-   sphinx-build -b html . _build/html
-
-   # Open the result
-   open _build/html/index.html   # macOS
-   xdg-open _build/html/index.html  # Linux
-
-.. note::
-
-   The direct Sphinx invocation skips the CMake-driven ``docgen`` step, so
-   the ``headers/`` pages will show a "not found" error or display stub
-   content.  Use ``ninja docs-libc-html`` to get the fully generated output.
 
 Troubleshooting
 ===============
