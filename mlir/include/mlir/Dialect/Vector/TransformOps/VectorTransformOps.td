@@ -269,10 +269,19 @@ def ApplyUnrollMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
     Indicates that vector multi_reduction operations with more than one
     reduction dimension should be unrolled in a rank-reducing way.
 
-    This populates the patterns:
+    This populates the patterns from
+    `populateVectorMultiReductionUnrollingPatterns`, i.e.:
+    * `UnrollMultiReductionInnerReduction` (inner_reduction)
+    * `UnrollMultiReductionInnerParallel` (inner_parallel)
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
+  }];
 }
 
 

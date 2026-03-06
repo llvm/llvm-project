@@ -83,8 +83,9 @@ void populateVectorMultiReductionFlatteningPatterns(
 
 /// Populate the pattern set with the following patterns:
 ///
-void populateVectorMultiReductionUnrollingPatterns(RewritePatternSet &patterns,
-                                                   PatternBenefit benefit = 1);
+void populateVectorMultiReductionUnrollingPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
 ///
