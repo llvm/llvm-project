@@ -1905,15 +1905,16 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
 
   auto ReplaceValue = [&](Instruction &I, Value &V) { replaceValue(I, V); };
 
-  // Reduce the number of reductions by folding a binop of a reduction and a
-  // scalar (which might be another reduction) into a single reduction of a
-  // vector binop. This leverages associativity and commutativity of the
-  // binary operation (Add/Sub) to group reductions together.
+  // Bring the two reduce instructions closer together to provide an opportunity
+  // to see if they can be folded. Only focus on the direct Add/Sub between
+  // the two reduces instruction. whether it can ultimately be folded depends on
+  // subsequent type and cost model judgments.
   //
   // Examples:
-  //   (Reduce(X) + Y) + Reduce(Z)  -> Reduce(X + Z) + Y
-  //   (Reduce(X) - Y) - Reduce(Z)  -> Reduce(X - Z) - Y
-  //   Reduce(Z) - (Reduce(X) + Y)  -> Reduce(Z - X) - Y
+  //   Reduce(X) + Y + Reduce(Z)   -> Reduce(X) + Reduce(Z) + Y
+  //   Reduce(X) - Y - Reduce(Z)   -> Reduce(X) - Reduce(Z) - Y
+  //   Reduce(Z) - (Reduce(X) + Y) -> Reduce(Z) - Reduce(X) - Y
+  //
   if (auto *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0))) {
     if (matchAssociativeReduction(I, BinOpOpc, ReductionIID, Builder, Op0,
                                   I.getOperand(1),
