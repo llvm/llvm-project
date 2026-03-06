@@ -12,7 +12,6 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
