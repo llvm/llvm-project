@@ -106,8 +106,8 @@ add_or_sub(InType x, InType y) {
         }
       }
 
-      if constexpr (cpp::is_same_v<InType, bfloat16> &&
-                    cpp::is_same_v<OutType, bfloat16>) {
+      if constexpr (cpp::is_class_v<InType> &&
+                    cpp::is_same_v<OutType, InType>) {
         OutFPBits y_bits(y);
         if constexpr (IsSub)
           y_bits.set_sign(y_bits.sign().negate());

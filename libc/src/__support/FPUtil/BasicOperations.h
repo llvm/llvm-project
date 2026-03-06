@@ -46,6 +46,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> max(T x, T y) {
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
+#if !defined(LIBC_USE_SOFT_FLOAT16)
 #if defined(__LIBC_USE_BUILTIN_FMAXF16_FMINF16)
 template <> LIBC_INLINE float16 max(float16 x, float16 y) {
   return __builtin_fmaxf16(x, y);
@@ -60,6 +61,7 @@ template <> LIBC_INLINE float16 max(float16 x, float16 y) {
   return ((xi > yi) != (xi < 0 && yi < 0)) ? x : y;
 }
 #endif
+#endif // !LIBC_USE_SOFT_FLOAT16
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 #if defined(__LIBC_USE_BUILTIN_FMAX_FMIN) && !defined(LIBC_TARGET_ARCH_IS_X86)
@@ -86,6 +88,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> min(T x, T y) {
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
+#if !defined(LIBC_USE_SOFT_FLOAT16)
 #if defined(__LIBC_USE_BUILTIN_FMAXF16_FMINF16)
 template <> LIBC_INLINE float16 min(float16 x, float16 y) {
   return __builtin_fminf16(x, y);
@@ -100,6 +103,7 @@ template <> LIBC_INLINE float16 min(float16 x, float16 y) {
   return ((xi < yi) != (xi < 0 && yi < 0)) ? x : y;
 }
 #endif
+#endif // !LIBC_USE_SOFT_FLOAT16
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 #if defined(__LIBC_USE_BUILTIN_FMAX_FMIN) && !defined(LIBC_TARGET_ARCH_IS_X86)
