@@ -392,29 +392,97 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
 #undef CHECK_ALIGN_CONSECUTIVE
 
-  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.PointerAlignment = {/*Default=*/FormatStyle::PAS_Middle,
+                            /*ReturnType=*/FormatStyle::RTAS_Default,
+                            /*CStyleCast=*/FormatStyle::CAS_Default};
   CHECK_PARSE("PointerAlignment: Left", PointerAlignment,
-              FormatStyle::PAS_Left);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Left,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
   CHECK_PARSE("PointerAlignment: Right", PointerAlignment,
-              FormatStyle::PAS_Right);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Right,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
   CHECK_PARSE("PointerAlignment: Middle", PointerAlignment,
-              FormatStyle::PAS_Middle);
-  Style.ReferenceAlignment = FormatStyle::RAS_Middle;
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Middle,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
+  CHECK_PARSE("PointerAlignment:\n"
+              "  Default: Right\n"
+              "  ReturnType: Left",
+              PointerAlignment,
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Right,
+                   /*ReturnType=*/FormatStyle::RTAS_Left,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
+  CHECK_PARSE("PointerAlignment:\n"
+              "  Default: Right\n"
+              "  CStyleCast: Left",
+              PointerAlignment,
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Right,
+                   /*ReturnType=*/FormatStyle::RTAS_Left,
+                   /*CStyleCast=*/FormatStyle::CAS_Left}));
+
+  Style.ReferenceAlignment = {/*Default=*/FormatStyle::RAS_Middle,
+                              /*ReturnType=*/FormatStyle::RTAS_Default,
+                              /*CStyleCast=*/FormatStyle::CAS_Default};
   CHECK_PARSE("ReferenceAlignment: Pointer", ReferenceAlignment,
-              FormatStyle::RAS_Pointer);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Pointer,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
   CHECK_PARSE("ReferenceAlignment: Left", ReferenceAlignment,
-              FormatStyle::RAS_Left);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Left,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
   CHECK_PARSE("ReferenceAlignment: Right", ReferenceAlignment,
-              FormatStyle::RAS_Right);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Right,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
   CHECK_PARSE("ReferenceAlignment: Middle", ReferenceAlignment,
-              FormatStyle::RAS_Middle);
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Middle,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
+  CHECK_PARSE("ReferenceAlignment:\n"
+              "  Default: Right\n"
+              "  ReturnType: Left",
+              ReferenceAlignment,
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Right,
+                   /*ReturnType=*/FormatStyle::RTAS_Left,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
+  CHECK_PARSE("ReferenceAlignment:\n"
+              "  Default: Right\n"
+              "  CStyleCast: Left",
+              ReferenceAlignment,
+              FormatStyle::ReferenceAlignmentOptions(
+                  {/*Default=*/FormatStyle::RAS_Right,
+                   /*ReturnType=*/FormatStyle::RTAS_Left,
+                   /*CStyleCast=*/FormatStyle::CAS_Left}));
+
   // For backward compatibility:
   CHECK_PARSE("PointerBindsToType: Left", PointerAlignment,
-              FormatStyle::PAS_Left);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Left,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
   CHECK_PARSE("PointerBindsToType: Right", PointerAlignment,
-              FormatStyle::PAS_Right);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Right,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
   CHECK_PARSE("PointerBindsToType: Middle", PointerAlignment,
-              FormatStyle::PAS_Middle);
+              FormatStyle::PointerAlignmentOptions(
+                  {/*Default=*/FormatStyle::PAS_Middle,
+                   /*ReturnType=*/FormatStyle::RTAS_Default,
+                   /*CStyleCast=*/FormatStyle::CAS_Default}));
 
   Style.ReflowComments = FormatStyle::RCS_Always;
   CHECK_PARSE("ReflowComments: Never", ReflowComments, FormatStyle::RCS_Never);
