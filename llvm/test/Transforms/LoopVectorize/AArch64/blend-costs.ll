@@ -4,9 +4,9 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx14.0.0"
 
-define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr %dst, i1 %c) {
+define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr %dst, ptr noalias %dst2, i1 %c) {
 ; CHECK-LABEL: define void @test_blend_feeding_replicated_store_1(
-; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[SRC:%.*]], ptr [[DST:%.*]], i1 [[C:%.*]]) {
+; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[SRC:%.*]], ptr [[DST:%.*]], ptr noalias [[DST2:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP43:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP43]], 16
@@ -18,6 +18,8 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP43]], [[TMP2]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x ptr> poison, ptr [[DST2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT2]], <16 x ptr> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x ptr> poison, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT1]], <16 x ptr> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -29,7 +31,7 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[TMP24:%.*]] = select <16 x i1> [[TMP22]], <16 x i1> [[BROADCAST_SPLAT]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP26:%.*]] = xor <16 x i1> [[TMP22]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <16 x i1> [[TMP24]], [[TMP26]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP22]], <16 x ptr> [[BROADCAST_SPLAT2]], <16 x ptr> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP22]], <16 x ptr> [[BROADCAST_SPLAT2]], <16 x ptr> [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <16 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -162,7 +164,7 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN_2]], label %[[LOOP_LATCH]]
 ; CHECK:       [[THEN_2]]:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ null, %[[CONTINUE]] ], [ [[DST]], %[[THEN]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[DST2]], %[[CONTINUE]] ], [ [[DST]], %[[THEN]] ]
 ; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -189,7 +191,7 @@ then:
   br i1 %c, label %then.2, label %loop.latch
 
 then.2:
-  %p = phi ptr [ null, %continue ], [ %dst, %then ]
+  %p = phi ptr [ %dst2, %continue ], [ %dst, %then ]
   store i8 0, ptr %p, align 1
   br label %loop.latch
 
