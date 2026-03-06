@@ -14230,11 +14230,26 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
     // We allow integer constant expressions in all cases.
     } else if (DclT->isIntegralOrEnumerationType()) {
-      if (getLangOpts().CPlusPlus11 && DclT.isVolatileQualified())
-        // In C++11, a non-constexpr const static data member with an
-        // in-class initializer cannot be volatile.
-        Diag(VDecl->getLocation(), diag::err_in_class_initializer_volatile);
+  if (getLangOpts().CPlusPlus11 && DclT.isVolatileQualified())
+    // In C++11, a non-constexpr const static data member with an
+    // in-class initializer cannot be volatile.
+    Diag(VDecl->getLocation(), diag::err_in_class_initializer_volatile);
 
+  // 新增：检查是否真的是常量表达式（适用于所有语言版本）
+  if (!Init->isValueDependent()) {
+    Expr::EvalResult EvalResult;
+    if (!Init->EvaluateAsConstantExpr(EvalResult, Context)) {
+      // 如果不是常量表达式，报错
+      Diag(Init->getExprLoc(), diag::err_in_class_initializer_non_constant)
+        << Init->getSourceRange();
+      VDecl->setInvalidDecl();
+
+      // 如果求值过程中有附注（比如 volatile 的提示），输出它们
+      if (EvalResult.Diag) {
+        Diag(EvalResult.Diag->first, EvalResult.Diag->second);
+      }
+    }
+  }
     // We allow foldable floating-point constants as an extension.
     } else if (DclT->isFloatingType()) { // also permits complex, which is ok
       // In C++98, this is a GNU extension. In C++11, it is not, but we support
