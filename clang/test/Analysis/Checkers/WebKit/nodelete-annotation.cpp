@@ -213,6 +213,31 @@ public:
     m_obj = obj; // expected-warning{{A function 'setObj' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
 
+  RefPtr<RefCountable> [[clang::annotate_type("webkit.nodelete")]] takeObj() {
+    return std::move(m_obj); // expected-warning{{A function 'takeObj' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+  struct Duration {
+    double seconds;
+  };
+  Duration [[clang::annotate_type("webkit.nodelete")]] returnArg(Duration duration) {
+    return duration;
+  }
+
+  Duration m_duration;
+  Duration [[clang::annotate_type("webkit.nodelete")]] returnStruct() {
+    return std::move(m_duration);
+  }
+
+  struct PtrContainer {
+    RefPtr<RefCountable> ptr;
+  };
+
+  PtrContainer m_container;
+  PtrContainer [[clang::annotate_type("webkit.nodelete")]] returnPtrContainer() {
+    return std::move(m_container); // expected-warning{{A function 'returnPtrContainer' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
   void [[clang::annotate_type("webkit.nodelete")]] swapObj(RefPtr<RefCountable>&& obj) {
     m_obj.swap(obj);
   }

@@ -883,7 +883,25 @@ public:
     }
 
     // Recursively descend into the callee to confirm that it's trivial.
-    return IsFunctionTrivial(CE->getConstructor());
+    auto *Ctor = CE->getConstructor();
+    if (Ctor->isMoveConstructor() && !IsFirstArgTrivialDtorOrLocalOrParm(CE))
+      return false;
+    return IsFunctionTrivial(Ctor);
+  }
+
+  bool IsFirstArgTrivialDtorOrLocalOrParm(const CXXConstructExpr *CE) {
+    if (CE->getNumArgs() != 1)
+      return false;
+    auto *Arg = CE->getArg(0)->IgnoreParenCasts();
+    if (CanTriviallyDestruct(Arg->getType()))
+      return true;
+    auto DRE = dyn_cast<DeclRefExpr>(Arg);
+    if (!DRE)
+      return false;
+    auto *Decl = dyn_cast_or_null<VarDecl>(DRE->getDecl());
+    if (!Decl)
+      return false;
+    return Decl->isLocalVarDeclOrParm();
   }
 
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
