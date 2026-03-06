@@ -2602,6 +2602,19 @@ public:
       if (I1 && I2) {
         if (I1->getParent() != I2->getParent())
           return CheckSameEntryOrFail();
+        Value *V;
+        Value *Cond;
+        // ZExt i1 to something must be considered same opcode for select i1
+        // cmp, x, y
+        // Required to better match the transformation after
+        // BoUpSLP::matchesInversedZExtSelect analysis.
+        if ((match(I1, m_ZExt(m_Value(V))) &&
+             match(I2, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+             V->getType() == Cond->getType()) ||
+            (match(I2, m_ZExt(m_Value(V))) &&
+             match(I1, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+             V->getType() == Cond->getType()))
+          return LookAheadHeuristics::ScoreSameOpcode;
         SmallVector<Value *, 4> Ops(MainAltOps);
         Ops.push_back(I1);
         Ops.push_back(I2);
@@ -3549,7 +3562,7 @@ public:
   /// root of profitable tree to vectorize. Return std::nullopt if no candidate
   /// scored above the LookAheadHeuristics::ScoreFail. \param Limit Lower limit
   /// of the cost, considered to be good enough score.
-  std::optional<int>
+  std::pair<std::optional<int>, int>
   findBestRootPair(ArrayRef<std::pair<Value *, Value *>> Candidates,
                    int Limit = LookAheadHeuristics::ScoreFail) const {
     LookAheadHeuristics LookAhead(*TLI, *DL, *SE, *this, /*NumLanes=*/2,
@@ -3566,7 +3579,7 @@ public:
         Index = I;
       }
     }
-    return Index;
+    return std::make_pair(Index, BestScore);
   }
 
   /// Checks if the instruction is marked for deletion.
@@ -4644,8 +4657,7 @@ private:
   /// in general.
   ScalarsVectorizationLegality
   getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
-                                  const EdgeInfo &UserTreeIdx,
-                                  bool TryCopyableElementsVectorization) const;
+                                  const EdgeInfo &UserTreeIdx) const;
 
   /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
@@ -10274,7 +10286,7 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
       Candidates[0] = std::make_pair(Operands[0][I], Operands[0][I + 1]);
       Candidates[1] = std::make_pair(Operands[0][I], Operands[1][I + 1]);
       Candidates[2] = std::make_pair(Operands[1][I], Operands[0][I + 1]);
-      std::optional<int> Res = findBestRootPair(Candidates);
+      std::optional<int> Res = findBestRootPair(Candidates).first;
       switch (Res.value_or(0)) {
       case 0:
         break;
@@ -11520,26 +11532,226 @@ class InstructionsCompatibilityAnalysis {
     llvm_unreachable("Unexpected vectorization of the instructions.");
   }
 
+  /// Check if the specified \p VL list of values is better to represent as
+  /// uniform with copyables, as modeled via \p CopyableS, or as alternate (or
+  /// uniform with compatible ops), modeled via \p S.
+  /// Performs the analysis of the operands, choosing the preferred main
+  /// instruction and checking the matching of the operands for the main
+  /// instruction and copyable elements.
+  bool isCopyablePreferable(ArrayRef<Value *> VL, const BoUpSLP &R,
+                            const InstructionsState &S,
+                            const InstructionsState &CopyableS) {
+    // If all elements are vectorized already - keep as is.
+    if (all_of(VL, [&](Value *V) {
+          return isa<PoisonValue>(V) || R.isVectorized(V);
+        }))
+      return false;
+    Instruction *SMain = S.getMainOp();
+    Instruction *SAlt = S.isAltShuffle() ? S.getAltOp() : nullptr;
+    const bool IsCommutative = ::isCommutative(SMain);
+    const bool IsAltCommutative =
+        S.isAltShuffle() ? ::isCommutative(SAlt) : false;
+    const bool IsMainCommutative = ::isCommutative(MainOp);
+    SmallVector<BoUpSLP::ValueList> Ops;
+    buildOriginalOperands(S, SMain, Ops);
+    // Support only binary operations for now.
+    if (Ops.size() != 2)
+      return false;
+    // Try to find better candidate for S main instruction, which operands have
+    // better matching.
+    auto CheckOperands = [](Value *Op, Value *SMainOp) {
+      auto *OpI = dyn_cast<BinaryOperator>(Op);
+      if (!OpI)
+        return false;
+      auto *SMainOpI = dyn_cast<BinaryOperator>(SMainOp);
+      if (!SMainOpI)
+        return true;
+      return any_of(OpI->operands(), [&](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        return I && I->getOpcode() == SMainOpI->getOpcode();
+      });
+    };
+    SmallPtrSet<Value *, 8> Operands;
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || I == SMain)
+        continue;
+      Instruction *MatchingOp = S.getMatchingMainOpOrAltOp(I);
+      if (MatchingOp != SMain)
+        continue;
+      SmallVector<BoUpSLP::ValueList> VOps;
+      buildOriginalOperands(S, I, VOps);
+      Operands.insert(I->op_begin(), I->op_end());
+      assert(VOps.size() == 2 && Ops.size() == 2 &&
+             "Expected binary operations only.");
+      if (CheckOperands(VOps[0][0], Ops[0][0]) ||
+          CheckOperands(VOps[1][0], Ops[1][0]) ||
+          (IsCommutative && (CheckOperands(VOps[0][0], Ops[1][0]) ||
+                             CheckOperands(VOps[1][0], Ops[0][0])))) {
+        SMain = I;
+        Ops.swap(VOps);
+        break;
+      }
+    }
+    SmallVector<BoUpSLP::ValueList> MainOps;
+    buildOriginalOperands(S, MainOp, MainOps);
+
+    auto BuildFirstOperandCandidates =
+        [&](SmallVectorImpl<std::pair<Value *, Value *>> &Candidates,
+            ArrayRef<BoUpSLP::ValueList> Ops, Value *Op0, Value *Op1,
+            bool IsCommutative) {
+          Candidates.emplace_back(Ops[0][0], Op0);
+          if (IsCommutative)
+            Candidates.emplace_back(Ops[0][0], Op1);
+        };
+
+    auto BuildSecondOperandCandidates =
+        [&](SmallVectorImpl<std::pair<Value *, Value *>> &Candidates,
+            ArrayRef<BoUpSLP::ValueList> Ops, int PrevBestIdx, Value *Op0,
+            Value *Op1, bool IsCommutative) {
+          if (PrevBestIdx != 1)
+            Candidates.emplace_back(Ops[1][0], Op1);
+          if (PrevBestIdx != 0 && IsCommutative)
+            Candidates.emplace_back(Ops[1][0], Op0);
+        };
+
+    auto FindBestCandidate =
+        [&](ArrayRef<std::pair<Value *, Value *>> Candidates, bool &IsConst,
+            int &Score) {
+          auto Res = R.findBestRootPair(Candidates);
+          Score = Res.second;
+          IsConst =
+              Res.second == BoUpSLP::LookAheadHeuristics::ScoreConstants &&
+              isConstant(Candidates[Res.first.value_or(0)].first) &&
+              isConstant(Candidates[Res.first.value_or(0)].second);
+          if (IsConst) {
+            // Check if there are splat candidates and consider them better
+            // option.
+            for (const auto [Idx, P] : enumerate(Candidates)) {
+              if (!isConstant(P.first) && !isConstant(P.second) &&
+                  P.second == P.first) {
+                Res.first = Idx;
+                IsConst = false;
+                Score = isa<LoadInst>(Candidates[Res.first.value_or(0)].first)
+                            ? BoUpSLP::LookAheadHeuristics::ScoreSplatLoads
+                            : BoUpSLP::LookAheadHeuristics::ScoreSplat;
+                break;
+              }
+            }
+          }
+          return Res.first;
+        };
+
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || (I == MainOp && (!S.isAltShuffle() || I == SMain)) ||
+          (!S.isAltShuffle() && I == SMain))
+        continue;
+      SmallVector<BoUpSLP::ValueList> VOps;
+      buildOriginalOperands(S, I == SMain ? MainOp : I, VOps);
+      SmallVector<Value *> CopyableOps =
+          getOperands(CopyableS, I == MainOp ? SMain : I);
+      if (CopyableOps.size() == VOps.size() &&
+          all_of(zip(CopyableOps, VOps), [&](const auto &P) {
+            return std::get<0>(P) == std::get<1>(P)[0];
+          }))
+        continue;
+      SmallVector<std::pair<Value *, Value *>> Candidates;
+      BuildFirstOperandCandidates(Candidates, MainOps, CopyableOps[0],
+                                  CopyableOps[1], IsMainCommutative);
+      const unsigned OpSize = Candidates.size();
+      Instruction *MatchingOp =
+          S.getMatchingMainOpOrAltOp(I) == S.getMainOp() ? SMain : SAlt;
+      const bool IsCommutativeInst =
+          (MatchingOp == SMain ? IsCommutative : IsAltCommutative) ||
+          ::isCommutative(I, MatchingOp);
+      if (S.isAltShuffle() && MatchingOp == SAlt &&
+          any_of(VOps, [&](const BoUpSLP::ValueList &Ops) {
+            auto *I = dyn_cast<BinaryOperator>(Ops[0]);
+            return I && Operands.contains(I);
+          }))
+        return false;
+      if (S.isAltShuffle() && MatchingOp == SMain)
+        Operands.insert(I->op_begin(), I->op_end());
+      BuildFirstOperandCandidates(Candidates, Ops, VOps[0][0], VOps[1][0],
+                                  IsCommutativeInst);
+      bool IsBestConst;
+      int Score;
+      std::optional<int> BestOp =
+          FindBestCandidate(Candidates, IsBestConst, Score);
+      const bool IsOriginalBetter =
+          static_cast<unsigned>(BestOp.value_or(OpSize)) >= OpSize;
+      Candidates.clear();
+      BuildSecondOperandCandidates(
+          Candidates, MainOps, IsOriginalBetter ? -1 : *BestOp, CopyableOps[0],
+          CopyableOps[1], IsMainCommutative);
+      const unsigned SecondOpSize = Candidates.size();
+      BuildSecondOperandCandidates(
+          Candidates, Ops,
+          IsOriginalBetter ? BestOp.value_or(OpSize - 1) - OpSize : -1,
+          VOps[0][0], VOps[1][0], IsCommutativeInst);
+      bool IsSecondBestConst;
+      int SecondScore;
+      std::optional<int> SecondBestOp =
+          FindBestCandidate(Candidates, IsSecondBestConst, SecondScore);
+      // No best candidates.
+      if (!BestOp && !SecondBestOp)
+        return false;
+      // Original better in both ops combinations.
+      const bool IsSecondOriginalBetter =
+          static_cast<unsigned>(SecondBestOp.value_or(SecondOpSize)) >=
+          SecondOpSize;
+      if (IsOriginalBetter && IsSecondOriginalBetter)
+        return false;
+      // Original is better in second combination, but in the first combination
+      // no best candidates.
+      if (!BestOp && IsSecondOriginalBetter)
+        return false;
+      // Original is better in first combination, but in the second combination
+      // no best candidates.
+      if (!SecondBestOp && IsOriginalBetter)
+        return false;
+      // Copyable is best in the first combination, but it is constant, but
+      // original is better in second non-constant combination.
+      if (!IsOriginalBetter && IsBestConst && IsSecondOriginalBetter &&
+          !IsSecondBestConst)
+        return false;
+      // Copyable is best in the second combination, but it is constant, but
+      // original is better in the first non-constant combination.
+      if (BestOp && IsOriginalBetter && !IsBestConst &&
+          !IsSecondOriginalBetter && IsSecondBestConst)
+        return false;
+      // Original combination score is better.
+      if (((Score > SecondScore ||
+            (Score <= BoUpSLP::LookAheadHeuristics::ScoreAltOpcodes &&
+             Score == SecondScore)) &&
+           IsOriginalBetter) ||
+          (IsSecondOriginalBetter &&
+           (SecondScore > Score ||
+            (Score <= BoUpSLP::LookAheadHeuristics::ScoreAltOpcodes &&
+             Score == SecondScore))))
+        return false;
+    }
+    return true;
+  }
+
 public:
   InstructionsCompatibilityAnalysis(DominatorTree &DT, const DataLayout &DL,
                                     const TargetTransformInfo &TTI,
                                     const TargetLibraryInfo &TLI)
       : DT(DT), DL(DL), TTI(TTI), TLI(TLI) {}
 
-  InstructionsState
-  buildInstructionsState(ArrayRef<Value *> VL, const BoUpSLP &R,
-                         bool TryCopyableElementsVectorization,
-                         bool WithProfitabilityCheck = false,
-                         bool SkipSameCodeCheck = false) {
+  InstructionsState buildInstructionsState(ArrayRef<Value *> VL,
+                                           const BoUpSLP &R,
+                                           bool WithProfitabilityCheck = false,
+                                           bool SkipSameCodeCheck = false) {
     InstructionsState S = (SkipSameCodeCheck || !allSameBlock(VL))
                               ? InstructionsState::invalid()
                               : getSameOpcode(VL, TLI);
-    if (S)
-      return S;
     // Check if series of selects + zext i1 %x to in can be combined into
     // selects + select %x, i32 1, i32 0.
     Instruction *SelectOp = nullptr;
-    if (allSameBlock(VL) && all_of(VL, [&](Value *V) {
+    if (!S && allSameBlock(VL) && all_of(VL, [&](Value *V) {
           if (match(V, m_Select(m_Value(), m_Value(), m_Value()))) {
             if (!SelectOp)
               SelectOp = cast<Instruction>(V);
@@ -11552,12 +11764,33 @@ public:
       if (SelectOp)
         return InstructionsState(SelectOp, SelectOp);
     }
-    if (!VectorizeCopyableElements || !TryCopyableElementsVectorization)
+    if (S && S.isAltShuffle()) {
+      Type *ScalarTy = S.getMainOp()->getType();
+      VectorType *VecTy = getWidenedType(ScalarTy, VL.size());
+      unsigned Opcode0 = S.getOpcode();
+      unsigned Opcode1 = S.getAltOpcode();
+      SmallBitVector OpcodeMask(
+          getAltInstrMask(VL, ScalarTy, Opcode0, Opcode1));
+      // If this pattern is supported by the target then we consider the order.
+      if (TTI.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask))
+        return S;
+    } else if (S && (!VectorizeCopyableElements ||
+                     !isa<BinaryOperator>(S.getMainOp()) ||
+                     all_of(VL, [&](Value *V) {
+                       auto *I = dyn_cast<Instruction>(V);
+                       return !I || I->getOpcode() == S.getOpcode();
+                     }))) {
+      return S;
+    }
+    if (!VectorizeCopyableElements)
       return S;
     findAndSetMainInstruction(VL, R);
     if (!MainOp)
-      return InstructionsState::invalid();
+      return S;
+    InstructionsState OrigS = S;
     S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+    if (OrigS && !isCopyablePreferable(VL, R, OrigS, S))
+      return OrigS;
     if (!WithProfitabilityCheck)
       return S;
     // Check if it is profitable to vectorize the instruction.
@@ -11580,19 +11813,19 @@ public:
       BuildCandidates(Candidates1, Operands[0][0], Operands[0][1]);
       BuildCandidates(Candidates2, Operands[1][0], Operands[1][1]);
       bool Res = !Candidates1.empty() && !Candidates2.empty() &&
-                 R.findBestRootPair(Candidates1) &&
-                 R.findBestRootPair(Candidates2);
+                 R.findBestRootPair(Candidates1).first &&
+                 R.findBestRootPair(Candidates2).first;
       if (!Res && isCommutative(MainOp)) {
         Candidates1.clear();
         Candidates2.clear();
         BuildCandidates(Candidates1, Operands[0][0], Operands[1][1]);
         BuildCandidates(Candidates2, Operands[1][0], Operands[0][1]);
         Res = !Candidates1.empty() && !Candidates2.empty() &&
-              R.findBestRootPair(Candidates1) &&
-              R.findBestRootPair(Candidates2);
+              R.findBestRootPair(Candidates1).first &&
+              R.findBestRootPair(Candidates2).first;
       }
       if (!Res)
-        return InstructionsState::invalid();
+        return OrigS;
       constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
       InstructionCost ScalarCost = TTI.getInstructionCost(S.getMainOp(), Kind);
       InstructionCost VectorCost;
@@ -11618,7 +11851,7 @@ public:
         llvm_unreachable("Unexpected instruction.");
       }
       if (VectorCost > ScalarCost)
-        return InstructionsState::invalid();
+        return OrigS;
       return S;
     }
     assert(Operands.size() == 2 && "Unexpected number of operands!");
@@ -11634,7 +11867,7 @@ public:
         all_of(VL, [&](Value *V) {
           return isa<PHINode>(V) || !S.isCopyableElement(V);
         }))
-      return InstructionsState::invalid();
+      return OrigS;
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
@@ -11654,7 +11887,7 @@ public:
     }
     // 2. Check, if operands can be vectorized.
     if (count_if(Operands.back(), IsaPred<Instruction>) > 1)
-      return InstructionsState::invalid();
+      return OrigS;
     auto CheckOperand = [&](ArrayRef<Value *> Ops) {
       if (allConstant(Ops) || isSplat(Ops))
         return true;
@@ -11677,8 +11910,7 @@ public:
       // First operand not a constant or splat? Last attempt - check for
       // potential vectorization.
       InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
-      InstructionsState OpS = Analysis.buildInstructionsState(
-          Ops, R, /*TryCopyableElementsVectorization=*/true);
+      InstructionsState OpS = Analysis.buildInstructionsState(Ops, R);
       if (!OpS || (OpS.getOpcode() == Instruction::PHI && !allSameBlock(Ops)))
         return false;
       unsigned CopyableNum =
@@ -11686,7 +11918,7 @@ public:
       return CopyableNum <= VL.size() / 2;
     };
     if (!CheckOperand(Operands.front()))
-      return InstructionsState::invalid();
+      return OrigS;
 
     return S;
   }
@@ -11713,15 +11945,14 @@ public:
 };
 } // namespace
 
-BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
-    ArrayRef<Value *> VL, unsigned Depth, const EdgeInfo &UserTreeIdx,
-    bool TryCopyableElementsVectorization) const {
+BoUpSLP::ScalarsVectorizationLegality
+BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
+                                         const EdgeInfo &UserTreeIdx) const {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   InstructionsState S = Analysis.buildInstructionsState(
-      VL, *this, TryCopyableElementsVectorization,
-      /*WithProfitabilityCheck=*/true, TryCopyableElementsVectorization);
+      VL, *this, /*WithProfitabilityCheck=*/true);
 
   bool AreScatterAllGEPSameBlock = false;
   if (!S) {
@@ -11982,8 +12213,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return;
   }
 
-  ScalarsVectorizationLegality Legality = getScalarsVectorizationLegality(
-      VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/false);
+  ScalarsVectorizationLegality Legality =
+      getScalarsVectorizationLegality(VL, Depth, UserTreeIdx);
   InstructionsState S = Legality.getInstructionsState();
   if (!Legality.isLegal()) {
     if (Legality.trySplitVectorize()) {
@@ -11992,18 +12223,11 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
         return;
     }
-    if (!S)
-      Legality = getScalarsVectorizationLegality(
-          VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/true);
-    if (!Legality.isLegal()) {
-      if (Legality.tryToFindDuplicates())
-        tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S,
-                            UserTreeIdx);
+    if (Legality.tryToFindDuplicates())
+      tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx);
 
-      newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
-      return;
-    }
-    S = Legality.getInstructionsState();
+    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
+    return;
   }
 
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.
@@ -13712,15 +13936,15 @@ void BoUpSLP::transformNodes() {
     for (unsigned Op : seq<unsigned>(S.getMainOp()->getNumOperands()))
       Candidates.emplace_back().emplace_back(I1->getOperand(Op),
                                              I2->getOperand(Op));
-    return all_of(
-        Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
-          return all_of(Cand,
-                        [](const std::pair<Value *, Value *> &P) {
-                          return isa<Constant>(P.first) ||
-                                 isa<Constant>(P.second) || P.first == P.second;
-                        }) ||
-                 findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads);
-        });
+    return all_of(Candidates, [this](
+                                  ArrayRef<std::pair<Value *, Value *>> Cand) {
+      return all_of(Cand,
+                    [](const std::pair<Value *, Value *> &P) {
+                      return isa<Constant>(P.first) ||
+                             isa<Constant>(P.second) || P.first == P.second;
+                    }) ||
+             findBestRootPair(Cand, LookAheadHeuristics::ScoreSplatLoads).first;
+    });
   };
 
   // Try to reorder gather nodes for better vectorization opportunities.
@@ -24587,8 +24811,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     ValOps.insert(cast<StoreInst>(V)->getValueOperand());
   // Operands are not same/alt opcodes or non-power-of-2 uniques - exit.
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
-  InstructionsState S = Analysis.buildInstructionsState(
-      ValOps.getArrayRef(), R, /*TryCopyableElementsVectorization=*/true);
+  InstructionsState S =
+      Analysis.buildInstructionsState(ValOps.getArrayRef(), R);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
     bool IsAllowedSize =
@@ -26018,8 +26242,7 @@ public:
         Ops = LocalReducedVals.back();
       Ops.append(RV.begin(), RV.end());
       InstructionsCompatibilityAnalysis Analysis(DT, DL, *TTI, TLI);
-      InstructionsState OpS =
-          Analysis.buildInstructionsState(Ops, V, VectorizeCopyableElements);
+      InstructionsState OpS = Analysis.buildInstructionsState(Ops, V);
       if (LocalReducedVals.empty()) {
         LocalReducedVals.push_back(Ops);
         States.push_back(OpS);
@@ -27619,7 +27842,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
 
   // We have multiple options. Try to pick the single best.
-  std::optional<int> BestCandidate = R.findBestRootPair(Candidates);
+  std::optional<int> BestCandidate = R.findBestRootPair(Candidates).first;
   if (!BestCandidate)
     return false;
   return (*BestCandidate == 0 &&
@@ -28542,7 +28765,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       NewVL.back() = V1->getValueOperand();
       InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
       InstructionsState S = Analysis.buildInstructionsState(
-          NewVL, R, VectorizeCopyableElements, /*WithProfitabilityCheck=*/true,
+          NewVL, R, /*WithProfitabilityCheck=*/true,
           /*SkipSameCodeCheck=*/!SameParent);
       if (S)
         return true;
