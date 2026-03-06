@@ -2507,6 +2507,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     AM.HasBaseReg = true;
     AM.BaseOffs = Dist;
     if (TLI->isLegalFlatAddressingMode(AM, AS) &&
+        (!TII->usesASYNC_CNT(MI) || Dist >= 0) &&
         (uint32_t)std::abs(Dist) > MaxDist) {
       MaxDist = std::abs(Dist);
 
@@ -2534,7 +2535,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
       AM.HasBaseReg = true;
       AM.BaseOffs = OtherOffset - AnchorAddr.Offset;
 
-      if (TLI->isLegalFlatAddressingMode(AM, AS)) {
+      if (TLI->isLegalFlatAddressingMode(AM, AS) &&
+          (!TII->usesASYNC_CNT(*OtherMI) || AM.BaseOffs >= 0)) {
         LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
                    OtherMI->dump());
         int32_t OtherOffsetDiff = OtherOffset - AnchorAddr.Offset;
