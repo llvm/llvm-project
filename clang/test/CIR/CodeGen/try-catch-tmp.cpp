@@ -596,7 +596,7 @@ void cleanup_inside_try_body() {
   }
 }
 
-// CIR: cir.func {{.*}} @_Z23cleanup_inside_try_bodyv(){{.*}} personality(@__gxx_personality_v0) {
+// CIR: cir.func {{.*}} @_Z23cleanup_inside_try_bodyv(){{.*}} personality(@__gxx_personality_v0){{.*}}{
 // CIR: cir.scope {
 // CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"]
 // CIR:   cir.try {

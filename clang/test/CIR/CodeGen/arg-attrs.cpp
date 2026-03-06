@@ -15,10 +15,10 @@ struct Struct {
 };
 
 void Struct::this_func(){}
-  // CIR: cir.func {{.*}}@_ZN6Struct9this_funcEv(%{{.*}}: !cir.ptr<!rec_Struct> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef} {{.*}}) {
+  // CIR: cir.func {{.*}}@_ZN6Struct9this_funcEv(%{{.*}}: !cir.ptr<!rec_Struct> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef} {{.*}}){{.*}}{
   // BOTH: define {{.*}}void @_ZN6Struct9this_funcEv(ptr noundef nonnull align 4 dereferenceable(20) %{{.*}})
 void Struct::arg_attr(Struct s, int &i, Incomplete &j){}
-  // CIR: cir.func {{.*}}@_ZN6Struct8arg_attrES_RiR10Incomplete(%{{.*}}: !cir.ptr<!rec_Struct> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef} {{.*}}, %{{.*}}: !rec_Struct {{.*}}, %{{.*}}: !cir.ptr<!s32i> {llvm.align = 8 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef} {{.*}}, %arg3: !cir.ptr<!rec_Incomplete> {llvm.align = 8 : i64, llvm.nonnull, llvm.noundef} {{.*}}) {
+  // CIR: cir.func {{.*}}@_ZN6Struct8arg_attrES_RiR10Incomplete(%{{.*}}: !cir.ptr<!rec_Struct> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef} {{.*}}, %{{.*}}: !rec_Struct {{.*}}, %{{.*}}: !cir.ptr<!s32i> {llvm.align = 8 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef} {{.*}}, %arg3: !cir.ptr<!rec_Incomplete> {llvm.align = 8 : i64, llvm.nonnull, llvm.noundef} {{.*}}){{.*}}{
   // LLVM: define {{.*}}void @_ZN6Struct8arg_attrES_RiR10Incomplete(ptr noundef nonnull align 4 dereferenceable(20) %{{.*}}, %struct.Struct %{{.*}}, ptr noundef nonnull align 8 dereferenceable(4) %{{.*}}, ptr noundef nonnull align 8 %{{.*}})
   // OGCG: define {{.*}}void @_ZN6Struct8arg_attrES_RiR10Incomplete(ptr noundef nonnull align 4 dereferenceable(20) %{{.*}}, ptr noundef byval(%struct.Struct) align 8 %{{.*}}, ptr noundef nonnull align 4 dereferenceable(4) %{{.*}}, ptr noundef nonnull align 1 %{{.*}})
 

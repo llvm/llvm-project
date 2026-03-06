@@ -72,49 +72,49 @@ void hasLambdas() {
   Lambda2(1, 2, 3);
 }
 
-// CHECK: cir.func{{.*}} @_Z5Func1v({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F1_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func1v({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F1_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F1_R_NAME]] func(@_Z5Func1v) bind("BIND1") seq
 //
-// CHECK: cir.func{{.*}} @_Z5Func2v({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F2_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func2v({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F2_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_Z5Func3v({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F3_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func3v({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F3_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F3_R_NAME]] func(@_Z5Func3v) bind("BIND3" [#acc.device_type<nvidia>]) seq
 //
-// CHECK: cir.func{{.*}} @_Z5Func4v({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F4_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func4v({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F4_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_Z5Func5v({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F5_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func5v({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F5_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F5_R_NAME]] func(@_Z5Func5v) bind("BIND5_N" [#acc.device_type<nvidia>], "BIND5_N" [#acc.device_type<host>], "BIND5_M" [#acc.device_type<multicore>]) seq
 //
-// CHECK: cir.func{{.*}} @_Z5Func6v({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F6_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func6v({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F6_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_Z5Func7i({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F7_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func7i({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F7_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F7_R_NAME]] func(@_Z5Func7i) bind(@_Z5BIND7i) seq
 //
-// CHECK: cir.func{{.*}} @_Z5Func8f({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F8_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func8f({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F8_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_Z5Func9ifs({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F9_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z5Func9ifs({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F9_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F9_R_NAME]] func(@_Z5Func9ifs) bind(@_Z5BIND9ifs [#acc.device_type<nvidia>]) seq
 
-// CHECK: cir.func{{.*}} @_Z6Func101S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F10_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z6Func101S({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F10_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_Z6Func11P1UR1Vi({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F11_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z6Func11P1UR1Vi({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F11_R_NAME:.*]]]>{{.*}}}
 // CHECK: acc.routine @[[F11_R_NAME]] func(@_Z6Func11P1UR1Vi) bind(@_Z10BIND11_NVHP1UR1Vi [#acc.device_type<nvidia>], @_Z10BIND11_NVHP1UR1Vi [#acc.device_type<host>], @_Z9BIND11_MCP1UR1Vi [#acc.device_type<multicore>]) seq
 //
-// CHECK: cir.func{{.*}} @_Z6Func121U1Vi({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F12_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_Z6Func121U1Vi({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[F12_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_ZN8HasFuncs7MemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[MEMFUNC_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_ZN8HasFuncs7MemFuncEidRS_1S({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[MEMFUNC_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_ZNK8HasFuncs12ConstMemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[CONSTMEMFUNC_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_ZNK8HasFuncs12ConstMemFuncEidRS_1S({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[CONSTMEMFUNC_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_ZNVK8HasFuncs15VolatileMemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[VOLATILEMEMFUNC_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_ZNVK8HasFuncs15VolatileMemFuncEidRS_1S({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[VOLATILEMEMFUNC_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_ZNKO8HasFuncs10RefMemFuncEidRS_1S({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[REFMEMFUNC_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_ZNKO8HasFuncs10RefMemFuncEidRS_1S({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[REFMEMFUNC_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} @_ZN8HasFuncs13StaticMemFuncEidRS_P1U({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[STATICFUNC_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} @_ZN8HasFuncs13StaticMemFuncEidRS_P1U({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[STATICFUNC_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} lambda{{.*}} @_ZZ10hasLambdasvENK3$_0clEifd({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[LAMBDA1_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} lambda{{.*}} @_ZZ10hasLambdasvENK3$_0clEifd({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[LAMBDA1_R_NAME:.*]]]>{{.*}}}
 //
-// CHECK: cir.func{{.*}} lambda{{.*}} @_ZZ10hasLambdasvENK3$_1clEifd({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[LAMBDA2_R_NAME:.*]]]>}
+// CHECK: cir.func{{.*}} lambda{{.*}} @_ZZ10hasLambdasvENK3$_1clEifd({{.*}}){{.*}} attributes {{{.*}}acc.routine_info = #acc.routine_info<[@[[LAMBDA2_R_NAME:.*]]]>{{.*}}}
 //
 // CHECK:  acc.routine @[[MEMFUNC_R_NAME]] func(@_ZN8HasFuncs7MemFuncEidRS_1S) bind(@_Z3MEMP8HasFuncsidRS_1S) seq
 // CHECK:  acc.routine @[[CONSTMEMFUNC_R_NAME]] func(@_ZNK8HasFuncs12ConstMemFuncEidRS_1S) bind(@_Z3MEMPK8HasFuncsidRS_1S) seq
