@@ -431,6 +431,11 @@ bool X86TargetLowering::allowsMemoryAccess(LLVMContext &Context,
 /// current function.  The returned value is a member of the
 /// MachineJumpTableInfo::JTEntryKind enum.
 unsigned X86TargetLowering::getJumpTableEncoding() const {
+  // Always use EK_CoffImgRel32 for 64-bit Windows targets.
+  if (Subtarget.isTargetWin64()) {
+    return MachineJumpTableInfo::EK_CoffImgRel32;
+  }
+
   // In GOT pic mode, each entry in the jump table is emitted as a @GOTOFF
   // symbol.
   if (isPositionIndependent() && Subtarget.isPICStyleGOT())

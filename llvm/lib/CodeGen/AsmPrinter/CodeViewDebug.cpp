@@ -3578,6 +3578,10 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
           std::tie(Base, BaseOffset, Branch, EntrySize) =
               Asm->getCodeViewJumpTableInfo(JumpTableIndex, &BranchMI, Branch);
           break;
+        case MachineJumpTableInfo::EK_CoffImgRel32:
+          EntrySize = JumpTableEntrySize::UInt32;
+          Base = nullptr;
+          break;
         }
 
         const MachineJumpTableEntry &JTE = JTI.getJumpTables()[JumpTableIndex];
