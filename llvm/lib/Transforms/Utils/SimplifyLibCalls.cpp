@@ -4046,10 +4046,14 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
   case LibFunc_sinf:
   case LibFunc_sinl:
-    return replaceUnaryCall(CI, Builder, Intrinsic::sin);
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::sin);
+    return nullptr;
   case LibFunc_cosf:
   case LibFunc_cosl:
-    return replaceUnaryCall(CI, Builder, Intrinsic::cos);
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::cos);
+    return nullptr;
   case LibFunc_powf:
   case LibFunc_pow:
   case LibFunc_powl:
@@ -4122,8 +4126,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
         hasFloatVersion(M, CI->getCalledFunction()->getName()))
       if (Value *V = optimizeUnaryDoubleFP(CI, Builder, TLI, true))
         return V;
-    return replaceUnaryCall(
-        CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(
+          CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
+    return nullptr;
   case LibFunc_acos:
   case LibFunc_acosh:
   case LibFunc_asin:
