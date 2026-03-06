@@ -8334,7 +8334,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
 
         Inst.eraseFromParent();
 
-        const TargetRegisterClass *NewDstRegRC = MRI.getRegClass(NewDstReg);
         for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(NewDstReg))) {
           MachineInstr &UseMI = *UseMO.getParent();
@@ -8343,22 +8342,10 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
           // addUsersToVALU.
           legalizeOperandsVALUt16(UseMI, MRI);
 
-          // If a user operand requires a narrower register class than
-          // NewDstReg (e.g., VGPR_32_Lo256 for WMMA scale operands), emit
-          // a COPY to a new register with the correct class.
           unsigned OpIdx = UseMI.getOperandNo(&UseMO);
-          const TargetRegisterClass *OpRC = getRegClass(UseMI.getDesc(), OpIdx);
-          if (!OpRC)
-            continue;
-          const TargetRegisterClass *NarrowRC =
-              RI.getCommonSubClass(NewDstRegRC, OpRC);
-          if (!NarrowRC || NarrowRC == NewDstRegRC)
-            continue;
-          Register CopyReg = MRI.createVirtualRegister(NarrowRC);
-          BuildMI(*UseMI.getParent(), &UseMI, UseMI.getDebugLoc(),
-                  get(AMDGPU::COPY), CopyReg)
-              .addReg(NewDstReg);
-          UseMO.setReg(CopyReg);
+          if (const TargetRegisterClass *OpRC =
+                  getRegClass(UseMI.getDesc(), OpIdx))
+            MRI.constrainRegClass(NewDstReg, OpRC);
         }
 
         return;
