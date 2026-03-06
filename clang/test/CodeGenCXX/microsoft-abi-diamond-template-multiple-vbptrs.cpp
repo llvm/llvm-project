@@ -78,4 +78,45 @@ DerivedWithData<T>::DerivedWithData() : DiamondWithData() {
 
 template struct DerivedWithData<int>;
 
+// Test 3: Another case which triggers the bug (similar to Test 1, non-template)
+class Interface {
+public:
+  virtual ~Interface() {}
+};
+
+class Base1If : public virtual Interface {
+};
+
+class Base2If : public virtual Interface {
+};
+
+class BaseIf : public Base1If, public Base2If {
+};
+
+class DerivedClass : public BaseIf {
+public:
+  // CHECK-LABEL: define {{.*}} @"??0DerivedClass@test@@QEAA@XZ"
+
+  // Layout of DerivedClass:
+  // offset 0: vbptr for Base1If (8 bytes)
+  // offset 8: vbptr for Base2If (8 bytes)
+  // offset 16+: virtual base Interface
+
+  // CHECK: call {{.*}} @"??0BaseIf@test@@QEAA@XZ"
+  // EmitNullBaseClassInitialization now correctly calculates memory regions
+  // around the vbptrs without hitting negative size assertion
+
+  // No memset is generated since there are no gaps to zero
+  // CHECK-NOT: call void @llvm.memset
+  // CHECK: ret
+
+  DerivedClass()
+  : BaseIf()
+  { }
+};
+
+// Instantiate to trigger code generation
+DerivedClass d;
+
+
 } // namespace test
