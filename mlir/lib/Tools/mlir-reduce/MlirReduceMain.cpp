@@ -26,23 +26,6 @@
 
 using namespace mlir;
 
-// Parse and verify the input MLIR file. Returns null on error.
-static OwningOpRef<Operation *> loadModule(MLIRContext &context,
-                                           StringRef inputFilename,
-                                           bool insertImplictModule) {
-  // Set up the input file.
-  std::string errorMessage;
-  auto file = openInputFile(inputFilename, &errorMessage);
-  if (!file) {
-    llvm::errs() << errorMessage << "\n";
-    return nullptr;
-  }
-
-  auto sourceMgr = std::make_shared<llvm::SourceMgr>();
-  sourceMgr->AddNewSourceBuffer(std::move(file), SMLoc());
-  return parseSourceFileForTool(sourceMgr, &context, insertImplictModule);
-}
-
 LogicalResult mlir::mlirReduceMain(int argc, char **argv,
                                    MLIRContext &context) {
   // Override the default '-h' and use the default PrintHelpMessage() which
