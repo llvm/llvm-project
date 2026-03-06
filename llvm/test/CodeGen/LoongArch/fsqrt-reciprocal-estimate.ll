@@ -16,16 +16,7 @@ define float @frsqrt_f32(float %a) nounwind {
 ;
 ; LA32F-FRECIPE-LABEL: frsqrt_f32:
 ; LA32F-FRECIPE:       # %bb.0:
-; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    fmul.s $fa0, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    lu12i.w $a0, -261120
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa2, $a0
-; LA32F-FRECIPE-NEXT:    fmadd.s $fa0, $fa0, $fa1, $fa2
-; LA32F-FRECIPE-NEXT:    lu12i.w $a0, -266240
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa2, $a0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa0, $fa1, $fa0
+; LA32F-FRECIPE-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32F-FRECIPE-NEXT:    ret
 ;
 ; LA64D-LABEL: frsqrt_f32:
@@ -553,22 +544,14 @@ define float @sqrt_simplify_before_recip_3_uses_f32(float %x, ptr %p1, ptr %p2) 
 ;
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_f32:
 ; LA32F-FRECIPE:       # %bb.0:
-; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    lu12i.w $a2, -261120
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a2
-; LA32F-FRECIPE-NEXT:    fmadd.s $fa2, $fa2, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    lu12i.w $a2, -266240
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa2
+; LA32F-FRECIPE-NEXT:    fsqrt.s $fa1, $fa0
+; LA32F-FRECIPE-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a2, 270976
 ; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa2, $a2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa1, $fa2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa0, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    fst.s $fa1, $a0, 0
+; LA32F-FRECIPE-NEXT:    fdiv.s $fa2, $fa2, $fa1
+; LA32F-FRECIPE-NEXT:    fst.s $fa0, $a0, 0
 ; LA32F-FRECIPE-NEXT:    fst.s $fa2, $a1, 0
+; LA32F-FRECIPE-NEXT:    fmov.s $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    ret
 ;
 ; LA64D-LABEL: sqrt_simplify_before_recip_3_uses_f32:
@@ -628,26 +611,18 @@ define float @sqrt_simplify_before_recip_4_uses_f32(float %x, ptr %p1, ptr %p2, 
 ;
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_4_uses_f32:
 ; LA32F-FRECIPE:       # %bb.0:
-; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    lu12i.w $a3, -261120
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a3
-; LA32F-FRECIPE-NEXT:    fmadd.s $fa2, $fa2, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    lu12i.w $a3, -266240
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a3
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa2
+; LA32F-FRECIPE-NEXT:    fsqrt.s $fa1, $fa0
+; LA32F-FRECIPE-NEXT:    frsqrt.s $fa0, $fa0
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a3, 270976
 ; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa2, $a3
-; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa1, $fa2
+; LA32F-FRECIPE-NEXT:    fdiv.s $fa2, $fa2, $fa1
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a3, 271040
 ; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a3
-; LA32F-FRECIPE-NEXT:    fmul.s $fa3, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    fmul.s $fa0, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    fst.s $fa1, $a0, 0
+; LA32F-FRECIPE-NEXT:    fdiv.s $fa3, $fa3, $fa1
+; LA32F-FRECIPE-NEXT:    fst.s $fa0, $a0, 0
 ; LA32F-FRECIPE-NEXT:    fst.s $fa2, $a1, 0
 ; LA32F-FRECIPE-NEXT:    fst.s $fa3, $a2, 0
+; LA32F-FRECIPE-NEXT:    fmov.s $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    ret
 ;
 ; LA64D-LABEL: sqrt_simplify_before_recip_4_uses_f32:
@@ -714,25 +689,15 @@ define float @sqrt_simplify_before_recip_3_uses_order_f32(float %x, ptr %p1, ptr
 ;
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_order_f32:
 ; LA32F-FRECIPE:       # %bb.0:
-; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
-; LA32F-FRECIPE-NEXT:    lu12i.w $a2, -261120
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a2
-; LA32F-FRECIPE-NEXT:    fmadd.s $fa2, $fa2, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    lu12i.w $a2, -266240
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa0, $fa0, $fa1
+; LA32F-FRECIPE-NEXT:    fsqrt.s $fa0, $fa0
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a2, 270976
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa2, $a2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa1, $fa2
+; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa1, $a2
+; LA32F-FRECIPE-NEXT:    fdiv.s $fa1, $fa1, $fa0
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a2, 271040
-; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a2
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa1, $fa3
-; LA32F-FRECIPE-NEXT:    fst.s $fa2, $a0, 0
-; LA32F-FRECIPE-NEXT:    fst.s $fa1, $a1, 0
+; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa2, $a2
+; LA32F-FRECIPE-NEXT:    fdiv.s $fa2, $fa2, $fa0
+; LA32F-FRECIPE-NEXT:    fst.s $fa1, $a0, 0
+; LA32F-FRECIPE-NEXT:    fst.s $fa2, $a1, 0
 ; LA32F-FRECIPE-NEXT:    ret
 ;
 ; LA64D-LABEL: sqrt_simplify_before_recip_3_uses_order_f32:
