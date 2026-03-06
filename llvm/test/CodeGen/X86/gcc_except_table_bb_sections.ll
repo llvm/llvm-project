@@ -19,7 +19,7 @@ define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 ; PersonalityEncoding = dwarf::DW_EH_PE_udata4 (small/medium)
 ; PersonalityEncoding = dwarf::DW_EH_PE_absptr (large)
 ; CHECK-NON-PIC-SMALL-NEXT:  .cfi_personality 3, __gxx_personality_v0
-; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_personality 3, __gxx_personality_v0
+; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_personality 0, __gxx_personality_v0
 ; CHECK-NON-PIC-LARGE-NEXT:  .cfi_personality 0, __gxx_personality_v0
 ; LSDAEncoding = dwarf::DW_EH_PE_udata4 (small)
 ; LSDAEncoding = dwarf::DW_EH_PE_absptr (medium/large)
@@ -31,7 +31,7 @@ define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 ; PersonalityEncoding = DW_EH_PE_indirect | DW_EH_PE_pcrel | DW_EH_PE_sdata4 (small/medium)
 ; PersonalityEncoding = DW_EH_PE_indirect | DW_EH_PE_pcrel | DW_EH_PE_sdata8 (large)
 ; CHECK-PIC-SMALL-NEXT:  .cfi_personality 155, DW.ref.__gxx_personality_v0
-; CHECK-PIC-MEDIUM-NEXT: .cfi_personality 155, DW.ref.__gxx_personality_v0
+; CHECK-PIC-MEDIUM-NEXT: .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-PIC-LARGE-NEXT:  .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; LSDAEncoding = DW_EH_PE_pcrel | DW_EH_PE_sdata4 (small)
 ; LSDAEncoding = DW_EH_PE_pcrel | DW_EH_PE_sdata8 (medium/large)
@@ -54,14 +54,14 @@ define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:           .cfi_startproc
 
 ; CHECK-NON-PIC-SMALL-NEXT:  .cfi_personality 3, __gxx_personality_v0
-; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_personality 3, __gxx_personality_v0
+; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_personality 0, __gxx_personality_v0
 ; CHECK-NON-PIC-LARGE-NEXT:  .cfi_personality 0, __gxx_personality_v0
 ; CHECK-NON-PIC-SMALL-NEXT:  .cfi_lsda 3, .Lexception1
 ; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_lsda 0, .Lexception1
 ; CHECK-NON-PIC-LARGE-NEXT:  .cfi_lsda 0, .Lexception1
 
 ; CHECK-PIC-SMALL-NEXT:  .cfi_personality 155, DW.ref.__gxx_personality_v0
-; CHECK-PIC-MEDIUM-NEXT: .cfi_personality 155, DW.ref.__gxx_personality_v0
+; CHECK-PIC-MEDIUM-NEXT: .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-PIC-LARGE-NEXT:  .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-PIC-SMALL-NEXT:  .cfi_lsda 27, .Lexception1
 ; CHECK-PIC-MEDIUM-NEXT: .cfi_lsda 28, .Lexception1
@@ -73,14 +73,14 @@ define i32 @main() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:           .cfi_startproc
 
 ; CHECK-NON-PIC-SMALL-NEXT:  .cfi_personality 3, __gxx_personality_v0
-; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_personality 3, __gxx_personality_v0
+; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_personality 0, __gxx_personality_v0
 ; CHECK-NON-PIC-LARGE-NEXT:  .cfi_personality 0, __gxx_personality_v0
 ; CHECK-NON-PIC-SMALL-NEXT:  .cfi_lsda 3, .Lexception2
 ; CHECK-NON-PIC-MEDIUM-NEXT: .cfi_lsda 0, .Lexception2
 ; CHECK-NON-PIC-LARGE-NEXT:  .cfi_lsda 0, .Lexception2
 
 ; CHECK-PIC-SMALL-NEXT:  .cfi_personality 155, DW.ref.__gxx_personality_v0
-; CHECK-PIC-MEDIUM-NEXT: .cfi_personality 155, DW.ref.__gxx_personality_v0
+; CHECK-PIC-MEDIUM-NEXT: .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-PIC-LARGE-NEXT:  .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-PIC-SMALL-NEXT:  .cfi_lsda 27, .Lexception2
 ; CHECK-PIC-MEDIUM-NEXT: .cfi_lsda 28, .Lexception2
@@ -137,7 +137,7 @@ declare i32 @__gxx_personality_v0(...)
 
 ;; Verify @TType encoding for PIC mode.
 ; CHECK-PIC-SMALL-NEXT: .byte 155                       # @TType Encoding = indirect pcrel sdata4
-; CHECK-PIC-MEDIUM-NEXT:.byte 155                       # @TType Encoding = indirect pcrel sdata4
+; CHECK-PIC-MEDIUM-NEXT:.byte 156                       # @TType Encoding = indirect pcrel sdata8
 ; CHECK-PIC-LARGE-NEXT: .byte 156                       # @TType Encoding = indirect pcrel sdata8
 
 ; CHECK-NEXT:           .uleb128 .Lttbase0-.Lttbaseref0
@@ -166,7 +166,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NON-PIC-LARGE-NEXT:  .byte	0               # @TType Encoding = absptr
 
 ; CHECK-PIC-SMALL-NEXT: .byte 155                       # @TType Encoding = indirect pcrel sdata4
-; CHECK-PIC-MEDIUM-NEXT:.byte 155                       # @TType Encoding = indirect pcrel sdata4
+; CHECK-PIC-MEDIUM-NEXT:.byte 156                       # @TType Encoding = indirect pcrel sdata8
 ; CHECK-PIC-LARGE-NEXT: .byte 156                       # @TType Encoding = indirect pcrel sdata8
 
 ; CHECK-NEXT:           .uleb128 .Lttbase0-.Lttbaseref1
@@ -191,7 +191,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NON-PIC-LARGE-NEXT:  .byte	0               # @TType Encoding = absptr
 
 ; CHECK-PIC-SMALL-NEXT:  .byte 155                      # @TType Encoding = indirect pcrel sdata4
-; CHECK-PIC-MEDIUM-NEXT: .byte 155                      # @TType Encoding = indirect pcrel sdata4
+; CHECK-PIC-MEDIUM-NEXT: .byte 156                      # @TType Encoding = indirect pcrel sdata8
 ; CHECK-PIC-LARGE-NEXT:  .byte 156                      # @TType Encoding = indirect pcrel sdata8
 
 ; CHECK-NEXT:           .uleb128 .Lttbase0-.Lttbaseref2
@@ -219,7 +219,7 @@ declare i32 @__gxx_personality_v0(...)
 
 ; CHECK-PIC-NEXT:     [[DOT:\.Ltmp[0-9]+]]:
 ; CHECK-PIC-SMALL-NEXT:  .long .L_ZTIi.DW.stub-[[DOT]]
-; CHECK-PIC-MEDIUM-NEXT: .long .L_ZTIi.DW.stub-[[DOT]]
+; CHECK-PIC-MEDIUM-NEXT: .quad .L_ZTIi.DW.stub-[[DOT]]
 ; CHECK-PIC-LARGE-NEXT:  .quad .L_ZTIi.DW.stub-[[DOT]]
 
 ; CHECK-NEXT:         .Lttbase0:
