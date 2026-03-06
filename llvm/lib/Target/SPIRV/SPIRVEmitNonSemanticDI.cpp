@@ -444,7 +444,7 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
   DISubprogram *SP = F.getSubprogram();
-  // DISubProgram is not available, don't translate
+  // DISubProgram is not available, don't translate.
   if (!SP) {
     return false;
   }
@@ -457,19 +457,19 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
     return false;
   }
 
-  // We insert at the first basic block available
+  // We insert at the first basic block available.
   if (MF.begin() == MF.end()) {
     return false;
   }
 
-  // Get the scope from DISubProgram
+  // Get the scope from DISubProgram.
   DIScope *Scope = SP->getScope();
   if (!Scope) {
     return false;
   }
 
   // TODO: Support additional DIScope types beyond DIFile.
-  // Only translate when scope is DIFile
+  // Only translate when scope is DIFile.
   const DIFile *FileScope = dyn_cast<DIFile>(Scope);
   if (!FileScope) {
     return false;
@@ -484,7 +484,7 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
     return false;
   }
 
-  // Check for function type - required for DebugTypeFunction
+  // Check for function type - required for DebugTypeFunction.
   DISubroutineType *FuncType = SP->getType();
   if (!FuncType) {
     return false;
@@ -501,7 +501,7 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
   const Module *M = getModule(MF);
   LLVMContext *Context = &M->getContext();
 
-  // Emit DebugCompilationUnit and DebugFunction
+  // Emit DebugCompilationUnit and DebugFunction.
   {
     const SPIRVInstrInfo *TII = TM->getSubtargetImpl()->getInstrInfo();
     const SPIRVRegisterInfo *TRI = TM->getSubtargetImpl()->getRegisterInfo();
@@ -521,7 +521,7 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
                                  SPIRV::AccessQualifier::ReadWrite, false);
 
     // Get file path from DICompileUnit for DebugSource (needed for
-    // DebugFunction)
+    // DebugFunction).
     DIFile *File = CU->getFile();
     SmallString<128> FilePath;
     sys::path::append(FilePath, File->getDirectory(), File->getFilename());
@@ -532,15 +532,15 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
         MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
         SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
 
-    // Look up the DebugCompilationUnit register from emitGlobalDI
+    // Look up the DebugCompilationUnit register from emitGlobalDI.
     auto It = CompileUnitRegMap.find(CU);
     assert(It != CompileUnitRegMap.end() &&
            "DebugCompilationUnit register should have been created in "
            "emitGlobalDI");
     const Register DebugCompUnitReg = It->second;
 
-    // Emit DebugFunction
-    // Get function metadata
+    // Emit DebugFunction.
+    // Get function metadata.
     StringRef FuncName = SP->getName();
     StringRef LinkageName = SP->getLinkageName();
     unsigned Line = SP->getLine();
@@ -552,7 +552,7 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
     const Register LinkageNameStrReg =
         emitOpString(MRI, MIRBuilder, LinkageName);
 
-    // Emit DebugTypeFunction
+    // Emit DebugTypeFunction.
     const Register DebugTypeFunctionReg =
         emitDebugTypeFunction(MRI, MIRBuilder, GR, VoidTy, I32Ty, TII, TRI, RBI,
                               MF, FuncType, Context);
