@@ -42,7 +42,8 @@ except ValueError:
 # Error: Malformed JSON vocab
 import tempfile
 import os
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+
+with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
     f.write("{ this is not valid json }")
     bad_vocab = f.name
 try:
