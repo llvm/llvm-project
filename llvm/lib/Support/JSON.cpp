@@ -145,7 +145,7 @@ void Value::moveFrom(const Value &&M) {
     create<json::Array>(std::move(M.as<json::Array>()));
     break;
   }
-  const_cast<Value&>(M).destroy();
+  const_cast<Value &>(M).destroy();
   M.Type = T_Null;
 }
 
