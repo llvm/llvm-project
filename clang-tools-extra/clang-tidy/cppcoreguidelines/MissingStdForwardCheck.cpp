@@ -54,24 +54,6 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
          FuncTemplate->getTemplateParameters()->getDepth();
 }
 
-AST_MATCHER_P(NamedDecl, hasSameNameAsBoundNode, std::string, BindingID) {
-  const IdentifierInfo *II = Node.getIdentifier();
-  if (nullptr == II)
-    return false;
-  const StringRef Name = II->getName();
-
-  return Builder->removeBindings(
-      [this, Name](const ast_matchers::internal::BoundNodesMap &Nodes) {
-        const DynTypedNode &BN = Nodes.getNode(this->BindingID);
-        if (const auto *ND = BN.get<NamedDecl>()) {
-          if (!isa<FieldDecl, CXXMethodDecl, VarDecl>(ND))
-            return true;
-          return ND->getName() != Name;
-        }
-        return true;
-      });
-}
-
 AST_MATCHER_P(LambdaCapture, hasCaptureKind, LambdaCaptureKind, Kind) {
   return Node.getCaptureKind() == Kind;
 }
@@ -85,46 +67,61 @@ AST_MATCHER(VarDecl, hasIdentifier) {
   return ID != nullptr && !ID->isPlaceholder();
 }
 
+AST_MATCHER_P(ValueDecl, refersToBoundParm, std::string, ParamID) {
+  return Builder->removeBindings(
+      [&](const ast_matchers::internal::BoundNodesMap &Nodes) {
+        const auto *Param = Nodes.getNodeAs<ParmVarDecl>(ParamID);
+        if (!Param)
+          return true;
+
+        for (const ValueDecl *V = &Node; V;) {
+          if (V == Param)
+            return false;
+
+          const auto *VD = dyn_cast<VarDecl>(V);
+          const Expr *Init = (VD && VD->getType()->isReferenceType())
+                                 ? VD->getInit()
+                                 : nullptr;
+          const auto *DRE =
+              Init ? dyn_cast<DeclRefExpr>(Init->IgnoreParenImpCasts())
+                   : nullptr;
+          V = DRE ? DRE->getDecl() : nullptr;
+        }
+        return true;
+      });
+}
+
 } // namespace
 
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
-  auto RefToParmImplicit = allOf(
-      equalsBoundNode("var"), hasInitializer(ignoringParenImpCasts(
-                                  declRefExpr(to(equalsBoundNode("param"))))));
-  auto RefToParm = capturesVar(
-      varDecl(anyOf(hasSameNameAsBoundNode("param"), RefToParmImplicit)));
+  auto CapturedVar = varDecl(refersToBoundParm("param"));
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
-            unless(hasAnyCapture(
-                capturesVar(varDecl(hasSameNameAsBoundNode("param"))))));
-  auto CaptureByRefExplicit = hasAnyCapture(
-      allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
+            unless(hasAnyCapture(capturesVar(CapturedVar))));
+  auto CaptureByRefExplicit = hasAnyCapture(allOf(
+      hasCaptureKind(LambdaCaptureKind::LCK_ByRef), capturesVar(CapturedVar)));
 
   auto CapturedInBody = lambdaExpr(anyOf(CaptureInRef, CaptureByRefExplicit));
   auto CapturedInCaptureList = hasAnyCapture(capturesVar(
       varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
 
   auto CapturedInLambda = hasDeclContext(cxxRecordDecl(
-      isLambda(),
-      hasParent(lambdaExpr(forCallable(equalsBoundNode("func")),
-                           anyOf(CapturedInCaptureList, CapturedInBody)))));
+      isLambda(), hasParent(lambdaExpr(
+                      anyOf(CapturedInCaptureList, CapturedInBody),
+                      hasAncestor(functionDecl(equalsBoundNode("func")))))));
 
   auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
 
-  auto ForwardCallMatcher = callExpr(
-      callExpr().bind("call"), argumentCountIs(1),
-      hasArgument(0, declRefExpr(to(varDecl().bind("var")))),
-      forCallable(
-          anyOf(allOf(equalsBoundNode("func"),
-                      functionDecl(hasAnyParameter(parmVarDecl(allOf(
-                          equalsBoundNode("param"), equalsBoundNode("var")))))),
-                CapturedInLambda)),
-      callee(unresolvedLookupExpr(hasAnyDeclaration(
-          namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
+  auto ForwardCallMatcher =
+      callExpr(callExpr().bind("call"), argumentCountIs(1),
+               hasArgument(0, declRefExpr(to(CapturedVar)).bind("var")),
+               forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
+               callee(unresolvedLookupExpr(hasAnyDeclaration(
+                   namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
 
-      unless(anyOf(hasAncestor(typeLoc()),
-                   hasAncestor(expr(hasUnevaluatedContext())))));
+               unless(anyOf(hasAncestor(typeLoc()),
+                            hasAncestor(expr(hasUnevaluatedContext())))));
 
   Finder->addMatcher(
       parmVarDecl(
