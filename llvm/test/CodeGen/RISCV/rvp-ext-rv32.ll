@@ -1832,24 +1832,18 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrli.h a1, a0, 8
 ; CHECK-NEXT:    pslli.h a0, a0, 8
-; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    pli.b a2, 15
 ; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    addi a1, a2, -241
-; CHECK-NEXT:    psrli.h a2, a0, 4
-; CHECK-NEXT:    padd.hs a1, zero, a1
-; CHECK-NEXT:    and a2, a2, a1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    lui a1, 3
-; CHECK-NEXT:    addi a1, a1, 819
-; CHECK-NEXT:    padd.hs a1, zero, a1
+; CHECK-NEXT:    psrli.h a1, a0, 4
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 51
 ; CHECK-NEXT:    pslli.h a0, a0, 4
-; CHECK-NEXT:    or a0, a2, a0
-; CHECK-NEXT:    psrli.h a2, a0, 2
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    lui a2, 5
-; CHECK-NEXT:    addi a2, a2, 1365
-; CHECK-NEXT:    padd.hs a2, zero, a2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.h a1, a0, 2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 85
 ; CHECK-NEXT:    pslli.h a0, a0, 2
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    psrli.h a1, a0, 1

@@ -2263,24 +2263,18 @@ define <4 x i16> @test_bitreverse_v4i16(<4 x i16> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrli.h a1, a0, 8
 ; CHECK-NEXT:    pslli.h a0, a0, 8
-; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    pli.b a2, 15
 ; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    addi a1, a2, -241
-; CHECK-NEXT:    psrli.h a2, a0, 4
-; CHECK-NEXT:    padd.hs a1, zero, a1
-; CHECK-NEXT:    and a2, a2, a1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    lui a1, 3
-; CHECK-NEXT:    addi a1, a1, 819
-; CHECK-NEXT:    padd.hs a1, zero, a1
+; CHECK-NEXT:    psrli.h a1, a0, 4
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 51
 ; CHECK-NEXT:    pslli.h a0, a0, 4
-; CHECK-NEXT:    or a0, a2, a0
-; CHECK-NEXT:    psrli.h a2, a0, 2
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    lui a2, 5
-; CHECK-NEXT:    addi a2, a2, 1365
-; CHECK-NEXT:    padd.hs a2, zero, a2
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    psrli.h a1, a0, 2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    pli.b a2, 85
 ; CHECK-NEXT:    pslli.h a0, a0, 2
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    psrli.h a1, a0, 1
@@ -2305,21 +2299,15 @@ define <2 x i32> @test_bitreverse_v2i32(<2 x i32> %a) {
 ; CHECK-NEXT:    and a2, a0, a2
 ; CHECK-NEXT:    pslli.w a0, a0, 24
 ; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    lui a3, 61681
+; CHECK-NEXT:    pli.b a3, 15
 ; CHECK-NEXT:    pslli.w a2, a2, 8
 ; CHECK-NEXT:    or a0, a0, a2
-; CHECK-NEXT:    lui a2, 209715
-; CHECK-NEXT:    addi a3, a3, -241
-; CHECK-NEXT:    padd.ws a3, zero, a3
+; CHECK-NEXT:    pli.b a2, 51
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    psrli.w a1, a0, 4
 ; CHECK-NEXT:    and a0, a0, a3
 ; CHECK-NEXT:    and a1, a1, a3
-; CHECK-NEXT:    lui a3, 349525
-; CHECK-NEXT:    addi a2, a2, 819
-; CHECK-NEXT:    addi a3, a3, 1365
-; CHECK-NEXT:    padd.ws a2, zero, a2
-; CHECK-NEXT:    padd.ws a3, zero, a3
+; CHECK-NEXT:    pli.b a3, 85
 ; CHECK-NEXT:    pslli.w a0, a0, 4
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    psrli.w a1, a0, 2
