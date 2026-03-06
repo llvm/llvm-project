@@ -665,19 +665,19 @@ struct non_forwarded_struct {
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local noundef i32 @test_non_fowarded_struct_reference(
 // NO-SANITIZE-WITH-ATTR-SAME: i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @non_forwarded_struct_ref, align 8, !tbaa [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA9:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @non_forwarded_struct_ref, align 8, !tbaa [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA11:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[REVMAP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[REVMAP]], i64 [[INDEX]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store ptr null, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA13:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store ptr null, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA15:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i32 0
 //
 // NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local noundef i32 @test_non_fowarded_struct_reference(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @non_forwarded_struct_ref, align 8, !tbaa [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA9:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @non_forwarded_struct_ref, align 8, !tbaa [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA11:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[REVMAP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[REVMAP]], i64 [[INDEX]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store ptr null, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA13:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store ptr null, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA15:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i32 0
 //
 int test_non_fowarded_struct_reference(long index) {
@@ -845,7 +845,7 @@ int test_reject_array_of_fams(int c, struct tests_foo *var) {
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test_double_dereference(
 // NO-SANITIZE-WITH-ATTR-SAME: i32 noundef [[C:%.*]], ptr nofree noundef readonly captures(none) [[VAR:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VAR]], align 8, !tbaa [[_ZTS9TESTS_FOOPTR_TBAA15:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VAR]], align 8, !tbaa [[_ZTS9TESTS_FOOPTR_TBAA17:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 44
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret i32 [[TMP1]]
@@ -853,7 +853,7 @@ int test_reject_array_of_fams(int c, struct tests_foo *var) {
 // NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test_double_dereference(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: i32 noundef [[C:%.*]], ptr nofree noundef readonly captures(none) [[VAR:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VAR]], align 8, !tbaa [[_ZTS9TESTS_FOOPTR_TBAA15:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VAR]], align 8, !tbaa [[_ZTS9TESTS_FOOPTR_TBAA17:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 44
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA6]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i32 [[TMP1]]
@@ -917,7 +917,7 @@ struct main_struct {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ENTRIES:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 24
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[ENTRIES]], i64 [[IDXPROM]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS10SUB_STRUCTPTR_TBAA17:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS10SUB_STRUCTPTR_TBAA19:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[J]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [6 x i8], ptr [[TMP0]], i64 [[IDXPROM1]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret ptr [[ARRAYIDX2]]
@@ -928,7 +928,7 @@ struct main_struct {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ENTRIES:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 24
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[ENTRIES]], i64 [[IDXPROM]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS10SUB_STRUCTPTR_TBAA17:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS10SUB_STRUCTPTR_TBAA19:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[J]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [6 x i8], ptr [[TMP0]], i64 [[IDXPROM1]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret ptr [[ARRAYIDX2]]
@@ -946,9 +946,9 @@ struct containing_struct {
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test_search_for_correct_containing_struct(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA19:![0-9]+]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA19]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA19]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA21:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA21]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA21]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
@@ -958,9 +958,9 @@ struct containing_struct {
 // NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test_search_for_correct_containing_struct(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA19:![0-9]+]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA19]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA19]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA21:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA21]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8, !tbaa [[_ZTS17CONTAINING_STRUCTPTR_TBAA21]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 12
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
@@ -983,7 +983,7 @@ struct annotated_struct_array {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX1]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[ANN]], i64 [[IDXPROM]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS9ANNOTATEDPTR_TBAA21:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS9ANNOTATEDPTR_TBAA23:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
@@ -999,7 +999,7 @@ struct annotated_struct_array {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX1]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i8], ptr [[ANN]], i64 [[IDXPROM]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS9ANNOTATEDPTR_TBAA21:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !tbaa [[_ZTS9ANNOTATEDPTR_TBAA23:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 12
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[IDX2]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARRAY]], i64 [[IDXPROM5]]
@@ -1088,7 +1088,7 @@ struct annotated_with_array {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 344
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[IDX1]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [8 x i8], ptr [[ARRAY]], i64 [[IDXPROM1]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store i64 [[TMP4]], ptr [[ARRAYIDX2]], align 8, !tbaa [[LONG_TBAA23:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i64 [[TMP4]], ptr [[ARRAYIDX2]], align 8, !tbaa [[LONG_TBAA25:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local void @test_assign_bdos_of_index_into_array(
@@ -1097,7 +1097,7 @@ struct annotated_with_array {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 344
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[IDX1]] to i64
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [8 x i8], ptr [[ARRAY]], i64 [[IDXPROM1]]
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i64 -1, ptr [[ARRAYIDX2]], align 8, !tbaa [[LONG_TBAA23:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i64 -1, ptr [[ARRAYIDX2]], align 8, !tbaa [[LONG_TBAA25:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret void
 //
 void test_assign_bdos_of_index_into_array(struct annotated_with_array *ptr, int idx1, int idx2) {
@@ -1329,14 +1329,14 @@ struct foo {
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nofree noundef readonly captures(none) [[Q:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 16
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY]], align 8, !tbaa [[_ZTS3BAZPTR_TBAA25:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY]], align 8, !tbaa [[_ZTS3BAZPTR_TBAA27:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret ptr [[TMP0]]
 //
 // NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local ptr @test_non_forward_decl_struct(
 // NO-SANITIZE-WITHOUT-ATTR-SAME: ptr nofree noundef readonly captures(none) [[Q:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:  [[ENTRY:.*:]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 16
-// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY]], align 8, !tbaa [[_ZTS3BAZPTR_TBAA25:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY]], align 8, !tbaa [[_ZTS3BAZPTR_TBAA27:![0-9]+]]
 // NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret ptr [[TMP0]]
 //
 struct baz *test_non_forward_decl_struct(struct foo *q) {
@@ -1348,48 +1348,52 @@ struct baz *test_non_forward_decl_struct(struct foo *q) {
 // NO-SANITIZE-WITH-ATTR: [[META5]] = !{!"Simple C/C++ TBAA"}
 // NO-SANITIZE-WITH-ATTR: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
 // NO-SANITIZE-WITH-ATTR: [[CHAR_TBAA7]] = !{[[META4]], [[META4]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[TBAA_STRUCT8]] = !{i64 0, i64 24, [[CHAR_TBAA7]]}
-// NO-SANITIZE-WITH-ATTR: [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA9]] = !{[[META10:![0-9]+]], [[META11:![0-9]+]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META10]] = !{!"ref_non_forwarded_struct", [[META11]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META11]] = !{!"p1 _ZTS20non_forwarded_struct", [[META12:![0-9]+]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META12]] = !{!"any pointer", [[META4]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA13]] = !{[[META14:![0-9]+]], [[META14]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META14]] = !{!"p1 _ZTS24ref_non_forwarded_struct", [[META12]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[_ZTS9TESTS_FOOPTR_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META16]] = !{!"p1 _ZTS9tests_foo", [[META12]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[_ZTS10SUB_STRUCTPTR_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META18]] = !{!"p1 _ZTS10sub_struct", [[META12]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[_ZTS17CONTAINING_STRUCTPTR_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META20]] = !{!"p1 _ZTS17containing_struct", [[META12]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[_ZTS9ANNOTATEDPTR_TBAA21]] = !{[[META22:![0-9]+]], [[META22]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META22]] = !{!"p1 _ZTS9annotated", [[META12]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[LONG_TBAA23]] = !{[[META24:![0-9]+]], [[META24]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META24]] = !{!"long", [[META4]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[_ZTS3BAZPTR_TBAA25]] = !{[[META26:![0-9]+]], [[META26]], i64 0}
-// NO-SANITIZE-WITH-ATTR: [[META26]] = !{!"p1 _ZTS3baz", [[META12]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[TBAA_STRUCT8]] = !{i64 0, i64 24, [[META9:![0-9]+]]}
+// NO-SANITIZE-WITH-ATTR: [[META9]] = !{[[META10:![0-9]+]], [[META4]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META10]] = !{!"hang", [[META4]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA11]] = !{[[META12:![0-9]+]], [[META13:![0-9]+]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META12]] = !{!"ref_non_forwarded_struct", [[META13]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META13]] = !{!"p1 _ZTS20non_forwarded_struct", [[META14:![0-9]+]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META14]] = !{!"any pointer", [[META4]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META16]] = !{!"p1 _ZTS24ref_non_forwarded_struct", [[META14]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[_ZTS9TESTS_FOOPTR_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META18]] = !{!"p1 _ZTS9tests_foo", [[META14]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[_ZTS10SUB_STRUCTPTR_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META20]] = !{!"p1 _ZTS10sub_struct", [[META14]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[_ZTS17CONTAINING_STRUCTPTR_TBAA21]] = !{[[META22:![0-9]+]], [[META22]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META22]] = !{!"p1 _ZTS17containing_struct", [[META14]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[_ZTS9ANNOTATEDPTR_TBAA23]] = !{[[META24:![0-9]+]], [[META24]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META24]] = !{!"p1 _ZTS9annotated", [[META14]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[LONG_TBAA25]] = !{[[META26:![0-9]+]], [[META26]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META26]] = !{!"long", [[META4]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[_ZTS3BAZPTR_TBAA27]] = !{[[META28:![0-9]+]], [[META28]], i64 0}
+// NO-SANITIZE-WITH-ATTR: [[META28]] = !{!"p1 _ZTS3baz", [[META14]], i64 0}
 //.
 // NO-SANITIZE-WITHOUT-ATTR: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // NO-SANITIZE-WITHOUT-ATTR: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // NO-SANITIZE-WITHOUT-ATTR: [[META5]] = !{!"Simple C/C++ TBAA"}
 // NO-SANITIZE-WITHOUT-ATTR: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
 // NO-SANITIZE-WITHOUT-ATTR: [[CHAR_TBAA7]] = !{[[META4]], [[META4]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[TBAA_STRUCT8]] = !{i64 0, i64 24, [[CHAR_TBAA7]]}
-// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA9]] = !{[[META10:![0-9]+]], [[META11:![0-9]+]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META10]] = !{!"ref_non_forwarded_struct", [[META11]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META11]] = !{!"p1 _ZTS20non_forwarded_struct", [[META12:![0-9]+]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META12]] = !{!"any pointer", [[META4]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA13]] = !{[[META14:![0-9]+]], [[META14]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META14]] = !{!"p1 _ZTS24ref_non_forwarded_struct", [[META12]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS9TESTS_FOOPTR_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META16]] = !{!"p1 _ZTS9tests_foo", [[META12]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS10SUB_STRUCTPTR_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META18]] = !{!"p1 _ZTS10sub_struct", [[META12]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS17CONTAINING_STRUCTPTR_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META20]] = !{!"p1 _ZTS17containing_struct", [[META12]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS9ANNOTATEDPTR_TBAA21]] = !{[[META22:![0-9]+]], [[META22]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META22]] = !{!"p1 _ZTS9annotated", [[META12]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[LONG_TBAA23]] = !{[[META24:![0-9]+]], [[META24]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META24]] = !{!"long", [[META4]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS3BAZPTR_TBAA25]] = !{[[META26:![0-9]+]], [[META26]], i64 0}
-// NO-SANITIZE-WITHOUT-ATTR: [[META26]] = !{!"p1 _ZTS3baz", [[META12]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[TBAA_STRUCT8]] = !{i64 0, i64 24, [[META9:![0-9]+]]}
+// NO-SANITIZE-WITHOUT-ATTR: [[META9]] = !{[[META10:![0-9]+]], [[META4]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META10]] = !{!"hang", [[META4]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS20NON_FORWARDED_STRUCTPTR_TBAA11]] = !{[[META12:![0-9]+]], [[META13:![0-9]+]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META12]] = !{!"ref_non_forwarded_struct", [[META13]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META13]] = !{!"p1 _ZTS20non_forwarded_struct", [[META14:![0-9]+]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META14]] = !{!"any pointer", [[META4]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS24REF_NON_FORWARDED_STRUCTPTR_TBAA15]] = !{[[META16:![0-9]+]], [[META16]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META16]] = !{!"p1 _ZTS24ref_non_forwarded_struct", [[META14]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS9TESTS_FOOPTR_TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META18]] = !{!"p1 _ZTS9tests_foo", [[META14]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS10SUB_STRUCTPTR_TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META20]] = !{!"p1 _ZTS10sub_struct", [[META14]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS17CONTAINING_STRUCTPTR_TBAA21]] = !{[[META22:![0-9]+]], [[META22]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META22]] = !{!"p1 _ZTS17containing_struct", [[META14]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS9ANNOTATEDPTR_TBAA23]] = !{[[META24:![0-9]+]], [[META24]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META24]] = !{!"p1 _ZTS9annotated", [[META14]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[LONG_TBAA25]] = !{[[META26:![0-9]+]], [[META26]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META26]] = !{!"long", [[META4]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[_ZTS3BAZPTR_TBAA27]] = !{[[META28:![0-9]+]], [[META28]], i64 0}
+// NO-SANITIZE-WITHOUT-ATTR: [[META28]] = !{!"p1 _ZTS3baz", [[META14]], i64 0}
 //.
