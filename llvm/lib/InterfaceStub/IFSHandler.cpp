@@ -24,9 +24,24 @@ using namespace llvm;
 using namespace llvm::ifs;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(IFSSymbol)
+LLVM_YAML_IS_SEQUENCE_VECTOR(IFSVerDef)
+LLVM_YAML_STRONG_TYPEDEF(std::string, FlowString)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FlowString)
 
 namespace llvm {
 namespace yaml {
+
+template <> struct ScalarTraits<FlowString> {
+  static void output(const FlowString &Value, void *, llvm::raw_ostream &Out) {
+    Out << Value;
+  }
+
+  static StringRef input(StringRef Scalar, void *, FlowString &Value) {
+    return Scalar;
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
 
 /// YAML traits for ELFSymbolType.
 template <> struct ScalarEnumerationTraits<IFSSymbolType> {
@@ -116,6 +131,7 @@ template <> struct MappingTraits<IFSTarget> {
 template <> struct MappingTraits<IFSSymbol> {
   static void mapping(IO &IO, IFSSymbol &Symbol) {
     IO.mapRequired("Name", Symbol.Name);
+    IO.mapOptional("Version", Symbol.Version, "");
     IO.mapRequired("Type", Symbol.Type);
     // The need for symbol size depends on the symbol type.
     if (Symbol.Type == IFSSymbolType::NoType) {
@@ -126,9 +142,27 @@ template <> struct MappingTraits<IFSSymbol> {
     } else if (Symbol.Type != IFSSymbolType::Func) {
       IO.mapOptional("Size", Symbol.Size);
     }
+    IO.mapOptional("Default", Symbol.Default, false);
     IO.mapOptional("Undefined", Symbol.Undefined, false);
     IO.mapOptional("Weak", Symbol.Weak, false);
     IO.mapOptional("Warning", Symbol.Warning);
+  }
+
+  // Compacts symbol information into a single line.
+  static const bool flow = true; // NOLINT(readability-identifier-naming)
+};
+
+/// YAML traits for ELFVersionDefinition.
+template <> struct MappingTraits<IFSVerDef> {
+  static void mapping(IO &IO, IFSVerDef &VerDef) {
+    IO.mapRequired("Name", VerDef.Name);
+    if (IO.outputting()) {
+      std::vector<FlowString> Parents;
+      llvm::copy(VerDef.Parents, std::back_inserter(Parents));
+      IO.mapOptional("Parents", Parents);
+    } else {
+      IO.mapOptional("Parents", VerDef.Parents);
+    }
   }
 
   // Compacts symbol information into a single line.
@@ -145,6 +179,7 @@ template <> struct MappingTraits<IFSStub> {
     IO.mapOptional("Target", Stub.Target);
     IO.mapOptional("NeededLibs", Stub.NeededLibs);
     IO.mapRequired("Symbols", Stub.Symbols);
+    IO.mapOptional("VersionDefinitions", Stub.VersionDefinitions);
   }
 };
 
@@ -158,6 +193,7 @@ template <> struct MappingTraits<IFSStubTriple> {
     IO.mapOptional("Target", Stub.Target.Triple);
     IO.mapOptional("NeededLibs", Stub.NeededLibs);
     IO.mapRequired("Symbols", Stub.Symbols);
+    IO.mapOptional("VersionDefinitions", Stub.VersionDefinitions);
   }
 };
 } // end namespace yaml
