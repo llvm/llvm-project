@@ -521,6 +521,16 @@ define <4 x i16> @test_pli_h() {
   ret <4 x i16> splat (i16 100)
 }
 
+define <2 x i32> @test_pli_h_v2i32() {
+; CHECK-LABEL: test_pli_h_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 6
+; CHECK-NEXT:    addi a0, a0, 1124
+; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i32> splat (i32 u0x640064)
+}
+
 ; Test PLI for v8i8 with unsigned immediate
 define <8 x i8> @test_pli_b() {
 ; CHECK-LABEL: test_pli_b:
@@ -530,6 +540,26 @@ define <8 x i8> @test_pli_b() {
   ret <8 x i8> splat (i8 64)
 }
 
+define <4 x i16> @test_pli_b_v4i16() {
+; CHECK-LABEL: test_pli_b_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    addi a0, a0, 64
+; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <4 x i16> splat (i16 u0x4040)
+}
+
+define <2 x i32> @test_pli_b_v2i32() {
+; CHECK-LABEL: test_pli_b_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 263172
+; CHECK-NEXT:    addi a0, a0, 64
+; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i32> splat (i32 u0x40404040)
+}
+
 ; Test PLI for v2i32 with signed immediate
 define <2 x i32> @test_pli_w() {
 ; CHECK-LABEL: test_pli_w:
@@ -537,6 +567,64 @@ define <2 x i32> @test_pli_w() {
 ; CHECK-NEXT:    pli.w a0, -256
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 -256)
+}
+
+define <4 x i16> @test_plui_h() {
+; CHECK-LABEL: test_plui_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 25
+; CHECK-NEXT:    slli a0, a0, 8
+; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <4 x i16> splat (i16 u0x1900)
+}
+
+define <4 x i16> @test_plui_h_negative() {
+; CHECK-LABEL: test_plui_h_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 1048570
+; CHECK-NEXT:    addi a0, a0, -1792
+; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <4 x i16> splat (i16 u0x9900)
+}
+
+define <2 x i32> @test_plui_h_v2i32() {
+; CHECK-LABEL: test_plui_h_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 102402
+; CHECK-NEXT:    addi a0, a0, -1792
+; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i32> splat (i32 u0x19001900)
+}
+
+define <2 x i32> @test_plui_h_negative_v2i32() {
+; CHECK-LABEL: test_plui_h_negative_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 626698
+; CHECK-NEXT:    addi a0, a0, -1792
+; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i32> splat (i32 u0x99009900)
+}
+
+define <2 x i32> @test_plui_w() {
+; CHECK-LABEL: test_plui_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 76800
+; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i32> splat (i32 u0x12c00000)
+}
+
+define <2 x i32> @test_plui_w_negative() {
+; CHECK-LABEL: test_plui_w_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 825344
+; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i32> splat (i32 u0xc9800000)
 }
 
 define i16 @test_extract_vector_16(<4 x i16> %a) {
@@ -2059,10 +2147,10 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB165_2
+; CHECK-NEXT:    bnez a3, .LBB174_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB165_2:
+; CHECK-NEXT:  .LBB174_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %res
@@ -2073,10 +2161,10 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB166_2
+; CHECK-NEXT:    bnez a3, .LBB175_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB166_2:
+; CHECK-NEXT:  .LBB175_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %res
@@ -2087,10 +2175,10 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB167_2
+; CHECK-NEXT:    bnez a3, .LBB176_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB167_2:
+; CHECK-NEXT:  .LBB176_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %res

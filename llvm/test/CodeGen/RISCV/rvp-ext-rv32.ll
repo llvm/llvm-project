@@ -442,12 +442,50 @@ define <4 x i8> @test_pli_b() {
   ret <4 x i8> splat (i8 32)
 }
 
+define <2 x i16> @test_pli_b_v2i16() {
+; CHECK-LABEL: test_pli_b_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 2
+; CHECK-NEXT:    addi a0, a0, 32
+; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0x2020)
+}
+
 define <4 x i8> @test_pli_b_negative() {
 ; CHECK-LABEL: test_pli_b_negative:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.b a0, -2
 ; CHECK-NEXT:    ret
   ret <4 x i8> splat (i8 -2)
+}
+
+define <2 x i16> @test_pli_b_negative_v2i16() {
+; CHECK-LABEL: test_pli_b_negative_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a0, -258
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0xfefe)
+}
+
+define <2 x i16> @test_plui_h() {
+; CHECK-LABEL: test_plui_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 3
+; CHECK-NEXT:    addi a0, a0, 1664
+; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0x3680)
+}
+
+define <2 x i16> @test_plui_h_negative() {
+; CHECK-LABEL: test_plui_h_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 1048571
+; CHECK-NEXT:    addi a0, a0, 1600
+; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    ret
+  ret <2 x i16> splat (i16 u0xb640)
 }
 
 define i16 @test_extract_vector_16(<2 x i16> %a) {
@@ -1713,10 +1751,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB120_2
+; CHECK-NEXT:    bnez a3, .LBB124_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB120_2:
+; CHECK-NEXT:  .LBB124_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1727,10 +1765,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB121_2
+; CHECK-NEXT:    bnez a3, .LBB125_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB121_2:
+; CHECK-NEXT:  .LBB125_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res
