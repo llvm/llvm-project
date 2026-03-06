@@ -937,6 +937,12 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
     ColonLoc = ExpectedLoc;
   }
 
+  StmtResult Default =
+      Actions.ActOnDefaultStmt(DefaultLoc, ColonLoc, getCurScope());
+
+  if (Default.isInvalid())
+    return ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
+
   StmtResult SubStmt;
 
   if (Tok.is(tok::r_brace)) {
@@ -953,8 +959,8 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
   DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
-  return Actions.ActOnDefaultStmt(DefaultLoc, ColonLoc,
-                                  SubStmt.get(), getCurScope());
+  Actions.ActOnDefaultStmtBody(Default.get(), SubStmt.get());
+  return Default;
 }
 
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
