@@ -2719,11 +2719,11 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
       const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
       if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
-          getZeroExtendExpr(NarrowA, B->getType(), Depth) == A &&
+          getZeroExtendExpr(NarrowA, B->getType(), Depth + 1) == A &&
           hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
                                          SCEV::FlagAnyWrap),
                    SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd, SCEV::FlagAnyWrap, Depth + 1), B->getType(), Depth);
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd, SCEV::FlagAnyWrap, Depth + 1), B->getType(), Depth + 1);
       }
     }
   }
