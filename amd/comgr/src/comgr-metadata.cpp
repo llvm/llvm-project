@@ -684,6 +684,8 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
     if (Reader.readFixedString(BundleEntryID, BundleEntryIDSize)) {
       return AMD_COMGR_STATUS_ERROR;
     }
+    // The encoded size may include a null terminator; strip it.
+    BundleEntryID = BundleEntryID.rtrim('\0');
 
     const auto OffloadAndTargetId = BundleEntryID.split('-');
     if (OffloadAndTargetId.first != OffloadKindHip &&
