@@ -1101,7 +1101,8 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   auto MaybeCastTidX = m_CastOrSelf(MaybeMaskedTidX);
   auto MaybeMaskedCastTidX =
       m_CombineOr(m_c_And(MaybeCastTidX, m_Value()), MaybeCastTidX);
-  if (match(V, m_LShr(MaybeMaskedCastTidX, m_ConstantInt(C)))) {
+  if (match(V, m_LShr(MaybeMaskedCastTidX, m_ConstantInt(C))) ||
+      match(V, m_AShr(MaybeMaskedCastTidX, m_ConstantInt(C)))) {
     return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
   }
 
