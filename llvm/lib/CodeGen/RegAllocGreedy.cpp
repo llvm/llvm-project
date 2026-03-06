@@ -118,7 +118,7 @@ CSRFirstTimeCost("regalloc-csr-first-time-cost",
 static cl::opt<unsigned> CSRCostScale(
     "regalloc-csr-cost-scale",
     cl::desc("Scale for the callee-saved register cost, in percentage."),
-    cl::init(80), cl::Hidden);
+    cl::init(30), cl::Hidden);
 
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
