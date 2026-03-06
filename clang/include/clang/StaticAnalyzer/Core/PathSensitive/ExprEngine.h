@@ -215,8 +215,9 @@ public:
   getCrossTranslationUnitContext() {
     return &CTU;
   }
+  
 
-  const NodeBuilderContext &getBuilderContext() {
+  const NodeBuilderContext &getBuilderContext() const {
     assert(currBldrCtx);
     return *currBldrCtx;
   }
