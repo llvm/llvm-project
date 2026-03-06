@@ -77,3 +77,26 @@ define i1 @lock_xor_setns_folded(ptr %0) nounwind {
   %3 = icmp slt i64 %2, 0
   ret i1 %3
 }
+
+; Negative test: C = -3, so -C = 3 which is not a power of two.  The folded
+; icmp ult old, 3 does not satisfy the power-of-two guard and must not be
+; matched; a cmpxchg loop is emitted instead.
+define i1 @lock_and_not_pow2(ptr %0) nounwind {
+; CHECK-LABEL: lock_and_not_pow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB6_1: # %atomicrmw.start
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    andq $-3, %rcx
+; CHECK-NEXT:    lock cmpxchgq %rcx, (%rdi)
+; CHECK-NEXT:    jne .LBB6_1
+; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
+; CHECK-NEXT:    cmpq $3, %rax
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    retq
+  %2 = atomicrmw and ptr %0, i64 -3 seq_cst, align 8
+  %3 = icmp ult i64 %2, 3
+  ret i1 %3
+}

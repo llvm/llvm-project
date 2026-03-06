@@ -32568,9 +32568,9 @@ static X86::CondCode getCmpArithCC(const AtomicRMWInst *AI) {
     const APInt &C = CI->getValue();
     const APInt *K;
     if (match(I, m_c_ICmp(Pred, m_Specific(AI), m_APInt(K)))) {
-      if (Pred == ICmpInst::ICMP_ULT && *K == -C)
+      if (Pred == ICmpInst::ICMP_ULT && *K == -C && (-C).isPowerOf2())
         return X86::COND_E;
-      if (Pred == ICmpInst::ICMP_UGT && *K == ~C)
+      if (Pred == ICmpInst::ICMP_UGT && *K == ~C && (-C).isPowerOf2())
         return X86::COND_NE;
       if (C.isNegative()) {
         if (Pred == ICmpInst::ICMP_SLT && K->isZero())
