@@ -1801,6 +1801,14 @@ double4 min(double4, double4);
 ///   8. matrix * vector -> vector
 ///   9. matrix * matrix -> matrix
 
+// Cases 1, 2, 3, 4, 5, and 7 of mul are defined in hlsl_intrinsics.h as
+// header-only implementations because they are elementwise operations and dot
+// products easily expressed in HLSL.
+
+// Cases 6, 8, and 9 are defined below to alias the mul builtin so that they can
+// be lowered to the llvm.matrix.multiply intrinsic which is not exposed
+// directly to HLSL.
+
 // Case 6: vector * matrix -> vector
 template <typename T, int R, int C>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)

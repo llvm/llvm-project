@@ -1062,26 +1062,23 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     QualType QTy1 = E->getArg(1)->getType();
 
     bool IsVec0 = QTy0->isVectorType();
+    bool IsVec1 = QTy1->isVectorType();
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
-    // Only matrix-involved cases reach the builtin (cases 6, 8, 9).
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
-      // Case 6: vector<N> * matrix<N,M> -> vector<M>
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
       unsigned M = MatTy->getNumColumns();
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, M, "hlsl.mul");
     }
-    if (IsMat0 && !IsMat1) {
-      // Case 8: matrix<M,N> * vector<N> -> vector<M>
+    if (IsMat0 && IsVec1) {
       auto *MatTy = QTy0->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
-    // Case 9: matrix<M,K> * matrix<K,N> -> matrix<M,N>
     assert(IsMat0 && IsMat1);
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
