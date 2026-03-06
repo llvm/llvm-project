@@ -13,6 +13,7 @@ add_library(PluginCommon OBJECT
   src/PluginInterface.cpp
   src/GlobalHandler.cpp
   src/JIT.cpp
+  src/RecordReplay.cpp
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp

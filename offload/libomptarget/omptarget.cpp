@@ -2381,9 +2381,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
                        bool IsRecord, bool SaveOutput,
                        uint64_t &ReqPtrArgOffset) {
-  return Device.RTL->initialize_record_replay(Device.DeviceID, MemorySize,
-                                              VAddr, IsRecord, SaveOutput,
-                                              ReqPtrArgOffset);
+  return Device.RTL->initialize_record_replay(
+      Device.DeviceID, MemorySize, VAddr, IsRecord, /*IsNative=*/true,
+      SaveOutput, ReqPtrArgOffset);
 }
 
 /// Executes a kernel using pre-recorded information for loading to
@@ -2431,7 +2431,11 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
   KernelArgs.NumTeams[0] = NumTeams;
+  KernelArgs.NumTeams[1] = 1;
+  KernelArgs.NumTeams[2] = 1;
   KernelArgs.ThreadLimit[0] = ThreadLimit;
+  KernelArgs.ThreadLimit[1] = 1;
+  KernelArgs.ThreadLimit[2] = 1;
 
   int Ret = Device.launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets, KernelArgs,
                                 AsyncInfo);

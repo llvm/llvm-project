@@ -91,11 +91,14 @@ int main(int argc, char **argv) {
   for (auto It : *TgtArgOffsetsArray)
     TgtArgOffsets.push_back(static_cast<ptrdiff_t>(It.getAsInteger().value()));
 
-  void *BAllocStart = reinterpret_cast<void *>(
-      JsonKernelInfo->getAsObject()->getInteger("BumpAllocVAStart").value());
+  void *VAllocAddr = reinterpret_cast<void *>(
+      JsonKernelInfo->getAsObject()->getInteger("VAllocAddr").value());
+  uint64_t VAllocSize =
+      JsonKernelInfo->getAsObject()->getInteger("VAllocSize").value();
 
-  llvm::offloading::EntryTy KernelEntry = {~0U,     0, 0, 0,      nullptr,
-                                           nullptr, 0, 0, nullptr};
+  llvm::offloading::EntryTy KernelEntry = {
+      0x0, 0x1,    object::OffloadKind::OFK_OpenMP, 0, nullptr, nullptr, 0,
+      0,   nullptr};
   std::string KernelEntryName = KernelFunc.value().str();
   KernelEntry.SymbolName = const_cast<char *>(KernelEntryName.c_str());
   // Anything non-zero works to uniquely identify the kernel.
@@ -119,11 +122,6 @@ int main(int argc, char **argv) {
   Desc.HostEntriesEnd = &KernelEntry + 1;
   Desc.DeviceImages = &DeviceImage;
 
-  auto DeviceMemorySizeJson =
-      JsonKernelInfo->getAsObject()->getInteger("DeviceMemorySize");
-  // Set device memory size to the ceiling of GB granularity.
-  uint64_t DeviceMemorySize = std::ceil(DeviceMemorySizeJson.value());
-
   auto DeviceIdJson = JsonKernelInfo->getAsObject()->getInteger("DeviceId");
   // TODO: Print warning if the user overrides the device id in the json file.
   int32_t DeviceId = (DeviceIdOpt > -1 ? DeviceIdOpt : DeviceIdJson.value());
@@ -134,8 +132,8 @@ int main(int argc, char **argv) {
   __tgt_register_lib(&Desc);
 
   uint64_t ReqPtrArgOffset = 0;
-  int Rc = __tgt_activate_record_replay(DeviceId, DeviceMemorySize, BAllocStart,
-                                        false, VerifyOpt, ReqPtrArgOffset);
+  int Rc = __tgt_activate_record_replay(DeviceId, VAllocSize, VAllocAddr, false,
+                                        VerifyOpt, ReqPtrArgOffset);
 
   if (Rc != OMP_TGT_SUCCESS) {
     report_fatal_error("Cannot activate record replay\n");
@@ -150,8 +148,8 @@ int main(int argc, char **argv) {
 
   // On AMD for currently unknown reasons we cannot copy memory mapped data to
   // device. This is a work-around.
-  uint8_t *recored_data = new uint8_t[DeviceMemoryMB.get()->getBufferSize()];
-  std::memcpy(recored_data,
+  uint8_t *RecordedData = new uint8_t[DeviceMemoryMB.get()->getBufferSize()];
+  std::memcpy(RecordedData,
               const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
               DeviceMemoryMB.get()->getBufferSize());
 
@@ -160,15 +158,15 @@ int main(int argc, char **argv) {
     for (auto *&Arg : TgtArgs) {
       auto ArgInt = uintptr_t(Arg);
       // Try to find pointer arguments.
-      if (ArgInt < uintptr_t(BAllocStart) ||
-          ArgInt >= uintptr_t(BAllocStart) + DeviceMemorySize)
+      if (ArgInt < uintptr_t(VAllocAddr) ||
+          ArgInt >= uintptr_t(VAllocAddr) + VAllocSize)
         continue;
       Arg = reinterpret_cast<void *>(ArgInt - ReqPtrArgOffset);
     }
   }
 
   __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)recored_data,
+      /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)RecordedData,
       DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       LoopTripCount.value());
@@ -198,7 +196,7 @@ int main(int argc, char **argv) {
                 "verify!\n";
   }
 
-  delete[] recored_data;
+  delete[] RecordedData;
 
   return 0;
 }
