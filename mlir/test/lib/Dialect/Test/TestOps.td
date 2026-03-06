@@ -2729,6 +2729,41 @@ def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
 }
 
 //===----------------------------------------------------------------------===//
+// Test areTypesCompatible for RegionBranchOpInterface / LoopLikeOpInterface
+//===----------------------------------------------------------------------===//
+
+def TestTypesCompatYieldOp : TEST_Op<"types_compat_yield",
+    [Pure, ReturnLike, Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$args);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+}
+
+def TestRegionTypesCompatOp : TEST_Op<"region_types_compat",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     SingleBlockImplicitTerminator<"TestTypesCompatYieldOp">,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$entries);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+}
+
+def TestLoopTypesCompatOp : TEST_Op<"loop_types_compat",
+    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
+       ["getInitsMutable", "getRegionIterArgs", "getYieldedValuesMutable",
+        "getLoopResults"]>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     SingleBlockImplicitTerminator<"TestTypesCompatYieldOp">,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$init_args);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+}
+
+//===----------------------------------------------------------------------===//
 // Test TableGen generated build() methods
 //===----------------------------------------------------------------------===//
 
@@ -3184,6 +3219,7 @@ def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOfNonZeroRankOf<[Any
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
+  let hasVerifier = 1;
   let description = [{
     Creates a value with specified [min, max] range for integer range analysis.
 

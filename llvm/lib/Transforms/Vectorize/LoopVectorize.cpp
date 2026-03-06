@@ -8333,9 +8333,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: We can't call runPass on these transforms yet, due to verifier
   // failures.
   VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
-  DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues,
-                                          CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8347,6 +8344,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Optimize FindIV reductions to use sentinel-based approach when possible.
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
                  *OrigLoop);
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
+                                                 CM.foldTailByMasking());
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
@@ -8408,7 +8407,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8444,13 +8442,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
     return nullptr;
 
-  // TODO: IVEndValues are not used yet in the native path, to optimize exit
-  // values.
-  // TODO: We can't call runPass on the transform yet, due to verifier
-  // failures.
-  DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues,
-                                          /*FoldTail=*/false);
+  // Optimize induction live-out users to use precomputed end values.
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
+                                                 /*FoldTail=*/false);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -9767,15 +9761,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Override IC if user provided an interleave count.
   IC = UserIC > 0 ? UserIC : IC;
-
-  // FIXME: Enable interleaving for FindLast reductions.
-  if (InterleaveLoop && hasFindLastReductionPhi(LVP.getPlanFor(VF.Width))) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to FindLast reduction.\n");
-    IntDiagMsg = {"FindLastPreventsScalarInterleaving",
-                  "Unable to interleave due to FindLast reduction."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
 
   // Emit diagnostic messages, if any.
   const char *VAPassName = Hints.vectorizeAnalysisPassName();

@@ -2432,7 +2432,23 @@ static void initCatchParam(CIRGenFunction &cgf, mlir::Value ehToken,
   // If we're catching by reference, we can just cast the object
   // pointer to the appropriate pointer.
   if (isa<ReferenceType>(catchType)) {
-    cgf.cgm.errorNYI(loc, "initCatchParam: ReferenceType");
+    QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
+    bool endCatchMightThrow = caughtType->isRecordType();
+
+    mlir::Value adjustedExn =
+        callBeginCatch(cgf, ehToken, cirCatchTy, endCatchMightThrow);
+
+    // We have no way to tell the personality function that we're
+    // catching by reference, so if we're catching a pointer,
+    // __cxa_begin_catch will actually return that pointer by value.
+    if (isa<PointerType>(caughtType)) {
+      cgf.cgm.errorNYI(loc, "initCatchParam: catching a pointer");
+      return;
+    }
+
+    mlir::Value exnCast =
+        cgf.getBuilder().createBitcast(adjustedExn, cirCatchTy);
+    cgf.getBuilder().createStore(cgf.getLoc(loc), exnCast, paramAddr);
     return;
   }
 

@@ -11,6 +11,44 @@
 
 namespace llvm::orc::detail {
 
+class ElementSetTest : public testing::Test {
+public:
+  using TestElementSet = WaitingOnGraph<uintptr_t, uintptr_t>::ElementSet;
+
+  bool merge(TestElementSet &S, const TestElementSet &Other) {
+    return S.merge(Other);
+  }
+
+  bool remove(TestElementSet &S, const TestElementSet &Other) {
+    return S.remove(Other);
+  }
+
+  template <typename Pred> bool remove_if(TestElementSet &S, Pred &&P) {
+    return S.remove_if(std::forward<Pred>(P));
+  }
+};
+
+class ContainerElementsMapTest : public testing::Test {
+public:
+  using TestContainerElementsMap =
+      WaitingOnGraph<uintptr_t, uintptr_t>::ContainerElementsMap;
+
+  bool merge(TestContainerElementsMap &M,
+             const TestContainerElementsMap &Other) {
+    return M.merge(Other);
+  }
+
+  bool remove(TestContainerElementsMap &M,
+              const TestContainerElementsMap &Other) {
+    return M.remove(Other);
+  }
+
+  template <typename Visitor>
+  bool visit(TestContainerElementsMap &M, Visitor &&V) {
+    return M.visit(std::forward<Visitor>(V));
+  }
+};
+
 class WaitingOnGraphTest : public testing::Test {
 public:
   using TestGraph = WaitingOnGraph<uintptr_t, uintptr_t>;
@@ -118,6 +156,157 @@ protected:
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::detail;
+
+TEST_F(ElementSetTest, Merge) {
+  // Merge into empty set.
+  TestElementSet S;
+  TestElementSet Other({1, 2, 3});
+  EXPECT_TRUE(merge(S, Other));
+  EXPECT_EQ(S, Other);
+
+  // Merge with all-duplicate elements -- no change.
+  EXPECT_FALSE(merge(S, Other));
+  EXPECT_EQ(S, Other);
+
+  // Merge empty into non-empty -- no change.
+  EXPECT_FALSE(merge(S, TestElementSet()));
+  EXPECT_EQ(S, Other);
+
+  // Merge with partial overlap.
+  EXPECT_TRUE(merge(S, TestElementSet({3, 4, 5})));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3, 4, 5}));
+}
+
+TEST_F(ElementSetTest, Remove) {
+  // Remove from empty set.
+  TestElementSet S;
+  EXPECT_FALSE(remove(S, TestElementSet({1, 2})));
+  EXPECT_TRUE(S.empty());
+
+  // Remove empty from non-empty -- no change.
+  S = TestElementSet({1, 2, 3});
+  EXPECT_FALSE(remove(S, TestElementSet()));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3}));
+
+  // Remove with no overlap -- no change.
+  EXPECT_FALSE(remove(S, TestElementSet({4, 5})));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3}));
+
+  // Remove with partial overlap (|this| > |Other| path).
+  S = TestElementSet({1, 2, 3, 4, 5});
+  EXPECT_TRUE(remove(S, TestElementSet({2, 4})));
+  EXPECT_EQ(S, TestElementSet({1, 3, 5}));
+
+  // Remove with partial overlap (|this| <= |Other| path).
+  S = TestElementSet({1, 2});
+  EXPECT_TRUE(remove(S, TestElementSet({2, 3, 4, 5})));
+  EXPECT_EQ(S, TestElementSet({1}));
+
+  // Remove all elements.
+  S = TestElementSet({1, 2});
+  EXPECT_TRUE(remove(S, TestElementSet({1, 2})));
+  EXPECT_TRUE(S.empty());
+}
+
+TEST_F(ElementSetTest, RemoveIf) {
+  // RemoveIf on empty set.
+  TestElementSet S;
+  EXPECT_FALSE(remove_if(S, [](const auto &) { return true; }));
+
+  // RemoveIf with predicate matching nothing.
+  S = TestElementSet({1, 2, 3});
+  EXPECT_FALSE(remove_if(S, [](const auto &) { return false; }));
+  EXPECT_EQ(S, TestElementSet({1, 2, 3}));
+
+  // RemoveIf with predicate matching some elements.
+  EXPECT_TRUE(remove_if(S, [](const auto &E) { return E % 2 == 0; }));
+  EXPECT_EQ(S, TestElementSet({1, 3}));
+
+  // RemoveIf with predicate matching all elements.
+  EXPECT_TRUE(remove_if(S, [](const auto &) { return true; }));
+  EXPECT_TRUE(S.empty());
+}
+
+TEST_F(ContainerElementsMapTest, Merge) {
+  // Merge into empty map.
+  TestContainerElementsMap M;
+  TestContainerElementsMap Other({{0, {1, 2}}, {1, {3}}});
+  EXPECT_TRUE(merge(M, Other));
+  EXPECT_EQ(M, Other);
+
+  // Merge with all-duplicate entries -- no change.
+  EXPECT_FALSE(merge(M, Other));
+  EXPECT_EQ(M, Other);
+
+  // Merge empty -- no change.
+  EXPECT_FALSE(merge(M, TestContainerElementsMap()));
+  EXPECT_EQ(M, Other);
+
+  // Merge with disjoint containers.
+  EXPECT_TRUE(merge(M, TestContainerElementsMap({{2, {4}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}, {2, {4}}}));
+
+  // Merge with overlapping container, new elements.
+  EXPECT_TRUE(merge(M, TestContainerElementsMap({{0, {3}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2, 3}}, {1, {3}}, {2, {4}}}));
+}
+
+TEST_F(ContainerElementsMapTest, Remove) {
+  // Remove from empty map.
+  TestContainerElementsMap M;
+  EXPECT_FALSE(remove(M, TestContainerElementsMap({{0, {1}}})));
+  EXPECT_TRUE(M.empty());
+
+  // Remove with no matching container.
+  M = TestContainerElementsMap({{0, {1, 2}}, {1, {3}}});
+  EXPECT_FALSE(remove(M, TestContainerElementsMap({{2, {1}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}}));
+
+  // Remove with no overlap within matching container.
+  EXPECT_FALSE(remove(M, TestContainerElementsMap({{0, {5}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}}));
+
+  // Remove partial elements from a container.
+  EXPECT_TRUE(remove(M, TestContainerElementsMap({{0, {1}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {2}}, {1, {3}}}));
+
+  // Remove all elements from a container -- container should be cleaned up.
+  EXPECT_TRUE(remove(M, TestContainerElementsMap({{0, {2}}})));
+  EXPECT_EQ(M, TestContainerElementsMap({{1, {3}}}));
+}
+
+TEST_F(ContainerElementsMapTest, Visit) {
+  // Visit empty map -- no-op.
+  TestContainerElementsMap M;
+  EXPECT_FALSE(visit(M, [](auto &, auto &) { return false; }));
+
+  // Visit with no modifications.
+  M = TestContainerElementsMap({{0, {1, 2}}, {1, {3}}});
+  EXPECT_FALSE(visit(M, [](auto &, auto &) { return false; }));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 2}}, {1, {3}}}));
+
+  // Visit that removes some elements from one container.
+  M = TestContainerElementsMap({{0, {1, 2, 3}}, {1, {4}}});
+  EXPECT_TRUE(visit(M, [](auto &Container, auto &Elements) {
+    if (Container == 0) {
+      Elements.erase(2);
+      return true;
+    }
+    return false;
+  }));
+  EXPECT_EQ(M, TestContainerElementsMap({{0, {1, 3}}, {1, {4}}}));
+
+  // Visit that empties a container -- container should be removed.
+  M = TestContainerElementsMap({{0, {1}}, {1, {2}}});
+  EXPECT_TRUE(visit(M, [](auto &Container, auto &Elements) {
+    if (Container == 0) {
+      Elements.clear();
+      return true;
+    }
+    return false;
+  }));
+  EXPECT_EQ(M, TestContainerElementsMap({{1, {2}}}));
+}
 
 TEST_F(WaitingOnGraphTest, ConstructAndDestroyEmpty) {
   // Nothing to do here -- we're just testing construction and destruction

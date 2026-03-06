@@ -1,4 +1,6 @@
 mem_fence/fence.cl
+subgroup/subgroup.cl
+synchronization/sub_group_barrier.cl
 workitem/get_global_offset.cl
 workitem/get_group_id.cl
 workitem/get_global_size.cl

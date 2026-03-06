@@ -1888,6 +1888,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i512, Custom);
     setOperationAction(ISD::ADD, MVT::i512, Custom);
     setOperationAction(ISD::SUB, MVT::i512, Custom);
+    setOperationAction(ISD::SRL, MVT::i512, Custom);
+    setOperationAction(ISD::SHL, MVT::i512, Custom);
+    setOperationAction(ISD::SRA, MVT::i512, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
@@ -2134,8 +2137,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::FSHR, VT, Legal);
       }
 
-      setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
-      setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
+      setOperationAction(ISD::ROTL, MVT::v32i16, Legal);
+      setOperationAction(ISD::ROTR, MVT::v32i16, Legal);
     }
 
     // Only PCLMUL required as we always unroll clmul vectors.
@@ -2162,6 +2165,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSHL, VT, Legal);
       setOperationAction(ISD::FSHR, VT, Legal);
     }
+
+    setOperationAction(ISD::ROTL, MVT::v16i16, Legal);
+    setOperationAction(ISD::ROTR, MVT::v16i16, Legal);
+    setOperationAction(ISD::ROTL, MVT::v8i16, Legal);
+    setOperationAction(ISD::ROTR, MVT::v8i16, Legal);
   }
 
   // This block controls legalization for operations that don't have
@@ -2936,6 +2944,10 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     // Check for larger than legal scalar integer ops that might have been
     // custom lowered to vector instruction.
     switch (Opcode) {
+    case ISD::SHL:
+    case ISD::SRL:
+    case ISD::SRA:
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget);
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
@@ -31932,12 +31944,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (IsCstSplat && CstSplatValue.urem(EltSizeInBits) == 0)
     return R;
 
-  // AVX512 VBMI2 vXi16 - lower to funnel shifts.
-  if (Subtarget.hasVBMI2() && 16 == EltSizeInBits) {
-    unsigned FunnelOpc = IsROTL ? ISD::FSHL : ISD::FSHR;
-    return DAG.getNode(FunnelOpc, DL, VT, R, R, Amt);
-  }
-
   SDValue Z = DAG.getConstant(0, DL, VT);
 
   if (!IsROTL) {
@@ -34428,6 +34434,92 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Res =
         DAG.getNode(ISD::VSELECT, dl, VecVT, CorrVec, Adjusted, Partial);
 
+    Results.push_back(DAG.getBitcast(VT, Res));
+    return;
+  }
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA: {
+    EVT VT = N->getValueType(0);
+    SDValue Src = N->getOperand(0);
+    SDValue Amt = N->getOperand(1);
+    assert(Subtarget.useAVX512Regs() && "AVX512F required");
+    assert(VT == MVT::i512 && "Unexpected VT!");
+    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+    MVT BoolVT = VecVT.changeVectorElementType(MVT::i1);
+
+    if (!mayFoldIntoVector(Src, DAG, Subtarget))
+      return;
+
+    // Early out if this will fold to a constant shift of whole byte elements.
+    // TODO: Directly lower to a shuffle?
+    if (auto *AmtC = dyn_cast<ConstantSDNode>(Amt)) {
+      assert(AmtC->getAPIntValue().ult(512) && "Out of bounds shift amount");
+      if (AmtC->getAPIntValue().urem(8) == 0)
+        return;
+    }
+
+    SDValue AmtLane = DAG.getNode(ISD::SRL, dl, MVT::i32,
+                                  DAG.getZExtOrTrunc(Amt, dl, MVT::i32),
+                                  DAG.getShiftAmountConstant(6, MVT::i32, dl));
+    AmtLane = DAG.getZExtOrTrunc(AmtLane, dl, MVT::i8);
+
+    if (auto *SrcC = dyn_cast<ConstantSDNode>(Src)) {
+      // Special case: SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
+      if (Opc == ISD::SHL && SrcC->getAPIntValue() == 1) {
+        SDValue Bit = DAG.getConstant(1, dl, MVT::i64);
+        SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
+                                     DAG.getZExtOrTrunc(Amt, dl, MVT::i64),
+                                     DAG.getConstant(63, dl, MVT::i64));
+        SDValue LaneMask = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtLane);
+        LaneMask =
+            DAG.getBitcast(BoolVT, DAG.getZExtOrTrunc(LaneMask, dl, MVT::i8));
+        SDValue Elt = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtMod);
+        SDValue Res =
+            DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
+                          DAG.getConstant(0, dl, VecVT));
+        Results.push_back(DAG.getBitcast(VT, Res));
+        return;
+      }
+    }
+
+    // Use EXPAND/COMPRESS to shuffle the i64 elements left/right with the
+    // ShiftAmt/64 'laneshift', and then shuffle one element along to get the
+    // shifted in bits from the neighbouring element. Finally use a funnel shift
+    // with the ShiftAmt%64 'elementshift' to get the final result.
+    SDValue Mask =
+        DAG.getNode(ISD::TRUNCATE, dl, MVT::i8,
+                    DAG.getNode(ISD::SHL, dl, MVT::i32,
+                                DAG.getAllOnesConstant(dl, MVT::i32), AmtLane));
+    Src = DAG.getBitcast(VecVT, Src);
+
+    SDValue PassThrough;
+    if (Opc == ISD::SRA) {
+      // Splat the MSB sign bit across the vector.
+      PassThrough = DAG.getNode(ISD::SRA, dl, VecVT, Src,
+                                DAG.getShiftAmountConstant(63, VecVT, dl));
+      PassThrough = DAG.getVectorShuffle(VecVT, dl, PassThrough, PassThrough,
+                                         {7, 7, 7, 7, 7, 7, 7, 7});
+    } else {
+      PassThrough = DAG.getConstant(0, dl, VecVT);
+    }
+    SDValue A, B;
+    if (Opc == ISD::SHL) {
+      A = DAG.getNode(X86ISD::EXPAND, dl, VecVT, Src, PassThrough,
+                      DAG.getBitcast(BoolVT, Mask));
+      B = DAG.getVectorShuffle(VecVT, dl, PassThrough, A,
+                               {7, 8, 9, 10, 11, 12, 13, 14});
+    } else {
+      B = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, Src, PassThrough,
+                      DAG.getBitcast(BoolVT, Mask));
+      A = DAG.getVectorShuffle(VecVT, dl, B, PassThrough,
+                               {1, 2, 3, 4, 5, 6, 7, 8});
+    }
+    // Funnel shifts use modulo shift amount so no need to explicitly mask it.
+    SDValue Res =
+        DAG.getNode(Opc == ISD::SHL ? ISD::FSHL : ISD::FSHR, dl, VecVT, A, B,
+                    DAG.getSplatBuildVector(
+                        VecVT, dl, DAG.getZExtOrTrunc(Amt, dl, MVT::i64)));
     Results.push_back(DAG.getBitcast(VT, Res));
     return;
   }
@@ -48075,6 +48167,23 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
             N, InputVector.getValueType(), InputVector, CIdx->getZExtValue(),
             dl, DAG, DCI))
       return V;
+
+  // Scalarize single use funnel shift.
+  // Ideally DAG would handle this similar to scalarizeExtractedBinOp.
+  if (InputVector.getOpcode() == ISD::FSHL ||
+      InputVector.getOpcode() == ISD::FSHR) {
+    if (CIdx && InputVector.hasOneUse() &&
+        TLI.isOperationLegal(InputVector.getOpcode(), VT)) {
+      SDValue LHS = DAG.getExtractVectorElt(dl, VT, InputVector.getOperand(0),
+                                            CIdx->getZExtValue());
+      SDValue RHS = DAG.getExtractVectorElt(dl, VT, InputVector.getOperand(1),
+                                            CIdx->getZExtValue());
+      SDValue Amt = DAG.getExtractVectorElt(dl, VT, InputVector.getOperand(2),
+                                            CIdx->getZExtValue());
+      Amt = DAG.getShiftAmountOperand(VT, Amt);
+      return DAG.getNode(InputVector.getOpcode(), dl, VT, LHS, RHS, Amt);
+    }
+  }
 
   // Attempt to extract a i1 element by using MOVMSK to extract the signbits
   // and then testing the relevant element.

@@ -152,6 +152,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     llvm_unreachable("invalid statement class to emit generically");
   case Stmt::BreakStmtClass:
   case Stmt::NullStmtClass:
