@@ -89,20 +89,23 @@ MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                      : CSR_Interrupt_32_SaveList;
   }
 
+  bool GPIsGlobal = MF->getInfo<MipsFunctionInfo>()->isGPGlobalRegister();
   // N64 ABI
   if (Subtarget.isABI_N64()) {
     if (Subtarget.isSingleFloat())
-      return CSR_N64_SingleFloat_SaveList;
+      return GPIsGlobal ? CSR_N64_SingleFloat_NoGP_SaveList
+                        : CSR_N64_SingleFloat_SaveList;
 
-    return CSR_N64_SaveList;
+    return GPIsGlobal ? CSR_N64_NoGP_SaveList : CSR_N64_SaveList;
   }
 
   // N32 ABI
   if (Subtarget.isABI_N32()) {
     if (Subtarget.isSingleFloat())
-      return CSR_N32_SingleFloat_SaveList;
+      return GPIsGlobal ? CSR_N32_SingleFloat_NoGP_SaveList
+                        : CSR_N32_SingleFloat_SaveList;
 
-    return CSR_N32_SaveList;
+    return GPIsGlobal ? CSR_N32_NoGP_SaveList : CSR_N32_SaveList;
   }
 
   // O32 ABI
@@ -122,6 +125,7 @@ const uint32_t *
 MipsRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const {
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
+
   // N64 ABI
   if (Subtarget.isABI_N64()) {
     if (Subtarget.isSingleFloat())
@@ -175,7 +179,8 @@ getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(R);
 
   // For mno-abicalls, GP is a program invariant!
-  if (!Subtarget.isABICalls()) {
+  bool GPIsGlobal = MF.getInfo<MipsFunctionInfo>()->isGPGlobalRegister();
+  if (!Subtarget.isABICalls() || GPIsGlobal) {
     Reserved.set(Mips::GP);
     Reserved.set(Mips::GP_64);
   }

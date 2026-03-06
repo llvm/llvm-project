@@ -62,6 +62,9 @@ public:
   int getEhDataRegFI(unsigned Reg) const { return EhDataRegFI[Reg]; }
   bool isEhDataRegFI(int FI) const;
 
+  void setGPGlobalRegister(bool Val) { GPIsGlobalRegister = Val; }
+  bool isGPGlobalRegister() const { return GPIsGlobalRegister; }
+
   /// Create a MachinePointerInfo that has an ExternalSymbolPseudoSourceValue
   /// object representing a GOT entry for an external function.
   MachinePointerInfo callPtrInfo(MachineFunction &MF, const char *ES);
@@ -126,6 +129,8 @@ private:
   /// FrameIndex for expanding BuildPairF64 nodes to spill and reload when the
   /// O32 FPXX ABI is enabled. -1 is used to denote invalid index.
   int MoveF64ViaSpillFI = -1;
+
+  bool GPIsGlobalRegister = false;
 };
 
 } // end namespace llvm
