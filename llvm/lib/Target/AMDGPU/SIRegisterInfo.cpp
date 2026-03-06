@@ -1549,13 +1549,14 @@ void SIRegisterInfo::buildSpillLoadStore(
                 : 0; // Restore Ops have data reg as the first (output) operand.
     const TargetRegisterClass *ExpectedRC =
         TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
-    unsigned NumRegs = std::min(RegWidth / 4, 4u);
-    unsigned SubIdx = getSubRegFromChannel(0, NumRegs);
-    const TargetRegisterClass *MatchRC = findCommonRegClass(
-        RC, getRegSizeInBits(*ExpectedRC) == getRegSizeInBits(*RC) ? 0 : SubIdx,
-        ExpectedRC, 0);
-    if (MatchRC && !MatchRC->contains(ValueReg))
-      IsRegMisaligned = true;
+    if (!ExpectedRC->contains(ValueReg)) {
+      unsigned NumRegs = std::min(AMDGPU::getRegBitWidth(*ExpectedRC) / 4, 4u);
+      unsigned SubIdx = getSubRegFromChannel(0, NumRegs);
+      const TargetRegisterClass *MatchRC =
+          getMatchingSuperRegClass(RC, ExpectedRC, SubIdx);
+      if (!MatchRC || !MatchRC->contains(ValueReg))
+        IsRegMisaligned = true;
+    }
   }
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
