@@ -524,9 +524,7 @@ define <4 x i16> @test_pli_h() {
 define <2 x i32> @test_pli_h_v2i32() {
 ; CHECK-LABEL: test_pli_h_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 6
-; CHECK-NEXT:    addi a0, a0, 1124
-; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    pli.h a0, 100
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0x640064)
 }
@@ -543,9 +541,7 @@ define <8 x i8> @test_pli_b() {
 define <4 x i16> @test_pli_b_v4i16() {
 ; CHECK-LABEL: test_pli_b_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 4
-; CHECK-NEXT:    addi a0, a0, 64
-; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    pli.b a0, 64
 ; CHECK-NEXT:    ret
   ret <4 x i16> splat (i16 u0x4040)
 }
@@ -553,9 +549,7 @@ define <4 x i16> @test_pli_b_v4i16() {
 define <2 x i32> @test_pli_b_v2i32() {
 ; CHECK-LABEL: test_pli_b_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 263172
-; CHECK-NEXT:    addi a0, a0, 64
-; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    pli.b a0, 64
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0x40404040)
 }
@@ -572,9 +566,7 @@ define <2 x i32> @test_pli_w() {
 define <4 x i16> @test_plui_h() {
 ; CHECK-LABEL: test_plui_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 8
-; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    plui.h a0, 6
 ; CHECK-NEXT:    ret
   ret <4 x i16> splat (i16 u0x1900)
 }
@@ -582,9 +574,7 @@ define <4 x i16> @test_plui_h() {
 define <4 x i16> @test_plui_h_negative() {
 ; CHECK-LABEL: test_plui_h_negative:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 1048570
-; CHECK-NEXT:    addi a0, a0, -1792
-; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    plui.h a0, -26
 ; CHECK-NEXT:    ret
   ret <4 x i16> splat (i16 u0x9900)
 }
@@ -592,9 +582,7 @@ define <4 x i16> @test_plui_h_negative() {
 define <2 x i32> @test_plui_h_v2i32() {
 ; CHECK-LABEL: test_plui_h_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 102402
-; CHECK-NEXT:    addi a0, a0, -1792
-; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    plui.h a0, 6
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0x19001900)
 }
@@ -602,9 +590,7 @@ define <2 x i32> @test_plui_h_v2i32() {
 define <2 x i32> @test_plui_h_negative_v2i32() {
 ; CHECK-LABEL: test_plui_h_negative_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 626698
-; CHECK-NEXT:    addi a0, a0, -1792
-; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    plui.h a0, -26
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0x99009900)
 }
@@ -612,8 +598,7 @@ define <2 x i32> @test_plui_h_negative_v2i32() {
 define <2 x i32> @test_plui_w() {
 ; CHECK-LABEL: test_plui_w:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 76800
-; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    plui.w a0, 75
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0x12c00000)
 }
@@ -621,8 +606,7 @@ define <2 x i32> @test_plui_w() {
 define <2 x i32> @test_plui_w_negative() {
 ; CHECK-LABEL: test_plui_w_negative:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 825344
-; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    plui.w a0, -218
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0xc9800000)
 }
@@ -1008,9 +992,8 @@ define <8 x i8> @test_psslai_b(<8 x i8> %a) {
 ; CHECK-LABEL: test_psslai_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmslt.b a1, a0, zero
-; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    pli.b a2, -128
 ; CHECK-NEXT:    pli.b a3, 127
-; CHECK-NEXT:    padd.bs a2, zero, a2
 ; CHECK-NEXT:    merge a1, a3, a2
 ; CHECK-NEXT:    pslli.b a2, a0, 2
 ; CHECK-NEXT:    psrai.b a3, a2, 2

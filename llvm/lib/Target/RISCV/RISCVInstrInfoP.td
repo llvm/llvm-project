@@ -1816,11 +1816,6 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI16VT (riscv_psra GPR:$rs1, GPR:$rs2)),
            (PSRA_HS GPR:$rs1, GPR:$rs2)>;
 
-  // 8-bit PLI SD node pattern
-  def: Pat<(XLenVecI8VT (splat_vector simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
-  // 16-bit PLI SD node pattern
-  def: Pat<(XLenVecI16VT (splat_vector simm10:$imm10)), (PLI_H simm10:$imm10)>;
-
   // // splat pattern
   def: Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
@@ -1923,9 +1918,6 @@ let Predicates = [HasStdExtP, IsRV64] in {
                  zexti16:$rs1),
             (PPAIRE_H zexti16:$rs1,
                       (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
-
-  // 32-bit PLI SD node pattern
-  def: Pat<(v2i32 (splat_vector simm10:$imm10)), (PLI_W simm10:$imm10)>;
 
   // Basic 32-bit arithmetic patterns
   def: Pat<(v2i32 (add GPR:$rs1, GPR:$rs2)), (PADD_W GPR:$rs1, GPR:$rs2)>;

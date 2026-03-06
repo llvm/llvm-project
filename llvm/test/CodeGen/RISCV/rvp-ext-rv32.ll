@@ -445,9 +445,7 @@ define <4 x i8> @test_pli_b() {
 define <2 x i16> @test_pli_b_v2i16() {
 ; CHECK-LABEL: test_pli_b_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 2
-; CHECK-NEXT:    addi a0, a0, 32
-; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    pli.b a0, 32
 ; CHECK-NEXT:    ret
   ret <2 x i16> splat (i16 u0x2020)
 }
@@ -463,7 +461,7 @@ define <4 x i8> @test_pli_b_negative() {
 define <2 x i16> @test_pli_b_negative_v2i16() {
 ; CHECK-LABEL: test_pli_b_negative_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.h a0, -258
+; CHECK-NEXT:    pli.b a0, -2
 ; CHECK-NEXT:    ret
   ret <2 x i16> splat (i16 u0xfefe)
 }
@@ -471,9 +469,7 @@ define <2 x i16> @test_pli_b_negative_v2i16() {
 define <2 x i16> @test_plui_h() {
 ; CHECK-LABEL: test_plui_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 3
-; CHECK-NEXT:    addi a0, a0, 1664
-; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    plui.h a0, 13
 ; CHECK-NEXT:    ret
   ret <2 x i16> splat (i16 u0x3680)
 }
@@ -481,9 +477,7 @@ define <2 x i16> @test_plui_h() {
 define <2 x i16> @test_plui_h_negative() {
 ; CHECK-LABEL: test_plui_h_negative:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 1048571
-; CHECK-NEXT:    addi a0, a0, 1600
-; CHECK-NEXT:    padd.hs a0, zero, a0
+; CHECK-NEXT:    plui.h a0, -19
 ; CHECK-NEXT:    ret
   ret <2 x i16> splat (i16 u0xb640)
 }
@@ -683,9 +677,8 @@ define <4 x i8> @test_psslai_b(<4 x i8> %a) {
 ; CHECK-LABEL: test_psslai_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmslt.b a1, a0, zero
-; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    pli.b a2, -128
 ; CHECK-NEXT:    pli.b a3, 127
-; CHECK-NEXT:    padd.bs a2, zero, a2
 ; CHECK-NEXT:    merge a1, a3, a2
 ; CHECK-NEXT:    pslli.b a2, a0, 2
 ; CHECK-NEXT:    psrai.b a3, a2, 2
