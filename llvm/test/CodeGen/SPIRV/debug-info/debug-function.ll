@@ -16,7 +16,7 @@
 ; CHECK: [[TYPE:%[0-9]+]] = OpExtInst {{.*}} DebugTypeFunction [[ZERO]] [[VOID_TYPE]]
 ; CHECK: [[DEBUG_FUNC:%[0-9]+]] = OpExtInst {{.*}} DebugFunction [[NAME]] [[TYPE]] [[SOURCE]] [[LINE]] [[ZERO]] [[PARENT]] [[LINKAGE]] [[FLAGS]] [[LINE]]
 ; CHECK: [[FUNC:%[0-9]+]] = OpFunction {{.*}}
-; DebugFunctionDefinition must be after OpFunction
+; DebugFunctionDefinition must be after OpFunction.
 ; CHECK: OpExtInst {{.*}} DebugFunctionDefinition [[DEBUG_FUNC]] [[FUNC]]
 
 target triple = "spirv64-unknown-unknown"
