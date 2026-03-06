@@ -514,12 +514,6 @@ public:
     return false;
   }
 
-  typename Instance::CallbackType GetCallbackAtIndex(uint32_t idx) {
-    if (auto instance = GetInstanceAtIndex(idx))
-      return instance->create_callback;
-    return nullptr;
-  }
-
   llvm::StringRef GetDescriptionAtIndex(uint32_t idx) {
     if (auto instance = GetInstanceAtIndex(idx))
       return instance->description;
@@ -536,6 +530,15 @@ public:
     if (auto instance = GetInstanceForName(name))
       return instance->create_callback;
     return nullptr;
+  }
+
+  std::vector<typename Instance::CallbackType> GetCreateCallbacks() {
+    std::vector<Instance> snapshot = GetSnapshot();
+    std::vector<typename Instance::CallbackType> result;
+    result.reserve(snapshot.size());
+    for (const auto &instance : snapshot)
+      result.push_back(instance.create_callback);
+    return result;
   }
 
   void PerformDebuggerCallback(Debugger &debugger) {
@@ -641,8 +644,8 @@ bool PluginManager::UnregisterPlugin(ABICreateInstance create_callback) {
   return GetABIInstances().UnregisterPlugin(create_callback);
 }
 
-ABICreateInstance PluginManager::GetABICreateCallbackAtIndex(uint32_t idx) {
-  return GetABIInstances().GetCallbackAtIndex(idx);
+std::vector<ABICreateInstance> PluginManager::GetABICreateCallbacks() {
+  return GetABIInstances().GetCreateCallbacks();
 }
 
 #pragma mark Architecture
@@ -698,9 +701,9 @@ bool PluginManager::UnregisterPlugin(
   return GetDisassemblerInstances().UnregisterPlugin(create_callback);
 }
 
-DisassemblerCreateInstance
-PluginManager::GetDisassemblerCreateCallbackAtIndex(uint32_t idx) {
-  return GetDisassemblerInstances().GetCallbackAtIndex(idx);
+std::vector<DisassemblerCreateInstance>
+PluginManager::GetDisassemblerCreateCallbacks() {
+  return GetDisassemblerInstances().GetCreateCallbacks();
 }
 
 DisassemblerCreateInstance
@@ -732,9 +735,9 @@ bool PluginManager::UnregisterPlugin(
   return GetDynamicLoaderInstances().UnregisterPlugin(create_callback);
 }
 
-DynamicLoaderCreateInstance
-PluginManager::GetDynamicLoaderCreateCallbackAtIndex(uint32_t idx) {
-  return GetDynamicLoaderInstances().GetCallbackAtIndex(idx);
+std::vector<DynamicLoaderCreateInstance>
+PluginManager::GetDynamicLoaderCreateCallbacks() {
+  return GetDynamicLoaderInstances().GetCreateCallbacks();
 }
 
 DynamicLoaderCreateInstance
@@ -765,9 +768,9 @@ bool PluginManager::UnregisterPlugin(JITLoaderCreateInstance create_callback) {
   return GetJITLoaderInstances().UnregisterPlugin(create_callback);
 }
 
-JITLoaderCreateInstance
-PluginManager::GetJITLoaderCreateCallbackAtIndex(uint32_t idx) {
-  return GetJITLoaderInstances().GetCallbackAtIndex(idx);
+std::vector<JITLoaderCreateInstance>
+PluginManager::GetJITLoaderCreateCallbacks() {
+  return GetJITLoaderInstances().GetCreateCallbacks();
 }
 
 #pragma mark EmulateInstruction
@@ -793,9 +796,9 @@ bool PluginManager::UnregisterPlugin(
   return GetEmulateInstructionInstances().UnregisterPlugin(create_callback);
 }
 
-EmulateInstructionCreateInstance
-PluginManager::GetEmulateInstructionCreateCallbackAtIndex(uint32_t idx) {
-  return GetEmulateInstructionInstances().GetCallbackAtIndex(idx);
+std::vector<EmulateInstructionCreateInstance>
+PluginManager::GetEmulateInstructionCreateCallbacks() {
+  return GetEmulateInstructionInstances().GetCreateCallbacks();
 }
 
 EmulateInstructionCreateInstance
@@ -827,9 +830,9 @@ bool PluginManager::UnregisterPlugin(
   return GetOperatingSystemInstances().UnregisterPlugin(create_callback);
 }
 
-OperatingSystemCreateInstance
-PluginManager::GetOperatingSystemCreateCallbackAtIndex(uint32_t idx) {
-  return GetOperatingSystemInstances().GetCallbackAtIndex(idx);
+std::vector<OperatingSystemCreateInstance>
+PluginManager::GetOperatingSystemCreateCallbacks() {
+  return GetOperatingSystemInstances().GetCreateCallbacks();
 }
 
 OperatingSystemCreateInstance
@@ -860,9 +863,9 @@ bool PluginManager::UnregisterPlugin(LanguageCreateInstance create_callback) {
   return GetLanguageInstances().UnregisterPlugin(create_callback);
 }
 
-LanguageCreateInstance
-PluginManager::GetLanguageCreateCallbackAtIndex(uint32_t idx) {
-  return GetLanguageInstances().GetCallbackAtIndex(idx);
+std::vector<LanguageCreateInstance>
+PluginManager::GetLanguageCreateCallbacks() {
+  return GetLanguageInstances().GetCreateCallbacks();
 }
 
 #pragma mark LanguageRuntime
@@ -906,23 +909,15 @@ bool PluginManager::UnregisterPlugin(
   return GetLanguageRuntimeInstances().UnregisterPlugin(create_callback);
 }
 
-LanguageRuntimeCreateInstance
-PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(uint32_t idx) {
-  return GetLanguageRuntimeInstances().GetCallbackAtIndex(idx);
-}
-
-LanguageRuntimeGetCommandObject
-PluginManager::GetLanguageRuntimeGetCommandObjectAtIndex(uint32_t idx) {
-  if (auto instance = GetLanguageRuntimeInstances().GetInstanceAtIndex(idx))
-    return instance->command_callback;
-  return nullptr;
-}
-
-LanguageRuntimeGetExceptionPrecondition
-PluginManager::GetLanguageRuntimeGetExceptionPreconditionAtIndex(uint32_t idx) {
-  if (auto instance = GetLanguageRuntimeInstances().GetInstanceAtIndex(idx))
-    return instance->precondition_callback;
-  return nullptr;
+std::vector<LanguageRuntimeCallbacks>
+PluginManager::GetLanguageRuntimeCallbacks() {
+  auto instances = GetLanguageRuntimeInstances().GetSnapshot();
+  std::vector<LanguageRuntimeCallbacks> result;
+  result.reserve(instances.size());
+  for (auto &instance : instances)
+    result.push_back({instance.create_callback, instance.command_callback,
+                      instance.precondition_callback});
+  return result;
 }
 
 #pragma mark SystemRuntime
@@ -947,9 +942,9 @@ bool PluginManager::UnregisterPlugin(
   return GetSystemRuntimeInstances().UnregisterPlugin(create_callback);
 }
 
-SystemRuntimeCreateInstance
-PluginManager::GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx) {
-  return GetSystemRuntimeInstances().GetCallbackAtIndex(idx);
+std::vector<SystemRuntimeCreateInstance>
+PluginManager::GetSystemRuntimeCreateCallbacks() {
+  return GetSystemRuntimeInstances().GetCreateCallbacks();
 }
 
 #pragma mark ObjectFile
@@ -1002,24 +997,14 @@ bool PluginManager::UnregisterPlugin(ObjectFileCreateInstance create_callback) {
   return GetObjectFileInstances().UnregisterPlugin(create_callback);
 }
 
-ObjectFileCreateInstance
-PluginManager::GetObjectFileCreateCallbackAtIndex(uint32_t idx) {
-  return GetObjectFileInstances().GetCallbackAtIndex(idx);
-}
-
-ObjectFileCreateMemoryInstance
-PluginManager::GetObjectFileCreateMemoryCallbackAtIndex(uint32_t idx) {
-  if (auto instance = GetObjectFileInstances().GetInstanceAtIndex(idx))
-    return instance->create_memory_callback;
-  return nullptr;
-}
-
-ObjectFileGetModuleSpecifications
-PluginManager::GetObjectFileGetModuleSpecificationsCallbackAtIndex(
-    uint32_t idx) {
-  if (auto instance = GetObjectFileInstances().GetInstanceAtIndex(idx))
-    return instance->get_module_specifications;
-  return nullptr;
+std::vector<ObjectFileCallbacks> PluginManager::GetObjectFileCallbacks() {
+  auto instances = GetObjectFileInstances().GetSnapshot();
+  std::vector<ObjectFileCallbacks> result;
+  result.reserve(instances.size());
+  for (auto &instance : instances)
+    result.push_back({instance.create_callback, instance.create_memory_callback,
+                      instance.get_module_specifications, instance.save_core});
+  return result;
 }
 
 ObjectFileCreateMemoryInstance
@@ -1133,24 +1118,15 @@ bool PluginManager::UnregisterPlugin(
   return GetObjectContainerInstances().UnregisterPlugin(create_callback);
 }
 
-ObjectContainerCreateInstance
-PluginManager::GetObjectContainerCreateCallbackAtIndex(uint32_t idx) {
-  return GetObjectContainerInstances().GetCallbackAtIndex(idx);
-}
-
-ObjectContainerCreateMemoryInstance
-PluginManager::GetObjectContainerCreateMemoryCallbackAtIndex(uint32_t idx) {
-  if (auto instance = GetObjectContainerInstances().GetInstanceAtIndex(idx))
-    return instance->create_memory_callback;
-  return nullptr;
-}
-
-ObjectFileGetModuleSpecifications
-PluginManager::GetObjectContainerGetModuleSpecificationsCallbackAtIndex(
-    uint32_t idx) {
-  if (auto instance = GetObjectContainerInstances().GetInstanceAtIndex(idx))
-    return instance->get_module_specifications;
-  return nullptr;
+std::vector<ObjectContainerCallbacks>
+PluginManager::GetObjectContainerCallbacks() {
+  auto instances = GetObjectContainerInstances().GetSnapshot();
+  std::vector<ObjectContainerCallbacks> result;
+  result.reserve(instances.size());
+  for (auto &instance : instances)
+    result.push_back({instance.create_callback, instance.create_memory_callback,
+                      instance.get_module_specifications});
+  return result;
 }
 
 #pragma mark Platform
@@ -1185,13 +1161,13 @@ PluginManager::GetPlatformPluginDescriptionAtIndex(uint32_t idx) {
 }
 
 PlatformCreateInstance
-PluginManager::GetPlatformCreateCallbackAtIndex(uint32_t idx) {
-  return GetPlatformInstances().GetCallbackAtIndex(idx);
-}
-
-PlatformCreateInstance
 PluginManager::GetPlatformCreateCallbackForPluginName(llvm::StringRef name) {
   return GetPlatformInstances().GetCallbackForName(name);
+}
+
+std::vector<PlatformCreateInstance>
+PluginManager::GetPlatformCreateCallbacks() {
+  return GetPlatformInstances().GetCreateCallbacks();
 }
 
 void PluginManager::AutoCompletePlatformName(llvm::StringRef name,
@@ -1234,13 +1210,12 @@ PluginManager::GetProcessPluginDescriptionAtIndex(uint32_t idx) {
 }
 
 ProcessCreateInstance
-PluginManager::GetProcessCreateCallbackAtIndex(uint32_t idx) {
-  return GetProcessInstances().GetCallbackAtIndex(idx);
-}
-
-ProcessCreateInstance
 PluginManager::GetProcessCreateCallbackForPluginName(llvm::StringRef name) {
   return GetProcessInstances().GetCallbackForName(name);
+}
+
+std::vector<ProcessCreateInstance> PluginManager::GetProcessCreateCallbacks() {
+  return GetProcessInstances().GetCreateCallbacks();
 }
 
 void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
@@ -1359,9 +1334,9 @@ bool PluginManager::UnregisterPlugin(
   return GetScriptInterpreterInstances().UnregisterPlugin(create_callback);
 }
 
-ScriptInterpreterCreateInstance
-PluginManager::GetScriptInterpreterCreateCallbackAtIndex(uint32_t idx) {
-  return GetScriptInterpreterInstances().GetCallbackAtIndex(idx);
+std::vector<ScriptInterpreterCreateInstance>
+PluginManager::GetScriptInterpreterCreateCallbacks() {
+  return GetScriptInterpreterInstances().GetCreateCallbacks();
 }
 
 lldb::ScriptInterpreterSP
@@ -1442,9 +1417,9 @@ PluginManager::GetSyntheticFrameProviderCreateCallbackForPluginName(
   return GetSyntheticFrameProviderInstances().GetCallbackForName(name);
 }
 
-ScriptedFrameProviderCreateInstance
-PluginManager::GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx) {
-  return GetScriptedFrameProviderInstances().GetCallbackAtIndex(idx);
+std::vector<ScriptedFrameProviderCreateInstance>
+PluginManager::GetScriptedFrameProviderCreateCallbacks() {
+  return GetScriptedFrameProviderInstances().GetCreateCallbacks();
 }
 
 #pragma mark StructuredDataPlugin
@@ -1486,21 +1461,14 @@ bool PluginManager::UnregisterPlugin(
   return GetStructuredDataPluginInstances().UnregisterPlugin(create_callback);
 }
 
-StructuredDataPluginCreateInstance
-PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(uint32_t idx) {
-  return GetStructuredDataPluginInstances().GetCallbackAtIndex(idx);
-}
-
-StructuredDataFilterLaunchInfo
-PluginManager::GetStructuredDataFilterCallbackAtIndex(
-    uint32_t idx, bool &iteration_complete) {
-  if (auto instance =
-          GetStructuredDataPluginInstances().GetInstanceAtIndex(idx)) {
-    iteration_complete = false;
-    return instance->filter_callback;
-  }
-  iteration_complete = true;
-  return nullptr;
+std::vector<StructuredDataPluginCallbacks>
+PluginManager::GetStructuredDataPluginCallbacks() {
+  auto instances = GetStructuredDataPluginInstances().GetSnapshot();
+  std::vector<StructuredDataPluginCallbacks> result;
+  result.reserve(instances.size());
+  for (auto &instance : instances)
+    result.push_back({instance.create_callback, instance.filter_callback});
+  return result;
 }
 
 #pragma mark SymbolFile
@@ -1525,9 +1493,9 @@ bool PluginManager::UnregisterPlugin(SymbolFileCreateInstance create_callback) {
   return GetSymbolFileInstances().UnregisterPlugin(create_callback);
 }
 
-SymbolFileCreateInstance
-PluginManager::GetSymbolFileCreateCallbackAtIndex(uint32_t idx) {
-  return GetSymbolFileInstances().GetCallbackAtIndex(idx);
+std::vector<SymbolFileCreateInstance>
+PluginManager::GetSymbolFileCreateCallbacks() {
+  return GetSymbolFileInstances().GetCreateCallbacks();
 }
 
 #pragma mark SymbolVendor
@@ -1552,9 +1520,9 @@ bool PluginManager::UnregisterPlugin(
   return GetSymbolVendorInstances().UnregisterPlugin(create_callback);
 }
 
-SymbolVendorCreateInstance
-PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
-  return GetSymbolVendorInstances().GetCallbackAtIndex(idx);
+std::vector<SymbolVendorCreateInstance>
+PluginManager::GetSymbolVendorCreateCallbacks() {
+  return GetSymbolVendorInstances().GetCreateCallbacks();
 }
 
 #pragma mark SymbolLocator
@@ -1607,9 +1575,9 @@ bool PluginManager::UnregisterPlugin(
   return GetSymbolLocatorInstances().UnregisterPlugin(create_callback);
 }
 
-SymbolLocatorCreateInstance
-PluginManager::GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx) {
-  return GetSymbolLocatorInstances().GetCallbackAtIndex(idx);
+std::vector<SymbolLocatorCreateInstance>
+PluginManager::GetSymbolLocatorCreateCallbacks() {
+  return GetSymbolLocatorInstances().GetCreateCallbacks();
 }
 
 ModuleSpec
@@ -1791,16 +1759,14 @@ bool PluginManager::UnregisterPlugin(
   return GetTraceExporterInstances().UnregisterPlugin(create_callback);
 }
 
-ThreadTraceExportCommandCreator
-PluginManager::GetThreadTraceExportCommandCreatorAtIndex(uint32_t index) {
-  if (auto instance = GetTraceExporterInstances().GetInstanceAtIndex(index))
-    return instance->create_thread_trace_export_command;
-  return nullptr;
-}
-
-llvm::StringRef
-PluginManager::GetTraceExporterPluginNameAtIndex(uint32_t index) {
-  return GetTraceExporterInstances().GetNameAtIndex(index);
+std::vector<TraceExporterCallbacks> PluginManager::GetTraceExporterCallbacks() {
+  auto instances = GetTraceExporterInstances().GetSnapshot();
+  std::vector<TraceExporterCallbacks> result;
+  result.reserve(instances.size());
+  for (auto &instance : instances)
+    result.push_back({instance.name, instance.create_callback,
+                      instance.create_thread_trace_export_command});
+  return result;
 }
 
 #pragma mark UnwindAssembly
@@ -1825,9 +1791,9 @@ bool PluginManager::UnregisterPlugin(
   return GetUnwindAssemblyInstances().UnregisterPlugin(create_callback);
 }
 
-UnwindAssemblyCreateInstance
-PluginManager::GetUnwindAssemblyCreateCallbackAtIndex(uint32_t idx) {
-  return GetUnwindAssemblyInstances().GetCallbackAtIndex(idx);
+std::vector<UnwindAssemblyCreateInstance>
+PluginManager::GetUnwindAssemblyCreateCallbacks() {
+  return GetUnwindAssemblyInstances().GetCreateCallbacks();
 }
 
 #pragma mark MemoryHistory
@@ -1852,9 +1818,9 @@ bool PluginManager::UnregisterPlugin(
   return GetMemoryHistoryInstances().UnregisterPlugin(create_callback);
 }
 
-MemoryHistoryCreateInstance
-PluginManager::GetMemoryHistoryCreateCallbackAtIndex(uint32_t idx) {
-  return GetMemoryHistoryInstances().GetCallbackAtIndex(idx);
+std::vector<MemoryHistoryCreateInstance>
+PluginManager::GetMemoryHistoryCreateCallbacks() {
+  return GetMemoryHistoryInstances().GetCreateCallbacks();
 }
 
 #pragma mark InstrumentationRuntime
@@ -1893,17 +1859,14 @@ bool PluginManager::UnregisterPlugin(
   return GetInstrumentationRuntimeInstances().UnregisterPlugin(create_callback);
 }
 
-InstrumentationRuntimeGetType
-PluginManager::GetInstrumentationRuntimeGetTypeCallbackAtIndex(uint32_t idx) {
-  if (auto instance =
-          GetInstrumentationRuntimeInstances().GetInstanceAtIndex(idx))
-    return instance->get_type_callback;
-  return nullptr;
-}
-
-InstrumentationRuntimeCreateInstance
-PluginManager::GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx) {
-  return GetInstrumentationRuntimeInstances().GetCallbackAtIndex(idx);
+std::vector<InstrumentationRuntimeCallbacks>
+PluginManager::GetInstrumentationRuntimeCallbacks() {
+  auto instances = GetInstrumentationRuntimeInstances().GetSnapshot();
+  std::vector<InstrumentationRuntimeCallbacks> result;
+  result.reserve(instances.size());
+  for (auto &instance : instances)
+    result.push_back({instance.create_callback, instance.get_type_callback});
+  return result;
 }
 
 #pragma mark TypeSystem
@@ -1944,9 +1907,9 @@ bool PluginManager::UnregisterPlugin(TypeSystemCreateInstance create_callback) {
   return GetTypeSystemInstances().UnregisterPlugin(create_callback);
 }
 
-TypeSystemCreateInstance
-PluginManager::GetTypeSystemCreateCallbackAtIndex(uint32_t idx) {
-  return GetTypeSystemInstances().GetCallbackAtIndex(idx);
+std::vector<TypeSystemCreateInstance>
+PluginManager::GetTypeSystemCreateCallbacks() {
+  return GetTypeSystemInstances().GetCreateCallbacks();
 }
 
 LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForTypes() {
@@ -2058,14 +2021,13 @@ bool PluginManager::UnregisterPlugin(REPLCreateInstance create_callback) {
   return GetREPLInstances().UnregisterPlugin(create_callback);
 }
 
-REPLCreateInstance PluginManager::GetREPLCreateCallbackAtIndex(uint32_t idx) {
-  return GetREPLInstances().GetCallbackAtIndex(idx);
-}
-
-LanguageSet PluginManager::GetREPLSupportedLanguagesAtIndex(uint32_t idx) {
-  if (auto instance = GetREPLInstances().GetInstanceAtIndex(idx))
-    return instance->supported_languages;
-  return LanguageSet();
+std::vector<REPLCallbacks> PluginManager::GetREPLCallbacks() {
+  auto instances = GetREPLInstances().GetSnapshot();
+  std::vector<REPLCallbacks> result;
+  result.reserve(instances.size());
+  for (auto &instance : instances)
+    result.push_back({instance.create_callback, instance.supported_languages});
+  return result;
 }
 
 LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
@@ -2104,9 +2066,9 @@ bool PluginManager::UnregisterPlugin(
   return GetHighlighterInstances().UnregisterPlugin(create_callback);
 }
 
-HighlighterCreateInstance
-PluginManager::GetHighlighterCreateCallbackAtIndex(uint32_t idx) {
-  return GetHighlighterInstances().GetCallbackAtIndex(idx);
+std::vector<HighlighterCreateInstance>
+PluginManager::GetHighlighterCreateCallbacks() {
+  return GetHighlighterInstances().GetCreateCallbacks();
 }
 
 #pragma mark PluginManager
