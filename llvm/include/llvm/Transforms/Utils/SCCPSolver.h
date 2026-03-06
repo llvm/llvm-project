@@ -218,6 +218,11 @@ public:
   // old ValueLatticeElement::isOverdefined() and is intended to be used in the
   // transition to ValueLatticeElement.
   LLVM_ABI static bool isOverdefined(const ValueLatticeElement &LV);
+
+  // Helper to check if \p LV is a replaceable constant. A pointer constant with
+  // potentially different provenance may not be unconditionally propagated to
+  // all uses.
+  LLVM_ABI static bool isReplaceableConstant(const ValueLatticeElement &LV);
 };
 } // namespace llvm
 

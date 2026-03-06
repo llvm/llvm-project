@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -57,6 +58,14 @@ bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
          (LV.isConstantRange() && LV.getConstantRange().isSingleElement());
 }
 
+bool SCCPSolver::isReplaceableConstant(const ValueLatticeElement &LV) {
+  if (!isConstant(LV))
+    return false;
+  if (LV.mayHaveDifferentProvenance())
+    return false;
+  return true;
+}
+
 bool SCCPSolver::isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !SCCPSolver::isConstant(LV);
 }
@@ -81,6 +90,32 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
     LLVM_DEBUG(dbgs() << "  Can\'t treat the result of call " << *CB
                       << " as a constant\n");
     return false;
+  }
+
+  // For pointer constants derived from PredicateInfo, the constant may have
+  // different provenance. Take this into account during constant pointer
+  // propagation.
+  if (V->getType()->isPointerTy()) {
+    const auto &LV = getLatticeValueFor(V);
+    if (LV.mayHaveDifferentProvenance()) {
+      const DataLayout *DL = nullptr;
+      if (auto *I = dyn_cast<Instruction>(V))
+        DL = &I->getDataLayout();
+      else if (auto *A = dyn_cast<Argument>(V))
+        DL = &A->getParent()->getDataLayout();
+
+      if (!DL)
+        return false;
+
+      bool Changed = V->replaceUsesWithIf(Const, [&](Use &U) {
+        bool CanReplace = canReplacePointersInUseIfEqual(U, Const, *DL);
+        if (CanReplace)
+          LLVM_DEBUG(dbgs() << "  Constant pointer: " << *Const << " = " << *V
+                            << '\n');
+        return CanReplace;
+      });
+      return Changed;
+    }
   }
 
   LLVM_DEBUG(dbgs() << "  Constant: " << *Const << " = " << *V << '\n');
@@ -356,11 +391,11 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (wouldInstructionBeTriviallyDead(&Inst))
+      if (isInstructionTriviallyDead(&Inst)) {
         Inst.eraseFromParent();
-
+        ++InstRemovedStat;
+      }
       MadeChanges = true;
-      ++InstRemovedStat;
     } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
@@ -1122,7 +1157,7 @@ bool SCCPInstVisitor::isStructLatticeConstant(Function *F, StructType *STy) {
   for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
     const auto &It = TrackedMultipleRetVals.find(std::make_pair(F, i));
     assert(It != TrackedMultipleRetVals.end());
-    if (!SCCPSolver::isConstant(It->second))
+    if (!SCCPSolver::isReplaceableConstant(It->second))
       return false;
   }
   return true;
@@ -2079,6 +2114,8 @@ void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
     // For non-integer values or integer constant expressions, only
     // propagate equal constants or not-constants.
     addAdditionalUser(OtherOp, I);
+    if (CopyOf->getType()->isPointerTy())
+      CondVal.setMayHaveDifferentProvenance(true);
     mergeInValue(IV, I, CondVal);
     return;
   } else if (Pred == CmpInst::ICMP_NE && CondVal.isConstant()) {
