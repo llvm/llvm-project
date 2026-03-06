@@ -713,3 +713,310 @@ relation over dynamic instances and a :ref:`controlled m-converged
 <controlled_m_converged>` property of static instances. The :ref:`uniformity
 analysis <uniformity-analysis>` implemented in LLVM includes this for targets
 that support convergence control tokens.
+
+Preservation of Uniformity at Use
+=================================
+
+Introduction
+------------
+
+In execution of a program, the outputs produced by two converged dynamic
+instances of a static instance are *uniform* if they compare equal; 
+otherwise, *divergent*. In any given program, uniformity is determined 
+through static analysis, which depends on the current state of the program’s 
+control flow. During execution, a transformation may alter the original 
+structure of the program, potentially leading to a change in control flow.
+
+When a group of threads executes the same program in parallel, the program's 
+control flow determines which subset of threads will execute any given static 
+instance. With the change in control flow, it is possible that the new set of 
+threads reaching a static instance includes some threads that did not previously 
+execute it.
+
+Although the original set of threads continues to execute the same static 
+instance, the inclusion of these additional threads may change the 
+classification. This means that during execution, a static instance marked 
+as *uniform* by the analysis may be marked as *divergent* after a transformation
+that changes the control flow of the original program.
+
+However, our proof in this document demonstrates that this conservative 
+classification does not impact the uniformity of "the original subset of threads"
+that executed the static instance in the original program.
+
+In this document, we have defined a set of observable :ref:`fundamental properties<convergence-valid-transform>`
+in any program that are essential for a transformation to be considered valid. 
+Building on these properties, our proof demonstrates that any valid 
+transformation preserves "the uniformity of each value at its use". That is, for 
+a given program *P* and a valid transformation *R* resulting in a transformed 
+program *P'*, any assumptions about uniformity built into *P'* are preserved in
+*P''*.
+
+Concepts
+--------
+
+**Static instance**
+
+Each occurrence of an instruction or a constant literal in the program source 
+is called a *static instance*.
+
+**Dynamic instance**
+
+When a thread executes a program, each execution of a static instance produces 
+a distinct *dynamic instance* of that instruction. The dynamic instance of
+a constant literal is simply its value.
+
+Both terms, *static instance* and *dynamic instance*, match the definitions 
+used in the LLVM specification of  :ref:`convergence and uniformity<convergence-dynamic-instances>`.
+
+.. _convergence-valid-transform:
+
+Core Properties of a Valid Transformation
+------------------------------------------
+
+Let *P* denote the input program and *R* be any transformation applied to *P*,
+resulting in the transformed program *P′ = R(P)*. Let *P* and *P′* be executed
+under the same initial conditions by the set of threads *T*.
+
+.. _convergence-VT-1:
+
+Property VT.1: Correspondence of Static and Dynamic instances
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Let *X* be a set of static instances in program *P*, and *X′* be their 
+corresponding static instances in the transformed program *P′*. Let *D(X)* 
+denote the set of all dynamic instances of *X* during the execution of *P*.
+Similarly, let *D′(X)* denote the set of all dynamic instances of *X′* 
+during the execution of *P′*.
+
+A valid transformation *R* maps a set of static instances *X* in *P* to a set
+of corresponding static instances *X’* in *P’* such that:
+
+- For each dynamic instance *d* in *D(X)*, if there is a set of corresponding
+  dynamic instances in *P’*, then that set is in *D’(X)*.
+- Every dynamic instance *d’* in *D’(X)* must correspond to one or more dynamic
+  instances in *D(X)*.
+
+Thus, the correspondence is **closed** between the dynamic instances produced by 
+program *P* and program *P′* for the same input and the same set of threads.
+
+**Example:**
+
+Program P:
+
+::
+
+  C = ...
+  E = ...
+  A = B ? C : E   // B is constant true
+
+- X: Static instance representing the ternary operator as *A*. 
+- Dynamic instances of X in P will always evaluate *C*, because *B* is constant true. 
+
+Thus: 
+
+- Every dynamic instance d in D(X) computes the value of *C*. 
+
+Transformed program P’:
+
+::
+
+  A = C
+
+- The transformation R simplifies the ternary operator by eliminating the unused E, resulting in a direct assignment. 
+- X’: Static instance representing A = C; in P’. 
+
+After transformation, A and C in P both correspond to C in P’. 
+
+Thus: 
+
+- The static instance A in P corresponds to the static instance C in P’. 
+- The set of dynamic instances D({A, C}) corresponds to the set D’(C). 
+
+Thus, the transformation establishes a *close correspondence* between the set *D({A, C})* in program P and the set *D’(C)* in program P’. 
+
+.. _convergence-VT-2:
+
+Property VT.2: Correspondence of Use-def chain across Dynamic instances
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Let *X* and *Y* be any pair of static instances such that static instance *Y* uses the value defined by static instance *X*.
+
+For any valid transformation *R* applied to *P*, each use-def pair of dynamic instances (*d’(X)*, *d’(Y)*) in the execution 
+of *P’* has a corresponding use-def pair (*d(X)*, *d(Y)*) in the execution of program *P* such that:
+
+- *d′(X)* corresponds to *d(X)*, and
+- *d′(Y)* corresponds to *d(Y)*,
+- and *d′(Y)* uses the value defined by *d′(X)*.
+
+Thus, the correspondence is **closed** in use-def relationships between program *P* and program *P’*.
+
+**Example:**
+
+Program P:
+
+::  
+
+   A = ... 
+   B = ...A  // B uses A. 
+   C = ...B  // C uses B. 
+
+Let's assume that *B* compute the same value as *A*. 
+
+Transformed program P’: 
+
+::
+
+   A = ... 
+   C = ...A  // C uses A. 
+
+This a classical value forwarding optimization. 
+
+- The static instance *A* in the transformed program corresponds to the set of static instances *{A, B}* in the original program. 
+- The static instance *C* in the final program corresponds to the static instance *C* in the original program. 
+- Similarly, the dynamic instances. 
+- The use-def pair *{A, C}* in the transformed program corresponds to the use-def pair *{{A, B}, {B, C}}* in the original program. 
+- The use-def pair *{A, B}* in the original program corresponds to *A* in the transformed program. 
+
+.. _convergence-VT-3:
+
+Property VT.3: Preserving statically known uniformity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In any program P, certain static instances are known to be *uniform*, and this property
+cannot be changed by a transformation. These sources of uniformity include: 
+
+- Function arguments to a kernel are always uniform. 
+- Constants are always Uniform. 
+- The return value of a function call marked as `alwaysUniform` are always uniform. 
+
+Likewise, some operations are statically known to be *divergent*, such as: 
+
+- Atomics, which are always divergent. 
+- The return value of a function call is always divergent, unless it is a
+  call to a function that is marked `alwaysUniform`. 
+- Function arguments to a non-kernel function are always divergent. 
+
+If a static instance X is known to be *uniform*, then after the transform R,
+its corresponding dynamic instances *d1’(X)* and *d2’(X)* must also be *uniform*. 
+
+In particular: 
+
+- A transformation may replace a *divergent* value with a *uniform* value, if possible. 
+- However, a transformation must not replace a "statically uniform" value with a *divergent* one. 
+
+**Example:**
+
+Consider a program P where a convergent operation, such as `readfirstlane()`,
+is marked as `alwaysUniform`. This operation is defined in a static instance
+*A* and is used later in the program at some static instance *B*. 
+
+Program P: 
+
+::
+
+   A = readfirstlane() // isAlwaysUniform, Convergent  
+   B = A ...  
+
+In program P, all dynamic instances of *A* are uniform across the threads that
+execute it. This is because the operation is marked as `alwaysUniform` and is
+convergent ensuring that the threads executing *A* compute the same value. 
+
+Now, consider a transformation R that restructures the control flow by introducing
+an `if-else` condition and duplicates the convergent operation within these branches
+in the transformed program P': 
+
+Transformed program P’: 
+
+::
+
+   if (divergent_cond)  
+      A1 = readfirstlane()  
+   else  
+      A2 = readfirstlane()  
+   A = phi(A1, A2)  
+   B = ... A 
+
+In this transformed program P’, the static instance *A* from P is now mapped
+to a *phi node* that merges the values of *A1* and *A2* depending on the control path taken. 
+
+Although `readfirstlane()` is convergent and `alwaysUniform` in each branch individually,
+the phi node introduces a merge between divergent control paths which clearly
+implies that the *phi node* is divergent. 
+
+Thus, this transformation is **invalid** because transformation does not preserve
+the *static uniformity* of the convergent operation marked as `alwaysUniform`. 
+
+.. _convergence-statement-1:
+
+Statement 1: Preservation of uniformity at value computation 
+-------------------------------------------------------------
+
+If the converged dynamic instances of a static instance are *uniform* across the set
+of threads T in program P, then in the transformed program P’, the "corresponding
+dynamic instances" must also be *uniform* across the same set of threads. 
+
+**Proof** 
+
+Let X be any static instance in the execution of program P. Let *d1(X)* and *d2(X)*
+be converged dynamic instances of *X* in the threads t1 and t2. After transformation R,
+from :ref:`VT.1<convergence-VT-1>`, let *d1’(X)*, *d2’(X)*, be the corresponding
+dynamic instances in the program P’.   
+
+**Base Case** 
+
+After transformation R, if the static instance *X* is a source of statically
+known uniformity (e.g., a constant, a uniform argument), then from :ref:`VT.3<convergence-VT-3>`,
+its dynamic instances *d1’(X)*, *d2’(X)* in P’ must be *uniform*. 
+
+**Inductive Step** 
+
+For contradiction, assume that dynamic instances *d1’(X)*, *d2’(X)* in thread t1, t2
+are not uniform in P’. This is possible only in two scenarios: 
+
+Operand dependence: 
+
+- If *d1’(X)* and *d2’(X)* are not uniform, then one or more operands of *X* must
+  have become *divergent* as a result of the transform R. 
+- For each operand *O*, we can replace *X* with *O* as the new def and inductively
+  apply the same reasoning until we reach a "source of statically known uniformity". 
+
+Control dependence: 
+
+- If the output differs even for "uniform operands", then the execution of static
+  instance *X* depends on threads reaching it, which is only relevant if *X* is a `convergent operation`.  
+- If X is not marked as `convergent`, then the program itself is *invalid*.
+- If it is marked as `convergent`, then a valid transformation R must *preserve*
+  the set of threads that executed the convergent operation. 
+
+Therefore, for the original static instance *X*, dynamic instances *d1’(X)* and *d2’(X)* must be *uniform*. 
+
+.. _convergence-statement-2:
+
+Statement 2: Preservation of Uniformity at Use  
+-----------------------------------------------
+
+If the converged dynamic instances of a static instance are uniform at their use across
+the set of threads T in program P, then in the transformed program P′, the "corresponding
+dynamic instances must also be uniform at their use" for the same set of threads. 
+
+**Proof** 
+
+Let *X* and *Y* be two static instances in P, such that *Y* uses *X*. Let *d1(X)* and *d2(X)* be
+converged dynamic instances of *X* in threads t1 and t2, and similarly *d1(Y)* and *d2(Y)*.
+After transformation, let *d1’(X)*, *d2’(X)*, etc be the corresponding dynamic instances of *X* in P’.  
+
+- Using :ref:`Property VT.2<convergence-VT-2>`, since dynamic instance *d1(Y)* uses *d1(X)*, there exists a
+  "corresponding use-def pair" such that, dynamic instance *d1’(Y)* uses *d1’(X)* and
+  *d1’(Y)*, *d1’(X)* corresponds to *d1(Y)*, *d1(X)* respectively. Similarly, for pair *d2(Y) and d2(X)*. 
+- From :ref:`statement.1<convergence-statement-1>`, *d1’(X), d2’(X)* are *uniform* for threads t1, t2, since
+  *d1(X) and d2(X)* are known to be *uniform*. 
+- From points 1, 2, use of dynamic instances *d1’(X), d2’(X)* in dynamic instances
+  *d1’(Y), d2’(Y)* is also *uniform* for threads t1, t2. 
+
+Hence, "use of corresponding dynamic instances" in transformed program P' is *uniform*.
+
+.. note::
+
+   This proof provides intuitive reasoning and checkable properties for compiler
+   engineers. It is not a mechanically-verified formal proof in the programming
+   languages theory sense.
