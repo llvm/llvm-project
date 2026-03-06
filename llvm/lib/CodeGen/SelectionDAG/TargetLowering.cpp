@@ -9322,7 +9322,7 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
 
     if (NeedFPCompare) {
       // Truncate to the largest legal float type.
-      EVT TruncFloatEltVT = (MaxLegalIntBits == 64) ? MVT::f64 : MVT::f32;
+      EVT TruncFloatEltVT = EVT::getFloatingPointVT(MaxLegalIntBits);
 
       EVT TruncFloatVT = TruncFloatEltVT;
       if (ResultVT.isVector() && TruncFloatEltVT != MVT::Other) {
@@ -9333,8 +9333,7 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
           isOperationLegalOrCustom(ISD::FP_ROUND, TruncFloatVT)) {
         // Round to smaller float type, then bitcast to integer for sign check.
         // Use TargetConstant for the truncation flag.
-        EVT PointerVT =
-            DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+        EVT PointerVT = getPointerTy(DAG.getDataLayout());
         SDValue OpTrunc = DAG.getNode(ISD::FP_ROUND, DL, TruncFloatVT, Op,
                                       DAG.getTargetConstant(0, DL, PointerVT));
         EVT TruncIntVT = TruncFloatVT.changeTypeToInteger();
@@ -9356,7 +9355,12 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
           DAG.getNode(ISD::AND, DL, ResultVT, NotNaN, SignBitResult);
     }
 
-    if (Test == fcNegative)
+    bool IsICmpImmLegal =
+        isLegalICmpImmediate(APInt::getAllOnes(IntVTBits).getZExtValue());
+    if (!NeedFPCompare && (!DAG.isKnownNeverNaN(Op) || IsICmpImmLegal) &&
+        Test == fcPositive) {
+      ; // (fcPosInf | fcFinite) has better performance.
+    } else if (Test == fcNegative)
       return SignBitResult;
     else
       return DAG.getNode(ISD::XOR, DL, ResultVT, SignBitResult,
