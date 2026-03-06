@@ -61,6 +61,11 @@ Diagnostics
 Semantic Highlighting
 ^^^^^^^^^^^^^^^^^^^^^
 
+- ``clangd`` now exposes a ``commandLineDefined`` semantic token modifier 
+  for macros that are defined via compiler command-line options 
+  (for example [-D] flags),  allowing clients to distinguish them 
+  from macros defined in source files or headers.
+
 Compile flags
 ^^^^^^^^^^^^^
 
