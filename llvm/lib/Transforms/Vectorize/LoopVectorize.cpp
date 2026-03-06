@@ -9768,15 +9768,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Override IC if user provided an interleave count.
   IC = UserIC > 0 ? UserIC : IC;
 
-  // FIXME: Enable interleaving for FindLast reductions.
-  if (InterleaveLoop && hasFindLastReductionPhi(LVP.getPlanFor(VF.Width))) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to FindLast reduction.\n");
-    IntDiagMsg = {"FindLastPreventsScalarInterleaving",
-                  "Unable to interleave due to FindLast reduction."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
-
   // Emit diagnostic messages, if any.
   const char *VAPassName = Hints.vectorizeAnalysisPassName();
   if (!VectorizeLoop && !InterleaveLoop) {

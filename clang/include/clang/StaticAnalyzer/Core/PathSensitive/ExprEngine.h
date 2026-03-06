@@ -221,8 +221,6 @@ public:
     return *currBldrCtx;
   }
 
-  const Stmt *getStmt() const;
-
   const LocationContext *getRootLocationContext() const {
     assert(G.getRoot());
     return G.getRoot()->getLocation().getLocationContext();

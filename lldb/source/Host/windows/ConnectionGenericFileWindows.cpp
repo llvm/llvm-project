@@ -160,8 +160,8 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
   if (!IsConnected())
     return finish(0, eConnectionStatusNoConnection, ERROR_INVALID_HANDLE);
 
-  BOOL read_result;
-  DWORD read_error;
+  BOOL read_result = FALSE;
+  DWORD read_error = ERROR_SUCCESS;
   if (!m_read_pending) {
     m_overlapped.hEvent = m_event_handles[kBytesAvailableEvent];
     read_result = ::ReadFile(m_file, dst, dst_len, NULL, &m_overlapped);

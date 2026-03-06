@@ -1515,7 +1515,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
-                             {DataSelect, MaskSelect, PhiR->getStartValue()},
+                             {PhiR->getStartValue(), DataSelect, MaskSelect},
                              RdxResult->getDebugLoc());
     RdxResult->replaceAllUsesWith(ExtractLastActive);
     RdxResult->eraseFromParent();
@@ -1817,10 +1817,12 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     bool IsStrictPredicate = ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred);
     if (IsStrictPredicate) {
-      return handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
-                                    cast<VPWidenIntOrFpInductionRecipe>(IVOp),
-                                    MinOrMaxResult, FindIVSelect, FindIVCmp,
-                                    FindIVRdxResult);
+      if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
+                                  cast<VPWidenIntOrFpInductionRecipe>(IVOp),
+                                  MinOrMaxResult, FindIVSelect, FindIVCmp,
+                                  FindIVRdxResult))
+        return false;
+      continue;
     }
 
     // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
