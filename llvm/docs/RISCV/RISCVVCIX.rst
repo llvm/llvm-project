@@ -41,7 +41,7 @@ To understand the code here, we first provide a brief overview. VCIX Pseudo-inst
 
 For example:
 
-.. code-block:: td
+.. code-block::
 
   multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,
                          Operand OpClass = payload2> {
@@ -84,7 +84,7 @@ Note that for each of these definitions, there is a ``Sched`` list attached. The
 
 Switching back to the scheduling model linked at the start of this section, we explain how behavior is assigned to the VCIX ``SchedWrite`` objects. Let’s take a look at an example:
 
-.. code-block:: td
+.. code-block::
 
   // snip
 
@@ -107,7 +107,7 @@ The default implementation sets the ``Latency``, ``AcquireAtCycles`` and ``Relea
 
 Let’s assume that ``WriteVC_V_I`` behaves differently from the default implementation, and all the other VCIX instructions behave the same as the default implementation. We might write something like this:
 
-.. code-block:: td
+.. code-block::
 
   defvar CustomCycles = SiFive7GetCustomCycles<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
@@ -132,7 +132,7 @@ Another thing that can be customized is the processor resources that are used by
 
 To do so, first let’s look at the existing ``ProcResource`` we used before, namely ``VCQ`` and ``VA1``. These two instances are actually parameters passed to the enclosing structure, ``SiFive7WriteResBase``. Their actual definitions are placed `here <https://github.com/llvm/llvm-project/blob/e087d428823e1d1d4c00c895bc3b637989764104/llvm/lib/Target/RISCV/RISCVSchedSiFive7.td#L273>`__:
 
-.. code-block:: td
+.. code-block::
 
   def PipeA   : ProcResource<1>;
   def PipeB   : ProcResource<1>;
@@ -153,7 +153,7 @@ To do so, first let’s look at the existing ``ProcResource`` we used before, na
 
 These ``ProcResources`` are instantiated in another class, ``SiFive7SchedResources``, where we also create an alias for each of them (through ``defvar``) so that it's easier to use later:
 
-.. code-block:: td
+.. code-block::
 
   defvar SiFive7PipeA = !cast<ProcResource>(NAME # "SiFive7PipeA");
   defvar SiFive7PipeB = !cast<ProcResource>(NAME # "SiFive7PipeB");
@@ -171,7 +171,7 @@ Specifically, ``SiFive7VA1`` here is the alias for ``VA1`` mentioned previously,
 
 So if you want to add your own, that might look something like this:
 
-.. code-block:: td
+.. code-block::
 
   // Step 1: create a new ProcResource
   def CustomVCIX          : ProcResource<1>;
@@ -213,7 +213,7 @@ Another scenario you may be interested in handling is changing scheduling inform
 
 There is an existing helper class, ``LMULWriteResMXVariant``, which can be found on GitHub `here <https://github.com/llvm/llvm-project/blob/36b339b84a98afe7bdf470747a776d0d5f348b64/llvm/lib/Target/RISCV/RISCVScheduleV.td#L74>`__ that implements this process for the case when there is a single predicate.
 
-.. code-block:: td
+.. code-block::
 
   def IsOp0ImmEq2 : MCSchedPredicate<CheckImmOperand<0, 2>>; // true when operand 0 is 2
 
@@ -230,7 +230,7 @@ To extend it to handle multiple opcodes, you would add add additional ``WriteRes
 
 To define a predicate that checks an opcode immediate is 0 or 1 for example, you might write something like this for the ``WriteVC_V_I`` pseudo for LMUL ``mx``:
 
-.. code-block:: td
+.. code-block::
 
   // Define WriteRes objects for all pseudo + opcode combinations
   let Latency = 3, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, 4] in
