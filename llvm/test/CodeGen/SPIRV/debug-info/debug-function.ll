@@ -1,7 +1,7 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; The path separator may be '/' on Unix or '\' on Windows, so we use a flexible pattern
+; The path separator may be '/' on Unix or '\' on Windows, so we use a flexible pattern.
 ; CHECK: OpString "{{[/\]}}A{{[/\]}}B{{[/\]}}C{{[/\]}}example.cpp"
 ; CHECK: [[FILE_STRING:%[0-9]+]] = OpString "{{[/\]}}A{{[/\]}}B{{[/\]}}C{{[/\]}}example.cpp"
 ; CHECK: [[NAME:%[0-9]+]] = OpString "test1"
