@@ -41,6 +41,7 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %f {
       transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerparallel"
       transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerparallel"
       transform.apply_patterns.vector.multi_reduction_lowering lowering_strategy = "innerparallel"
     } : !transform.any_op
 
