@@ -57,10 +57,10 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
   // The last value where tan(x) ~ x is 0x3db8
   if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
     int rounding = fputil::quick_get_round();
-    // separate case handles it with magnitude of 2^-13
+    // separate case handles it with magnitude of 2^-11
     if ((xbits.is_pos() && rounding == FE_UPWARD) ||
         (xbits.is_neg() && rounding == FE_DOWNWARD))
-      return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-13f, xf));
+      return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
     return x;
   }
 
