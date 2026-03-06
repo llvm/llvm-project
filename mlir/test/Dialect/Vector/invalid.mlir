@@ -148,6 +148,13 @@ func.func @extract_position_rank_overflow_generic(%arg0: vector<4x8x16xf32>) {
 
 // -----
 
+func.func @extract_partial_scalar_result(%arg0: vector<4x8x16xf32>) {
+  // expected-error@+1 {{expected the result type to be a vector when using fewer indices than the source vector rank}}
+  %1 = "vector.extract" (%arg0) <{static_position = array<i64: 0>}> : (vector<4x8x16xf32>) -> f32
+}
+
+// -----
+
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #2 to be a non-negative integer smaller than the corresponding vector dimension}}
   %1 = vector.extract %arg0[0, 43, 0] : f32 from vector<4x8x16xf32>

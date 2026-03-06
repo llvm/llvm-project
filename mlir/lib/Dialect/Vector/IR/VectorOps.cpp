@@ -1385,6 +1385,13 @@ LogicalResult vector::ExtractOp::verify() {
   if (position.size() > static_cast<unsigned>(getSourceVectorType().getRank()))
     return emitOpError(
         "expected position attribute of rank no greater than vector rank");
+  // A partial extraction (fewer indices than the source vector rank) extracts a
+  // sub-vector, so the result type must be a VectorType. Extracting a scalar
+  // requires providing one index per source vector dimension.
+  if (position.size() < static_cast<size_t>(getSourceVectorType().getRank()) &&
+      !isa<VectorType>(getResult().getType()))
+    return emitOpError("expected the result type to be a vector when using "
+                       "fewer indices than the source vector rank");
   for (auto [idx, pos] : llvm::enumerate(position)) {
     if (auto attr = dyn_cast<Attribute>(pos)) {
       int64_t constIdx = cast<IntegerAttr>(attr).getInt();
