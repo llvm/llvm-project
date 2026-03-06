@@ -1786,9 +1786,10 @@ BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
   return addSimpleTemplateParams(Names, {}, CD);
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
-    ArrayRef<StringRef> Names, ArrayRef<QualType> DefaultValues,
-    ConceptDecl *CD) {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names,
+                                                ArrayRef<QualType> DefaultTypes,
+                                                ConceptDecl *CD) {
   if (Record->isCompleteDefinition()) {
     assert(Template && "existing record it not a template");
     assert(Template->getTemplateParameters()->size() == Names.size() &&
@@ -1796,12 +1797,12 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSimpleTemplateParams(
     return *this;
   }
 
-  assert((DefaultValues.empty() || DefaultValues.size() == Names.size()) &&
+  assert((DefaultTypes.empty() || DefaultTypes.size() == Names.size()) &&
          "template default argument count mismatch");
 
   TemplateParameterListBuilder Builder = TemplateParameterListBuilder(*this);
   for (unsigned i = 0; i < Names.size(); ++i) {
-    QualType DefaultTy = DefaultValues.empty() ? QualType() : DefaultValues[i];
+    QualType DefaultTy = DefaultTypes.empty() ? QualType() : DefaultTypes[i];
     Builder.addTypeParameter(Names[i], DefaultTy);
   }
   return Builder.finalizeTemplateArgs(CD);

@@ -5,6 +5,9 @@ SamplerState g_s : register(s0);
 Texture2D<> default_template : register(t1, space2);
 Texture2D implicit_template : register(t0, space1);
 
+// CHECK: %"class.hlsl::Texture2D" = type { target("dx.Texture", <4 x float>, 0, 0, 0, 2) }
+// SPIRV: %"class.hlsl::Texture2D" = type { target("spirv.Image", float, 1, 2, 0, 0, 1, 0) }
+
 // CHECK: @{{.*}}default_template = internal global %"class.hlsl::Texture2D" poison, align {{[0-9]+}}
 // CHECK: @{{.*}}implicit_template = internal global %"class.hlsl::Texture2D" poison, align {{[0-9]+}}
 // SPIRV: @{{.*}}default_template = internal global %"class.hlsl::Texture2D" poison, align {{[0-9]+}}

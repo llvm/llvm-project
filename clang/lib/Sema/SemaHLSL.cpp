@@ -5563,7 +5563,7 @@ QualType SemaHLSL::ActOnTemplateShorthand(TemplateDecl *Template,
   if (!Params || Params->size() != 1)
     return QualType();
 
-  if (Template->getName() != "Texture2D")
+  if (!Template->isImplicit())
     return QualType();
 
   TemplateArgumentListInfo TemplateArgs(NameLoc, NameLoc);
