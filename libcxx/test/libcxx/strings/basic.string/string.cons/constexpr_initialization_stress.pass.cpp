@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 // REQUIRES: clang
 
 // <string>
@@ -20,8 +20,6 @@
 #include <string>
 #include <array>
 #include <cassert>
-
-#include "test_macros.h"
 
 consteval auto eval() {
   std::array<std::string, 6000> r;

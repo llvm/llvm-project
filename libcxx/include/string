@@ -2339,6 +2339,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
     if (__libcpp_is_constant_evaluated())
       return;
+    if (__libcpp_is_constant_evaluated())
+      return;
     __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
   }
 

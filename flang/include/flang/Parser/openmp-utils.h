@@ -113,6 +113,9 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
   return detail::DirectiveNameScope::GetOmpDirectiveName(x);
 }
 
+std::string GetUpperName(llvm::omp::Clause id, unsigned version);
+std::string GetUpperName(llvm::omp::Directive id, unsigned version);
+
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x);
 const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
