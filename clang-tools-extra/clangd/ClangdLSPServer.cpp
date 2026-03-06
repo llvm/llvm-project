@@ -35,7 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/SHA1.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
@@ -73,18 +73,15 @@ std::optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   return std::nullopt;
 }
 
-const llvm::StringLiteral ApplyFixCommand = "clangd.applyFix";
-const llvm::StringLiteral ApplyTweakCommand = "clangd.applyTweak";
-const llvm::StringLiteral ApplyRenameCommand = "clangd.applyRename";
-
 CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
-                        const URIForFile &File) {
+                        const URIForFile &File,
+                        const std::string &ApplyRenameCommand) {
   CodeAction CA;
   CA.title = R.FixMessage;
   CA.kind = std::string(CodeAction::QUICKFIX_KIND);
   CA.command.emplace();
   CA.command->title = R.FixMessage;
-  CA.command->command = std::string(ApplyRenameCommand);
+  CA.command->command = ApplyRenameCommand;
   RenameParams Params;
   Params.textDocument = TextDocumentIdentifier{File};
   Params.position = R.Diag.Range.start;
@@ -96,7 +93,7 @@ CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
 /// Transforms a tweak into a code action that would apply it if executed.
 /// EXPECTS: T.prepare() was called and returned true.
 CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
-                        Range Selection) {
+                        Range Selection, const std::string &ApplyTweakCommand) {
   CodeAction CA;
   CA.title = T.Title;
   CA.kind = T.Kind.str();
@@ -107,7 +104,7 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
   //        directly.
   CA.command.emplace();
   CA.command->title = T.Title;
-  CA.command->command = std::string(ApplyTweakCommand);
+  CA.command->command = ApplyTweakCommand;
   TweakArgs Args;
   Args.file = File;
   Args.tweakID = T.ID;
@@ -681,8 +678,15 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
           : llvm::json::Value(true);
 
   std::vector<llvm::StringRef> Commands;
+  // Advertise only instance-specific commands (those with a unique suffix).
+  // The base command names (clangd.applyFix, clangd.applyTweak,
+  // clangd.applyRename) are registered as handlers for backwards compatibility
+  // but are not advertised, to avoid conflicts when multiple clangd instances
+  // run in the same VS Code window.
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
-    Commands.push_back(Command);
+    if (!Command.starts_with("clangd.apply") ||
+        Command.count('.') > 1) // Instance-specific commands have 2 dots
+      Commands.push_back(Command);
   llvm::sort(Commands);
   ServerCaps["executeCommandProvider"] =
       llvm::json::Object{{"commands", Commands}};
@@ -1046,14 +1050,15 @@ void ClangdLSPServer::onFoldingRange(
   Server->foldingRanges(Params.textDocument.uri.file(), std::move(Reply));
 }
 
-static std::optional<Command> asCommand(const CodeAction &Action) {
+static std::optional<Command> asCommand(const CodeAction &Action,
+                                        const std::string &ApplyFixCommand) {
   Command Cmd;
   if (Action.command && Action.edit)
     return std::nullopt; // Not representable. (We never emit these anyway).
   if (Action.command) {
     Cmd = *Action.command;
   } else if (Action.edit) {
-    Cmd.command = std::string(ApplyFixCommand);
+    Cmd.command = ApplyFixCommand;
     Cmd.argument = *Action.edit;
   } else {
     return std::nullopt;
@@ -1101,10 +1106,10 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
     }
 
     for (const auto &R : Fixits->Renames)
-      CAs.push_back(toCodeAction(R, File));
+      CAs.push_back(toCodeAction(R, File, ApplyRenameCommand));
 
     for (const auto &TR : Fixits->TweakRefs)
-      CAs.push_back(toCodeAction(TR, File, Selection));
+      CAs.push_back(toCodeAction(TR, File, Selection, ApplyTweakCommand));
 
     // If there's exactly one quick-fix, call it "preferred".
     // We never consider refactorings etc as preferred.
@@ -1129,7 +1134,7 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
       return Reply(llvm::json::Array(CAs));
     std::vector<Command> Commands;
     for (const auto &Action : CAs) {
-      if (auto Command = asCommand(Action))
+      if (auto Command = asCommand(Action, ApplyFixCommand))
         Commands.push_back(std::move(*Command));
     }
     return Reply(llvm::json::Array(Commands));
@@ -1665,6 +1670,16 @@ ClangdLSPServer::ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,
       MsgHandler(new MessageHandler(*this)), TFS(TFS),
       SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()), Opts(Opts) {
+  // Generate unique command names using a UUID to avoid collisions when
+  // multiple clangd instances run in the same editor (e.g., multi-root
+  // workspaces).
+  std::array<uint8_t, 16> UUID;
+  llvm::getRandomBytes(UUID.data(), UUID.size());
+  std::string Suffix = llvm::toHex(UUID);
+  ApplyFixCommand = "clangd.applyFix." + Suffix;
+  ApplyTweakCommand = "clangd.applyTweak." + Suffix;
+  ApplyRenameCommand = "clangd.applyRename." + Suffix;
+
   if (Opts.ConfigProvider) {
     assert(!Opts.ContextProvider &&
            "Only one of ConfigProvider and ContextProvider allowed!");
@@ -1726,9 +1741,15 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("textDocument/inlayHint", this, &ClangdLSPServer::onInlayHint);
   Bind.method("$/memoryUsage", this, &ClangdLSPServer::onMemoryUsage);
   Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
+  // Register unique command names that will be advertised in capabilities.
   Bind.command(ApplyFixCommand, this, &ClangdLSPServer::onCommandApplyEdit);
   Bind.command(ApplyTweakCommand, this, &ClangdLSPServer::onCommandApplyTweak);
   Bind.command(ApplyRenameCommand, this, &ClangdLSPServer::onCommandApplyRename);
+  // Also register base command names for backwards compatibility (e.g., tests,
+  // manual command invocation). These are not advertised but will be accepted.
+  Bind.command("clangd.applyFix", this, &ClangdLSPServer::onCommandApplyEdit);
+  Bind.command("clangd.applyTweak", this, &ClangdLSPServer::onCommandApplyTweak);
+  Bind.command("clangd.applyRename", this, &ClangdLSPServer::onCommandApplyRename);
 
   ApplyWorkspaceEdit = Bind.outgoingMethod("workspace/applyEdit");
   PublishDiagnostics = Bind.outgoingNotification("textDocument/publishDiagnostics");
