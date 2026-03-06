@@ -17209,6 +17209,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // fold (conv (freeze (load x))) -> (freeze (load (conv*)x))
   // If the resultant load doesn't need a higher alignment than the original!
   auto CastLoad = [this, &VT](SDValue N0, const SDLoc &DL) {
+    if (N0.getOpcode() == ISD::AssertNoFPClass)
+      N0 = N0.getOperand(0);
     if (!ISD::isNormalLoad(N0.getNode()) || !N0.hasOneUse())
       return SDValue();
 
