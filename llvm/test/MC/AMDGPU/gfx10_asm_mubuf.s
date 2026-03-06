@@ -1107,6 +1107,9 @@ buffer_gl1_inv
 buffer_load_dword v255, off, s[8:11], s3 offset:4095
 // GFX10: buffer_load_dword v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x30,0xe0,0x00,0xff,0x02,0x03]
 
+buffer_load_dword v255, off, s[8:11], s3 offset:4095 nolds
+// GFX10: buffer_load_dword v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x30,0xe0,0x00,0xff,0x02,0x03]
+
 buffer_load_dword v5, off, s[12:15], s3 offset:4095
 // GFX10: buffer_load_dword v5, off, s[12:15], s3 offset:4095 ; encoding: [0xff,0x0f,0x30,0xe0,0x00,0x05,0x03,0x03]
 
@@ -1338,6 +1341,9 @@ buffer_load_format_d16_xyzw v[1:2], off, s[4:7], s1
 buffer_load_format_x v255, off, s[8:11], s3 offset:4095
 // GFX10: buffer_load_format_x v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x00,0xe0,0x00,0xff,0x02,0x03]
 
+buffer_load_format_x v255, off, s[8:11], s3 offset:4095 nolds
+// GFX10: buffer_load_format_x v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x00,0xe0,0x00,0xff,0x02,0x03]
+
 buffer_load_format_x v5, off, s[12:15], s3 offset:4095
 // GFX10: buffer_load_format_x v5, off, s[12:15], s3 offset:4095 ; encoding: [0xff,0x0f,0x00,0xe0,0x00,0x05,0x03,0x03]
 
@@ -1554,6 +1560,9 @@ buffer_load_format_xyzw v[5:8], v0, s[8:11], s3 offen offset:4095
 buffer_load_sbyte v255, off, s[8:11], s3 offset:4095
 // GFX10: buffer_load_sbyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x24,0xe0,0x00,0xff,0x02,0x03]
 
+buffer_load_sbyte v255, off, s[8:11], s3 offset:4095 nolds
+// GFX10: buffer_load_sbyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x24,0xe0,0x00,0xff,0x02,0x03]
+
 buffer_load_sbyte v5, off, s[12:15], s3 offset:4095
 // GFX10: buffer_load_sbyte v5, off, s[12:15], s3 offset:4095 ; encoding: [0xff,0x0f,0x24,0xe0,0x00,0x05,0x03,0x03]
 
@@ -1606,6 +1615,9 @@ buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095
 // GFX10: buffer_load_sbyte v5, v0, s[8:11], s3 offen offset:4095 ; encoding: [0xff,0x1f,0x24,0xe0,0x00,0x05,0x02,0x03]
 
 buffer_load_sshort v255, off, s[8:11], s3 offset:4095
+// GFX10: buffer_load_sshort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x2c,0xe0,0x00,0xff,0x02,0x03]
+
+buffer_load_sshort v255, off, s[8:11], s3 offset:4095 nolds
 // GFX10: buffer_load_sshort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x2c,0xe0,0x00,0xff,0x02,0x03]
 
 buffer_load_sshort v5, off, s[12:15], s3 offset:4095
@@ -1662,6 +1674,9 @@ buffer_load_sshort v5, v0, s[8:11], s3 offen offset:4095
 buffer_load_ubyte v255, off, s[8:11], s3 offset:4095
 // GFX10: buffer_load_ubyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x20,0xe0,0x00,0xff,0x02,0x03]
 
+buffer_load_ubyte v255, off, s[8:11], s3 offset:4095 nolds
+// GFX10: buffer_load_ubyte v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x20,0xe0,0x00,0xff,0x02,0x03]
+
 buffer_load_ubyte v5, off, s[12:15], s3 offset:4095
 // GFX10: buffer_load_ubyte v5, off, s[12:15], s3 offset:4095 ; encoding: [0xff,0x0f,0x20,0xe0,0x00,0x05,0x03,0x03]
 
@@ -1714,6 +1729,9 @@ buffer_load_ubyte v5, v0, s[8:11], s3 offen offset:4095
 // GFX10: buffer_load_ubyte v5, v0, s[8:11], s3 offen offset:4095 ; encoding: [0xff,0x1f,0x20,0xe0,0x00,0x05,0x02,0x03]
 
 buffer_load_ushort v255, off, s[8:11], s3 offset:4095
+// GFX10: buffer_load_ushort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x28,0xe0,0x00,0xff,0x02,0x03]
+
+buffer_load_ushort v255, off, s[8:11], s3 offset:4095 nolds
 // GFX10: buffer_load_ushort v255, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x28,0xe0,0x00,0xff,0x02,0x03]
 
 buffer_load_ushort v5, off, s[12:15], s3 offset:4095
