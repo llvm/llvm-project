@@ -1380,6 +1380,85 @@ Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
   return replaceInstUsesWith(I, BitCastCmp);
 }
 
+// Prior to SSE4.2, to perform greater (or less than) comparisons between two
+// v2i64 values, the comparison is performed on v4i32 values:
+//
+// (A1, A2) -> (A1Lower, A1Upper, A2Lower, A2Upper)
+// (B1, B2) -> (B1Lower, B1Upper, B2Lower, B2Upper)
+// (Result1, Result2) -> (Result1, Result1, Result2, Result2)
+//
+// where,
+//
+// ResultX = (GtLowerX & EqUpperX) | (GtUpperX)
+// GtLowerX = AXLower OP BXLower
+// GtUpperX = AXUpper OP BXUpper
+// EqUpperX = AXUpper EQ BXUpper
+//
+// Upper and lower values are obtained through vector shuffles.
+Instruction *
+InstCombinerImpl::foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I) {
+  if (I.getOpcode() != Instruction::Or)
+    return nullptr;
+
+  auto *OldVecType = dyn_cast<VectorType>(I.getType());
+
+  if (!OldVecType || OldVecType->isScalableTy() ||
+      !OldVecType->getElementType()->isIntegerTy(32) ||
+      OldVecType->getElementCount().getFixedValue() != 4)
+    return nullptr;
+
+  Value *A, *B, *Greater1, *Greater2, *Greater;
+  CmpPredicate PredEq;
+  SmallVector<int> MaskLower = {0, 0, 2, 2};
+  SmallVector<int> MaskUpper = {1, 1, 3, 3};
+
+  auto GreaterLower = m_SExtOrSelf(m_Shuffle(
+      m_SExtOrSelf(m_Value(Greater1)), m_Poison(), m_SpecificMask(MaskLower)));
+  auto GreaterUpper = m_SExtOrSelf(m_Shuffle(
+      m_SExtOrSelf(m_Value(Greater2)), m_Poison(), m_SpecificMask(MaskUpper)));
+  auto EqUpper = m_SExtOrSelf(
+      m_Shuffle(m_SExtOrSelf(m_c_ICmp(PredEq, m_Value(A), m_Value(B))),
+                m_Poison(), m_SpecificMask(MaskUpper)));
+
+  if (!match(&I, m_c_Or(m_c_And(GreaterLower, EqUpper), GreaterUpper)) ||
+      Greater1 != Greater2 || PredEq != ICmpInst::ICMP_EQ)
+    return nullptr;
+
+  Greater = Greater1;
+
+  auto *Zero = ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), 0);
+  auto *Flip =
+      ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), 0x80000000);
+  auto *FlipLower = ConstantVector::get({Flip, Zero, Flip, Zero});
+  auto *FlipAll = ConstantVector::get({Flip, Flip, Flip, Flip});
+
+  CmpPredicate PredGt;
+  auto UGt = m_c_ICmp(PredGt, m_Specific(A), m_Specific(B));
+  auto UGtAlt = m_c_ICmp(PredGt, m_c_Xor(m_Specific(A), m_Specific(FlipAll)),
+                         m_c_Xor(m_Specific(B), m_Specific(FlipAll)));
+  auto SGt = m_c_ICmp(PredGt, m_c_Xor(m_Specific(A), m_Specific(FlipLower)),
+                      m_c_Xor(m_Specific(B), m_Specific(FlipLower)));
+
+  if (!(match(Greater, UGt) &&
+        (PredGt == ICmpInst::ICMP_UGT || PredGt == ICmpInst::ICMP_ULT)) &&
+      !((match(Greater, SGt) || match(Greater, UGtAlt)) &&
+        (PredGt == ICmpInst::ICMP_SGT || PredGt == ICmpInst::ICMP_SLT)))
+    return nullptr;
+
+  LLVM_DEBUG(dbgs() << "Found V2CmpGt using V4CmpGt pattern" << '\n');
+
+  // Perform folding
+  auto *NewElementType = IntegerType::get(I.getContext(), 64);
+  auto *NewVecType = VectorType::get(NewElementType, 2, false);
+  auto *BitCastA = Builder.CreateBitCast(A, NewVecType);
+  auto *BitCastB = Builder.CreateBitCast(B, NewVecType);
+  auto *Cmp = Builder.CreateICmp(PredGt, BitCastA, BitCastB);
+  auto *SExt = Builder.CreateSExt(Cmp, NewVecType);
+  auto *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
+
+  return replaceInstUsesWith(I, BitCastCmp);
+}
+
 static std::optional<std::pair<Value *, Value *>>
 matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS) {
   if (LHS->getParent() != RHS->getParent())
