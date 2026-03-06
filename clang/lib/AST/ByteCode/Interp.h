@@ -280,6 +280,10 @@ template <typename T, bool (*OpFW)(T, T, unsigned, T *),
           template <typename U> class OpAP>
 bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
                      const T &RHS) {
+
+  if (LHS.getKind() != IntegralKind::Number ||
+      RHS.getKind() != IntegralKind::Number)
+    return Invalid(S, OpPC);
   // Fast path - add the numbers with fixed width.
   T Result;
   if constexpr (needsAlloc<T>())
@@ -343,6 +347,34 @@ bool Sub(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   const unsigned Bits = RHS.bitWidth() + 1;
+
+  // Handle (int)&&a - (int)&&b.
+  // Both operands should be integrals that point to labels and the result is a
+  // AddrLabelDiff integral.
+  if (LHS.getKind() == IntegralKind::LabelAddress ||
+      RHS.getKind() == IntegralKind::LabelAddress) {
+    const auto *A = reinterpret_cast<const Expr *>(
+        S.P.getNativePointer(static_cast<uint32_t>(LHS)));
+    const auto *B = reinterpret_cast<const Expr *>(
+        S.P.getNativePointer(static_cast<uint32_t>(RHS)));
+    if (isa<AddrLabelExpr>(A) && isa<AddrLabelExpr>(B)) {
+      const auto *LHSAddrExpr = cast<AddrLabelExpr>(A);
+      const auto *RHSAddrExpr = cast<AddrLabelExpr>(B);
+
+      if (LHSAddrExpr->getLabel()->getDeclContext() !=
+          RHSAddrExpr->getLabel()->getDeclContext())
+        return Invalid(S, OpPC);
+
+      unsigned Index = S.P.getOrCreateAddrLabelDiff(LHSAddrExpr, RHSAddrExpr);
+      if constexpr (std::is_same_v<T, Boolean> ||
+                    std::is_same_v<T, FixedPoint>) {
+        return false;
+      } else {
+        S.Stk.push<T>(T::from(IntegralKind::AddrLabelDiff, Index));
+      }
+      return true;
+    }
+  }
 
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, Bits, LHS, RHS);
 }
@@ -1069,16 +1101,16 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
       LHS.isTypeidPointer() || RHS.isTypeidPointer()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-        << LHS.toDiagnosticString(S.getASTContext())
-        << RHS.toDiagnosticString(S.getASTContext());
+        << LHS.toDiagnosticString(S.getASTContext(), S.P)
+        << RHS.toDiagnosticString(S.getASTContext(), S.P);
     return false;
   }
 
   if (!Pointer::hasSameBase(LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-        << LHS.toDiagnosticString(S.getASTContext())
-        << RHS.toDiagnosticString(S.getASTContext());
+        << LHS.toDiagnosticString(S.getASTContext(), S.P)
+        << RHS.toDiagnosticString(S.getASTContext(), S.P);
     return false;
   }
 
@@ -1130,7 +1162,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     if (P.isWeak()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
-          << P.toDiagnosticString(S.getASTContext());
+          << P.toDiagnosticString(S.getASTContext(), S.P);
       return false;
     }
   }
@@ -1152,8 +1184,8 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     if (arePotentiallyOverlappingStringLiterals(LHS, RHS)) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_literal_comparison)
-          << LHS.toDiagnosticString(S.getASTContext())
-          << RHS.toDiagnosticString(S.getASTContext());
+          << LHS.toDiagnosticString(S.getASTContext(), S.P)
+          << RHS.toDiagnosticString(S.getASTContext(), S.P);
       return false;
     }
   }
@@ -1171,14 +1203,14 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
       RHS.isBlockPointer() && RHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-        << LHS.toDiagnosticString(S.getASTContext());
+        << LHS.toDiagnosticString(S.getASTContext(), S.P);
     return false;
   }
   if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
       LHS.isBlockPointer() && LHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
-        << RHS.toDiagnosticString(S.getASTContext());
+        << RHS.toDiagnosticString(S.getASTContext(), S.P);
     return false;
   }
 
@@ -1198,14 +1230,14 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
           CE && IsOpaqueConstantCall(CE)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_opaque_call_comparison)
-            << P.toDiagnosticString(S.getASTContext());
+            << P.toDiagnosticString(S.getASTContext(), S.P);
         return false;
       }
     } else if (BothNonNull && P.isIntegralPointer()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_constant_comparison)
-          << LHS.toDiagnosticString(S.getASTContext())
-          << RHS.toDiagnosticString(S.getASTContext());
+          << LHS.toDiagnosticString(S.getASTContext(), S.P)
+          << RHS.toDiagnosticString(S.getASTContext(), S.P);
       return false;
     }
   }
@@ -1213,8 +1245,8 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   if (LHS.isUnknownSizeArray() && RHS.isUnknownSizeArray()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_zero_sized)
-        << LHS.toDiagnosticString(S.getASTContext())
-        << RHS.toDiagnosticString(S.getASTContext());
+        << LHS.toDiagnosticString(S.getASTContext(), S.P)
+        << RHS.toDiagnosticString(S.getASTContext(), S.P);
     return false;
   }
 
@@ -1282,8 +1314,8 @@ bool CMP3(InterpState &S, CodePtr OpPC, const ComparisonCategoryInfo *CmpInfo) {
     if (CmpResult == ComparisonCategoryResult::Unordered) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-          << LHS.toDiagnosticString(S.getASTContext())
-          << RHS.toDiagnosticString(S.getASTContext());
+          << LHS.toDiagnosticString(S.getASTContext(), S.P)
+          << RHS.toDiagnosticString(S.getASTContext(), S.P);
       return false;
     }
   }
@@ -1376,7 +1408,28 @@ bool Const(InterpState &S, CodePtr OpPC, const T &Arg) {
     S.Stk.push<T>(Result);
     return true;
   }
-  S.Stk.push<T>(Arg);
+
+  if constexpr (std::is_same_v<T, uint8_t>) {
+    S.Stk.push<Integral<8, false>>(Integral<8, false>::from(Arg));
+  } else if constexpr (std::is_same_v<T, int8_t>) {
+    S.Stk.push<Integral<8, true>>(Integral<8, true>::from(Arg));
+  } else if constexpr (std::is_same_v<T, uint16_t>) {
+    S.Stk.push<Integral<16, false>>(Integral<16, false>::from(Arg));
+  } else if constexpr (std::is_same_v<T, int16_t>) {
+    S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Arg));
+  } else if constexpr (std::is_same_v<T, uint32_t>) {
+    S.Stk.push<Integral<32, false>>(Integral<32, false>::from(Arg));
+  } else if constexpr (std::is_same_v<T, int32_t>) {
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg));
+  } else if constexpr (std::is_same_v<T, uint64_t>) {
+    S.Stk.push<Integral<64, false>>(Integral<64, false>::from(Arg));
+  } else if constexpr (std::is_same_v<T, int64_t>) {
+    S.Stk.push<Integral<64, true>>(Integral<64, true>::from(Arg));
+  } else {
+    // Bool.
+    S.Stk.push<T>(Arg);
+  }
+
   return true;
 }
 
@@ -2451,11 +2504,28 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
   const Pointer &LHS = S.Stk.pop<Pointer>().expand();
   const Pointer &RHS = S.Stk.pop<Pointer>().expand();
 
+  if (LHS.pointsToLabel() || RHS.pointsToLabel()) {
+    const auto *LHSAddrExpr =
+        dyn_cast_if_present<AddrLabelExpr>(LHS.getDeclDesc()->asExpr());
+    const auto *RHSAddrExpr =
+        dyn_cast_if_present<AddrLabelExpr>(RHS.getDeclDesc()->asExpr());
+    if (!LHSAddrExpr || !RHSAddrExpr)
+      return false;
+
+    if (LHSAddrExpr->getLabel()->getDeclContext() !=
+        RHSAddrExpr->getLabel()->getDeclContext())
+      return Invalid(S, OpPC);
+
+    unsigned Index = S.P.getOrCreateAddrLabelDiff(LHSAddrExpr, RHSAddrExpr);
+    S.Stk.push<T>(T::from(IntegralKind::AddrLabelDiff, Index));
+    return true;
+  }
+
   if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_pointer_arith_unspecified)
-        << LHS.toDiagnosticString(S.getASTContext())
-        << RHS.toDiagnosticString(S.getASTContext());
+        << LHS.toDiagnosticString(S.getASTContext(), S.P)
+        << RHS.toDiagnosticString(S.getASTContext(), S.P);
     return false;
   }
 
@@ -2520,7 +2590,25 @@ inline bool GetLocalEnabled(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   using T = typename PrimConv<TIn>::T;
   using U = typename PrimConv<TOut>::T;
-  S.Stk.push<U>(U::from(S.Stk.pop<T>()));
+
+  auto In = S.Stk.pop<T>();
+
+  if (In.getKind() != IntegralKind::Number &&
+      In.getKind() != IntegralKind::AddrLabelDiff) {
+    if (!CheckIntegralAddressCast(S, OpPC, In.bitWidth()))
+      return Invalid(S, OpPC);
+  } else if (In.getKind() == IntegralKind::AddrLabelDiff) {
+    // Allow casts of address-of-label differences if they are no-ops
+    // or narrowing, if the result is at least 32 bits wide.
+    // (The narrowing case isn't actually guaranteed to
+    // be constant-evaluatable except in some narrow cases which are hard
+    // to detect here.  We let it through on the assumption the user knows
+    // what they are doing.)
+    if (!(U::bitWidth() >= 32 && U::bitWidth() <= In.bitWidth()))
+      return false;
+  }
+
+  S.Stk.push<U>(U::from(In));
   return true;
 }
 
@@ -2668,6 +2756,7 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
 
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth);
+bool CheckIntegralAddressCast(InterpState &S, CodePtr OpPC, unsigned BitWidth);
 bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
 bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth);
 
@@ -2678,7 +2767,33 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
     return Invalid(S, OpPC);
 
-  S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  if constexpr (std::is_same_v<T, Boolean>) {
+    S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  } else {
+    if (Ptr.isBlockPointer()) {
+      uintptr_t IntVal;
+      IntegralKind Kind = IntegralKind::Address;
+      if (Ptr.isDummy()) {
+        if (const Expr *E = Ptr.getDeclDesc()->asExpr()) {
+          IntVal = S.P.getOrCreateNativePointer(E);
+          if (isa<AddrLabelExpr>(E))
+            Kind = IntegralKind::LabelAddress;
+        } else {
+          IntVal = S.P.getOrCreateNativePointer(Ptr.getDeclDesc()->asDecl());
+        }
+      } else {
+        Kind = IntegralKind::BlockAddress;
+        IntVal = S.P.getOrCreateNativePointer(Ptr.block());
+      }
+      S.Stk.push<T>(T::from(Kind, IntVal));
+    } else if (Ptr.isFunctionPointer()) {
+      uintptr_t IntVal = S.P.getOrCreateNativePointer(
+          Ptr.asFunctionPointer().getFunction()->getDecl());
+      S.Stk.push<T>(T::from(IntegralKind::Address, IntVal));
+    } else {
+      S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+    }
+  }
   return true;
 }
 
@@ -3253,7 +3368,19 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
       << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
       << S.getLangOpts().CPlusPlus;
 
-  S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
+  if (IntVal.getKind() == IntegralKind::Address) {
+    const VarDecl *VD = reinterpret_cast<const VarDecl *>(
+        S.P.getNativePointer(static_cast<uintptr_t>(IntVal)));
+    unsigned GlobalIndex = *S.P.getOrCreateGlobal(VD);
+    S.Stk.push<Pointer>(S.P.getGlobal(GlobalIndex));
+  } else if (IntVal.getKind() == IntegralKind::BlockAddress) {
+    const Block *B = reinterpret_cast<const Block *>(
+        S.P.getNativePointer(static_cast<uintptr_t>(IntVal)));
+    S.Stk.push<Pointer>(const_cast<Block *>(B));
+  } else {
+    S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
+  }
+
   return true;
 }
 
@@ -3396,7 +3523,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool OffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E) {
   llvm::SmallVector<int64_t> ArrayIndices;
   for (size_t I = 0; I != E->getNumExpressions(); ++I)
-    ArrayIndices.emplace_back(S.Stk.pop<int64_t>());
+    ArrayIndices.emplace_back(
+        static_cast<int64_t>(S.Stk.pop<Integral<64, true>>()));
 
   int64_t Result;
   if (!InterpretOffsetOf(S, OpPC, E, ArrayIndices, Result))
@@ -3511,7 +3639,7 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
   if (NumElements.isNegative()) {
     if (!IsNoThrow) {
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
-          << NumElements.toDiagnosticString(S.getASTContext());
+          << NumElements.toDiagnosticString(S.getASTContext(), S.P);
       return false;
     }
     S.Stk.push<Pointer>(0, nullptr);

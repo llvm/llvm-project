@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_INTEGRAL_H
 
 #include "clang/AST/APValue.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
@@ -22,6 +23,7 @@
 #include <cstdint>
 
 #include "Primitives.h"
+#include "Program.h"
 
 namespace clang {
 namespace interp {
@@ -69,8 +71,9 @@ private:
 
   // The primitive representing the integral.
   using ReprT = typename Repr<Bits, Signed>::Type;
-  ReprT V;
   static_assert(std::is_trivially_copyable_v<ReprT>);
+  ReprT V = 0;
+  IntegralKind Kind = IntegralKind::Number;
 
   /// Primitive representing limits.
   static const auto Min = std::numeric_limits<ReprT>::min();
@@ -78,16 +81,20 @@ private:
 
   /// Construct an integral from anything that is convertible to storage.
   template <typename T> explicit Integral(T V) : V(V) {}
+  template <typename T>
+  explicit Integral(IntegralKind Kind, T V) : V(V), Kind(Kind) {}
 
 public:
   using AsUnsigned = Integral<Bits, false>;
 
   /// Zero-initializes an integral.
-  Integral() : V(0) {}
+  Integral() = default;
 
   /// Constructs an integral from another integral.
   template <unsigned SrcBits, bool SrcSign>
-  explicit Integral(Integral<SrcBits, SrcSign> V) : V(V.V) {}
+  explicit Integral(Integral<SrcBits, SrcSign> V) : V(V.V), Kind(V.Kind) {}
+
+  IntegralKind getKind() const { return Kind; }
 
   /// Construct an integral from a value based on signedness.
   explicit Integral(const APSInt &V)
@@ -115,7 +122,7 @@ public:
 
   template <unsigned DstBits, bool DstSign>
   explicit operator Integral<DstBits, DstSign>() const {
-    return Integral<DstBits, DstSign>(V);
+    return Integral<DstBits, DstSign>(Kind, V);
   }
 
   template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
@@ -137,7 +144,35 @@ public:
       return APInt(Bits, static_cast<uint64_t>(V), Signed)
           .zextOrTrunc(BitWidth);
   }
-  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &, const Program &P) const {
+    switch (Kind) {
+    case IntegralKind::Address: {
+      const ValueDecl *VD =
+          reinterpret_cast<const ValueDecl *>(P.getNativePointer(V));
+      return APValue(VD, CharUnits::Zero(), APValue::NoLValuePath{});
+    }
+    case IntegralKind::LabelAddress: {
+      const Expr *VD = reinterpret_cast<const Expr *>(P.getNativePointer(V));
+      return APValue(VD, CharUnits::Zero(), APValue::NoLValuePath{});
+    }
+    case IntegralKind::BlockAddress: {
+      const Block *B = reinterpret_cast<const Block *>(P.getNativePointer(V));
+      const Descriptor *D = B->getDescriptor();
+      if (const Expr *E = D->asExpr())
+        return APValue(E, CharUnits::Zero(), APValue::NoLValuePath{});
+
+      return APValue(D->asValueDecl(), CharUnits::Zero(),
+                     APValue::NoLValuePath{});
+    }
+    case IntegralKind::AddrLabelDiff: {
+      AddrLabelDiff ALD = P.getLabelDiff(V);
+      return APValue(ALD.LHS, ALD.RHS);
+    }
+    case IntegralKind::Number:
+      return APValue(toAPSInt());
+    }
+    llvm_unreachable("Unhandled IntegralKind");
+  }
 
   Integral<Bits, false> toUnsigned() const {
     return Integral<Bits, false>(*this);
@@ -172,7 +207,7 @@ public:
     return Integral(V);
   }
 
-  std::string toDiagnosticString(const ASTContext &Ctx) const {
+  std::string toDiagnosticString(const ASTContext &Ctx, const Program &) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
     OS << V;
@@ -198,14 +233,25 @@ public:
     return Integral((V & BitMask) | (Signed && (V & SignBit) ? ExtMask : 0));
   }
 
-  void print(llvm::raw_ostream &OS) const { OS << V; }
+  void print(llvm::raw_ostream &OS) const {
+    OS << V;
+    if (Kind == IntegralKind::Address)
+      OS << " (Address)";
+    else if (Kind == IntegralKind::BlockAddress)
+      OS << " (BlockAddress)";
+    else if (Kind == IntegralKind::LabelAddress)
+      OS << " (LabelAddress)";
+    else if (Kind == IntegralKind::AddrLabelDiff)
+      OS << " (LabelAddrDiff)";
+  }
 
   static Integral min(unsigned NumBits) { return Integral(Min); }
   static Integral max(unsigned NumBits) { return Integral(Max); }
   static Integral zero(unsigned BitWidth = 0) { return from(0); }
 
   template <typename ValT>
-  static Integral from(ValT Value, unsigned NumBits = 0) {
+  static std::enable_if_t<!std::is_same_v<ValT, IntegralKind>, Integral>
+  from(ValT Value, unsigned NumBits = 0) {
     if constexpr (std::is_integral_v<ValT>)
       return Integral(Value);
     else
@@ -213,8 +259,13 @@ public:
   }
 
   template <unsigned SrcBits, bool SrcSign>
-  static Integral from(Integral<SrcBits, SrcSign> Value) {
-    return Integral(Value.V);
+  static std::enable_if_t<SrcBits != 0, Integral>
+  from(Integral<SrcBits, SrcSign> Value) {
+    return Integral(Value.Kind, Value.V);
+  }
+
+  template <typename T> static Integral from(IntegralKind Kind, T Value) {
+    return Integral(Kind, Value);
   }
 
   static bool increment(Integral A, Integral *R) {

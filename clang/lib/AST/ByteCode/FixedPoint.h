@@ -9,12 +9,15 @@
 #ifndef LLVM_CLANG_AST_INTERP_FIXED_POINT_H
 #define LLVM_CLANG_AST_INTERP_FIXED_POINT_H
 
+#include "Primitives.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "llvm/ADT/APFixedPoint.h"
 
 namespace clang {
 namespace interp {
+
+class Program;
 
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
@@ -49,7 +52,9 @@ public:
   operator bool() const { return V.getBoolValue(); }
   void print(llvm::raw_ostream &OS) const { OS << V; }
 
-  APValue toAPValue(const ASTContext &) const { return APValue(V); }
+  APValue toAPValue(const ASTContext &, const Program &) const {
+    return APValue(V);
+  }
   APSInt toAPSInt(unsigned BitWidth = 0) const { return V.getValue(); }
 
   unsigned bitWidth() const { return V.getWidth(); }
@@ -78,9 +83,10 @@ public:
     return V.convertToInt(BitWidth, Signed, Overflow);
   }
 
-  std::string toDiagnosticString(const ASTContext &Ctx) const {
+  std::string toDiagnosticString(const ASTContext &Ctx, const Program &) const {
     return V.toString();
   }
+  static IntegralKind getKind() { return IntegralKind::Number; }
 
   ComparisonCategoryResult compare(const FixedPoint &Other) const {
     int c = V.compare(Other.V);
