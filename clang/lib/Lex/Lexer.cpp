@@ -36,6 +36,7 @@
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Unicode.h"
 #include "llvm/Support/UnicodeCharRanges.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -45,7 +46,7 @@
 #include <optional>
 #include <string>
 
-#ifdef __SSE4_2__
+#if LLVM_IS_X86
 #include <nmmintrin.h>
 #endif
 
@@ -1930,35 +1931,49 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
   return true;
 }
 
-static const char *
-fastParseASCIIIdentifier(const char *CurPtr,
-                         [[maybe_unused]] const char *BufferEnd) {
-#ifdef __SSE4_2__
+static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
+  unsigned char C = *CurPtr;
+  while (isAsciiIdentifierContinue(C))
+    C = *++CurPtr;
+  return CurPtr;
+}
+
+#if LLVM_IS_X86
+// Fast path for lexing ASCII identifiers using SSE4.2 instructions.
+LLVM_TARGET_SSE42 static const char *
+fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
   constexpr ssize_t BytesPerRegister = 16;
 
   __m128i AsciiIdentifierRangeV =
-      _mm_load_si128((const __m128i *)AsciiIdentifierRange);
+      _mm_load_si128(reinterpret_cast<const __m128i *>(AsciiIdentifierRange));
 
   while (LLVM_LIKELY(BufferEnd - CurPtr >= BytesPerRegister)) {
-    __m128i Cv = _mm_loadu_si128((const __m128i *)(CurPtr));
+    __m128i Cv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(CurPtr));
 
-    int Consumed = _mm_cmpistri(AsciiIdentifierRangeV, Cv,
-                                _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES |
-                                    _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
+    const int Consumed =
+        _mm_cmpistri(AsciiIdentifierRangeV, Cv,
+                     _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES |
+                         _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
     CurPtr += Consumed;
     if (Consumed == BytesPerRegister)
       continue;
     return CurPtr;
   }
+
+  return fastParseASCIIIdentifierScalar(CurPtr);
+}
 #endif
 
-  unsigned char C = *CurPtr;
-  while (isAsciiIdentifierContinue(C))
-    C = *++CurPtr;
-  return CurPtr;
+static const char *fastParseASCIIIdentifier(const char *CurPtr,
+                                            const char *BufferEnd) {
+#if LLVM_IS_X86
+  if (LLVM_LIKELY(LLVM_CPU_SUPPORTS_SSE42))
+    return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
+#endif
+  return fastParseASCIIIdentifierScalar(CurPtr);
 }
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
