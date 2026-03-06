@@ -1108,9 +1108,11 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
       false);   // Don't run in a shell (we don't need shell expansion)
 
   if (error.Fail() || exit_status != 0 || command_output.empty()) {
-    LLDB_LOGF(log, "'%s' failed (exit status: %d, error: '%s', output: '%s')",
+    LLDB_LOGF(log,
+              "'%s' failed (exit status: %d, error: '%s', stdout: '%s', "
+              "stderr: '%s')",
               command.GetData(), exit_status, error.AsCString(),
-              error_output.c_str());
+              command_output.c_str(), error_output.c_str());
     return false;
   }
 

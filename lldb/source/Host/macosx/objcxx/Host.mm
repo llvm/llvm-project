@@ -1516,7 +1516,6 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 
     int status;
     std::string output;
-    std::string error_output;
     FileSpec cwd(launch_info.GetWorkingDirectory());
     if (!FileSystem::Instance().Exists(cwd)) {
       char *wd = getcwd(nullptr, 0);
@@ -1531,9 +1530,8 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       }
     }
     bool run_in_shell = true;
-    Status e =
-        RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        &error_output, std::chrono::seconds(10), run_in_shell);
+    Status e = RunShellCommand(expand_command, cwd, &status, nullptr, &output,
+                               nullptr, std::chrono::seconds(10), run_in_shell);
 
     if (e.Fail())
       return e;

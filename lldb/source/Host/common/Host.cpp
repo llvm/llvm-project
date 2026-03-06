@@ -406,7 +406,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path,
                              bool run_in_shell) {
   return RunShellCommand(shell_path, Args(command), working_dir, status_ptr,
                          signo_ptr, command_output_ptr, command_error_ptr,
-                         timeout);
+                         timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
@@ -417,7 +417,7 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                              bool run_in_shell) {
   return RunShellCommand(llvm::StringRef(), args, working_dir, status_ptr,
                          signo_ptr, command_output_ptr, command_error_ptr,
-                         timeout);
+                         timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
