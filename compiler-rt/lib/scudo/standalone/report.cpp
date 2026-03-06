@@ -175,6 +175,13 @@ void NORETURN reportCallocOverflow(uptr Count, uptr Size) {
                 Count, Size);
 }
 
+void NORETURN reportReallocarrayOverflow(uptr Count, uptr Size) {
+  ScopedErrorReport Report;
+  Report.append("reallocarray parameters overflow: count * size (%zu * %zu) "
+                "cannot be represented with type size_t\n",
+                Count, Size);
+}
+
 void NORETURN reportInvalidPosixMemalignAlignment(uptr Alignment) {
   ScopedErrorReport Report;
   Report.append(

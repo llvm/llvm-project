@@ -52,6 +52,23 @@ func.func @double_loop_nest(%a: memref<20x30xf32>, %b: memref<20xf32>) {
   return
 }
 
+// Regression test for https://github.com/llvm/llvm-project/issues/149327
+// Verifies no crash when a vector.transfer_read has a 1D vector type but the
+// shape ratio is 2D, causing a rank mismatch in operatesOnSuperVectorsOf.
+// The transfer op should simply not be matched (not crash).
+// CHECK-LABEL: func @transfer_rank_mismatch_no_crash
+func.func @transfer_rank_mismatch_no_crash(%arg0: memref<82x97xf32>) {
+  %0 = ub.poison : f32
+  affine.for %arg1 = 0 to 82 {
+    affine.for %arg2 = 0 to 97 step 128 {
+      // The vector type is 1D but the shape ratio is 2D — no crash.
+      // CHECK-NOT: matched: {{.*}} = vector.transfer_read
+      %1 = vector.transfer_read %arg0[%arg1, %arg2], %0 : memref<82x97xf32>, vector<128xf32>
+    }
+  }
+  return
+}
+
 // VECNEST:       affine.for %{{.*}} = 0 to 20 step 4 {
 // VECNEST:         vector.transfer_read
 // VECNEST-NEXT:    affine.for %{{.*}} = 0 to 30 {

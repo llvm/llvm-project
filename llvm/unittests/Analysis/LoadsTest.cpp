@@ -75,7 +75,7 @@ TEST(LoadsTest, CanReplacePointersIfEqual) {
 @x = common global [1 x i32] zeroinitializer, align 4
 declare void @use(ptr)
 
-define void @f(ptr %p1, ptr %p2, i64 %i) {
+define void @f(ptr %p1, ptr %p2, i64 %i, ptr addrspace(1) %p1as1) {
   call void @use(ptr getelementptr inbounds ([1 x i32], ptr @y, i64 0, i64 0))
 
   %p1_idx = getelementptr inbounds i32, ptr %p1, i64 %i
@@ -105,6 +105,14 @@ define void @f(ptr %p1, ptr %p2, i64 %i) {
   EXPECT_FALSE(canReplacePointersIfEqual(P1, P2, DL));
   EXPECT_TRUE(canReplacePointersIfEqual(P1, ConstDerefPtr, DL));
   EXPECT_TRUE(canReplacePointersIfEqual(P1, NullPtr, DL));
+
+  // Allow replacement of null in default address space with pointer, as in
+  // non-default ones, null may not have nullary provenance and instead recover
+  // a previously exposed provenance.
+  Value *P1AS1 = F->getArg(3);
+  Value *NullPtrAS1 = ConstantPointerNull::get(PointerType::get(C, 1));
+  EXPECT_TRUE(canReplacePointersIfEqual(NullPtr, P1, DL));
+  EXPECT_FALSE(canReplacePointersIfEqual(NullPtrAS1, P1AS1, DL));
 
   GetElementPtrInst *BasedOnP1 = cast<GetElementPtrInst>(&*++InstIter);
   EXPECT_TRUE(canReplacePointersIfEqual(BasedOnP1, P1, DL));

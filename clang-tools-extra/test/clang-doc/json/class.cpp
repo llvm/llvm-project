@@ -139,9 +139,9 @@ private:
 // CHECK-NEXT:              "End": true,
 // CHECK-NEXT:              "Param": "typename T"
 // CHECK-NEXT:            }
-// CHECK-NEXT:          ]
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "VerticalDisplay": false
 // CHECK-NEXT:        }
-// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "Description": {
@@ -163,12 +163,12 @@ private:
 // CHECK-NEXT:          "QualName": "Foo",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        }
-// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "HasContexts": true,
 // CHECK-NEXT:    "HasEnums": true,
 // CHECK-NEXT:    "HasFriends": true,
+// CHECK-NEXT:    "HasMembers": true,
 // CHECK-NEXT:    "HasPrivateMembers": true,
 // CHECK-NEXT:    "HasProtectedMembers": true,
 // CHECK-NEXT:    "HasProtectedMethods": true,
@@ -239,8 +239,8 @@ private:
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Params": [
 // CHECK-NEXT:          {
-// CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "MyParam",
+// CHECK-NEXT:            "ParamEnd": true,
 // CHECK-NEXT:            "Type": {
 // CHECK-NEXT:              "Name": "int",
 // CHECK-NEXT:              "QualName": "int",
@@ -255,7 +255,8 @@ private:
 // CHECK-NEXT:          "QualName": "int",
 // CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:        "USR": "{{[0-9A-F]*}}",
+// CHECK-NEXT:        "VerticalDisplay": false
 // CHECK-NEXT:      },
 // CHECK:             "IsStatic": true,
 // CHECK:             "Name": "getConst",

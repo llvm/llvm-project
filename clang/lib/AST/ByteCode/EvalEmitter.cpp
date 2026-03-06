@@ -106,7 +106,7 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*isStatic=*/false);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
@@ -202,7 +202,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
-  // Function pointers are alway returned as lvalues.
+  // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
