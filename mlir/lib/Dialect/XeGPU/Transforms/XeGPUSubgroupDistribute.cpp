@@ -1321,17 +1321,31 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
         cast<vector::MultiDimReductionOp>(yieldOperand->get().getDefiningOp());
     unsigned operandIdx = yieldOperand->getOperandNumber();
     VectorType sourceType = reductionOp.getSourceVectorType();
-    // Only 2D vectors are supported.
-    if (sourceType.getRank() != 2)
+    int64_t sourceRank = sourceType.getRank();
+    // Need at least a 2D source vector.
+    if (sourceRank < 2)
       return rewriter.notifyMatchFailure(warpOp,
-                                         "Only 2D reductions are supported.");
+                                         "Only 2D+ reductions are supported.");
+    // Leading dimensions (first rank-2) must be unit (size 1).
+    for (int64_t i = 0; i < sourceRank - 2; ++i) {
+      if (sourceType.getShape()[i] != 1)
+        return rewriter.notifyMatchFailure(
+            warpOp, "Only unit dimensions allowed for the leading dimensions.");
+    }
+    // Effective dimension indices (last 2 dims of the source).
+    int64_t dim0Idx = sourceRank - 2;
+    int64_t dim1Idx = sourceRank - 1;
     ArrayRef<int64_t> reductionDims = reductionOp.getReductionDims();
-    // Only 1 reduction dimension supported. This also ensures that the result
-    // is vector type.
-    if (reductionDims.size() != 1)
+    // Find effective reduction dims among the last 2 dims (skip leading dims).
+    SmallVector<int64_t> effectiveReductionDims;
+    for (int64_t d : reductionDims) {
+      if (d == dim0Idx || d == dim1Idx)
+        effectiveReductionDims.push_back(d);
+    }
+    if (effectiveReductionDims.size() != 1)
       return rewriter.notifyMatchFailure(
-          warpOp, "Only 1 reduction dimension is supported.");
-    int64_t reductionDim = reductionDims[0];
+          warpOp, "Only 1 non-trivial effective reduction dim is supported.");
+    int64_t reductionDim = effectiveReductionDims[0];
     VectorType distributedResultType =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     VectorType resultType = cast<VectorType>(reductionOp.getType());
@@ -1344,15 +1358,16 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           warpOp, "Failed to distribute the source vector type.");
     VectorType sourceDistType = sourceDistTypeOrFailure.value();
-    // Only single dimension distribution is supported.
+    // Only single dimension distribution among the last 2 dims is supported.
     bool dim0Distributed =
-        sourceDistType.getShape()[0] != sourceType.getShape()[0];
+        sourceDistType.getShape()[dim0Idx] != sourceType.getShape()[dim0Idx];
     bool dim1Distributed =
-        sourceDistType.getShape()[1] != sourceType.getShape()[1];
+        sourceDistType.getShape()[dim1Idx] != sourceType.getShape()[dim1Idx];
     if (dim0Distributed && dim1Distributed)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting source to be distributed in a single dimension.");
-    int64_t sourceDistDim = dim0Distributed ? 0 : (dim1Distributed ? 1 : -1);
+    int64_t sourceDistDim =
+        dim0Distributed ? dim0Idx : (dim1Distributed ? dim1Idx : -1);
     if (sourceDistDim == -1)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting a distributed source vector.");
@@ -1371,8 +1386,9 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
     // |  dim-1 distributed   |       0        | distributed    |
     // |  dim-1 distributed   |       1        | broadcasted    |
 
-    bool isReductionLaneLocal = (sourceDistDim == 0 && reductionDim == 1) ||
-                                (sourceDistDim == 1 && reductionDim == 0);
+    bool isReductionLaneLocal =
+        (sourceDistDim == dim0Idx && reductionDim == dim1Idx) ||
+        (sourceDistDim == dim1Idx && reductionDim == dim0Idx);
     if (isReductionLaneLocal && !resultDistributed)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting a distributed result for lane-local reduction.");
