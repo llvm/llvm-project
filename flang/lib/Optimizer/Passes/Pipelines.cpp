@@ -178,6 +178,7 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
 /// \param pm - MLIR pass manager that will hold the pipeline definition
 void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
                                            MLIRToLLVMPassPipelineConfig &pc) {
+  pm.addPass(fir::createMIFOpConversion());
   // Early Optimizer EP Callback
   pc.invokeFIROptEarlyEPCallbacks(pm, pc.OptLevel);
 
@@ -373,7 +374,6 @@ void createDebugPasses(mlir::PassManager &pm,
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
-  pm.addPass(fir::createMIFOpConversion());
   fir::addBoxedProcedurePass(pm);
   if (config.OptLevel.isOptimizingForSpeed() && config.AliasAnalysis &&
       !disableFirAliasTags && !useOldAliasTags)

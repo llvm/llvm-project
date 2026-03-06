@@ -88,6 +88,7 @@ end program
 ! O2-NEXT:   'omp.private' Pipeline
 ! O2-NEXT:     InlineHLFIRAssign
 ! ALL-NEXT: ConvertHLFIRtoFIR
+! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: CSE
 ! Ideally, we need an output with only the pass names, but
 ! there is currently no way to get that, so in order to
@@ -159,7 +160,6 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! O2-NEXT:  'func.func' Pipeline
 ! O2-NEXT:    SetRuntimeCallAttributes
-! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: BoxedProcedurePass
 ! O2-NEXT:  AddAliasTags
 
