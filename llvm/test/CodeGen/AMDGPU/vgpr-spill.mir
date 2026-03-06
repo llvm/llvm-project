@@ -290,9 +290,7 @@ body:             |
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr4, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX942-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr2_vgpr3_vgpr4, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 4, align 4, addrspace 5)
     ;
     ; GFX1200-LABEL: name: spill_v128_kill_unaligned
     ; GFX1200: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
@@ -303,9 +301,7 @@ body:             |
     ; GFX1250: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr4, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX1250-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr2_vgpr3_vgpr4, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 4, align 4, addrspace 5)
     SI_SPILL_V128_SAVE killed $vgpr1_vgpr2_vgpr3_vgpr4, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, addrspace 5)
 ...
 
@@ -334,9 +330,7 @@ body:             |
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr2, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr3, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr4, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX942-NEXT: SCRATCH_STORE_DWORDX3_SADDR $vgpr2_vgpr3_vgpr4, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 4, align 4, addrspace 5)
     ;
     ; GFX1200-LABEL: name: spill_v128_unaligned
     ; GFX1200: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
@@ -347,9 +341,7 @@ body:             |
     ; GFX1250: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr2, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr3, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr4, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GFX1250-NEXT: SCRATCH_STORE_DWORDX3_SADDR $vgpr2_vgpr3_vgpr4, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 4, align 4, addrspace 5)
     SI_SPILL_V128_SAVE $vgpr1_vgpr2_vgpr3_vgpr4, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, addrspace 5)
 ...
 
@@ -421,13 +413,8 @@ body:             |
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr2, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr3, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr4, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr6, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr7, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr8, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; GFX942-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 4, align 4, addrspace 5)
+    ; GFX942-NEXT: SCRATCH_STORE_DWORDX3_SADDR $vgpr6_vgpr7_vgpr8, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 20, align 4, addrspace 5)
     ;
     ; GFX1200-LABEL: name: spill_v256_unaligned
     ; GFX1200: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
@@ -439,12 +426,7 @@ body:             |
     ; GFX1250: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     ; GFX1250-NEXT: {{  $}}
     ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr2, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr3, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr4, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr6, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr7, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr8, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; GFX1250-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 4, align 4, addrspace 5)
+    ; GFX1250-NEXT: SCRATCH_STORE_DWORDX3_SADDR $vgpr6_vgpr7_vgpr8, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 20, align 4, addrspace 5)
     SI_SPILL_V256_SAVE $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, addrspace 5)
 ...
