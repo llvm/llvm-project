@@ -60,7 +60,7 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
     // separate case handles it with magnitude of 2^-13
     if ((xbits.is_pos() && rounding == FE_UPWARD) ||
         (xbits.is_neg() && rounding == FE_DOWNWARD))
-      return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
+      return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-13f, xf));
     return x;
   }
 

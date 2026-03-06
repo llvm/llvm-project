@@ -76,7 +76,7 @@ LIBC_INLINE float16 tanf16(float16 x) {
       // tan(x) = x * 2^-11 + x
       if ((xbits.is_pos() && rounding == FE_UPWARD) ||
           (xbits.is_neg() && rounding == FE_DOWNWARD))
-        return fputil::cast<float16>(fputil::multiply_add(xf, 0x1.0p-13f, xf));
+        return fputil::cast<float16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
       return x;
     }
 
