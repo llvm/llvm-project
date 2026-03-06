@@ -36,9 +36,9 @@ namespace mlir {
       ValueRange{genericOp.getDpsInits()[0]}))
 
 #define REPLACE_UNARY_OP(NEWOP)                                                \
-  (rewriter.replaceOpWithNewOp<NEWOP>(genericOp,                               \
-                                      ValueRange{genericOp.getDpsInputs()[0]}, \
-                                      ValueRange{genericOp.getDpsInits()[0]}))
+  static_cast<LinalgOp>(rewriter.replaceOpWithNewOp<NEWOP>(                    \
+      genericOp, ValueRange{genericOp.getDpsInputs()[0]},                      \
+      ValueRange{genericOp.getDpsInits()[0]}))
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -448,10 +448,37 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
   // Elementwise Unary
   if (isaElemwiseSingleUnaryOpInterface(genericOp)) {
     Operation *op = &genericOp.getBody()->front();
-    if (isa<math::ExpOp>(op)) {
-      LinalgOp namedOp = REPLACE_UNARY_OP(ExpOp);
-      return namedOp;
+    if (isa<math::ExpOp>(op))
+      return REPLACE_UNARY_OP(ExpOp);
+    if (isa<math::LogOp>(op))
+      return REPLACE_UNARY_OP(LogOp);
+    if (isa<math::AbsFOp>(op))
+      return REPLACE_UNARY_OP(AbsOp);
+    if (isa<math::CeilOp>(op))
+      return REPLACE_UNARY_OP(CeilOp);
+    if (isa<math::FloorOp>(op))
+      return REPLACE_UNARY_OP(FloorOp);
+    if (isa<arith::NegFOp>(op))
+      return REPLACE_UNARY_OP(NegFOp);
+    if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
+      if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
+              divOp.getLhs().getDefiningOp()))
+        if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
+          return REPLACE_UNARY_OP(ReciprocalOp);
     }
+    if (isa<math::RoundOp>(op))
+      return REPLACE_UNARY_OP(RoundOp);
+    if (isa<math::SqrtOp>(op))
+      return REPLACE_UNARY_OP(SqrtOp);
+    if (isa<math::RsqrtOp>(op))
+      return REPLACE_UNARY_OP(RsqrtOp);
+    if (auto mulOp = dyn_cast<arith::MulFOp>(op);
+        mulOp && mulOp.getLhs() == mulOp.getRhs())
+      return REPLACE_UNARY_OP(SquareOp);
+    if (isa<math::TanhOp>(op))
+      return REPLACE_UNARY_OP(TanhOp);
+    if (isa<math::ErfOp>(op))
+      return REPLACE_UNARY_OP(ErfOp);
   }
 
   // Elementwise Binary
