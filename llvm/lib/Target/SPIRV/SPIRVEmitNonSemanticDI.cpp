@@ -444,51 +444,43 @@ bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
   DISubprogram *SP = F.getSubprogram();
-  // DISubProgram is not available, don't translate.
-  if (!SP) {
+  if (!SP)
     return false;
-  }
 
   // TODO: Support declarations
   // Only process function definitions, skip declarations.
   // Function declarations require an optional operand in the DebugFunction
   // instruction that is not yet supported.
-  if (!SP->isDefinition()) {
+  if (!SP->isDefinition())
     return false;
-  }
 
   // We insert at the first basic block available.
-  if (MF.begin() == MF.end()) {
+  if (MF.begin() == MF.end())
     return false;
-  }
 
   // Get the scope from DISubProgram.
   DIScope *Scope = SP->getScope();
-  if (!Scope) {
+  if (!Scope)
     return false;
-  }
 
   // TODO: Support additional DIScope types beyond DIFile.
   // Only translate when scope is DIFile.
   const DIFile *FileScope = dyn_cast<DIFile>(Scope);
-  if (!FileScope) {
+  if (!FileScope)
     return false;
-  }
 
   // Use SP->getUnit() as the scope for DebugSource.
   // In SPIRV, the DebugSource scope cannot be a File, so we use the
   // CompilationUnit instead. This matches what the translator does when
   // handling DIFile scopes.
   const DICompileUnit *CU = SP->getUnit();
-  if (!CU) {
+  if (!CU)
     return false;
-  }
 
-  // Check for function type - required for DebugTypeFunction.
+  // Check for function type (required for emitting DebugTypeFunction).
   DISubroutineType *FuncType = SP->getType();
-  if (!FuncType) {
+  if (!FuncType)
     return false;
-  }
 
   // TODO: Support functions with return types and parameters.
   // Check that the function type array has exactly one element and it is null.
