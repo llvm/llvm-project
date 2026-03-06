@@ -946,8 +946,8 @@ TEST_F(ValueTrackingTest, impliesPoison_Select_AllValuesUsedInCondBinOps) {
 
   // These should be true ideally, but the recursion limit doesn't let us go
   // deep enough.
-  EXPECT_FALSE(impliesPoison(A2, A5));
-  EXPECT_FALSE(impliesPoison(A, A5));
+  EXPECT_TRUE(impliesPoison(A2, A5));
+  EXPECT_TRUE(impliesPoison(A, A5));
 
   EXPECT_TRUE(impliesPoison(A3, A5));
 }
