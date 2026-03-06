@@ -495,8 +495,7 @@ define <vscale x 8 x i16> @vwabda(<vscale x 8 x i16> %acc ,<vscale x 8 x i8> %a,
 ; ZVABD-LABEL: vwabda:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabd.vv v10, v10, v11
-; ZVABD-NEXT:    vwaddu.wv v8, v8, v10
+; ZVABD-NEXT:    vwabda.vv v8, v10, v11
 ; ZVABD-NEXT:    ret
   %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
@@ -519,8 +518,7 @@ define <vscale x 8 x i16> @vwabdau(<vscale x 8 x i16> %acc ,<vscale x 8 x i8> %a
 ; ZVABD-LABEL: vwabdau:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabdu.vv v10, v10, v11
-; ZVABD-NEXT:    vwaddu.wv v8, v8, v10
+; ZVABD-NEXT:    vwabdau.vv v8, v10, v11
 ; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
@@ -544,11 +542,10 @@ define <vscale x 8 x i32> @vwabda_zext_diff(<vscale x 8 x i32> %acc ,<vscale x 8
 ;
 ; ZVABD-LABEL: vwabda_zext_diff:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabdu.vv v14, v12, v13
-; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD-NEXT:    vzext.vf2 v12, v14
-; ZVABD-NEXT:    vwaddu.wv v8, v8, v12
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vzext.vf2 v14, v13
+; ZVABD-NEXT:    vzext.vf2 v16, v12
+; ZVABD-NEXT:    vwabdau.vv v8, v16, v14
 ; ZVABD-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
@@ -573,11 +570,10 @@ define <vscale x 8 x i32> @vwabdau_zext_diff(<vscale x 8 x i32> %acc ,<vscale x 
 ;
 ; ZVABD-LABEL: vwabdau_zext_diff:
 ; ZVABD:       # %bb.0:
-; ZVABD-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; ZVABD-NEXT:    vabd.vv v14, v12, v13
-; ZVABD-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVABD-NEXT:    vzext.vf2 v12, v14
-; ZVABD-NEXT:    vwaddu.wv v8, v8, v12
+; ZVABD-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVABD-NEXT:    vsext.vf2 v14, v13
+; ZVABD-NEXT:    vsext.vf2 v16, v12
+; ZVABD-NEXT:    vwabda.vv v8, v16, v14
 ; ZVABD-NEXT:    ret
   %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
