@@ -23,6 +23,7 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
@@ -12861,6 +12862,52 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
   const Expr *Culprit;
   if (Init->isConstantInitializer(Context, false, &Culprit))
     return false;
+
+  // Emit ObjC-specific diagnostics for non-constant literals at file scope.
+  if (getLangOpts().ObjCConstantLiterals && isa<ObjCObjectLiteral>(Culprit)) {
+
+    // For collection literals iterate the elements to highlight which one is
+    // the offender.
+    if (auto ALE = dyn_cast<ObjCArrayLiteral>(Init)) {
+      for (size_t I = 0, N = ALE->getNumElements(); I != N; ++I) {
+        Expr *Elm = ALE->getElement(I);
+        if (!Elm->isConstantInitializer(Context, false, nullptr)) {
+          Diag(Elm->getExprLoc(),
+               diag::err_objc_literal_nonconstant_at_file_scope)
+              << ObjC().CheckLiteralKind(Init) << Elm->getSourceRange();
+          return true;
+        }
+      }
+    }
+
+    if (auto DLE = dyn_cast<ObjCDictionaryLiteral>(Init)) {
+      for (size_t I = 0, N = DLE->getNumElements(); I != N; ++I) {
+        const ObjCDictionaryElement Elm = DLE->getKeyValueElement(I);
+
+        // Check that the key is a string literal and is constant.
+        if (!isa<ObjCStringLiteral>(Elm.Key) ||
+            !Elm.Key->isConstantInitializer(Context, false, nullptr)) {
+          Diag(Elm.Key->getExprLoc(),
+               diag::err_objc_literal_nonconstant_at_file_scope)
+              << ObjC().CheckLiteralKind(Init) << Elm.Key->getSourceRange();
+          return true;
+        }
+
+        if (!Elm.Value->isConstantInitializer(Context, false, nullptr)) {
+          Diag(Elm.Value->getExprLoc(),
+               diag::err_objc_literal_nonconstant_at_file_scope)
+              << ObjC().CheckLiteralKind(Init) << Elm.Value->getSourceRange();
+          return true;
+        }
+      }
+    }
+
+    Diag(Culprit->getExprLoc(),
+         diag::err_objc_literal_nonconstant_at_file_scope)
+        << ObjC().CheckLiteralKind(Init) << Culprit->getSourceRange();
+    return true;
+  }
+
   Diag(Culprit->getExprLoc(), DiagID) << Culprit->getSourceRange();
   return true;
 }

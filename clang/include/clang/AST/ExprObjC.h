@@ -47,20 +47,47 @@ namespace clang {
 class ASTContext;
 class CXXBaseSpecifier;
 
+/// Base class for Objective-C object literals (@"...", @42, @[], @{}).
+class ObjCObjectLiteral : public Expr {
+protected:
+  ObjCObjectLiteral(StmtClass SC, QualType T, bool ECI, ExprValueKind VK,
+                    ExprObjectKind OK)
+      : Expr(SC, T, VK, OK) {
+    setDependence(ExprDependence::None);
+    ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer = ECI;
+  }
+  explicit ObjCObjectLiteral(StmtClass SC, EmptyShell Empty)
+      : Expr(SC, Empty) {}
+
+public:
+  bool isGlobalAllocation() const {
+    return isExpressibleAsConstantInitializer();
+  }
+  bool isExpressibleAsConstantInitializer() const {
+    return ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer;
+  }
+  void setExpressibleAsConstantInitializer(bool ECI) {
+    ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer = ECI;
+  }
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() >= firstObjCObjectLiteralConstant &&
+           T->getStmtClass() <= lastObjCObjectLiteralConstant;
+  }
+};
+
 /// ObjCStringLiteral, used for Objective-C string literals
 /// i.e. @"foo".
-class ObjCStringLiteral : public Expr {
+class ObjCStringLiteral final : public ObjCObjectLiteral {
   Stmt *String;
   SourceLocation AtLoc;
 
 public:
   ObjCStringLiteral(StringLiteral *SL, QualType T, SourceLocation L)
-      : Expr(ObjCStringLiteralClass, T, VK_PRValue, OK_Ordinary), String(SL),
-        AtLoc(L) {
-    setDependence(ExprDependence::None);
-  }
+      : ObjCObjectLiteral(ObjCStringLiteralClass, T, true, VK_PRValue,
+                          OK_Ordinary),
+        String(SL), AtLoc(L) {}
   explicit ObjCStringLiteral(EmptyShell Empty)
-      : Expr(ObjCStringLiteralClass, Empty) {}
+      : ObjCObjectLiteral(ObjCStringLiteralClass, Empty) {}
 
   StringLiteral *getString() { return cast<StringLiteral>(String); }
   const StringLiteral *getString() const { return cast<StringLiteral>(String); }
@@ -125,7 +152,7 @@ public:
 /// as in: @(strdup("hello world")), @(random()) or @(view.frame)
 /// Also used for boxing non-parenthesized numeric literals;
 /// as in: @42 or \@true (c++/objc++) or \@__objc_yes (c/objc).
-class ObjCBoxedExpr : public Expr {
+class ObjCBoxedExpr final : public ObjCObjectLiteral {
   Stmt *SubExpr;
   ObjCMethodDecl *BoxingMethod;
   SourceRange Range;
@@ -133,25 +160,20 @@ class ObjCBoxedExpr : public Expr {
 public:
   friend class ASTStmtReader;
 
-  ObjCBoxedExpr(Expr *E, QualType T, ObjCMethodDecl *method, SourceRange R)
-      : Expr(ObjCBoxedExprClass, T, VK_PRValue, OK_Ordinary), SubExpr(E),
-        BoxingMethod(method), Range(R) {
+  ObjCBoxedExpr(Expr *E, QualType T, ObjCMethodDecl *method, bool ECI,
+                SourceRange R)
+      : ObjCObjectLiteral(ObjCBoxedExprClass, T, ECI, VK_PRValue, OK_Ordinary),
+        SubExpr(E), BoxingMethod(method), Range(R) {
     setDependence(computeDependence(this));
   }
   explicit ObjCBoxedExpr(EmptyShell Empty)
-      : Expr(ObjCBoxedExprClass, Empty) {}
+      : ObjCObjectLiteral(ObjCBoxedExprClass, Empty) {}
 
   Expr *getSubExpr() { return cast<Expr>(SubExpr); }
   const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
 
   ObjCMethodDecl *getBoxingMethod() const {
     return BoxingMethod;
-  }
-
-  // Indicates whether this boxed expression can be emitted as a compile-time
-  // constant.
-  bool isExpressibleAsConstantInitializer() const {
-    return !BoxingMethod && SubExpr;
   }
 
   SourceLocation getAtLoc() const { return Range.getBegin(); }
@@ -188,26 +210,26 @@ public:
 /// ObjCArrayLiteral - used for objective-c array containers; as in:
 /// @[@"Hello", NSApp, [NSNumber numberWithInt:42]];
 class ObjCArrayLiteral final
-    : public Expr,
+    : public ObjCObjectLiteral,
       private llvm::TrailingObjects<ObjCArrayLiteral, Expr *> {
   unsigned NumElements;
   SourceRange Range;
   ObjCMethodDecl *ArrayWithObjectsMethod;
 
-  ObjCArrayLiteral(ArrayRef<Expr *> Elements,
-                   QualType T, ObjCMethodDecl * Method,
-                   SourceRange SR);
+  ObjCArrayLiteral(ArrayRef<Expr *> Elements, QualType T,
+                   ObjCMethodDecl *Method, bool ECI, SourceRange SR);
 
   explicit ObjCArrayLiteral(EmptyShell Empty, unsigned NumElements)
-      : Expr(ObjCArrayLiteralClass, Empty), NumElements(NumElements) {}
+      : ObjCObjectLiteral(ObjCArrayLiteralClass, Empty),
+        NumElements(NumElements) {}
 
 public:
   friend class ASTStmtReader;
   friend TrailingObjects;
 
   static ObjCArrayLiteral *Create(const ASTContext &C,
-                                  ArrayRef<Expr *> Elements,
-                                  QualType T, ObjCMethodDecl * Method,
+                                  ArrayRef<Expr *> Elements, QualType T,
+                                  ObjCMethodDecl *Method, bool ECI,
                                   SourceRange SR);
 
   static ObjCArrayLiteral *CreateEmpty(const ASTContext &C,
@@ -301,7 +323,7 @@ struct ObjCDictionaryLiteral_ExpansionData {
 /// ObjCDictionaryLiteral - AST node to represent objective-c dictionary
 /// literals; as in:  @{@"name" : NSUserName(), @"date" : [NSDate date] };
 class ObjCDictionaryLiteral final
-    : public Expr,
+    : public ObjCObjectLiteral,
       private llvm::TrailingObjects<ObjCDictionaryLiteral,
                                     ObjCDictionaryLiteral_KeyValuePair,
                                     ObjCDictionaryLiteral_ExpansionData> {
@@ -325,14 +347,13 @@ class ObjCDictionaryLiteral final
   using ExpansionData = ObjCDictionaryLiteral_ExpansionData;
 
   ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
-                        bool HasPackExpansions,
-                        QualType T, ObjCMethodDecl *method,
-                        SourceRange SR);
+                        bool HasPackExpansions, QualType T,
+                        ObjCMethodDecl *method, bool ECI, SourceRange SR);
 
   explicit ObjCDictionaryLiteral(EmptyShell Empty, unsigned NumElements,
                                  bool HasPackExpansions)
-      : Expr(ObjCDictionaryLiteralClass, Empty), NumElements(NumElements),
-        HasPackExpansions(HasPackExpansions) {}
+      : ObjCObjectLiteral(ObjCDictionaryLiteralClass, Empty),
+        NumElements(NumElements), HasPackExpansions(HasPackExpansions) {}
 
   size_t numTrailingObjects(OverloadToken<KeyValuePair>) const {
     return NumElements;
@@ -345,8 +366,8 @@ public:
 
   static ObjCDictionaryLiteral *Create(const ASTContext &C,
                                        ArrayRef<ObjCDictionaryElement> VK,
-                                       bool HasPackExpansions,
-                                       QualType T, ObjCMethodDecl *method,
+                                       bool HasPackExpansions, QualType T,
+                                       ObjCMethodDecl *method, bool ECI,
                                        SourceRange SR);
 
   static ObjCDictionaryLiteral *CreateEmpty(const ASTContext &C,
