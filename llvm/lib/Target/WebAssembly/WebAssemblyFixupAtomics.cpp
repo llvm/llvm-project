@@ -11,8 +11,8 @@
 ///
 /// This is used because ISel selects atomics with a default value for the
 /// memory ordering immediate operand. Even though we run this pass early in
-/// the MI pass pipeline, MI passes should still use getMergedOrdering() on
-/// the MachineMemOperand to get the ordering rther than the immediate.
+/// the MI pass pipeline, later MI passes should still use getMergedOrdering()
+/// on the MachineMemOperand to get the ordering rather than the immediate.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -74,15 +74,18 @@ bool WebAssemblyFixupAtomics::runOnMachineFunction(MachineFunction &MF) {
           unsigned Order = wasm::WASM_MEM_ORDER_SEQ_CST;
           auto *MMO = *MI.memoperands_begin();
           switch (MMO->getMergedOrdering()) {
+          case AtomicOrdering::Unordered:
+          case AtomicOrdering::Monotonic:
           case AtomicOrdering::Acquire:
           case AtomicOrdering::Release:
           case AtomicOrdering::AcquireRelease:
-          case AtomicOrdering::Monotonic:
             Order = wasm::WASM_MEM_ORDER_ACQ_REL;
             break;
-          default:
+          case AtomicOrdering::SequentiallyConsistent:
             Order = wasm::WASM_MEM_ORDER_SEQ_CST;
             break;
+          default:
+           report_fatal_error("Atomic instructions cannot have NotAtomic ordering");
           }
           if (MI.getOperand(I).getImm() != Order) {
             MI.getOperand(I).setImm(Order);

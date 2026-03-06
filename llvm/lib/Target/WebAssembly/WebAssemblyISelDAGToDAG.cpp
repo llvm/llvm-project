@@ -215,12 +215,13 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
         case AtomicOrdering::Acquire:
         case AtomicOrdering::Release:
         case AtomicOrdering::AcquireRelease:
-        case AtomicOrdering::Monotonic:
           Order = wasm::WASM_MEM_ORDER_ACQ_REL;
           break;
-        default:
+        case AtomicOrdering::SequentiallyConsistent:
           Order = wasm::WASM_MEM_ORDER_SEQ_CST;
           break;
+        default:
+          llvm_unreachable("Invalid ordering for atomic fence");
         }
       }
       Fence = CurDAG->getMachineNode(
