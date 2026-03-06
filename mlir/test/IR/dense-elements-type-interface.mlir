@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -verify-diagnostics -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -verify-diagnostics -allow-unregistered-dialect -split-input-file | FileCheck %s
 
 // Test dense elements attribute with custom element type using DenseElementTypeInterface.
 // Uses the new type-first syntax: dense<TYPE : [ATTR, ...]>
@@ -81,3 +81,13 @@ func.func @invalid_type() {
   "test.dummy"() {attr = dense<i32 : [1 : i32, 2 : i32, 3 : i32]>} : () -> ()
   return
 }
+
+// -----
+
+// expected-error @+1 {{dense string elements not supported in sparse elements attribute}}
+"test.foostr"(){bar = sparse<0, "foo"> : tensor<1x1x1x!unknown<>>} : () -> ()
+
+// -----
+
+// expected-error @+1 {{dense string elements not supported in sparse elements attribute}}
+"test.foostr"(){bar = sparse<[[1, 1, 0], [0, 1, 0], [0, 0, 1]], ["a", "b", "c"]> : tensor<2x2x2x!unknown<>>} : () -> ()
