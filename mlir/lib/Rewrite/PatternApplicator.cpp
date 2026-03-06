@@ -13,7 +13,10 @@
 
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "ByteCode.h"
+#include "mlir/IR/Diagnostics.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/ManagedStatic.h"
 
 #ifndef NDEBUG
 #include "llvm/ADT/ScopeExit.h"
@@ -23,6 +26,41 @@
 
 using namespace mlir;
 using namespace mlir::detail;
+
+namespace {
+enum PatternMatchingRemarkMode {
+  /// Do not emit any diagnostic remarks for pattern matching.
+  None,
+  /// Emit a remark for successful pattern matching.
+  MatchSuccess,
+  /// Emit a remark for failed pattern matching.
+  MatchFailure,
+  /// Emit a remark for both successful and failed pattern matching.
+  MatchSuccessAndFailure,
+};
+struct PatternApplicatorOptions {
+  llvm::cl::opt<PatternMatchingRemarkMode> mode{
+      "mlir-emit-pattern-match-diagnostics",
+      llvm::cl::desc("Emit diagnostic remarks for pattern matching"),
+      llvm::cl::init(PatternMatchingRemarkMode::None), // default value
+      llvm::cl::values(
+          clEnumValN(PatternMatchingRemarkMode::None, "none", "no remarks"),
+          clEnumValN(PatternMatchingRemarkMode::MatchSuccess, "match-success",
+                     "pattern match success"),
+          clEnumValN(PatternMatchingRemarkMode::MatchFailure, "match-failure",
+                     "pattern match failure"),
+          clEnumValN(PatternMatchingRemarkMode::MatchSuccessAndFailure,
+                     "match-success-and-failure",
+                     "pattern match success and failure"))};
+};
+} // namespace
+
+static llvm::ManagedStatic<PatternApplicatorOptions> clOptions;
+
+void mlir::registerPatternApplicatorCLOptions() {
+  // Make sure that the options struct has been initialized.
+  *clOptions;
+}
 
 PatternApplicator::PatternApplicator(
     const FrozenRewritePatternSet &frozenPatternList)
@@ -220,9 +258,26 @@ LogicalResult PatternApplicator::matchAndRewrite(
             llvm::scope_exit resetListenerCallback(
                 [&] { rewriter.setListener(oldListener); });
 #endif
+            Location loc = op->getLoc();
             result = pattern->matchAndRewrite(op, rewriter);
             LDBG() << " -> matchAndRewrite "
                    << (succeeded(result) ? "successful" : "failed");
+            bool shouldEmitMatchSuccessRemark =
+                clOptions->mode == PatternMatchingRemarkMode::MatchSuccess ||
+                clOptions->mode ==
+                    PatternMatchingRemarkMode::MatchSuccessAndFailure;
+            bool shouldEmitMatchFailureRemark =
+                clOptions->mode == PatternMatchingRemarkMode::MatchFailure ||
+                clOptions->mode ==
+                    PatternMatchingRemarkMode::MatchSuccessAndFailure;
+            if (succeeded(result) && shouldEmitMatchSuccessRemark) {
+              mlir::emitRemark(loc)
+                  << "pattern match success: " << pattern->getDebugName();
+            }
+            if (failed(result) && shouldEmitMatchFailureRemark) {
+              mlir::emitRemark(loc)
+                  << "pattern match failure: " << pattern->getDebugName();
+            }
           }
 
           // Process the result of the pattern application.
