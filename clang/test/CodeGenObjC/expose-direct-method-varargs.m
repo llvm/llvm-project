@@ -33,6 +33,8 @@ __attribute__((objc_root_class, weak_import))
 // CHECK-LABEL: define hidden void @"+[Root printf:]"(
 // CHECK-NOT: @"\01+[Root printf:]"
 // CHECK-NOT: @"+[Root printf:]_thunk"
+// Class realization should be at the call site, not in the implementation.
+// CHECK-NOT: objc_msgSend
 + (void)printf:(Root *)format, ... {}
 
 @end
@@ -76,12 +78,10 @@ void useRoot(Root *_Nullable root) {
 }
 
 // Test: Non-null receiver
-// NOTE: Phase 7 will optimize this to skip nil checks when _Nonnull is detected
-// For now (Phase 4), it should look the same as the nullable receiver case above
 
 // CHECK-LABEL: define{{.*}} void @useRootNonNull(
 void useRootNonNull(Root *_Nonnull root) {
-  // For nullable receivers, we should emit nil check inline
+  // TODO: For nonnull receivers, we should not emit nil check inline
   // CHECK: icmp eq ptr %{{[0-9]+}}, null
   // CHECK: br i1 %{{[0-9]+}}, label %msgSend.null-receiver, label %msgSend.call
 

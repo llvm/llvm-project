@@ -1,11 +1,11 @@
-// REQUIRES: system-darwin
-
 // RUN: %clang -fobjc-direct-precondition-thunk -fobjc-arc \
+// RUN:   -target arm64-apple-macos11.0 \
 // RUN:   -S -emit-llvm %s -o - | FileCheck %s
 
 // Build and execute (for manual testing):
 //   mkdir -p %t
 //   %clang -fobjc-direct-precondition-thunk -fobjc-arc \
+//     -target arm64-apple-macos11.0 \
 //     -O2 -framework Foundation %s -o %t/thunk-linkedlist
 //   %t/thunk-linkedlist 8 7 6 | FileCheck %s --check-prefix=EXE
 #import <Foundation/Foundation.h>

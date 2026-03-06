@@ -238,6 +238,11 @@ __attribute__((objc_root_class))
 @property(direct, readonly) int intProperty;
 @end
 
+__attribute__((objc_root_class, weak_import))
+@interface WeakRoot
++ (int)classGetInt __attribute__((objc_direct, weak_import));
+@end
+
 // CHECK-LABEL: define{{.*}} i32 @useRootDeclOnly(ptr noundef %r)
 int useRootDeclOnly(RootDeclOnly *r) {
   // CHECK: call i32 @"-[RootDeclOnly intProperty]_thunk"(ptr noundef %{{[0-9]+}})
@@ -288,5 +293,39 @@ int useSRet(Root *r) {
 // CHECK: dummy_ret_block:
 // CHECK:   ret void
 
-// CHECK: define {{.*}} @"+[Root classGetComplex]_thunk"
-// CHECK: define {{.*}} @"+[Root classGetAggregate]_thunk"
+// Class method thunks should have class realization (objc_msgSend)
+// instead of a nil check.
+// CHECK-LABEL: define linkonce_odr hidden i64 @"+[Root classGetComplex]_thunk"(ptr noundef %self)
+// CHECK: entry:
+// CHECK-NOT: icmp eq ptr
+// CHECK:   call ptr @objc_msgSend
+// CHECK:   musttail call i64 @"+[Root classGetComplex]"(ptr noundef %self)
+// CHECK:   ret i64
+
+// CHECK-LABEL: define linkonce_odr hidden void @"+[Root classGetAggregate]_thunk"(ptr {{.*}} sret(%struct.my_aggregate_struct) {{.*}} %agg.result, ptr noundef %self)
+// CHECK: entry:
+// CHECK-NOT: icmp eq ptr
+// CHECK:   call ptr @objc_msgSend
+// CHECK:   musttail call void @"+[Root classGetAggregate]"(ptr {{.*}} sret(%struct.my_aggregate_struct) {{.*}} %agg.result, ptr noundef %self)
+// CHECK:   ret void
+
+// CHECK-LABEL: define{{.*}} i32 @useWeakRoot()
+int useWeakRoot() {
+  // CHECK: call i32 @"+[WeakRoot classGetInt]_thunk"
+  return [WeakRoot classGetInt];
+}
+
+// Weakly linked class method thunks should have class realization
+// AND a nil check (the weak class may not exist at runtime).
+// CHECK-LABEL: define linkonce_odr hidden i32 @"+[WeakRoot classGetInt]_thunk"(ptr noundef %self)
+// CHECK: entry:
+// CHECK:   call ptr @objc_msgSend
+// CHECK:   %[[IS_NIL:.*]] = icmp eq ptr {{.*}}, null
+// CHECK:   br i1 %[[IS_NIL]], label %objc_direct_method.self_is_nil, label %objc_direct_method.cont
+// CHECK: objc_direct_method.self_is_nil:
+// CHECK:   call void @llvm.memset
+// CHECK:   br label %dummy_ret_block
+// CHECK: objc_direct_method.cont:
+// CHECK:   %[[RET:.*]] = musttail call i32 @"+[WeakRoot classGetInt]"(ptr noundef %self)
+// CHECK:   ret i32 %[[RET]]
+// CHECK: dummy_ret_block:
