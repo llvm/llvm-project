@@ -40,10 +40,12 @@ bool onlyScalarValuesUsed(const VPValue *Def);
 VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
-/// SCEV expression could be constructed.
+/// SCEV expression could be constructed. If \p VPDT is provided, it is used to
+/// detect header phis for constructing AddRecExprs.
 const SCEV *getSCEVExprForVPValue(const VPValue *V,
                                   PredicatedScalarEvolution &PSE,
-                                  const Loop *L = nullptr);
+                                  const Loop *L = nullptr,
+                                  const VPDominatorTree *VPDT = nullptr);
 
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an

@@ -439,12 +439,11 @@ public:
   /// SCEV overflow check.
   ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
-private:
-  /// Private constructor - used by \c isInductionPHI.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
                       SmallVectorImpl<Instruction *> *Casts = nullptr);
 
+private:
   /// Start value.
   TrackingVH<Value> StartValue;
   /// Induction kind.
