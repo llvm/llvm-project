@@ -81,9 +81,9 @@
 ; GCN-O0-NEXT: si-insert-waitcnts
 ; GCN-O0-NEXT: si-mode-register
 ; GCN-O0-NEXT: si-late-branch-lowering
+; GCN-O0-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O0-NEXT: post-RA-hazard-rec
 ; GCN-O0-NEXT: amdgpu-wait-sgpr-hazards
-; GCN-O0-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O0-NEXT: branch-relaxation
 ; GCN-O0-NEXT: reg-usage-collector
 ; GCN-O0-NEXT: remove-loads-into-fake-uses
@@ -251,9 +251,9 @@
 ; GCN-O2-NEXT: si-insert-hard-clauses
 ; GCN-O2-NEXT: si-late-branch-lowering
 ; GCN-O2-NEXT: si-pre-emit-peephole
+; GCN-O2-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O2-NEXT: post-RA-hazard-rec
 ; GCN-O2-NEXT: amdgpu-wait-sgpr-hazards
-; GCN-O2-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O2-NEXT: amdgpu-insert-delay-alu
 ; GCN-O2-NEXT: branch-relaxation
 ; GCN-O2-NEXT: reg-usage-collector
@@ -422,9 +422,9 @@
 ; GCN-O3-NEXT: si-insert-hard-clauses
 ; GCN-O3-NEXT: si-late-branch-lowering
 ; GCN-O3-NEXT: si-pre-emit-peephole
+; GCN-O3-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O3-NEXT: post-RA-hazard-rec
 ; GCN-O3-NEXT: amdgpu-wait-sgpr-hazards
-; GCN-O3-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O3-NEXT: amdgpu-insert-delay-alu
 ; GCN-O3-NEXT: branch-relaxation
 ; GCN-O3-NEXT: reg-usage-collector
