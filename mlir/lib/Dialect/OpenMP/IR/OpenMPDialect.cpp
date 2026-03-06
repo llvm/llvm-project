@@ -3467,6 +3467,8 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               else
                 return "fused";
             })
+            .Case(
+                [&](InterchangeOp op) -> std::string { return "interchange"; })
             .Case([&](TileOp op) -> std::string {
               auto [generateesFirst, generateesCount] =
                   op.getGenerateesODSOperandIndexAndLength();
@@ -3656,6 +3658,30 @@ CanonicalLoopOp::getGenerateesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_cli);
 }
 
+// Canonical loop must be perfectly nested, i.e. the body of the parent must
+// only contain the omp.canonical_loop of the nested loops, and
+// omp.terminator
+bool isPerfectlyNested(CanonicalLoopOp parentLoop, CanonicalLoopOp loop) {
+  auto &parentBody = parentLoop.getRegion();
+  if (!parentBody.hasOneBlock())
+    return false;
+  auto &parentBlock = parentBody.getBlocks().front();
+
+  auto nestedLoopIt = parentBlock.begin();
+  if (nestedLoopIt == parentBlock.end() ||
+      (&*nestedLoopIt != loop.getOperation()))
+    return false;
+
+  auto termIt = std::next(nestedLoopIt);
+  if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
+    return false;
+
+  if (std::next(termIt) != parentBlock.end())
+    return false;
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // UnrollHeuristicOp
 //===----------------------------------------------------------------------===//
@@ -3788,30 +3814,7 @@ LogicalResult TileOp::verify() {
       return emitOpError()
              << "currently only supports omp.canonical_loop as applyee";
 
-    // Canonical loop must be perfectly nested, i.e. the body of the parent must
-    // only contain the omp.canonical_loop of the nested loops, and
-    // omp.terminator
-    bool isPerfectlyNested = [&]() {
-      auto &parentBody = parentLoop.getRegion();
-      if (!parentBody.hasOneBlock())
-        return false;
-      auto &parentBlock = parentBody.getBlocks().front();
-
-      auto nestedLoopIt = parentBlock.begin();
-      if (nestedLoopIt == parentBlock.end() ||
-          (&*nestedLoopIt != loop.getOperation()))
-        return false;
-
-      auto termIt = std::next(nestedLoopIt);
-      if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
-        return false;
-
-      if (std::next(termIt) != parentBlock.end())
-        return false;
-
-      return true;
-    }();
-    if (!isPerfectlyNested)
+    if (!isPerfectlyNested(parentLoop, loop))
       return emitOpError() << "tiled loop nest must be perfectly nested";
 
     if (parentIVs.contains(loop.getTripCount()))
@@ -3893,6 +3896,98 @@ std::pair<unsigned, unsigned> FuseOp::getApplyeesODSOperandIndexAndLength() {
 }
 
 std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
+}
+
+//===----------------------------------------------------------------------===//
+// InterchangeOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, InterchangeOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+LogicalResult InterchangeOp::verify() {
+  if (getApplyees().size() < 2)
+    return emitOpError() << "must apply to at least two loops";
+
+  if (!getPermutation().has_value())
+    return emitOpError() << "must have permutation attribute";
+
+  auto permutation = getPermutation().value();
+  if (permutation.size() != getApplyees().size())
+    return emitOpError() << "expecting the same number of permutation "
+                            "attributes and applyees";
+
+  llvm::SmallVector<bool> found(permutation.size(), false);
+  for (auto &val : permutation) {
+    int perm = llvm::dyn_cast<IntegerAttr>(val).getInt();
+    if (perm <= 0)
+      return emitOpError()
+             << "permutation attribute must be a positive integer";
+    if ((unsigned)perm - 1 < permutation.size())
+      found[perm - 1] = true;
+  }
+  for (bool b : found) {
+    if (!b)
+      return emitOpError()
+             << "every integer from 1 must appear in the permutation attribute";
+  }
+
+  if (!getGeneratees().empty() &&
+      getApplyees().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting the same number of generatees and applyees";
+
+  DenseSet<Value> parentIVs;
+
+  Value parent = getApplyees().front();
+  for (auto &&applyee : llvm::drop_begin(getApplyees())) {
+    auto [parentCreate, parentGen, parentCons] = decodeCli(parent);
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!parentGen)
+      return emitOpError() << "applyee CLI has no generator";
+
+    auto parentLoop = dyn_cast_or_null<CanonicalLoopOp>(parentGen->getOwner());
+    if (!parentGen)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    parentIVs.insert(parentLoop.getInductionVar());
+
+    if (!gen)
+      return emitOpError() << "applyee CLI has no generator";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    if (!loop)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    if (!isPerfectlyNested(parentLoop, loop))
+      return emitOpError() << "interchanged loop nest must be perfectly nested";
+
+    if (parentIVs.contains(loop.getTripCount()))
+      return emitOpError() << "interchanged loop nest must be rectangular";
+
+    parent = applyee;
+  }
+
+  return success();
+}
+
+std::pair<unsigned, unsigned>
+InterchangeOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned>
+InterchangeOp::getGenerateesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 

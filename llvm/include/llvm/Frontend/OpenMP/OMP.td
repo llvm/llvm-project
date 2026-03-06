@@ -453,7 +453,7 @@ def OMPC_Partial: Clause<[Spelling<"partial">]> {
 }
 def OMPC_Permutation: Clause<[Spelling<"permutation">]> {
   let clangClass = "OMPPermutationClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "ScalarIntConstantExpr";
   let isValueList = true;
 }
 def OMPC_Priority : Clause<[Spelling<"priority">]> {

@@ -2130,6 +2130,10 @@ static bool isSizesClause(const parser::OmpClause *clause) {
   return std::holds_alternative<parser::OmpClause::Sizes>(clause->u);
 }
 
+static bool isCollapseClause(const parser::OmpClause *clause) {
+  return std::holds_alternative<parser::OmpClause::Collapse>(clause->u);
+}
+
 std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
@@ -2138,17 +2142,18 @@ std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
   // does not exeed the number of tiled loops.
   std::int64_t tileLevel = 0;
   for (auto [level, clause] : llvm::zip_equal(levels, clauses))
-    if (isSizesClause(clause))
+    if (clause && isSizesClause(clause))
       tileLevel = level;
 
   std::int64_t maxLevel = 1;
   const parser::OmpClause *maxClause = nullptr;
   for (auto [level, clause] : llvm::zip_equal(levels, clauses)) {
-    if (tileLevel > 0 && tileLevel < level) {
+    if (clause && isCollapseClause(clause) && tileLevel > 0 &&
+        tileLevel < level) {
       context_.Say(clause->source,
           "The value of the parameter in the COLLAPSE clause must"
           " not be larger than the number of the number of tiled loops"
-          " because collapse currently is limited to independent loop"
+          " because collapse currently is liSIZESmited to independent loop"
           " iterations."_err_en_US);
       return 1;
     }
@@ -2180,6 +2185,17 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromLoopConstruct(
 
   CollectNumAffectedLoopsFromClauses(clauseList, levels, clauses);
   CollectNumAffectedLoopsFromInnerLoopContruct(x, levels, clauses);
+
+  bool has_permutation =
+      llvm::any_of(clauseList.v, [](const parser::OmpClause &c) {
+        return c.Id() == llvm::omp::Clause::OMPC_permutation;
+      });
+  if (x.BeginDir().DirName().v == llvm::omp::Directive::OMPD_interchange &&
+      !has_permutation) {
+    // OMPD_interchange with no permutation clause needs a level 2 nest
+    levels.push_back(2);
+    clauses.push_back(nullptr);
+  }
 }
 
 void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
@@ -2220,6 +2236,11 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
 
     if (const auto tclause{std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
       levels.push_back(tclause->v.size());
+      clauses.push_back(&clause);
+    }
+    if (const auto iclause{
+            std::get_if<parser::OmpClause::Permutation>(&clause.u)}) {
+      levels.push_back(iclause->v.size());
       clauses.push_back(&clause);
     }
   }
@@ -2400,18 +2421,29 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
 
 void OmpAttributeVisitor::CheckAssocLoopLevel(
     std::int64_t level, const parser::OmpClause *clause) {
-  if (clause && level != 0) {
-    switch (clause->Id()) {
-    case llvm::omp::OMPC_sizes:
-      context_.Say(clause->source,
-          "The SIZES clause has more entries than there are nested canonical loops."_err_en_US);
-      break;
-    default:
-      context_.Say(clause->source,
-          "The value of the parameter in the COLLAPSE or ORDERED clause must"
-          " not be larger than the number of nested loops"
-          " following the construct."_err_en_US);
-      break;
+  if (level != 0) {
+    if (clause) {
+      switch (clause->Id()) {
+      case llvm::omp::OMPC_sizes:
+        context_.Say(clause->source,
+            "The SIZES clause has more entries than there are nested canonical loops."_err_en_US);
+        break;
+      case llvm::omp::OMPC_permutation:
+        context_.Say(clause->source,
+            "The PERMUTATION clause has more entries than there are nested canonical loops."_err_en_US);
+        break;
+      default:
+        context_.Say(clause->source,
+            "The value of the parameter in the COLLAPSE or ORDERED clause must"
+            " not be larger than the number of nested loops"
+            " following the construct."_err_en_US);
+        break;
+      }
+    } else if (GetContext().directive ==
+        llvm::omp::Directive::OMPD_interchange) {
+      // OMPD_interchange with no permutation clause needs a level 2 nest
+      context_.Say(GetContext().directiveSource,
+          "The INTERCHANGE construct must be followed by a canonical loop nest of at least 2 levels"_err_en_US);
     }
   }
 }

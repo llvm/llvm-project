@@ -3851,6 +3851,46 @@ static LogicalResult applyFuse(omp::FuseOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Apply a `#pragma omp interchange` / `!$omp interchange` transformation using
+/// the OpenMPIRBuilder.
+static LogicalResult
+applyInterchange(omp::InterchangeOp op, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+
+  SmallVector<llvm::CanonicalLoopInfo *> translatedLoops;
+
+  for (Value applyee : op.getApplyees()) {
+    llvm::CanonicalLoopInfo *consBuilderCLI =
+        moduleTranslation.lookupOMPLoop(applyee);
+    assert(applyee && "Canonical loop must already been translated");
+    translatedLoops.push_back(consBuilderCLI);
+  }
+
+  auto perm = op.getPermutation().value();
+  std::vector<int> permutation;
+  for (auto &val : perm) {
+    auto intVal = llvm::dyn_cast<mlir::IntegerAttr>(val);
+    assert(intVal && "permutation attributes must be integers");
+    permutation.push_back(intVal.getInt());
+  }
+
+  auto generatedLoops =
+      ompBuilder->interchangeLoops(loc.DL, translatedLoops, permutation);
+  if (!op.getGeneratees().empty()) {
+    for (auto [mlirLoop, genLoop] :
+         zip_equal(op.getGeneratees(), generatedLoops))
+      moduleTranslation.mapOmpLoop(mlirLoop, genLoop);
+  }
+
+  // CLIs can only be consumed once
+  for (Value applyee : op.getApplyees())
+    moduleTranslation.invalidateOmpLoop(applyee);
+
+  return success();
+}
+
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
 static llvm::AtomicOrdering
 convertAtomicOrdering(std::optional<omp::ClauseMemoryOrderKind> ao) {
@@ -7330,6 +7370,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::FuseOp op) {
             return applyFuse(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::InterchangeOp op) {
+            return applyInterchange(op, builder, moduleTranslation);
           })
           .Case([&](omp::TargetAllocMemOp) {
             return convertTargetAllocMemOp(*op, builder, moduleTranslation);

@@ -534,6 +534,23 @@ bool ClauseProcessor::processLooprange(StatementContext &stmtCtx,
   return false;
 }
 
+bool ClauseProcessor::processPermutation(
+    StatementContext &stmtCtx, mlir::omp::PermutationClauseOps &result) const {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  std::vector<mlir::Attribute> permAttr;
+  if (auto *clause = findUniqueClause<omp::clause::Permutation>()) {
+    for (auto &vv : clause->v)
+      permAttr.push_back(
+          firOpBuilder.getI64IntegerAttr(evaluate::ToInt64(vv).value()));
+  } else { // Default behaviour for interchange with no permutation clause is
+           // permutation(2,1)
+    permAttr.push_back(firOpBuilder.getI64IntegerAttr(2));
+    permAttr.push_back(firOpBuilder.getI64IntegerAttr(1));
+  }
+  result.permutation = firOpBuilder.getArrayAttr(permAttr);
+  return true;
+}
+
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {

@@ -578,6 +578,25 @@ def FuseOp
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP interchange operation
+//===----------------------------------------------------------------------===//
+
+def InterchangeOp
+    : OpenMPTransformBase_Op<"interchange",
+                             clauses = [OpenMP_PermutationClause]> {
+  let summary = "OpenMP interchange operation";
+  let description = [{
+    Represents the OpenMP interchange directive introduced in OpenMP 6.0.
+   
+    The construct takes a loop nest and rearranges the affected loops in the
+    order specified by the `permutation` clause. The `permutation clause must
+    be present and its elements known beforehand.
+  }]#clausesDescription;
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.8.3 Workshare Construct
 //===----------------------------------------------------------------------===//
 

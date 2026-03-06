@@ -1433,6 +1433,20 @@ public:
   /// \param Loop The loop to unroll. The loop will be invalidated.
   LLVM_ABI void unrollLoopFull(DebugLoc DL, CanonicalLoopInfo *Loop);
 
+  /// Interchange the order of the nested loops.
+  ///
+  /// @param DL          Debug location for instructions added by interchange.
+  /// @param Loops       Loops affected by loop interchange. The
+  /// CanonicalLoopInfo objects are invalidated by this method, i.e. should not
+  /// used after interchange.
+  /// @param Permutation The new order in wich the \p Loops will be arranged.
+  ///
+  /// \returns A list of generated loops. Contains the same loops as the input
+  ///          loop nest reordered.
+  LLVM_ABI std::vector<CanonicalLoopInfo *>
+  interchangeLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
+                   std::vector<int> Permutation);
+
   /// Fully or partially unroll a loop. How the loop is unrolled is determined
   /// using LLVM's LoopUnrollPass.
   ///

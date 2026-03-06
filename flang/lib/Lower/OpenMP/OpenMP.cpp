@@ -2245,6 +2245,40 @@ static void genCanonicalLoopNest(
   firOpBuilder.setInsertionPointAfter(loops.front());
 }
 
+static void genInterchangeOp(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::SymMap &symTable,
+                             lower::StatementContext &stmtCtx,
+                             Fortran::semantics::SemanticsContext &semaCtx,
+                             Fortran::lower::pft::Evaluation &eval,
+                             mlir::Location loc, const ConstructQueue &queue,
+                             ConstructQueue::const_iterator item) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // get the permutation order
+  mlir::omp::PermutationClauseOps permutationClause;
+  ClauseProcessor cp(converter, semaCtx, item->clauses);
+  cp.processPermutation(stmtCtx, permutationClause);
+
+  // gen canonical loop nest
+  size_t numLoops = permutationClause.permutation.size();
+  llvm::SmallVector<mlir::omp::CanonicalLoopOp, 3> canonLoops;
+  genCanonicalLoopNest(converter, symTable, semaCtx, eval,
+                       getNestedDoConstruct(eval), loc, queue, item, numLoops,
+                       canonLoops);
+  assert((canonLoops.size() == numLoops) &&
+         "Expecting the predetermined number of loops");
+
+  llvm::SmallVector<mlir::Value> applyees, generatees;
+  for (mlir::omp::CanonicalLoopOp l : canonLoops) {
+    applyees.push_back(l.getCli());
+    auto newCLI = mlir::omp::NewCliOp::create(firOpBuilder, loc);
+    generatees.push_back(newCLI);
+  }
+
+  mlir::omp::InterchangeOp::create(firOpBuilder, loc, generatees, applyees,
+                                   permutationClause.permutation);
+}
+
 static void genTileOp(Fortran::lower::AbstractConverter &converter,
                       Fortran::lower::SymMap &symTable,
                       lower::StatementContext &stmtCtx,
@@ -3734,6 +3768,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_teams:
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
+    break;
+  case llvm::omp::Directive::OMPD_interchange:
+    genInterchangeOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
+                     item);
     break;
   case llvm::omp::Directive::OMPD_tile:
     genTileOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
