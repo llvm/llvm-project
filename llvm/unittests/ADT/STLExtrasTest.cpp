@@ -1964,4 +1964,14 @@ TEST(STLExtrasTest, AdjacentFind) {
   EXPECT_EQ(*std::next(It13), 3);
 }
 
+// Compile-time tests for llvm::is_sorted_constexpr
+// Check to ensure range based functions as expected
+static constexpr std::array<int, 5> CSorted{{1, 2, 2, 3, 5}};
+static_assert(llvm::is_sorted_constexpr(CSorted),
+              "Non-descending order with duplicates should be sorted");
+static_assert(llvm::is_sorted_constexpr(CSorted, std::less<>()),
+              "Explicit std::less non-descending order should be sorted");
+static_assert(!llvm::is_sorted_constexpr(CSorted, std::greater<>()),
+              "Non-descending order should not be sorted by std::greater");
+
 } // namespace

@@ -21,26 +21,55 @@ class MemoryObject;
 class Context;
 class AnyValue;
 
-enum class ByteKind : uint8_t {
-  // A concrete byte with a known value.
-  Concrete,
-  // A uninitialized byte. Each load from an uninitialized byte yields
-  // a nondeterministic value.
-  Undef,
-  // A poisoned byte. It occurs when the program stores a poison value to
-  // memory,
-  // or when a memory object is dead.
-  Poison,
-};
-
+/// Representation of a byte in memory.
+/// How to interpret the byte per bit:
+/// - If the concrete mask bit is 0, the bit is either undef or poison. The
+/// value bit indicates whether it is undef.
+/// - If the concrete mask bit is 1, the bit is a concrete value. The value bit
+/// stores the concrete bit value.
 struct Byte {
+  uint8_t ConcreteMask;
   uint8_t Value;
-  ByteKind Kind : 2;
-  // TODO: provenance
+  // TODO: captured capabilities of pointers.
 
-  void set(uint8_t V) {
-    Value = V;
-    Kind = ByteKind::Concrete;
+  static Byte poison() { return Byte{0, 0}; }
+  static Byte undef() { return Byte{0, 255}; }
+  static Byte concrete(uint8_t Val) { return Byte{255, Val}; }
+
+  void zeroBits(uint8_t Mask) {
+    ConcreteMask |= Mask;
+    Value &= ~Mask;
+  }
+
+  void poisonBits(uint8_t Mask) {
+    ConcreteMask &= ~Mask;
+    Value &= ~Mask;
+  }
+
+  void undefBits(uint8_t Mask) {
+    ConcreteMask &= ~Mask;
+    Value |= Mask;
+  }
+
+  void writeBits(uint8_t Mask, uint8_t Val) {
+    ConcreteMask |= Mask;
+    Value = (Value & ~Mask) | (Val & Mask);
+  }
+
+  /// Returns a logical byte that is part of two adjacent bytes.
+  /// Example with ShAmt = 5:
+  ///     |       Low       |      High       |
+  /// LSB | 0 1 0 1 0 1 0 1 | 0 0 0 0 1 1 1 1 | MSB
+  ///     Result =  | 1 0 1   0 0 0 0 1 |
+  static Byte fshr(const Byte &Low, const Byte &High, uint32_t ShAmt) {
+    return Byte{static_cast<uint8_t>(
+                    (Low.ConcreteMask | (High.ConcreteMask << 8)) >> ShAmt),
+                static_cast<uint8_t>((Low.Value | (High.Value << 8)) >> ShAmt)};
+  }
+
+  Byte lshr(uint8_t Shift) const {
+    return Byte{static_cast<uint8_t>(ConcreteMask >> Shift),
+                static_cast<uint8_t>(Value >> Shift)};
   }
 };
 
@@ -54,6 +83,9 @@ enum class StorageKind {
   Aggregate, // Struct, Array or Vector
 };
 
+/// Tri-state boolean value.
+enum class BooleanKind { False, True, Poison };
+
 class Pointer {
   // The underlying memory object. It can be null for invalid or dangling
   // pointers.
@@ -61,14 +93,15 @@ class Pointer {
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
   APInt Address;
-  // The offset within the memory object.
-  uint64_t Offset;
   // TODO: modeling inrange(Start, End) attribute
 
 public:
-  explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address,
-                   uint64_t Offset)
-      : Obj(std::move(Obj)), Address(Address), Offset(Offset) {}
+  explicit Pointer(const APInt &Address) : Obj(nullptr), Address(Address) {}
+  explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address)
+      : Obj(std::move(Obj)), Address(Address) {}
+  Pointer getWithNewAddr(const APInt &NewAddr) const {
+    return Pointer(Obj, NewAddr);
+  }
   static AnyValue null(unsigned BitWidth);
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
@@ -106,11 +139,17 @@ public:
   void print(raw_ostream &OS) const;
 
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
+  static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
   static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
   static AnyValue getNullValue(Context &Ctx, Type *Ty);
+  static AnyValue getVectorSplat(const AnyValue &Scalar, size_t NumElements);
 
   bool isNone() const { return Kind == StorageKind::None; }
   bool isPoison() const { return Kind == StorageKind::Poison; }
+  bool isInteger() const { return Kind == StorageKind::Integer; }
+  bool isFloat() const { return Kind == StorageKind::Float; }
+  bool isPointer() const { return Kind == StorageKind::Pointer; }
+  bool isAggregate() const { return Kind == StorageKind::Aggregate; }
 
   const APInt &asInteger() const {
     assert(Kind == StorageKind::Integer && "Expect an integer value");
@@ -133,12 +172,24 @@ public:
     return AggVal;
   }
 
+  std::vector<AnyValue> &asAggregate() {
+    assert(Kind == StorageKind::Aggregate &&
+           "Expect an aggregate/vector value");
+    return AggVal;
+  }
+
   // Helper function for C++ 17 structured bindings.
   template <size_t I> const AnyValue &get() const {
     assert(Kind == StorageKind::Aggregate &&
            "Expect an aggregate/vector value");
     assert(I < AggVal.size() && "Index out of bounds");
     return AggVal[I];
+  }
+
+  BooleanKind asBoolean() const {
+    if (isPoison())
+      return BooleanKind::Poison;
+    return asInteger().isZero() ? BooleanKind::False : BooleanKind::True;
   }
 };
 

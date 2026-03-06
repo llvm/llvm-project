@@ -1,4 +1,4 @@
-//===- VectorToAMX.h - Convert vector to AMX dialect ------------*- C++ -*-===//
+//===- VectorToAMX.h - Convert vector to X86 dialect AMX ops ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ class RewritePatternSet;
 #define GEN_PASS_DECL_CONVERTVECTORTOAMX
 #include "mlir/Conversion/Passes.h.inc"
 
-/// Collect a set of patterns to convert from the vector to AMX ops.
+/// Collect a set of patterns to convert from the vector to X86 AMX ops.
 void populateVectorToAMXConversionPatterns(RewritePatternSet &patterns);
 
 } // namespace mlir

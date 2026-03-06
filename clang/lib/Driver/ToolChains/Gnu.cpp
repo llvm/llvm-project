@@ -1609,7 +1609,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 ///     atomic operation can't work together correctly.
 static bool
 selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
-                    StringRef Arch, const Multilib::flags_list &Flags,
+                    const Multilib::flags_list &Flags,
                     llvm::SmallVectorImpl<Multilib> &SelectedMultilibs) {
   // Try to find the perfect matching multi-lib first.
   if (RISCVMultilibSet.select(D, Flags, SelectedMultilibs))
@@ -1617,6 +1617,17 @@ selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
 
   Multilib::flags_list NewFlags;
   std::vector<MultilibBuilder> NewMultilibs;
+
+  // Collect all flags and extract Arch from march
+  StringRef Arch;
+  for (StringRef Flag : Flags) {
+    if (Flag.consume_front("-march=")) {
+      Arch = Flag;
+      continue;
+    }
+
+    NewFlags.push_back(Flag.str());
+  }
 
   llvm::Expected<std::unique_ptr<llvm::RISCVISAInfo>> ParseResult =
       llvm::RISCVISAInfo::parseArchString(
@@ -1630,14 +1641,6 @@ selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
 
   addMultilibFlag(ISAInfo->getXLen() == 32, "-m32", NewFlags);
   addMultilibFlag(ISAInfo->getXLen() == 64, "-m64", NewFlags);
-
-  // Collect all flags except march=*
-  for (StringRef Flag : Flags) {
-    if (Flag.starts_with("!march=") || Flag.starts_with("-march="))
-      continue;
-
-    NewFlags.push_back(Flag.str());
-  }
 
   llvm::StringSet<> AllArchExts;
   // Reconstruct multi-lib list, and break march option into separated
@@ -1756,21 +1759,12 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
           });
 
   Multilib::flags_list Flags;
-  llvm::StringSet<> Added_ABIs;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
-  for (auto Element : RISCVMultilibSet) {
-    addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str(), Flags);
-    if (!Added_ABIs.count(Element.mabi)) {
-      Added_ABIs.insert(Element.mabi);
-      addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str(), Flags);
-    }
-  }
+  Flags.push_back("-march=" + MArch);
+  Flags.push_back("-mabi=" + ABIName.str());
 
-  if (selectRISCVMultilib(D, RISCVMultilibs, MArch, Flags,
-                          Result.SelectedMultilibs))
+  if (selectRISCVMultilib(D, RISCVMultilibs, Flags, Result.SelectedMultilibs))
     Result.Multilibs = std::move(RISCVMultilibs);
 }
 

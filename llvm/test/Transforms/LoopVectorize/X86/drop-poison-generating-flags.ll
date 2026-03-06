@@ -287,12 +287,10 @@ define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, 
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[PTRS]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 0, 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 1, 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 2, 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 3, 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[INPUT]], i64 -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP9]]
@@ -300,11 +298,10 @@ define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, 
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP11]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP12]], i32 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x ptr> [[TMP16]], ptr [[TMP13]], i32 3
-; CHECK-NEXT:    store <4 x ptr> [[TMP17]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    store <4 x ptr> [[TMP17]], ptr [[PTRS]], align 8
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP10]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[OUTPUT]], i64 0
-; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
@@ -747,9 +744,7 @@ define void @recipe_without_underlying_instr_lanes_used(i64 %n, ptr noalias %dst
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i8> [ [[TMP22]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP28]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> [[TMP26]], <4 x i8> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> poison, <4 x i64> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[PREDPHI7]], i32 3
-; CHECK-NEXT:    store i64 [[TMP12]], ptr [[AUX]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[AUX]], align 8
 ; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

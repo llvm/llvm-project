@@ -2966,11 +2966,12 @@ void tools::addMachineOutlinerArgs(const Driver &D,
         D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
       }
     } else {
-      // Disable all outlining behaviour.
-      //
-      // FIXME: This should probably use the `nooutline` attribute rather than
-      // tweaking Pipeline Pass flags, so `-mno-outline` and `-moutline` objects
-      // can be combined correctly during LTO.
+      if (!IsLTO)
+        // Disable all outlining behaviour using `nooutline` attribute, in case
+        // Linker Invocation lacks `-mno-outline`.
+        CmdArgs.push_back("-mno-outline");
+
+      // Disable Pass in Pipeline
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }
@@ -3090,7 +3091,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
   bool FilenameSearch = LibclcNamespec.consume_front(":");
   if (FilenameSearch) {
     SmallString<128> LibclcFile(LibclcNamespec);
-    if (llvm::sys::fs::exists(LibclcFile)) {
+    if (D.getVFS().exists(LibclcFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
       CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
       return;
@@ -3112,7 +3113,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
     if (!CPU.empty()) {
       SmallString<128> CPUPath(BasePath);
       llvm::sys::path::append(CPUPath, CPU, "libclc.bc");
-      if (llvm::sys::fs::exists(CPUPath)) {
+      if (D.getVFS().exists(CPUPath)) {
         CC1Args.push_back("-mlink-builtin-bitcode");
         CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
         return;
@@ -3123,7 +3124,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
   // Fall back to the generic library for the triple.
   SmallString<128> GenericPath(BasePath);
   llvm::sys::path::append(GenericPath, "libclc.bc");
-  if (llvm::sys::fs::exists(GenericPath)) {
+  if (D.getVFS().exists(GenericPath)) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
     return;

@@ -95,10 +95,9 @@ struct deferredval_ty {
 /// whichever value m_VPValue(X) populated.
 inline deferredval_ty m_Deferred(VPValue *const &V) { return V; }
 
-/// Match an integer constant or vector of constants if Pred::isValue returns
-/// true for the APInt. \p BitWidth optionally specifies the bitwidth the
-/// matched constant must have. If it is 0, the matched constant can have any
-/// bitwidth.
+/// Match an integer constant if Pred::isValue returns true for the APInt. \p
+/// BitWidth optionally specifies the bitwidth the matched constant must have.
+/// If it is 0, the matched constant can have any bitwidth.
 template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
   Pred P;
 
@@ -119,15 +118,17 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
   }
 };
 
-/// Match a specified integer value or vector of all elements of that
-/// value. \p BitWidth optionally specifies the bitwidth the matched constant
-/// must have. If it is 0, the matched constant can have any bitwidth.
+/// Match a specified signed or unsigned integer value.
 struct is_specific_int {
   APInt Val;
+  bool IsSigned;
 
-  is_specific_int(APInt Val) : Val(std::move(Val)) {}
+  is_specific_int(APInt Val, bool IsSigned = false)
+      : Val(std::move(Val)), IsSigned(IsSigned) {}
 
-  bool isValue(const APInt &C) const { return APInt::isSameValue(Val, C); }
+  bool isValue(const APInt &C) const {
+    return APInt::isSameValue(Val, C, IsSigned);
+  }
 };
 
 template <unsigned Bitwidth = 0>
@@ -135,6 +136,11 @@ using specific_intval = int_pred_ty<is_specific_int, Bitwidth>;
 
 inline specific_intval<0> m_SpecificInt(uint64_t V) {
   return specific_intval<0>(is_specific_int(APInt(64, V)));
+}
+
+inline specific_intval<0> m_SpecificSInt(int64_t V) {
+  return specific_intval<0>(
+      is_specific_int(APInt(64, V, /*isSigned=*/true), /*IsSigned=*/true));
 }
 
 inline specific_intval<1> m_False() {
@@ -502,6 +508,13 @@ m_LastActiveLane(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::LastActiveLane>(Op0);
 }
 
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<VPInstruction::ExtractLastActive, Op0_t, Op1_t,
+                           Op2_t>
+m_ExtractLastActive(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::ExtractLastActive>(Op0, Op1, Op2);
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ComputeReductionResult, Op0_t>
 m_ComputeReductionResult(const Op0_t &Op0) {
@@ -536,10 +549,10 @@ inline VPInstruction_match<VPInstruction::StepVector> m_StepVector() {
   return m_VPInstruction<VPInstruction::StepVector>();
 }
 
-template <typename Op0_t, typename Op1_t>
-inline VPInstruction_match<VPInstruction::ExitingIVValue, Op0_t, Op1_t>
-m_ExitingIVValue(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::ExitingIVValue>(Op0, Op1);
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExitingIVValue, Op0_t>
+m_ExitingIVValue(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExitingIVValue>(Op0);
 }
 
 template <unsigned Opcode, typename Op0_t>
@@ -584,6 +597,15 @@ template <typename Op0_t>
 inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>, Op0_t>
 m_ZExtOrSelf(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), Op0);
+}
+
+template <typename Op0_t>
+inline match_combine_or<
+    match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
+                     AllRecipe_match<Instruction::Trunc, Op0_t>>,
+    Op0_t>
+m_ZExtOrTruncOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_CombineOr(m_ZExt(Op0), m_Trunc(Op0)), Op0);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t>
@@ -833,15 +855,18 @@ inline auto m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllRecipe_match<Instruction::Select, Op0_t, specific_intval<1>, Op1_t>
-m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Select(Op0, m_True(), Op1);
+inline auto m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(
+      m_c_VPInstruction<VPInstruction::LogicalOr, Op0_t, Op1_t>(Op0, Op1),
+      m_Select(Op0, m_True(), Op1));
 }
 
 template <typename Op0_t, typename Op1_t>
 inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
+
+inline auto m_CanonicalIV() { return class_match<VPCanonicalIVPHIRecipe>(); }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 using VPScalarIVSteps_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0,

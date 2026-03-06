@@ -20,6 +20,12 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+xqcisls %s -o - | FileCheck --check-prefix=RV32XQCISLS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xqcisync %s -o - | FileCheck --check-prefix=RV32XQCISYNC %s
 
+; RUN: llc -mtriple=riscv32 %s -o - \
+; RUN:   -mattr=+xqcia,+xqciac,+xqcibi,+xqcibm,+xqcicli,+xqcicm,+xqcics,+xqcicsr,+xqciint \
+; RUN:   -mattr=+xqciio,+xqcilb,+xqcili,+xqcilia,+xqcilo,+xqcilsm,+xqcisim,+xqcisls,+xqcisync \
+; RUN:   | FileCheck --check-prefix=RV32COMBINETOXQCI %s
+; RUN: llc -mtriple=riscv32 %s -o - -mattr=+xqci | FileCheck --check-prefix=RV32COMBINETOXQCI %s
+
 ; RUN: llc -mtriple=riscv64 -mattr=+xqccmp %s -o - | FileCheck --check-prefix=RV64XQCCMP %s
 
 ; RV32XQCCMP: .attribute 5, "rv32i2p1_c2p0_zca1p0_xqccmp0p3"
@@ -38,9 +44,12 @@
 ; RV32XQCILIA: .attribute 5, "rv32i2p1_c2p0_zca1p0_xqcilia0p2"
 ; RV32XQCILO: .attribute 5, "rv32i2p1_c2p0_zca1p0_xqcilo0p3"
 ; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p6"
-; RV32XQCISIM: attribute 5, "rv32i2p1_c2p0_zca1p0_xqcisim0p2"
+; RV32XQCISIM: .attribute 5, "rv32i2p1_c2p0_zca1p0_xqcisim0p2"
 ; RV32XQCISLS: .attribute 5, "rv32i2p1_xqcisls0p2"
-; RV32XQCISYNC: attribute 5, "rv32i2p1_c2p0_zca1p0_xqcisync0p3"
+; RV32XQCISYNC: .attribute 5, "rv32i2p1_c2p0_zca1p0_xqcisync0p3"
+
+; RV32COMBINETOXQCI: .attribute 5,
+; RV32COMBINETOXQCI-SAME: _xqci0p13_
 
 ; RV64XQCCMP: .attribute 5, "rv64i2p1_c2p0_zca1p0_xqccmp0p3"
 
