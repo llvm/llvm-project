@@ -675,6 +675,12 @@ private:
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
                            bool HasBranchWeights) const;
 
+  /// Materializes the alias mask within a check block before the loop. The
+  /// vector loop will only be entered if the clamped VF from the alias mask
+  /// is not scalar.
+  void materializeAliasMask(VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks,
+                            bool HasBranchWeights);
+
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans
   /// and the cost of that VF.
