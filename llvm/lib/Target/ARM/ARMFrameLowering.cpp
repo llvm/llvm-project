@@ -443,6 +443,9 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
   default:
     report_fatal_error("No SEH Opcode for instruction " + TII.getName(Opc));
     break;
+  case ARM::CLEANUPRET:
+  case ARM::CATCHRET:
+    break;
   case ARM::t2ADDri:   // add.w r11, sp, #xx
   case ARM::t2ADDri12: // add.w r11, sp, #xx
   case ARM::t2MOVTi16: // movt  r4, #xx
@@ -2368,6 +2371,9 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
       for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         if (!MI.getOperand(i).isFI())
           continue;
+
+        if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+          break;
 
         // When using ADDri to get the address of a stack object, 255 is the
         // largest offset guaranteed to fit in the immediate offset.
