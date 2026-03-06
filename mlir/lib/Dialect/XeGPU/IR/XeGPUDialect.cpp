@@ -890,9 +890,23 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
       parent.setDimData(adjustDims[0], sgData, instData, laneData), getDims());
 }
 
-// Derive a new layout by removing dimensions.
-// `dimGroup` specifies a group of dimensions to be removed in the derived
-// layout.
+// Derive a new layout by removing dimensions. `dimGroup` specifies a group of
+// dimensions to be removed in the derived layout.
+//
+// Example: drop the 2nd dimension from a rank-3 sliced view.
+//
+// Suppose:
+//   xegpu.layout = slice<layout<[V0, V1, V2, V3, V4]>, [1, 3]>
+//
+// The slice removes parent dims [1, 3], so the sliced-space dims map to
+// parent dims [V0, V2, V4].
+//
+// If we drop sliced-space dim 1 (the 2nd dim), that corresponds to dropping
+// parent dim 2, result in parent layout [V0, V1, V3, V4] after dropping.
+// After parent dim 2 is removed, sliced dims [1, 3] must be reindexed to [1, 2].
+//
+// Result:
+//   xegpu.layout = slice<layout<[0, 1, 3, 4]>, [1, 2]>
 DistributeLayoutAttr SliceAttr::dropDims(SmallVector<int64_t> dimGroup) {
   // Map the sliced dims from parent space to collapsed space
   SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
@@ -900,8 +914,15 @@ DistributeLayoutAttr SliceAttr::dropDims(SmallVector<int64_t> dimGroup) {
       mapSlicedDimsToParentSpace(dimGroup, sliceDims);
 
   auto droppedParent = getParent().dropDims(dimsInParentSpace);
+
+  SmallVector<int64_t> newSliceDims;
+  for (int64_t d : sliceDims) {
+    int64_t offset = llvm::count_if(dimsInParentSpace, [&](int64_t s) { return s < d; });
+    newSliceDims.push_back(d - offset);
+  }
+
   return SliceAttr::get(getContext(), droppedParent,
-                        DenseI64ArrayAttr::get(getContext(), sliceDims));
+                        DenseI64ArrayAttr::get(getContext(), newSliceDims));
 }
 
 // Derive a new layout by collapsing dimensions.
