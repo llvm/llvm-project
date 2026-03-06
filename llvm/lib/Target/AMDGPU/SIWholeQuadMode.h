@@ -20,6 +20,7 @@ public:
   MachineFunctionProperties getClearedProperties() const {
     return MachineFunctionProperties().setIsSSA();
   }
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 
