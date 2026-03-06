@@ -111,7 +111,7 @@ define <4 x i32> @cmpeq_epi64_select_neg_3(<4 x i32> noundef %a, <4 x i32> nound
 ;
   %cmp = icmp eq <4 x i32> %a, %b
   %sext = sext <4 x i1> %cmp to <4 x i32>
-  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %shuffle = shufflevector <4 x i32> %sext, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   %select = select <4 x i1> %cmp, <4 x i32> %shuffle, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %select
 }
