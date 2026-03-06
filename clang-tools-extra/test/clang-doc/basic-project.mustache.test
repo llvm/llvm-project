@@ -28,7 +28,8 @@ HTML-SHAPE:                     <a href="../index.html" class="navbar__link">Hom
 HTML-SHAPE:           <div class="navbar-breadcrumb-container">
 HTML-SHAPE-NEXT:          <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-SHAPE:       </nav>
-HTML-SHAPE-NEXT: </header>
+HTML-SHAPE-NEXT: <script>
+HTML-SHAPE:      </header>
 HTML-SHAPE-LABEL:<main>
 HTML-SHAPE-NEXT:    <div class="container">
 HTML-SHAPE-NEXT:         <div class="sidebar">
@@ -126,7 +127,8 @@ HTML-CALC:                     <a href="../index.html" class="navbar__link">Home
 HTML-CALC:           <div class="navbar-breadcrumb-container">
 HTML-CALC-NEXT:          <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CALC:       </nav>
-HTML-CALC-NEXT: </header>
+HTML-CALC-NEXT: <script>
+HTML-CALC:      </header>
 HTML-CALC-LABEL:<main>
 HTML-CALC-NEXT:     <div class="container">
 HTML-CALC-NEXT:         <div class="sidebar">
@@ -331,7 +333,8 @@ HTML-RECTANGLE:                     <a href="../index.html" class="navbar__link"
 HTML-RECTANGLE:           <div class="navbar-breadcrumb-container">
 HTML-RECTANGLE-NEXT:          <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-RECTANGLE:       </nav>
-HTML-RECTANGLE-NEXT: </header>
+HTML-RECTANGLE-NEXT: <script>
+HTML-RECTANGLE:      </header>
 HTML-RECTANGLE-LABEL:<main>
 HTML-RECTANGLE-NEXT:    <div class="container">
 HTML-RECTANGLE-NEXT:         <div class="sidebar">
@@ -436,7 +439,8 @@ HTML-CIRCLE:                     <a href="../index.html" class="navbar__link">Ho
 HTML-CIRCLE:           <div class="navbar-breadcrumb-container">
 HTML-CIRCLE-NEXT:          <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CIRCLE:       </nav>
-HTML-CIRCLE-NEXT: </header>
+HTML-CIRCLE-NEXT: <script>
+HTML-CIRCLE:      </header>
 HTML-CIRCLE-LABEL:<main>
 HTML-CIRCLE-NEXT:     <div class="container">
 HTML-CIRCLE-NEXT:         <div class="sidebar">
