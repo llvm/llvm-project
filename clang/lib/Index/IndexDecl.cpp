@@ -738,6 +738,9 @@ public:
     if (!shouldContinue)
       return false;
 
+    if (!IndexCtx.shouldIndexImplicitInstantiation())
+      return true;
+
     // Only check instantiation if D is canonical to prevent infinite cycling
     if (D != D->getCanonicalDecl())
       return true;

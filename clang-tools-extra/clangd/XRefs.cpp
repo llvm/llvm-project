@@ -1051,6 +1051,7 @@ findRefs(const llvm::ArrayRef<const NamedDecl *> TargetDecls, ParsedAST &AST,
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
+  IndexOpts.IndexImplicitInstantiation = true;
   IndexOpts.IndexParametersInDeclarations = true;
   IndexOpts.IndexTemplateParameters = true;
   indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),

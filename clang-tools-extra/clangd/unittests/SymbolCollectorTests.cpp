@@ -310,6 +310,7 @@ public:
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = true;
+    IndexOpts.IndexImplicitInstantiation = true;
     std::shared_ptr<include_cleaner::PragmaIncludes> PI =
         std::make_shared<include_cleaner::PragmaIncludes>();
     COpts.PragmaIncludes = PI.get();
