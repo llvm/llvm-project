@@ -1,5 +1,4 @@
 ; RUN: opt -passes=sroa -S %s -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - | FileCheck %s
 
 ;; Check that multiple dbg.assign intrinsics linked to a store that is getting
 ;; split (or at least that is touched by SROA, causing a replacement store to

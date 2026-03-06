@@ -162,13 +162,11 @@ static bool computeUnrollAndJamCount(
   // unrolling we leave to the unroller. This uses UP.Threshold /
   // UP.PartialThreshold / UP.MaxCount to come up with sensible loop values.
   // We have already checked that the loop has no unroll.* pragmas.
-  unsigned MaxTripCount = 0;
-  bool UseUpperBound = false;
-  bool ExplicitUnroll = computeUnrollCount(
-    L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount, MaxTripCount,
-      /*MaxOrZero*/ false, OuterTripMultiple, OuterUCE, UP, PP,
-      UseUpperBound);
-  if (ExplicitUnroll || UseUpperBound) {
+  bool ExplicitUnroll =
+      computeUnrollCount(L, TTI, DT, LI, AC, SE, EphValues, ORE, OuterTripCount,
+                         /*MaxTripCount*/ 0, /*MaxOrZero*/ false,
+                         OuterTripMultiple, OuterUCE, UP, PP);
+  if (ExplicitUnroll) {
     // If the user explicitly set the loop as unrolled, dont UnJ it. Leave it
     // for the unroller instead.
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; explicit count set by "
@@ -425,7 +423,7 @@ static bool tryToUnrollAndJamLoop(LoopNest &LN, DominatorTree &DT, LoopInfo &LI,
                                   const TargetTransformInfo &TTI,
                                   AssumptionCache &AC, DependenceInfo &DI,
                                   OptimizationRemarkEmitter &ORE, int OptLevel,
-                                  LPMUpdater &U) {
+                                  LPMUpdater &U, bool &AnyLoopRemoved) {
   bool DidSomething = false;
   ArrayRef<Loop *> Loops = LN.getLoops();
   Loop *OutmostLoop = &LN.getOutermostLoop();
@@ -441,8 +439,11 @@ static bool tryToUnrollAndJamLoop(LoopNest &LN, DominatorTree &DT, LoopInfo &LI,
         tryToUnrollAndJamLoop(L, DT, &LI, SE, TTI, AC, DI, ORE, OptLevel);
     if (Result != LoopUnrollResult::Unmodified)
       DidSomething = true;
-    if (L == OutmostLoop && Result == LoopUnrollResult::FullyUnrolled)
-      U.markLoopAsDeleted(*L, LoopName);
+    if (Result == LoopUnrollResult::FullyUnrolled) {
+      if (L == OutmostLoop)
+        U.markLoopAsDeleted(*L, LoopName);
+      AnyLoopRemoved = true;
+    }
   }
 
   return DidSomething;
@@ -457,11 +458,13 @@ PreservedAnalyses LoopUnrollAndJamPass::run(LoopNest &LN,
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   OptimizationRemarkEmitter ORE(&F);
 
+  bool AnyLoopRemoved = false;
   if (!tryToUnrollAndJamLoop(LN, AR.DT, AR.LI, AR.SE, AR.TTI, AR.AC, DI, ORE,
-                             OptLevel, U))
+                             OptLevel, U, AnyLoopRemoved))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
-  PA.preserve<LoopNestAnalysis>();
+  if (!AnyLoopRemoved)
+    PA.preserve<LoopNestAnalysis>();
   return PA;
 }

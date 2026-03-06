@@ -28,10 +28,27 @@
 
 namespace fir {
 
+static mlir::LowerToLLVMOptions MakeLowerOptions(mlir::ModuleOp module) {
+  llvm::StringRef dataLayoutString;
+  auto dataLayoutAttr = module->template getAttrOfType<mlir::StringAttr>(
+      mlir::LLVM::LLVMDialect::getDataLayoutAttrName());
+  if (dataLayoutAttr)
+    dataLayoutString = dataLayoutAttr.getValue();
+
+  auto options = mlir::LowerToLLVMOptions(module.getContext());
+  auto llvmDL = llvm::DataLayout(dataLayoutString);
+  if (llvmDL.getPointerSizeInBits(0) == 32) {
+    // FIXME: Should translateDataLayout in the MLIR layer be doing this?
+    options.overrideIndexBitwidth(32);
+  }
+  options.dataLayout = llvmDL;
+  return options;
+}
+
 LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
                                      bool forceUnifiedTBAATree,
                                      const mlir::DataLayout &dl)
-    : mlir::LLVMTypeConverter(module.getContext()),
+    : mlir::LLVMTypeConverter(module.getContext(), MakeLowerOptions(module)),
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(
           module.getContext(), getTargetTriple(module), getKindMapping(module),
@@ -111,8 +128,8 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
                                                   /*isPacked=*/false);
   });
   addConversion([&](mlir::NoneType none) {
-    return mlir::LLVM::LLVMStructType::getLiteral(
-        none.getContext(), std::nullopt, /*isPacked=*/false);
+    return mlir::LLVM::LLVMStructType::getLiteral(none.getContext(), {},
+                                                  /*isPacked=*/false);
   });
   addConversion([&](fir::DummyScopeType dscope) {
     // DummyScopeType values must not have any uses after PreCGRewrite.
@@ -146,8 +163,8 @@ LLVMTypeConverter::convertRecordType(fir::RecordType derived,
     return mlir::success();
   }
   callStack.push_back(derived);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([&callStack]() { callStack.pop_back(); });
+  llvm::scope_exit popConversionCallStack(
+      [&callStack]() { callStack.pop_back(); });
 
   llvm::SmallVector<mlir::Type> members;
   for (auto mem : derived.getTypeList()) {

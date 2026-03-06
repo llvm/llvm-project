@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsTargetObjectFile.h"
-#include "MCTargetDesc/MipsMCExpr.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -172,23 +172,21 @@ bool MipsTargetObjectFile::IsConstantInSmallSection(
 }
 
 /// Return true if this constant should be placed into small data section.
-MCSection *MipsTargetObjectFile::getSectionForConstant(const DataLayout &DL,
-                                                       SectionKind Kind,
-                                                       const Constant *C,
-                                                       Align &Alignment) const {
+MCSection *MipsTargetObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   if (IsConstantInSmallSection(DL, C, *TM))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
-                                                            Alignment);
+                                                            Alignment, F);
 }
 
 const MCExpr *
 MipsTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(0x8000, getContext()), getContext());
-  return MipsMCExpr::create(MipsMCExpr::MEK_DTPREL, Expr, getContext());
+  return MCSpecifierExpr::create(Expr, Mips::S_DTPREL, getContext());
 }

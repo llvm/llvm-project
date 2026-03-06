@@ -27,7 +27,7 @@ namespace {
 /// A pass converting MLIR Func operations into the SPIR-V dialect.
 class ConvertFuncToSPIRVPass
     : public impl::ConvertFuncToSPIRVPassBase<ConvertFuncToSPIRVPass> {
-  using ConvertFuncToSPIRVPassBase::ConvertFuncToSPIRVPassBase;
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -42,6 +42,7 @@ void ConvertFuncToSPIRVPass::runOnOperation() {
 
   SPIRVConversionOptions options;
   options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
+  options.emulateUnsupportedFloatTypes = this->emulateUnsupportedFloatTypes;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 
   RewritePatternSet patterns(context);

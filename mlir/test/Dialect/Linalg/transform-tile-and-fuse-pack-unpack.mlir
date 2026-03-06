@@ -159,7 +159,8 @@ module {
         -> (!transform.op<"tensor.empty">,
             !transform.op<"linalg.transpose">,
             !transform.op<"tensor.collapse_shape">,
-            !transform.op<"tensor.extract_slice">)
+            !transform.op<"tensor.extract_slice">,
+            !transform.op<"linalg.copy">)
 
       %root = transform.structured.match ops{["linalg.generic"]} in %arg1
           : (!transform.any_op) -> !transform.any_op
@@ -170,8 +171,8 @@ module {
       // Fuse the consumer operation into the tiled loop.
       %slice_op = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %forall_op
           : (!transform.any_op) -> !transform.op<"tensor.parallel_insert_slice">
-      transform.test.fuse_consumer %slice_op
-        : (!transform.op<"tensor.parallel_insert_slice">) -> (!transform.any_op, !transform.any_op)
+      transform.test.fuse_consumer_using_slice %slice_op in (%forall_op)
+        : (!transform.op<"tensor.parallel_insert_slice">, !transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
     }
   }
@@ -220,7 +221,8 @@ module {
         -> (!transform.op<"tensor.empty">,
             !transform.op<"linalg.transpose">,
             !transform.op<"tensor.collapse_shape">,
-            !transform.op<"tensor.extract_slice">)
+            !transform.op<"tensor.extract_slice">,
+            !transform.op<"linalg.copy">)
 
       %root = transform.structured.match ops{["linalg.generic"]} in %arg1
           : (!transform.any_op) -> !transform.any_op
@@ -231,7 +233,7 @@ module {
       // Fuse the consumer operation into the tiled loop.
       %slice_op = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %forall_op
           : (!transform.any_op) -> !transform.op<"tensor.parallel_insert_slice">
-      // Note that we cannot apply transform.test.fuse_consumer here because the extract_slice
+      // Note that we cannot apply transform.test.fuse_consumer_using_slice here because the extract_slice
       // is not qualified consumer operation. Forcing this will yeild "could not fetch consumer
       // to fuse" error.
       transform.yield

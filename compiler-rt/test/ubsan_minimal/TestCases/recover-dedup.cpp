@@ -1,4 +1,4 @@
-// RUN: %clangxx -w -fsanitize=signed-integer-overflow,nullability-return,returns-nonnull-attribute -fsanitize-recover=all %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_min_runtime -w -fsanitize=signed-integer-overflow,nullability-return,returns-nonnull-attribute -fsanitize-recover=all %s -o %t && %run %t 2>&1 | FileCheck %s
 
 #include <stdint.h>
 #include <stdio.h>

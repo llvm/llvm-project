@@ -77,13 +77,13 @@
 ! CHECK-LINKING-LIBOMP-GOES-AFTER: "--as-needed" "{{.*}}-{{.*}}.o" "-lmylib" "foo.a" "-lm" "-Bstatic" "-lhappy" "-Bdynamic" {{.*}}"-lomp"
 ! CHECK-NOLINKING: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
 ! CHECK-NOLINKING: "-ffast-math"
-! CHECK-NOLINKING-NO: "-lm" "-Bstatic" "-lhappy" "-Bdynamic"
+! CHECK-NOLINKING-NOT: "-lm" "-Bstatic" "-lhappy" "-Bdynamic"
 ! CHECK-NOLINKING-OPENMP: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
 ! CHECK-NOLINKING-OPENMP: "-ffast-math" {{.*}}"-fopenmp"
-! CHECK-NOLINKING-OPENMP-NO: "-lm" "-Bstatic" "-lhappy" "-Bdynamic" {{.}}"-lomp"
+! CHECK-NOLINKING-OPENMP-NOT: "-lm" "-Bstatic" "-lhappy" "-Bdynamic" {{.}}"-lomp"
 ! CHECK-LINKING-MSVC: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
 ! CHECK-LINKING-MSVC: "-ffast-math"
 ! CHECK-LINKING-MSVC: "--as-needed" "{{.*}}-{{.*}}.o" "mylib.lib" "foo.lib" "m.lib" "-Bstatic" "happy.lib" "-Bdynamic"
 ! CHECK-NOLINKING-MSVC: Configuration file: {{.*}}Inputs{{.}}config-l.cfg
 ! CHECK-NOLINKING-MSVC: "-ffast-math"
-! CHECK-NOLINKING-MSVC-NO: "m.lib" "-Bstatic" "happy.lib" "-Bdynamic"
+! CHECK-NOLINKING-MSVC-NOT: "m.lib" "-Bstatic" "happy.lib" "-Bdynamic"

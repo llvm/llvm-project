@@ -26,7 +26,7 @@ void fir::runtime::genDerivedTypeInitialize(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = fir::runtime::createArguments(builder, loc, fTy, box, sourceFile,
                                             sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genDerivedTypeInitializeClone(fir::FirOpBuilder &builder,
@@ -41,7 +41,7 @@ void fir::runtime::genDerivedTypeInitializeClone(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto args = fir::runtime::createArguments(builder, loc, fTy, newBox, box,
                                             sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genDerivedTypeDestroy(fir::FirOpBuilder &builder,
@@ -49,7 +49,7 @@ void fir::runtime::genDerivedTypeDestroy(fir::FirOpBuilder &builder,
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Destroy)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, box);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genDerivedTypeFinalize(fir::FirOpBuilder &builder,
@@ -61,7 +61,7 @@ void fir::runtime::genDerivedTypeFinalize(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = fir::runtime::createArguments(builder, loc, fTy, box, sourceFile,
                                             sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genDerivedTypeDestroyWithoutFinalization(
@@ -70,7 +70,7 @@ void fir::runtime::genDerivedTypeDestroyWithoutFinalization(
       loc, builder);
   auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, box);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::genNullifyDerivedType(fir::FirOpBuilder &builder,
@@ -78,7 +78,7 @@ void fir::runtime::genNullifyDerivedType(fir::FirOpBuilder &builder,
                                          fir::RecordType derivedType,
                                          unsigned rank) {
   mlir::Value typeDesc =
-      builder.create<fir::TypeDescOp>(loc, mlir::TypeAttr::get(derivedType));
+      fir::TypeDescOp::create(builder, loc, mlir::TypeAttr::get(derivedType));
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyDerived)>(loc,
                                                                    builder);
@@ -90,7 +90,7 @@ void fir::runtime::genNullifyDerivedType(fir::FirOpBuilder &builder,
   mlir::Value c0 = builder.createIntegerConstant(loc, inputTypes[3], 0);
   args.push_back(rankCst);
   args.push_back(c0);
-  builder.create<fir::CallOp>(loc, callee, args);
+  fir::CallOp::create(builder, loc, callee, args);
 }
 
 mlir::Value fir::runtime::genSameTypeAs(fir::FirOpBuilder &builder,
@@ -100,7 +100,7 @@ mlir::Value fir::runtime::genSameTypeAs(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(SameTypeAs)>(loc, builder);
   auto fTy = sameTypeAsFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, a, b);
-  return builder.create<fir::CallOp>(loc, sameTypeAsFunc, args).getResult(0);
+  return fir::CallOp::create(builder, loc, sameTypeAsFunc, args).getResult(0);
 }
 
 mlir::Value fir::runtime::genExtendsTypeOf(fir::FirOpBuilder &builder,
@@ -110,5 +110,6 @@ mlir::Value fir::runtime::genExtendsTypeOf(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(ExtendsTypeOf)>(loc, builder);
   auto fTy = extendsTypeOfFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, a, mold);
-  return builder.create<fir::CallOp>(loc, extendsTypeOfFunc, args).getResult(0);
+  return fir::CallOp::create(builder, loc, extendsTypeOfFunc, args)
+      .getResult(0);
 }

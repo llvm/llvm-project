@@ -22,8 +22,7 @@
 
 using namespace lldb_private;
 
-SystemInitializerTest::SystemInitializerTest()
-    : SystemInitializerCommon(nullptr) {}
+SystemInitializerTest::SystemInitializerTest() : SystemInitializerCommon() {}
 SystemInitializerTest::~SystemInitializerTest() = default;
 
 llvm::Error SystemInitializerTest::Initialize() {
@@ -51,10 +50,14 @@ llvm::Error SystemInitializerTest::Initialize() {
   // Settings must be initialized AFTER PluginManager::Initialize is called.
   Debugger::SettingsInitialize();
 
+  Debugger::Initialize(nullptr);
+
   return llvm::Error::success();
 }
 
 void SystemInitializerTest::Terminate() {
+  Debugger::Terminate();
+
   Debugger::SettingsTerminate();
 
   // Terminate and unload and loaded system or user LLDB plug-ins

@@ -38,14 +38,10 @@ if config.llvm_polly_link_into_tools == '' or \
    config.llvm_polly_link_into_tools.lower() == 'false' or \
    config.llvm_polly_link_into_tools.lower() == 'notfound' or \
    config.llvm_polly_link_into_tools.lower() == 'llvm_polly_link_into_tools-notfound':
-    config.substitutions.append(('%loadPolly', '-load '
-                                 + config.polly_lib_dir + '/LLVMPolly@LLVM_SHLIBEXT@'
-                                 + commonOpts ))
     config.substitutions.append(('%loadNPMPolly', '-load-pass-plugin '
                                  + config.polly_lib_dir + '/LLVMPolly@LLVM_SHLIBEXT@'
                                  + commonOpts ))
 else:
-    config.substitutions.append(('%loadPolly', commonOpts ))
     config.substitutions.append(('%loadNPMPolly', commonOpts ))
 
 import lit.llvm

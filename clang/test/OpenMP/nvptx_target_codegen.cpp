@@ -164,7 +164,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    store ptr [[PTR1_ADDR]], ptr [[TMP3]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9targetBarPiS__l25_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 2)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9targetBarPiS__l25_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 2, i32 0)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit()
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -429,7 +429,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    store ptr [[F]], ptr [[TMP2]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[TMP3]], align 8
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3baziRd_omp_outlined, ptr @_Z3baziRd_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 2)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3baziRd_omp_outlined, ptr @_Z3baziRd_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 2, i32 0)
 // CHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[F]], align 4
 // CHECK1-NEXT:    call void @__kmpc_free_shared(ptr [[F]], i64 4)
 // CHECK1-NEXT:    ret i32 [[TMP4]]
@@ -550,7 +550,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    store ptr [[PTR1_ADDR]], ptr [[TMP3]], align 4
 // CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
 // CHECK2-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9targetBarPiS__l25_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2)
+// CHECK2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 2, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9targetBarPiS__l25_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2, i32 0)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit()
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -815,7 +815,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    store ptr [[F]], ptr [[TMP2]], align 4
 // CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
 // CHECK2-NEXT:    store ptr [[TMP1]], ptr [[TMP3]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3baziRd_omp_outlined, ptr @_Z3baziRd_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 2)
+// CHECK2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3baziRd_omp_outlined, ptr @_Z3baziRd_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 2, i32 0)
 // CHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[F]], align 4
 // CHECK2-NEXT:    call void @__kmpc_free_shared(ptr [[F]], i32 4)
 // CHECK2-NEXT:    ret i32 [[TMP4]]

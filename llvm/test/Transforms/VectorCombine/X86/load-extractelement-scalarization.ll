@@ -6,8 +6,7 @@
 define void @multiple_extract(ptr %p) {
 ; CHECK-LABEL: @multiple_extract(
 ; CHECK-NEXT:    [[VP:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i32 0, i64 0
-; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[VP]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i32 0, i64 1
 ; CHECK-NEXT:    [[E1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i32 [[E0]], ptr [[P]], align 4
@@ -22,5 +21,19 @@ define void @multiple_extract(ptr %p) {
   store i32 %e0, ptr %p, align 4
   %p1 = getelementptr inbounds nuw i8, ptr %p, i64 4
   store i32 %e1, ptr %p1, align 4
+  ret void
+}
+
+; infinite loop if we fold an extract that is waiting to be erased
+define void @unused_extract(ptr %p) {
+; CHECK-LABEL: @unused_extract(
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[LOAD]], i64 1
+; CHECK-NEXT:    ret void
+;
+  %load = load <4 x float>, ptr %p, align 8
+  %shuffle0 = shufflevector <4 x float> zeroinitializer, <4 x float> %load, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %shuffle1 = shufflevector <4 x float> %shuffle0, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
+  %extract = extractelement <4 x float> %load, i64 1
   ret void
 }

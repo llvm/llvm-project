@@ -13,10 +13,9 @@
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/descriptor.h"
-#include "flang/Runtime/io-api-consts.h"
+#include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <string_view>
 
@@ -184,7 +183,7 @@ TEST(ExternalIOTests, TestSequentialFixedUnformatted) {
   io = IONAME(BeginInquireIoLength)(__FILE__, __LINE__);
   for (int j{1}; j <= 3; ++j) {
     ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc))
-        << "OutputDescriptor() for InquireIoLength";
+        << "OutputDescriptor() for InquireIoLength " << j;
   }
   ASSERT_EQ(IONAME(GetIoLength)(io), 3 * recl) << "GetIoLength";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
@@ -951,4 +950,38 @@ TEST(ExternalIOTests, BigUnitNumbers) {
         IostatUnitOverflow);
     EXPECT_EQ(std::strncmp(msg, expectedMsg, n), 0);
   }
+}
+
+TEST(ExternalIOTests, OpenNewExtant) {
+  // OPEN(10,STATUS='REPLACE')
+  Cookie io{IONAME(BeginOpenUnit)(10, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, "opennewextant", 13))
+      << "SetFile(opennewextant)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "REPLACE", 7)) << "SetStatus(REPLACE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenUnit(REPLACE)";
+  // CLOSE(10)
+  io = IONAME(BeginClose)(10, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+  // OPEN(10,STATUS='NEW') - should fail
+  io = IONAME(BeginOpenUnit)(10, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetFile)(io, "opennewextant", 13))
+      << "SetFile(opennewextant)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "NEW", 3)) << "SetStatus(NEW)";
+  IONAME(EnableHandlers)(io, /*hasIoStat=*/true);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOpenNewExtant)
+      << "EndIoStatement() for OpenUnit(NEW)";
+  // OPEN(10,STATUS='OLD')
+  io = IONAME(BeginOpenUnit)(10, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetFile)(io, "opennewextant", 15))
+      << "SetFile(opennewextant)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenUnit(OLD)";
+  // CLOSE(UNIT=10,STATUS='DELETE')
+  io = IONAME(BeginClose)(10, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for CLOSE(DELETE)";
 }

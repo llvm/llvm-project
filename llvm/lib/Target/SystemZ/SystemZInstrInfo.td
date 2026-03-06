@@ -424,8 +424,10 @@ defm CondStore64 : CondStores<GR64, simple_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
-def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+let isMoveReg = 1 in {
+  def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
+  def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+}
 
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTR  : UnaryRR <"ltr",  0x12,   null_frag, GR32, GR32>;
@@ -459,7 +461,8 @@ def LLGFI : InstAlias<"llgfi\t$R1, $RI1", (LLILF GR64:$R1, imm64lf32:$RI1)>;
 def LLGHI : InstAlias<"llghi\t$R1, $RI1", (LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
-let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1,
+    isReMaterializable = 1 in {
   // Expands to L, LY or LFH, depending on the choice of register.
   def LMux : UnaryRXYPseudo<"l", z_load, GRX32, 4>,
              Requires<[FeatureHighWord]>;
@@ -480,7 +483,7 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTG : UnaryRXY<"ltg", 0xE302, z_load, GR64, 8>;
 }
 
-let canFoldAsLoad = 1 in {
+let canFoldAsLoad = 1, isReMaterializable =1 in {
   def LRL  : UnaryRILPC<"lrl",  0xC4D, aligned_z_load, GR32>;
   def LGRL : UnaryRILPC<"lgrl", 0xC48, aligned_z_load, GR64>;
 }
@@ -680,29 +683,31 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
 def : Pat<(sext_inreg GR64:$src, i32),
           (LGFR (EXTRACT_SUBREG GR64:$src, subreg_l32))>;
 
-// 32-bit extensions from 8-bit memory.  LBMux expands to LB or LBH,
-// depending on the choice of register.
-def LBMux : UnaryRXYPseudo<"lb", z_asextloadi8, GRX32, 1>,
+let isReMaterializable = 1 in {
+  // 32-bit extensions from 8-bit memory.  LBMux expands to LB or LBH,
+  // depending on the choice of register.
+  def LBMux : UnaryRXYPseudo<"lb", z_asextloadi8, GRX32, 1>,
+              Requires<[FeatureHighWord]>;
+  def LB  : UnaryRXY<"lb", 0xE376, z_asextloadi8, GR32, 1>;
+  def LBH : UnaryRXY<"lbh", 0xE3C0, z_asextloadi8, GRH32, 1>,
             Requires<[FeatureHighWord]>;
-def LB  : UnaryRXY<"lb", 0xE376, z_asextloadi8, GR32, 1>;
-def LBH : UnaryRXY<"lbh", 0xE3C0, z_asextloadi8, GRH32, 1>,
-          Requires<[FeatureHighWord]>;
 
-// 32-bit extensions from 16-bit memory.  LHMux expands to LH or LHH,
-// depending on the choice of register.
-def LHMux : UnaryRXYPseudo<"lh", z_asextloadi16, GRX32, 2>,
-            Requires<[FeatureHighWord]>;
-defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, z_asextloadi16, GR32, 2>;
-def  LHH  : UnaryRXY<"lhh", 0xE3C4, z_asextloadi16, GRH32, 2>,
-            Requires<[FeatureHighWord]>;
-def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_z_asextloadi16, GR32>;
+  // 32-bit extensions from 16-bit memory.  LHMux expands to LH or LHH,
+  // depending on the choice of register.
+  def LHMux : UnaryRXYPseudo<"lh", z_asextloadi16, GRX32, 2>,
+              Requires<[FeatureHighWord]>;
+  defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, z_asextloadi16, GR32, 2>;
+  def  LHH  : UnaryRXY<"lhh", 0xE3C4, z_asextloadi16, GRH32, 2>,
+              Requires<[FeatureHighWord]>;
+  def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_z_asextloadi16, GR32>;
 
-// 64-bit extensions from memory.
-def LGB   : UnaryRXY<"lgb", 0xE377, z_asextloadi8,  GR64, 1>;
-def LGH   : UnaryRXY<"lgh", 0xE315, z_asextloadi16, GR64, 2>;
-def LGF   : UnaryRXY<"lgf", 0xE314, z_asextloadi32, GR64, 4>;
-def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_z_asextloadi16, GR64>;
-def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_z_asextloadi32, GR64>;
+  // 64-bit extensions from memory.
+  def LGB   : UnaryRXY<"lgb", 0xE377, z_asextloadi8,  GR64, 1>;
+  def LGH   : UnaryRXY<"lgh", 0xE315, z_asextloadi16, GR64, 2>;
+  def LGF   : UnaryRXY<"lgf", 0xE314, z_asextloadi32, GR64, 4>;
+  def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_z_asextloadi16, GR64>;
+  def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_z_asextloadi32, GR64>;
+}
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
   def LTGF : UnaryRXY<"ltgf", 0xE332, z_asextloadi32, GR64, 4>;
 
@@ -731,29 +736,31 @@ def LLGFR : UnaryRRE<"llgfr", 0xB916, zext32, GR64, GR32>;
 def : Pat<(and GR64:$src, 0xffffffff),
           (LLGFR (EXTRACT_SUBREG GR64:$src, subreg_l32))>;
 
-// 32-bit extensions from 8-bit memory.  LLCMux expands to LLC or LLCH,
-// depending on the choice of register.
-def LLCMux : UnaryRXYPseudo<"llc", z_azextloadi8, GRX32, 1>,
+let isReMaterializable = 1 in {
+  // 32-bit extensions from 8-bit memory.  LLCMux expands to LLC or LLCH,
+  // depending on the choice of register.
+  def LLCMux : UnaryRXYPseudo<"llc", z_azextloadi8, GRX32, 1>,
+               Requires<[FeatureHighWord]>;
+  def LLC  : UnaryRXY<"llc", 0xE394, z_azextloadi8, GR32, 1>;
+  def LLCH : UnaryRXY<"llch", 0xE3C2, z_azextloadi8, GRH32, 1>,
              Requires<[FeatureHighWord]>;
-def LLC  : UnaryRXY<"llc", 0xE394, z_azextloadi8, GR32, 1>;
-def LLCH : UnaryRXY<"llch", 0xE3C2, z_azextloadi8, GRH32, 1>,
-           Requires<[FeatureHighWord]>;
 
-// 32-bit extensions from 16-bit memory.  LLHMux expands to LLH or LLHH,
-// depending on the choice of register.
-def LLHMux : UnaryRXYPseudo<"llh", z_azextloadi16, GRX32, 2>,
-             Requires<[FeatureHighWord]>;
-def LLH   : UnaryRXY<"llh", 0xE395, z_azextloadi16, GR32, 2>;
-def LLHH  : UnaryRXY<"llhh", 0xE3C6, z_azextloadi16, GRH32, 2>,
-            Requires<[FeatureHighWord]>;
-def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_z_azextloadi16, GR32>;
+  // 32-bit extensions from 16-bit memory.  LLHMux expands to LLH or LLHH,
+  // depending on the choice of register.
+  def LLHMux : UnaryRXYPseudo<"llh", z_azextloadi16, GRX32, 2>,
+               Requires<[FeatureHighWord]>;
+  def LLH   : UnaryRXY<"llh", 0xE395, z_azextloadi16, GR32, 2>;
+  def LLHH  : UnaryRXY<"llhh", 0xE3C6, z_azextloadi16, GRH32, 2>,
+              Requires<[FeatureHighWord]>;
+  def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_z_azextloadi16, GR32>;
 
-// 64-bit extensions from memory.
-def LLGC   : UnaryRXY<"llgc", 0xE390, z_azextloadi8,  GR64, 1>;
-def LLGH   : UnaryRXY<"llgh", 0xE391, z_azextloadi16, GR64, 2>;
-def LLGF   : UnaryRXY<"llgf", 0xE316, z_azextloadi32, GR64, 4>;
-def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_z_azextloadi16, GR64>;
-def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_z_azextloadi32, GR64>;
+  // 64-bit extensions from memory.
+  def LLGC   : UnaryRXY<"llgc", 0xE390, z_azextloadi8,  GR64, 1>;
+  def LLGH   : UnaryRXY<"llgh", 0xE391, z_azextloadi16, GR64, 2>;
+  def LLGF   : UnaryRXY<"llgf", 0xE316, z_azextloadi32, GR64, 4>;
+  def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_z_azextloadi16, GR64>;
+  def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_z_azextloadi32, GR64>;
+}
 
 // 31-to-64-bit zero extensions.
 def LLGTR : UnaryRRE<"llgtr", 0xB917, null_frag, GR64, GR64>;
@@ -1556,38 +1563,38 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 // end bits (operands 2 and 3) are in the range [32, 64).
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
-    def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
+    defm RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
   let CCValues = 0xE, CompareZeroCCMask = 0xE in {
-    def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
-    def RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
+    defm RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    defm RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
   }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
 let Predicates = [FeatureMiscellaneousExtensions] in {
-  def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
-  def RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
+  defm RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  defm RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
 }
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
 let Predicates = [FeatureHighWord] in {
-  def RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
-  def RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
-  def RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
-  def RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
-  def RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
-  def RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
-  def RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
+  def  RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
+  defm RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
+  defm RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
+  defm RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
+  defm RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
+  defm RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
+  defm RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
 }
 
 // Rotate second operand left and perform a logical operation with selected
 // bits of the first operand.  The CC result only describes the selected bits,
 // so isn't useful for a full comparison against zero.
 let Defs = [CC] in {
-  def RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
-  def ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
-  def RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
+  defm RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
+  defm ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
+  defm RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2183,7 +2190,7 @@ let mayLoad = 1, mayStore = 1, Defs = [CC, R0D, R1D, R2D, R3D, R5D],
 
 // Checksum.
 let mayLoad = 1, Defs = [CC] in
-  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR64, GR128>;
+  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR32, GR128>;
 
 // Compression call.
 let mayLoad = 1, mayStore = 1, Defs = [CC, R1D], Uses = [R0L, R1D] in

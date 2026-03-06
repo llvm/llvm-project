@@ -214,7 +214,7 @@ public:
 
   void GetRemoteQSupported();
 
-  bool GetVContSupported(char flavor);
+  bool GetVContSupported(llvm::StringRef flavor);
 
   bool GetpPacketSupported(lldb::tid_t tid);
 
@@ -262,9 +262,9 @@ public:
 
   bool GetGroupName(uint32_t gid, std::string &name);
 
-  bool HasFullVContSupport() { return GetVContSupported('A'); }
+  bool HasFullVContSupport() { return GetVContSupported("A"); }
 
-  bool HasAnyVContSupport() { return GetVContSupported('a'); }
+  bool HasAnyVContSupport() { return GetVContSupported("a"); }
 
   bool GetStopReply(StringExtractorGDBRemote &response);
 
@@ -337,6 +337,12 @@ public:
   bool GetQXferSigInfoReadSupported();
 
   bool GetMultiprocessSupported();
+
+  bool GetReverseContinueSupported();
+
+  bool GetReverseStepSupported();
+
+  bool GetMultiMemReadSupported();
 
   LazyBool SupportsAllocDeallocMemory() // const
   {
@@ -568,6 +574,9 @@ protected:
   LazyBool m_supports_qSaveCore = eLazyBoolCalculate;
   LazyBool m_uses_native_signals = eLazyBoolCalculate;
   std::optional<xPacketState> m_x_packet_state;
+  LazyBool m_supports_reverse_continue = eLazyBoolCalculate;
+  LazyBool m_supports_reverse_step = eLazyBoolCalculate;
+  LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

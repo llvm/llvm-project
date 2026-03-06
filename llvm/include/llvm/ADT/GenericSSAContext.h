@@ -25,7 +25,7 @@ template <typename, bool> class DominatorTreeBase;
 template <typename> class SmallVectorImpl;
 
 namespace Intrinsic {
-typedef unsigned ID;
+using ID = unsigned;
 }
 
 // Specializations of this template should provide the types used by the
@@ -54,7 +54,7 @@ public:
 
   // The null value for ValueRefT. For LLVM IR and MIR, this is simply the
   // default constructed value.
-  static constexpr ValueRefT *ValueRefNull = {};
+  static constexpr ValueRefT ValueRefNull = {};
 
   // An InstructionT usually defines one or more ValueT objects.
   using InstructionT = typename SSATraits::InstructionT;

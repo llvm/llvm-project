@@ -1,8 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  FrontendOpenMP
-  Support
-  )
-
 add_clang_unittest(ClangAnalysisFlowSensitiveTests
   ArenaTest.cpp
   ASTOpsTest.cpp
@@ -13,9 +8,11 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   DataflowEnvironmentTest.cpp
   DebugSupportTest.cpp
   DeterminismTest.cpp
+  FormulaTest.cpp
   LoggerTest.cpp
   MapLatticeTest.cpp
   MatchSwitchTest.cpp
+  MockHeaders.cpp
   MultiVarConstantPropagationTest.cpp
   RecordOpsTest.cpp
   SignAnalysisTest.cpp
@@ -28,12 +25,11 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   TransferTest.cpp
   TypeErasedDataflowAnalysisTest.cpp
   UncheckedOptionalAccessModelTest.cpp
+  UncheckedStatusOrAccessModelTest.cpp
+  UncheckedStatusOrAccessModelTestFixture.cpp
   ValueTest.cpp
   WatchedLiteralsSolverTest.cpp
-  )
-
-clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
-  PRIVATE
+  CLANG_LIBS
   clangAST
   clangASTMatchers
   clangAnalysis
@@ -44,11 +40,11 @@ clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
   clangLex
   clangSerialization
   clangTooling
-  )
-
-target_link_libraries(ClangAnalysisFlowSensitiveTests
-  PRIVATE
+  LINK_LIBS
   clangTesting
   LLVMTestingAnnotations
   LLVMTestingSupport
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
   )

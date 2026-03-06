@@ -41,9 +41,7 @@ namespace {
   struct XCoreLowerThreadLocal : public ModulePass {
     static char ID;
 
-    XCoreLowerThreadLocal() : ModulePass(ID) {
-      initializeXCoreLowerThreadLocalPass(*PassRegistry::getPassRegistry());
-    }
+    XCoreLowerThreadLocal() : ModulePass(ID) {}
 
     bool lowerGlobal(GlobalVariable *GV);
 
@@ -156,7 +154,7 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   for (User *U : Users) {
     Instruction *Inst = cast<Instruction>(U);
     IRBuilder<> Builder(Inst);
-    Value *ThreadID = Builder.CreateIntrinsic(Intrinsic::xcore_getid, {}, {});
+    Value *ThreadID = Builder.CreateIntrinsic(Intrinsic::xcore_getid, {});
     Value *Addr = Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV,
                                             {Builder.getInt64(0), ThreadID});
     U->replaceUsesOfWith(GV, Addr);

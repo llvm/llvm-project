@@ -35,7 +35,7 @@ produced the trace file.
 Header Section
 ==============
 
-A trace file begins with a 32 byte header.
+A trace file begins with a 32-byte header.
 
 +-------------------+-----------------+----------------------------------------+
 | Field             | Size (bytes)    | Description                            |
@@ -119,7 +119,7 @@ attempt to pad for alignment, and it is not seekable.
 Function Records
 ----------------
 
-Function Records have an 8 byte layout. This layout encodes information to
+Function Records have an 8-byte layout. This layout encodes information to
 reconstruct a call stack of instrumented function and their durations.
 
 +---------------+--------------+-----------------------------------------------+
@@ -147,14 +147,14 @@ reconstruct a call stack of instrumented function and their durations.
 +---------------+--------------+-----------------------------------------------+
 
 On little-endian machines, the bitfields are ordered from least significant bit
-bit to most significant bit. A reader can read an 8 bit value and apply the mask
+bit to most significant bit. A reader can read an 8-bit value and apply the mask
 ``0x01`` for the discriminant. Similarly, they can read 32 bits and unsigned
 shift right by ``0x04`` to obtain the function_id field.
 
 On big-endian machine, the bitfields are written in order from most significant
-bit to least significant bit. A reader would read an 8 bit value and unsigned
+bit to least significant bit. A reader would read an 8-bit value and unsigned
 shift right by 7 bits for the discriminant. The function_id field could be
-obtained by reading a 32 bit value and applying the mask ``0x0FFFFFFF``.
+obtained by reading a 32-bit value and applying the mask ``0x0FFFFFFF``.
 
 Function action types are as follows.
 
@@ -178,7 +178,7 @@ records for each of the logged args follow the function record in the stream.
 Metadata Records
 ----------------
 
-Interspersed throughout the buffer are 16 byte Metadata records. For typically
+Interspersed throughout the buffer are 16-byte Metadata records. For typically
 instrumented binaries, they will be sparser than Function records, and they
 provide a fuller picture of the binary execution state.
 
@@ -288,11 +288,11 @@ Its data segment is as follows.
 TSCWrap Records
 ---------------
 
-Since each function record uses a 32 bit value to represent the number of ticks
+Since each function record uses a 32-bit value to represent the number of ticks
 of the timestamp counter since the last reference, it is possible for this value
 to overflow, particularly for sparsely instrumented binaries.
 
-When this delta would not fit into a 32 bit representation, a reference absolute
+When this delta would not fit into a 32-bit representation, a reference absolute
 timestamp counter record is written in the form of a TSCWrap record.
 
 Its data segment is as follows.

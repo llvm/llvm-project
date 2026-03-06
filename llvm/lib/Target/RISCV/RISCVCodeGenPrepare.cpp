@@ -25,6 +25,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -32,20 +33,33 @@ using namespace llvm;
 #define PASS_NAME "RISC-V CodeGenPrepare"
 
 namespace {
-
-class RISCVCodeGenPrepare : public FunctionPass,
-                            public InstVisitor<RISCVCodeGenPrepare, bool> {
+class RISCVCodeGenPrepare : public InstVisitor<RISCVCodeGenPrepare, bool> {
+  Function &F;
   const DataLayout *DL;
   const DominatorTree *DT;
   const RISCVSubtarget *ST;
 
 public:
+  RISCVCodeGenPrepare(Function &F, const DominatorTree *DT,
+                      const RISCVSubtarget *ST)
+      : F(F), DL(&F.getDataLayout()), DT(DT), ST(ST) {}
+  bool run();
+  bool visitInstruction(Instruction &I) { return false; }
+  bool visitAnd(BinaryOperator &BO);
+  bool visitIntrinsicInst(IntrinsicInst &I);
+  bool expandVPStrideLoad(IntrinsicInst &I);
+  bool widenVPMerge(IntrinsicInst &I);
+};
+} // namespace
+
+namespace {
+class RISCVCodeGenPrepareLegacyPass : public FunctionPass {
+public:
   static char ID;
 
-  RISCVCodeGenPrepare() : FunctionPass(ID) {}
+  RISCVCodeGenPrepareLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
-
   StringRef getPassName() const override { return PASS_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -53,14 +67,8 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
-
-  bool visitInstruction(Instruction &I) { return false; }
-  bool visitAnd(BinaryOperator &BO);
-  bool visitIntrinsicInst(IntrinsicInst &I);
-  bool expandVPStrideLoad(IntrinsicInst &I);
 };
-
-} // end anonymous namespace
+} // namespace
 
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
 // but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
@@ -103,6 +111,76 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   return true;
 }
 
+// With EVL tail folding, an AnyOf reduction will generate an i1 vp.merge like
+// follows:
+//
+// loop:
+//   %phi = phi <vscale x 4 x i1> [ zeroinitializer, %entry ], [ %rec, %loop ]
+//   %cmp = icmp ...
+//   %rec = call <vscale x 4 x i1> @llvm.vp.merge(%cmp, i1 true, %phi, %evl)
+//   ...
+// middle:
+//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
+//
+// However RVV doesn't have any tail undisturbed mask instructions and so we
+// need a convoluted sequence of mask instructions to lower the i1 vp.merge: see
+// llvm/test/CodeGen/RISCV/rvv/vpmerge-sdnode.ll.
+//
+// To avoid that this widens the i1 vp.merge to an i8 vp.merge, which will
+// generate a single vmerge.vim:
+//
+// loop:
+//   %phi = phi <vscale x 4 x i8> [ zeroinitializer, %entry ], [ %rec, %loop ]
+//   %cmp = icmp ...
+//   %rec = call <vscale x 4 x i8> @llvm.vp.merge(%cmp, i8 true, %phi, %evl)
+//   %trunc = trunc <vscale x 4 x i8> %rec to <vscale x 4 x i1>
+//   ...
+// middle:
+//   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec)
+//
+// The trunc will normally be sunk outside of the loop, but even if there are
+// users inside the loop it is still profitable.
+bool RISCVCodeGenPrepare::widenVPMerge(IntrinsicInst &II) {
+  if (!II.getType()->getScalarType()->isIntegerTy(1))
+    return false;
+
+  Value *Mask, *True, *PhiV, *EVL;
+  using namespace PatternMatch;
+  if (!match(&II,
+             m_Intrinsic<Intrinsic::vp_merge>(m_Value(Mask), m_Value(True),
+                                              m_Value(PhiV), m_Value(EVL))))
+    return false;
+
+  auto *Phi = dyn_cast<PHINode>(PhiV);
+  if (!Phi || !Phi->hasOneUse() || Phi->getNumIncomingValues() != 2 ||
+      !match(Phi->getIncomingValue(0), m_Zero()) ||
+      Phi->getIncomingValue(1) != &II)
+    return false;
+
+  Type *WideTy =
+      VectorType::get(IntegerType::getInt8Ty(II.getContext()),
+                      cast<VectorType>(II.getType())->getElementCount());
+
+  IRBuilder<> Builder(Phi);
+  PHINode *WidePhi = Builder.CreatePHI(WideTy, 2);
+  WidePhi->addIncoming(ConstantAggregateZero::get(WideTy),
+                       Phi->getIncomingBlock(0));
+  Builder.SetInsertPoint(&II);
+  Value *WideTrue = Builder.CreateZExt(True, WideTy);
+  Value *WideMerge = Builder.CreateIntrinsic(Intrinsic::vp_merge, {WideTy},
+                                             {Mask, WideTrue, WidePhi, EVL});
+  WidePhi->addIncoming(WideMerge, Phi->getIncomingBlock(1));
+  Value *Trunc = Builder.CreateTrunc(WideMerge, II.getType());
+
+  II.replaceAllUsesWith(Trunc);
+
+  // Break the cycle and delete the old chain.
+  Phi->setIncomingValue(1, Phi->getIncomingValue(0));
+  llvm::RecursivelyDeleteTriviallyDeadInstructions(&II);
+
+  return true;
+}
+
 // LLVM vector reduction intrinsics return a scalar result, but on RISC-V vector
 // reduction instructions write the result in the first element of a vector
 // register. So when a reduction in a loop uses a scalar phi, we end up with
@@ -113,9 +191,10 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // vfredosum.vs v8, v8, v10
 // vfmv.f.s fa0, v8
 //
-// This mainly affects ordered fadd reductions, since other types of reduction
-// typically use element-wise vectorisation in the loop body. This tries to
-// vectorize any scalar phis that feed into a fadd reduction:
+// This mainly affects ordered fadd reductions and VP reductions that have a
+// scalar start value, since other types of reduction typically use element-wise
+// vectorisation in the loop body. This tries to vectorize any scalar phis that
+// feed into these reductions:
 //
 // loop:
 // %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
@@ -137,7 +216,11 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
-  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd)
+  if (widenVPMerge(I))
+    return true;
+
+  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd &&
+      !isa<VPReductionIntrinsic>(&I))
     return false;
 
   auto *PHI = dyn_cast<PHINode>(I.getOperand(0));
@@ -188,25 +271,17 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
   IRBuilder<> Builder(&II);
   Type *STy = VTy->getElementType();
   Value *Val = Builder.CreateLoad(STy, BasePtr);
-  Value *Res = Builder.CreateIntrinsic(Intrinsic::experimental_vp_splat, {VTy},
-                                       {Val, II.getOperand(2), VL});
+  Value *Res = Builder.CreateIntrinsic(
+      Intrinsic::vp_merge, VTy,
+      {II.getOperand(2), Builder.CreateVectorSplat(VTy->getElementCount(), Val),
+       PoisonValue::get(VTy), VL});
 
   II.replaceAllUsesWith(Res);
   II.eraseFromParent();
   return true;
 }
 
-bool RISCVCodeGenPrepare::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  auto &TM = TPC.getTM<RISCVTargetMachine>();
-  ST = &TM.getSubtarget<RISCVSubtarget>(F);
-
-  DL = &F.getDataLayout();
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
+bool RISCVCodeGenPrepare::run() {
   bool MadeChange = false;
   for (auto &BB : F)
     for (Instruction &I : llvm::make_early_inc_range(BB))
@@ -215,12 +290,40 @@ bool RISCVCodeGenPrepare::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepare, DEBUG_TYPE, PASS_NAME, false, false)
+bool RISCVCodeGenPrepareLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  auto &TM = TPC.getTM<RISCVTargetMachine>();
+  auto ST = &TM.getSubtarget<RISCVSubtarget>(F);
+  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+
+  RISCVCodeGenPrepare RVCGP(F, DT, ST);
+  return RVCGP.run();
+}
+
+INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME,
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RISCVCodeGenPrepare, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME, false,
+                    false)
 
-char RISCVCodeGenPrepare::ID = 0;
+char RISCVCodeGenPrepareLegacyPass::ID = 0;
 
-FunctionPass *llvm::createRISCVCodeGenPreparePass() {
-  return new RISCVCodeGenPrepare();
+FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
+  return new RISCVCodeGenPrepareLegacyPass();
+}
+
+PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  auto ST = &TM->getSubtarget<RISCVSubtarget>(F);
+  bool Changed = RISCVCodeGenPrepare(F, DT, ST).run();
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

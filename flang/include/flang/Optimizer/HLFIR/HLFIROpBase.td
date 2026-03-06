@@ -39,7 +39,6 @@ def hlfir_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
   let cppNamespace = "hlfir";
   let dependentDialects = ["fir::FIROpsDialect"];
 }
@@ -91,14 +90,13 @@ def IsFortranVariablePred
 def AnyFortranVariable : Type<IsFortranVariablePred, "any HLFIR variable type">;
 
 
-def AnyFortranValue : TypeConstraint<Or<[AnyLogicalLike.predicate,
-    AnyIntegerLike.predicate, AnyRealLike.predicate,
-    AnyFirComplexLike.predicate,
-    hlfir_ExprType.predicate]>, "any Fortran value type">;
+def IsFortranValuePred : CPred<"::hlfir::isFortranValueType($_self)">;
+def AnyFortranValue
+        : TypeConstraint<IsFortranValuePred, "any Fortran value type">;
 
-
-def AnyFortranEntity : TypeConstraint<Or<[AnyFortranVariable.predicate,
-    AnyFortranValue.predicate]>, "any Fortran value or variable type">;
+def AnyFortranEntity
+    : Type<Or<[AnyFortranVariable.predicate, AnyFortranValue.predicate]>,
+           "any Fortran value or variable type">;
 
 def IsFortranScalarCharacterPred
         : CPred<"::hlfir::isFortranScalarCharacterType($_self)">;

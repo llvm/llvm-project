@@ -53,8 +53,9 @@ public:
   IOHandler(Debugger &debugger, IOHandler::Type type);
 
   IOHandler(Debugger &debugger, IOHandler::Type type,
-            const lldb::FileSP &input_sp, const lldb::StreamFileSP &output_sp,
-            const lldb::StreamFileSP &error_sp, uint32_t flags);
+            const lldb::FileSP &input_sp,
+            const lldb::LockableStreamFileSP &output_sp,
+            const lldb::LockableStreamFileSP &error_sp, uint32_t flags);
 
   virtual ~IOHandler();
 
@@ -89,6 +90,8 @@ public:
 
   virtual void TerminalSizeChanged() {}
 
+  virtual void Refresh() {}
+
   virtual const char *GetPrompt() {
     // Prompt support isn't mandatory
     return nullptr;
@@ -98,6 +101,12 @@ public:
     // Prompt support isn't mandatory
     return false;
   }
+
+  virtual bool SetUseColor(bool use_color) {
+    // Color support isn't mandatory.
+    return false;
+  };
+
   bool SetPrompt(const char *) = delete;
 
   virtual llvm::StringRef GetControlSequence(char ch) { return {}; }
@@ -112,17 +121,11 @@ public:
 
   int GetErrorFD();
 
-  FILE *GetInputFILE();
-
-  FILE *GetOutputFILE();
-
-  FILE *GetErrorFILE();
-
   lldb::FileSP GetInputFileSP();
 
-  lldb::StreamFileSP GetOutputStreamFileSP();
+  lldb::LockableStreamFileSP GetOutputStreamFileSP();
 
-  lldb::StreamFileSP GetErrorStreamFileSP();
+  lldb::LockableStreamFileSP GetErrorStreamFileSP();
 
   Debugger &GetDebugger() { return m_debugger; }
 
@@ -155,14 +158,11 @@ public:
 
   virtual void PrintAsync(const char *s, size_t len, bool is_stdout);
 
-  std::recursive_mutex &GetOutputMutex() { return m_output_mutex; }
-
 protected:
   Debugger &m_debugger;
   lldb::FileSP m_input_sp;
-  lldb::StreamFileSP m_output_sp;
-  lldb::StreamFileSP m_error_sp;
-  std::recursive_mutex m_output_mutex;
+  lldb::LockableStreamFileSP m_output_sp;
+  lldb::LockableStreamFileSP m_error_sp;
   Predicate<bool> m_popped;
   Flags m_flags;
   Type m_type;
@@ -330,8 +330,8 @@ public:
 
   IOHandlerEditline(Debugger &debugger, IOHandler::Type type,
                     const lldb::FileSP &input_sp,
-                    const lldb::StreamFileSP &output_sp,
-                    const lldb::StreamFileSP &error_sp, uint32_t flags,
+                    const lldb::LockableStreamFileSP &output_sp,
+                    const lldb::LockableStreamFileSP &error_sp, uint32_t flags,
                     const char *editline_name, // Used for saving history files
                     llvm::StringRef prompt, llvm::StringRef continuation_prompt,
                     bool multi_line, bool color,
@@ -345,9 +345,10 @@ public:
                     IOHandlerDelegate &) = delete;
 
   IOHandlerEditline(Debugger &, IOHandler::Type, const lldb::FileSP &,
-                    const lldb::StreamFileSP &, const lldb::StreamFileSP &,
-                    uint32_t, const char *, const char *, const char *, bool,
-                    bool, uint32_t, IOHandlerDelegate &) = delete;
+                    const lldb::LockableStreamFileSP &,
+                    const lldb::LockableStreamFileSP &, uint32_t, const char *,
+                    const char *, const char *, bool, bool, uint32_t,
+                    IOHandlerDelegate &) = delete;
 
   ~IOHandlerEditline() override;
 
@@ -382,6 +383,8 @@ public:
   bool SetPrompt(llvm::StringRef prompt) override;
   bool SetPrompt(const char *prompt) = delete;
 
+  bool SetUseColor(bool use_color) override;
+
   const char *GetContinuationPrompt();
 
   void SetContinuationPrompt(llvm::StringRef prompt);
@@ -403,6 +406,8 @@ public:
 
   void PrintAsync(const char *s, size_t len, bool is_stdout) override;
 
+  void Refresh() override;
+
 private:
 #if LLDB_ENABLE_LIBEDIT
   bool IsInputCompleteCallback(Editline *editline, StringList &lines);
@@ -413,6 +418,8 @@ private:
   std::optional<std::string> SuggestionCallback(llvm::StringRef line);
 
   void AutoCompleteCallback(CompletionRequest &request);
+
+  void RedrawCallback();
 #endif
 
 protected:

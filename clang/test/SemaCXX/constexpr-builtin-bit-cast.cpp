@@ -262,7 +262,7 @@ constexpr int ttn = test_to_nullptr();
 constexpr const long &returns_local() { return 0L; }
 
 // expected-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
-// expected-note@+1 {{read of temporary whose lifetime has ended}}
+// expected-note@+1 {{read of object outside its lifetime}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
 
 constexpr int test_indeterminate(bool read_indet) {
@@ -526,4 +526,18 @@ namespace test_complex {
 
   constexpr double D = __builtin_bit_cast(double, test_float_complex);
   constexpr int M = __builtin_bit_cast(int, test_int_complex); // expected-error {{size of '__builtin_bit_cast' source type 'const _Complex unsigned int' does not match destination type 'int' (8 vs 4 bytes)}}
+}
+
+namespace InvalidBaseClass {
+  class F {
+  public:
+    char c;
+  };
+
+  class InBetween : public F{};
+  class E : public InBetween {
+  public:
+    constexpr E() :  F{3} {} // expected-error {{not a direct or virtual base}}
+  };
+  static_assert(__builtin_bit_cast(char, E()) == 0); // expected-error {{not an integral constant expression}}
 }

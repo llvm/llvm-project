@@ -1,8 +1,8 @@
 ; RUN: llc -O3 -aarch64-enable-gep-opt=true -verify-machineinstrs %s -o - | FileCheck %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare < %s 2>&1 | FileCheck --check-prefix=CHECK-UseAA %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -aarch64-use-aa=false -print-after=codegenprepare < %s 2>&1 | FileCheck --check-prefix=CHECK-NoAA %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cyclone < %s 2>&1 | FileCheck --check-prefix=CHECK-UseAA %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cortex-a53 < %s 2>&1 | FileCheck --check-prefix=CHECK-UseAA %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare < %s 2>&1 | FileCheck --check-prefix=CHECK-IR %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -aarch64-use-aa=false -print-after=codegenprepare < %s 2>&1 | FileCheck --check-prefix=CHECK-IR %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cyclone < %s 2>&1 | FileCheck --check-prefix=CHECK-IR %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cortex-a53 < %s 2>&1 | FileCheck --check-prefix=CHECK-IR %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
@@ -38,24 +38,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NOT: madd
 ; CHECK:ldr
 
-; CHECK-NoAA-LABEL: @test_GEP_CSE(
-; CHECK-NoAA: [[PTR0:%[a-zA-Z0-9]+]] = ptrtoint ptr %string to i64
-; CHECK-NoAA: [[PTR1:%[a-zA-Z0-9]+]] = mul i64 %idxprom, 96
-; CHECK-NoAA: [[PTR2:%[a-zA-Z0-9]+]] = add i64 [[PTR0]], [[PTR1]]
-; CHECK-NoAA: add i64 [[PTR2]], 23052
-; CHECK-NoAA: inttoptr
-; CHECK-NoAA: if.then:
-; CHECK-NoAA-NOT: ptrtoint
-; CHECK-NoAA-NOT: mul
-; CHECK-NoAA: add i64 [[PTR2]], 23048
-; CHECK-NoAA: inttoptr
-
-; CHECK-UseAA-LABEL: @test_GEP_CSE(
-; CHECK-UseAA: [[IDX:%[a-zA-Z0-9]+]] = mul i64 %idxprom, 96
-; CHECK-UseAA: [[PTR1:%[a-zA-Z0-9]+]] = getelementptr i8, ptr %string, i64 [[IDX]]
-; CHECK-UseAA: getelementptr i8, ptr [[PTR1]], i64 23052
-; CHECK-UseAA: if.then:
-; CHECK-UseAA: getelementptr i8, ptr [[PTR1]], i64 23048
+; CHECK-IR-LABEL: @test_GEP_CSE(
+; CHECK-IR: [[IDX:%[a-zA-Z0-9]+]] = mul i64 %idxprom, 96
+; CHECK-IR: [[PTR1:%[a-zA-Z0-9]+]] = getelementptr i8, ptr %string, i64 [[IDX]]
+; CHECK-IR: getelementptr i8, ptr [[PTR1]], i64 23052
+; CHECK-IR: if.then:
+; CHECK-IR: getelementptr i8, ptr [[PTR1]], i64 23048
 
 %class.my = type { i32, [128 x i32], i32, [256 x %struct.pt]}
 %struct.pt = type { ptr, i32, i32 }

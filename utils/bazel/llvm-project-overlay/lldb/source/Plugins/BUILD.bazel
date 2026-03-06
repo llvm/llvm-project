@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
 
@@ -13,9 +14,20 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "PluginClangCommon",
-    srcs = glob(["Language/ClangCommon/*.cpp"]),
-    hdrs = glob(["Language/ClangCommon/*.h"]),
+    name = "PluginHighlighterDefault",
+    srcs = glob(["Highlighter/Default/*.cpp"]),
+    hdrs = glob(["Highlighter/Default/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:CoreHeaders",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginHighlighterClang",
+    srcs = glob(["Highlighter/Clang/*.cpp"]),
+    hdrs = glob(["Highlighter/Clang/*.h"]),
     includes = [".."],
     deps = [
         "//clang:basic",
@@ -31,10 +43,11 @@ cc_library(
 cc_library(
     name = "PluginObjCLanguageHeaders",
     hdrs = glob(["Language/ObjC/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
         ":PluginExpressionParserClangHeaders",
+        ":PluginHighlighterClang",
         "//lldb:CoreHeaders",
     ],
 )
@@ -68,8 +81,16 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginExpressionParserClangHeaders",
+        "//clang:ast",
+        "//clang:basic",
         "//clang:frontend",
         "//lldb:CoreHeaders",
+        "//lldb:ExpressionHeaders",
+        "//lldb:Headers",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -79,6 +100,7 @@ cc_library(
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
+        "//clang:codegen",
         "//lldb:CoreHeaders",
         "//lldb:Headers",
         "//lldb:SymbolHeaders",
@@ -135,6 +157,22 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginProtocolServerMCP",
+    srcs = glob(["Protocol/MCP/*.cpp"]),
+    hdrs = glob(["Protocol/MCP/*.h"]),
+    deps = [
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:InterpreterHeaders",
+        "//lldb:ProtocolHeaders",
+        "//lldb:ProtocolMCP",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginTypeSystemClang",
     srcs = glob(["TypeSystem/Clang/*.cpp"]),
     deps = [
@@ -151,6 +189,7 @@ cc_library(
         "//clang:lex",
         "//clang:sema",
         "//lldb:CoreHeaders",
+        "//lldb:ExpressionHeaders",
         "//lldb:Host",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
@@ -162,6 +201,7 @@ cc_library(
 cc_library(
     name = "PluginExpressionParserClangHeaders",
     hdrs = glob(["ExpressionParser/Clang/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
     deps = [
         "//lldb:CoreHeaders",
@@ -190,6 +230,7 @@ cc_library(
         "//clang:frontend",
         "//clang:frontend_rewrite",
         "//clang:lex",
+        "//clang:options",
         "//clang:parse",
         "//clang:rewrite",
         "//clang:sema",
@@ -215,16 +256,10 @@ cc_library(
 gentbl_cc_library(
     name = "PlatformMacOSXProperties",
     strip_include_prefix = "Platform/MacOSX",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "Platform/MacOSX/PlatformMacOSXProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "Platform/MacOSX/PlatformMacOSXPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "Platform/MacOSX/PlatformMacOSXProperties.inc": ["-gen-lldb-property-defs"],
+        "Platform/MacOSX/PlatformMacOSXPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "Platform/MacOSX/PlatformMacOSXProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -244,8 +279,8 @@ cc_library(
 
 objc_library(
     name = "PluginPlatformMacOSXObjCXX",
-    srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -270,6 +305,7 @@ cc_library(
                "//conditions:default": [],
            }),
     hdrs = glob(["Platform/MacOSX/*.h"]),
+    features = ["-parse_headers"],  # TODO: Attempt to fix in a way that works cross platform
     includes = [".."],
     tags = ["nobuildkite"],
     deps = [
@@ -301,16 +337,10 @@ cc_library(
 gentbl_cc_library(
     name = "SymbolFileDWARFProperties",
     strip_include_prefix = "SymbolFile/DWARF",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "SymbolFile/DWARF/SymbolFileDWARFProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "SymbolFile/DWARF/SymbolFileDWARFPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "SymbolFile/DWARF/SymbolFileDWARFProperties.inc": ["-gen-lldb-property-defs"],
+        "SymbolFile/DWARF/SymbolFileDWARFPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "SymbolFile/DWARF/SymbolFileDWARFProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -319,6 +349,7 @@ gentbl_cc_library(
 cc_library(
     name = "PluginSymbolFileDWARFHeaders",
     hdrs = glob(["SymbolFile/DWARF/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
     deps = [
         ":PluginTypeSystemClangHeaders",
@@ -346,6 +377,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
         "//llvm:BinaryFormat",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
@@ -393,7 +425,18 @@ cc_library(
     name = "PluginSymbolFileNativePDBHeaders",
     hdrs = glob(["SymbolFile/NativePDB/*.h"]),
     includes = [".."],
-    deps = ["//lldb:Core"],
+    deps = [
+        ":PluginExpressionParserClangHeaders",
+        "//lldb:Core",
+        "//lldb:ExpressionHeaders",
+        "//lldb:Headers",
+        "//lldb:SymbolHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:DebugInfoCodeView",
+        "//llvm:DebugInfoPDB",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
 )
 
 cc_library(
@@ -426,7 +469,28 @@ cc_library(
     name = "PluginSymbolFilePDBHeaders",
     hdrs = glob(["SymbolFile/PDB/*.h"]),
     includes = [".."],
-    deps = ["//lldb:Core"],
+    deps = [
+        ":PluginExpressionParserClangHeaders",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:DebugInfoPDB",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SymbolFilePDBProperties",
+    strip_include_prefix = "SymbolFile/PDB",
+    tbl_outs = {
+        "SymbolFile/PDB/SymbolFilePDBProperties.inc": ["-gen-lldb-property-defs"],
+        "SymbolFile/PDB/SymbolFilePDBPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "SymbolFile/PDB/SymbolFilePDBProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
 )
 
 cc_library(
@@ -439,6 +503,7 @@ cc_library(
         ":PluginSymbolFileNativePDBHeaders",
         ":PluginSymbolFilePDBHeaders",
         ":PluginTypeSystemClangHeaders",
+        ":SymbolFilePDBProperties",
         "//clang:ast",
         "//clang:lex",
         "//lldb:Core",
@@ -454,16 +519,10 @@ cc_library(
 gentbl_cc_library(
     name = "ProcessGDBRemoteProperties",
     strip_include_prefix = "Process/gdb-remote",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "Process/gdb-remote/ProcessGDBRemoteProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "Process/gdb-remote/ProcessGDBRemotePropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "Process/gdb-remote/ProcessGDBRemoteProperties.inc": ["-gen-lldb-property-defs"],
+        "Process/gdb-remote/ProcessGDBRemotePropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "Process/gdb-remote/ProcessGDBRemoteProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -493,7 +552,23 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
+    ],
+)
+
+cc_library(
+    name = "PluginProcessWasm",
+    srcs = glob(["Process/wasm/*.cpp"]),
+    hdrs = glob(["Process/wasm/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -548,16 +623,10 @@ cc_library(
 gentbl_cc_library(
     name = "StructuredDataDarwinLogProperties",
     strip_include_prefix = "StructuredData/DarwinLog",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "StructuredData/DarwinLog/StructuredDataDarwinLogProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "StructuredData/DarwinLog/StructuredDataDarwinLogPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "StructuredData/DarwinLog/StructuredDataDarwinLogProperties.inc": ["-gen-lldb-property-defs"],
+        "StructuredData/DarwinLog/StructuredDataDarwinLogPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "StructuredData/DarwinLog/StructuredDataDarwinLogProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -617,16 +686,10 @@ cc_library(
 gentbl_cc_library(
     name = "PlatformQemuUserProperties",
     strip_include_prefix = "Platform/QemuUser",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "Platform/QemuUser/PlatformQemuUserProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "Platform/QemuUser/PlatformQemuUserPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "Platform/QemuUser/PlatformQemuUserProperties.inc": ["-gen-lldb-property-defs"],
+        "Platform/QemuUser/PlatformQemuUserPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "Platform/QemuUser/PlatformQemuUserProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -674,6 +737,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginPlatformPOSIX",
+        ":PluginProcessUtility",
         ":PluginTypeSystemClangHeaders",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -690,16 +754,10 @@ cc_library(
 gentbl_cc_library(
     name = "PlatformAndroidProperties",
     strip_include_prefix = "Platform/Android",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "Platform/Android/PlatformAndroidProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "Platform/Android/PlatformAndroidPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "Platform/Android/PlatformAndroidProperties.inc": ["-gen-lldb-property-defs"],
+        "Platform/Android/PlatformAndroidPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "Platform/Android/PlatformAndroidProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -748,10 +806,13 @@ cc_library(
     hdrs = glob(["MemoryHistory/asan/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginInstrumentationRuntimeUtility",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Expression",
         "//lldb:Headers",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
     ],
@@ -764,7 +825,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginCPPRuntime",
-        ":PluginClangCommon",
+        ":PluginHighlighterClang",
         ":PluginTypeSystemClang",
         "//lldb:Core",
         "//lldb:DataFormatters",
@@ -850,7 +911,7 @@ cc_library(
     hdrs = glob(["Language/ObjCPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
+        ":PluginHighlighterClang",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Target",
@@ -859,14 +920,32 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LanguageCPlusPlusProperties",
+    strip_include_prefix = "Language/CPlusPlus",
+    tbl_outs = {
+        "Language/CPlusPlus/LanguageCPlusPlusProperties.inc": ["-gen-lldb-property-defs"],
+        "Language/CPlusPlus/LanguageCPlusPlusPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Language/CPlusPlus/LanguageCPlusPlusProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
 cc_library(
     name = "PluginCPlusPlusLanguageHeaders",
     hdrs = glob(["Language/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
         ":PluginExpressionParserClangHeaders",
+        ":PluginHighlighterClang",
+        "//clang:lex",
         "//lldb:CoreHeaders",
+        "//lldb:DataFormatters",
+        "//lldb:Headers",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -875,10 +954,11 @@ cc_library(
     srcs = glob(["Language/CPlusPlus/*.cpp"]),
     includes = [".."],
     deps = [
+        ":LanguageCPlusPlusProperties",
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
-        ":PluginClangCommon",
         ":PluginExpressionParserClangHeaders",
+        ":PluginHighlighterClang",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
         "//clang:basic",
@@ -886,6 +966,7 @@ cc_library(
         "//lldb:DataFormatters",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
@@ -899,10 +980,7 @@ cc_library(
 gentbl_cc_library(
     name = "TraceExporterCTFOptions",
     strip_include_prefix = "TraceExporter/ctf",
-    tbl_outs = [(
-        ["-gen-lldb-option-defs"],
-        "TraceExporter/ctf/TraceExporterCTFCommandOptions.inc",
-    )],
+    tbl_outs = {"TraceExporter/ctf/TraceExporterCTFCommandOptions.inc": ["-gen-lldb-option-defs"]},
     tblgen = "//lldb:lldb-tblgen",
     td_file = "TraceExporter/ctf/TraceExporterCTFOptions.td",
     deps = [
@@ -1137,6 +1215,7 @@ cc_library(
 cc_library(
     name = "PluginDynamicLoaderPosixDYLDHeaders",
     hdrs = glob(["DynamicLoader/POSIX-DYLD/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
 )
 
@@ -1146,6 +1225,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
@@ -1222,31 +1302,12 @@ cc_library(
     ],
 )
 
-gentbl_cc_library(
-    name = "DynamicLoaderMacOSXDYLDProperties",
-    strip_include_prefix = "DynamicLoader/MacOSX-DYLD",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinPropertiesEnum.inc",
-        ),
-    ],
-    tblgen = "//lldb:lldb-tblgen",
-    td_file = "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinProperties.td",
-    deps = ["//lldb:CoreTdFiles"],
-)
-
 cc_library(
     name = "PluginDynamicLoaderMacOSXDYLD",
     srcs = glob(["DynamicLoader/MacOSX-DYLD/*.cpp"]),
     hdrs = glob(["DynamicLoader/MacOSX-DYLD/*.h"]),
     includes = [".."],
     deps = [
-        ":DynamicLoaderMacOSXDYLDProperties",
         ":PluginObjCRuntime",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
@@ -1267,16 +1328,10 @@ cc_library(
 gentbl_cc_library(
     name = "DynamicLoaderDarwinKernelProperties",
     strip_include_prefix = "DynamicLoader/Darwin-Kernel",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernelProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernelPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernelProperties.inc": ["-gen-lldb-property-defs"],
+        "DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernelPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernelProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -1285,6 +1340,7 @@ gentbl_cc_library(
 cc_library(
     name = "PluginDynamicLoaderDarwinKernelHeaders",
     hdrs = glob(["DynamicLoader/Darwin-Kernel/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
     includes = [".."],
 )
 
@@ -1337,6 +1393,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1348,9 +1405,12 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -1365,6 +1425,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1416,7 +1477,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
     ],
 )
 
@@ -1677,25 +1738,22 @@ cc_library(
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Expression",
+        "//lldb:Headers",
         "//lldb:Symbol",
         "//lldb:Target",
         "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityHeaders",
     ],
 )
 
 gentbl_cc_library(
     name = "JITLoaderGDBProperties",
     strip_include_prefix = "JITLoader/GDB",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "JITLoader/GDB/JITLoaderGDBProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "JITLoader/GDB/JITLoaderGDBPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "JITLoader/GDB/JITLoaderGDBProperties.inc": ["-gen-lldb-property-defs"],
+        "JITLoader/GDB/JITLoaderGDBPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "JITLoader/GDB/JITLoaderGDBProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -1742,16 +1800,10 @@ cc_library(
 gentbl_cc_library(
     name = "SymbolLocatorDebuginfodProperties",
     strip_include_prefix = "SymbolLocator/Debuginfod",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "SymbolLocator/Debuginfod/SymbolLocatorDebuginfodProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "SymbolLocator/Debuginfod/SymbolLocatorDebuginfodPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "SymbolLocator/Debuginfod/SymbolLocatorDebuginfodProperties.inc": ["-gen-lldb-property-defs"],
+        "SymbolLocator/Debuginfod/SymbolLocatorDebuginfodPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "SymbolLocator/Debuginfod/SymbolLocatorDebuginfodProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -1784,6 +1836,7 @@ cc_library(
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:Symbol",
@@ -1942,6 +1995,8 @@ cc_library(
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//llvm:Support",
     ],
@@ -2008,16 +2063,10 @@ cc_library(
 gentbl_cc_library(
     name = "ObjectFilePECOFFProperties",
     strip_include_prefix = "ObjectFile/PECOFF",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "ObjectFile/PECOFF/ObjectFilePECOFFProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "ObjectFile/PECOFF/ObjectFilePECOFFPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "ObjectFile/PECOFF/ObjectFilePECOFFProperties.inc": ["-gen-lldb-property-defs"],
+        "ObjectFile/PECOFF/ObjectFilePECOFFPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "ObjectFile/PECOFF/ObjectFilePECOFFProperties.td",
     deps = ["//lldb:CoreTdFiles"],
@@ -2080,6 +2129,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2114,6 +2164,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2162,13 +2213,18 @@ cc_library(
     hdrs = glob(["Process/scripted/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2187,6 +2243,7 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -2218,16 +2275,10 @@ cc_library(
 gentbl_cc_library(
     name = "ProcessKDPProperties",
     strip_include_prefix = "Process/MacOSX-Kernel",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "Process/MacOSX-Kernel/ProcessKDPProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "Process/MacOSX-Kernel/ProcessKDPPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "Process/MacOSX-Kernel/ProcessKDPProperties.inc": ["-gen-lldb-property-defs"],
+        "Process/MacOSX-Kernel/ProcessKDPPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = "//lldb:lldb-tblgen",
     td_file = "Process/MacOSX-Kernel/ProcessKDPProperties.td",
     deps = ["//lldb:CoreTdFiles"],

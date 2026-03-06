@@ -14,6 +14,7 @@
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/character.h"
 #include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cstring>
 
@@ -117,7 +118,7 @@ static RT_API_ATTRS void Compare(Descriptor &result, const Descriptor &x,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate() != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("Compare: could not allocate storage for result");
   }
   std::size_t xChars{x.ElementBytes() >> shift<CHAR>};
@@ -172,7 +173,7 @@ static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate() != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("ADJUSTL/R: could not allocate storage for result");
   }
   for (SubscriptValue resultAt{0}; elements-- > 0;
@@ -226,7 +227,7 @@ static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate() != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("LEN_TRIM: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
@@ -289,6 +290,24 @@ inline RT_API_ATTRS std::size_t Index(const CHAR *x, std::size_t xLen,
       }
       if (j > wantLen) {
         return at;
+      }
+    }
+    return 0;
+  }
+  if (wantLen == 1) {
+    // Trivial case for single character lookup.
+    // We can use simple forward search.
+    CHAR ch{want[0]};
+    if constexpr (std::is_same_v<CHAR, char>) {
+      if (auto pos{reinterpret_cast<const CHAR *>(
+              Fortran::runtime::memchr(x, ch, xLen))}) {
+        return pos - x + 1;
+      }
+    } else {
+      for (std::size_t at{0}; at < xLen; ++at) {
+        if (x[at] == ch) {
+          return at + 1;
+        }
       }
     }
     return 0;
@@ -408,8 +427,9 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
   for (int j{0}; j < rank; ++j) {
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (result.Allocate() != CFI_SUCCESS) {
-    terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash(
+        "INDEX/SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
   std::size_t argElementChars{arg.ElementBytes() >> shift<CHAR>};
@@ -511,7 +531,8 @@ static RT_API_ATTRS void MaxMinHelper(Descriptor &accumulator,
     for (int j{0}; j < rank; ++j) {
       accumulator.GetDimension(j).SetBounds(1, ub[j]);
     }
-    RUNTIME_CHECK(terminator, accumulator.Allocate() == CFI_SUCCESS);
+    RUNTIME_CHECK(
+        terminator, accumulator.Allocate(kNoAsyncObject) == CFI_SUCCESS);
   }
   for (CHAR *result{accumulator.OffsetElement<CHAR>()}; elements-- > 0;
        accumData += accumChars, result += chars, x.IncrementSubscripts(xAt)) {
@@ -547,6 +568,427 @@ static RT_API_ATTRS void MaxMin(Descriptor &accumulator, const Descriptor &x,
   default:
     terminator.Crash(
         "Character MAX/MIN: result does not have a character type");
+  }
+}
+
+template <typename CHAR>
+static inline RT_API_ATTRS bool TokenizeIsInSet(
+    CHAR ch, const CHAR *set, std::size_t setChars) {
+  for (std::size_t j{0}; j < setChars; ++j) {
+    if (set[j] == ch) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Pad the token with spaces.
+template <typename CHAR>
+static inline RT_API_ATTRS void TokenizeFillBlanks(
+    CHAR *to, std::size_t chars) {
+  if (chars == 0) {
+    return;
+  }
+  if constexpr (std::is_same_v<CHAR, char>) {
+    runtime::memset(to, ' ', chars);
+  } else {
+    for (std::size_t j{0}; j < chars; ++j) {
+      to[j] = static_cast<CHAR>(' ');
+    }
+  }
+}
+
+struct TokenizeAnalysis {
+  std::size_t tokenCount{0};
+  std::size_t maxTokenLen{0}; // in characters
+};
+
+template <typename CHAR>
+static RT_API_ATTRS TokenizeAnalysis AnalyzeTokenize(const CHAR *str,
+    std::size_t strChars, const CHAR *set, std::size_t setChars) {
+  TokenizeAnalysis analysis;
+
+  // Empty STRING should return one empty token, per Fortran standard.
+  if (strChars == 0) {
+    analysis.tokenCount = 1;
+    analysis.maxTokenLen = 0;
+    return analysis;
+  }
+  if (setChars == 0) {
+    analysis.tokenCount = 1;
+    analysis.maxTokenLen = strChars;
+    return analysis;
+  }
+
+  // Split STRING at each delimiter character. This produces empty tokens
+  // when delimiters are consecutive or when STRING starts/ends with a
+  // delimiter.
+  std::size_t tokenStart{0};
+  for (std::size_t pos{0}; pos < strChars; ++pos) {
+    if (TokenizeIsInSet(str[pos], set, setChars)) {
+      analysis.maxTokenLen = std::max(analysis.maxTokenLen, pos - tokenStart);
+      analysis.tokenCount++;
+      tokenStart = pos + 1;
+    }
+  }
+  analysis.maxTokenLen = std::max(analysis.maxTokenLen, strChars - tokenStart);
+  analysis.tokenCount++;
+
+  return analysis;
+}
+// Allocates and populates the result arrays for TOKENIZE Form 1.
+template <typename CHAR>
+static RT_API_ATTRS void TokenizeFillForm1(Descriptor &tokens,
+    Descriptor *separator, const Descriptor &string, const CHAR *str,
+    std::size_t strChars, const CHAR *set, std::size_t setChars,
+    const TokenizeAnalysis &analysis, Terminator &terminator) {
+
+  // (Re)allocate TOKENS.
+  if (tokens.IsAllocated()) {
+    tokens.Deallocate();
+  }
+  SubscriptValue tokensExtent[1]{
+      static_cast<SubscriptValue>(analysis.tokenCount)};
+  std::size_t tokenElemBytes{
+      analysis.tokenCount == 0 ? 0 : analysis.maxTokenLen * sizeof(CHAR)};
+  tokens.Establish(string.type(), tokenElemBytes, nullptr, 1, tokensExtent,
+      CFI_attribute_allocatable);
+  tokens.GetDimension(0).SetBounds(1, tokensExtent[0]);
+  if (tokens.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash("TOKENIZE: could not allocate TOKENS array");
+  }
+
+  // (Re)allocate SEPARATOR if present.
+  std::size_t sepCount{analysis.tokenCount > 0 ? analysis.tokenCount - 1 : 0};
+  std::size_t sepElemBytes{sizeof(CHAR)};
+  if (separator) {
+    if (separator->IsAllocated()) {
+      separator->Deallocate();
+    }
+    SubscriptValue sepExtent[1]{static_cast<SubscriptValue>(sepCount)};
+    separator->Establish(string.type(), sepElemBytes, nullptr, 1, sepExtent,
+        CFI_attribute_allocatable);
+    separator->GetDimension(0).SetBounds(1, sepExtent[0]);
+    if (separator->Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+      terminator.Crash("TOKENIZE: could not allocate SEPARATOR array");
+    }
+  }
+
+  if (analysis.tokenCount == 0) {
+    return;
+  }
+
+  // Populate tokens and separators.
+  if (setChars == 0) {
+    // One token (possibly empty) equal to STRING.
+    if (tokenElemBytes > 0) {
+      CHAR *tokDest{tokens.OffsetElement<CHAR>(0)};
+      if (strChars > 0) {
+        runtime::memcpy(tokDest, str, strChars * sizeof(CHAR));
+      }
+      TokenizeFillBlanks(tokDest + strChars, analysis.maxTokenLen - strChars);
+    }
+    return;
+  }
+
+  std::size_t tokenIndex{0};
+  std::size_t sepIndex{0};
+
+  auto storeToken = [&](std::size_t tokenStart, std::size_t tokenEnd) {
+    std::size_t tokenLen{tokenEnd - tokenStart};
+    if (tokenElemBytes > 0) {
+      // Each element is stored in a fixed-size slot of `tokenElemBytes`.
+      CHAR *tokDest{tokens.OffsetElement<CHAR>(tokenIndex * tokenElemBytes)};
+      if (tokenLen > 0) {
+        runtime::memcpy(tokDest, str + tokenStart, tokenLen * sizeof(CHAR));
+      }
+      TokenizeFillBlanks(tokDest + tokenLen, analysis.maxTokenLen - tokenLen);
+    }
+    ++tokenIndex;
+  };
+
+  // Split at each delimiter character, producing empty tokens at boundaries
+  // and between consecutive delimiters.
+  std::size_t tokenStart{0};
+  for (std::size_t pos{0}; pos < strChars; ++pos) {
+    if (TokenizeIsInSet(str[pos], set, setChars)) {
+      storeToken(tokenStart, pos);
+      if (separator) {
+        CHAR *sepDest{separator->OffsetElement<CHAR>(sepIndex * sepElemBytes)};
+        sepDest[0] = str[pos];
+        ++sepIndex;
+      }
+      tokenStart = pos + 1;
+    }
+  }
+  storeToken(tokenStart, strChars);
+}
+
+template <int KIND>
+static RT_API_ATTRS void TokenizeStoreIntAt(
+    const Descriptor &result, std::size_t at, std::int64_t value) {
+  StoreIntegerAt<KIND>{}(result, at, value);
+}
+
+using TokenizeStoreIntFn = void (*)(
+    const Descriptor &, std::size_t, std::int64_t);
+
+static RT_API_ATTRS TokenizeStoreIntFn GetTokenizeStoreIntFn(
+    int kind, Terminator &terminator, const char *which) {
+  switch (kind) {
+  case 1:
+    return &TokenizeStoreIntAt<1>;
+  case 2:
+    return &TokenizeStoreIntAt<2>;
+  case 4:
+    return &TokenizeStoreIntAt<4>;
+  case 8:
+    return &TokenizeStoreIntAt<8>;
+  case 16:
+    return &TokenizeStoreIntAt<16>;
+  default:
+    terminator.Crash(
+        "TOKENIZE: unsupported INTEGER kind=%d for %s", kind, which);
+  }
+}
+
+template <typename CHAR>
+static RT_API_ATTRS void TokenizeFillPositions(Descriptor &first,
+    Descriptor &last, const CHAR *str, std::size_t strChars, const CHAR *set,
+    std::size_t setChars, TokenizeStoreIntFn storeFirst,
+    TokenizeStoreIntFn storeLast, Terminator &terminator) {
+
+  // Empty STRING should return one empty token, per Fortran standard.
+  if (strChars == 0) {
+    storeFirst(first, 0, 1);
+    storeLast(last, 0, 0);
+    return;
+  }
+  if (setChars == 0) {
+    storeFirst(first, 0, 1);
+    storeLast(last, 0, static_cast<std::int64_t>(strChars));
+    return;
+  }
+
+  std::size_t tokenIndex{0};
+  std::size_t tokenStart{0};
+  for (std::size_t pos{0}; pos < strChars; ++pos) {
+    if (TokenizeIsInSet(str[pos], set, setChars)) {
+      storeFirst(first, tokenIndex, static_cast<std::int64_t>(tokenStart + 1));
+      storeLast(last, tokenIndex, static_cast<std::int64_t>(pos));
+      ++tokenIndex;
+      tokenStart = pos + 1;
+    }
+  }
+  storeFirst(first, tokenIndex, static_cast<std::int64_t>(tokenStart + 1));
+  storeLast(last, tokenIndex, static_cast<std::int64_t>(strChars));
+  ++tokenIndex;
+
+  // Sanity check: we should have filled exactly the allocated extent.
+  if (tokenIndex != static_cast<std::size_t>(first.GetDimension(0).Extent())) {
+    terminator.Crash("TOKENIZE: internal error populating FIRST/LAST");
+  }
+}
+
+// Tokenize Form 1 implementation.
+static RT_API_ATTRS void TokenizeImpl(Descriptor &tokens, Descriptor *separator,
+    const Descriptor &string, const Descriptor &set, Terminator &terminator) {
+  RUNTIME_CHECK(terminator, string.rank() == 0);
+  RUNTIME_CHECK(terminator, set.rank() == 0);
+  RUNTIME_CHECK(terminator, string.raw().type == set.raw().type);
+  RUNTIME_CHECK(terminator, tokens.rank() == 1);
+  RUNTIME_CHECK(terminator, tokens.IsAllocatable());
+  if (separator) {
+    RUNTIME_CHECK(terminator, separator->rank() == 1);
+    RUNTIME_CHECK(terminator, separator->IsAllocatable());
+  }
+
+  switch (string.raw().type) {
+  case CFI_type_char: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes};
+    std::size_t setChars{setBytes};
+    const char *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char>()};
+    const char *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char>()};
+    auto analysis{AnalyzeTokenize(str, strChars, setPtr, setChars)};
+    TokenizeFillForm1(tokens, separator, string, str, strChars, setPtr,
+        setChars, analysis, terminator);
+    break;
+  }
+  case CFI_type_char16_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 1};
+    std::size_t setChars{setBytes >> 1};
+    const char16_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char16_t>()};
+    const char16_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char16_t>()};
+    auto analysis{AnalyzeTokenize(str, strChars, setPtr, setChars)};
+    TokenizeFillForm1(tokens, separator, string, str, strChars, setPtr,
+        setChars, analysis, terminator);
+    break;
+  }
+  case CFI_type_char32_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 2};
+    std::size_t setChars{setBytes >> 2};
+    const char32_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char32_t>()};
+    const char32_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char32_t>()};
+    auto analysis{AnalyzeTokenize(str, strChars, setPtr, setChars)};
+    TokenizeFillForm1(tokens, separator, string, str, strChars, setPtr,
+        setChars, analysis, terminator);
+    break;
+  }
+  default:
+    terminator.Crash("TOKENIZE: bad string type code %d",
+        static_cast<int>(string.raw().type));
+  }
+}
+
+// Tokenize Form 2 implementation.
+static RT_API_ATTRS void TokenizePositionsImpl(Descriptor &first,
+    Descriptor &last, const Descriptor &string, const Descriptor &set,
+    Terminator &terminator) {
+  RUNTIME_CHECK(terminator, string.rank() == 0);
+  RUNTIME_CHECK(terminator, set.rank() == 0);
+  RUNTIME_CHECK(terminator, string.raw().type == set.raw().type);
+  RUNTIME_CHECK(terminator, first.rank() == 1);
+  RUNTIME_CHECK(terminator, last.rank() == 1);
+  RUNTIME_CHECK(terminator, first.IsAllocatable());
+  RUNTIME_CHECK(terminator, last.IsAllocatable());
+
+  auto firstCK{first.type().GetCategoryAndKind()};
+  auto lastCK{last.type().GetCategoryAndKind()};
+  if (!firstCK || firstCK->first != TypeCategory::Integer) {
+    terminator.Crash("TOKENIZE: FIRST is not an INTEGER array");
+  }
+  if (!lastCK || lastCK->first != TypeCategory::Integer) {
+    terminator.Crash("TOKENIZE: LAST is not an INTEGER array");
+  }
+  int firstKind{firstCK->second};
+  int lastKind{lastCK->second};
+  auto storeFirst{GetTokenizeStoreIntFn(firstKind, terminator, "FIRST")};
+  auto storeLast{GetTokenizeStoreIntFn(lastKind, terminator, "LAST")};
+
+  // Count tokens.
+  std::size_t tokenCount{0};
+  switch (string.raw().type) {
+  case CFI_type_char: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes};
+    std::size_t setChars{setBytes};
+    const char *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char>()};
+    const char *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char>()};
+    tokenCount = AnalyzeTokenize(str, strChars, setPtr, setChars).tokenCount;
+    break;
+  }
+  case CFI_type_char16_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 1};
+    std::size_t setChars{setBytes >> 1};
+    const char16_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char16_t>()};
+    const char16_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char16_t>()};
+    tokenCount = AnalyzeTokenize(str, strChars, setPtr, setChars).tokenCount;
+    break;
+  }
+  case CFI_type_char32_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 2};
+    std::size_t setChars{setBytes >> 2};
+    const char32_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char32_t>()};
+    const char32_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char32_t>()};
+    tokenCount = AnalyzeTokenize(str, strChars, setPtr, setChars).tokenCount;
+    break;
+  }
+  default:
+    terminator.Crash("TOKENIZE: bad string type code %d",
+        static_cast<int>(string.raw().type));
+  }
+
+  // (Re)allocate FIRST/LAST.
+  if (first.IsAllocated()) {
+    first.Deallocate();
+  }
+  if (last.IsAllocated()) {
+    last.Deallocate();
+  }
+  SubscriptValue extent[1]{static_cast<SubscriptValue>(tokenCount)};
+  first.Establish(TypeCategory::Integer, firstKind, nullptr, 1, extent,
+      CFI_attribute_allocatable);
+  first.GetDimension(0).SetBounds(1, extent[0]);
+  last.Establish(TypeCategory::Integer, lastKind, nullptr, 1, extent,
+      CFI_attribute_allocatable);
+  last.GetDimension(0).SetBounds(1, extent[0]);
+  if (first.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash("TOKENIZE: could not allocate FIRST array");
+  }
+  if (last.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
+    terminator.Crash("TOKENIZE: could not allocate LAST array");
+  }
+
+  if (tokenCount == 0) {
+    return;
+  }
+
+  // Populate FIRST/LAST.
+  switch (string.raw().type) {
+  case CFI_type_char: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes};
+    std::size_t setChars{setBytes};
+    const char *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char>()};
+    const char *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char>()};
+    TokenizeFillPositions(first, last, str, strChars, setPtr, setChars,
+        storeFirst, storeLast, terminator);
+    break;
+  }
+  case CFI_type_char16_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 1};
+    std::size_t setChars{setBytes >> 1};
+    const char16_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char16_t>()};
+    const char16_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char16_t>()};
+    TokenizeFillPositions(first, last, str, strChars, setPtr, setChars,
+        storeFirst, storeLast, terminator);
+    break;
+  }
+  case CFI_type_char32_t: {
+    std::size_t strBytes{string.ElementBytes()};
+    std::size_t setBytes{set.ElementBytes()};
+    std::size_t strChars{strBytes >> 2};
+    std::size_t setChars{setBytes >> 2};
+    const char32_t *str{
+        strBytes == 0 ? nullptr : string.OffsetElement<const char32_t>()};
+    const char32_t *setPtr{
+        setBytes == 0 ? nullptr : set.OffsetElement<const char32_t>()};
+    TokenizeFillPositions(first, last, str, strChars, setPtr, setChars,
+        storeFirst, storeLast, terminator);
+    break;
+  }
+  default:
+    break;
   }
 }
 
@@ -587,7 +1029,7 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   for (int j{0}; j < rank; ++j) {
     accumulator.GetDimension(j).SetBounds(1, ub[j]);
   }
-  if (accumulator.Allocate() != CFI_SUCCESS) {
+  if (accumulator.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash(
         "CharacterConcatenate: could not allocate storage for result");
   }
@@ -596,8 +1038,8 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   from.GetLowerBounds(fromAt);
   for (; elements-- > 0;
        to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
-    std::memcpy(to, p, oldBytes);
-    std::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
+    runtime::memcpy(to, p, oldBytes);
+    runtime::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
   }
   FreeMemory(old);
 }
@@ -610,7 +1052,8 @@ void RTDEF(CharacterConcatenateScalar1)(
   accumulator.set_base_addr(nullptr);
   std::size_t oldLen{accumulator.ElementBytes()};
   accumulator.raw().elem_len += chars;
-  RUNTIME_CHECK(terminator, accumulator.Allocate() == CFI_SUCCESS);
+  RUNTIME_CHECK(
+      terminator, accumulator.Allocate(kNoAsyncObject) == CFI_SUCCESS);
   std::memcpy(accumulator.OffsetElement<char>(oldLen), from, chars);
   FreeMemory(old);
 }
@@ -677,7 +1120,7 @@ void RTDEF(CharacterCompare)(
 std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
     std::size_t offset, const char *rhs, std::size_t rhsBytes) {
   if (auto n{std::min(lhsBytes - offset, rhsBytes)}) {
-    std::memcpy(lhs + offset, rhs, n);
+    runtime::memcpy(lhs + offset, rhs, n);
     offset += n;
   }
   return offset;
@@ -685,7 +1128,7 @@ std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
 
 void RTDEF(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset) {
   if (bytes > offset) {
-    std::memset(lhs + offset, ' ', bytes - offset);
+    runtime::memset(lhs + offset, ' ', bytes - offset);
   }
 }
 
@@ -768,7 +1211,7 @@ void RTDEF(LenTrim)(Descriptor &result, const Descriptor &string, int kind,
 
 std::size_t RTDEF(Scan1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Scan>(x, xLen, set, setLen, back);
+  return ScanVerify<false>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Scan2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
@@ -812,13 +1255,33 @@ void RTDEF(Repeat)(Descriptor &result, const Descriptor &string,
   std::size_t origBytes{string.ElementBytes()};
   result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  if (result.Allocate() != CFI_SUCCESS) {
+  if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
     terminator.Crash("REPEAT could not allocate storage for result");
   }
   const char *from{string.OffsetElement()};
   for (char *to{result.OffsetElement()}; ncopies-- > 0; to += origBytes) {
-    std::memcpy(to, from, origBytes);
+    runtime::memcpy(to, from, origBytes);
   }
+}
+
+// F_C_STRING - Appends null terminator to create C-compatible string
+// If asis is false, trailing blanks are trimmed first
+void RTDEF(FCString)(Descriptor &result, const Descriptor &string, bool asis,
+    const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  RUNTIME_CHECK(terminator, string.raw().type == CFI_type_char);
+  std::size_t chars{string.ElementBytes()};
+  if (!asis) {
+    chars = LenTrim(string.OffsetElement<const char>(), chars);
+  }
+  std::size_t resultBytes{chars + 1};
+  result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
+      CFI_attribute_allocatable);
+  RUNTIME_CHECK(terminator, result.Allocate(kNoAsyncObject) == CFI_SUCCESS);
+  if (chars > 0) {
+    std::memcpy(result.OffsetElement(), string.OffsetElement(), chars);
+  }
+  *result.OffsetElement<char>(chars) = '\0';
 }
 
 void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
@@ -846,13 +1309,13 @@ void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
   }
   result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  RUNTIME_CHECK(terminator, result.Allocate() == CFI_SUCCESS);
+  RUNTIME_CHECK(terminator, result.Allocate(kNoAsyncObject) == CFI_SUCCESS);
   std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
 }
 
 std::size_t RTDEF(Verify1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Verify>(x, xLen, set, setLen, back);
+  return ScanVerify<true>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Verify2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
@@ -894,6 +1357,22 @@ void RTDEF(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
 void RTDEF(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile, int sourceLine) {
   MaxMin<true>(accumulator, x, sourceFile, sourceLine);
+}
+
+// TOKENIZE Form 1 entry point
+void RTDEF(Tokenize)(Descriptor &tokens, Descriptor *separator,
+    const Descriptor &string, const Descriptor &set, const char *sourceFile,
+    int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  TokenizeImpl(tokens, separator, string, set, terminator);
+}
+
+// TOKENIZE Form 2 entry point
+void RTDEF(TokenizePositions)(Descriptor &first, Descriptor &last,
+    const Descriptor &string, const Descriptor &set, const char *sourceFile,
+    int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  TokenizePositionsImpl(first, last, string, set, terminator);
 }
 
 RT_EXT_API_GROUP_END

@@ -8,10 +8,10 @@
 
 #include "MCInstrDescView.h"
 
-#include <iterator>
 #include <tuple>
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/InterleavedRange.h"
 
 namespace llvm {
 namespace exegesis {
@@ -49,6 +49,8 @@ bool Operand::isReg() const { return Tracker; }
 bool Operand::isTied() const { return TiedToIndex.has_value(); }
 
 bool Operand::isVariable() const { return VariableIndex.has_value(); }
+
+bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
 
 bool Operand::isMemory() const {
   return isExplicit() &&
@@ -115,7 +117,9 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < Description->getNumDefs());
-    // TODO(gchatelet): Handle isLookupPtrRegClass.
+    Operand.IsEarlyClobber =
+        (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
+    // TODO(gchatelet): Handle LookupRegClassByHwMode.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
     int TiedToIndex = Description->getOperandConstraint(OpIndex, MCOI::TIED_TO);
@@ -289,15 +293,8 @@ void Instruction::dump(const MCRegisterInfo &RegInfo,
   }
   for (const auto &Var : Variables) {
     Stream << "- Var" << Var.getIndex();
-    Stream << " [";
-    bool IsFirst = true;
-    for (auto OperandIndex : Var.TiedOperands) {
-      if (!IsFirst)
-        Stream << ",";
-      Stream << "Op" << OperandIndex;
-      IsFirst = false;
-    }
-    Stream << "]";
+    Stream << " ";
+    Stream << llvm::interleaved_array(Var.TiedOperands, ",");
     Stream << "\n";
   }
   if (hasMemoryOperands())

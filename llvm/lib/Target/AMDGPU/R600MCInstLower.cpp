@@ -20,6 +20,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 
+using namespace llvm;
+
 namespace {
 class R600MCInstLower : public AMDGPUMCInstLower {
 public:
@@ -53,7 +55,7 @@ void R600AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }
@@ -72,8 +74,10 @@ void R600AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 }
 
-const MCExpr *R600AsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *R600AsmPrinter::lowerConstant(const Constant *CV,
+                                            const Constant *BaseCV,
+                                            uint64_t Offset) {
   if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
     return E;
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }

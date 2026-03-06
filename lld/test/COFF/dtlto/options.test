@@ -1,0 +1,56 @@
+REQUIRES: x86
+
+## Test that DTLTO-specific options are handled correctly.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: opt -thinlto-bc foo.ll -o foo.obj
+
+## Not specifying a value for -thinlto-remote-compiler should result in an
+## error if -thinlto-distributor is specified.
+RUN: not lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
+RUN:   -thinlto-distributor:fake.exe 2>&1 | FileCheck %s --check-prefix=COMPILER
+RUN: lld-link /entry:foo /subsystem:console foo.obj /out:my.exe
+
+## Specifying an empty value for -thinlto-remote-compiler should result in an
+## error if -thinlto-distributor is specified.
+RUN: not lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
+RUN:   -thinlto-distributor:fake.exe \
+RUN:   -thinlto-remote-compiler:"" 2>&1 | FileCheck %s --check-prefix=COMPILER
+RUN: lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
+RUN:   -thinlto-remote-compiler:""
+
+COMPILER: error: A value must be specified for /thinlto-remote-compiler if /thinlto-distributor is specified.
+
+## Test that DTLTO options are passed correctly to the distributor and
+## remote compiler.
+## Note: validate.py does not perform any compilation. Instead, it validates the
+## received JSON, pretty-prints the JSON and the supplied arguments, and then
+## exits with an error. This allows FileCheck directives to verify the
+## distributor inputs.
+RUN: not lld-link /entry:foo /subsystem:console foo.obj /out:my.exe \
+RUN:   -thinlto-distributor:%python \
+RUN:   -thinlto-distributor-arg:%llvm_src_root/utils/dtlto/validate.py \
+RUN:   -thinlto-distributor-arg:darg1=10 \
+RUN:   -thinlto-distributor-arg:darg2=20 \
+RUN:   -thinlto-remote-compiler:my_clang.exe \
+RUN:   -thinlto-remote-compiler-arg:carg1=20 \
+RUN:   -thinlto-remote-compiler-arg:carg2=30 2>&1 | FileCheck %s
+
+CHECK: distributor_args=['darg1=10', 'darg2=20']
+
+CHECK: "linker_output": "my.exe"
+
+CHECK: "my_clang.exe"
+CHECK: "carg1=20"
+CHECK: "carg2=30"
+
+CHECK: error: DTLTO backend compilation: cannot open native object file:
+
+#--- foo.ll
+target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+define void @foo() {
+  ret void
+}

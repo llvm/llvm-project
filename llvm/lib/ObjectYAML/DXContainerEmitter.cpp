@@ -38,7 +38,7 @@ private:
   Error validateSize(uint32_t Computed);
 
   void writeHeader(raw_ostream &OS);
-  void writeParts(raw_ostream &OS);
+  Error writeParts(raw_ostream &OS);
 };
 } // namespace
 
@@ -107,7 +107,7 @@ void DXContainerWriter::writeHeader(raw_ostream &OS) {
            Offsets.size() * sizeof(uint32_t));
 }
 
-void DXContainerWriter::writeParts(raw_ostream &OS) {
+Error DXContainerWriter::writeParts(raw_ostream &OS) {
   uint32_t RollingOffset =
       sizeof(dxbc::Header) + (ObjectFile.Header.PartCount * sizeof(uint32_t));
   for (auto I : llvm::zip(ObjectFile.Parts, *ObjectFile.Header.PartOffsets)) {
@@ -269,10 +269,106 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::RootSignatureDesc RS;
       RS.Flags = P.RootSignature->getEncodedFlags();
       RS.Version = P.RootSignature->Version;
-      RS.NumParameters = P.RootSignature->NumParameters;
-      RS.RootParametersOffset = P.RootSignature->RootParametersOffset;
       RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
+
+      for (DXContainerYAML::RootParameterLocationYaml &L :
+           P.RootSignature->Parameters.Locations) {
+
+        const dxbc::RootParameterType Type = L.Header.Type;
+        const dxbc::ShaderVisibility Visibility = L.Header.Visibility;
+
+        switch (Type) {
+        case dxbc::RootParameterType::Constants32Bit: {
+          const DXContainerYAML::RootConstantsYaml &ConstantYaml =
+              P.RootSignature->Parameters.getOrInsertConstants(L);
+          mcdxbc::RootConstants Constants;
+
+          Constants.Num32BitValues = ConstantYaml.Num32BitValues;
+          Constants.RegisterSpace = ConstantYaml.RegisterSpace;
+          Constants.ShaderRegister = ConstantYaml.ShaderRegister;
+          RS.ParametersContainer.addParameter(Type, Visibility, Constants);
+          break;
+        }
+        case dxbc::RootParameterType::CBV:
+        case dxbc::RootParameterType::SRV:
+        case dxbc::RootParameterType::UAV: {
+          const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
+              P.RootSignature->Parameters.getOrInsertDescriptor(L);
+
+          mcdxbc::RootDescriptor Descriptor;
+          Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
+          Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
+          if (RS.Version > 1)
+            Descriptor.Flags = DescriptorYaml.getEncodedFlags();
+          RS.ParametersContainer.addParameter(Type, Visibility, Descriptor);
+          break;
+        }
+        case dxbc::RootParameterType::DescriptorTable: {
+          const DXContainerYAML::DescriptorTableYaml &TableYaml =
+              P.RootSignature->Parameters.getOrInsertTable(L);
+          mcdxbc::DescriptorTable Table;
+          for (const auto &R : TableYaml.Ranges) {
+            mcdxbc::DescriptorRange Range;
+            Range.RangeType = R.RangeType;
+            Range.NumDescriptors = R.NumDescriptors;
+            Range.BaseShaderRegister = R.BaseShaderRegister;
+            Range.RegisterSpace = R.RegisterSpace;
+            Range.OffsetInDescriptorsFromTableStart =
+                R.OffsetInDescriptorsFromTableStart;
+
+            if (RS.Version > 1)
+              Range.Flags = R.getEncodedFlags();
+
+            Table.Ranges.push_back(Range);
+          }
+          RS.ParametersContainer.addParameter(Type, Visibility, Table);
+          break;
+        }
+        }
+      }
+
+      for (const auto &Param : P.RootSignature->samplers()) {
+        mcdxbc::StaticSampler NewSampler;
+        NewSampler.Filter = Param.Filter;
+        NewSampler.AddressU = Param.AddressU;
+        NewSampler.AddressV = Param.AddressV;
+        NewSampler.AddressW = Param.AddressW;
+        NewSampler.MipLODBias = Param.MipLODBias;
+        NewSampler.MaxAnisotropy = Param.MaxAnisotropy;
+        NewSampler.ComparisonFunc = Param.ComparisonFunc;
+        NewSampler.BorderColor = Param.BorderColor;
+        NewSampler.MinLOD = Param.MinLOD;
+        NewSampler.MaxLOD = Param.MaxLOD;
+        NewSampler.ShaderRegister = Param.ShaderRegister;
+        NewSampler.RegisterSpace = Param.RegisterSpace;
+        NewSampler.ShaderVisibility = Param.ShaderVisibility;
+
+        if (RS.Version > 2)
+          NewSampler.Flags = Param.getEncodedFlags();
+
+        RS.StaticSamplers.push_back(NewSampler);
+      }
+
+      // Handling of offsets
+      RS.RootParameterOffset = RS.computeRootParametersOffset();
+      if (P.RootSignature->RootParametersOffset &&
+          P.RootSignature->RootParametersOffset.value() !=
+              RS.RootParameterOffset) {
+        return createStringError(
+            errc::invalid_argument,
+            "Specified RootParametersOffset does not match required value: %d.",
+            RS.RootParameterOffset);
+      }
+
+      RS.StaticSamplersOffset = RS.computeStaticSamplersOffset();
+      if (P.RootSignature->StaticSamplersOffset &&
+          P.RootSignature->StaticSamplersOffset.value() !=
+              RS.StaticSamplersOffset) {
+        return createStringError(
+            errc::invalid_argument,
+            "Specified StaticSamplersOffset does not match computed value: %d.",
+            RS.StaticSamplersOffset);
+      }
 
       RS.write(OS);
       break;
@@ -283,14 +379,15 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       OS.write_zeros(PartSize - BytesWritten);
     RollingOffset += PartSize;
   }
+
+  return Error::success();
 }
 
 Error DXContainerWriter::write(raw_ostream &OS) {
   if (Error Err = computePartOffsets())
     return Err;
   writeHeader(OS);
-  writeParts(OS);
-  return Error::success();
+  return writeParts(OS);
 }
 
 namespace llvm {

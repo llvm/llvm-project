@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zksh -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZKSH
 
-declare i32 @llvm.riscv.sm3p0(i32);
-
 define signext i32 @sm3p0_i32(i32 signext %a) nounwind {
 ; RV64ZKSH-LABEL: sm3p0_i32:
 ; RV64ZKSH:       # %bb.0:
@@ -12,8 +10,6 @@ define signext i32 @sm3p0_i32(i32 signext %a) nounwind {
   %val = call i32 @llvm.riscv.sm3p0(i32 signext %a)
   ret i32 %val
 }
-
-declare i32 @llvm.riscv.sm3p1(i32);
 
 define signext i32 @sm3p1_i32(i32 signext %a) nounwind {
 ; RV64ZKSH-LABEL: sm3p1_i32:

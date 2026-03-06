@@ -13,6 +13,7 @@
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include <optional>
 
@@ -26,44 +27,48 @@ public:
 
   void Preload() override { m_fallback.Preload(); }
 
-  void
-  GetGlobalVariables(ConstString basename,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void
-  GetGlobalVariables(const RegularExpression &regex,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void
-  GetGlobalVariables(DWARFUnit &cu,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void
-  GetObjCMethods(ConstString class_name,
-                 llvm::function_ref<bool(DWARFDIE die)> callback) override {}
+  void GetGlobalVariables(
+      ConstString basename,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetGlobalVariables(
+      const RegularExpression &regex,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetGlobalVariables(
+      DWARFUnit &cu,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override {}
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
   /// Uses DWARF5's IDX_parent fields, when available, to speed up this query.
   void GetFullyQualifiedType(
       const DWARFDeclContext &context,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(const DWARFDeclContext &context,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetNamespaces(ConstString name,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void
-  GetTypesWithQuery(TypeQuery &query,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  GetTypes(ConstString name,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(const DWARFDeclContext &context,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetNamespaces(
+      ConstString name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetTypesWithQuery(
+      TypeQuery &query,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetNamespacesWithParents(
       ConstString name, const CompilerDeclContext &parent_decl_ctx,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetFunctions(const Module::LookupInfo &lookup_info,
-                    SymbolFileDWARF &dwarf,
-                    const CompilerDeclContext &parent_decl_ctx,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetFunctions(const RegularExpression &regex,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetFunctions(
+      const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
+      const CompilerDeclContext &parent_decl_ctx,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void GetFunctions(
+      const RegularExpression &regex,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
   void Dump(Stream &s) override;
 
@@ -117,8 +122,9 @@ private:
   std::optional<DWARFTypeUnit *>
   GetForeignTypeUnit(const DebugNames::Entry &entry) const;
 
-  bool ProcessEntry(const DebugNames::Entry &entry,
-                    llvm::function_ref<bool(DWARFDIE die)> callback);
+  IterationAction
+  ProcessEntry(const DebugNames::Entry &entry,
+               llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   /// Returns true if `parent_entries` have identical names to `parent_names`.
   bool SameParentChain(llvm::ArrayRef<llvm::StringRef> parent_names,

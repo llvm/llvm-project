@@ -17,7 +17,7 @@ namespace Fortran::runtime::io {
 RT_OFFLOAD_API_GROUP_BEGIN
 
 // In output statement, add a space between numbers and characters.
-static RT_API_ATTRS void addSpaceBeforeCharacter(IoStatementState &io) {
+static RT_API_ATTRS void AddSpaceBeforeCharacter(IoStatementState &io) {
   if (auto *list{io.get_if<ListDirectedStatementState<Direction::Output>>()}) {
     list->set_lastWasUndelimitedCharacter(false);
   }
@@ -29,7 +29,7 @@ static RT_API_ATTRS void addSpaceBeforeCharacter(IoStatementState &io) {
 template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZOutput(IoStatementState &io,
     const DataEdit &edit, const unsigned char *data0, std::size_t bytes) {
-  addSpaceBeforeCharacter(io);
+  AddSpaceBeforeCharacter(io);
   int digits{static_cast<int>((bytes * 8) / LOG2_BASE)};
   int get{static_cast<int>(bytes * 8) - digits * LOG2_BASE};
   if (get > 0) {
@@ -110,27 +110,11 @@ static RT_API_ATTRS bool EditBOZOutput(IoStatementState &io,
 template <int KIND>
 bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     common::HostSignedIntType<8 * KIND> n, bool isSigned) {
-  addSpaceBeforeCharacter(io);
-  char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
-  bool isNegative{isSigned && n < 0};
-  using Unsigned = common::HostUnsignedIntType<8 * KIND>;
-  Unsigned un{static_cast<Unsigned>(n)};
-  int signChars{0};
+  AddSpaceBeforeCharacter(io);
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
   case 'G':
   case 'I':
-    if (isNegative) {
-      un = -un;
-    }
-    if (isNegative || (edit.modes.editingFlags & signPlus)) {
-      signChars = 1; // '-' or '+'
-    }
-    while (un > 0) {
-      auto quotient{un / 10u};
-      *--p = '0' + static_cast<int>(un - Unsigned{10} * quotient);
-      un = quotient;
-    }
     break;
   case 'B':
     return EditBOZOutput<1>(
@@ -152,7 +136,22 @@ bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
         edit.descriptor);
     return false;
   }
-
+  char buffer[130], *end{&buffer[sizeof buffer]}, *p{end};
+  bool isNegative{isSigned && n < 0};
+  using Unsigned = common::HostUnsignedIntType<8 * KIND>;
+  Unsigned un{static_cast<Unsigned>(n)};
+  int signChars{0};
+  if (isNegative) {
+    un = -un;
+  }
+  if (isNegative || (edit.modes.editingFlags & signPlus)) {
+    signChars = 1; // '-' or '+'
+  }
+  while (un > 0) {
+    auto quotient{un / 10u};
+    *--p = '0' + static_cast<int>(un - Unsigned{10} * quotient);
+    un = quotient;
+  }
   int digits = end - p;
   int leadingZeroes{0};
   int editWidth{edit.width.value_or(0)};
@@ -176,11 +175,19 @@ bool RT_API_ATTRS EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
   }
   if (edit.IsListDirected()) {
     int total{std::max(leadingSpaces, 1) + subTotal};
-    if (io.GetConnectionState().NeedAdvance(static_cast<std::size_t>(total)) &&
-        !io.AdvanceRecord()) {
-      return false;
+    if (io.GetConnectionState().NeedAdvance(static_cast<std::size_t>(total))) {
+      if (!io.AdvanceRecord()) {
+        return false;
+      }
     }
     leadingSpaces = 1;
+  } else if (!edit.width) {
+    // Bare 'I' and 'G' are interpreted with various default widths in the
+    // compilers that support them, so there's always some leading space
+    // after column 1.
+    if (io.GetConnectionState().positionInRecord > 0) {
+      leadingSpaces = 1;
+    }
   }
   return EmitRepeated(io, ' ', leadingSpaces) &&
       EmitAscii(io, n < 0 ? "-" : "+", signChars) &&
@@ -259,10 +266,23 @@ RT_API_ATTRS bool RealOutputEditingBase::EmitSuffix(const DataEdit &edit) {
   }
 }
 
+static RT_API_ATTRS char IsInfOrNaN(const char *p, std::size_t length) {
+  if (!p || length < 1) {
+    return '\0';
+  }
+  if (*p == '-' || *p == '+') {
+    if (length == 1) {
+      return '\0';
+    }
+    ++p;
+  }
+  return *p == 'I' || *p == 'N' ? *p : '\0';
+}
+
 template <int KIND>
 RT_API_ATTRS decimal::ConversionToDecimalResult
-RealOutputEditing<KIND>::ConvertToDecimal(
-    int significantDigits, enum decimal::FortranRounding rounding, int flags) {
+RealOutputEditing<KIND>::ConvertToDecimal(int significantDigits,
+    enum decimal::FortranRounding rounding, int width, int flags) {
   auto converted{decimal::ConvertToDecimal<binaryPrecision>(buffer_,
       sizeof buffer_, static_cast<enum decimal::DecimalConversionFlags>(flags),
       significantDigits, rounding, x_)};
@@ -270,28 +290,23 @@ RealOutputEditing<KIND>::ConvertToDecimal(
     io_.GetIoErrorHandler().Crash(
         "RealOutputEditing::ConvertToDecimal: buffer size %zd was insufficient",
         sizeof buffer_);
+  } else if (IsInfOrNaN(converted.str, converted.length) == 'I' &&
+      converted.length <= 4 &&
+      static_cast<int>(converted.length + 5) <= width) {
+    // Emit "Infinity" rather than "Inf" (F'2023 13.7.2.3.2 p9), possibly signed
+    std::memcpy(buffer_, converted.str, converted.length);
+    std::memcpy(buffer_ + converted.length, "inity", 5);
+    converted.str = buffer_;
+    converted.length += 5;
   }
   return converted;
-}
-
-static RT_API_ATTRS bool IsInfOrNaN(const char *p, int length) {
-  if (!p || length < 1) {
-    return false;
-  }
-  if (*p == '-' || *p == '+') {
-    if (length == 1) {
-      return false;
-    }
-    ++p;
-  }
-  return *p == 'I' || *p == 'N';
 }
 
 // 13.7.2.3.3 in F'2018
 template <int KIND>
 RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
     const DataEdit &edit) {
-  addSpaceBeforeCharacter(io_);
+  AddSpaceBeforeCharacter(io_);
   int editDigits{edit.digits.value_or(0)}; // 'd' field
   int editWidth{edit.width.value_or(0)}; // 'w' field
   int significantDigits{editDigits};
@@ -346,9 +361,9 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
   }
   // In EN editing, multiple attempts may be necessary, so this is a loop.
   while (true) {
-    decimal::ConversionToDecimalResult converted{
-        ConvertToDecimal(significantDigits, edit.modes.round, flags)};
-    if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
+    decimal::ConversionToDecimalResult converted{ConvertToDecimal(
+        significantDigits, edit.modes.round, editWidth, flags)};
+    if (IsInfOrNaN(converted.str, converted.length)) {
       return editWidth > 0 &&
               converted.length + trailingBlanks_ >
                   static_cast<std::size_t>(editWidth)
@@ -427,7 +442,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
 // 13.7.2.3.2 in F'2018
 template <int KIND>
 RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
-  addSpaceBeforeCharacter(io_);
+  AddSpaceBeforeCharacter(io_);
   int fracDigits{edit.digits.value_or(0)}; // 'd' field
   const int editWidth{edit.width.value_or(0)}; // 'w' field
   enum decimal::FortranRounding rounding{edit.modes.round};
@@ -447,9 +462,9 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
   bool canIncrease{true};
   for (int extraDigits{fracDigits == 0 ? 1 : 0};;) {
     decimal::ConversionToDecimalResult converted{
-        ConvertToDecimal(extraDigits + fracDigits, rounding, flags)};
+        ConvertToDecimal(extraDigits + fracDigits, rounding, editWidth, flags)};
     const char *convertedStr{converted.str};
-    if (IsInfOrNaN(convertedStr, static_cast<int>(converted.length))) {
+    if (IsInfOrNaN(converted.str, converted.length)) {
       return editWidth > 0 &&
               converted.length > static_cast<std::size_t>(editWidth)
           ? EmitRepeated(io_, '*', editWidth)
@@ -578,8 +593,8 @@ RT_API_ATTRS DataEdit RealOutputEditing<KIND>::EditForGOutput(DataEdit edit) {
     flags |= decimal::AlwaysSign;
   }
   decimal::ConversionToDecimalResult converted{
-      ConvertToDecimal(significantDigits, edit.modes.round, flags)};
-  if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
+      ConvertToDecimal(significantDigits, edit.modes.round, editWidth, flags)};
+  if (IsInfOrNaN(converted.str, converted.length)) {
     return edit; // Inf/Nan -> Ew.d (same as Fw.d)
   }
   int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
@@ -612,7 +627,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditListDirectedOutput(
     const DataEdit &edit) {
   decimal::ConversionToDecimalResult converted{
       ConvertToDecimal(1, edit.modes.round)};
-  if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
+  if (IsInfOrNaN(converted.str, converted.length)) {
     DataEdit copy{edit};
     copy.variation = DataEdit::ListDirected;
     return EditEorDOutput(copy);
@@ -645,15 +660,17 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditListDirectedOutput(
 template <int KIND>
 RT_API_ATTRS auto RealOutputEditing<KIND>::ConvertToHexadecimal(
     int significantDigits, enum decimal::FortranRounding rounding,
-    int flags) -> ConvertToHexadecimalResult {
+    int editWidth, int flags) -> ConvertToHexadecimalResult {
   if (x_.IsNaN() || x_.IsInfinite()) {
-    auto converted{ConvertToDecimal(significantDigits, rounding, flags)};
-    return {converted.str, static_cast<int>(converted.length), 0};
+    auto converted{
+        ConvertToDecimal(significantDigits, rounding, editWidth, flags)};
+    return {converted.str, static_cast<int>(converted.length), /*exponent=*/0};
   }
   x_.RoundToBits(4 * significantDigits, rounding);
   if (x_.IsInfinite()) { // rounded away to +/-Inf
-    auto converted{ConvertToDecimal(significantDigits, rounding, flags)};
-    return {converted.str, static_cast<int>(converted.length), 0};
+    auto converted{
+        ConvertToDecimal(significantDigits, rounding, editWidth, flags)};
+    return {converted.str, static_cast<int>(converted.length), /*exponent=*/0};
   }
   int len{0};
   if (x_.IsNegative()) {
@@ -702,7 +719,7 @@ RT_API_ATTRS auto RealOutputEditing<KIND>::ConvertToHexadecimal(
 
 template <int KIND>
 RT_API_ATTRS bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
-  addSpaceBeforeCharacter(io_);
+  AddSpaceBeforeCharacter(io_);
   int editDigits{edit.digits.value_or(0)}; // 'd' field
   int significantDigits{editDigits + 1};
   int flags{0};
@@ -717,8 +734,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
         (common::PrecisionOfRealKind(16) + 3) / 4};
     significantDigits = maxSigHexDigits;
   }
-  auto converted{
-      ConvertToHexadecimal(significantDigits, edit.modes.round, flags)};
+  auto converted{ConvertToHexadecimal(
+      significantDigits, edit.modes.round, editWidth, flags)};
   if (IsInfOrNaN(converted.str, converted.length)) {
     return editWidth > 0 && converted.length > editWidth
         ? EmitRepeated(io_, '*', editWidth)

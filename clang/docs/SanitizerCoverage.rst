@@ -314,7 +314,7 @@ will not be instrumented.
   void __sanitizer_cov_trace_div4(uint32_t Val);
   void __sanitizer_cov_trace_div8(uint64_t Val);
 
-  // Called before a GetElemementPtr (GEP) instruction
+  // Called before a GetElementPtr (GEP) instruction
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
 
@@ -383,6 +383,50 @@ Users need to implement a single function to capture the CF table at startup:
                                 const uintptr_t *cfs_end) {
     // [cfs_beg,cfs_end) is the array of ptr-sized integers representing
     // the collected control flow.
+  }
+
+Tracing Stack Depth
+===================
+
+With ``-fsanitize-coverage=stack-depth`` the compiler will track how much
+stack space has been used for a function call chain. Leaf functions are
+not included in this tracing.
+
+The maximum depth of a function call graph is stored in the thread-local
+``__sancov_lowest_stack`` variable. Instrumentation is inserted in every
+non-leaf function to check the frame pointer against this variable,
+and if it is lower, store the current frame pointer. This effectively
+inserts the following:
+
+.. code-block:: c++
+
+  extern thread_local uintptr_t __sancov_lowest_stack;
+
+  uintptr_t stack = (uintptr_t)__builtin_frame_address(0);
+  if (stack < __sancov_lowest_stack)
+    __sancov_lowest_stack = stack;
+
+If ``-fsanitize-coverage-stack-depth-callback-min=N`` (where
+``N > 0``) is also used, the tracking is delegated to a callback,
+``__sanitizer_cov_stack_depth``, instead of adding instrumentation to
+update ``__sancov_lowest_stack``. The ``N`` of the argument is used
+to determine which functions to instrument. Only functions estimated
+to be using ``N`` bytes or more of stack space will be instrumented to
+call the tracing callback. In the case of a dynamically sized stack,
+the callback is unconditionally added.
+
+The callback takes no arguments and is responsible for determining
+the stack usage and doing any needed comparisons and storage. A roughly
+equivalent implementation of ``__sancov_lowest_stack`` using the callback
+would look like this:
+
+.. code-block:: c++
+
+  void __sanitizer_cov_stack_depth(void) {
+    uintptr_t stack = (uintptr_t)__builtin_frame_address(0);
+
+    if (stack < __sancov_lowest_stack)
+      __sancov_lowest_stack = stack;
   }
 
 Gated Trace Callbacks
@@ -519,18 +563,39 @@ Sancov matches these files using module names and binaries file names.
 
 .. code-block:: console
 
-    USAGE: sancov [options] <action> (<binary file>|<.sancov file>)...
+    USAGE: sancov [options] <action> <binary files...> <.sancov files...> <.symcov files...>
 
-    Action (required)
-      -print                    - Print coverage addresses
-      -covered-functions        - Print all covered functions.
-      -not-covered-functions    - Print all not covered functions.
-      -symbolize                - Symbolizes the report.
+    Action (required):
+      -covered-functions     Print all covered funcions.
+      -diff                  Compute difference between two sancov files (A - B) and write to the new output sancov file
+      -html-report           REMOVED. Use -symbolize & coverage-report-server.py.
+      -merge                 Merges reports.
+      -not-covered-functions Print all not covered funcions.
+      -print-coverage-pcs    Print coverage instrumentation points addresses.
+      -print-coverage-stats  Print coverage statistics.
+      -print                 Print coverage addresses
+      -symbolize             Produces a symbolized JSON report from binary report.
+      -union                 Compute union of multiple sancov files and write to the new output sancov file
 
-    Options
-      -blocklist=<string>         - Blocklist file (sanitizer blocklist format).
-      -demangle                   - Print demangled function name.
-      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
+    Generic Options:
+      -help    Display this help
+      -h       Alias for --help
+      -version Display the version
+      -v       Alias for --version
+
+    OPTIONS:
+      -demangle=0          Alias for --no-demangle
+      -demangle            Demangle function names
+      -ignorelist=<string> Ignorelist file (sanitizer ignorelist format)
+      -no-demangle         Do not demangle function names
+      -no-skip-dead-files  List dead source files in reports
+      -output=<string>     Output file for diff and union actions
+      -skip-dead-files=0   Alias for --no-skip-dead-files
+      -skip-dead-files     Do not list dead source files in reports
+      -strip_path_prefix=<string>
+                          Strip this prefix from files paths in reports
+      -use_default_ignorelist=0
+                          Alias for --no-use_default_ignore_list
 
 
 Coverage Reports

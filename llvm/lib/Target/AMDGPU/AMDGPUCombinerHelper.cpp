@@ -19,9 +19,9 @@ using namespace MIPatternMatch;
 
 AMDGPUCombinerHelper::AMDGPUCombinerHelper(
     GISelChangeObserver &Observer, MachineIRBuilder &B, bool IsPreLegalize,
-    GISelKnownBits *KB, MachineDominatorTree *MDT, const LegalizerInfo *LI,
+    GISelValueTracking *VT, MachineDominatorTree *MDT, const LegalizerInfo *LI,
     const GCNSubtarget &STI)
-    : CombinerHelper(Observer, B, IsPreLegalize, KB, MDT, LI), STI(STI),
+    : CombinerHelper(Observer, B, IsPreLegalize, VT, MDT, LI), STI(STI),
       TII(*STI.getInstrInfo()) {}
 
 LLVM_READNONE
@@ -143,8 +143,7 @@ static bool allUsesHaveSourceMods(MachineInstr &MI, MachineRegisterInfo &MRI,
 }
 
 static bool mayIgnoreSignedZero(MachineInstr &MI) {
-  const TargetOptions &Options = MI.getMF()->getTarget().Options;
-  return Options.NoSignedZerosFPMath || MI.getFlag(MachineInstr::MIFlag::FmNsz);
+  return MI.getFlag(MachineInstr::MIFlag::FmNsz);
 }
 
 static bool isInv2Pi(const APFloat &APF) {
@@ -515,4 +514,19 @@ bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
   };
 
   return true;
+}
+
+bool AMDGPUCombinerHelper::matchConstantIs32BitMask(Register Reg) const {
+  auto Res = getIConstantVRegValWithLookThrough(Reg, MRI);
+  if (!Res)
+    return false;
+
+  const uint64_t Val = Res->Value.getZExtValue();
+  unsigned MaskIdx = 0;
+  unsigned MaskLen = 0;
+  if (!isShiftedMask_64(Val, MaskIdx, MaskLen))
+    return false;
+
+  // Check if low 32 bits or high 32 bits are all ones.
+  return MaskLen >= 32 && ((MaskIdx == 0) || (MaskIdx == 64 - MaskLen));
 }

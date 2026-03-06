@@ -29,7 +29,7 @@
 ; CHECK:      DW_TAG_imported_module
 ; CHECK-NEXT:   DW_AT_decl_file
 ; CHECK-NEXT:   DW_AT_decl_line
-; CHECK-NEXT:   DW_AT_import  ([[DIE_ID]])
+; CHECK-NEXT:   DW_AT_import  ([[DIE_ID]] "external_module")
 
 ; When the debugger sees the module being imported is a declaration,
 ; it should go to the global scope to find the module's definition.

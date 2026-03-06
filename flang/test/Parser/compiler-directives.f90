@@ -36,6 +36,28 @@ subroutine vector_always
   enddo
 end subroutine
 
+subroutine vector_vectorlength
+  !dir$ vector vectorlength(fixed)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (FIXED)
+  do i=1,10
+  enddo
+
+  !dir$ vector vectorlength(scalable)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (SCALABLE)
+  do i=1,10
+  enddo
+
+  !dir$ vector vectorlength(8,scalable)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (8, SCALABLE)
+  do i=1,10
+  enddo
+
+  !dir$ vector vectorlength(4)
+  ! CHECK: !DIR$ VECTOR VECTORLENGTH (4)
+  do i=1,10
+  enddo
+end subroutine
+
 subroutine unroll
   !dir$ unroll
   ! CHECK: !DIR$ UNROLL
@@ -43,6 +65,63 @@ subroutine unroll
   enddo
   !dir$ unroll 2
   ! CHECK: !DIR$ UNROLL 2
+  do i=1,10
+  enddo
+  !dir$ nounroll
+  ! CHECK: !DIR$ NOUNROLL
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine unroll_and_jam
+  !dir$ unroll_and_jam
+  ! CHECK: !DIR$ UNROLL_AND_JAM
+  do i=1,10
+  enddo
+  !dir$ unroll_and_jam 2
+  ! CHECK: !DIR$ UNROLL_AND_JAM 2
+  do i=1,10
+  enddo
+  !dir$ nounroll_and_jam
+  ! CHECK: !DIR$ NOUNROLL_AND_JAM
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine no_vector
+  !dir$ novector
+  ! CHECK: !DIR$ NOVECTOR
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine inline
+  integer :: a
+  !dir$ forceinline
+  ! CHECK: !DIR$ FORCEINLINE
+  a = f(2)
+
+  !dir$ inline
+  ! CHECK: !DIR$ INLINE
+  call g()
+
+  !dir$ noinline
+  ! CHECK: !DIR$ NOINLINE
+  call g()
+
+  contains
+    function f(x)
+      integer :: x
+      f = x**2
+    end function
+
+    subroutine g()
+    end subroutine
+end subroutine
+
+subroutine ivdep 
+  !dir$ ivdep 
+  ! CHECK: !DIR$ IVDEP 
   do i=1,10
   enddo
 end subroutine

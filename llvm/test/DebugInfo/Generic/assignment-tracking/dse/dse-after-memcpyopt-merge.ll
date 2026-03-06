@@ -1,5 +1,4 @@
-; RUN: opt %s -S -passes=dse -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=dse -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt %s -S -passes=dse -o - | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Observed in the wild, but test is created by running memcpyopt on
 ;; assignment-tracking/memcpyopt/merge-stores.ll then manually inserting

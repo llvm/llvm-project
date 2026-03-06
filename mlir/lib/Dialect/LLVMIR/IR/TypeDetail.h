@@ -69,7 +69,7 @@ public:
   class Key {
   public:
     /// Constructs a key for an identified struct.
-    Key(StringRef name, bool opaque, ArrayRef<Type> types = std::nullopt)
+    Key(StringRef name, bool opaque, ArrayRef<Type> types = {})
         : types(types), name(name), identified(true), packed(false),
           opaque(opaque) {}
     /// Constructs a key for a literal struct.

@@ -134,6 +134,18 @@
 #endif
 
 /*
+ * RT_GPU_TARGET is defined when compiling natively for a GPU
+ * target (AMDGPU or NVPTX) using a GPU-hosted libc/libc++. This is
+ * distinct from RT_DEVICE_COMPILATION which covers CUDA and OpenMP
+ * offload paths that use separate host/device compilation.
+ */
+#if defined(__AMDGPU__) || defined(__NVPTX__)
+#define RT_GPU_TARGET 1
+#else
+#undef RT_GPU_TARGET
+#endif
+
+/*
  * Recurrence in the call graph prevents computing minimal stack size
  * required for a kernel execution. This macro can be used to disable
  * some F18 runtime functionality that is implemented using recurrent
@@ -188,5 +200,22 @@
 #else
 #define RT_OPTNONE_ATTR
 #endif
+
+/* Detect system endianness if it was not explicitly set. */
+#if !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN)
+
+/* We always assume Windows is little endian, otherwise use the GCC compatible
+ * flags. */
+#if defined(_MSC_VER) || defined(_WIN32)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define FLANG_BIG_ENDIAN 1
+#else
+#error "Unknown or unsupported endianness."
+#endif
+
+#endif /* !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN) */
 
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */

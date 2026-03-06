@@ -23,6 +23,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -60,14 +61,11 @@ void LoopVersioning::versionLoop(
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
   const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
 
-  SCEVExpander Exp2(*RtPtrChecking.getSE(),
-                    VersionedLoop->getHeader()->getDataLayout(),
-                    "induction");
+  SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction");
   MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
                                      VersionedLoop, AliasChecks, Exp2);
 
-  SCEVExpander Exp(*SE, RuntimeCheckBB->getDataLayout(),
-                   "scev.check");
+  SCEVExpander Exp(*SE, "scev.check");
   SCEVRuntimeCheck =
       Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
 
@@ -80,6 +78,8 @@ void LoopVersioning::versionLoop(
         Builder.CreateOr(MemRuntimeCheck, SCEVRuntimeCheck, "lver.safe");
   } else
     RuntimeCheck = MemRuntimeCheck ? MemRuntimeCheck : SCEVRuntimeCheck;
+
+  Exp.eraseDeadInstructions(SCEVRuntimeCheck);
 
   assert(RuntimeCheck && "called even though we don't need "
                          "any runtime checks");
@@ -107,8 +107,12 @@ void LoopVersioning::versionLoop(
   // Insert the conditional branch based on the result of the memchecks.
   Instruction *OrigTerm = RuntimeCheckBB->getTerminator();
   Builder.SetInsertPoint(OrigTerm);
-  Builder.CreateCondBr(RuntimeCheck, NonVersionedLoop->getLoopPreheader(),
-                       VersionedLoop->getLoopPreheader());
+  auto *BI =
+      Builder.CreateCondBr(RuntimeCheck, NonVersionedLoop->getLoopPreheader(),
+                           VersionedLoop->getLoopPreheader());
+  // We don't know what the probability of executing the versioned vs the
+  // unversioned variants is.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*BI, DEBUG_TYPE);
   OrigTerm->eraseFromParent();
 
   // The loops merge in the original exit block.  This is now dominated by the
@@ -225,34 +229,43 @@ void LoopVersioning::annotateLoopWithNoAlias() {
   }
 }
 
-void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
-                                             const Instruction *OrigInst) {
+std::pair<MDNode *, MDNode *>
+LoopVersioning::getNoAliasMetadataFor(const Instruction *OrigInst) const {
   if (!AnnotateNoAlias)
-    return;
+    return {nullptr, nullptr};
 
   LLVMContext &Context = VersionedLoop->getHeader()->getContext();
   const Value *Ptr = isa<LoadInst>(OrigInst)
                          ? cast<LoadInst>(OrigInst)->getPointerOperand()
                          : cast<StoreInst>(OrigInst)->getPointerOperand();
 
+  MDNode *AliasScope = nullptr;
+  MDNode *NoAlias = nullptr;
   // Find the group for the pointer and then add the scope metadata.
   auto Group = PtrToGroup.find(Ptr);
   if (Group != PtrToGroup.end()) {
-    VersionedInst->setMetadata(
-        LLVMContext::MD_alias_scope,
-        MDNode::concatenate(
-            VersionedInst->getMetadata(LLVMContext::MD_alias_scope),
-            MDNode::get(Context, GroupToScope[Group->second])));
+    AliasScope = MDNode::concatenate(
+        OrigInst->getMetadata(LLVMContext::MD_alias_scope),
+        MDNode::get(Context, GroupToScope.lookup(Group->second)));
 
     // Add the no-alias metadata.
     auto NonAliasingScopeList = GroupToNonAliasingScopeList.find(Group->second);
     if (NonAliasingScopeList != GroupToNonAliasingScopeList.end())
-      VersionedInst->setMetadata(
-          LLVMContext::MD_noalias,
-          MDNode::concatenate(
-              VersionedInst->getMetadata(LLVMContext::MD_noalias),
-              NonAliasingScopeList->second));
+      NoAlias =
+          MDNode::concatenate(OrigInst->getMetadata(LLVMContext::MD_noalias),
+                              NonAliasingScopeList->second);
   }
+  return {AliasScope, NoAlias};
+}
+
+void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
+                                             const Instruction *OrigInst) {
+  const auto &[AliasScopeMD, NoAliasMD] = getNoAliasMetadataFor(OrigInst);
+  if (AliasScopeMD)
+    VersionedInst->setMetadata(LLVMContext::MD_alias_scope, AliasScopeMD);
+
+  if (NoAliasMD)
+    VersionedInst->setMetadata(LLVMContext::MD_noalias, NoAliasMD);
 }
 
 namespace {

@@ -47,7 +47,10 @@ macro(enable_cuda_compilation name files)
     # property can only be applied to object libraries and create *.ptx files
     # instead of *.o files. The .a will consist of those *.ptx files only.
     add_flangrt_library(obj.${name}PTX OBJECT ${files})
-    set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    set_target_properties(obj.${name}PTX PROPERTIES
+      CUDA_PTX_COMPILATION ON
+      CUDA_SEPARABLE_COMPILATION ON
+      )
     add_flangrt_library(${name}PTX STATIC "$<TARGET_OBJECTS:obj.${name}PTX>")
 
     # Apply configuration options
@@ -68,45 +71,3 @@ macro(enable_cuda_compilation name files)
   endif()
 endmacro()
 
-macro(enable_omp_offload_compilation name files)
-  if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-    # OpenMP offload build only works with Clang compiler currently.
-
-    if (FLANG_RT_ENABLE_SHARED)
-      message(FATAL_ERROR
-        "FLANG_RT_ENABLE_SHARED is not supported for OpenMP offload build of Flang-RT"
-        )
-    endif()
-
-    if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND
-        "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-
-      string(REPLACE ";" "," compile_for_architectures
-        "${FLANG_RT_DEVICE_ARCHITECTURES}"
-        )
-
-      set(OMP_COMPILE_OPTIONS
-        -fopenmp
-        -fvisibility=hidden
-        -fopenmp-cuda-mode
-        --offload-arch=${compile_for_architectures}
-        # Force LTO for the device part.
-        -foffload-lto
-        )
-      set_source_files_properties(${files} PROPERTIES COMPILE_OPTIONS
-        "${OMP_COMPILE_OPTIONS}"
-        )
-      target_link_options(${name}.static PUBLIC ${OMP_COMPILE_OPTIONS})
-
-      # Enable "declare target" in the source code.
-      set_source_files_properties(${files}
-        PROPERTIES COMPILE_DEFINITIONS OMP_OFFLOAD_BUILD
-        )
-    else()
-      message(FATAL_ERROR
-        "Flang-rt build with OpenMP offload is not supported for these compilers:\n"
-        "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}\n"
-        "CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
-    endif()
-  endif()
-endmacro()

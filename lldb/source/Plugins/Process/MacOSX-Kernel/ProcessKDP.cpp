@@ -10,7 +10,6 @@
 #include <cstdlib>
 
 #include <memory>
-#include <mutex>
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -36,8 +35,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/UUID.h"
-
-#include "llvm/Support/Threading.h"
 
 #define USEC_PER_SEC 1000000
 
@@ -70,7 +67,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_processkdp_properties);
+    m_collection_sp->Initialize(g_processkdp_properties_def);
   }
 
   ~PluginProperties() override = default;
@@ -97,6 +94,7 @@ llvm::StringRef ProcessKDP::GetPluginDescriptionStatic() {
 }
 
 void ProcessKDP::Terminate() {
+  ProcessKDPLog::Terminate();
   PluginManager::UnregisterPlugin(ProcessKDP::CreateInstance);
 }
 
@@ -276,12 +274,15 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
               // Lookup UUID locally, before attempting dsymForUUID like action
               FileSpecList search_paths =
                   Target::GetDefaultDebugFileSearchPaths();
+
+              StatisticsMap symbol_locator_map;
               module_spec.GetSymbolFileSpec() =
-                  PluginManager::LocateExecutableSymbolFile(module_spec,
-                                                            search_paths);
+                  PluginManager::LocateExecutableSymbolFile(
+                      module_spec, search_paths, symbol_locator_map);
               if (module_spec.GetSymbolFileSpec()) {
                 ModuleSpec executable_module_spec =
-                    PluginManager::LocateExecutableObjectFile(module_spec);
+                    PluginManager::LocateExecutableObjectFile(
+                        module_spec, symbol_locator_map);
                 if (FileSystem::Instance().Exists(
                         executable_module_spec.GetFileSpec())) {
                   module_spec.GetFileSpec() =
@@ -297,6 +298,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
 
               if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
                 ModuleSP module_sp(new Module(module_spec));
+                module_sp->GetSymbolLocatorStatistics().merge(
+                    symbol_locator_map);
                 if (module_sp.get() && module_sp->GetObjectFile()) {
                   // Get the current target executable
                   ModuleSP exe_module_sp(target.GetExecutableModule());
@@ -321,20 +324,10 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
           SetID(1);
           GetThreadList();
           SetPrivateState(eStateStopped);
-          StreamSP async_strm_sp(target.GetDebugger().GetAsyncOutputStream());
-          if (async_strm_sp) {
-            const char *cstr;
-            if ((cstr = m_comm.GetKernelVersion()) != NULL) {
-              async_strm_sp->Printf("Version: %s\n", cstr);
-              async_strm_sp->Flush();
-            }
-            //                      if ((cstr = m_comm.GetImagePath ()) != NULL)
-            //                      {
-            //                          async_strm_sp->Printf ("Image Path:
-            //                          %s\n", cstr);
-            //                          async_strm_sp->Flush();
-            //                      }
-          }
+          const char *cstr;
+          if ((cstr = m_comm.GetKernelVersion()) != NULL)
+            target.GetDebugger().GetAsyncOutputStream()->Printf("Version: %s\n",
+                                                                cstr);
         } else {
           return Status::FromErrorString("KDP_REATTACH failed");
         }
@@ -402,9 +395,14 @@ lldb_private::DynamicLoader *ProcessKDP::GetDynamicLoader() {
 
 Status ProcessKDP::WillResume() { return Status(); }
 
-Status ProcessKDP::DoResume() {
+Status ProcessKDP::DoResume(RunDirection direction) {
   Status error;
   Log *log = GetLog(KDPLog::Process);
+
+  if (direction == RunDirection::eRunReverse)
+    return Status::FromErrorStringWithFormatv(
+        "{0} does not support reverse execution of processes", GetPluginName());
+
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())
     StartAsyncThread();
@@ -682,15 +680,11 @@ Status ProcessKDP::DoSignal(int signo) {
 }
 
 void ProcessKDP::Initialize() {
-  static llvm::once_flag g_once_flag;
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-
-    ProcessKDPLog::Initialize();
-  });
+  ProcessKDPLog::Initialize();
 }
 
 void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {

@@ -17,6 +17,7 @@
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -119,14 +120,14 @@ struct PostDomOnlyPrinter final
 
 namespace llvm {
   class FunctionPass;
-  FunctionPass *createDomPrinterWrapperPassPass();
-  FunctionPass *createDomOnlyPrinterWrapperPassPass();
-  FunctionPass *createDomViewerWrapperPassPass();
-  FunctionPass *createDomOnlyViewerWrapperPassPass();
-  FunctionPass *createPostDomPrinterWrapperPassPass();
-  FunctionPass *createPostDomOnlyPrinterWrapperPassPass();
-  FunctionPass *createPostDomViewerWrapperPassPass();
-  FunctionPass *createPostDomOnlyViewerWrapperPassPass();
+  LLVM_ABI FunctionPass *createDomPrinterWrapperPassPass();
+  LLVM_ABI FunctionPass *createDomOnlyPrinterWrapperPassPass();
+  LLVM_ABI FunctionPass *createDomViewerWrapperPassPass();
+  LLVM_ABI FunctionPass *createDomOnlyViewerWrapperPassPass();
+  LLVM_ABI FunctionPass *createPostDomPrinterWrapperPassPass();
+  LLVM_ABI FunctionPass *createPostDomOnlyPrinterWrapperPassPass();
+  LLVM_ABI FunctionPass *createPostDomViewerWrapperPassPass();
+  LLVM_ABI FunctionPass *createPostDomOnlyViewerWrapperPassPass();
 } // End llvm namespace
 
 #endif

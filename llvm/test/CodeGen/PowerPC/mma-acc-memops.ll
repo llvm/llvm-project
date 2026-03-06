@@ -3,10 +3,18 @@
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   -disable-auto-paired-vec-st=false < %s | FileCheck %s \
 ; RUN:   --check-prefix=LE-PAIRED
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
+; RUN:   -disable-auto-paired-vec-st=false < %s | FileCheck %s \
+; RUN:   --check-prefix=LE-PAIRED-WACC
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr -disable-auto-paired-vec-st=false < %s | \
 ; RUN:   FileCheck %s --check-prefix=BE-PAIRED
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=future -ppc-asm-full-reg-names \
+; RUN:   -ppc-vsr-nums-as-vr -disable-auto-paired-vec-st=false < %s | \
+; RUN:   FileCheck %s --check-prefix=BE-PAIRED-WACC
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-vsr-nums-as-vr \
 ; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   | FileCheck %s --check-prefix=LE-PWR9
@@ -26,29 +34,59 @@
 define dso_local void @testLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-LABEL: testLdSt:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+96(0), 1
-; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+112(0), 1
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+80(0), 1
+; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+96(0), 1
+; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+112(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+176(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs1, f@PCREL+160(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs2, f@PCREL+144(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs3, f@PCREL+128(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
+; LE-PAIRED-WACC-LABEL: testLdSt:
+; LE-PAIRED-WACC:       # %bb.0: # %entry
+; LE-PAIRED-WACC-NEXT:    plxv v3, f@PCREL+64(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv v5, f@PCREL+96(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv v2, f@PCREL+80(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv v4, f@PCREL+112(0), 1
+; LE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; LE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; LE-PAIRED-WACC-NEXT:    pstxv v4, f@PCREL+176(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv v5, f@PCREL+160(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv v2, f@PCREL+144(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv v3, f@PCREL+128(0), 1
+; LE-PAIRED-WACC-NEXT:    blr
+;
 ; BE-PAIRED-LABEL: testLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, f@toc@ha
 ; BE-PAIRED-NEXT:    addi r3, r3, f@toc@l
-; BE-PAIRED-NEXT:    lxv vs1, 80(r3)
-; BE-PAIRED-NEXT:    lxv vs0, 64(r3)
 ; BE-PAIRED-NEXT:    lxv vs3, 112(r3)
 ; BE-PAIRED-NEXT:    lxv vs2, 96(r3)
+; BE-PAIRED-NEXT:    lxv vs1, 80(r3)
+; BE-PAIRED-NEXT:    lxv vs0, 64(r3)
 ; BE-PAIRED-NEXT:    stxv vs1, 144(r3)
 ; BE-PAIRED-NEXT:    stxv vs0, 128(r3)
 ; BE-PAIRED-NEXT:    stxv vs3, 176(r3)
 ; BE-PAIRED-NEXT:    stxv vs2, 160(r3)
 ; BE-PAIRED-NEXT:    blr
+;
+; BE-PAIRED-WACC-LABEL: testLdSt:
+; BE-PAIRED-WACC:       # %bb.0: # %entry
+; BE-PAIRED-WACC-NEXT:    addis r3, r2, f@toc@ha
+; BE-PAIRED-WACC-NEXT:    addi r3, r3, f@toc@l
+; BE-PAIRED-WACC-NEXT:    lxv v3, 112(r3)
+; BE-PAIRED-WACC-NEXT:    lxv v5, 80(r3)
+; BE-PAIRED-WACC-NEXT:    lxv v2, 96(r3)
+; BE-PAIRED-WACC-NEXT:    lxv v4, 64(r3)
+; BE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; BE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; BE-PAIRED-WACC-NEXT:    stxv v5, 176(r3)
+; BE-PAIRED-WACC-NEXT:    stxv v4, 160(r3)
+; BE-PAIRED-WACC-NEXT:    stxv v3, 144(r3)
+; BE-PAIRED-WACC-NEXT:    stxv v2, 128(r3)
+; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testLdSt:
 ; LE-PWR9:       # %bb.0: # %entry
@@ -135,17 +173,36 @@ define dso_local void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-NEXT:    paddi r5, 0, f@PCREL, 1
 ; LE-PAIRED-NEXT:    sldi r3, r3, 6
 ; LE-PAIRED-NEXT:    add r6, r5, r3
-; LE-PAIRED-NEXT:    lxv vs1, 32(r6)
-; LE-PAIRED-NEXT:    lxv vs0, 48(r6)
 ; LE-PAIRED-NEXT:    lxvx vs3, r5, r3
-; LE-PAIRED-NEXT:    lxv vs2, 16(r6)
 ; LE-PAIRED-NEXT:    sldi r3, r4, 6
 ; LE-PAIRED-NEXT:    add r4, r5, r3
+; LE-PAIRED-NEXT:    lxv vs2, 16(r6)
+; LE-PAIRED-NEXT:    lxv vs1, 32(r6)
+; LE-PAIRED-NEXT:    lxv vs0, 48(r6)
 ; LE-PAIRED-NEXT:    stxvx vs3, r5, r3
 ; LE-PAIRED-NEXT:    stxv vs0, 48(r4)
 ; LE-PAIRED-NEXT:    stxv vs1, 32(r4)
 ; LE-PAIRED-NEXT:    stxv vs2, 16(r4)
 ; LE-PAIRED-NEXT:    blr
+;
+; LE-PAIRED-WACC-LABEL: testXLdSt:
+; LE-PAIRED-WACC:       # %bb.0: # %entry
+; LE-PAIRED-WACC-NEXT:    paddi r5, 0, f@PCREL, 1
+; LE-PAIRED-WACC-NEXT:    sldi r3, r3, 6
+; LE-PAIRED-WACC-NEXT:    add r6, r5, r3
+; LE-PAIRED-WACC-NEXT:    lxvx v3, r5, r3
+; LE-PAIRED-WACC-NEXT:    lxv v2, 16(r6)
+; LE-PAIRED-WACC-NEXT:    lxv v5, 32(r6)
+; LE-PAIRED-WACC-NEXT:    lxv v4, 48(r6)
+; LE-PAIRED-WACC-NEXT:    sldi r3, r4, 6
+; LE-PAIRED-WACC-NEXT:    add r4, r5, r3
+; LE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; LE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; LE-PAIRED-WACC-NEXT:    stxvx v3, r5, r3
+; LE-PAIRED-WACC-NEXT:    stxv v4, 48(r4)
+; LE-PAIRED-WACC-NEXT:    stxv v5, 32(r4)
+; LE-PAIRED-WACC-NEXT:    stxv v2, 16(r4)
+; LE-PAIRED-WACC-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testXLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
@@ -153,17 +210,37 @@ define dso_local void @testXLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-NEXT:    addi r5, r5, f@toc@l
 ; BE-PAIRED-NEXT:    sldi r3, r3, 6
 ; BE-PAIRED-NEXT:    add r6, r5, r3
-; BE-PAIRED-NEXT:    lxvx vs0, r5, r3
-; BE-PAIRED-NEXT:    sldi r3, r4, 6
-; BE-PAIRED-NEXT:    add r4, r5, r3
-; BE-PAIRED-NEXT:    lxv vs1, 16(r6)
 ; BE-PAIRED-NEXT:    lxv vs3, 48(r6)
 ; BE-PAIRED-NEXT:    lxv vs2, 32(r6)
+; BE-PAIRED-NEXT:    lxvx vs0, r5, r3
+; BE-PAIRED-NEXT:    lxv vs1, 16(r6)
+; BE-PAIRED-NEXT:    sldi r3, r4, 6
+; BE-PAIRED-NEXT:    add r4, r5, r3
 ; BE-PAIRED-NEXT:    stxvx vs0, r5, r3
 ; BE-PAIRED-NEXT:    stxv vs1, 16(r4)
 ; BE-PAIRED-NEXT:    stxv vs3, 48(r4)
 ; BE-PAIRED-NEXT:    stxv vs2, 32(r4)
 ; BE-PAIRED-NEXT:    blr
+;
+; BE-PAIRED-WACC-LABEL: testXLdSt:
+; BE-PAIRED-WACC:       # %bb.0: # %entry
+; BE-PAIRED-WACC-NEXT:    addis r5, r2, f@toc@ha
+; BE-PAIRED-WACC-NEXT:    addi r5, r5, f@toc@l
+; BE-PAIRED-WACC-NEXT:    sldi r3, r3, 6
+; BE-PAIRED-WACC-NEXT:    add r6, r5, r3
+; BE-PAIRED-WACC-NEXT:    lxvx v2, r5, r3
+; BE-PAIRED-WACC-NEXT:    lxv v5, 48(r6)
+; BE-PAIRED-WACC-NEXT:    lxv v3, 16(r6)
+; BE-PAIRED-WACC-NEXT:    lxv v4, 32(r6)
+; BE-PAIRED-WACC-NEXT:    sldi r3, r4, 6
+; BE-PAIRED-WACC-NEXT:    add r4, r5, r3
+; BE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
+; BE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; BE-PAIRED-WACC-NEXT:    stxvx v2, r5, r3
+; BE-PAIRED-WACC-NEXT:    stxv v5, 48(r4)
+; BE-PAIRED-WACC-NEXT:    stxv v4, 32(r4)
+; BE-PAIRED-WACC-NEXT:    stxv v3, 16(r4)
+; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testXLdSt:
 ; LE-PWR9:       # %bb.0: # %entry
@@ -253,29 +330,59 @@ entry:
 define dso_local void @testUnalignedLdSt() {
 ; LE-PAIRED-LABEL: testUnalignedLdSt:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+43(0), 1
-; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+59(0), 1
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+27(0), 1
+; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+43(0), 1
+; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+59(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+67(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs1, f@PCREL+51(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs2, f@PCREL+35(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs3, f@PCREL+19(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
+; LE-PAIRED-WACC-LABEL: testUnalignedLdSt:
+; LE-PAIRED-WACC:       # %bb.0: # %entry
+; LE-PAIRED-WACC-NEXT:    plxv v3, f@PCREL+11(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv v5, f@PCREL+43(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv v2, f@PCREL+27(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv v4, f@PCREL+59(0), 1
+; LE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; LE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; LE-PAIRED-WACC-NEXT:    pstxv v4, f@PCREL+67(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv v5, f@PCREL+51(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv v2, f@PCREL+35(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv v3, f@PCREL+19(0), 1
+; LE-PAIRED-WACC-NEXT:    blr
+;
 ; BE-PAIRED-LABEL: testUnalignedLdSt:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, f@toc@ha
 ; BE-PAIRED-NEXT:    addi r3, r3, f@toc@l
-; BE-PAIRED-NEXT:    plxv vs1, 27(r3), 0
-; BE-PAIRED-NEXT:    plxv vs0, 11(r3), 0
 ; BE-PAIRED-NEXT:    plxv vs3, 59(r3), 0
 ; BE-PAIRED-NEXT:    plxv vs2, 43(r3), 0
+; BE-PAIRED-NEXT:    plxv vs1, 27(r3), 0
+; BE-PAIRED-NEXT:    plxv vs0, 11(r3), 0
 ; BE-PAIRED-NEXT:    pstxv vs1, 35(r3), 0
 ; BE-PAIRED-NEXT:    pstxv vs0, 19(r3), 0
 ; BE-PAIRED-NEXT:    pstxv vs3, 67(r3), 0
 ; BE-PAIRED-NEXT:    pstxv vs2, 51(r3), 0
 ; BE-PAIRED-NEXT:    blr
+;
+; BE-PAIRED-WACC-LABEL: testUnalignedLdSt:
+; BE-PAIRED-WACC:       # %bb.0: # %entry
+; BE-PAIRED-WACC-NEXT:    addis r3, r2, f@toc@ha
+; BE-PAIRED-WACC-NEXT:    addi r3, r3, f@toc@l
+; BE-PAIRED-WACC-NEXT:    plxv v3, 59(r3), 0
+; BE-PAIRED-WACC-NEXT:    plxv v5, 27(r3), 0
+; BE-PAIRED-WACC-NEXT:    plxv v2, 43(r3), 0
+; BE-PAIRED-WACC-NEXT:    plxv v4, 11(r3), 0
+; BE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; BE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
+; BE-PAIRED-WACC-NEXT:    pstxv v5, 67(r3), 0
+; BE-PAIRED-WACC-NEXT:    pstxv v4, 51(r3), 0
+; BE-PAIRED-WACC-NEXT:    pstxv v3, 35(r3), 0
+; BE-PAIRED-WACC-NEXT:    pstxv v2, 19(r3), 0
+; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testUnalignedLdSt:
 ; LE-PWR9:       # %bb.0: # %entry
@@ -375,21 +482,39 @@ entry:
 define dso_local void @testLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-LABEL: testLdStPair:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    plxv v3, g@PCREL+32(0), 1
 ; LE-PAIRED-NEXT:    plxv vs0, g@PCREL+48(0), 1
+; LE-PAIRED-NEXT:    plxv vs1, g@PCREL+32(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs0, g@PCREL+80(0), 1
-; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+64(0), 1
+; LE-PAIRED-NEXT:    pstxv vs1, g@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    blr
+;
+; LE-PAIRED-WACC-LABEL: testLdStPair:
+; LE-PAIRED-WACC:       # %bb.0: # %entry
+; LE-PAIRED-WACC-NEXT:    plxv vs0, g@PCREL+48(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv vs1, g@PCREL+32(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv vs0, g@PCREL+80(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv vs1, g@PCREL+64(0), 1
+; LE-PAIRED-WACC-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testLdStPair:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, g@toc@ha
 ; BE-PAIRED-NEXT:    addi r3, r3, g@toc@l
-; BE-PAIRED-NEXT:    lxv v3, 48(r3)
 ; BE-PAIRED-NEXT:    lxv vs0, 32(r3)
-; BE-PAIRED-NEXT:    stxv v3, 80(r3)
+; BE-PAIRED-NEXT:    lxv vs1, 48(r3)
+; BE-PAIRED-NEXT:    stxv vs1, 80(r3)
 ; BE-PAIRED-NEXT:    stxv vs0, 64(r3)
 ; BE-PAIRED-NEXT:    blr
+;
+; BE-PAIRED-WACC-LABEL: testLdStPair:
+; BE-PAIRED-WACC:       # %bb.0: # %entry
+; BE-PAIRED-WACC-NEXT:    addis r3, r2, g@toc@ha
+; BE-PAIRED-WACC-NEXT:    addi r3, r3, g@toc@l
+; BE-PAIRED-WACC-NEXT:    lxv vs0, 48(r3)
+; BE-PAIRED-WACC-NEXT:    lxv vs1, 32(r3)
+; BE-PAIRED-WACC-NEXT:    stxv vs0, 80(r3)
+; BE-PAIRED-WACC-NEXT:    stxv vs1, 64(r3)
+; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testLdStPair:
 ; LE-PWR9:       # %bb.0: # %entry
@@ -452,13 +577,26 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-NEXT:    sldi r3, r3, 5
 ; LE-PAIRED-NEXT:    paddi r5, 0, g@PCREL, 1
 ; LE-PAIRED-NEXT:    add r6, r5, r3
-; LE-PAIRED-NEXT:    lxvx v3, r5, r3
+; LE-PAIRED-NEXT:    lxvx vs0, r5, r3
 ; LE-PAIRED-NEXT:    sldi r3, r4, 5
 ; LE-PAIRED-NEXT:    add r4, r5, r3
-; LE-PAIRED-NEXT:    lxv vs0, 16(r6)
-; LE-PAIRED-NEXT:    stxvx v3, r5, r3
-; LE-PAIRED-NEXT:    stxv vs0, 16(r4)
+; LE-PAIRED-NEXT:    lxv vs1, 16(r6)
+; LE-PAIRED-NEXT:    stxvx vs0, r5, r3
+; LE-PAIRED-NEXT:    stxv vs1, 16(r4)
 ; LE-PAIRED-NEXT:    blr
+;
+; LE-PAIRED-WACC-LABEL: testXLdStPair:
+; LE-PAIRED-WACC:       # %bb.0: # %entry
+; LE-PAIRED-WACC-NEXT:    sldi r3, r3, 5
+; LE-PAIRED-WACC-NEXT:    paddi r5, 0, g@PCREL, 1
+; LE-PAIRED-WACC-NEXT:    add r6, r5, r3
+; LE-PAIRED-WACC-NEXT:    lxvx vs0, r5, r3
+; LE-PAIRED-WACC-NEXT:    lxv vs1, 16(r6)
+; LE-PAIRED-WACC-NEXT:    sldi r3, r4, 5
+; LE-PAIRED-WACC-NEXT:    add r4, r5, r3
+; LE-PAIRED-WACC-NEXT:    stxvx vs0, r5, r3
+; LE-PAIRED-WACC-NEXT:    stxv vs1, 16(r4)
+; LE-PAIRED-WACC-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testXLdStPair:
 ; BE-PAIRED:       # %bb.0: # %entry
@@ -469,10 +607,24 @@ define dso_local void @testXLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; BE-PAIRED-NEXT:    lxvx vs0, r5, r3
 ; BE-PAIRED-NEXT:    sldi r3, r4, 5
 ; BE-PAIRED-NEXT:    add r4, r5, r3
-; BE-PAIRED-NEXT:    lxv v3, 16(r6)
+; BE-PAIRED-NEXT:    lxv vs1, 16(r6)
 ; BE-PAIRED-NEXT:    stxvx vs0, r5, r3
-; BE-PAIRED-NEXT:    stxv v3, 16(r4)
+; BE-PAIRED-NEXT:    stxv vs1, 16(r4)
 ; BE-PAIRED-NEXT:    blr
+;
+; BE-PAIRED-WACC-LABEL: testXLdStPair:
+; BE-PAIRED-WACC:       # %bb.0: # %entry
+; BE-PAIRED-WACC-NEXT:    addis r5, r2, g@toc@ha
+; BE-PAIRED-WACC-NEXT:    sldi r3, r3, 5
+; BE-PAIRED-WACC-NEXT:    addi r5, r5, g@toc@l
+; BE-PAIRED-WACC-NEXT:    add r6, r5, r3
+; BE-PAIRED-WACC-NEXT:    lxvx vs0, r5, r3
+; BE-PAIRED-WACC-NEXT:    lxv vs1, 16(r6)
+; BE-PAIRED-WACC-NEXT:    sldi r3, r4, 5
+; BE-PAIRED-WACC-NEXT:    add r4, r5, r3
+; BE-PAIRED-WACC-NEXT:    stxvx vs0, r5, r3
+; BE-PAIRED-WACC-NEXT:    stxv vs1, 16(r4)
+; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testXLdStPair:
 ; LE-PWR9:       # %bb.0: # %entry
@@ -542,21 +694,39 @@ entry:
 define dso_local void @testUnalignedLdStPair() {
 ; LE-PAIRED-LABEL: testUnalignedLdStPair:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    plxv v3, g@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    plxv vs0, g@PCREL+27(0), 1
+; LE-PAIRED-NEXT:    plxv vs1, g@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs0, g@PCREL+35(0), 1
-; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+19(0), 1
+; LE-PAIRED-NEXT:    pstxv vs1, g@PCREL+19(0), 1
 ; LE-PAIRED-NEXT:    blr
+;
+; LE-PAIRED-WACC-LABEL: testUnalignedLdStPair:
+; LE-PAIRED-WACC:       # %bb.0: # %entry
+; LE-PAIRED-WACC-NEXT:    plxv vs0, g@PCREL+27(0), 1
+; LE-PAIRED-WACC-NEXT:    plxv vs1, g@PCREL+11(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv vs0, g@PCREL+35(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv vs1, g@PCREL+19(0), 1
+; LE-PAIRED-WACC-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testUnalignedLdStPair:
 ; BE-PAIRED:       # %bb.0: # %entry
 ; BE-PAIRED-NEXT:    addis r3, r2, g@toc@ha
 ; BE-PAIRED-NEXT:    addi r3, r3, g@toc@l
-; BE-PAIRED-NEXT:    plxv v3, 27(r3), 0
 ; BE-PAIRED-NEXT:    plxv vs0, 11(r3), 0
-; BE-PAIRED-NEXT:    pstxv v3, 35(r3), 0
+; BE-PAIRED-NEXT:    plxv vs1, 27(r3), 0
+; BE-PAIRED-NEXT:    pstxv vs1, 35(r3), 0
 ; BE-PAIRED-NEXT:    pstxv vs0, 19(r3), 0
 ; BE-PAIRED-NEXT:    blr
+;
+; BE-PAIRED-WACC-LABEL: testUnalignedLdStPair:
+; BE-PAIRED-WACC:       # %bb.0: # %entry
+; BE-PAIRED-WACC-NEXT:    addis r3, r2, g@toc@ha
+; BE-PAIRED-WACC-NEXT:    addi r3, r3, g@toc@l
+; BE-PAIRED-WACC-NEXT:    plxv vs0, 27(r3), 0
+; BE-PAIRED-WACC-NEXT:    plxv vs1, 11(r3), 0
+; BE-PAIRED-WACC-NEXT:    pstxv vs0, 35(r3), 0
+; BE-PAIRED-WACC-NEXT:    pstxv vs1, 19(r3), 0
+; BE-PAIRED-WACC-NEXT:    blr
 ;
 ; LE-PWR9-LABEL: testUnalignedLdStPair:
 ; LE-PWR9:       # %bb.0: # %entry

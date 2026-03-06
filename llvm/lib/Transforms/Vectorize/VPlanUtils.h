@@ -10,10 +10,14 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "VPlanPatternMatch.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
+class PredicatedScalarEvolution;
 } // namespace llvm
 
 namespace llvm {
@@ -25,49 +29,127 @@ bool onlyFirstLaneUsed(const VPValue *Def);
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
+/// Returns true if only scalar values of \p Def are used by all users.
+bool onlyScalarValuesUsed(const VPValue *Def);
+
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
 /// value. Otherwise return a VPExpandSCEVRecipe to expand \p Expr. If \p Plan's
 /// pre-header already contains a recipe expanding \p Expr, return it. If not,
 /// create a new one.
-VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
-                                       ScalarEvolution &SE);
+VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+const SCEV *getSCEVExprForVPValue(const VPValue *V,
+                                  PredicatedScalarEvolution &PSE,
+                                  const Loop *L = nullptr);
 
-/// Returns true if \p VPV is uniform after vectorization.
-inline bool isUniformAfterVectorization(const VPValue *VPV) {
-  // A value defined outside the vector region must be uniform after
-  // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideLoopRegions())
-    return true;
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
-    return Rep->isUniform();
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(),
-                  isUniformAfterVectorization);
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           ((Instruction::isBinaryOp(VPI->getOpcode()) ||
-             VPI->getOpcode() == VPInstruction::PtrAdd) &&
-            all_of(VPI->operands(), isUniformAfterVectorization));
-  if (auto *IV = dyn_cast<VPDerivedIVRecipe>(VPV))
-    return all_of(IV->operands(), isUniformAfterVectorization);
+/// Returns true if \p Addr is an address SCEV that can be passed to
+/// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
+/// affine AddRec (i.e. induction ), or an add expression of such operands or a
+/// sign-extended AddRec.
+bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
 
-  // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
-}
+/// Returns true if \p VPV is a single scalar, either because it produces the
+/// same value for all lanes or only has its first lane used.
+bool isSingleScalar(const VPValue *VPV);
 
 /// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(const VPValue *V, VPlan &Plan);
+bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operand is known to be uniform across all VFs and UFs (e.g.
 /// VPDerivedIV or VPCanonicalIVPHI).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
+
+/// Returns the header block of the first, top-level loop, or null if none
+/// exist.
+VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Get the VF scaling factor applied to the recipe's output, if the recipe has
+/// one.
+unsigned getVFScaleFactor(VPRecipeBase *R);
+
+/// Returns the VPValue representing the uncountable exit comparison used by
+/// AnyOf if the recipes it depends on can be traced back to live-ins and
+/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
+/// generating the values for the comparison. The recipes are stored in
+/// \p Recipes, and recipes forming an address for a load are also added to
+/// \p GEPs.
+LLVM_ABI_FOR_TEST
+std::optional<VPValue *>
+getRecipesForUncountableExit(VPlan &Plan,
+                             SmallVectorImpl<VPRecipeBase *> &Recipes,
+                             SmallVectorImpl<VPRecipeBase *> &GEPs);
+
+/// Return a MemoryLocation for \p R with noalias metadata populated from
+/// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
+/// the location is conservatively set to nullptr.
+std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
+
+/// Extracts and returns NoWrap and FastMath flags from the induction binop in
+/// \p ID.
+inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  if (auto *OBO = dyn_cast_if_present<OverflowingBinaryOperator>(
+          ID.getInductionBinOp()))
+    return VPIRFlags::WrapFlagsTy(OBO->hasNoUnsignedWrap(),
+                                  OBO->hasNoSignedWrap());
+
+  assert(ID.getKind() == InductionDescriptor::IK_IntInduction &&
+         "Expected int induction");
+  return VPIRFlags::WrapFlagsTy(false, false);
+}
+
+/// Search \p Start's users for a recipe satisfying \p Pred, looking through
+/// recipes with definitions.
+template <typename PredT>
+inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+  SetVector<VPValue *> Worklist;
+  Worklist.insert(Start);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    VPValue *Cur = Worklist[I];
+    auto *R = Cur->getDefiningRecipe();
+    if (!R)
+      continue;
+    if (Pred(R))
+      return R;
+    for (VPUser *U : Cur->users()) {
+      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
+        Worklist.insert(V);
+    }
+  }
+  return nullptr;
+}
+
+/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
+/// return nullptr;
+template <typename MatchT>
+static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  auto It = find_if(V->users(), match_fn(P));
+  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+}
+
+/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
+/// return nullptr.
+template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+}
+
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
+
+/// Collect the header mask with the pattern:
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
 } // namespace vputils
 
@@ -90,11 +172,7 @@ public:
            NewBlock->getPredecessors().empty() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      disconnectBlocks(BlockPtr, Succ);
-      connectBlocks(NewBlock, Succ);
-    }
+    transferSuccessors(BlockPtr, NewBlock);
     connectBlocks(BlockPtr, NewBlock);
   }
 
@@ -108,9 +186,10 @@ public:
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      disconnectBlocks(Pred, BlockPtr);
-      connectBlocks(Pred, NewBlock);
+      Pred->replaceSuccessor(BlockPtr, NewBlock);
+      NewBlock->appendPredecessor(Pred);
     }
+    BlockPtr->clearPredecessors();
     connectBlocks(NewBlock, BlockPtr);
   }
 
@@ -143,8 +222,7 @@ public:
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-           "Blocks can't have more than two successors.");
+
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else
@@ -177,6 +255,14 @@ public:
     Old->clearSuccessors();
   }
 
+  /// Transfer successors from \p Old to \p New. \p New must have no successors.
+  static void transferSuccessors(VPBlockBase *Old, VPBlockBase *New) {
+    for (auto *Succ : Old->getSuccessors())
+      Succ->replacePredecessor(Old, New);
+    New->setSuccessors(Old->getSuccessors());
+    Old->clearSuccessors();
+  }
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T>
@@ -203,16 +289,18 @@ public:
   /// single edge between \p From and \p To.
   static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
                            VPBlockBase *BlockPtr) {
-    auto &Successors = From->getSuccessors();
-    auto &Predecessors = To->getPredecessors();
-    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
-           "must have single between From and To");
-    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
-    unsigned PredIx =
-        std::distance(Predecessors.begin(), find(Predecessors, From));
+    unsigned SuccIdx = From->getIndexForSuccessor(To);
+    unsigned PredIx = To->getIndexForPredecessor(From);
     VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
     VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
   }
+
+  /// Returns true if \p VPB is a loop header, based on regions or \p VPDT in
+  /// their absence.
+  static bool isHeader(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns true if \p VPB is a loop latch, using isHeader().
+  static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
 };
 
 } // namespace llvm

@@ -14,7 +14,7 @@ define i32 @test(i32 %arg) {
 ; CHECK-NEXT:    br i1 false, label [[IF:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 7, [[ARG]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 1, [[DIV]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 1, [[DIV]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:

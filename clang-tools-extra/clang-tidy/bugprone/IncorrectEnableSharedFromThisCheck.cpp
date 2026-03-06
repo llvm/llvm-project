@@ -1,4 +1,4 @@
-//===--- IncorrectEnableSharedFromThisCheck.cpp - clang-tidy --------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,6 @@ void IncorrectEnableSharedFromThisCheck::registerMatchers(MatchFinder *Finder) {
           .bind("base_rec")));
   Finder->addMatcher(
       cxxRecordDecl(
-          unless(isExpansionInSystemHeader()),
           hasDirectBase(cxxBaseSpecifier(unless(isPublic()), hasType(QType))
                             .bind("base")))
           .bind("derived"),

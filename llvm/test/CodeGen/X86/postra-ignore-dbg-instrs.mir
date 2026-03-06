@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=x86_64-none-linux-gnu -run-pass=postra-machine-sink -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-none-linux-gnu -passes=postra-machine-sink  -o - %s | FileCheck %s
 #
 # This test was originally generated from the following sample:
 #

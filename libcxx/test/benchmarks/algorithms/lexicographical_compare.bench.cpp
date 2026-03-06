@@ -24,9 +24,9 @@ static void bm_lexicographical_compare(benchmark::State& state) {
     benchmark::DoNotOptimize(std::lexicographical_compare(vec1.begin(), vec1.end(), vec2.begin(), vec2.end()));
   }
 }
-BENCHMARK(bm_lexicographical_compare<unsigned char>)->DenseRange(1, 8)->Range(16, 1 << 20);
-BENCHMARK(bm_lexicographical_compare<signed char>)->DenseRange(1, 8)->Range(16, 1 << 20);
-BENCHMARK(bm_lexicographical_compare<int>)->DenseRange(1, 8)->Range(16, 1 << 20);
+BENCHMARK(bm_lexicographical_compare<unsigned char>)->Arg(1)->Range(8, 1 << 20);
+BENCHMARK(bm_lexicographical_compare<signed char>)->Arg(1)->Range(8, 1 << 20);
+BENCHMARK(bm_lexicographical_compare<int>)->Arg(1)->Range(8, 1 << 20);
 
 template <class T>
 static void bm_ranges_lexicographical_compare(benchmark::State& state) {
@@ -39,8 +39,8 @@ static void bm_ranges_lexicographical_compare(benchmark::State& state) {
     benchmark::DoNotOptimize(std::ranges::lexicographical_compare(vec1.begin(), vec1.end(), vec2.begin(), vec2.end()));
   }
 }
-BENCHMARK(bm_ranges_lexicographical_compare<unsigned char>)->DenseRange(1, 8)->Range(16, 1 << 20);
-BENCHMARK(bm_ranges_lexicographical_compare<signed char>)->DenseRange(1, 8)->Range(16, 1 << 20);
-BENCHMARK(bm_ranges_lexicographical_compare<int>)->DenseRange(1, 8)->Range(16, 1 << 20);
+BENCHMARK(bm_ranges_lexicographical_compare<unsigned char>)->Arg(1)->Range(8, 1 << 20);
+BENCHMARK(bm_ranges_lexicographical_compare<signed char>)->Arg(1)->Range(8, 1 << 20);
+BENCHMARK(bm_ranges_lexicographical_compare<int>)->Arg(1)->Range(8, 1 << 20);
 
 BENCHMARK_MAIN();

@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include <optional>
 
 namespace mlir {
@@ -85,8 +84,8 @@ LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
     rewriter.setInsertionPointToStart(&module->getRegion(0).front());
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-    opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
-                                           opFunctionTy);
+    opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(), name,
+                                  opFunctionTy);
     opFunc.setPrivate();
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));

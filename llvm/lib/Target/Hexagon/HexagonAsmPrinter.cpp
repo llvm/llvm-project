@@ -43,6 +43,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -419,6 +420,14 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
 
   case Hexagon::PS_call_nr:
     Inst.setOpcode(Hexagon::J2_call);
+    break;
+
+  case Hexagon::PS_readcr:
+    Inst.setOpcode(Hexagon::A2_tfrcrr);
+    break;
+
+  case Hexagon::PS_readcr64:
+    Inst.setOpcode(Hexagon::A4_tfrcpp);
     break;
 
   case Hexagon::S5_asrhub_rnd_sat_goodsyntax: {
@@ -853,6 +862,12 @@ void HexagonAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI) {
   EmitSled(MI, SledKind::TAIL_CALL);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {
+char HexagonAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(HexagonAsmPrinter, "hexagon-asm-printer",
+                "Hexagon Assembly Printer", false, false)
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonAsmPrinter() {
   RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());
 }

@@ -75,8 +75,10 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
     auto &It = PendingMembers[0];
     CCAssignFn *AssignFn =
         TLI->CCAssignFnForCall(State.getCallingConv(), /*IsVarArg=*/false);
+    // FIXME: Get the correct original type.
+    Type *OrigTy = EVT(It.getValVT()).getTypeForEVT(State.getContext());
     if (AssignFn(It.getValNo(), It.getValVT(), It.getValVT(), CCValAssign::Full,
-                 ArgFlags, State))
+                 ArgFlags, OrigTy, State))
       llvm_unreachable("Call operand has unhandled type");
 
     // Return the flags to how they were before.
@@ -142,7 +144,7 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   ArrayRef<MCPhysReg> RegList;
   if (LocVT.SimpleTy == MVT::i64 || (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32))
     RegList = XRegList;
-  else if (LocVT.SimpleTy == MVT::f16)
+  else if (LocVT.SimpleTy == MVT::f16 || LocVT.SimpleTy == MVT::bf16)
     RegList = HRegList;
   else if (LocVT.SimpleTy == MVT::f32 || LocVT.is32BitVector())
     RegList = SRegList;

@@ -81,9 +81,9 @@ dimension is either static or a dynamic one in turn bound to a valid symbol.
 Note that as a result of rule (3) above, symbol validity is sensitive to the
 location of the SSA use. Dimensions may be bound not only to anything that a
 symbol is bound to, but also to induction variables of enclosing
-[`affine.for`](#affinefor-mliraffineforop) and
-[`affine.parallel`](#affineparallel-mliraffineparallelop) operations, and the result
-of an [`affine.apply` operation](#affineapply-mliraffineapplyop) (which recursively
+[`affine.for`](#affinefor-affineaffineforop) and
+[`affine.parallel`](#affineparallel-affineaffineparallelop) operations, and the result
+of an [`affine.apply` operation](#affineapply-affineaffineapplyop) (which recursively
 may use other dimensions and symbols).
 
 ### Affine Expressions
@@ -158,7 +158,7 @@ dimension indices and symbols into a list of results, with affine expressions
 combining the indices and symbols. Affine maps distinguish between
 [indices and symbols](#dimensions-and-symbols) because indices are inputs to the
 affine map when the map is called (through an operation such as
-[affine.apply](#affineapply-mliraffineapplyop)), whereas symbols are bound when the
+[affine.apply](#affineapply-affineaffineapplyop)), whereas symbols are bound when the
 map is established (e.g. when a memref is formed, establishing a memory
 [layout map](Builtin.md/#layout)).
 

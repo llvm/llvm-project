@@ -55,7 +55,7 @@ public:
     Plugins = Layer.Plugins;
   }
 
-  ~JITLinkCtx() {
+  ~JITLinkCtx() override {
     // If there is an object buffer return function then use it to
     // return ownership of the buffer.
     if (Layer.ReturnObjectBuffer && ObjBuffer)
@@ -108,8 +108,7 @@ public:
         LookupContinuation->run(Result.takeError());
       else {
         AsyncLookupResult LR;
-        for (auto &KV : *Result)
-          LR[KV.first] = KV.second;
+        LR.insert_range(*Result);
         LookupContinuation->run(std::move(LR));
       }
     };
@@ -208,7 +207,6 @@ public:
     if (auto Err = MR->notifyResolved(InternedResult))
       return Err;
 
-    notifyLoaded();
     return Error::success();
   }
 
@@ -243,11 +241,6 @@ public:
         [this](LinkGraph &G) { return registerDependencies(G); });
 
     return Error::success();
-  }
-
-  void notifyLoaded() {
-    for (auto &P : Plugins)
-      P->notifyLoaded(*MR);
   }
 
   Error notifyEmitted(jitlink::JITLinkMemoryManager::FinalizedAlloc FA) {
@@ -396,16 +389,13 @@ private:
 
         for (auto *FB : BI.AnonEdges) {
           auto &FBI = BlockInfos[FB];
-          for (auto *BB : BI.AnonBackEdges)
-            FBI.AnonBackEdges.insert(BB);
+          FBI.AnonBackEdges.insert_range(BI.AnonBackEdges);
         }
 
         for (auto *BB : BI.AnonBackEdges) {
           auto &BBI = BlockInfos[BB];
-          for (auto *SD : BI.SymbolDeps)
-            BBI.SymbolDeps.insert(SD);
-          for (auto *FB : BI.AnonEdges)
-            BBI.AnonEdges.insert(FB);
+          BBI.SymbolDeps.insert_range(BI.SymbolDeps);
+          BBI.AnonEdges.insert_range(BI.AnonEdges);
         }
       }
 

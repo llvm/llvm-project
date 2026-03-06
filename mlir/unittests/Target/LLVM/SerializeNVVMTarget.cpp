@@ -19,7 +19,7 @@
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/Config/llvm-config.h" // for LLVM_HAS_NVPTX_TARGET
+#include "llvm/Config/Targets.h" // for LLVM_HAS_NVPTX_TARGET
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Process.h"
@@ -86,15 +86,16 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMMToLLVM)) {
   ASSERT_TRUE(!!serializer);
   gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Offload);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
 
     // Read the serialized module.
-    llvm::MemoryBufferRef buffer(StringRef(object->data(), object->size()),
-                                 "module");
+    llvm::MemoryBufferRef buffer(
+        StringRef(object->getObject().data(), object->getObject().size()),
+        "module");
     llvm::LLVMContext llvmContext;
     llvm::Expected<std::unique_ptr<llvm::Module>> llvmModule =
         llvm::getLazyBitcodeModule(buffer, llvmContext);
@@ -122,14 +123,18 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToPTX)) {
   ASSERT_TRUE(!!serializer);
   gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Assembly);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
 
     ASSERT_TRUE(
-        StringRef(object->data(), object->size()).contains("nvvm_kernel"));
+        StringRef(object->getObject().data(), object->getObject().size())
+            .contains("nvvm_kernel"));
+    ASSERT_TRUE(
+        StringRef(object->getObject().data(), object->getObject().size())
+            .count('\0') == 0);
   }
 }
 
@@ -152,11 +157,11 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToBinary)) {
   ASSERT_TRUE(!!serializer);
   gpu::TargetOptions options("", {}, "", "", gpu::CompilationTarget::Binary);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
   }
 }
 
@@ -202,11 +207,11 @@ TEST_F(MLIRTargetLLVMNVVM,
                              optimizedCallback, isaCallback);
 
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
 
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
     ASSERT_TRUE(!initialLLVMIR.empty());
     ASSERT_TRUE(!linkedLLVMIR.empty());
     ASSERT_TRUE(!optimizedLLVMIR.empty());
@@ -274,7 +279,7 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LinkedLLVMIRResource)) {
                              gpu::CompilationTarget::Assembly, {}, {},
                              linkedCallback);
   for (auto gpuModule : (*module).getBody()->getOps<gpu::GPUModuleOp>()) {
-    std::optional<SmallVector<char, 0>> object =
+    std::optional<mlir::gpu::SerializedObject> object =
         serializer.serializeToObject(gpuModule, options);
 
     // Verify that we correctly linked in the library: the external call is
@@ -293,6 +298,6 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(LinkedLLVMIRResource)) {
       ASSERT_FALSE(bar->empty());
     }
     ASSERT_TRUE(object != std::nullopt);
-    ASSERT_TRUE(!object->empty());
+    ASSERT_TRUE(!object->getObject().empty());
   }
 }

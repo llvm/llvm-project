@@ -1,11 +1,15 @@
 # Xqcilsm - Qualcomm uC Load Store Multiple Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcilsm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcilsm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcilsm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcilsm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK: :[[@LINE+1]]:20: error: expected register
 qc.swm x5, x20, 12(20)
+
+# CHECK-PLUS: :[[@LINE+2]]:8: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:8: error: invalid operand for instruction
+qc.swm x0, x20, 12(x3)
 
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
@@ -23,6 +27,10 @@ qc.swm x5, x20, 12(x3)
 
 # CHECK: :[[@LINE+1]]:20: error: expected register
 qc.swmi x10, 4, 20(4)
+
+# CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
+qc.swmi x0, 4, 20(x4)
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.swmi x10, 4, 20

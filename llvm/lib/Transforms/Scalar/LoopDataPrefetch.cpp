@@ -304,7 +304,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (!Metrics.NumInsts.isValid())
     return MadeChange;
 
-  unsigned LoopSize = *Metrics.NumInsts.getValue();
+  unsigned LoopSize = Metrics.NumInsts.getValue();
   if (!LoopSize)
     LoopSize = 1;
 
@@ -390,7 +390,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       continue;
 
     BasicBlock *BB = P.InsertPt->getParent();
-    SCEVExpander SCEVE(*SE, BB->getDataLayout(), "prefaddr");
+    SCEVExpander SCEVE(*SE, "prefaddr");
     const SCEV *NextLSCEV = SE->getAddExpr(P.LSCEVAddRec, SE->getMulExpr(
       SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
       P.LSCEVAddRec->getStepRecurrence(*SE)));

@@ -16,8 +16,7 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
-    "aix/HostInfoAIX.cpp",
-    "common/Alarm.cpp",
+    "common/DiagnosticsRendering.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -28,9 +27,11 @@ static_library("Host") {
     "common/HostNativeThreadBase.cpp",
     "common/HostProcess.cpp",
     "common/HostThread.cpp",
+    "common/JSONTransport.cpp",
     "common/LZMA.cpp",
     "common/LockFileBase.cpp",
     "common/MainLoopBase.cpp",
+    "common/MemoryMonitor.cpp",
     "common/MonitoringProcessLauncher.cpp",
     "common/NativeProcessProtocol.cpp",
     "common/NativeRegisterContext.cpp",
@@ -64,6 +65,7 @@ static_library("Host") {
 
   if (current_os == "win") {
     sources += [
+      "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
       "windows/FileSystem.cpp",
       "windows/Host.cpp",
@@ -75,6 +77,7 @@ static_library("Host") {
       "windows/PipeWindows.cpp",
       "windows/ProcessLauncherWindows.cpp",
       "windows/ProcessRunLock.cpp",
+      "windows/PseudoConsole.cpp",
     ]
   } else {
     sources += [
@@ -87,6 +90,15 @@ static_library("Host") {
       "posix/MainLoopPosix.cpp",
       "posix/PipePosix.cpp",
       "posix/ProcessLauncherPosixFork.cpp",
+      "posix/Support.cpp",
+    ]
+  }
+
+  if (current_os == "aix") {
+    sources += [
+      "aix/Host.cpp",
+      "aix/HostInfoAIX.cpp",
+      "aix/Support.cpp",
     ]
   }
 

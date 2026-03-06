@@ -99,8 +99,6 @@ entry:
 ; CHECK: calll __eqdf2
 ; CHECK: sete
 ; CHECK: calll __unorddf2
-; CHECK: setne
-; CHECK: or
 ; CHECK: retl
 
 define i1 @test11(double %d) #0 {

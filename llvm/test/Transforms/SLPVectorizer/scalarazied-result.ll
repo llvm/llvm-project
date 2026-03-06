@@ -9,10 +9,6 @@ define void @test() {
 ;
 ; AARCH64-LABEL: @test(
 ; AARCH64-NEXT:  entry:
-; AARCH64-NEXT:    [[TMP0:%.*]] = extractelement <8 x half> zeroinitializer, i64 1
-; AARCH64-NEXT:    [[TOBOOL:%.*]] = fcmp une half [[TMP0]], 0xH0000
-; AARCH64-NEXT:    [[TMP1:%.*]] = extractelement <8 x half> zeroinitializer, i64 1
-; AARCH64-NEXT:    [[TOBOOL3:%.*]] = fcmp une half [[TMP1]], 0xH0000
 ; AARCH64-NEXT:    ret void
 ;
 entry:

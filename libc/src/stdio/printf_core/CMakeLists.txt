@@ -25,8 +25,38 @@ endif()
 if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
   list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
+if(LIBC_CONF_PRINTF_RUNTIME_DISPATCH)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_RUNTIME_DISPATCH")
+endif()
 if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
+endif()
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${LIBC_TARGET_OS})
+else()
+  add_subdirectory(generic)
+endif()
+
+set(target_error_mapper libc.src.stdio.printf_core.${LIBC_TARGET_OS}.error_mapper)
+if(NOT TARGET ${target_error_mapper})
+    set(target_error_mapper libc.src.stdio.printf_core.generic.error_mapper)
+endif()
+
+if(LIBC_CONF_PRINTF_DISABLE_WIDE)
+  set(wchar_deps "")
+  set(parser_wchar_deps "")
+else()
+  set(wchar_deps
+    libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
+    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.mbstate
+  )
+  set(parser_wchar_deps
+    libc.hdr.types.wint_t
+  )
 endif()
 
 add_header_library(
@@ -41,8 +71,10 @@ add_header_library(
   HDRS
     core_structs.h
   DEPENDS
+    libc.include.inttypes
     libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fp_bits
+    libc.hdr.errno_macros
 )
 
 add_header_library(
@@ -60,12 +92,11 @@ add_header_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
+    ${parser_wchar_deps}
 )
 
-add_object_library(
+add_header_library(
   writer
-  SRCS
-    writer.cpp
   HDRS
     writer.h
   DEPENDS
@@ -76,10 +107,8 @@ add_object_library(
     libc.src.string.memory_utils.inline_memset
 )
 
-add_object_library(
+add_header_library(
   converter
-  SRCS
-    converter.cpp
   HDRS
     converter.h
     converter_atlas.h
@@ -98,6 +127,8 @@ add_object_library(
     .core_structs
     .printf_config
     .writer
+    libc.include.inttypes
+    libc.hdr.limits_macros
     libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.limits
@@ -111,12 +142,12 @@ add_object_library(
     libc.src.__support.libc_assert
     libc.src.__support.uint128
     libc.src.__support.StringUtil.error_to_string
+    libc.src.string.memory_utils.inline_memcpy
+    ${wchar_deps}
 )
 
-add_object_library(
+add_header_library(
   printf_main
-  SRCS
-    printf_main.cpp
   HDRS
     printf_main.h
   DEPENDS
@@ -125,6 +156,7 @@ add_object_library(
     .writer
     .core_structs
     libc.src.__support.arg_list
+    libc.src.__support.error_or
 )
 
 add_header_library(
@@ -136,8 +168,18 @@ add_header_library(
     libc.hdr.func.free
     libc.hdr.func.realloc
     libc.src.__support.arg_list
+    libc.src.__support.error_or
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+)
+
+add_header_library(
+  error_mapper
+  HDRS
+    error_mapper.h
+  DEPENDS
+    ${target_error_mapper}
+    libc.src.__support.macros.properties.architectures
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
@@ -152,8 +194,10 @@ add_header_library(
     vfprintf_internal.h
   DEPENDS
     libc.src.__support.File.file
+    libc.src.__support.error_or
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
   ${use_system_file}
 )
+

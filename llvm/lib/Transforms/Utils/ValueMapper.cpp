@@ -77,7 +77,7 @@ struct WorklistEntry {
   };
   struct AppendingGVTy {
     GlobalVariable *GV;
-    Constant *InitPrefix;
+    GlobalVariable *OldGV;
   };
   struct AliasOrIFuncTy {
     GlobalValue *GV;
@@ -120,12 +120,12 @@ class Mapper {
   SmallVector<WorklistEntry, 4> Worklist;
   SmallVector<DelayedBasicBlock, 1> DelayedBBs;
   SmallVector<Constant *, 16> AppendingInits;
-  const MetadataSetTy *IdentityMD;
+  const MetadataPredicate *IdentityMD;
 
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
          ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer,
-         const MetadataSetTy *IdentityMD)
+         const MetadataPredicate *IdentityMD)
       : Flags(Flags), TypeMapper(TypeMapper),
         MCs(1, MappingContext(VM, Materializer)), IdentityMD(IdentityMD) {}
 
@@ -162,7 +162,7 @@ public:
 
   void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                     unsigned MCID);
-  void scheduleMapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+  void scheduleMapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
                                     bool IsOldCtorDtor,
                                     ArrayRef<Constant *> NewMembers,
                                     unsigned MCID);
@@ -173,7 +173,7 @@ public:
   void flush();
 
 private:
-  void mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+  void mapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
                             bool IsOldCtorDtor,
                             ArrayRef<Constant *> NewMembers);
 
@@ -525,6 +525,10 @@ Value *Mapper::mapValue(const Value *V) {
     return getVM()[V] = ConstantStruct::get(cast<StructType>(NewTy), Ops);
   if (isa<ConstantVector>(C))
     return getVM()[V] = ConstantVector::get(Ops);
+  if (isa<ConstantPtrAuth>(C))
+    return getVM()[V] =
+               ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
+                                    cast<ConstantInt>(Ops[2]), Ops[3], Ops[4]);
   // If this is a no-operand constant, it must be because the type was remapped.
   if (isa<PoisonValue>(C))
     return getVM()[V] = PoisonValue::get(NewTy);
@@ -769,7 +773,7 @@ MDNode *MDNodeMapper::visitOperands(UniquedGraph &G, MDNode::op_iterator &I,
     MDNode &OpN = *cast<MDNode>(Op);
     assert(OpN.isUniqued() &&
            "Only uniqued operands cannot be mapped immediately");
-    if (G.Info.insert(std::make_pair(&OpN, Data())).second)
+    if (G.Info.try_emplace(&OpN).second)
       return &OpN; // This is a new one.  Return it.
   }
   return nullptr;
@@ -901,11 +905,10 @@ std::optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return wrapConstantAsMetadata(*CMD, mapValue(CMD->getValue()));
   }
 
-  // Map metadata from IdentityMD on first use. We need to add these nodes to
-  // the mapping as otherwise metadata nodes numbering gets messed up. This is
-  // still economical because the amount of data in IdentityMD may be a lot
-  // larger than what will actually get used.
-  if (IdentityMD && IdentityMD->contains(MD))
+  // Map metadata matching IdentityMD predicate on first use. We need to add
+  // these nodes to the mapping as otherwise metadata nodes numbering gets
+  // messed up.
+  if (IdentityMD && (*IdentityMD)(MD))
     return getVM().MD()[MD] = TrackingMDRef(const_cast<Metadata *>(MD));
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
@@ -942,7 +945,7 @@ void Mapper::flush() {
           drop_begin(AppendingInits, PrefixSize));
       AppendingInits.resize(PrefixSize);
       mapAppendingVariable(*E.Data.AppendingGV.GV,
-                           E.Data.AppendingGV.InitPrefix,
+                           E.Data.AppendingGV.OldGV,
                            E.AppendingGVIsOldCtorDtor, ArrayRef(NewInits));
       break;
     }
@@ -985,6 +988,13 @@ void Mapper::remapInstruction(Instruction *I) {
              "Referenced value not in value map!");
   }
 
+  // Drop callee_type metadata from calls that were remapped
+  // into a direct call from an indirect one.
+  if (auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
+      CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
+  }
+
   // Remap phi nodes' incoming blocks.
   if (PHINode *PN = dyn_cast<PHINode>(I)) {
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
@@ -1007,6 +1017,10 @@ void Mapper::remapInstruction(Instruction *I) {
     if (New != Old)
       I->setMetadata(MI.first, New);
   }
+
+  // Remap source location atom instance.
+  if (!(Flags & RF_DoNotRemapAtoms))
+    RemapSourceAtom(I, getVM());
 
   if (!TypeMapper)
     return;
@@ -1081,15 +1095,21 @@ void Mapper::remapFunction(Function &F) {
   }
 }
 
-void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+void Mapper::mapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
                                   bool IsOldCtorDtor,
                                   ArrayRef<Constant *> NewMembers) {
+  Constant *InitPrefix =
+      (OldGV && !OldGV->isDeclaration()) ? OldGV->getInitializer() : nullptr;
+
   SmallVector<Constant *, 16> Elements;
   if (InitPrefix) {
     unsigned NumElements =
         cast<ArrayType>(InitPrefix->getType())->getNumElements();
     for (unsigned I = 0; I != NumElements; ++I)
       Elements.push_back(InitPrefix->getAggregateElement(I));
+    OldGV->setInitializer(nullptr);
+    if (InitPrefix->hasUseList() && InitPrefix->use_empty())
+      InitPrefix->destroyConstant();
   }
 
   PointerType *VoidPtrTy;
@@ -1135,7 +1155,7 @@ void Mapper::scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
 }
 
 void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
-                                          Constant *InitPrefix,
+                                          GlobalVariable *OldGV,
                                           bool IsOldCtorDtor,
                                           ArrayRef<Constant *> NewMembers,
                                           unsigned MCID) {
@@ -1146,7 +1166,7 @@ void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
   WE.Kind = WorklistEntry::MapAppendingVar;
   WE.MCID = MCID;
   WE.Data.AppendingGV.GV = &GV;
-  WE.Data.AppendingGV.InitPrefix = InitPrefix;
+  WE.Data.AppendingGV.OldGV = OldGV;
   WE.AppendingGVIsOldCtorDtor = IsOldCtorDtor;
   WE.AppendingGVNumNewMembers = NewMembers.size();
   Worklist.push_back(WE);
@@ -1208,7 +1228,7 @@ public:
 ValueMapper::ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags,
                          ValueMapTypeRemapper *TypeMapper,
                          ValueMaterializer *Materializer,
-                         const MetadataSetTy *IdentityMD)
+                         const MetadataPredicate *IdentityMD)
     : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer, IdentityMD)) {}
 
 ValueMapper::~ValueMapper() { delete getAsMapper(pImpl); }
@@ -1269,12 +1289,12 @@ void ValueMapper::scheduleMapGlobalInitializer(GlobalVariable &GV,
 }
 
 void ValueMapper::scheduleMapAppendingVariable(GlobalVariable &GV,
-                                               Constant *InitPrefix,
+                                               GlobalVariable *OldGV,
                                                bool IsOldCtorDtor,
                                                ArrayRef<Constant *> NewMembers,
                                                unsigned MCID) {
   getAsMapper(pImpl)->scheduleMapAppendingVariable(
-      GV, InitPrefix, IsOldCtorDtor, NewMembers, MCID);
+      GV, OldGV, IsOldCtorDtor, NewMembers, MCID);
 }
 
 void ValueMapper::scheduleMapGlobalAlias(GlobalAlias &GA, Constant &Aliasee,
@@ -1289,4 +1309,25 @@ void ValueMapper::scheduleMapGlobalIFunc(GlobalIFunc &GI, Constant &Resolver,
 
 void ValueMapper::scheduleRemapFunction(Function &F, unsigned MCID) {
   getAsMapper(pImpl)->scheduleRemapFunction(F, MCID);
+}
+
+void llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM) {
+  const DebugLoc &DL = I->getDebugLoc();
+  if (!DL)
+    return;
+
+  auto AtomGroup = DL->getAtomGroup();
+  if (!AtomGroup)
+    return;
+
+  auto R = VM.AtomMap.find({DL->getInlinedAt(), AtomGroup});
+  if (R == VM.AtomMap.end())
+    return;
+  AtomGroup = R->second;
+
+  // Remap the atom group and copy all other fields.
+  DILocation *New = DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), AtomGroup, DL->getAtomRank());
+  I->setDebugLoc(New);
 }

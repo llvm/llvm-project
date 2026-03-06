@@ -116,6 +116,13 @@ unsigned long rsr64_6(void) {
   return __builtin_arm_rsr64("0:1:16:16:2"); //expected-error {{invalid special register for builtin}}
 }
 
+void rsr64_7(unsigned long *r) {
+  // The following three instructions should produce the same assembly.
+  r[0] = __builtin_arm_rsr64("ICC_CTLR_EL3");
+  r[1] = __builtin_arm_rsr64("s3_6_c12_c12_4");
+  r[2] = __builtin_arm_rsr64("3:6:12:12:4");
+}
+
 __uint128_t rsr128_3(void) {
   return __builtin_arm_rsr128("0:1:2"); //expected-error {{invalid special register for builtin}}
 }

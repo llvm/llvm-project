@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScriptInterpreterLua.h"
-#include "Lua.h"
+#include "LuaState.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
@@ -17,6 +17,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
@@ -44,9 +45,9 @@ public:
                           true, debugger.GetUseColor(), 0, *this),
         m_script_interpreter(script_interpreter),
         m_active_io_handler(active_io_handler) {
-    llvm::cantFail(m_script_interpreter.GetLua().ChangeIO(
-        debugger.GetOutputFile().GetStream(),
-        debugger.GetErrorFile().GetStream()));
+    llvm::cantFail(m_script_interpreter.GetLuaState().ChangeIO(
+        debugger.GetOutputFileSP()->GetStream(),
+        debugger.GetErrorFileSP()->GetStream()));
     llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
   }
 
@@ -76,8 +77,13 @@ public:
     }
     if (instructions == nullptr)
       return;
-    if (interactive)
-      *io_handler.GetOutputStreamFileSP() << instructions;
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream << instructions;
+      }
+    }
   }
 
   bool IOHandlerIsInputComplete(IOHandler &io_handler,
@@ -92,7 +98,7 @@ public:
     StreamString str;
     lines.Join("\n", str);
     if (llvm::Error E =
-            m_script_interpreter.GetLua().CheckSyntax(str.GetString())) {
+            m_script_interpreter.GetLuaState().CheckSyntax(str.GetString())) {
       std::string error_str = toString(std::move(E));
       // Lua always errors out to incomplete code with '<eof>'
       return error_str.find("<eof>") == std::string::npos;
@@ -112,8 +118,11 @@ public:
       for (BreakpointOptions &bp_options : *bp_options_vec) {
         Status error = m_script_interpreter.SetBreakpointCommandCallback(
             bp_options, data.c_str(), /*is_callback=*/false);
-        if (error.Fail())
-          *io_handler.GetErrorStreamFileSP() << error.AsCString() << '\n';
+        if (error.Fail()) {
+          LockedStreamFile locked_stream =
+              io_handler.GetErrorStreamFileSP()->Lock();
+          locked_stream << error.AsCString() << '\n';
+        }
       }
       io_handler.SetIsDone(true);
     } break;
@@ -130,8 +139,11 @@ public:
         io_handler.SetIsDone(true);
         return;
       }
-      if (llvm::Error error = m_script_interpreter.GetLua().Run(data))
-        *io_handler.GetErrorStreamFileSP() << toString(std::move(error));
+      if (llvm::Error error = m_script_interpreter.GetLuaState().Run(data)) {
+        LockedStreamFile locked_stream =
+            io_handler.GetErrorStreamFileSP()->Lock();
+        locked_stream << toString(std::move(error));
+      }
       break;
     }
   }
@@ -145,7 +157,7 @@ private:
 
 ScriptInterpreterLua::ScriptInterpreterLua(Debugger &debugger)
     : ScriptInterpreter(debugger, eScriptLanguageLua),
-      m_lua(std::make_unique<Lua>()) {}
+      m_lua_state(std::make_unique<LuaState>()) {}
 
 ScriptInterpreterLua::~ScriptInterpreterLua() = default;
 
@@ -180,14 +192,14 @@ bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
   ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
 
   if (llvm::Error e =
-          m_lua->ChangeIO(io_redirect.GetOutputFile()->GetStream(),
-                          io_redirect.GetErrorFile()->GetStream())) {
+          m_lua_state->ChangeIO(io_redirect.GetOutputFile()->GetStream(),
+                                io_redirect.GetErrorFile()->GetStream())) {
     result->AppendErrorWithFormatv("lua failed to redirect I/O: {0}\n",
                                    llvm::toString(std::move(e)));
     return false;
   }
 
-  if (llvm::Error e = m_lua->Run(command)) {
+  if (llvm::Error e = m_lua_state->Run(command)) {
     result->AppendErrorWithFormatv(
         "lua failed attempting to evaluate '{0}': {1}\n", command,
         llvm::toString(std::move(e)));
@@ -216,9 +228,9 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
 bool ScriptInterpreterLua::LoadScriptingModule(
     const char *filename, const LoadScriptOptions &options,
     lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
-    FileSpec extra_search_dir) {
+    FileSpec extra_search_dir, lldb::TargetSP loaded_into_target_sp) {
 
-  if (llvm::Error e = m_lua->LoadModule(filename)) {
+  if (llvm::Error e = m_lua_state->LoadModule(filename)) {
     error = Status::FromErrorStringWithFormatv(
         "lua failed to import '{0}': {1}\n", filename,
         llvm::toString(std::move(e)));
@@ -228,13 +240,9 @@ bool ScriptInterpreterLua::LoadScriptingModule(
 }
 
 void ScriptInterpreterLua::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguageLua, CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                lldb::eScriptLanguageLua, CreateInstance);
 }
 
 void ScriptInterpreterLua::Terminate() {}
@@ -249,7 +257,7 @@ llvm::Error ScriptInterpreterLua::EnterSession(user_id_t debugger_id) {
       "lldb.process = lldb.target:GetProcess(); "
       "lldb.thread = lldb.process:GetSelectedThread(); "
       "lldb.frame = lldb.thread:GetSelectedFrame()";
-  return m_lua->Run(llvm::formatv(fmt_str, debugger_id).str());
+  return m_lua_state->Run(llvm::formatv(fmt_str, debugger_id).str());
 }
 
 llvm::Error ScriptInterpreterLua::LeaveSession() {
@@ -263,7 +271,7 @@ llvm::Error ScriptInterpreterLua::LeaveSession() {
                         "lldb.process = nil; "
                         "lldb.thread = nil; "
                         "lldb.frame = nil";
-  return m_lua->Run(str);
+  return m_lua_state->Run(str);
 }
 
 bool ScriptInterpreterLua::BreakpointCallbackFunction(
@@ -283,10 +291,10 @@ bool ScriptInterpreterLua::BreakpointCallbackFunction(
   Debugger &debugger = target->GetDebugger();
   ScriptInterpreterLua *lua_interpreter = static_cast<ScriptInterpreterLua *>(
       debugger.GetScriptInterpreter(true, eScriptLanguageLua));
-  Lua &lua = lua_interpreter->GetLua();
+  LuaState &lua_state = lua_interpreter->GetLuaState();
 
   CommandDataLua *bp_option_data = static_cast<CommandDataLua *>(baton);
-  llvm::Expected<bool> BoolOrErr = lua.CallBreakpointCallback(
+  llvm::Expected<bool> BoolOrErr = lua_state.CallBreakpointCallback(
       baton, stop_frame_sp, bp_loc_sp, bp_option_data->m_extra_args_sp);
   if (llvm::Error E = BoolOrErr.takeError()) {
     *debugger.GetAsyncErrorStream() << toString(std::move(E));
@@ -311,10 +319,10 @@ bool ScriptInterpreterLua::WatchpointCallbackFunction(
   Debugger &debugger = target->GetDebugger();
   ScriptInterpreterLua *lua_interpreter = static_cast<ScriptInterpreterLua *>(
       debugger.GetScriptInterpreter(true, eScriptLanguageLua));
-  Lua &lua = lua_interpreter->GetLua();
+  LuaState &lua_state = lua_interpreter->GetLuaState();
 
   llvm::Expected<bool> BoolOrErr =
-      lua.CallWatchpointCallback(baton, stop_frame_sp, wp_sp);
+      lua_state.CallWatchpointCallback(baton, stop_frame_sp, wp_sp);
   if (llvm::Error E = BoolOrErr.takeError()) {
     *debugger.GetAsyncErrorStream() << toString(std::move(E));
     return true;
@@ -360,7 +368,7 @@ Status ScriptInterpreterLua::RegisterBreakpointCallback(
     StructuredData::ObjectSP extra_args_sp) {
   auto data_up = std::make_unique<CommandDataLua>(extra_args_sp);
   llvm::Error err =
-      m_lua->RegisterBreakpointCallback(data_up.get(), command_body_text);
+      m_lua_state->RegisterBreakpointCallback(data_up.get(), command_body_text);
   if (err)
     return Status::FromError(std::move(err));
   auto baton_sp =
@@ -381,7 +389,7 @@ Status ScriptInterpreterLua::RegisterWatchpointCallback(
     StructuredData::ObjectSP extra_args_sp) {
   auto data_up = std::make_unique<WatchpointOptions::CommandData>();
   llvm::Error err =
-      m_lua->RegisterWatchpointCallback(data_up.get(), command_body_text);
+      m_lua_state->RegisterWatchpointCallback(data_up.get(), command_body_text);
   if (err)
     return Status::FromError(std::move(err));
   auto baton_sp =
@@ -400,4 +408,4 @@ llvm::StringRef ScriptInterpreterLua::GetPluginDescriptionStatic() {
   return "Lua script interpreter";
 }
 
-Lua &ScriptInterpreterLua::GetLua() { return *m_lua; }
+LuaState &ScriptInterpreterLua::GetLuaState() { return *m_lua_state; }

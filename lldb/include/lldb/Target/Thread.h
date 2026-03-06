@@ -19,6 +19,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
@@ -26,6 +27,7 @@
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define LLDB_THREAD_MAX_STOP_EXC_DATA 8
@@ -201,14 +203,13 @@ public:
   ///    The User resume state for this thread.
   lldb::StateType GetResumeState() const { return m_resume_state; }
 
-  /// This function is called on all the threads before "ShouldResume" and
-  /// "WillResume" in case a thread needs to change its state before the
-  /// ThreadList polls all the threads to figure out which ones actually will
-  /// get to run and how.
+  // This function is called to determine whether the thread needs to
+  // step over a breakpoint and if so, push a step-over-breakpoint thread
+  // plan.
   ///
   /// \return
   ///    True if we pushed a ThreadPlanStepOverBreakpoint
-  bool SetupForResume();
+  bool SetupToStepOverBreakpointIfNeeded(lldb::RunDirection direction);
 
   // Do not override this function, it is for thread plan logic only
   bool ShouldResume(lldb::StateType resume_state);
@@ -479,6 +480,11 @@ public:
 
   bool SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
                                       Stream &output_stream);
+
+  /// Resets the selected frame index of this object.
+  void ClearSelectedFrameIndex() {
+    return GetStackFrameList()->ClearSelectedFrameIndex();
+  }
 
   void SetDefaultFileAndLineToSelectedFrame() {
     GetStackFrameList()->SetDefaultFileAndLineToSelectedFrame();
@@ -1291,6 +1297,24 @@ public:
   ///     an empty std::optional is returned in that case.
   std::optional<lldb::addr_t> GetPreviousFrameZeroPC();
 
+  lldb::StackFrameListSP GetStackFrameList();
+
+  /// Get a frame list by its unique identifier.
+  lldb::StackFrameListSP GetFrameListByIdentifier(lldb::frame_list_id_t id);
+
+  llvm::Error
+  LoadScriptedFrameProvider(const ScriptedFrameProviderDescriptor &descriptor);
+
+  llvm::Expected<ScriptedFrameProviderDescriptor>
+  GetScriptedFrameProviderDescriptorForID(lldb::frame_list_id_t id) const;
+
+  void ClearScriptedFrameProvider();
+
+  const llvm::DenseMap<lldb::frame_list_id_t, lldb::SyntheticFrameProviderSP> &
+  GetFrameProviders() const {
+    return m_frame_providers;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1332,8 +1356,6 @@ protected:
     return StructuredData::ObjectSP();
   }
 
-  lldb::StackFrameListSP GetStackFrameList();
-
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;
   }
@@ -1370,6 +1392,8 @@ protected:
       m_state_mutex;       ///< Multithreaded protection for m_state.
   mutable std::recursive_mutex
       m_frame_mutex; ///< Multithreaded protection for m_state.
+  lldb::StackFrameListSP
+      m_unwinder_frames_sp;                ///< The unwinder frame list (ID 0).
   lldb::StackFrameListSP m_curr_frames_sp; ///< The stack frames that get lazily
                                            ///populated after a thread stops.
   lldb::StackFrameListSP m_prev_frames_sp; ///< The previous stack frames from
@@ -1395,6 +1419,24 @@ protected:
 
   /// The Thread backed by this thread, if any.
   lldb::ThreadWP m_backed_thread;
+
+  /// Map from frame list ID to its frame provider.
+  /// Cleared in ClearStackFrames(), repopulated in GetStackFrameList().
+  llvm::DenseMap<lldb::frame_list_id_t, lldb::SyntheticFrameProviderSP>
+      m_frame_providers;
+
+  /// Ordered chain of provider IDs.
+  /// Persists across ClearStackFrames() to maintain stable provider IDs.
+  std::vector<std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>>
+      m_provider_chain_ids;
+
+  /// Map from frame list identifier to frame list weak pointer.
+  mutable llvm::DenseMap<lldb::frame_list_id_t, lldb::StackFrameListWP>
+      m_frame_lists_by_id;
+
+  /// Counter for assigning unique provider IDs. Starts at 1 since 0 is
+  /// reserved for normal unwinder frames. Persists across ClearStackFrames.
+  lldb::frame_list_id_t m_next_provider_id = 1;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info

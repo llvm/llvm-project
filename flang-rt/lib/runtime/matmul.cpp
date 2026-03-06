@@ -81,7 +81,7 @@ inline RT_API_ATTRS void MatrixTimesMatrix(
     SubscriptValue n, std::size_t xColumnByteStride = 0,
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * cols * sizeof *product);
   const XT *RESTRICT xp0{x};
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
@@ -153,7 +153,7 @@ inline RT_API_ATTRS void MatrixTimesVector(
     SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t xColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * sizeof *product);
   [[maybe_unused]] const XT *RESTRICT xp0{x};
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
@@ -203,7 +203,7 @@ inline RT_API_ATTRS void VectorTimesMatrix(
     SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, cols * sizeof *product);
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
     auto xv{static_cast<ResultType>(*x++)};
@@ -255,7 +255,7 @@ static inline RT_API_ATTRS void DoMatmul(
     for (int j{0}; j < resRank; ++j) {
       result.GetDimension(j).SetBounds(1, extent[j]);
     }
-    if (int stat{result.Allocate()}) {
+    if (int stat{result.Allocate(kNoAsyncObject)}) {
       terminator.Crash(
           "MATMUL: could not allocate memory for result; STAT=%d", stat);
     }
@@ -424,6 +424,7 @@ static inline RT_API_ATTRS void DoMatmul(
 template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
     int YKIND>
 struct MatmulHelper {
+  using ResultTy = Fortran::common::optional<std::pair<TypeCategory, int>>;
   using ResultDescriptor =
       std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
   RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
@@ -439,7 +440,7 @@ struct MatmulHelper {
                      xCatKind->first == TypeCategory::Unsigned) &&
                     (yCatKind->first == TypeCategory::Integer ||
                         yCatKind->first == TypeCategory::Unsigned))));
-    if constexpr (constexpr auto resultType{
+    if constexpr (constexpr ResultTy resultType{
                       GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
       return DoMatmul<IS_ALLOCATING, resultType->first, resultType->second,
           CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(

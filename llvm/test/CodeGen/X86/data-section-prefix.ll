@@ -13,10 +13,10 @@
 ; ELF-NOUNIQ: .section    .bss.unlikely.,"aw",@nobits,unique,3
 ; ELF-NOUNIQ: .section    .bss,"aw",@nobits,unique,4
 
-; COFF-MSVC: .section .data,"dw",one_only,foo
-; COFF-MSVC: .section .data,"dw",one_only,bar
-; COFF-MSVC: .section .bss,"bw",one_only,baz
-; COFF-MSVC: .section .bss,"bw",one_only,quz
+; COFF-MSVC: .section .data,"dw",one_only,foo,unique,0
+; COFF-MSVC: .section .data,"dw",one_only,bar,unique,1
+; COFF-MSVC: .section .bss,"bw",one_only,baz,unique,2
+; COFF-MSVC: .section .bss,"bw",one_only,quz,unique,3
 
 @foo = global i32 1, !section_prefix !0
 @bar = global i32 2

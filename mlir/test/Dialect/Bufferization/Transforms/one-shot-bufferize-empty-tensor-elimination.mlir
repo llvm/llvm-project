@@ -123,7 +123,7 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
 
 // -----
 
-// EmptyTensorElimination does currently not apply to chains where the type is
+// EmptyTensorElimination does not currently apply to chains where the type is
 // changing. (Casts are supported.) This test just ensures that we do not crash
 // or generate IR that does not verify.
 
@@ -368,21 +368,18 @@ func.func @multiple_materialize_in_destination_buffer(%m: memref<5xf32>, %f: f32
 
 // -----
 
-// `EmptyTensorElimination` fails to find a valid insertion
-// point for the new injected `SubsetExtraction`.
-// CHECK-LABEL:   func.func @fail_to_eliminate_any_empty_tensors
-func.func @fail_to_eliminate_any_empty_tensors() -> tensor<5x6x128xf32> {
+// CHECK-LABEL:   func.func @eliminate_all_empty_tensors
+func.func @eliminate_all_empty_tensors() -> tensor<5x6x128xf32> {
   %cst_1 = arith.constant 1.0 : f32
   %cst_2 = arith.constant 2.0 : f32
-  // CHECK: memref.alloc
-  // CHECK: memref.alloc
-  // CHECK: memref.alloc
+  // CHECK: memref.alloc() {alignment = 64 : i64} : memref<5x6x128xf32>
+  // CHECK-NOT: memref.alloc
   %empty_1 = tensor.empty() : tensor<5x6x64xf32>
   %res_1 = linalg.fill ins(%cst_1 : f32) outs(%empty_1 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
   %empty_2 = tensor.empty() : tensor<5x6x64xf32>
   %res_2 = linalg.fill ins(%cst_2 : f32) outs(%empty_2 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
   %cancatenated_empty = tensor.empty() : tensor<5x6x128xf32>
-  // CHECK: memref.copy
+  // CHECK-NOT: memref.copy
   %inserted_slice_1 = tensor.insert_slice %res_1 into %cancatenated_empty[0, 0, 0][5, 6, 64][1, 1, 1]
       : tensor<5x6x64xf32> into tensor<5x6x128xf32>
   %inserted_slice_2 = tensor.insert_slice %res_2 into %inserted_slice_1[0, 0, 64][5, 6, 64][1, 1, 1]
@@ -392,20 +389,19 @@ func.func @fail_to_eliminate_any_empty_tensors() -> tensor<5x6x128xf32> {
 
 // -----
 
-// CHECK-LABEL:   func.func @succeed_to_eliminate_one_empty_tensor
-func.func @succeed_to_eliminate_one_empty_tensor() -> tensor<5x6x128xf32> {
+// CHECK-LABEL:   func.func @eliminate_concatenated_empty_tensors
+func.func @eliminate_concatenated_empty_tensors() -> tensor<5x6x128xf32> {
   %cst_1 = arith.constant 1.0 : f32
   %cst_2 = arith.constant 2.0 : f32
   // CHECK: memref.alloc() {alignment = 64 : i64} : memref<5x6x128xf32>
-  // CHECK: memref.alloc
   // CHECK-NOT: memref.alloc
-  %cancatenated_empty = tensor.empty() : tensor<5x6x128xf32>
+  %concatenated_empty = tensor.empty() : tensor<5x6x128xf32>
   %empty_1 = tensor.empty() : tensor<5x6x64xf32>
   %res_1 = linalg.fill ins(%cst_1 : f32) outs(%empty_1 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
   %empty_2 = tensor.empty() : tensor<5x6x64xf32>
   %res_2 = linalg.fill ins(%cst_2 : f32) outs(%empty_2 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
-  // CHECK: memref.copy
-  %inserted_slice_1 = tensor.insert_slice %res_1 into %cancatenated_empty[0, 0, 0][5, 6, 64][1, 1, 1]
+  // CHECK-NOT: memref.copy
+  %inserted_slice_1 = tensor.insert_slice %res_1 into %concatenated_empty[0, 0, 0][5, 6, 64][1, 1, 1]
       : tensor<5x6x64xf32> into tensor<5x6x128xf32>
   %inserted_slice_2 = tensor.insert_slice %res_2 into %inserted_slice_1[0, 0, 64][5, 6, 64][1, 1, 1]
       : tensor<5x6x64xf32> into tensor<5x6x128xf32>
@@ -420,20 +416,22 @@ func.func @succeed_to_eliminate_one_empty_tensor() -> tensor<5x6x128xf32> {
 
 // CHECK-ELIM-LABEL:   func.func @multi_use_of_the_same_tensor_empty
 // CHECK-LABEL:   func.func @multi_use_of_the_same_tensor_empty
+//       CHECK:   memref.alloc() {alignment = 64 : i64} : memref<5x6x128xf32>
+//   CHECK-NOT:   memref.alloc
+//   CHECK-NOT:   memref.copy
+//  CHECK-ELIM:   tensor.extract_slice {{.*}}[0, 0, 0]
+//  CHECK-ELIM:   linalg.fill
+//  CHECK-ELIM:   tensor.extract_slice {{.*}}[0, 0, 64]
+//  CHECK-ELIM:   linalg.fill
 func.func @multi_use_of_the_same_tensor_empty() -> tensor<5x6x128xf32> {
   %cst_1 = arith.constant 1.0 : f32
   %cst_2 = arith.constant 2.0 : f32
   %cancatenated_empty = tensor.empty() : tensor<5x6x128xf32>
   %empty_1 = tensor.empty() : tensor<5x6x64xf32>
-  // CHECK-ELIM: %[[VAL_3:.*]] = tensor.extract_slice
-  // CHECK-ELIM: linalg.fill ins(%[[VAL_0:.*]] : f32) outs(%[[VAL_3]]
-  // CHECK-ELIM-NOT: linalg.fill ins(%[[VAL_1:.*]] : f32) outs(%[[VAL_3]]
   %res_1 = linalg.fill ins(%cst_1 : f32) outs(%empty_1 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
   %res_2 = linalg.fill ins(%cst_2 : f32) outs(%empty_1 : tensor<5x6x64xf32>) -> tensor<5x6x64xf32>
-  // CHECK: memref.copy
   %inserted_slice_1 = tensor.insert_slice %res_1 into %cancatenated_empty[0, 0, 0][5, 6, 64][1, 1, 1]
       : tensor<5x6x64xf32> into tensor<5x6x128xf32>
-  // CHECK-NOT: memref.copy
   %inserted_slice_2 = tensor.insert_slice %res_2 into %inserted_slice_1[0, 0, 64][5, 6, 64][1, 1, 1]
       : tensor<5x6x64xf32> into tensor<5x6x128xf32>
   return %inserted_slice_2 : tensor<5x6x128xf32>
@@ -475,4 +473,67 @@ func.func @direct_use_of_tensor_empty(%arg0: tensor<5x6x128xf32>) -> tensor<5x6x
   %inserted_slice_1 = tensor.insert_slice %empty_1 into %arg0[0, 0, 0][5, 6, 64][1, 1, 1]
       : tensor<5x6x64xf32> into tensor<5x6x128xf32>
   return %inserted_slice_1 : tensor<5x6x128xf32>
+}
+
+// -----
+
+// Test that dependent pure operations are moved before the
+// insertion point to enable empty tensor elimination.
+
+//      CHECK-LABEL: func.func @move_dependent_arith_op(
+//       CHECK-SAME:     %[[ARG0:.*]]: memref<10xf32>
+//       CHECK-SAME:     %[[ARG1:.*]]: index
+//        CHECK-NOT:   memref.alloc
+//            CHECK:   %[[C5:.*]] = arith.constant 5 : index
+//            CHECK:   %[[OFFSET:.*]] = arith.addi %[[ARG1]], %[[C5]]
+//            CHECK:   %[[SV:.*]] = memref.subview %[[ARG0]][%[[OFFSET]]] [5] [1]
+//            CHECK:   linalg.fill {{.*}} outs(%[[SV]]
+//            CHECK:   return %[[ARG0]]
+// CHECK-ELIM-LABEL: func.func @move_dependent_arith_op(
+//  CHECK-ELIM-SAME:     %[[ARG0:.*]]: tensor<10xf32>
+//  CHECK-ELIM-SAME:     %[[ARG1:.*]]: index
+//       CHECK-ELIM:   %[[C5:.*]] = arith.constant 5 : index
+//       CHECK-ELIM:   %[[OFFSET:.*]] = arith.addi %[[ARG1]], %[[C5]]
+//       CHECK-ELIM:   %[[SLICE:.*]] = tensor.extract_slice %[[ARG0]][%[[OFFSET]]] [5] [1]
+//       CHECK-ELIM:   %[[FILL:.*]] = linalg.fill {{.*}} outs(%[[SLICE]]
+//       CHECK-ELIM:   tensor.insert_slice %[[FILL]] into %[[ARG0]][%[[OFFSET]]]
+func.func @move_dependent_arith_op(
+    %arg0: tensor<10xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>, bufferization.writable = true},
+    %arg1: index, %f: f32) -> tensor<10xf32>
+{
+  %0 = tensor.empty() : tensor<5xf32>
+  %1 = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  %c5 = arith.constant 5 : index
+  %offset = arith.addi %arg1, %c5 : index
+  %2 = tensor.insert_slice %1 into %arg0[%offset][5][1]
+      : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
+}
+
+// -----
+
+// Test that side-effecting operations are not moved, preventing empty
+// tensor elimination.
+
+//      CHECK-LABEL: func.func @side_effecting_op_blocks_movement(
+//            CHECK:   memref.alloc
+//            CHECK:   linalg.fill
+//            CHECK:   memref.load
+//            CHECK:   memref.subview
+//            CHECK:   memref.copy
+// CHECK-ELIM-LABEL: func.func @side_effecting_op_blocks_movement(
+//       CHECK-ELIM:   tensor.empty
+//       CHECK-ELIM:   linalg.fill
+//       CHECK-ELIM:   memref.load
+//       CHECK-ELIM:   tensor.insert_slice
+func.func @side_effecting_op_blocks_movement(
+    %arg0: tensor<10xf32> {bufferization.buffer_layout = affine_map<(d0) -> (d0)>, bufferization.writable = true},
+    %mem: memref<index>, %f: f32) -> tensor<10xf32>
+{
+  %0 = tensor.empty() : tensor<5xf32>
+  %1 = linalg.fill ins(%f : f32) outs(%0 : tensor<5xf32>) -> tensor<5xf32>
+  %offset = memref.load %mem[] : memref<index>
+  %2 = tensor.insert_slice %1 into %arg0[%offset][5][1]
+      : tensor<5xf32> into tensor<10xf32>
+  return %2 : tensor<10xf32>
 }

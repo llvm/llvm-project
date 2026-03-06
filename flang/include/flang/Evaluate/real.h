@@ -30,6 +30,12 @@ namespace Fortran::evaluate::value {
 // LOG10(2.)*1E12
 static constexpr std::int64_t ScaledLogBaseTenOfTwo{301029995664};
 
+// Ignore error about requesting a large alignment not being ABI compatible
+// with older AIX systems.
+#if defined(_AIX)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waix-compat"
+#endif
 // Models IEEE binary floating-point numbers (IEEE 754-2008,
 // ISO/IEC/IEEE 60559.2011).  The first argument to this
 // class template must be (or look like) an instance of Integer<>;
@@ -174,6 +180,8 @@ public:
   ValueWithRealFlags<Real> MOD(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> KahanSummation(const Real &, Real &correction,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   template <typename INT> constexpr INT EXPONENT() const {
@@ -442,6 +450,7 @@ public:
   // or parenthesized constant expression that produces this value.
   llvm::raw_ostream &AsFortran(
       llvm::raw_ostream &, int kind, bool minimal = false) const;
+  std::string AsFortran(int kind, bool minimal = false) const;
 
 private:
   using Significand = Integer<significandBits>; // no implicit bit
@@ -490,8 +499,14 @@ private:
       bool isNegative, int exponent, const Fraction &, Rounding, RoundingBits,
       bool multiply = false);
 
-  Word word_{}; // an Integer<>
+  // Require alignment, in case code generation on x86_64 decides that our
+  // Real object is suitable for SSE2 instructions and then gets surprised
+  // by unaligned address.
+  alignas(Word::alignment / 8) Word word_{}; // an Integer<>
 };
+#if defined(_AIX)
+#pragma GCC diagnostic pop
+#endif
 
 extern template class Real<Integer<16>, 11>; // IEEE half format
 extern template class Real<Integer<16>, 8>; // the "other" half format

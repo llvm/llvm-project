@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Relocations.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
+#include "TargetImpl.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
@@ -27,7 +28,7 @@ namespace {
 class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
-  int getTlsGdRelaxSkip(RelType type) const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -44,12 +45,16 @@ public:
                          unsigned size) const override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
-  bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+  bool deleteFallThruJmpInsn(InputSection &is,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
+  void applyBranchToBranchOpt() const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -79,7 +84,7 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_X86_64_JUMP_SLOT;
   relativeRel = R_X86_64_RELATIVE;
   iRelativeRel = R_X86_64_IRELATIVE;
-  symbolicRel = R_X86_64_64;
+  symbolicRel = ctx.arg.is64 ? R_X86_64_64 : R_X86_64_32;
   tlsDescRel = R_X86_64_TLSDESC;
   tlsGotRel = R_X86_64_TPOFF64;
   tlsModuleIndexRel = R_X86_64_DTPMOD64;
@@ -95,15 +100,6 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   defaultImageBase = 0x200000;
-}
-
-int X86_64::getTlsGdRelaxSkip(RelType type) const {
-  // TLSDESC relocations are processed separately. See relaxTlsGdToLe below.
-  return type == R_X86_64_GOTPC32_TLSDESC ||
-                 type == R_X86_64_CODE_4_GOTPC32_TLSDESC ||
-                 type == R_X86_64_TLSDESC_CALL
-             ? 1
-             : 2;
 }
 
 // Opcodes for the different X86_64 jmp instructions.
@@ -183,8 +179,8 @@ static bool isRelocationForJmpInsn(Relocation &R) {
 // next section.
 // TODO: Delete this once psABI reserves a new relocation type for fall thru
 // jumps.
-static bool isFallThruRelocation(InputSection &is, InputFile *file,
-                                 InputSection *nextIS, Relocation &r) {
+static bool isFallThruRelocation(InputSection &is, InputSection *nextIS,
+                                 Relocation &r) {
   if (!isRelocationForJmpInsn(r))
     return false;
 
@@ -245,7 +241,7 @@ static JmpInsnOpcode invertJmpOpcode(const JmpInsnOpcode opcode) {
 //   10: je bar  #jne flipped to je and the jmp is deleted.
 // aa.BB.foo:
 //   ...
-bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+bool X86_64::deleteFallThruJmpInsn(InputSection &is,
                                    InputSection *nextIS) const {
   const unsigned sizeOfDirectJmpInsn = 5;
 
@@ -269,7 +265,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (*(secContents + r.offset - 1) != 0xe9)
     return false;
 
-  if (isFallThruRelocation(is, file, nextIS, r)) {
+  if (isFallThruRelocation(is, nextIS, r)) {
     // This is a fall thru and can be deleted.
     r.expr = R_NONE;
     r.offset = 0;
@@ -296,7 +292,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (jmpOpcodeB == J_UNKNOWN)
     return false;
 
-  if (!isFallThruRelocation(is, file, nextIS, rB))
+  if (!isFallThruRelocation(is, nextIS, rB))
     return false;
 
   // jmpCC jumps to the fall thru block, the branch can be flipped and the
@@ -319,6 +315,8 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 bool X86_64::relaxOnce(int pass) const {
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_ALLOC))
+      continue;
     minVA = std::min(minVA, osec->addr);
     maxVA = std::max(maxVA, osec->addr + osec->size);
   }
@@ -358,6 +356,14 @@ bool X86_64::relaxOnce(int pass) const {
   return changed;
 }
 
+void X86_64::initTargetSpecificSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
+}
+
+// Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
                            const uint8_t *loc) const {
   switch (type) {
@@ -367,46 +373,19 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_32S:
   case R_X86_64_64:
     return R_ABS;
-  case R_X86_64_DTPOFF32:
-  case R_X86_64_DTPOFF64:
-    return R_DTPREL;
-  case R_X86_64_TPOFF32:
-  case R_X86_64_TPOFF64:
-    return R_TPREL;
-  case R_X86_64_TLSDESC_CALL:
-    return R_TLSDESC_CALL;
-  case R_X86_64_TLSLD:
-    return R_TLSLD_PC;
-  case R_X86_64_TLSGD:
-    return R_TLSGD_PC;
   case R_X86_64_SIZE32:
   case R_X86_64_SIZE64:
     return R_SIZE;
-  case R_X86_64_PLT32:
-    return R_PLT_PC;
+  case R_X86_64_DTPOFF32:
+  case R_X86_64_DTPOFF64:
+    return R_DTPREL;
   case R_X86_64_PC8:
   case R_X86_64_PC16:
   case R_X86_64_PC32:
   case R_X86_64_PC64:
     return R_PC;
-  case R_X86_64_GOT32:
-  case R_X86_64_GOT64:
-    return R_GOTPLT;
-  case R_X86_64_GOTPC32_TLSDESC:
-  case R_X86_64_CODE_4_GOTPC32_TLSDESC:
-    return R_TLSDESC_PC;
-  case R_X86_64_GOTPCREL:
-  case R_X86_64_GOTPCRELX:
-  case R_X86_64_REX_GOTPCRELX:
-  case R_X86_64_CODE_4_GOTPCRELX:
-  case R_X86_64_GOTTPOFF:
-  case R_X86_64_CODE_4_GOTTPOFF:
-  case R_X86_64_CODE_6_GOTTPOFF:
-    return R_GOT_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
-  case R_X86_64_PLTOFF64:
-    return R_PLT_GOTPLT;
   case R_X86_64_GOTPC32:
   case R_X86_64_GOTPC64:
     return R_GOTPLTONLY_PC;
@@ -466,10 +445,144 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType X86_64::getDynRel(RelType type) const {
-  if (type == R_X86_64_64 || type == R_X86_64_PC64 || type == R_X86_64_SIZE32 ||
-      type == R_X86_64_SIZE64)
+  if (type == symbolicRel || type == R_X86_64_SIZE32 || type == R_X86_64_SIZE64)
     return type;
   return R_X86_64_NONE;
+}
+
+template <class ELFT, class RelTy>
+void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_X86_64_NONE:
+      continue;
+
+      // Absolute relocations:
+    case R_X86_64_8:
+    case R_X86_64_16:
+    case R_X86_64_32:
+    case R_X86_64_32S:
+    case R_X86_64_64:
+      expr = R_ABS;
+      break;
+
+      // PC-relative relocations:
+    case R_X86_64_PC8:
+    case R_X86_64_PC16:
+    case R_X86_64_PC32:
+    case R_X86_64_PC64:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+      // GOT-generating relocations:
+    case R_X86_64_GOTPC32:
+    case R_X86_64_GOTPC64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTONLY_PC;
+      break;
+    case R_X86_64_GOTOFF64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTREL;
+      break;
+    case R_X86_64_GOT32:
+    case R_X86_64_GOT64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLT;
+      break;
+    case R_X86_64_PLTOFF64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_PLT_GOTPLT;
+      break;
+    case R_X86_64_GOTPCREL:
+    case R_X86_64_GOTPCRELX:
+    case R_X86_64_REX_GOTPCRELX:
+    case R_X86_64_CODE_4_GOTPCRELX:
+      expr = R_GOT_PC;
+      break;
+
+      // PLT-generating relocation:
+    case R_X86_64_PLT32:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+      // TLS relocations:
+    case R_X86_64_TPOFF32:
+    case R_X86_64_TPOFF64:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_X86_64_GOTTPOFF:
+    case R_X86_64_CODE_4_GOTTPOFF:
+    case R_X86_64_CODE_6_GOTTPOFF:
+      rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_X86_64_TLSGD:
+      if (rs.handleTlsGd(R_TLSGD_PC, R_GOT_PC, R_TPREL, type, offset, addend,
+                         sym))
+        ++it;
+      continue;
+    case R_X86_64_TLSLD:
+      if (rs.handleTlsLd(R_TLSLD_PC, type, offset, addend, sym))
+        ++it;
+      continue;
+    case R_X86_64_DTPOFF32:
+    case R_X86_64_DTPOFF64:
+      sec.addReloc(
+          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
+      continue;
+    case R_X86_64_TLSDESC_CALL:
+      // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
+      // rewrites for this relocation are identical.
+      if (!ctx.arg.shared)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+    case R_X86_64_GOTPC32_TLSDESC:
+    case R_X86_64_CODE_4_GOTPC32_TLSDESC:
+      rs.handleTlsDesc(R_TLSDESC_PC, R_GOT_PC, type, offset, addend, sym);
+      continue;
+
+      // Misc relocations:
+    case R_X86_64_SIZE32:
+    case R_X86_64_SIZE64:
+      expr = R_SIZE;
+      break;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+
+  if (ctx.arg.branchToBranch)
+    llvm::stable_sort(sec.relocs(),
+                      [](auto &l, auto &r) { return l.offset < r.offset; });
+}
+
+void X86_64::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.is64)
+    elf::scanSection1<X86_64, ELF64LE>(*this, sec);
+  else // ilp32
+    elf::scanSection1<X86_64, ELF32LE>(*this, sec);
 }
 
 void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
@@ -555,11 +668,6 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     }
     loc[-2] = 0x8b;
     write32le(loc, val);
-  } else {
-    // Convert call *x@tlsdesc(%rax) to xchg ax, ax.
-    assert(rel.type == R_X86_64_TLSDESC_CALL);
-    loc[0] = 0x66;
-    loc[1] = 0x90;
   }
 }
 
@@ -912,9 +1020,9 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_CODE_4_GOTPC32_TLSDESC:
   case R_X86_64_TLSDESC_CALL:
   case R_X86_64_TLSGD:
-    if (rel.expr == R_RELAX_TLS_GD_TO_LE) {
+    if (rel.expr == R_TPREL) {
       relaxTlsGdToLe(loc, rel, val);
-    } else if (rel.expr == R_RELAX_TLS_GD_TO_IE) {
+    } else if (rel.expr == R_GOT_PC) {
       relaxTlsGdToIe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);
@@ -922,7 +1030,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
     break;
   case R_X86_64_TLSLD:
-    if (rel.expr == R_RELAX_TLS_LD_TO_LE) {
+    if (rel.expr == R_TPREL) {
       relaxTlsLdToLe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);
@@ -932,7 +1040,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_X86_64_GOTTPOFF:
   case R_X86_64_CODE_4_GOTTPOFF:
   case R_X86_64_CODE_6_GOTTPOFF:
-    if (rel.expr == R_RELAX_TLS_IE_TO_LE) {
+    if (rel.expr == R_TPREL) {
       relaxTlsIeToLe(loc, rel, val);
     } else {
       checkInt(ctx, loc, val, 32, rel);
@@ -1143,12 +1251,8 @@ bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return false;
 }
 
-void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void X86_64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     if (rel.expr == R_NONE) // See deleteFallThruJmpInsn
       continue;
@@ -1160,6 +1264,72 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     applyJumpInstrMod(buf + sec.jumpInstrMod->offset,
                       sec.jumpInstrMod->original, sec.jumpInstrMod->size);
   }
+}
+
+static std::optional<uint64_t> getControlTransferAddend(InputSection &is,
+                                                        Relocation &r) {
+  // Identify a control transfer relocation for the branch-to-branch
+  // optimization. A "control transfer relocation" usually means a CALL or JMP
+  // target but it also includes relative vtable relocations for example.
+  //
+  // We require the relocation type to be PLT32. With a relocation type of PLT32
+  // the value may be assumed to be used for branching directly to the symbol
+  // and the addend is only used to produce the relocated value (hence the
+  // effective addend is always 0). This is because if a PLT is needed the
+  // addend will be added to the address of the PLT, and it doesn't make sense
+  // to branch into the middle of a PLT. For example, relative vtable
+  // relocations use PLT32 and 0 or a positive value as the addend but still are
+  // used to branch to the symbol.
+  //
+  // STT_SECTION symbols are a special case on x86 because the LLVM assembler
+  // uses them for branches to local symbols which are assembled as referring to
+  // the section symbol with the addend equal to the symbol value - 4.
+  if (r.type == R_X86_64_PLT32) {
+    if (r.sym->isSection())
+      return r.addend + 4;
+    return 0;
+  }
+  return std::nullopt;
+}
+
+static std::pair<Relocation *, uint64_t>
+getBranchInfoAtTarget(InputSection &is, uint64_t offset) {
+  auto content = is.contentMaybeDecompress();
+  if (content.size() > offset && content[offset] == 0xe9) { // JMP immediate
+    auto *i = llvm::partition_point(
+        is.relocations, [&](Relocation &r) { return r.offset < offset + 1; });
+    // Unlike with getControlTransferAddend() it is valid to accept a PC32
+    // relocation here because we know that this is actually a JMP and not some
+    // other reference, so the interpretation is that we add 4 to the addend and
+    // use that as the effective addend.
+    if (i != is.relocations.end() && i->offset == offset + 1 &&
+        (i->type == R_X86_64_PC32 || i->type == R_X86_64_PLT32)) {
+      return {i, i->addend + 4};
+    }
+  }
+  return {nullptr, 0};
+}
+
+static void redirectControlTransferRelocations(Relocation &r1,
+                                               const Relocation &r2) {
+  // The isSection() check handles the STT_SECTION case described above.
+  // In that case the original addend is irrelevant because it referred to an
+  // offset within the original target section so we overwrite it.
+  //
+  // The +4 is here to compensate for r2.addend which will likely be -4,
+  // but may also be addend-4 in case of a PC32 branch to symbol+addend.
+  if (r1.sym->isSection())
+    r1.addend = r2.addend;
+  else
+    r1.addend += r2.addend + 4;
+  r1.expr = r2.expr;
+  r1.sym = r2.sym;
+}
+
+void X86_64::applyBranchToBranchOpt() const {
+  applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
+                             getBranchInfoAtTarget,
+                             redirectControlTransferRelocations);
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT

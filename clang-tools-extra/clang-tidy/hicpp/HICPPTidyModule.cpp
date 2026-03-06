@@ -1,4 +1,4 @@
-//===------- HICPPTidyModule.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/AvoidGotoCheck.h"
@@ -17,7 +16,6 @@
 #include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
 #include "../cppcoreguidelines/ProTypeVarargCheck.h"
 #include "../cppcoreguidelines/SpecialMemberFunctionsCheck.h"
-#include "../google/DefaultArgumentsCheck.h"
 #include "../google/ExplicitConstructorCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
@@ -32,6 +30,7 @@
 #include "../modernize/UseOverrideCheck.h"
 #include "../performance/MoveConstArgCheck.h"
 #include "../performance/NoexceptMoveConstructorCheck.h"
+#include "../portability/NoAssemblerCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamedParameterCheck.h"
@@ -39,11 +38,11 @@
 #include "ExceptionBaseclassCheck.h"
 #include "IgnoredRemoveResultCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
-#include "NoAssemblerCheck.h"
 #include "SignedBitwiseCheck.h"
 
 namespace clang::tidy {
 namespace hicpp {
+namespace {
 
 class HICPPModule : public ClangTidyModule {
 public:
@@ -82,7 +81,8 @@ public:
     CheckFactories
         .registerCheck<cppcoreguidelines::ProBoundsArrayToPointerDecayCheck>(
             "hicpp-no-array-decay");
-    CheckFactories.registerCheck<NoAssemblerCheck>("hicpp-no-assembler");
+    CheckFactories.registerCheck<portability::NoAssemblerCheck>(
+        "hicpp-no-assembler");
     CheckFactories.registerCheck<cppcoreguidelines::NoMallocCheck>(
         "hicpp-no-malloc");
     CheckFactories
@@ -112,6 +112,8 @@ public:
   }
 };
 
+} // namespace
+
 // Register the HICPPModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<HICPPModule>
     X("hicpp-module", "Adds High-Integrity C++ checks.");
@@ -120,6 +122,6 @@ static ClangTidyModuleRegistry::Add<HICPPModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the HICPPModule.
-volatile int HICPPModuleAnchorSource = 0;
+volatile int HICPPModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

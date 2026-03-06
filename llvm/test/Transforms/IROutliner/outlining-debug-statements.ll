@@ -19,7 +19,7 @@ entry:
   %c = alloca i32, align 4
   store i32 2, ptr %a, align 4
   store i32 3, ptr %b, align 4
-  call void @llvm.dbg.value(metadata i64 0, metadata !14, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata i64 0, metadata !14, metadata !DIExpression()), !dbg !15
   store i32 4, ptr %c, align 4
   %al = load i32, ptr %a
   %bl = load i32, ptr %b
@@ -62,3 +62,4 @@ entry:
 !12 = !DISubroutineType(types: !13)
 !13 = !{}
 !14 = !DILocalVariable(name: "p_6", arg: 1, scope: !11, line: 117, type: !1)
+!15 = !DILocation(line: 1, scope: !11)

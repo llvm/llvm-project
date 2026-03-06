@@ -570,9 +570,7 @@ public:
         return ConcreteOp::getInherentAttr(concreteOp->getContext(),
                                            concreteOp.getProperties(), name);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->getDiscardableAttr(name);
+      return std::nullopt;
     }
     void setInherentAttr(Operation *op, StringAttr name,
                          Attribute value) final {
@@ -581,9 +579,8 @@ public:
         return ConcreteOp::setInherentAttr(concreteOp.getProperties(), name,
                                            value);
       }
-      // If the op does not have support for properties, we dispatch back to the
-      // dictionnary of discardable attributes for now.
-      return cast<ConcreteOp>(op)->setDiscardableAttr(name, value);
+      llvm_unreachable(
+          "Can't call setInherentAttr on operation with empty properties");
     }
     void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
       if constexpr (hasProperties) {
@@ -639,7 +636,7 @@ public:
         auto p = properties.as<Properties *>();
         return ConcreteOp::setPropertiesFromAttr(*p, attr, emitError);
       }
-      emitError() << "this operation does not support properties";
+      emitError() << "this operation has empty properties";
       return failure();
     }
     Attribute getPropertiesAsAttr(Operation *op) final {
@@ -651,11 +648,9 @@ public:
       return {};
     }
     bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
-      if constexpr (hasProperties) {
+      if constexpr (hasProperties)
         return *lhs.as<Properties *>() == *rhs.as<Properties *>();
-      } else {
-        return true;
-      }
+      return true;
     }
     void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
       *lhs.as<Properties *>() = *rhs.as<Properties *>();
@@ -802,7 +797,6 @@ public:
   using size_type = size_t;
 
   NamedAttrList() : dictionarySorted({}, true) {}
-  NamedAttrList(std::nullopt_t none) : NamedAttrList() {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
   NamedAttrList(DictionaryAttr attributes);
   NamedAttrList(const_iterator inStart, const_iterator inEnd);
@@ -985,9 +979,9 @@ public:
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(OperationState &&other) = default;
-  OperationState(const OperationState &other) = default;
   OperationState &operator=(OperationState &&other) = default;
-  OperationState &operator=(const OperationState &other) = default;
+  OperationState(const OperationState &other) = delete;
+  OperationState &operator=(const OperationState &other) = delete;
   ~OperationState();
 
   /// Get (or create) a properties of the provided type to be set on the
@@ -997,13 +991,25 @@ public:
     if (!properties) {
       T *p = new T{};
       properties = p;
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
       propertiesDeleter = [](OpaqueProperties prop) {
         delete prop.as<const T *>();
       };
-      propertiesSetter = [](OpaqueProperties new_prop,
+      propertiesSetter = [](OpaqueProperties newProp,
                             const OpaqueProperties prop) {
-        *new_prop.as<T *>() = *prop.as<const T *>();
+        *newProp.as<T *>() = *prop.as<const T *>();
       };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
       propertiesId = TypeID::get<T>();
     }
     assert(propertiesId == TypeID::get<T>() && "Inconsistent properties");
@@ -1016,6 +1022,36 @@ public:
   LogicalResult
   setProperties(Operation *op,
                 function_ref<InFlightDiagnostic()> emitError) const;
+
+  // Make `newProperties` the source of the properties that will be copied into
+  // the operation. The memory referenced by `newProperties` must remain live
+  // until after the `Operation` is created, at which time it may be
+  // deallocated. Calls to `getOrAddProperties<>() will return references to
+  // this memory.
+  template <typename T>
+  void useProperties(T &newProperties) {
+    assert(!properties &&
+           "Can't provide a properties struct when one has been allocated");
+    properties = &newProperties;
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
+    propertiesDeleter = [](OpaqueProperties) {};
+    propertiesSetter = [](OpaqueProperties newProp,
+                          const OpaqueProperties prop) {
+      *newProp.as<T *>() = *prop.as<const T *>();
+    };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
+    propertiesId = TypeID::get<T>();
+  }
 
   void addOperands(ValueRange newOperands);
 
@@ -1133,7 +1169,6 @@ private:
 class OpPrintingFlags {
 public:
   OpPrintingFlags();
-  OpPrintingFlags(std::nullopt_t) : OpPrintingFlags() {}
 
   /// Enables the elision of large elements attributes by printing a lexically
   /// valid but otherwise meaningless form instead of the element data. The
@@ -1182,6 +1217,9 @@ public:
   /// Print unique SSA ID numbers for values, block arguments and naming
   /// conflicts across all regions
   OpPrintingFlags &printUniqueSSAIDs(bool enable = true);
+
+  /// Print SSA IDs using their NameLoc, if provided, as prefix.
+  OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
 
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
@@ -1277,7 +1315,18 @@ struct OperationEquivalence {
     // When provided, the location attached to the operation are ignored.
     IgnoreLocations = 1,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreLocations)
+    // When provided, the discardable attributes attached to the operation are
+    // ignored.
+    IgnoreDiscardableAttrs = 2,
+
+    // When provided, the properties attached to the operation are ignored.
+    IgnoreProperties = 4,
+
+    // When provided, the commutativity of the operation is ignored, and
+    // operands are compared in an order-sensitive way.
+    IgnoreCommutativity = 8,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreCommutativity)
   };
 
   /// Compute a hash for the given operation.
@@ -1294,8 +1343,8 @@ struct OperationEquivalence {
   /// Helper that can be used with `computeHash` above to ignore operation
   /// operands/result mapping.
   static llvm::hash_code ignoreHashValue(Value) { return llvm::hash_code{}; }
-  /// Helper that can be used with `computeHash` above to ignore operation
-  /// operands/result mapping.
+  /// Helper that can be used with `computeHash` to compute the hash value
+  /// of operands/results directly.
   static llvm::hash_code directHashValue(Value v) { return hash_value(v); }
 
   /// Compare two operations (including their regions) and return if they are

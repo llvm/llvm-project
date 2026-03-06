@@ -15,6 +15,7 @@
 
 #include <ranges>
 
+#include <cassert>
 #include <concepts>
 #include <string_view>
 

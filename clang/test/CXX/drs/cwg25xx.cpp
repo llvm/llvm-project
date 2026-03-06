@@ -32,6 +32,26 @@ enum E2 : S<E2>::I { e };
 #endif
 } // namespace cwg2516
 
+namespace cwg2517 { // cwg2517: 21
+#if __cplusplus >= 202002L
+template<typename ArrayType>
+concept LargeArray = requires (ArrayType my_array) {
+  requires my_array.size() > 5;
+};
+
+struct Big {
+  constexpr int size() const { return 100; }
+};
+
+struct Small {
+  constexpr int size() const { return 3; }
+};
+
+static_assert(LargeArray<Big>);
+static_assert(!LargeArray<Small>);
+#endif
+} // namespace cwg2517
+
 namespace cwg2518 { // cwg2518: 17
 
 #if __cplusplus >= 201103L
@@ -41,20 +61,17 @@ void f(T t) {
   // cxx11-14-error@-1 {{constexpr if is a C++17 extension}}
     static_assert(false, "must be int-sized");
     // since-cxx11-error@-1 {{static assertion failed: must be int-sized}}
-    //   since-cxx11-note@#cwg2518-f-c {{in instantiation of function template specialization 'cwg2518::f<char>' requested here}}
+    //   since-cxx11-note@#cwg2518-f-char {{in instantiation of function template specialization 'cwg2518::f<char>' requested here}}
   }
 }
 
-void g(char c) {
-  f(0);
-  f(c); // #cwg2518-f-c
-}
+template void f(int);
+template void f(char);  // #cwg2518-f-char
 
 template <typename Ty>
 struct S {
-  static_assert(false);
-  // cxx11-14-error@-1 {{'static_assert' with no message is a C++17 extension}}
-  // since-cxx11-error@-2 {{static assertion failed}}
+  static_assert(false, "");
+  // since-cxx11-error@-1 {{static assertion failed:}}
   //   since-cxx11-note@#cwg2518-S-double {{in instantiation of template class 'cwg2518::S<double>' requested here}}
 };
 
@@ -97,14 +114,14 @@ long double operator"" _RESERVED(long double);
 
 namespace cwg2547 { // cwg2547: 20
 #if __cplusplus >= 202302L
-struct S;
-// since-cxx23-note@-1 {{forward declaration of 'cwg2547::S'}}
-// since-cxx23-note@-2 {{forward declaration of 'cwg2547::S'}}
-// since-cxx23-note@-3 {{forward declaration of 'cwg2547::S'}}
+struct S; // #cwg2547-S
 bool operator==(S, S) = default;  // error: S is not complete
 // since-cxx23-error@-1 {{variable has incomplete type 'S'}}
-// since-cxx23-error@-2 {{variable has incomplete type 'S'}}
-// since-cxx23-error@-3 {{equality comparison operator is not a friend of incomplete class 'cwg2547::S'}}
+//   since-cxx23-note@#cwg2547-S {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-error@-3 {{variable has incomplete type 'S'}}
+//   since-cxx23-note@#cwg2547-S {{forward declaration of 'cwg2547::S'}}
+// since-cxx23-error@-5 {{equality comparison operator is not a friend of incomplete class 'cwg2547::S'}}
+//   since-cxx23-note@#cwg2547-S {{forward declaration of 'cwg2547::S'}}
 struct S {
   friend bool operator==(S, const S&) = default; // error: parameters of different types
   // since-cxx23-error@-1 {{parameters for defaulted equality comparison operator must have the same type (found 'S' vs 'const S &')}}
@@ -223,19 +240,20 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
   //   since-cxx20-note@#cwg2565-VC {{because 'b' would be invalid: argument may not have 'void' type}}
 
   template<typename T>
-  concept ErrorRequires = requires (ErrorRequires auto x) {
+  concept ErrorRequires = requires (ErrorRequires auto x) { // #cwg2565-expr
   // since-cxx20-error@-1 {{a concept definition cannot refer to itself}}
   //   since-cxx20-note@-2 {{declared here}}
   // since-cxx20-error@-3 {{'auto' not allowed in requires expression parameter}}
     x;
   };
   static_assert(ErrorRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}}
-  //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // since-cxx20-error@-1 {{static assertion failed}} \
+  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'ErrorRequires'}} \
+  //   since-cxx20-note@#cwg2565-expr {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
   template<typename T>
   concept NestedErrorInRequires = requires (T x) { // #cwg2565-NEIR
-    requires requires (NestedErrorInRequires auto y) {
+    requires requires (NestedErrorInRequires auto y) { // #cwg2565-NEIR-inner
     // since-cxx20-error@-1 {{a concept definition cannot refer to itself}}
     //   since-cxx20-note@#cwg2565-NEIR {{declared here}}
     // since-cxx20-error@-3 {{'auto' not allowed in requires expression parameter}}
@@ -243,8 +261,9 @@ namespace cwg2565 { // cwg2565: 16 open 2023-06-07
     };
   };
   static_assert(NestedErrorInRequires<int>);
-  // since-cxx20-error@-1 {{static assertion failed}}
-  //   since-cxx20-note@-2 {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+  // since-cxx20-error@-1 {{static assertion failed}} \
+  //   since-cxx20-note@-1 {{because 'int' does not satisfy 'NestedErrorInRequires'}} \
+  //   since-cxx20-note-re@#cwg2565-NEIR-inner {{because {{.*}} would be invalid: constraint depends on a previously diagnosed expression}}
 
 #endif
 } // namespace cwg2565

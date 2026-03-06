@@ -10,12 +10,20 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolGOFF.h"
+#include "llvm/Support/FormattedStream.h"
 #include <map>
 #include <utility>
 
 namespace llvm {
+class MCGOFFStreamer;
+class SystemZHLASMAsmStreamer;
 
 class SystemZTargetStreamer : public MCTargetStreamer {
 public:
@@ -50,7 +58,62 @@ public:
 
   void emitConstantPools() override;
 
-  virtual void emitMachine(StringRef CPU) {};
+  virtual void emitMachine(StringRef CPUOrCommand) {};
+
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) {}
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) {}
+
+  virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
+                                           const MCSymbol *Lo) {
+    return nullptr;
+  }
+};
+
+class SystemZTargetGOFFStreamer : public SystemZTargetStreamer {
+public:
+  SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
+                                   const MCSymbol *Lo) override;
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
+  }
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
+    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
+};
+
+class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  SystemZTargetHLASMStreamer(MCStreamer &S, formatted_raw_ostream &OS)
+      : SystemZTargetStreamer(S), OS(OS) {}
+  SystemZHLASMAsmStreamer &getHLASMStreamer();
+  const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
+                                   const MCSymbol *Lo) override;
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
+  }
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
+    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
+};
+
+class SystemZTargetELFStreamer : public SystemZTargetStreamer {
+public:
+  SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  void emitMachine(StringRef CPUOrCommand) override {}
+};
+
+class SystemZTargetGNUStreamer : public SystemZTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  SystemZTargetGNUStreamer(MCStreamer &S, formatted_raw_ostream &OS)
+      : SystemZTargetStreamer(S), OS(OS) {}
+  void emitMachine(StringRef CPUOrCommand) override {
+    OS << "\t.machine " << CPUOrCommand << "\n";
+  }
 };
 
 } // end namespace llvm

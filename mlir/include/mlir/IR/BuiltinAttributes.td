@@ -37,7 +37,8 @@ class Builtin_Attr<string name, string attrMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", "affine_map", [
-    MemRefLayoutAttrInterface
+    MemRefLayoutAttrInterface,
+    OpAsmAttrInterface
   ]> {
   let summary = "An Attribute containing an AffineMap object";
   let description = [{
@@ -63,6 +64,16 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", "affine_map", [
   let extraClassDeclaration = [{
     using ValueType = AffineMap;
     AffineMap getAffineMap() const { return getValue(); }
+
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Get a name to use when generating an alias for this attribute.
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "map";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
   }];
   let skipDefaultBuilders = 1;
 }
@@ -147,13 +158,13 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
     if (!$_self.empty()) {
       auto *alloc = static_cast<char *>(
           $_allocator.allocate($_self.size(), alignof(uint64_t)));
-      std::uninitialized_copy($_self.begin(), $_self.end(), alloc);
+      llvm::uninitialized_copy($_self, alloc);
       $_dst = ArrayRef<char>(alloc, $_self.size());
     }
   }];
 }
 
-def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array", 
+def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
     [BlobAttrInterface]> {
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
@@ -228,29 +239,48 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
-                "integer or floating-point values";
+                "values";
   let description = [{
-    Syntax:
+    A dense elements attribute stores one or multiple elements of the same type.
+    The term "dense" refers to the fact that elements are not stored as
+    individual MLIR attributes, but in a raw buffer. The attribute provides a
+    covenience API to access elements in the form of MLIR attributes, but users
+    should avoid that API in performance-critical code and utilize APIs that
+    operate on raw bytes instead.
 
-    ```
-    tensor-literal ::= integer-literal | float-literal | bool-literal | [] | [tensor-literal (, tensor-literal)* ]
-    dense-intorfloat-elements-attribute ::= `dense` `<` tensor-literal `>` `:`
-                                            ( tensor-type | vector-type )
-    ```
+    The number of elements is determined by the `type` shaped type. (Unranked
+    shaped types are not supported.) The element type of the shaped type must
+    implement the `DenseElementType` interface. This type interface defines the
+    bitwidth of an element and provides a serializer/deserializer to/from MLIR
+    attributes.
 
-    A dense int-or-float elements attribute is an elements attribute containing
-    a densely packed vector or tensor of integer or floating-point values. The
-    element type of this attribute is required to be either an `IntegerType` or
-    a `FloatType`.
+    Storage format: Given an element bitwidth "w", element "i" starts at byte
+    offset "i * ceildiv(w, 8)". In other words, each element starts at a full
+    byte offset.
+
+    TODO: The name `DenseIntOrFPElements` is no longer accurate. The attribute
+    will be renamed in the future.
 
     Examples:
 
     ```
-    // A splat tensor of integer values.
+    // Literal-first syntax: A splat tensor of integer values.
     dense<10> : tensor<2xi32>
-    // A tensor of 2 float32 elements.
+
+    // Literal-first syntax: A tensor of 2 float32 elements.
     dense<[10.0, 11.0]> : tensor<2xf32>
+
+    // Type-first syntax: A splat tensor of integer values.
+    dense<tensor<2xi32> : 10 : i32>
+
+    // Type-first syntax: A tensor of 2 float32 elements.
+    dense<tensor<2xf32> : [10.0, 11.0]>
     ```
+
+    Note: The literal-first syntax is supported only for complex, float, index,
+    int element types. The parser/print have special casing for these types.
+    Dense element attributes with other element types must use the type-first
+    syntax.
   }];
   let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
                         "ArrayRef<char>":$rawData);
@@ -397,8 +427,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   let builders = [
     AttrBuilderWithInferredContext<(ins "ShapedType":$type,
                                         "ArrayRef<StringRef>":$values), [{
-      return $_get(type.getContext(), type, values,
-                   /* isSplat */(values.size() == 1));
+      return $_get(type.getContext(), type, values);
     }]>,
   ];
   let extraClassDeclaration = [{
@@ -483,7 +512,7 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     /// when building the attribute. The provided `blobName` is used as a hint
     /// for the key of the new handle for the `blob` resource, but may be
     /// changed if necessary to ensure uniqueness during insertion.
-    /// This base class builder does no element type specific size or alignment 
+    /// This base class builder does no element type specific size or alignment
     /// checking. Use the typed subclasses for more safety unless if performing
     /// generic operations.
     AttrBuilderWithInferredContext<(ins
@@ -524,9 +553,8 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", "dictionary"> {
     ```
   }];
   let parameters = (ins ArrayRefParameter<"NamedAttribute", "">:$value);
-  let builders = [
-    AttrBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "std::nullopt">:$value)>
-  ];
+  let builders = [AttrBuilder<(
+      ins CArg<"ArrayRef<NamedAttribute>", "{}">:$value)>];
   let extraClassDeclaration = [{
     using ValueType = ArrayRef<NamedAttribute>;
 
@@ -689,7 +717,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
     false // A bool, i.e. i1, value.
     ```
   }];
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, APIntParameter<"">:$value);
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
                                         "const APInt &":$value), [{
@@ -755,7 +783,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
 // IntegerSetAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set"> {
+def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set", [OpAsmAttrInterface]> {
   let summary = "An Attribute containing an IntegerSet object";
   let description = [{
     Syntax:
@@ -776,7 +804,19 @@ def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set"> {
       return $_get(value.getContext(), value);
     }]>
   ];
-  let extraClassDeclaration = "using ValueType = IntegerSet;";
+  let extraClassDeclaration = [{
+    using ValueType = IntegerSet;
+
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Get a name to use when generating an alias for this attribute.
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "set";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
+  }];
   let skipDefaultBuilders = 1;
 }
 
@@ -966,7 +1006,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
     /// Flatten, and return, all of the sparse indices in this attribute in
     /// row-major order.
-    std::vector<ptrdiff_t> getFlattenedSparseIndices() const;
+    SmallVector<ptrdiff_t> getFlattenedSparseIndices() const;
 
   public:
   }];
@@ -980,7 +1020,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
 def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
     [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface,
-                                 ["verifyLayout"]>]> {
+                                 ["verifyLayout", "getStridesAndOffset"]>]> {
   let summary = "An Attribute representing a strided layout of a shaped type";
   let description = [{
     Syntax:

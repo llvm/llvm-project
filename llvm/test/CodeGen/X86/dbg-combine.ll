@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple x86_64-pc-linux -O0 < %s | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -mtriple x86_64-pc-linux -O0 < %s | FileCheck %s
 
 ; Make sure that the sequence of debug locations for function foo is correctly
 ; generated. More specifically, .loc entries for lines 4,5,6,7 must appear in
@@ -64,7 +63,7 @@ declare ptr @llvm.stacksave() #2
 ; Function Attrs: nounwind
 declare void @llvm.stackrestore(ptr) #2
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 

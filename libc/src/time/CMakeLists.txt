@@ -7,10 +7,11 @@ add_header_library(
   HDRS
     time_constants.h
   DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.time_t
     libc.include.time
     libc.src.__support.CPP.array
     libc.src.__support.CPP.string_view
-    libc.hdr.types.time_t
 )
 
 add_object_library(
@@ -29,6 +30,7 @@ add_object_library(
     libc.hdr.types.time_t
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
+    libc.hdr.stdint_proxy
 )
 
 add_entrypoint_object(
@@ -81,6 +83,30 @@ add_entrypoint_object(
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
+)
+
+add_entrypoint_object(
+  localtime
+  SRCS
+    localtime.cpp
+  HDRS
+    localtime.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
+)
+
+add_entrypoint_object(
+  localtime_r
+  SRCS
+    localtime_r.cpp
+  HDRS
+    localtime_r.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
 )
 
 add_entrypoint_object(
@@ -151,6 +177,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strftime_l
+  SRCS
+    strftime_l.cpp
+  HDRS
+    strftime_l.h
+  DEPENDS
+    libc.hdr.types.locale_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
+    libc.src.stdio.printf_core.writer
+    libc.src.time.strftime_core.strftime_main
+)
+
+add_entrypoint_object(
   time
   SRCS
     time.cpp
@@ -205,3 +245,11 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.clock_getres
 )
+
+add_entrypoint_object(
+  clock_settime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_settime
+)
+

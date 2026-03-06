@@ -22,23 +22,34 @@
 # SYMTAB:        ?f@@YAHXZ in
 # NO-SYMTAB-NOT: ?f@@YAHXZ in
 
-# RUN: lld-link /entry:main %t.main.obj %t.lib /out:%t.exe 2>&1 | \
-# RUN:     FileCheck --allow-empty %s
-# RUN: lld-link /entry:main %t.main.obj %t_thin.lib /out:%t.exe 2>&1 | \
-# RUN:     FileCheck --allow-empty %s
-# RUN: lld-link /entry:main %t.main.obj /wholearchive:%t_thin.lib /out:%t.exe 2>&1 | \
-# RUN:     FileCheck --allow-empty %s
+# RUN: echo "/entry:main \"%t.main.obj\" /out:\"%t.exe\"" > %t.rsp
+
+# RUN: lld-link @%t.rsp %t.lib /verbose 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=LOAD_NON_THIN
+# RUN: lld-link @%t.rsp %t_thin.lib /verbose 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=LOAD_THIN_SYM
+# RUN: lld-link @%t.rsp /wholearchive:%t_thin.lib /verbose 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=LOAD_THIN_WHOLE
+# RUN: lld-link @%t.rsp /wholearchive %t_thin.lib /verbose 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=LOAD_THIN_WHOLE
+
+# LOAD_NON_THIN:   Loaded {{.*}}.lib({{.*}}.obj) for int __cdecl f(void)
+# LOAD_THIN_SYM:   Loaded {{.*}}.obj for int __cdecl f(void)
+# LOAD_THIN_WHOLE: Loaded {{.*}}.obj for <whole-archive>
 
 # RUN: rm %t.lib.obj
-# RUN: lld-link /entry:main %t.main.obj %t.lib /out:%t.exe 2>&1 | \
-# RUN:     FileCheck --allow-empty %s
-# RUN: env LLD_IN_TEST=1 not lld-link /entry:main %t.main.obj %t_thin.lib \
-# RUN:     /out:%t.exe 2>&1 | FileCheck --check-prefix=NOOBJ %s
-# RUN: env LLD_IN_TEST=1 not lld-link /entry:main %t.main.obj %t_thin.lib /out:%t.exe \
-# RUN:     /demangle:no 2>&1 | FileCheck --check-prefix=NOOBJNODEMANGLE %s
+# RUN: lld-link @%t.rsp %t.lib 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=ERR --allow-empty
+# RUN: env LLD_IN_TEST=1 not lld-link @%t.rsp %t_thin.lib 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=NOOBJ
+# RUN: env LLD_IN_TEST=1 not lld-link @%t.rsp /wholearchive:%t_thin.lib 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=NOOBJWHOLE
+# RUN: env LLD_IN_TEST=1 not lld-link @%t.rsp %t_thin.lib /demangle:no 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=NOOBJNODEMANGLE
 
-# CHECK-NOT: error: could not get the buffer for the member defining
+# ERR-NOT: error: could not get the buffer for the member defining
 # NOOBJ: error: could not get the buffer for the member defining symbol int __cdecl f(void): {{.*}}.lib({{.*}}.lib.obj):
+# NOOBJWHOLE: error: {{.*}}.lib: could not get the buffer for a child of the archive: '{{.*}}.obj'
 # NOOBJNODEMANGLE: error: could not get the buffer for the member defining symbol ?f@@YAHXZ: {{.*}}.lib({{.*}}.lib.obj):
 
 	.text

@@ -356,3 +356,30 @@ void nonInlineFunctionCallPtr() {
   (void)a;
   (void)c;
 }
+
+// ----------------------------------------------------------------------------//
+// Misc
+// ----------------------------------------------------------------------------//
+
+void unknownVal() {
+  // force the argument to be UnknownVal
+  (void)std::get<int>(*(std::variant<int, float>*)(int)3.14f); // no crash
+}
+
+template <typename T>
+using MyVariant = std::variant<int, float>;
+
+void typeAlias() {
+  MyVariant<bool> v;
+
+  (void)std::get<int>(v); // no-warning
+}
+
+template <template<typename> typename Container>
+using MySpecialVariant = std::variant<int, float>;
+
+void complexTypeAlias() {
+  MySpecialVariant<std::vector> v;
+
+  (void)std::get<int>(v); // no crash
+}

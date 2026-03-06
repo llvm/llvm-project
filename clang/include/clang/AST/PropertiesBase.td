@@ -81,6 +81,8 @@ def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
 def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
 def BTFTypeTagAttr : PropertyType<"const BTFTypeTagAttr *">;
+def OverflowBehaviorKind
+    : EnumPropertyType<"OverflowBehaviorType::OverflowBehaviorKind">;
 def CallingConv : EnumPropertyType;
 def DeclarationName : PropertyType;
 def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;
@@ -91,6 +93,7 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"FunctionDecl", DeclRef>;
   def NamedDeclRef :
     SubclassPropertyType<"NamedDecl", DeclRef>;
+  def NamespaceBaseDeclRef : SubclassPropertyType<"NamespaceBaseDecl", DeclRef>;
   def NamespaceDeclRef :
     SubclassPropertyType<"NamespaceDecl", DeclRef>;
   def NamespaceAliasDeclRef :
@@ -126,9 +129,8 @@ def LValuePathSerializationHelper :
     PropertyType<"APValue::LValuePathSerializationHelper"> {
   let BufferElementTypes = [ LValuePathEntry ];
 }
-def NestedNameSpecifier : PropertyType<"NestedNameSpecifier *">;
-def NestedNameSpecifierKind :
-  EnumPropertyType<"NestedNameSpecifier::SpecifierKind">;
+def NestedNameSpecifier : PropertyType<"NestedNameSpecifier">;
+def NestedNameSpecifierKind : EnumPropertyType<"NestedNameSpecifier::Kind">;
 def OverloadedOperatorKind : EnumPropertyType;
 def Qualifiers : PropertyType;
 def QualType : DefaultValuePropertyType;
@@ -137,7 +139,6 @@ def Selector : PropertyType;
 def SourceLocation : PropertyType;
 def StmtRef : RefPropertyType<"Stmt"> { let ConstWhenWriting = 1; }
   def ExprRef : SubclassPropertyType<"Expr", StmtRef>;
-def SubstTemplateTypeParmTypeFlag : EnumPropertyType;
 def TemplateArgument : PropertyType;
 def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
 def TemplateName : DefaultValuePropertyType;
@@ -145,9 +146,11 @@ def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
 def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
+def UnsignedOrNone : PropertyType;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
 def VectorKind : EnumPropertyType<"VectorKind">;
 def TypeCoupledDeclRefInfo : PropertyType;
+def HLSLSpirvOperand : PropertyType<"SpirvOperand"> { let PassByReference = 1; }
 
 def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
   let BufferElementTypes = [ QualType ];
@@ -350,6 +353,29 @@ let Class = PropertyTypeCase<APValue, "Vector"> in {
     return result;
   }]>;
 }
+let Class = PropertyTypeCase<APValue, "Matrix"> in {
+  def : ReadHelper<[{
+    SmallVector<APValue, 16> buffer;
+    unsigned numElts = node.getMatrixNumElements();
+    for (unsigned i = 0; i < numElts; ++i)
+      buffer.push_back(node.getMatrixElt(i));
+  }]>;
+  def : Property<"numRows", UInt32> {
+    let Read = [{ node.getMatrixNumRows() }];
+  }
+  def : Property<"numCols", UInt32> {
+    let Read = [{ node.getMatrixNumColumns() }];
+  }
+  def : Property<"elements", Array<APValue>> { let Read = [{ buffer }]; }
+  def : Creator<[{
+    APValue result;
+    result.MakeMatrix();
+    (void)result.setMatrixUninit(numRows, numCols);
+    for (unsigned i = 0; i < elements.size(); i++)
+      result.getMatrixElt(i) = elements[i];
+    return result;
+  }]>;
+}
 let Class = PropertyTypeCase<APValue, "Array"> in {
   def : ReadHelper<[{
     SmallVector<APValue, 4> buffer{};
@@ -414,7 +440,8 @@ let Class = PropertyTypeCase<APValue, "Union"> in {
     let Read = [{ node.getUnionValue() }];
   }
   def : Creator<[{
-    return APValue(cast<clang::FieldDecl>(fieldDecl), std::move(value));
+    // node.getUnionField() / fieldDecl can be null, thus, using `cast_if_present`
+    return APValue(cast_if_present<clang::FieldDecl>(fieldDecl), std::move(value));
   }]>;
 }
 let Class = PropertyTypeCase<APValue, "AddrLabelDiff"> in {
@@ -692,25 +719,26 @@ let Class = PropertyTypeCase<TemplateName, "QualifiedTemplate"> in {
 let Class = PropertyTypeCase<TemplateName, "DependentTemplate"> in {
   def : ReadHelper<[{
     auto dtn = node.getAsDependentTemplateName();
+    auto name = dtn->getName();
   }]>;
   def : Property<"qualifier", NestedNameSpecifier> {
     let Read = [{ dtn->getQualifier() }];
   }
   def : Property<"identifier", Optional<Identifier>> {
-    let Read = [{ makeOptionalFromPointer(
-                    dtn->isIdentifier()
-                      ? dtn->getIdentifier()
-                      : nullptr) }];
+    let Read = [{ makeOptionalFromPointer(name.getIdentifier()) }];
   }
   def : Property<"operatorKind", OverloadedOperatorKind> {
     let Conditional = [{ !identifier }];
-    let Read = [{ dtn->getOperator() }];
+    let Read = [{ name.getOperator() }];
+  }
+  def : Property<"HasTemplateKeyword", Bool> {
+    let Read = [{ dtn->hasTemplateKeyword() }];
   }
   def : Creator<[{
     if (identifier) {
-      return ctx.getDependentTemplateName(qualifier, *identifier);
+      return ctx.getDependentTemplateName({qualifier, *identifier, HasTemplateKeyword});
     } else {
-      return ctx.getDependentTemplateName(qualifier, *operatorKind);
+      return ctx.getDependentTemplateName({qualifier, *operatorKind, HasTemplateKeyword});
     }
   }]>;
 }
@@ -727,11 +755,12 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParm"> in {
   def : Property<"index", UInt32> {
     let Read = [{ parm->getIndex() }];
   }
-  def : Property<"packIndex", Optional<UInt32>> {
+  def : Property<"packIndex", UnsignedOrNone> {
     let Read = [{ parm->getPackIndex() }];
   }
+  def : Property<"final", Bool> { let Read = [{ parm->getFinal() }]; }
   def : Creator<[{
-    return ctx.getSubstTemplateTemplateParm(replacement, associatedDecl, index, packIndex);
+    return ctx.getSubstTemplateTemplateParm(replacement, associatedDecl, index, packIndex, final);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
@@ -859,32 +888,30 @@ let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
   def : Property<"name", TemplateName> {
     let Read = [{ node.getAsTemplateOrTemplatePattern() }];
   }
-  def : Property<"numExpansions", Optional<UInt32>> {
+  def : Property<"numExpansions", UnsignedOrNone> {
     let Read = [{
-      // Translate unsigned -> uint32_t just in case.
-      llvm::transformOptional(node.getNumTemplateExpansions(),
-                              [](unsigned i) { return uint32_t(i); })
+      node.getNumTemplateExpansions()
     }];
   }
   def : Property<"isDefaulted", Bool> {
     let Read = [{ node.getIsDefaulted() }];
   }
   def : Creator<[{
-    auto numExpansionsUnsigned = llvm::transformOptional(
-        numExpansions, [](uint32_t i) { return unsigned(i); });
-
-    return TemplateArgument(name, numExpansionsUnsigned, isDefaulted);
+    return TemplateArgument(name, numExpansions, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node.getAsExpr() }];
   }
+  def : Property<"IsCanonical", Bool> {
+    let Read = [{ node.isCanonicalExpr() }];
+  }
   def : Property<"isDefaulted", Bool> {
     let Read = [{ node.getIsDefaulted() }];
   }
   def : Creator<[{
-    return TemplateArgument(expression, isDefaulted);
+    return TemplateArgument(expression, IsCanonical, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {
@@ -896,6 +923,6 @@ let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {
     TemplateArgument *ctxElements = new (ctx) TemplateArgument[elements.size()];
     for (size_t i = 0, e = elements.size(); i != e; ++i)
       ctxElements[i] = elements[i];
-    return TemplateArgument(llvm::ArrayRef(ctxElements, elements.size()));
+    return TemplateArgument(ArrayRef(ctxElements, elements.size()));
   }]>;
 }

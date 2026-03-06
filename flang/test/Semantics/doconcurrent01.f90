@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1141
-! A reference to the procedure IEEE_SET_HALTING_MODE ! from the intrinsic 
+! A reference to the procedure IEEE_SET_HALTING_MODE ! from the intrinsic
 ! module IEEE_EXCEPTIONS, shall not ! appear within a DO CONCURRENT construct.
 !
 ! C1137
@@ -69,7 +69,7 @@ end subroutine do_concurrent_test2
 
 subroutine s1()
   use iso_fortran_env
-  type(event_type) :: x[*]
+  type(event_type), save :: x[*]
   do concurrent (i = 1:n)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
     event post (x)
@@ -78,7 +78,7 @@ end subroutine s1
 
 subroutine s2()
   use iso_fortran_env
-  type(event_type) :: x[*]
+  type(event_type), save :: x[*]
   do concurrent (i = 1:n)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
     event wait (x)
@@ -124,8 +124,7 @@ subroutine s6()
     type(type0) :: type1_field
   end type
 
-  type(type1) :: pvar;
-  type(type1) :: qvar;
+  type(type1), save :: pvar, qvar
   integer, allocatable, dimension(:) :: array1
   integer, allocatable, dimension(:) :: array2
   integer, allocatable, codimension[:] :: ca, cb
@@ -212,6 +211,7 @@ subroutine s7()
   type(procTypeNotPure) :: procVarNotPure
   type(procTypePure) :: procVarPure
   integer :: ivar
+  real :: rvar
 
   procVarPure%pureProcComponent => pureFunc
 
@@ -238,6 +238,14 @@ subroutine s7()
   do concurrent (i = 1:10)
 !ERROR: Impure procedure 'ipf' may not be referenced in DO CONCURRENT
     ivar = generic()
+  end do
+
+  ! This should generate an error
+  do concurrent (i = 1:10)
+!ERROR: Impure procedure 'irand' may not be referenced in DO CONCURRENT
+    ivar = irand()
+!ERROR: Impure procedure 'rand' may not be referenced in DO CONCURRENT
+    rvar = rand()
   end do
 
   contains

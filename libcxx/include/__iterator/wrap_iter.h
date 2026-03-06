@@ -47,14 +47,16 @@ public:
 private:
   iterator_type __i_;
 
+  friend struct pointer_traits<__wrap_iter<_Iter> >;
+
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
-  template <
-      class _OtherIter,
-      __enable_if_t< _And< is_convertible<const _OtherIter&, _Iter>,
-                           _Or<is_same<reference, __iter_reference<_OtherIter> >,
-                               is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIter> > > > >::value,
-                     int> = 0>
+  template <class _OtherIter,
+            __enable_if_t<
+                _And<is_convertible<const _OtherIter&, _Iter>,
+                     _Or<is_same<reference, __iterator_reference<_OtherIter> >,
+                         is_same<reference, __make_const_lvalue_ref<__iterator_reference<_OtherIter> > > > >::value,
+                int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_OtherIter>& __u) _NOEXCEPT
       : __i_(__u.__i_) {}
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT { return *__i_; }
@@ -100,8 +102,6 @@ public:
     return __i_[__n];
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 iterator_type base() const _NOEXCEPT { return __i_; }
-
 private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i_(__x) {}
 
@@ -112,123 +112,118 @@ private:
   template <class _CharT, class _Traits>
   friend class basic_string_view;
   template <class _Tp, class _Alloc>
-  friend class _LIBCPP_TEMPLATE_VIS vector;
+  friend class vector;
   template <class _Tp, size_t>
-  friend class _LIBCPP_TEMPLATE_VIS span;
+  friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
-};
+  template <class _Tp, class>
+  friend struct __optional_iterator;
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return __x.base() == __y.base();
-}
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator==(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
+    return __x.__i_ == __y.__i_;
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator==(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return __x.base() == __y.base();
-}
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator==(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return __x.__i_ == __y.__i_;
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return __x.base() < __y.base();
-}
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+  operator<(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
+    return __x.__i_ < __y.__i_;
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return __x.base() < __y.base();
-}
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+  operator<(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return __x.__i_ < __y.__i_;
+  }
 
 #if _LIBCPP_STD_VER <= 17
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return !(__x == __y);
-}
+  _LIBCPP_HIDE_FROM_ABI friend
+      _LIBCPP_CONSTEXPR bool operator!=(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
+    return !(__x == __y);
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return !(__x == __y);
-}
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return __y < __x;
-}
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator!=(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return !(__x == __y);
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return __y < __x;
-}
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator>(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
+    return __y < __x;
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return !(__x < __y);
-}
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator>(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return __y < __x;
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator>=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return !(__x < __y);
-}
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator>=(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
+    return !(__x < __y);
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
-  return !(__y < __x);
-}
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator>=(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return !(__x < __y);
+  }
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
-  return !(__y < __x);
-}
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator<=(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
+    return !(__y < __x);
+  }
+
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
+  operator<=(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT {
+    return !(__y < __x);
+  }
 
 #else
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering
-operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept {
-  if constexpr (three_way_comparable_with<_Iter1, _Iter2, strong_ordering>) {
-    return __x.base() <=> __y.base();
-  } else {
-    if (__x.base() < __y.base())
-      return strong_ordering::less;
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
+  operator<=>(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) noexcept {
+    if constexpr (three_way_comparable_with<_Iter, _Iter2, strong_ordering>) {
+      return __x.__i_ <=> __y.__i_;
+    } else {
+      if (__x.__i_ < __y.__i_)
+        return strong_ordering::less;
 
-    if (__x.base() == __y.base())
-      return strong_ordering::equal;
+      if (__x.__i_ == __y.__i_)
+        return strong_ordering::equal;
 
-    return strong_ordering::greater;
+      return strong_ordering::greater;
+    }
   }
-}
 #endif // _LIBCPP_STD_VER >= 20
 
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 #ifndef _LIBCPP_CXX03_LANG
-    auto
-    operator-(const __wrap_iter<_Iter1>& __x,
-              const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 auto
+  operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.__i_ - __y.__i_)
 #else
-typename __wrap_iter<_Iter1>::difference_type
-operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+  template <class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
+  typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
-{
-  return __x.base() - __y.base();
-}
+  {
+    return __x.__i_ - __y.__i_;
+  }
 
-template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter<_Iter1>
-operator+(typename __wrap_iter<_Iter1>::difference_type __n, __wrap_iter<_Iter1> __x) _NOEXCEPT {
-  __x += __n;
-  return __x;
-}
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
+  operator+(typename __wrap_iter::difference_type __n, __wrap_iter __x) _NOEXCEPT {
+    __x += __n;
+    return __x;
+  }
+};
 
 #if _LIBCPP_STD_VER <= 17
 template <class _It>
@@ -236,13 +231,13 @@ struct __libcpp_is_contiguous_iterator<__wrap_iter<_It> > : true_type {};
 #endif
 
 template <class _It>
-struct _LIBCPP_TEMPLATE_VIS pointer_traits<__wrap_iter<_It> > {
+struct pointer_traits<__wrap_iter<_It> > {
   typedef __wrap_iter<_It> pointer;
   typedef typename pointer_traits<_It>::element_type element_type;
   typedef typename pointer_traits<_It>::difference_type difference_type;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __w) _NOEXCEPT {
-    return std::__to_address(__w.base());
+    return std::__to_address(__w.__i_);
   }
 };
 

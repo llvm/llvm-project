@@ -7,9 +7,9 @@
 
 define void @f1() !prof !20 {
 ; CHECK-LABEL: f1 :hot
-; OVERRIDE-HOT-LABEL: f1
+; OVERRIDE-HOT-LABEL: f1{{$}}
 ; OVERRIDE-COLD-LABEL: f1 :hot
-; OVERRIDE-BOTH-LABEL: f1
+; OVERRIDE-BOTH-LABEL: f1{{$}}
 ; HOT-CUTOFF-0-LABEL: f1{{$}}
 ; COLD-CUTOFF-0-LABEL: f1 :cold
 
@@ -19,8 +19,8 @@ define void @f1() !prof !20 {
 define void @f2() !prof !21 {
 ; CHECK-LABEL: f2 :cold
 ; OVERRIDE-HOT-LABEL: f2 :cold
-; OVERRIDE-COLD-LABEL: f2
-; OVERRIDE-BOTH-LABEL: f2
+; OVERRIDE-COLD-LABEL: f2{{$}}
+; OVERRIDE-BOTH-LABEL: f2 :cold
 ; HOT-CUTOFF-0-LABEL: f2 :cold
 ; COLD-CUTOFF-0-LABEL: f2 :cold
 
@@ -28,10 +28,10 @@ define void @f2() !prof !21 {
 }
 
 define void @f3() !prof !22 {
-; CHECK-LABEL: f3
-; OVERRIDE-HOT-LABEL: f3
-; OVERRIDE-COLD-LABEL: f3
-; OVERRIDE-BOTH-LABEL: f3
+; CHECK-LABEL: f3 :hot
+; OVERRIDE-HOT-LABEL: f3{{$}}
+; OVERRIDE-COLD-LABEL: f3 :hot
+; OVERRIDE-BOTH-LABEL: f3 :cold
 ; HOT-CUTOFF-0-LABEL: f3{{$}}
 ; COLD-CUTOFF-0-LABEL: f3 :cold
 

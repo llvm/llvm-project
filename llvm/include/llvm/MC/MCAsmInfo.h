@@ -15,20 +15,28 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
 
+class MCAssembler;
 class MCContext;
 class MCCFIInstruction;
 class MCExpr;
+class MCSpecifierExpr;
 class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
+class MCValue;
+class Triple;
+class raw_ostream;
 
 namespace WinEH {
 
@@ -53,7 +61,7 @@ enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
 
 /// This class is intended to be used as a base class for asm
 /// properties and features specific to the target.
-class MCAsmInfo {
+class LLVM_ABI MCAsmInfo {
 public:
   /// Assembly character literal syntax types.
   enum AsmCharLiteralSyntax {
@@ -61,6 +69,13 @@ public:
                   /// target.
     ACLS_SingleQuotePrefix, /// The desired character is prefixed by a single
                             /// quote, e.g., `'A`.
+  };
+
+  // This describes a @ style relocation specifier (expr@specifier) supported by
+  // AsmParser::parsePrimaryExpr.
+  struct AtSpecifier {
+    uint32_t Kind;
+    StringRef Name;
   };
 
 protected:
@@ -113,11 +128,11 @@ protected:
 
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
-  const char *SeparatorString;
+  const char *SeparatorString = ";";
 
   /// This indicates the comment string used by the assembler.  Defaults to
   /// "#"
-  StringRef CommentString;
+  StringRef CommentString = "#";
 
   /// This indicates whether to allow additional "comment strings" to be lexed
   /// as a comment. Setting this attribute to true, will ensure that C-style
@@ -128,7 +143,10 @@ protected:
   bool AllowAdditionalComments = true;
 
   /// This is appended to emitted labels.  Defaults to ":"
-  const char *LabelSuffix;
+  const char *LabelSuffix = ":";
+
+  /// Use .set instead of = to equate a symbol to an expression.
+  bool UsesSetToEquateSymbol = false;
 
   // Print the EH begin symbol with an assignment. Defaults to false.
   bool UseAssignmentForEHBegin = false;
@@ -139,29 +157,21 @@ protected:
   /// This prefix is used for globals like constant pool entries that are
   /// completely private to the .s file and should not have names in the .o
   /// file.  Defaults to "L"
-  StringRef PrivateGlobalPrefix;
+  StringRef PrivateGlobalPrefix = "L";
 
-  /// This prefix is used for labels for basic blocks. Defaults to the same as
-  /// PrivateGlobalPrefix.
-  StringRef PrivateLabelPrefix;
+  /// This prefix is used for labels for basic blocks. Defaults to "L"
+  StringRef PrivateLabelPrefix = "L";
 
   /// This prefix is used for symbols that should be passed through the
   /// assembler but be removed by the linker.  This is 'l' on Darwin, currently
   /// used for some ObjC metadata.  The default of "" meast that for this system
   /// a plain private symbol should be used.  Defaults to "".
-  StringRef LinkerPrivateGlobalPrefix;
+  StringRef LinkerPrivateGlobalPrefix = "";
 
   /// If these are nonempty, they contain a directive to emit before and after
-  /// an inline assembly statement.  Defaults to "#APP\n", "#NO_APP\n"
-  const char *InlineAsmStart;
-  const char *InlineAsmEnd;
-
-  /// These are assembly directives that tells the assembler to interpret the
-  /// following instructions differently.  Defaults to ".code16", ".code32",
-  /// ".code64".
-  const char *Code16Directive;
-  const char *Code32Directive;
-  const char *Code64Directive;
+  /// an inline assembly statement.  Defaults to "APP", "NO_APP"
+  const char *InlineAsmStart = "APP";
+  const char *InlineAsmEnd = "NO_APP";
 
   /// Which dialect of an assembler variant to use.  Defaults to 0
   unsigned AssemblerDialect = 0;
@@ -212,17 +222,17 @@ protected:
   /// non-zero if supported by the directive) bytes emitted to the current
   /// section. Common cases are "\t.zero\t" and "\t.space\t". Defaults to
   /// "\t.zero\t"
-  const char *ZeroDirective;
+  const char *ZeroDirective = "\t.zero\t";
 
   /// This directive allows emission of an ascii string with the standard C
   /// escape characters embedded into it.  If a target doesn't support this, it
   /// can be set to null. Defaults to "\t.ascii\t"
-  const char *AsciiDirective;
+  const char *AsciiDirective = "\t.ascii\t";
 
   /// If not null, this allows for special handling of zero terminated strings
   /// on this target.  This is commonly supported as ".asciz".  If a target
   /// doesn't support this, it can be set to null.  Defaults to "\t.asciz\t"
-  const char *AscizDirective;
+  const char *AscizDirective = "\t.asciz\t";
 
   /// Form used for character literals in the assembly syntax.  Useful for
   /// producing strings as byte lists.  If a target does not use or support
@@ -233,31 +243,13 @@ protected:
   /// current section.  If a data directive is set to null, smaller data
   /// directives will be used to emit the large sizes.  Defaults to "\t.byte\t",
   /// "\t.short\t", "\t.long\t", "\t.quad\t"
-  const char *Data8bitsDirective;
-  const char *Data16bitsDirective;
-  const char *Data32bitsDirective;
-  const char *Data64bitsDirective;
+  const char *Data8bitsDirective = "\t.byte\t";
+  const char *Data16bitsDirective = "\t.short\t";
+  const char *Data32bitsDirective = "\t.long\t";
+  const char *Data64bitsDirective = "\t.quad\t";
 
   /// True if data directives support signed values
   bool SupportsSignedData = true;
-
-  /// If non-null, a directive that is used to emit a word which should be
-  /// relocated as a 64-bit GP-relative offset, e.g. .gpdword on Mips.  Defaults
-  /// to nullptr.
-  const char *GPRel64Directive = nullptr;
-
-  /// If non-null, a directive that is used to emit a word which should be
-  /// relocated as a 32-bit GP-relative offset, e.g. .gpword on Mips or .gprel32
-  /// on Alpha.  Defaults to nullptr.
-  const char *GPRel32Directive = nullptr;
-
-  /// If non-null, directives that are used to emit a word/dword which should
-  /// be relocated as a 32/64-bit DTP/TP-relative offset, e.g. .dtprelword/
-  /// .dtpreldword/.tprelword/.tpreldword on Mips.
-  const char *DTPRel32Directive = nullptr;
-  const char *DTPRel64Directive = nullptr;
-  const char *TPRel32Directive = nullptr;
-  const char *TPRel64Directive = nullptr;
 
   /// This is true if this target uses "Sun Style" syntax for section switching
   /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
@@ -287,7 +279,7 @@ protected:
 
   /// This is the directive used to declare a global entity. Defaults to
   /// ".globl".
-  const char *GlobalDirective;
+  const char *GlobalDirective = "\t.globl\t";
 
   /// True if the expression
   ///   .long f - g
@@ -308,6 +300,9 @@ protected:
   // most targets, so defaults to true.
   bool HasFunctionAlignment = true;
 
+  // True if the target respects .prefalign directives.
+  bool HasPreferredAlignment = false;
+
   /// True if the target has .type and .size directives, this is true for most
   /// ELF targets.  Defaults to true.
   bool HasDotTypeDotSizeDirective = true;
@@ -325,7 +320,7 @@ protected:
   bool HasNoDeadStrip = false;
 
   /// Used to declare a global as being a weak symbol. Defaults to ".weak".
-  const char *WeakDirective;
+  const char *WeakDirective = "\t.weak\t";
 
   /// This directive, if non-null, is used to declare a global as being a weak
   /// undefined symbol.  Defaults to nullptr.
@@ -355,8 +350,6 @@ protected:
   /// This attribute, if not MCSA_Invalid, is used to declare a symbol as having
   /// protected visibility.  Defaults to MCSA_Protected
   MCSymbolAttr ProtectedVisibilityAttr = MCSA_Protected;
-
-  MCSymbolAttr MemtagAttr = MCSA_Memtag;
 
   //===--- Dwarf Emission Directives -----------------------------------===//
 
@@ -390,13 +383,12 @@ protected:
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
 
-  /// True if target uses parens to indicate the symbol variant instead of @.
-  /// For example, foo(plt) instead of foo@plt.  Defaults to false.
-  bool UseParensForSymbolVariant = false;
+  /// True if target uses @ (expr@specifier) for relocation specifiers.
+  bool UseAtForSpecifier = false;
 
-  /// True if the target uses parens for symbol names starting with
-  /// '$' character to distinguish them from absolute names.
-  bool UseParensForDollarSignNames = true;
+  /// (ARM-specific) Uses parens for relocation specifier in data
+  /// directives, e.g. .word foo(got).
+  bool UseParensForSpecifier = false;
 
   /// True if the target supports flags in ".loc" directive, false if only
   /// location is allowed.
@@ -411,7 +403,7 @@ protected:
   // Generated object files can use all ELF features supported by GNU ld of
   // this binutils version and later. INT_MAX means all features can be used,
   // regardless of GNU ld support. The default value is referenced by
-  // clang/Driver/Options.td.
+  // clang/Options/Options.td.
   std::pair<int, int> BinutilsVersion = {2, 26};
 
   /// Should we use the integrated assembler?
@@ -419,13 +411,13 @@ protected:
   /// constructors) when failing to parse a valid piece of assembly (inline
   /// or otherwise) is considered a bug. It may then be overridden after
   /// construction (see CodeGenTargetMachineImpl::initAsmInfo()).
-  bool UseIntegratedAssembler;
+  bool UseIntegratedAssembler = true;
 
   /// Use AsmParser to parse inlineAsm when UseIntegratedAssembler is not set.
-  bool ParseInlineAsmUsingAsmParser;
+  bool ParseInlineAsmUsingAsmParser = false;
 
   /// Preserve Comments in assembly
-  bool PreserveAsmComments;
+  bool PreserveAsmComments = true;
 
   /// The column (zero-based) at which asm comments should be printed.
   unsigned CommentColumn = 40;
@@ -434,16 +426,20 @@ protected:
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr = true;
 
-  // If true, then the lexer and expression parser will support %neg(),
-  // %hi(), and similar unary operators.
-  bool HasMipsExpressions = false;
-
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
+
+  llvm::DenseMap<uint32_t, StringRef> AtSpecifierToName;
+  llvm::StringMap<uint32_t> NameToAtSpecifier;
+  void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
+
+  // Explicitly non-copyable.
+  MCAsmInfo(MCAsmInfo const &) = delete;
+  MCAsmInfo &operator=(MCAsmInfo const &) = delete;
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -469,17 +465,11 @@ public:
   const char *getData32bitsDirective() const { return Data32bitsDirective; }
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
-  const char *getGPRel64Directive() const { return GPRel64Directive; }
-  const char *getGPRel32Directive() const { return GPRel32Directive; }
-  const char *getDTPRel64Directive() const { return DTPRel64Directive; }
-  const char *getDTPRel32Directive() const { return DTPRel32Directive; }
-  const char *getTPRel64Directive() const { return TPRel64Directive; }
-  const char *getTPRel32Directive() const { return TPRel32Directive; }
 
-  /// Targets can implement this method to specify a section to switch to if the
-  /// translation unit doesn't have any trampolines that require an executable
-  /// stack.
-  virtual MCSection *getNonexecutableStackSection(MCContext &Ctx) const {
+  /// Targets can implement this method to specify a section to switch to
+  /// depending on whether the translation unit has any trampolines that require
+  /// an executable stack.
+  virtual MCSection *getStackSection(MCContext &Ctx, bool Exec) const {
     return nullptr;
   }
 
@@ -498,6 +488,9 @@ public:
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
 
+  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
+                                    const Triple &, raw_ostream &) const {}
+
   /// Return true if the .section directive should be omitted when
   /// emitting \p SectionName.  For example:
   ///
@@ -506,6 +499,10 @@ public:
   /// returns false => .section .text,#alloc,#execinstr
   /// returns true  => .text
   virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
+
+  // Return true if a .align directive should use "optimized nops" to fill
+  // instead of 0s.
+  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
 
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
@@ -544,6 +541,7 @@ public:
   bool shouldAllowAdditionalComments() const { return AllowAdditionalComments; }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
+  bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
   StringRef getPrivateGlobalPrefix() const { return PrivateGlobalPrefix; }
@@ -561,9 +559,6 @@ public:
 
   const char *getInlineAsmStart() const { return InlineAsmStart; }
   const char *getInlineAsmEnd() const { return InlineAsmEnd; }
-  const char *getCode16Directive() const { return Code16Directive; }
-  const char *getCode32Directive() const { return Code32Directive; }
-  const char *getCode64Directive() const { return Code64Directive; }
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
   bool doesAllowAtInName() const { return AllowAtInName; }
   void setAllowAtInName(bool V) { AllowAtInName = V; }
@@ -610,6 +605,7 @@ public:
   }
 
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
+  bool hasPreferredAlignment() const { return HasPreferredAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }
@@ -634,8 +630,6 @@ public:
   MCSymbolAttr getProtectedVisibilityAttr() const {
     return ProtectedVisibilityAttr;
   }
-
-  MCSymbolAttr getMemtagAttr() const { return MemtagAttr; }
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
@@ -670,10 +664,8 @@ public:
 
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
-  bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
-  bool useParensForDollarSignNames() const {
-    return UseParensForDollarSignNames;
-  }
+  bool useAtForSpecifier() const { return UseAtForSpecifier; }
+  bool useParensForSpecifier() const { return UseParensForSpecifier; }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
   }
@@ -727,8 +719,18 @@ public:
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
-  bool hasMipsExpressions() const { return HasMipsExpressions; }
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
+
+  StringRef getSpecifierName(uint32_t S) const;
+  std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
+
+  void printExpr(raw_ostream &, const MCExpr &) const;
+  virtual void printSpecifierExpr(raw_ostream &,
+                                  const MCSpecifierExpr &) const {
+    llvm_unreachable("Need to implement hook if target uses MCSpecifierExpr");
+  }
+  virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
+                                         const MCAssembler *Asm) const;
 };
 
 } // end namespace llvm

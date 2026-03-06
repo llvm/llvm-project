@@ -16,6 +16,7 @@ class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
             program,
+            disconnectAutomatically=False,
             exitCommands=[
                 # Ensure that output produced by lldb itself is not consumed by the OutputRedirector.
                 "?script print('out\\0\\0', end='\\r\\n', file=sys.stdout)",
@@ -28,15 +29,23 @@ class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Ensure partial messages are still sent.
-        output = self.collect_stdout(timeout_secs=1.0, pattern="abcdef")
+        output = self.collect_stdout(pattern="abcdef")
         self.assertTrue(output and len(output) > 0, "expect program stdout")
 
         self.continue_to_exit()
 
-        output += self.get_stdout(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        # Disconnecting from the server to ensure any pending IO is flushed.
+        self.dap_server.request_disconnect()
+
+        output += self.get_stdout()
         self.assertTrue(output and len(output) > 0, "expect program stdout")
         self.assertIn(
-            "abcdefghi\r\nhello world\r\nfinally\0\0out\0\0\r\nerr\0\0",
+            "abcdefghi\r\nhello world\r\nfinally\0\0",
             output,
             "full stdout not found in: " + repr(output),
+        )
+        console = self.get_console()
+        self.assertTrue(console and len(console) > 0, "expect dap messages")
+        self.assertIn(
+            "out\0\0\r\nerr\0\0\r\n", console, f"full console message not found"
         )

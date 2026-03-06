@@ -4,6 +4,7 @@ unittest("PluginsTests") {
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/IR",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]

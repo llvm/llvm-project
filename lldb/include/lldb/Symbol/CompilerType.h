@@ -144,7 +144,13 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsComplexType() const;
+
+  /// Returns \c true for floating point types (including complex floats).
+  bool IsFloatingPointType() const;
+
+  /// Returns \c true for non-complex float types.
+  bool IsRealFloatingPointType() const;
 
   bool IsFunctionType() const;
 
@@ -198,8 +204,6 @@ public:
 
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
-
-  bool IsFloat() const;
 
   /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;
@@ -275,6 +279,11 @@ public:
   /// Returns a shared pointer to the type system. The
   /// TypeSystem::TypeSystemSPWrapper can be compared for equality.
   TypeSystemSPWrapper GetTypeSystem() const;
+
+  template <typename TypeSystemType>
+  std::shared_ptr<TypeSystemType> GetTypeSystem() const {
+    return GetTypeSystem().dyn_cast_or_null<TypeSystemType>();
+  }
 
   ConstString GetTypeName(bool BaseOnly = false) const;
 
@@ -391,11 +400,11 @@ public:
   struct IntegralTemplateArgument;
 
   /// Return the size of the type in bytes.
-  std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
+  llvm::Expected<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
-  std::optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
+  llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
@@ -433,11 +442,10 @@ public:
 
   CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
 
-  uint32_t GetIndexOfFieldWithName(const char *name,
-                                   CompilerType *field_compiler_type = nullptr,
-                                   uint64_t *bit_offset_ptr = nullptr,
-                                   uint32_t *bitfield_bit_size_ptr = nullptr,
-                                   bool *is_bitfield_ptr = nullptr) const;
+  llvm::Expected<CompilerType>
+  GetDereferencedType(ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) const;
 
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
@@ -450,15 +458,20 @@ public:
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(llvm::StringRef name,
-                                   bool omit_empty_base_classes) const;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(llvm::StringRef name,
+                          bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names
   /// only and will descend into "clang_type" children in search for the first
   /// member in this class, or any base class that matches "name".
+  ///
+  /// \param child_indexes returns an index path for the result.
+  /// \returns 0 if unsuccessful, otherwise the length of the index path.
+  ///
   /// TODO: Return all matches for a given name by returning a
-  /// vector<vector<uint32_t>>
-  /// so we catch all names that match a given child name, not just the first.
+  /// vector<vector<uint32_t>> so we catch all names that match a
+  /// given child name, not just the first.
   size_t
   GetIndexOfChildMemberWithName(llvm::StringRef name,
                                 bool omit_empty_base_classes,

@@ -16,7 +16,6 @@
 
 #include "Yaml.h"
 #include "clang/AST/Attr.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -154,7 +153,6 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
                        TaintedArgs = std::move(TaintedArgs), CallLocation](
                           PathSensitiveBugReport &BR) -> std::string {
-    SmallString<256> Msg;
     // We give diagnostics only for taint related reports
     if (!BR.isInteresting(CallLocation) ||
         BR.getBugType().getCategory() != categories::TaintedData) {
@@ -380,10 +378,12 @@ private:
   CheckerManager &Mgr;
 };
 
-class GenericTaintChecker : public Checker<check::PreCall, check::PostCall> {
+class GenericTaintChecker
+    : public Checker<check::PreCall, check::PostCall, check::BeginFunction> {
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkBeginFunction(CheckerContext &C) const;
 
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
@@ -803,14 +803,16 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
     GlobalCRules.push_back(
         {{CDM::CLibrary, {"getenv"}}, TR::Source({{ReturnValueIndex}})});
   }
+  CheckerManager *Mgr = C.getAnalysisManager().getCheckerManager();
 
-  StaticTaintRules.emplace(std::make_move_iterator(GlobalCRules.begin()),
-                           std::make_move_iterator(GlobalCRules.end()));
+  StaticTaintRules = RuleLookupTy{};
+  if (Mgr->getAnalyzerOptions().getCheckerBooleanOption(this,
+                                                        "EnableDefaultConfig"))
+    StaticTaintRules.emplace(std::make_move_iterator(GlobalCRules.begin()),
+                             std::make_move_iterator(GlobalCRules.end()));
 
   // User-provided taint configuration.
-  CheckerManager *Mgr = C.getAnalysisManager().getCheckerManager();
-  assert(Mgr);
-  GenericTaintRuleParser ConfigParser{*Mgr};
+  const GenericTaintRuleParser ConfigParser{*Mgr};
   std::string Option{"Config"};
   StringRef ConfigFile =
       Mgr->getAnalyzerOptions().getCheckerStringOption(this, Option);
@@ -829,8 +831,94 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
                             std::make_move_iterator(Rules.end()));
 }
 
+bool isPointerToCharArray(const QualType &QT) {
+  if (!QT->isPointerType())
+    return false;
+  QualType PointeeType = QT->getPointeeType();
+  return PointeeType->isPointerType() &&
+         PointeeType->getPointeeType()->isCharType();
+}
+
+// The incoming parameters of the main function get tainted
+// if the program called in an untrusted environment.
+void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
+  if (!C.inTopFrame() || C.getAnalysisManager()
+                             .getAnalyzerOptions()
+                             .ShouldAssumeControlledEnvironment)
+    return;
+
+  const auto *FD = dyn_cast<FunctionDecl>(C.getLocationContext()->getDecl());
+  if (!FD || !FD->isMain() || FD->param_size() < 2)
+    return;
+
+  if (!FD->parameters()[0]->getType()->isIntegerType())
+    return;
+
+  if (!isPointerToCharArray(FD->parameters()[1]->getType()))
+    return;
+  ProgramStateRef State = C.getState();
+
+  const MemRegion *ArgcReg =
+      State->getRegion(FD->parameters()[0], C.getLocationContext());
+  SVal ArgcSVal = State->getSVal(ArgcReg);
+  State = addTaint(State, ArgcSVal);
+  StringRef ArgcName = FD->parameters()[0]->getName();
+  if (auto N = ArgcSVal.getAs<NonLoc>()) {
+    ConstraintManager &CM = C.getConstraintManager();
+    // The upper bound is the ARG_MAX on an arbitrary Linux
+    // to model that is is typically smaller than INT_MAX.
+    State = CM.assumeInclusiveRange(State, *N, llvm::APSInt::getUnsigned(1),
+                                    llvm::APSInt::getUnsigned(2097152), true);
+  }
+
+  const MemRegion *ArgvReg =
+      State->getRegion(FD->parameters()[1], C.getLocationContext());
+  SVal ArgvSVal = State->getSVal(ArgvReg);
+  State = addTaint(State, ArgvSVal);
+  StringRef ArgvName = FD->parameters()[1]->getName();
+
+  bool HaveEnvp = FD->param_size() > 2;
+  SVal EnvpSVal;
+  StringRef EnvpName;
+  if (HaveEnvp && !isPointerToCharArray(FD->parameters()[2]->getType()))
+    return;
+  if (HaveEnvp) {
+    const MemRegion *EnvPReg =
+        State->getRegion(FD->parameters()[2], C.getLocationContext());
+    EnvpSVal = State->getSVal(EnvPReg);
+    EnvpName = FD->parameters()[2]->getName();
+    State = addTaint(State, EnvpSVal);
+  }
+
+  const NoteTag *OriginatingTag =
+      C.getNoteTag([ArgvSVal, ArgcSVal, ArgcName, ArgvName, EnvpSVal,
+                    EnvpName](PathSensitiveBugReport &BR) -> std::string {
+        if ((!BR.isInteresting(ArgcSVal) && !BR.isInteresting(ArgvSVal) &&
+             !BR.isInteresting(EnvpSVal)))
+          return "";
+        if (BR.getBugType().getCategory() != categories::TaintedData)
+          return "";
+        std::string Message = "";
+        if (BR.isInteresting(ArgvSVal))
+          Message += "'" + ArgvName.str() + "'";
+        if (BR.isInteresting(ArgcSVal)) {
+          if (Message.size() > 0)
+            Message += ", ";
+          Message += "'" + ArgcName.str() + "'";
+        }
+        if (BR.isInteresting(EnvpSVal)) {
+          if (Message.size() > 0)
+            Message += ", ";
+          Message += "'" + EnvpName.str() + "'";
+        }
+        return "Taint originated in " + Message;
+      });
+  C.addTransition(State, OriginatingTag);
+}
+
 void GenericTaintChecker::checkPreCall(const CallEvent &Call,
                                        CheckerContext &C) const {
+
   initTaintRules(C);
 
   // FIXME: this should be much simpler.
@@ -1045,8 +1133,7 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
 
   // Generate diagnostic.
   assert(BT);
-  static CheckerProgramPointTag Tag(BT->getCheckerName(), Msg);
-  if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState(), &Tag)) {
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState())) {
     auto report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     report->addRange(E->getSourceRange());
     for (auto TaintedSym : getTaintedSymbols(C.getState(), *TaintedSVal)) {
@@ -1080,7 +1167,23 @@ static bool getPrintfFormatArgumentNum(const CallEvent &Call,
   const ArgIdxTy CallNumArgs = fromArgumentCount(Call.getNumArgs());
 
   for (const auto *Format : FDecl->specific_attrs<FormatAttr>()) {
+    // The format attribute uses 1-based parameter indexing, for example
+    // plain `printf(const char *fmt, ...)` would be annotated with
+    // `__format__(__printf__, 1, 2)`, so we need to subtract 1 to get a
+    // 0-based index. (This checker uses 0-based parameter indices.)
     ArgNum = Format->getFormatIdx() - 1;
+    // The format attribute also counts the implicit `this` parameter of
+    // methods, so e.g. in `SomeClass::method(const char *fmt, ...)` could be
+    // annotated with `__format__(__printf__, 2, 3)`. This checker doesn't
+    // count the implicit `this` parameter, so in this case we need to subtract
+    // one again.
+    // FIXME: Apparently the implementation of the format attribute doesn't
+    // support methods with an explicit object parameter, so we cannot
+    // implement proper support for that rare case either.
+    const CXXMethodDecl *MDecl = dyn_cast<CXXMethodDecl>(FDecl);
+    if (MDecl && !MDecl->isStatic())
+      ArgNum--;
+
     if ((Format->getType()->getName() == "printf") && CallNumArgs > ArgNum)
       return true;
   }

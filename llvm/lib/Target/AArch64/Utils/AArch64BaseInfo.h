@@ -19,6 +19,8 @@
 // FIXME: Is it easiest to fix this layering violation by moving the .inc
 // #includes from AArch64MCTargetDesc.h to here?
 #include "MCTargetDesc/AArch64MCTargetDesc.h" // For AArch64::X0 and friends.
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -247,6 +249,38 @@ static inline bool atomicBarrierDroppedOnZero(unsigned Opcode) {
   return false;
 }
 
+inline unsigned CheckFixedPointOperandConstant(APFloat &FVal, unsigned RegWidth,
+                                               bool isReciprocal) {
+  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
+  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
+  // x-register.
+  //
+  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
+  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
+  // integers.
+  bool IsExact;
+
+  if (isReciprocal)
+    if (!FVal.getExactInverse(&FVal))
+      return 0;
+
+  // fbits is between 1 and 64 in the worst-case, which means the fmul
+  // could have 2^64 as an actual operand. Need 65 bits of precision.
+  APSInt IntVal(65, true);
+  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+  // N.b. isPowerOf2 also checks for > 0.
+  if (!IsExact || !IntVal.isPowerOf2())
+    return 0;
+  unsigned FBits = IntVal.logBase2();
+
+  // Checks above should have guaranteed that we haven't lost information in
+  // finding FBits, but it must still be in range.
+  if (FBits == 0 || FBits > RegWidth)
+    return 0;
+  return FBits;
+}
+
 namespace AArch64CC {
 
 // The CondCodes constants map directly to the 4-bit encoding of the condition
@@ -362,6 +396,26 @@ inline static unsigned getNZCVToSatisfyCondCode(CondCode Code) {
   }
 }
 
+/// True, if a given condition code can be used in a fused compare-and-branch
+/// instructions, false otherwise.
+inline static bool isValidCBCond(AArch64CC::CondCode Code) {
+  switch (Code) {
+  default:
+    return false;
+  case AArch64CC::EQ:
+  case AArch64CC::NE:
+  case AArch64CC::HS:
+  case AArch64CC::LO:
+  case AArch64CC::HI:
+  case AArch64CC::LS:
+  case AArch64CC::GE:
+  case AArch64CC::LT:
+  case AArch64CC::GT:
+  case AArch64CC::LE:
+    return true;
+  }
+}
+
 } // end namespace AArch64CC
 
 struct SysAlias {
@@ -387,6 +441,16 @@ struct SysAliasReg : SysAlias {
       : SysAlias(N, E), NeedsReg(R) {}
   constexpr SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F)
       : SysAlias(N, E, F), NeedsReg(R) {}
+};
+
+struct SysAliasOptionalReg : SysAlias {
+  bool NeedsReg;
+  bool OptionalReg;
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O)
+      : SysAlias(N, E), NeedsReg(R), OptionalReg(O) {}
+  constexpr SysAliasOptionalReg(const char *N, uint16_t E, bool R, bool O,
+                                FeatureBitset F)
+      : SysAlias(N, E, F), NeedsReg(R), OptionalReg(O) {}
 };
 
 struct SysAliasImm : SysAlias {
@@ -657,6 +721,22 @@ namespace AArch64BTIHint {
 #include "AArch64GenSystemOperands.inc"
 }
 
+namespace AArch64CMHPriorityHint {
+struct CMHPriorityHint : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_CMHPRIORITYHINT_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64CMHPriorityHint
+
+namespace AArch64TIndexHint {
+struct TIndex : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_TINDEX_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TIndexHint
+
 namespace AArch64SME {
 enum ToggleCondition : unsigned {
   Always,
@@ -768,12 +848,60 @@ namespace AArch64SysReg {
 }
 
 namespace AArch64TLBI {
-  struct TLBI : SysAliasReg {
-    using SysAliasReg::SysAliasReg;
-  };
-  #define GET_TLBITable_DECL
-  #include "AArch64GenSystemOperands.inc"
+struct TLBI : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
+};
+#define GET_TLBITable_DECL
+#include "AArch64GenSystemOperands.inc"
 }
+
+namespace AArch64TLBIP {
+struct TLBIP : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
+};
+#define GET_TLBIPTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TLBIP
+
+namespace AArch64MLBI {
+struct MLBI : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_MLBITable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64MLBI
+
+namespace AArch64GIC {
+struct GIC : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_GICTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GIC
+
+namespace AArch64GICR {
+struct GICR : SysAliasReg {
+  using SysAliasReg::SysAliasReg;
+};
+#define GET_GICRTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GICR
+
+namespace AArch64GSB {
+struct GSB : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_GSBTable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GSB
+
+namespace AArch64PLBI {
+struct PLBI : SysAliasOptionalReg {
+  using SysAliasOptionalReg::SysAliasOptionalReg;
+};
+#define GET_PLBITable_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PLBI
 
 namespace AArch64II {
 /// Target Operand Flag enum.
@@ -907,6 +1035,16 @@ AArch64StringToPACKeyID(StringRef Name) {
   if (Name == "db")
     return AArch64PACKey::DB;
   return std::nullopt;
+}
+
+inline static unsigned getBTIHintNum(bool CallTarget, bool JumpTarget) {
+  unsigned HintNum = 32;
+  if (CallTarget)
+    HintNum |= 2;
+  if (JumpTarget)
+    HintNum |= 4;
+  assert(HintNum != 32 && "No target kinds!");
+  return HintNum;
 }
 
 namespace AArch64 {

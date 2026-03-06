@@ -29,6 +29,7 @@ namespace {
 
 //===----------------------------------------------------------------------===//
 // Utility functions
+//===----------------------------------------------------------------------===//
 
 // TODO: Move these to separate file.
 
@@ -145,6 +146,78 @@ static void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
   writer.writeVarInt(range.getStartColumn());
   writer.writeVarInt(range.getEndLine());
   writer.writeVarInt(range.getEndColumn());
+}
+
+static LogicalResult
+readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
+                             SmallVectorImpl<char> &rawData) {
+  // Validate that the element type implements DenseElementTypeInterface.
+  // Without this check, downstream code unconditionally calls
+  // getDenseElementBitWidth() which asserts on unsupported types.
+  if (!llvm::isa<DenseElementType>(type.getElementType())) {
+    reader.emitError()
+        << "DenseIntOrFPElementsAttr element type must implement "
+           "DenseElementTypeInterface, but got: "
+        << type.getElementType();
+    return failure();
+  }
+
+  ArrayRef<char> blob;
+  if (failed(reader.readBlob(blob)))
+    return failure();
+
+  // If the type is not i1, just copy the blob.
+  if (!type.getElementType().isInteger(1)) {
+    rawData.append(blob.begin(), blob.end());
+    return success();
+  }
+
+  // Check to see if this is using the packed format.
+  // Note: this could be asserted instead as this should be the case. But we
+  // did have period where the unpacked was being serialized, this enables
+  // consuming those still and the check for which case we are in is pretty
+  // cheap.
+  size_t numElements = type.getNumElements();
+  size_t packedSize = llvm::divideCeil(numElements, 8);
+  if (blob.size() == packedSize && blob.size() != numElements) {
+    // Unpack the blob.
+    rawData.resize(numElements);
+    for (size_t i = 0; i < numElements; ++i)
+      rawData[i] = (blob[i / 8] & (1 << (i % 8))) ? 1 : 0;
+    return success();
+  }
+  // Otherwise, fallback to the default behavior.
+  rawData.append(blob.begin(), blob.end());
+  return success();
+}
+
+static void writeDenseIntOrFPElementsAttr(DialectBytecodeWriter &writer,
+                                          DenseIntOrFPElementsAttr attr) {
+  // Check to see if this is an i1 dense attribute.
+  if (attr.getElementType().isInteger(1)) {
+    // Pack the data.
+    SmallVector<char> data;
+    ArrayRef<char> rawData = attr.getRawData();
+
+    // If the attribute is a splat, we can just splat the value directly.
+    if (attr.isSplat()) {
+      data.resize(1);
+      data[0] = rawData[0] ? 0xFF : 0x00;
+      writer.writeUnownedBlob(data);
+      return;
+    }
+
+    size_t numElements = attr.getNumElements();
+    data.resize(llvm::divideCeil(numElements, 8));
+    // Otherwise, pack the data manually.
+    for (size_t i = 0; i < numElements; ++i)
+      if (rawData[i])
+        data[i / 8] |= (1 << (i % 8));
+    writer.writeUnownedBlob(data);
+    return;
+  }
+
+  writer.writeOwnedBlob(attr.getRawData());
 }
 
 #include "mlir/IR/BuiltinDialectBytecode.cpp.inc"

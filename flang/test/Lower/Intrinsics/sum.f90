@@ -1,4 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
+! REQUIRES: x86-registered-target
+! RUN: bbc -target x86_64-unknown-linux-gnu --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPsum_test(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}) -> i32 {
@@ -110,7 +111,7 @@ integer function sum_test_optional_4(x, use_mask)
 integer :: x(:)
 logical :: use_mask
 logical, allocatable :: mask(:)
-if (use_mask) then 
+if (use_mask) then
   allocate(mask(size(x, 1)))
   call set_mask(mask)
   ! CHECK: fir.call @_QPset_mask

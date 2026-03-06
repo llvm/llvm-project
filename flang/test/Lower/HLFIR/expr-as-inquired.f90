@@ -11,7 +11,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_isallocated(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}}  {{.*}}El
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, {{.*}}Ex"
-! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.heap<!fir.array<?xf32>>) -> i64
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : i64

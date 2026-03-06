@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -verify-diagnostics
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @select_int_wrong_size(%arg0 : !cir.vector<8 x !cir.bool>, %arg1 : !cir.vector<7 x !s32i>, %arg2 : !cir.vector<8 x !s32i>) -> !cir.vector<8 x !s32i> {
+    // expected-error @below {{failed to verify that all of {true_value, false_value, result} have same type}}
+    %0 = cir.select if %arg0 then %arg1 else %arg2 : (!cir.vector<8 x !cir.bool>, !cir.vector<7 x !s32i>, !cir.vector<8 x !s32i>) -> !cir.vector<8 x !s32i>
+    cir.return %0 : !cir.vector<8 x !s32i>
+  }
+
+
+  cir.func @select_int_wrong_type(%arg0 : !cir.vector<8 x !cir.bool>, %arg1 : !s32i, %arg2 : !s32i) -> !s32i {
+    // expected-error @below {{expected both true and false operands to be vector types when the condition is a vector boolean type}}
+    %0 = cir.select if %arg0 then %arg1 else %arg2 : (!cir.vector<8 x !cir.bool>, !s32i, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  cir.func @select_int_valid(%arg0 : !cir.bool, %arg1 : !cir.vector<8 x !s32i>, %arg2 : !cir.vector<8 x !s32i>) -> !cir.vector<8 x !s32i> {
+    %0 = cir.select if %arg0 then %arg1 else %arg2 : (!cir.bool, !cir.vector<8 x !s32i>, !cir.vector<8 x !s32i>) -> !cir.vector<8 x !s32i>
+    cir.return %0 : !cir.vector<8 x !s32i>
+  }
+}

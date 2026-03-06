@@ -47,6 +47,11 @@ public:
 
   ~DWARFASTParserClang() override;
 
+  // LLVM RTTI support
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
+
   // DWARFASTParser interface.
   lldb::TypeSP
   ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
@@ -111,6 +116,20 @@ public:
 
   void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
                           const lldb_private::plugin::dwarf::DWARFDIE &def_die);
+
+  /// Get the object parameter DIE if one exists, otherwise returns
+  /// a default DWARFDIE.
+  ///
+  /// \param[in] subprogram DIE of function for which to get the object
+  /// parameter. \param[in] containing_decl_ctx DIE representing declaration
+  /// context of \a subprogram. If this DIE isn't a valid declaration context
+  /// for class methods, assume no object parameter exists.
+  ///
+  /// \returns DIE of object parameter if one exists.
+  ///
+  lldb_private::plugin::dwarf::DWARFDIE
+  GetObjectParameter(const lldb_private::plugin::dwarf::DWARFDIE &subprogram,
+                     const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die);
 
 protected:
   /// Protected typedefs and members.
@@ -183,7 +202,6 @@ protected:
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &member_function_dies,
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &contained_type_dies,
       DelayedPropertyList &delayed_properties,
-      const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   void ParseChildParameters(
@@ -202,7 +220,7 @@ protected:
   lldb::TypeSP
   ParseStructureLikeDIE(const lldb_private::SymbolContext &sc,
                         const lldb_private::plugin::dwarf::DWARFDIE &die,
-                        ParsedDWARFTypeAttributes &attrs);
+                        const ParsedDWARFTypeAttributes &attrs);
 
   clang::Decl *
   GetClangDeclForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
@@ -249,10 +267,6 @@ protected:
   // module.
   lldb::ModuleSP
   GetModuleForType(const lldb_private::plugin::dwarf::DWARFDIE &die);
-
-  static bool classof(const DWARFASTParser *Parser) {
-    return Parser->GetKind() == Kind::DWARFASTParserClang;
-  }
 
 private:
   struct FieldInfo {
@@ -320,7 +334,6 @@ private:
     /// Indicates the size of the field in bits.
     size_t bit_size = 0;
     uint64_t data_bit_offset = UINT64_MAX;
-    lldb::AccessType accessibility = lldb::eAccessNone;
     std::optional<uint64_t> byte_size;
     std::optional<lldb_private::plugin::dwarf::DWARFFormValue> const_value_form;
     lldb_private::plugin::dwarf::DWARFFormValue encoding_form;
@@ -398,7 +411,6 @@ private:
   ParseSingleMember(const lldb_private::plugin::dwarf::DWARFDIE &die,
                     const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
-                    lldb::AccessType default_accessibility,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
@@ -449,7 +461,7 @@ private:
   ///
   /// \returns true on success
   bool
-  ParseObjCMethod(const lldb_private::ObjCLanguage::MethodName &objc_method,
+  ParseObjCMethod(const lldb_private::ObjCLanguage::ObjCMethodName &objc_method,
                   const lldb_private::plugin::dwarf::DWARFDIE &die,
                   lldb_private::CompilerType clang_type,
                   const ParsedDWARFTypeAttributes &attrs, bool is_variadic);
@@ -466,7 +478,8 @@ private:
   /// \param[in] decl_ctx_die The DIE representing the DeclContext of the C++
   ///                         method being parsed.
   ///
-  /// \param[in] is_static Is true iff we're parsing a static method.
+  /// \param[in] object_parameter The DIE of this subprogram's object parameter.
+  ///                             May be an invalid DIE for C++ static methods.
   ///
   /// \param[out] ignore_containing_context Will get set to true if the caller
   ///             should treat this C++ method as-if it was not a C++ method.
@@ -481,7 +494,8 @@ private:
                  lldb_private::CompilerType clang_type,
                  const ParsedDWARFTypeAttributes &attrs,
                  const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die,
-                 bool is_static, bool &ignore_containing_context);
+                 const lldb_private::plugin::dwarf::DWARFDIE &object_parameter,
+                 bool &ignore_containing_context);
 
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
@@ -496,8 +510,6 @@ private:
   /// \param class_clang_type The C++/Objective-C class representing parent_die.
   /// For an Objective-C class this method sets the super class on success. For
   /// a C++ class this will *not* add the result as a base class.
-  /// \param default_accessibility The default accessibility that is given to
-  /// base classes if they don't have an explicit accessibility set.
   /// \param module_sp The current Module.
   /// \param base_classes The list of C++ base classes that will be appended
   /// with the parsed base class on success.
@@ -507,7 +519,6 @@ private:
       const lldb_private::plugin::dwarf::DWARFDIE &die,
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
       const lldb_private::CompilerType class_clang_type,
-      const lldb::AccessType default_accessibility,
       const lldb::ModuleSP &module_sp,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
@@ -517,15 +528,12 @@ private:
   /// \param die DW_TAG_variant_part DIE to parse
   /// \param parent_die The parent DW_TAG_structure_type to parse
   /// \param class_clang_type The Rust struct representing parent_die.
-  /// \param default_accesibility The default accessibility that is given to
-  ///  base classes if they don't have an explicit accessibility set
   /// \param layout_info The layout information that will be updated for
   //   base classes with the base offset
   void
   ParseRustVariantPart(lldb_private::plugin::dwarf::DWARFDIE &die,
                        const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
                        const lldb_private::CompilerType &class_clang_type,
-                       const lldb::AccessType default_accesibility,
                        lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };
 
@@ -536,7 +544,6 @@ struct ParsedDWARFTypeAttributes {
   explicit ParsedDWARFTypeAttributes(
       const lldb_private::plugin::dwarf::DWARFDIE &die);
 
-  lldb::AccessType accessibility = lldb::eAccessNone;
   bool is_artificial = false;
   bool is_complete_objc_class = false;
   bool is_explicit = false;
@@ -551,7 +558,6 @@ struct ParsedDWARFTypeAttributes {
   const char *mangled_name = nullptr;
   lldb_private::ConstString name;
   lldb_private::Declaration decl;
-  lldb_private::plugin::dwarf::DWARFDIE object_pointer;
   lldb_private::plugin::dwarf::DWARFFormValue abstract_origin;
   lldb_private::plugin::dwarf::DWARFFormValue containing_type;
   lldb_private::plugin::dwarf::DWARFFormValue signature;
@@ -559,6 +565,7 @@ struct ParsedDWARFTypeAttributes {
   lldb_private::plugin::dwarf::DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
   std::optional<uint64_t> byte_size;
+  std::optional<uint64_t> data_bit_size;
   std::optional<uint64_t> alignment;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;

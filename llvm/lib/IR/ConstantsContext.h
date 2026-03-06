@@ -54,7 +54,7 @@ public:
 
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -82,7 +82,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -111,7 +111,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -140,7 +140,7 @@ public:
 
   // allocate space for exactly three operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -178,7 +178,9 @@ public:
   Constant *ShuffleMaskForBitcode;
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -322,9 +324,7 @@ template <class ConstantClass> struct ConstantAggrKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
   using TypeClass = typename ConstantInfo<ConstantClass>::TypeClass;
 
@@ -478,10 +478,8 @@ public:
   }
 
   unsigned getHash() const {
-    return hash_combine(
-        Opcode, SubclassOptionalData,
-        hash_combine_range(Ops.begin(), Ops.end()),
-        hash_combine_range(ShuffleMask.begin(), ShuffleMask.end()), ExplicitTy);
+    return hash_combine(Opcode, SubclassOptionalData, hash_combine_range(Ops),
+                        hash_combine_range(ShuffleMask), ExplicitTy);
   }
 
   using TypeClass = ConstantInfo<ConstantExpr>::TypeClass;
@@ -537,15 +535,14 @@ struct ConstantPtrAuthKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
-  using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
+  using TypeClass = ConstantInfo<ConstantPtrAuth>::TypeClass;
 
   ConstantPtrAuth *create(TypeClass *Ty) const {
     return new ConstantPtrAuth(Operands[0], cast<ConstantInt>(Operands[1]),
-                               cast<ConstantInt>(Operands[2]), Operands[3]);
+                               cast<ConstantInt>(Operands[2]), Operands[3],
+                               Operands[4]);
   }
 };
 
