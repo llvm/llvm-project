@@ -53,7 +53,7 @@ struct DlSymAllocator {
     InternalFree(ptr);
   }
 
-  static void* Realloc(void *ptr, uptr new_size, uptr align = kWordSize) {
+  static void* Realloc(void* ptr, uptr new_size, uptr align = kWordSize) {
     if (!ptr)
       return Allocate(new_size, align);
     CHECK(internal_allocator()->FromPrimary(ptr));

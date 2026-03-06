@@ -53,6 +53,15 @@ INTERCEPTOR(void, free, void *ptr) {
 }
 
 #if SANITIZER_INTERCEPT_CFREE
+INTERCEPTOR(void, cfree, void *ptr) {
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_STACK_TRACE_FREE;
+  asan_free(ptr, &stack);
+}
+#endif // SANITIZER_INTERCEPT_CFREE
+
+#  if SANITIZER_AIX
 INTERCEPTOR(void*, __linux_vec_malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size, 16);
@@ -76,15 +85,6 @@ INTERCEPTOR(void*, __linux_realloc, void* ptr, uptr size) {
   return asan_vec_realloc(ptr, size, &stack);
 }
 
-INTERCEPTOR(void, cfree, void *ptr) {
-  if (DlsymAlloc::PointerIsMine(ptr))
-    return DlsymAlloc::Free(ptr);
-  GET_STACK_TRACE_FREE;
-  asan_free(ptr, &stack);
-}
-#endif // SANITIZER_INTERCEPT_CFREE
-
-#  if SANITIZER_AIX
 // Unlike malloc, vec_malloc must return memory aligned to 16 bytes.
 INTERCEPTOR(void*, vec_malloc, uptr size) {
   if (DlsymAlloc::Use())
@@ -112,7 +112,11 @@ INTERCEPTOR(void*, vec_realloc, void* ptr, uptr size) {
 
 INTERCEPTOR(void*, malloc, uptr size) {
   if (DlsymAlloc::Use())
-    return DlsymAlloc::Allocate(size, SANITIZER_AIX ? 16 : kWordSize);
+#  if SANITIZER_AIX
+    return DlsymAlloc::Allocate(size, 16);
+#  else
+    return DlsymAlloc::Allocate(size, kWordSize);
+#  endif
   GET_STACK_TRACE_MALLOC;
 #  if SANITIZER_AIX
   return asan_vec_malloc(size, &stack);
@@ -123,9 +127,13 @@ INTERCEPTOR(void*, malloc, uptr size) {
 
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
-    return DlsymAlloc::Callocate(nmemb, size, SANITIZER_AIX ? 16 : kWordSize);
+#  if SANITIZER_AIX
+    return DlsymAlloc::Callocate(nmemb, size, 16);
+#  else
+    return DlsymAlloc::Callocate(nmemb, size, kWordSize);
+#  endif
   GET_STACK_TRACE_MALLOC;
-# if SANITIZER_AIX
+#  if SANITIZER_AIX
   return asan_vec_calloc(nmemb, size, &stack);
 #  else
   return asan_calloc(nmemb, size, &stack);
@@ -134,7 +142,11 @@ INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
 
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
-    return DlsymAlloc::Realloc(ptr, size, SANITIZER_AIX ? 16 : kWordSize);
+#  if SANITIZER_AIX
+    return DlsymAlloc::Realloc(ptr, size, 16);
+#  else
+    return DlsymAlloc::Realloc(ptr, size, kWordSize);
+#  endif
   GET_STACK_TRACE_MALLOC;
 #  if SANITIZER_AIX
   return asan_vec_realloc(ptr, size, &stack);
