@@ -3304,6 +3304,14 @@ private:
 LogicalResult OperationConverter::convert(Operation *op,
                                           bool isRecursiveLegalization) {
   const ConversionConfig &config = rewriter.getConfig();
+  auto emitFailedToLegalizeDiag = [&](bool wasExplicitlyIllegal) {
+    InFlightDiagnostic diag = op->emitError()
+                              << "failed to legalize operation '"
+                              << op->getName() << "'";
+    if (wasExplicitlyIllegal)
+      diag << " that was explicitly marked illegal";
+    diag << ": " << OpWithFlags(op, OpPrintingFlags().skipRegions());
+  };
 
   // Legalize the given operation.
   if (failed(opLegalizer.legalize(op))) {
@@ -3311,8 +3319,7 @@ LogicalResult OperationConverter::convert(Operation *op,
     // Full conversions expect all operations to be converted.
     if (mode == OpConversionMode::Full) {
       if (!isRecursiveLegalization)
-        op->emitError() << "failed to legalize operation '" << op->getName()
-                        << "'";
+        emitFailedToLegalizeDiag(/*wasExplicitlyIllegal=*/false);
       return failure();
     }
     // Partial conversions allow conversions to fail iff the operation was not
@@ -3321,8 +3328,7 @@ LogicalResult OperationConverter::convert(Operation *op,
     if (mode == OpConversionMode::Partial) {
       if (opLegalizer.isIllegal(op)) {
         if (!isRecursiveLegalization)
-          op->emitError() << "failed to legalize operation '" << op->getName()
-                          << "' that was explicitly marked illegal";
+          emitFailedToLegalizeDiag(/*wasExplicitlyIllegal=*/true);
         return failure();
       }
       if (config.unlegalizedOps && !isRecursiveLegalization)

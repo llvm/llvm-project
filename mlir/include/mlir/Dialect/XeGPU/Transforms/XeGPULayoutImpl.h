@@ -81,6 +81,11 @@ DistributeLayoutAttr
 inferMultiReductionSourceLayout(DistributeLayoutAttr resLayout,
                                 SmallVector<int64_t> reduceDims);
 
+/// Infers the source layout attribute for a transpose operation given the
+/// result layout attribute and permutation.
+DistributeLayoutAttr inferTransposeSourceLayout(DistributeLayoutAttr resLayout,
+                                                ArrayRef<int64_t> permutation);
+
 /// Infers the source layout attribute for a bitcast operation given the
 /// result layout attribute, result element type bitwidth, and source element
 /// type bitwidth.
