@@ -492,16 +492,6 @@ static bool isKnownNonNegativeFromMinOrGuardedSub(const Value *Op0,
       match(Op1, m_SMin(m_Value(V), m_Specific(Op0))))
     return true;
 
-  Value *A;
-  if (match(Op1,
-            m_Select(
-                m_SpecificICmp(ICmpInst::ICMP_SLT, m_Specific(Op0), m_Value(A)),
-                m_Zero(), m_NSWSub(m_Specific(Op0), m_Deferred(A)))) ||
-      match(Op1, m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Specific(Op0),
-                                         m_Value(A)),
-                          m_NSWSub(m_Specific(Op0), m_Deferred(A)), m_Zero())))
-    return true;
-
   return false;
 }
 
