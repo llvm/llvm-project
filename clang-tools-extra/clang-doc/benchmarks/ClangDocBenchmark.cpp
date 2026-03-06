@@ -80,7 +80,7 @@ static void BM_Mapper_Scale(benchmark::State &State) {
     tooling::InMemoryToolResults Results;
     tooling::ExecutionContext ECtx(&Results);
     ClangDocContext CDCtx(&ECtx, "test-project", false, "", "", "", "", "", {},
-                          Diags, false);
+                          Diags, OutputFormatTy::json, false);
     auto ActionFactory = doc::newMapperActionFactory(CDCtx);
     std::unique_ptr<FrontendAction> Action = ActionFactory->create();
     tooling::runToolOnCode(std::move(Action), Code, "test.cpp");
@@ -193,7 +193,7 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
   ClangDocContext CDCtx(nullptr, "test-project", false, "", "", "", "", "", {},
-                        Diags, false);
+                        Diags, OutputFormatTy::json, false);
 
   std::string Output;
   llvm::raw_string_ostream OS(Output);
