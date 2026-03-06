@@ -201,6 +201,16 @@ wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
   return exeRegionOp;
 }
 
+/// Return true if \p v is a constant index with a negative value.
+static bool isNegativeConstantIndex(Value v) {
+  if (auto cst = v.getDefiningOp<arith::ConstantIndexOp>())
+    return cst.value() < 0;
+  if (auto cst = v.getDefiningOp<arith::ConstantOp>())
+    if (auto intAttr = dyn_cast<IntegerAttr>(cst.getValue()))
+      return intAttr.getInt() < 0;
+  return false;
+}
+
 scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
                                   bool enableCollapse) {
   assert(!loopOp.getUnstructured() &&
@@ -208,6 +218,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
          "loops");
 
   Location loc = loopOp->getLoc();
+  Type indexType = rewriter.getIndexType();
 
   // Create nested scf.for loops and build IR mapping for IVs
   IRMapping mapping;
@@ -217,27 +228,47 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(loopOp);
 
-  // Normalize all loops: lb=0, step=1, ub=tripCount.
-  // This is required because scf.for mandates a positive step, but acc.loop
-  // may have a negative step (e.g. Fortran DO loops counting down).
-  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-  Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
-
-  SmallVector<Value> tripCounts;
+  // Determine which loops need normalization (negative constant step).
+  // scf.for requires a positive step, so loops with a negative step must be
+  // normalized to lb=0, step=1, ub=tripCount with IV denormalization.
+  SmallVector<bool> needsNormalize;
   for (BlockArgument iv : loopOp.getBody().getArguments()) {
     size_t idx = iv.getArgNumber();
-    bool inclusiveUpperbound = false;
-    if (loopOp.getInclusiveUpperbound().has_value())
-      inclusiveUpperbound =
-          loopOp.getInclusiveUpperboundAttr().asArrayRef()[idx];
-
-    Value tc = calculateTripCount(rewriter, loc, loopOp.getLowerbound()[idx],
-                                  loopOp.getUpperbound()[idx],
-                                  loopOp.getStep()[idx], inclusiveUpperbound);
-    tripCounts.push_back(tc);
+    needsNormalize.push_back(isNegativeConstantIndex(loopOp.getStep()[idx]));
   }
 
-  // Now create the nested ForOps using normalized bounds
+  // Pre-compute all loop bounds before creating any ForOp.
+  SmallVector<Value> lowerBounds, upperBounds, steps;
+  for (BlockArgument iv : loopOp.getBody().getArguments()) {
+    size_t idx = iv.getArgNumber();
+
+    if (needsNormalize[idx]) {
+      bool inclusiveUpperbound = false;
+      if (loopOp.getInclusiveUpperbound().has_value())
+        inclusiveUpperbound =
+            loopOp.getInclusiveUpperboundAttr().asArrayRef()[idx];
+
+      Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+      Value tc = calculateTripCount(rewriter, loc, loopOp.getLowerbound()[idx],
+                                    loopOp.getUpperbound()[idx],
+                                    loopOp.getStep()[idx], inclusiveUpperbound);
+      lowerBounds.push_back(zero);
+      upperBounds.push_back(tc);
+      steps.push_back(one);
+    } else {
+      Value newLB = getValueOrCreateCastToIndexLike(
+          rewriter, loc, indexType, loopOp.getLowerbound()[idx]);
+      Value newUB = getExclusiveUpperBoundAsIndex(loopOp, idx, rewriter);
+      Value newStep = getValueOrCreateCastToIndexLike(rewriter, loc, indexType,
+                                                      loopOp.getStep()[idx]);
+      lowerBounds.push_back(newLB);
+      upperBounds.push_back(newUB);
+      steps.push_back(newStep);
+    }
+  }
+
+  // Now create the nested ForOps using the pre-computed bounds
   for (BlockArgument iv : loopOp.getBody().getArguments()) {
     size_t idx = iv.getArgNumber();
 
@@ -245,8 +276,8 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     if (idx > 0)
       rewriter.setInsertionPointToStart(forOps.back().getBody());
 
-    scf::ForOp forOp =
-        scf::ForOp::create(rewriter, loc, zero, tripCounts[idx], one);
+    scf::ForOp forOp = scf::ForOp::create(rewriter, loc, lowerBounds[idx],
+                                          upperBounds[idx], steps[idx]);
     forOps.push_back(forOp);
     mapping.map(iv, forOp.getInductionVar());
   }
@@ -264,8 +295,10 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
                             rewriter.getInsertionPoint(), mapping, rewriter);
 
-  // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb
+  // Denormalize IV uses for normalized loops only
   for (size_t idx = 0; idx < forOps.size(); ++idx) {
+    if (!needsNormalize[idx])
+      continue;
     Value iv = forOps[idx].getInductionVar();
     if (!iv.use_empty()) {
       rewriter.setInsertionPointToStart(forOps[idx].getBody());

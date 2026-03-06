@@ -242,17 +242,18 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
 
   ASSERT_TRUE(forOp);
 
-  // Normalized: lb=0, step=1, ub=tripCount (computed from dynamic bounds)
-  auto lbConst = getConstantIndex(forOp.getLowerBound());
-  ASSERT_TRUE(lbConst.has_value());
-  EXPECT_EQ(*lbConst, 0);
+  // Positive step: bounds passed through directly (no normalization)
+  EXPECT_EQ(forOp.getLowerBound(), lb);
 
-  auto stepConst = getConstantIndex(forOp.getStep());
-  ASSERT_TRUE(stepConst.has_value());
-  EXPECT_EQ(*stepConst, 1);
+  // Upper bound should be ub + 1 (for inclusive -> exclusive conversion)
+  auto ubAddOp = forOp.getUpperBound().getDefiningOp<arith::AddIOp>();
+  ASSERT_TRUE(ubAddOp);
+  EXPECT_EQ(ubAddOp.getLhs(), ub);
+  auto oneConst = getConstantIndex(ubAddOp.getRhs());
+  ASSERT_TRUE(oneConst.has_value());
+  EXPECT_EQ(*oneConst, 1);
 
-  // Upper bound is a computed trip count (not a constant)
-  EXPECT_FALSE(getConstantIndex(forOp.getUpperBound()).has_value());
+  EXPECT_EQ(forOp.getStep(), step);
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
@@ -349,19 +350,10 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForExclusiveUpperBound) {
 
   ASSERT_TRUE(forOp);
 
-  // Normalized: lb=0, step=1, ub=tripCount
-  // For exclusive [0, 10) with step 1: tripCount = (9 - 0 + 1) / 1 = 10
-  auto lbConst = getConstantIndex(forOp.getLowerBound());
-  ASSERT_TRUE(lbConst.has_value());
-  EXPECT_EQ(*lbConst, 0);
-
-  auto ubConst = getConstantIndex(forOp.getUpperBound());
-  ASSERT_TRUE(ubConst.has_value());
-  EXPECT_EQ(*ubConst, 10);
-
-  auto stepConst = getConstantIndex(forOp.getStep());
-  ASSERT_TRUE(stepConst.has_value());
-  EXPECT_EQ(*stepConst, 1);
+  // Positive step: bounds passed through directly (no normalization)
+  EXPECT_EQ(forOp.getLowerBound(), c0);
+  EXPECT_EQ(forOp.getUpperBound(), c10);
+  EXPECT_EQ(forOp.getStep(), c1);
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNegativeStep) {
