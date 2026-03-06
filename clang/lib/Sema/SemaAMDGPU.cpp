@@ -273,11 +273,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return true;
     }
 
-    bool ExtraGatherChecks = false;
     // For gather, only one bit can be set indicating which exact component to
     // return.
-    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32)
-      ExtraGatherChecks = SemaRef.BuiltinConstantArgPower2(TheCall, 0);
+    bool ExtraGatherChecks =
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 &&
+        SemaRef.BuiltinConstantArgPower2(TheCall, 0);
 
     return ExtraGatherChecks ||
            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
@@ -326,9 +326,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     // Complain about dmask values which are too huge to fully fit into 4 bits
     // (which is the actual size of the dmask in corresponding HW instructions).
     constexpr unsigned DMaskArgNo = 1;
-    return SemaRef.BuiltinConstantArgRange(TheCall, DMaskArgNo, /* Low = */ 0,
-                                           /* High = */ 15,
-                                           /* RangeIsError = */ true) ||
+    return SemaRef.BuiltinConstantArgRange(TheCall, DMaskArgNo, /*Low=*/0,
+                                           /*High=*/15,
+                                           /*RangeIsError=*/true) ||
            SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result) ||
            SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result);
   }
