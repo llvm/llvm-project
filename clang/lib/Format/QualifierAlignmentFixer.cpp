@@ -169,6 +169,17 @@ static bool isQualifier(const FormatToken *const Tok) {
   case tok::kw_constexpr:
   case tok::kw_restrict:
   case tok::kw_friend:
+  case tok::kw_typedef:
+  case tok::kw_consteval:
+  case tok::kw_constinit:
+  case tok::kw_thread_local:
+  case tok::kw_extern:
+  case tok::kw_mutable:
+  case tok::kw_signed:
+  case tok::kw_unsigned:
+  case tok::kw_long:
+  case tok::kw_short:
+  case tok::kw_explicit:
     return true;
   default:
     return false;
@@ -397,11 +408,29 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
       TypeToken->is(tok::r_square)) {
 
-    // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;
-    while (isConfiguredQualifier(FirstQual->getPreviousNonComment(),
-                                 ConfiguredQualifierTokens)) {
-      FirstQual = FirstQual->getPreviousNonComment();
+    const FormatToken *Prev = FirstQual->getPreviousNonComment();
+    if (!TypeToken) {
+      // At start of line: include paired qualifiers (long/short with
+      // unsigned/signed) and configured qualifiers, but not unrelated ones.
+      while (Prev &&
+             (isConfiguredQualifier(Prev, ConfiguredQualifierTokens) ||
+              (isQualifier(Prev) &&
+               (((QualifierType == tok::kw_unsigned ||
+                  QualifierType == tok::kw_signed) &&
+                 (Prev->is(tok::kw_long) || Prev->is(tok::kw_short))) ||
+                ((QualifierType == tok::kw_long ||
+                  QualifierType == tok::kw_short) &&
+                 (Prev->is(tok::kw_unsigned) || Prev->is(tok::kw_signed))))))) {
+        FirstQual = Prev;
+        Prev = FirstQual->getPreviousNonComment();
+      }
+    } else {
+      // Not at start: only include configured qualifiers
+      while (Prev && isConfiguredQualifier(Prev, ConfiguredQualifierTokens)) {
+        FirstQual = Prev;
+        Prev = FirstQual->getPreviousNonComment();
+      }
     }
 
     if (FirstQual != Tok)
@@ -429,9 +458,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       TypeToken = Prev;
     }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
-    while (isConfiguredQualifierOrType(
-        LastSimpleTypeSpecifier->getPreviousNonComment(),
-        ConfiguredQualifierTokens, LangOpts)) {
+    while (isQualifierOrType(LastSimpleTypeSpecifier->getPreviousNonComment(),
+                             LangOpts)) {
       LastSimpleTypeSpecifier =
           LastSimpleTypeSpecifier->getPreviousNonComment();
     }
@@ -538,6 +566,17 @@ tok::TokenKind LeftRightQualifierAlignmentFixer::getTokenFromQualifier(
       .Case("constexpr", tok::kw_constexpr)
       .Case("restrict", tok::kw_restrict)
       .Case("friend", tok::kw_friend)
+      .Case("typedef", tok::kw_typedef)
+      .Case("consteval", tok::kw_consteval)
+      .Case("constinit", tok::kw_constinit)
+      .Case("thread_local", tok::kw_thread_local)
+      .Case("extern", tok::kw_extern)
+      .Case("mutable", tok::kw_mutable)
+      .Case("signed", tok::kw_signed)
+      .Case("unsigned", tok::kw_unsigned)
+      .Case("long", tok::kw_long)
+      .Case("short", tok::kw_short)
+      .Case("explicit", tok::kw_explicit)
       .Default(tok::identifier);
 }
 
@@ -617,8 +656,33 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
 
     tok::TokenKind QualifierToken =
         LeftRightQualifierAlignmentFixer::getTokenFromQualifier(s);
-    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier)
+    if (QualifierToken != tok::kw_typeof && QualifierToken != tok::identifier) {
       Qualifiers.push_back(QualifierToken);
+
+      // Ensure signed/unsigned and long/short qualifier pairs are positioned
+      // together by default unless the user has explicitly specified both in
+      // the QualifierOrder. This allows users to override the default pairing
+      // by listing both qualifiers in the order.
+      auto addPairedQualifier = [&](tok::TokenKind PairedToken,
+                                    const std::string &PairedName) {
+        if (!llvm::is_contained(Order, PairedName)) {
+          Qualifiers.push_back(PairedToken);
+          if (left)
+            LeftOrder.insert(LeftOrder.begin(), PairedName);
+          else
+            RightOrder.push_back(PairedName);
+        }
+      };
+
+      if (QualifierToken == tok::kw_unsigned)
+        addPairedQualifier(tok::kw_signed, "signed");
+      else if (QualifierToken == tok::kw_signed)
+        addPairedQualifier(tok::kw_unsigned, "unsigned");
+      else if (QualifierToken == tok::kw_long)
+        addPairedQualifier(tok::kw_short, "short");
+      else if (QualifierToken == tok::kw_short)
+        addPairedQualifier(tok::kw_long, "long");
+    }
 
     if (left) {
       // Reverse the order for left aligned items.
