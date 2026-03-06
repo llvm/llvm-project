@@ -11,8 +11,7 @@ define void @loop_iv_cond_variable_bound(i32 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i32 [[IV]], 0
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp sge i32 [[IV]], -1
 ; CHECK-NEXT:    call void @use(i1 [[T_3]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[IV]], [[N]]
@@ -58,8 +57,7 @@ define void @loop_iv_cond_constant_bound() {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i32 [[IV]], 0
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp sge i32 [[IV]], -1
 ; CHECK-NEXT:    call void @use(i1 [[T_3]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[IV]], 2
