@@ -52,7 +52,7 @@ public:
   }
 
 protected:
-  std::vector<SystemRuntimeCreateInstance> m_system_runtime_plugins;
+  llvm::SmallVector<SystemRuntimeCreateInstance> m_system_runtime_plugins;
 
   static void RemoveAllRegisteredSystemRuntimePlugins() {
     // Enable all currently registered plugins so we can get a handle to
@@ -65,7 +65,7 @@ protected:
     }
 
     // Get a handle to the create call backs for all the registered plugins.
-    std::vector<SystemRuntimeCreateInstance> registered_plugin_callbacks =
+    llvm::SmallVector<SystemRuntimeCreateInstance> registered_plugin_callbacks =
         PluginManager::GetSystemRuntimeCreateCallbacks();
 
     // Remove all currently registered plugins.
@@ -103,7 +103,7 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePlugin) {
 TEST_F(PluginManagerTest, SystemRuntimePluginInfo) {
   RegisterMockSystemRuntimePlugins();
 
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -122,7 +122,7 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginInfo) {
   RegisterMockSystemRuntimePlugins();
 
   // Initial plugin info has all three registered plugins.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
 
@@ -145,7 +145,7 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisable) {
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("b", false));
 
   // Disabling a plugin does not remove it from plugin info.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -193,7 +193,7 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisableThenEnable) {
   }
 
   // And show up in the plugin info correctly.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -255,7 +255,7 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisableAll) {
   ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbacks().size(), 0u);
 
   // And show up in the plugin info correctly.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -297,7 +297,7 @@ TEST_F(PluginManagerTest, UnRegisterDisabledSystemRuntimePlugin) {
   RegisterMockSystemRuntimePlugins();
 
   // Initial plugin info has all three registered plugins.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
 
@@ -319,7 +319,7 @@ TEST_F(PluginManagerTest, UnRegisterDisabledSystemRuntimePlugin) {
 TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginChangesOrder) {
   RegisterMockSystemRuntimePlugins();
 
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   {
     auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
