@@ -1705,7 +1705,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     for (MachineInstr &MI : MBB) {
       // TODO: Walking through all MBBs here would be a bad heuristic. Better
       // handle them elsewhere.
-      if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
+      if (TII->isWWMRegSpillOpcode(MI.getOpcode()) ||
+          (TII->isVGPRSpill(MI) && MFI->getSGPRForEXECCopy()))
         NeedExecCopyReservedReg = true;
       else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
                MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||

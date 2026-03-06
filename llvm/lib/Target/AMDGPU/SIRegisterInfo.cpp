@@ -2460,18 +2460,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
 
       auto *MBB = MI->getParent();
-      bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
-      if (IsWWMRegSpill) {
-        TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
-                                  RS->isRegUsed(AMDGPU::SCC));
+      Register ExecCopyReg = MFI->getSGPRForEXECCopy();
+      if (ExecCopyReg) {
+        TII->insertScratchExecCopy(*MF, *MBB, MI, DL, ExecCopyReg,
+                                   RS->isRegUsed(AMDGPU::SCC));
       }
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(*MI, TII));
-      if (IsWWMRegSpill)
-        TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
+      if (ExecCopyReg)
+        TII->restoreExec(*MF, *MBB, MI, DL, ExecCopyReg);
 
       MI->eraseFromParent();
       return true;
@@ -2548,8 +2548,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
-      if (IsWWMRegSpill) {
-        TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
+      Register ExecCopyReg =
+          IsWWMRegSpill ? MFI->getSGPRForEXECCopy() : Register();
+      if (ExecCopyReg) {
+        TII->insertScratchExecCopy(*MF, *MBB, MI, DL, ExecCopyReg,
                                    RS->isRegUsed(AMDGPU::SCC));
       }
 
@@ -2558,8 +2560,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
 
-      if (IsWWMRegSpill)
-        TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
+      if (ExecCopyReg)
+        TII->restoreExec(*MF, *MBB, MI, DL, ExecCopyReg);
 
       MI->eraseFromParent();
       return true;

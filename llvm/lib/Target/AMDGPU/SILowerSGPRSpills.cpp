@@ -563,9 +563,23 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
                              TRI->getHWRegIndex(FuncInfo->getSGPRForEXECCopy()))
       FuncInfo->setSGPRForEXECCopy(UnusedLowSGPR);
   } else {
-    // No SGPR spills to virtual VGPR lanes and hence there won't be any WWM
-    // spills/copies. Reset the SGPR reserved for EXEC copy.
-    FuncInfo->setSGPRForEXECCopy(AMDGPU::NoRegister);
+    // Keep SGPRForEXECCopy reserved if exec may be narrowed in this function.
+    // Regular VGPR scratch spills require exec protection: memory ops respect
+    // the exec mask, so spills under narrowed exec leave inactive lanes
+    // unwritten, corrupting values on reload under wider exec.
+    bool HasExecModify = false;
+    for (const MachineBasicBlock &MBB : MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
+          HasExecModify = true;
+          break;
+        }
+      }
+      if (HasExecModify)
+        break;
+    }
+    if (!HasExecModify)
+      FuncInfo->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
   SaveBlocks.clear();
