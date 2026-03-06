@@ -100,6 +100,8 @@ public:
   BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
@@ -132,11 +134,13 @@ private:
   BuiltinTypeDeclBuilder &
   addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
                          AccessSpecifier Access = AccessSpecifier::AS_private);
+  QualType getGatherReturnType();
   FieldDecl *getResourceHandleField() const;
   FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();
   QualType getHandleElementType();
   Expr *getConstantIntExpr(int value);
+  Expr *getConstantUnsignedIntExpr(unsigned value);
   HLSLAttributedResourceType::Attributes getResourceAttrs() const;
 };
 
