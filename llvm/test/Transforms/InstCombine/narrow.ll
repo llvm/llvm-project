@@ -160,7 +160,7 @@ define i1 @searchArray2(i32 %hay, ptr %haystack) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[AND]] to i1
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
 entry:
