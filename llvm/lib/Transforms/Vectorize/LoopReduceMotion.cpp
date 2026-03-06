@@ -28,6 +28,8 @@
 
 #include "llvm/Transforms/Vectorize/LoopReduceMotion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Dominators.h"
@@ -45,18 +47,49 @@
 #define DEBUG_TYPE "loop-reduce-motion"
 
 using namespace llvm;
-PreservedAnalyses LoopReduceMotionPass::run(Loop &L, LoopAnalysisManager &LAM,
-                                            LoopStandardAnalysisResults &LAR,
-                                            LPMUpdater &Updater) {
+bool LoopReduceMotionPass::compareCost(LoopStandardAnalysisResults &AR, Loop &L,
+                                       VectorType *VecTy) {
+  auto TTI = &AR.TTI;
+  auto SE = &AR.SE;
 
-  bool Changed = matchAndTransform(L, &LAR.DT, &LAR.LI);
+  IntrinsicCostAttributes ReduceAttrs(Intrinsic::vector_reduce_add, VecTy,
+                                      {VecTy});
+  TTI::TargetCostKind CostKind = TargetTransformInfo::TCK_RecipThroughput;
+
+  InstructionCost VectorAddCost =
+      TTI->getArithmeticInstrCost(Instruction::Add, VecTy, CostKind);
+  InstructionCost ScalarAddCost = TTI->getArithmeticInstrCost(
+      Instruction::Add, VecTy->getElementType(), CostKind);
+  InstructionCost ReduceAddCost =
+      TTI->getIntrinsicInstrCost(ReduceAttrs, CostKind);
+
+  uint64_t FixedTripCount = SE->getSmallConstantTripCount(&L);
+  if (FixedTripCount > 0) {
+    InstructionCost beforeCost = FixedTripCount * (ReduceAddCost + ScalarAddCost);
+    InstructionCost afterCost = FixedTripCount * VectorAddCost + ReduceAddCost;
+
+    return afterCost < beforeCost;
+  }
+
+  if (VectorAddCost < ReduceAddCost && ScalarAddCost < ReduceAddCost / 2) {
+    return true;
+  }
+
+  return false;
+}
+
+PreservedAnalyses LoopReduceMotionPass::run(Loop &L, LoopAnalysisManager &LAM,
+                                            LoopStandardAnalysisResults &AR,
+                                            LPMUpdater &Updater) {
+  bool Changed = matchAndTransform(AR, L, &AR.DT, &AR.LI);
 
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
 
-bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree *DT,
+bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
+                                             Loop &L, DominatorTree *DT,
                                              LoopInfo *LI) {
   BasicBlock *Header = L.getHeader();
   BasicBlock *Latch = L.getLoopLatch();
@@ -129,11 +162,13 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree *DT,
 
     CallInst *ReduceCall = dyn_cast<CallInst>(RecurrenceValue);
     Instruction *VecIn = dyn_cast<Instruction>(ReduceOperand);
+    VectorType *VecTy = cast<VectorType>(VecIn->getType());
+    if (!compareCost(AR, L, VecTy))
+      continue;
     // pattern match success
     LLVM_DEBUG(dbgs() << "Found pattern to optimize in loop "
                       << Header->getName() << "!\n");
 
-    VectorType *VecTy = cast<VectorType>(VecIn->getType());
     Value *VecZero = ConstantInt::get(VecTy, 0);
 
     // build new Vector Add to replace Scalar Add

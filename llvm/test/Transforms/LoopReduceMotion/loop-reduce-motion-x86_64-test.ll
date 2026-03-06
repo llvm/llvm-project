@@ -2,6 +2,8 @@
 ; loop-reduce-motion-test.ll
 ; RUN: opt -passes=loop-reduce-motion -S < %s | FileCheck %s
 
+target triple = "x86_64-unknown-linux-gnu"
+
 define i32 @func_with_VecBin_Sub(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i32 %height) {
 ; CHECK-LABEL: @func_with_VecBin_Sub(
 ; CHECK-NEXT:  entry:
