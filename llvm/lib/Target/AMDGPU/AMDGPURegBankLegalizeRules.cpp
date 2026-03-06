@@ -645,6 +645,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
       .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
+  addRulesForGOpcs({G_PHI})
+      .Any({{UniS1}, {{}, {}, AextToS32InIncomingBlockGPHI}})
+      .Any({{UniS16}, {{}, {}, VerifyAllSgprGPHI}})
+      .Any({{UniBRC}, {{}, {}, VerifyAllSgprGPHI}})
+      .Any({{DivBRC}, {{}, {}, VerifyAllSgprOrVgprGPHI}});
+
   // LOAD       {Div}, {{VgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD       {Uni}, {{UniInVgprDst...}, {VgprSrc, ..., Sgpr_WF_RsrcIdx}}
   // LOAD_NORET {}, {{}, {Imm, VgprSrc, ..., Sgpr_WF_RsrcIdx}}

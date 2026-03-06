@@ -226,7 +226,7 @@ func.func @bounded_recursion() {
 builtin.module {
 
   func.func @fail_to_convert_illegal_op() -> i32 {
-    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f' that was explicitly marked illegal: %0 = "test.illegal_op_f"() : () -> i32}}
     %result = "test.illegal_op_f"() : () -> (i32)
     return %result : i32
   }
@@ -434,7 +434,7 @@ func.func @test_lookup_without_converter() {
 // expected-remark@-1 {{applyPartialConversion failed}}
 
 func.func @test_skip_1to1_pattern(%arg0: f32) {
-  // expected-error@+1 {{failed to legalize operation 'test.type_consumer'}}
+  // expected-error@+1 {{failed to legalize operation 'test.type_consumer' that was explicitly marked illegal}}
   "test.type_consumer"(%arg0) : (f32) -> ()
   return
 }
