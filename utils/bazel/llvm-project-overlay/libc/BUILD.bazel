@@ -21,7 +21,7 @@ package(
     features = [
         "parse_headers",
         "-use_header_modules",
-        "-layering_check",
+        "layering_check",
     ],
 )
 
@@ -2656,6 +2656,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":hdr_errno_macros",
         ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -3031,6 +3032,7 @@ libc_support_library(
         ":__support_fputil_polyeval",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -3071,6 +3073,7 @@ libc_support_library(
         ":__support_fputil_basic_operations",
         ":__support_fputil_bfloat16",
         ":__support_macros_config",
+        ":__support_macros_properties_types",
     ],
 )
 
@@ -3281,6 +3284,8 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_integer_literals",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
     ],
 )
 
@@ -3329,6 +3334,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -3603,6 +3609,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_math_exp10_float16_constants",
         ":__support_math_expf16_utils",
+        ":hdr_stdint_proxy",
     ],
 )
 
@@ -3909,6 +3916,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ffmaf128",
+    hdrs = ["src/__support/math/ffmaf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_floor",
     hdrs = ["src/__support/math/floor.h"],
     deps = [
@@ -3953,6 +3971,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -4210,6 +4229,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -4303,6 +4323,7 @@ libc_support_library(
     hdrs = ["src/__support/math/nextdownf128.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
         ":__support_macros_properties_types",
         ":llvm_libc_types_float128",
     ],
@@ -5212,6 +5233,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
+        ":__support_macros_config",
     ],
 )
 
@@ -5232,6 +5254,7 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_range_reduction_double",
         ":__support_sincos_eval",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -5589,9 +5612,14 @@ libc_support_library(
     hdrs = ["src/__support/math/tanhf16.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_array",
         ":__support_fputil_cast",
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_config",
         ":__support_macros_optimization",
@@ -6677,7 +6705,7 @@ libc_math_function(
 libc_math_function(
     name = "ffmaf128",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_ffmaf128",
     ],
 )
 

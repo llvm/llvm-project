@@ -966,11 +966,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // DesiredStackSpace available.
   noteBottomOfStack();
 
-  llvm::scope_exit FinishDiagnosticClient([&]() {
-    // Notify the diagnostic client that all files were processed.
-    getDiagnosticClient().finish();
-  });
-
   raw_ostream &OS = getVerboseOutputStream();
 
   if (!Act.PrepareToExecute(*this))
@@ -1219,6 +1214,9 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
 
+  // Pass along the GenModuleActionWrapper callback.
+  Instance.setGenModuleActionWrapper(getGenModuleActionWrapper());
+
   if (GetDependencyDirectives)
     Instance.GetDependencyDirectives =
         GetDependencyDirectives->cloneFor(Instance.getFileManager());
@@ -1273,8 +1271,14 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
   // thread so that we get a stack large enough.
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
-        GenerateModuleFromModuleMapAction Action;
-        Instance.ExecuteAction(Action);
+        std::unique_ptr<FrontendAction> Action =
+            std::make_unique<GenerateModuleFromModuleMapAction>();
+
+        if (auto WrapGenModuleAction = Instance.getGenModuleActionWrapper())
+          Action = WrapGenModuleAction(Instance.getFrontendOpts(),
+                                       std::move(Action));
+
+        Instance.ExecuteAction(*Action);
       },
       DesiredStackSize);
 
@@ -1583,9 +1587,14 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   // Find the macro definition from the command line.
   MacroInfo *CmdLineDefinition = nullptr;
   for (auto *MD = LatestLocalMD; MD; MD = MD->getPrevious()) {
-    // We only care about the predefines buffer.
-    FileID FID = SourceMgr.getFileID(MD->getLocation());
-    if (FID.isInvalid() || FID != PP.getPredefinesFileID())
+    SourceLocation MDLoc = MD->getLocation();
+    FileID FID = SourceMgr.getFileID(MDLoc);
+    if (FID.isInvalid())
+      continue;
+    // We only care about the predefines buffer, or if the macro is defined
+    // over the command line transitively through a PCH.
+    if (FID != PP.getPredefinesFileID() &&
+        !SourceMgr.isWrittenInCommandLineFile(MDLoc))
       continue;
     if (auto *DMD = dyn_cast<DefMacroDirective>(MD))
       CmdLineDefinition = DMD->getMacroInfo();
@@ -1607,7 +1616,7 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
       << true;
     return;
   } else if (!CmdLineDefinition) {
-    // There was no definition for this macro in the predefines buffer,
+    // There was no definition for this macro in the command line,
     // but there was a local definition. Complain.
     PP.Diag(ImportLoc, diag::warn_module_config_macro_undef)
       << false << ConfigMacro << Mod->getFullModuleName();
