@@ -273,3 +273,40 @@ func.func @test_i16_scalar_in_parallel() {
 // CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i16>) recipe(@firstprivatization_ref_i16) -> !fir.ref<i16> {implicit = true, name = "i16_var"}
 // CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<i16>)
 
+// -----
+
+// Implicit firstprivate for optional dummy: uses _optional recipe with null-check.
+
+// CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_optional_ref_i32 : !fir.ref<i32> init {
+// CHECK:       ^bb0(%{{.*}}: !fir.ref<i32>):
+// CHECK:         fir.if {{.*}} -> (!fir.ref<i32>) {
+// CHECK:           %[[ALLOC:.*]] = fir.alloca i32
+// CHECK:           fir.result %[[ALLOC]] : !fir.ref<i32>
+// CHECK:         } else {
+// CHECK:           fir.zero_bits !fir.ref<i32>
+// CHECK:           fir.result
+// CHECK:         }
+// CHECK:         acc.yield {{.*}} : !fir.ref<i32>
+// CHECK:       } copy {
+// CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
+// CHECK:         fir.if {{.*}} {
+// CHECK:           {{.*}} = fir.load %[[SRC]] : !fir.ref<i32>
+// CHECK:           hlfir.assign {{.*}} to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
+// CHECK:         }
+// CHECK:         acc.terminator
+// CHECK:       }
+
+// CHECK-LABEL: func.func @test_optional_dummy_in_parallel
+func.func @test_optional_dummy_in_parallel(%arg0: !fir.ref<i32>) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %decl = fir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "x"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  acc.parallel {
+    %load = fir.load %decl : !fir.ref<i32>
+    acc.yield
+  }
+  return
+}
+
+// CHECK: %[[FIRSTPRIV:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_optional_ref_i32) -> !fir.ref<i32> {implicit = true, name = "x"}
+// CHECK: acc.parallel firstprivate(%[[FIRSTPRIV]] : !fir.ref<i32>)
+

@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -232,7 +233,8 @@ static std::string getRecipeName(mlir::acc::RecipeKind kind, Type type,
                                  const fir::KindMapping &kindMap,
                                  llvm::ArrayRef<Value> bounds,
                                  mlir::acc::ReductionOperator reductionOp =
-                                     mlir::acc::ReductionOperator::AccNone) {
+                                     mlir::acc::ReductionOperator::AccNone,
+                                 bool firstprivateOptional = false) {
   assert(fir::isa_fir_type(type) && "getRecipeName expects a FIR type");
 
   // Build the complete prefix with all components before calling
@@ -259,7 +261,55 @@ static std::string getRecipeName(mlir::acc::RecipeKind kind, Type type,
   if (!bounds.empty())
     prefixOS << getBoundsString(bounds);
 
+  if (firstprivateOptional)
+    prefixOS << "_optional";
+
   return fir::getTypeAsString(type, kindMap, prefixOS.str());
+}
+
+/// Returns true if the variable is optional (e.g. Fortran OPTIONAL dummy).
+/// Used for implicit firstprivate recipe naming so optional variables get
+/// the _optional suffix and null-check in init/copy.
+/// Walks the def-use chain but stops at declare ops to check their optional
+/// attribute (getOriginalDef would follow ViewLike through declare to memref,
+/// losing the optional info).
+static bool isOptionalVariable(Value var) {
+  if (!var)
+    return false;
+  Value current = var;
+  while (current) {
+    Operation *defOp = current.getDefiningOp();
+    if (!defOp)
+      break;
+    // Trace through ACC data clause ops (CopyinOp, etc.) to get the original
+    // var - e.g. when parallel is inside enter data, live-ins are data op
+    // results; the original var carries the optional attribute.
+    if (Value accVar = acc::getVar(defOp)) {
+      current = accVar;
+      continue;
+    }
+    // Check declare ops - they carry the optional attribute.
+    if (auto varIface = dyn_cast<fir::FortranVariableOpInterface>(defOp))
+      return varIface.isOptional();
+    // Local alloca/allocmem are not optional.
+    if (isa<fir::AllocaOp, fir::AllocMemOp>(defOp))
+      return false;
+    // Follow through convert and view-like, but not through declare.
+    if (auto convertOp = dyn_cast<fir::ConvertOp>(defOp)) {
+      current = convertOp.getValue();
+      continue;
+    }
+    if (auto viewLike = dyn_cast<mlir::ViewLikeOpInterface>(defOp)) {
+      current = viewLike.getViewSource();
+      continue;
+    }
+    break;
+  }
+  // Fallback: value may trace to a block arg (function parameter) with
+  // fir.optional; valueHasFirAttribute checks function arg attributes.
+  if (isa<BlockArgument>(current))
+    return fir::valueHasFirAttribute(current, fir::getOptionalAttrName());
+  return false;
 }
 
 std::string fir::acc::getRecipeName(mlir::acc::RecipeKind kind, Type type,
@@ -268,7 +318,11 @@ std::string fir::acc::getRecipeName(mlir::acc::RecipeKind kind, Type type,
   auto kindMap = var && var.getDefiningOp()
                      ? fir::getKindMapping(var.getDefiningOp())
                      : fir::KindMapping(type.getContext());
-  return ::getRecipeName(kind, type, kindMap, bounds, reductionOp);
+  bool firstprivateOptional =
+      (kind == mlir::acc::RecipeKind::firstprivate_recipe && var &&
+       isOptionalVariable(var));
+  return ::getRecipeName(kind, type, kindMap, bounds, reductionOp,
+                         firstprivateOptional);
 }
 
 /// Get the initial value for reduction operator.
@@ -455,7 +509,8 @@ static RecipeOp genRecipeOp(
     fir::FirOpBuilder &builder, mlir::ModuleOp mod, llvm::StringRef recipeName,
     mlir::Location loc, mlir::Type ty,
     llvm::SmallVector<mlir::Value> &dataOperationBounds, bool allConstantBound,
-    mlir::acc::ReductionOperator op = mlir::acc::ReductionOperator::AccNone) {
+    mlir::acc::ReductionOperator op = mlir::acc::ReductionOperator::AccNone,
+    bool isOptional = false) {
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   RecipeOp recipe;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
@@ -496,9 +551,14 @@ static RecipeOp genRecipeOp(
   llvm::SmallVector<mlir::Value> initBounds =
       getRecipeBounds(builder, loc, dataOperationBounds,
                       initBlock->getArguments().drop_front(1));
-  mlir::Value retVal = mappableTy.generatePrivateInit(
+  mlir::Value retVal;
+
+  // Optional handling (fir.if + null check) is in generatePrivateInit only
+  // when isOptional is true.
+  retVal = mappableTy.generatePrivateInit(
       builder, loc, mlir::cast<MappableValue>(initBlock->getArgument(0)),
-      initName, initBounds, initValue, needsDestroy);
+      initName, initBounds, initValue, needsDestroy, isOptional);
+
   mlir::acc::YieldOp::create(builder, loc, retVal);
   // Create destroy region and generate destruction if requested.
   if (needsDestroy) {
@@ -552,13 +612,14 @@ fir::acc::createOrGetPrivateRecipe(mlir::OpBuilder &mlirBuilder,
 
 mlir::SymbolRefAttr fir::acc::createOrGetFirstprivateRecipe(
     mlir::OpBuilder &mlirBuilder, mlir::Location loc, mlir::Type ty,
-    llvm::SmallVector<mlir::Value> &dataBoundOps) {
+    llvm::SmallVector<mlir::Value> &dataBoundOps, bool isOptional) {
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder(mlirBuilder, mod);
   std::string recipeName =
       ::getRecipeName(mlir::acc::RecipeKind::firstprivate_recipe, ty,
-                      builder.getKindMap(), dataBoundOps);
+                      builder.getKindMap(), dataBoundOps,
+                      mlir::acc::ReductionOperator::AccNone, isOptional);
   if (auto recipe =
           mod.lookupSymbol<mlir::acc::FirstprivateRecipeOp>(recipeName))
     return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
@@ -566,7 +627,8 @@ mlir::SymbolRefAttr fir::acc::createOrGetFirstprivateRecipe(
   mlir::OpBuilder::InsertionGuard guard(builder);
   bool allConstantBound = fir::acc::areAllBoundsConstant(dataBoundOps);
   auto recipe = genRecipeOp<mlir::acc::FirstprivateRecipeOp>(
-      builder, mod, recipeName, loc, ty, dataBoundOps, allConstantBound);
+      builder, mod, recipeName, loc, ty, dataBoundOps, allConstantBound,
+      mlir::acc::ReductionOperator::AccNone, isOptional);
   auto [source, destination] = genRecipeCombinerOrCopyRegion(
       builder, loc, ty, recipe.getCopyRegion(), dataBoundOps, allConstantBound);
   llvm::SmallVector<mlir::Value> copyBounds =
@@ -576,8 +638,10 @@ mlir::SymbolRefAttr fir::acc::createOrGetFirstprivateRecipe(
   auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
-  [[maybe_unused]] bool success =
-      mappableTy.generateCopy(builder, loc, source, destination, copyBounds);
+  // Optional handling (fir.if + null check) is in generateCopy only when
+  // isOptional is true.
+  [[maybe_unused]] bool success = mappableTy.generateCopy(
+      builder, loc, source, destination, copyBounds, isOptional);
   assert(success && "failed to generate copy");
   mlir::acc::TerminatorOp::create(builder, loc);
   return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());

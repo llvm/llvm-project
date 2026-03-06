@@ -387,7 +387,8 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::llvm::StringRef":$varName,
                     "::mlir::ValueRange":$extents,
                     "::mlir::Value":$initVal,
-                    "bool &":$needsDestroy),
+                    "bool &":$needsDestroy,
+                    "bool":$isOptional),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return {};
@@ -402,7 +403,8 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::mlir::Location":$loc,
                     "::mlir::TypedValue<::mlir::acc::MappableType>":$from,
                     "::mlir::TypedValue<::mlir::acc::MappableType>":$to,
-                    "::mlir::ValueRange":$bounds),
+                    "::mlir::ValueRange":$bounds,
+                    "bool":$isOptional),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;

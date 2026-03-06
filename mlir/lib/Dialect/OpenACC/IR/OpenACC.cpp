@@ -1543,10 +1543,12 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
 /// Create and populate an init region for privatization recipes.
 /// Returns success if the region is populated, failure otherwise.
 /// Sets needsFree to indicate if the allocated memory requires deallocation.
+/// When isOptional is true (e.g. recipe name ends with _optional), init uses
+/// null-check for Fortran optional variables.
 static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
                                       Region &initRegion, Type varType,
                                       StringRef varName, ValueRange bounds,
-                                      bool &needsFree) {
+                                      bool &needsFree, bool isOptional = false) {
   // Create init block with arguments: original value + bounds
   SmallVector<Type> argTypes{varType};
   SmallVector<Location> argLocs{loc};
@@ -1569,7 +1571,7 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
     auto mappableTy = cast<MappableType>(varType);
     auto typedVar = cast<TypedValue<MappableType>>(blockArgVar);
     privatizedValue = mappableTy.generatePrivateInit(
-        builder, loc, typedVar, varName, bounds, {}, needsFree);
+        builder, loc, typedVar, varName, bounds, {}, needsFree, isOptional);
     if (!privatizedValue)
       return failure();
   } else {
@@ -1590,10 +1592,12 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
 
 /// Create and populate a copy region for firstprivate recipes.
 /// Returns success if the region is populated, failure otherwise.
-/// TODO: Handle MappableType - it does not yet have a copy API.
+/// When isOptional is true (e.g. recipe name ends with _optional), copy uses
+/// null-check for Fortran optional variables via MappableType::generateCopy.
 static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
                                       Region &copyRegion, Type varType,
-                                      ValueRange bounds) {
+                                      ValueRange bounds,
+                                      bool isOptional = false) {
   // Create copy block with arguments: original value + privatized value +
   // bounds
   SmallVector<Type> copyArgTypes{varType, varType};
@@ -1607,24 +1611,28 @@ static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
   copyBlock->addArguments(copyArgTypes, copyArgLocs);
   builder.setInsertionPointToStart(copyBlock);
 
+  Value originalArg = copyBlock->getArgument(0);
+  Value privatizedArg = copyBlock->getArgument(1);
+
   bool isMappable = isa<MappableType>(varType);
   bool isPointerLike = isa<PointerLikeType>(varType);
-  // TODO: Handle MappableType - it does not yet have a copy API.
-  // Otherwise, for now just fallback to pointer-like behavior.
-  if (isMappable && !isPointerLike)
-    return failure();
 
-  // Generate copy region body based on variable type
-  if (isPointerLike) {
+  // When optional, use MappableType::generateCopy for null-check handling.
+  if (isMappable && isOptional) {
+    auto mappableTy = cast<MappableType>(varType);
+    if (!mappableTy.generateCopy(
+            builder, loc, cast<TypedValue<MappableType>>(originalArg),
+            cast<TypedValue<MappableType>>(privatizedArg), bounds, isOptional))
+      return failure();
+  } else if (isPointerLike) {
     auto pointerLikeTy = cast<PointerLikeType>(varType);
-    Value originalArg = copyBlock->getArgument(0);
-    Value privatizedArg = copyBlock->getArgument(1);
-
-    // Generate copy operation using PointerLikeType interface
     if (!pointerLikeTy.genCopy(
             builder, loc, cast<TypedValue<PointerLikeType>>(privatizedArg),
             cast<TypedValue<PointerLikeType>>(originalArg), varType))
       return failure();
+  } else if (isMappable && !isPointerLike) {
+    // MappableType without optional handling - not yet supported for copy
+    return failure();
   }
 
   // Add terminator to copy block
@@ -1821,6 +1829,9 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   if (!isMappable && !isPointerLike)
     return std::nullopt;
 
+  // Derive isOptional from recipe name (e.g. firstprivatization_optional_ref_i32)
+  bool isOptional = recipeName.contains("_optional");
+
   OpBuilder::InsertionGuard guard(builder);
 
   // Create the recipe operation first so regions have proper parent context
@@ -1829,14 +1840,14 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Populate the init region
   bool needsFree = false;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), varType,
-                              varName, bounds, needsFree))) {
+                              varName, bounds, needsFree, isOptional))) {
     recipe.erase();
     return std::nullopt;
   }
 
   // Populate the copy region
   if (failed(createCopyRegion(builder, loc, recipe.getCopyRegion(), varType,
-                              bounds))) {
+                              bounds, isOptional))) {
     recipe.erase();
     return std::nullopt;
   }

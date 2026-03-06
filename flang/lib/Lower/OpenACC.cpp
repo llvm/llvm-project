@@ -792,8 +792,9 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
           builder, operandLocation, baseAddr.getType(), bounds);
       op.setRecipeAttr(recipeAttr);
     } else if constexpr (std::is_same_v<Op, mlir::acc::FirstprivateOp>) {
+      bool isOptional = Fortran::semantics::IsOptional(symbol);
       mlir::SymbolRefAttr recipeAttr = fir::acc::createOrGetFirstprivateRecipe(
-          builder, operandLocation, baseAddr.getType(), bounds);
+          builder, operandLocation, baseAddr.getType(), bounds, isOptional);
       op.setRecipeAttr(recipeAttr);
     }
   }

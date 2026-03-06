@@ -68,11 +68,14 @@ createOrGetPrivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \param loc The location
 /// \param ty The type of the variable
 /// \param dataBoundOps Optional bounds for the variable
+/// \param isOptional Whether the variable is Fortran optional (enables null-check
+///        in init/copy; uses a separate recipe with _optional suffix)
 /// \return The existing or created FirstprivateRecipeOp symbol
 mlir::SymbolRefAttr
 createOrGetFirstprivateRecipe(mlir::OpBuilder &builder, mlir::Location loc,
                               mlir::Type ty,
-                              llvm::SmallVector<mlir::Value> &dataBoundOps);
+                              llvm::SmallVector<mlir::Value> &dataBoundOps,
+                              bool isOptional = false);
 
 /// Create or get a reduction recipe for the given type, name and operator.
 /// \param builder The FIR builder

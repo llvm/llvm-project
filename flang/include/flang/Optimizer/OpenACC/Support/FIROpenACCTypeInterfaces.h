@@ -85,7 +85,8 @@ struct OpenACCMappableModel
                                   mlir::TypedValue<mlir::acc::MappableType> var,
                                   llvm::StringRef varName,
                                   mlir::ValueRange extents, mlir::Value initVal,
-                                  bool &needsDestroy) const;
+                                  bool &needsDestroy,
+                                  bool isOptional = false) const;
 
   bool generatePrivateDestroy(mlir::Type type, mlir::OpBuilder &builder,
                               mlir::Location loc, mlir::Value privatized,
@@ -95,7 +96,8 @@ struct OpenACCMappableModel
                     mlir::Location loc,
                     mlir::TypedValue<mlir::acc::MappableType> source,
                     mlir::TypedValue<mlir::acc::MappableType> dest,
-                    mlir::ValueRange bounds) const;
+                    mlir::ValueRange bounds,
+                    bool isOptional = false) const;
 
   bool generateCombiner(mlir::Type type, mlir::OpBuilder &mlirBuilder,
                         mlir::Location loc,
