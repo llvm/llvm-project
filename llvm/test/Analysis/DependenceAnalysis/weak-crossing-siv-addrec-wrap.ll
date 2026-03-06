@@ -36,7 +36,7 @@ define void @weak_crossing_siv_no_nsw(ptr %A) {
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ;
