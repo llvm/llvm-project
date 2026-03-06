@@ -334,12 +334,12 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     ExactFlags.IsExact &= Other.ExactFlags.IsExact;
     break;
   case OperationType::GEPOp:
-    GEPFlags &= Other.GEPFlags;
+    GEPFlagsStorage &= Other.GEPFlagsStorage;
     break;
   case OperationType::FPMathOp:
   case OperationType::FCmp:
     assert((OpType != OperationType::FCmp ||
-            FCmpFlags.Pred == Other.FCmpFlags.Pred) &&
+            FCmpFlags.CmpPredStorage == Other.FCmpFlags.CmpPredStorage) &&
            "Cannot drop CmpPredicate");
     getFMFsRef().NoNaNs &= Other.getFMFsRef().NoNaNs;
     getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
@@ -348,7 +348,8 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     NonNegFlags.NonNeg &= Other.NonNegFlags.NonNeg;
     break;
   case OperationType::Cmp:
-    assert(CmpPredicate == Other.CmpPredicate && "Cannot drop CmpPredicate");
+    assert(CmpPredStorage == Other.CmpPredStorage &&
+           "Cannot drop CmpPredicate");
     break;
   case OperationType::ReductionOp:
     assert(ReductionFlags.Kind == Other.ReductionFlags.Kind &&
@@ -361,7 +362,6 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
     getFMFsRef().NoInfs &= Other.getFMFsRef().NoInfs;
     break;
   case OperationType::Other:
-    assert(AllFlags == Other.AllFlags && "Cannot drop other flags");
     break;
   }
 }
@@ -432,7 +432,8 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
   assert((getNumOperandsForOpcode() == -1u ||
-          getNumOperandsForOpcode() == getNumOperands()) &&
+          getNumOperandsForOpcode() == getNumOperands() ||
+          (isMasked() && getNumOperandsForOpcode() + 1 == getNumOperands())) &&
          "number of operands does not match opcode");
 }
 
@@ -481,7 +482,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ReductionStartVector:
-  case VPInstruction::ExtractLastActive:
     return 3;
   case Instruction::Call: {
     // For unmasked calls, the last argument will the called function. Use that
@@ -505,6 +505,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
   case VPInstruction::ExtractLane:
+  case VPInstruction::ExtractLastActive:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -904,13 +905,21 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::Reverse:
     return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
   case VPInstruction::ExtractLastActive: {
-    Value *Data = State.get(getOperand(0));
-    Value *Mask = State.get(getOperand(1));
-    Value *Default = State.get(getOperand(2), /*IsScalar=*/true);
-    Type *VTy = Data->getType();
-    return Builder.CreateIntrinsic(
-        Intrinsic::experimental_vector_extract_last_active, {VTy},
-        {Data, Mask, Default});
+    Value *Result = State.get(getOperand(0), /*IsScalar=*/true);
+    for (unsigned Idx = 1; Idx < getNumOperands(); Idx += 2) {
+      Value *Data = State.get(getOperand(Idx));
+      Value *Mask = State.get(getOperand(Idx + 1));
+      Type *VTy = Data->getType();
+
+      if (State.VF.isScalar())
+        Result = Builder.CreateSelect(Mask, Data, Result);
+      else
+        Result = Builder.CreateIntrinsic(
+            Intrinsic::experimental_vector_extract_last_active, {VTy},
+            {Data, Mask, Result});
+    }
+
+    return Result;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1277,6 +1286,7 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
+  case Instruction::Load:
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
@@ -1382,6 +1392,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
+  case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -1603,6 +1614,10 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::VScale:
     O << "vscale " << *ResultTy;
+    break;
+  case Instruction::Load:
+    O << "load ";
+    printOperands(O, SlotTracker);
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
@@ -1944,7 +1959,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   IntrinsicCostAttributes CostAttrs(
       ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
-      InstructionCost::getInvalid(), &Ctx.TLI);
+      InstructionCost::getInvalid());
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
 }
 
@@ -2212,14 +2227,16 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::FPMathOp:
     getFastMathFlags().print(O);
     break;
-  case OperationType::GEPOp:
-    if (GEPFlags.isInBounds())
+  case OperationType::GEPOp: {
+    GEPNoWrapFlags Flags = getGEPNoWrapFlags();
+    if (Flags.isInBounds())
       O << " inbounds";
-    else if (GEPFlags.hasNoUnsignedSignedWrap())
+    else if (Flags.hasNoUnsignedSignedWrap())
       O << " nusw";
-    if (GEPFlags.hasNoUnsignedWrap())
+    if (Flags.hasNoUnsignedWrap())
       O << " nuw";
     break;
+  }
   case OperationType::NonNegOp:
     if (NonNegFlags.NonNeg)
       O << " nneg";

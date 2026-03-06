@@ -1,5 +1,3 @@
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
-
 add_custom_target(libc-shared-tests)
 
 add_fp_unittest(
@@ -15,6 +13,7 @@ add_fp_unittest(
     libc.src.__support.math.acosf16
     libc.src.__support.math.acoshf
     libc.src.__support.math.acoshf16
+    libc.src.__support.math.acospif
     libc.src.__support.math.acospif16
     libc.src.__support.math.asin
     libc.src.__support.math.asinf
@@ -44,6 +43,9 @@ add_fp_unittest(
     libc.src.__support.math.bf16mulf
     libc.src.__support.math.bf16mulf128
     libc.src.__support.math.bf16mull
+    libc.src.__support.math.bf16sub
+    libc.src.__support.math.bf16subf
+    libc.src.__support.math.bf16subf128
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
     libc.src.__support.math.canonicalizef
@@ -103,6 +105,7 @@ add_fp_unittest(
     libc.src.__support.math.f16mull
     libc.src.__support.math.f16sqrt
     libc.src.__support.math.f16sqrtf
+    libc.src.__support.math.f16sqrtf128
     libc.src.__support.math.f16sqrtl
     libc.src.__support.math.f16sub
     libc.src.__support.math.f16subf
@@ -118,7 +121,14 @@ add_fp_unittest(
     libc.src.__support.math.fdimf16
     libc.src.__support.math.fdiml
     libc.src.__support.math.ffma
+    libc.src.__support.math.ffmaf128
     libc.src.__support.math.ffmal
+    libc.src.__support.math.floor
+    libc.src.__support.math.floorbf16
+    libc.src.__support.math.floorf
+    libc.src.__support.math.floorf128
+    libc.src.__support.math.floorf16
+    libc.src.__support.math.floorl
     libc.src.__support.math.fmax
     libc.src.__support.math.fmaxbf16
     libc.src.__support.math.fmaxf
@@ -186,6 +196,12 @@ add_fp_unittest(
     libc.src.__support.math.nexttowardf
     libc.src.__support.math.nexttowardf16
     libc.src.__support.math.nexttowardl
+    libc.src.__support.math.nextafter
+    libc.src.__support.math.nextafterbf16
+    libc.src.__support.math.nextafterf
+    libc.src.__support.math.nextafterf16
+    libc.src.__support.math.nextafterl
+    libc.src.__support.math.nextafterf128
     libc.src.__support.math.pow
     libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf
@@ -221,6 +237,5 @@ add_fp_unittest(
     libc.src.__support.math.tanhf
     libc.src.__support.math.tanhf16
     libc.src.__support.math.tanpif
+    libc.src.__support.math.tanpif16
 )
-
-endif()

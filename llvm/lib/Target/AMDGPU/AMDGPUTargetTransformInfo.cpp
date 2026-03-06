@@ -217,13 +217,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
         // a variable, most likely we will be unable to combine it.
         // Do not unroll too deep inner loops for local memory to give a chance
         // to unroll an outer loop for a more important reason.
-        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2)
+        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2 ||
+            (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
+             !isa<Argument>(GEP->getPointerOperand())))
           continue;
-
-        const Value *V = getUnderlyingObject(GEP->getPointerOperand());
-        if (!isa<GlobalVariable>(V) && !isa<Argument>(V))
-          continue;
-
         LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
                           << *L << " due to LDS use.\n");
         UP.Runtime = UnrollRuntimeLocal;
@@ -1654,8 +1651,8 @@ void GCNTTIImpl::collectKernelLaunchBounds(
 
 GCNTTIImpl::KnownIEEEMode
 GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
-  if (!ST->hasIEEEMode()) // Only mode on gfx12
-    return KnownIEEEMode::On;
+  if (!ST->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
+    return KnownIEEEMode::On; // Only mode on gfx1170+
 
   const Function *F = I.getFunction();
   if (!F)

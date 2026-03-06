@@ -21,6 +21,12 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/EnumAttr.td"
 
+// Type constraint for signless-integer-or-index-like types that additionally
+// excludes i0 (zero-bitwidth integers), used for arith integer operations.
+def Arith_SignlessIntegerOrIndexLike : TypeOrValueSemanticsContainer<
+    AnyNonZeroBitwidthSignlessIntegerOrIndex,
+    "signless-non-zero-bitwidth-integer-like">;
+
 // Base class for Arith dialect ops. Ops in this dialect have no memory
 // effects and can be applied element-wise to vectors and tensors.
 class Arith_Op<string mnemonic, list<Trait> traits = []> :
@@ -51,8 +57,8 @@ class Arith_BinaryOp<string mnemonic, list<Trait> traits = []> :
 class Arith_IntBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
       [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
-    Arguments<(ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs)>,
-    Results<(outs SignlessIntegerOrIndexLike:$result)>;
+    Arguments<(ins Arith_SignlessIntegerOrIndexLike:$lhs, Arith_SignlessIntegerOrIndexLike:$rhs)>,
+    Results<(outs Arith_SignlessIntegerOrIndexLike:$result)>;
 
 // Base class for integer binary operations without undefined behavior.
 class Arith_TotalIntBinaryOp<string mnemonic, list<Trait> traits = []> :
@@ -110,10 +116,12 @@ class Arith_CastOp<string mnemonic, TypeConstraint From, TypeConstraint To,
 
 // Casts do not accept indices. Type constraint for signless-integer-like types
 // excluding indices: signless integers, vectors or tensors thereof.
+// i0 (zero-bitwidth) integers are excluded as they have no meaningful
+// representation in cast operations.
 def SignlessFixedWidthIntegerLike : TypeConstraint<Or<[
-        AnySignlessInteger.predicate,
-        VectorOfAnyRankOf<[AnySignlessInteger]>.predicate,
-        TensorOf<[AnySignlessInteger]>.predicate]>,
+        AnyNonZeroBitwidthSignlessInteger.predicate,
+        VectorOfAnyRankOf<[AnyNonZeroBitwidthSignlessInteger]>.predicate,
+        TensorOf<[AnyNonZeroBitwidthSignlessInteger]>.predicate]>,
     "signless-fixed-width-integer-like">;
 
 // Cast from an integer type to another integer type.
@@ -148,11 +156,11 @@ class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = [
     Arith_BinaryOp<mnemonic, traits #
       [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
        DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
-    Arguments<(ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs,
+    Arguments<(ins Arith_SignlessIntegerOrIndexLike:$lhs, Arith_SignlessIntegerOrIndexLike:$rhs,
       DefaultValuedAttr<
         Arith_IntegerOverflowAttr,
         "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags)>,
-    Results<(outs SignlessIntegerOrIndexLike:$result)> {
+    Results<(outs Arith_SignlessIntegerOrIndexLike:$result)> {
 
   let assemblyFormat = [{ $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
                           attr-dict `:` type($result) }];
@@ -161,10 +169,10 @@ class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = [
 class Arith_IntBinaryOpWithExactFlag<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
       [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
-    Arguments<(ins SignlessIntegerOrIndexLike:$lhs,
-               SignlessIntegerOrIndexLike:$rhs,
+    Arguments<(ins Arith_SignlessIntegerOrIndexLike:$lhs,
+               Arith_SignlessIntegerOrIndexLike:$rhs,
                UnitAttr:$isExact)>,
-    Results<(outs SignlessIntegerOrIndexLike:$result)> {
+    Results<(outs Arith_SignlessIntegerOrIndexLike:$result)> {
 
   let assemblyFormat = [{ $lhs `,` $rhs (`exact` $isExact^)?
                           attr-dict `:` type($result) }];
@@ -293,8 +301,8 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
     ```
   }];
 
-  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
-  let results = (outs SignlessIntegerOrIndexLike:$sum, BoolLike:$overflow);
+  let arguments = (ins Arith_SignlessIntegerOrIndexLike:$lhs, Arith_SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs Arith_SignlessIntegerOrIndexLike:$sum, BoolLike:$overflow);
   let assemblyFormat = [{
     $lhs `,` $rhs attr-dict `:` type($sum) `,` type($overflow)
   }];
@@ -434,8 +442,8 @@ def Arith_MulSIExtendedOp : Arith_Op<"mulsi_extended", [Pure, Commutative,
     ```
   }];
 
-  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
-  let results = (outs SignlessIntegerOrIndexLike:$low, SignlessIntegerOrIndexLike:$high);
+  let arguments = (ins Arith_SignlessIntegerOrIndexLike:$lhs, Arith_SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs Arith_SignlessIntegerOrIndexLike:$low, Arith_SignlessIntegerOrIndexLike:$high);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
 
@@ -477,8 +485,8 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
     ```
   }];
 
-  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
-  let results = (outs SignlessIntegerOrIndexLike:$low, SignlessIntegerOrIndexLike:$high);
+  let arguments = (ins Arith_SignlessIntegerOrIndexLike:$lhs, Arith_SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs Arith_SignlessIntegerOrIndexLike:$low, Arith_SignlessIntegerOrIndexLike:$high);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
 
@@ -1573,9 +1581,9 @@ def Arith_FPToSIOp : Arith_FToICastOp<"fptosi"> {
 
 // Index cast can convert between memrefs of signless integers and indices too.
 def IndexCastTypeConstraint : TypeConstraint<Or<[
-        SignlessIntegerOrIndexLike.predicate,
-        MemRefOf<[AnySignlessInteger, Index]>.predicate]>,
-    "signless-integer-like or memref of signless-integer">;
+        Arith_SignlessIntegerOrIndexLike.predicate,
+        MemRefOf<[AnyNonZeroBitwidthSignlessInteger, Index]>.predicate]>,
+    "signless-non-zero-bitwidth-integer-like or memref of signless-integer">;
 
 def Arith_IndexCastOp
   : Arith_CastOp<"index_cast", IndexCastTypeConstraint, IndexCastTypeConstraint,
@@ -1635,10 +1643,12 @@ def Arith_IndexCastUIOp
 //===----------------------------------------------------------------------===//
 
 // Bitcast can convert between memrefs of signless integers and floats.
+// i0 (zero-bitwidth) integers are excluded: a 0-bit bitcast is meaningless.
 def BitcastTypeConstraint : TypeConstraint<Or<[
-        SignlessIntegerOrFloatLike.predicate,
-        MemRefOf<[AnySignlessInteger, AnyFloat]>.predicate]>,
-    "signless-integer-or-float-like or memref of signless-integer or float">;
+        SignlessFixedWidthIntegerLike.predicate,
+        FloatLike.predicate,
+        MemRefOf<[AnyNonZeroBitwidthSignlessInteger, AnyFloat]>.predicate]>,
+    "non-zero-bitwidth-signless-integer-or-float-like or memref of non-zero-bitwidth signless integer or float">;
 
 def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
                                               BitcastTypeConstraint> {
@@ -1737,8 +1747,8 @@ def Arith_CmpIOp : Arith_CompareOp<"cmpi",
   }];
 
   let arguments = (ins Arith_CmpIPredicateAttr:$predicate,
-                       SignlessIntegerOrIndexLike:$lhs,
-                       SignlessIntegerOrIndexLike:$rhs);
+                       Arith_SignlessIntegerOrIndexLike:$lhs,
+                       Arith_SignlessIntegerOrIndexLike:$rhs);
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
