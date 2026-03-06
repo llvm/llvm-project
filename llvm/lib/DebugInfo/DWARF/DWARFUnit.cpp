@@ -504,17 +504,30 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
-    return Error::success(); // Already parsed.
+  bool DoPostExtractInit = false;
 
-  bool HasCUDie = !DieArray.empty();
-  extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
+  {
+    sys::ScopedReader ReadLock(DieArrayMutex);
+    if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
+      return Error::success(); // Already parsed.
+  }
 
-  if (DieArray.empty())
-    return Error::success();
+  {
+    sys::ScopedWriter WriteLock(DieArrayMutex);
+    if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
+      return Error::success(); // Another thread parsed while we waited
 
-  // If CU DIE was just parsed, copy several attribute values from it.
-  if (HasCUDie)
+    bool HasCUDie = !DieArray.empty();
+    extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
+
+    if (DieArray.empty())
+      return Error::success();
+
+    // Only do post-init if we just parsed the CU DIE for the first time
+    DoPostExtractInit = !HasCUDie;
+  }
+
+  if (!DoPostExtractInit)
     return Error::success();
 
   DWARFDie UnitDie(this, &DieArray[0]);
@@ -660,6 +673,7 @@ bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie) {
+  sys::ScopedWriter WriteLock(DieArrayMutex);
   // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
   // shrink_to_fit() is a *non-binding* request to reduce capacity() to size().
   // It depends on the implementation whether the request is fulfilled.
