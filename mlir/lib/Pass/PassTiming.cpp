@@ -90,8 +90,8 @@ struct PassTiming : public PassInstrumentation {
     auto &activeTimers = activeThreadTimers[tid];
     auto &parentScope = activeTimers.empty() ? rootScope : activeTimers.back();
 
+    parentTimerIndices[{tid, pass}] = activeTimers.size();
     if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass)) {
-      parentTimerIndices[{tid, pass}] = activeTimers.size();
       auto scope =
           parentScope.nest(pass->getThreadingSiblingOrThis(),
                            [adaptor]() { return adaptor->getAdaptorName(); });
@@ -107,8 +107,7 @@ struct PassTiming : public PassInstrumentation {
 
   void runAfterPass(Pass *pass, Operation *) override {
     auto tid = llvm::get_threadid();
-    if (isa<OpToOpPassAdaptor>(pass))
-      parentTimerIndices.erase({tid, pass});
+    parentTimerIndices.erase({tid, pass});
     auto &activeTimers = activeThreadTimers[tid];
     assert(!activeTimers.empty() && "expected active timer");
     activeTimers.pop_back();
