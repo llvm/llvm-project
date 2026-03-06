@@ -507,6 +507,11 @@ public:
   /// Use the blob in the CAS object as the input.
   std::string CASInputFileCASID;
 
+  bool needsCAS() const {
+    return !CASIncludeTreeID.empty() || !CASInputFileCacheKey.empty() ||
+           !CASInputFileCASID.empty();
+  }
+
   /// If ignore all the CAS info from serialized AST like modules and PCHs.
   bool ModuleLoadIgnoreCAS = false;
 

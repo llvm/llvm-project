@@ -37,11 +37,8 @@ class DiagnosticsEngine;
 /// CASOptions includes \a getOrCreateDatabases() for creating CAS and
 /// ActionCache.
 ///
-/// FIXME: The the caching is done here, instead of as a field in \a
-/// CompilerInstance, in order to ensure that \a
-/// clang::createVFSFromCompilerInvocation() uses the same CAS instance that
-/// the rest of the compiler job does, without updating all callers. Probably
-/// it would be better to update all callers and remove it from here.
+/// FIXME: Remove the caching that is done here. It should now be in the
+/// CompilerInstance.
 class CASOptions : public llvm::cas::CASConfiguration {
 public:
   enum CASKind {

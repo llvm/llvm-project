@@ -808,8 +808,14 @@ struct AsyncModuleCompile : PPCallbacks {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
             Service, Service.getOpts().MakeVFS());
-    VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
-                                          CI.getDiagnostics(), std::move(VFS));
+
+    std::shared_ptr<cas::ObjectStore> CAS;
+    if (auto *IncludeTree =
+            std::get_if<IncludeTreeCompilation>(&Service.getOpts().Compilation))
+      CAS = IncludeTree->CAS;
+
+    VFS = createVFSFromCompilerInvocation(
+        CI.getInvocation(), CI.getDiagnostics(), std::move(VFS), CAS);
     auto DC = std::make_unique<DiagnosticConsumer>();
     auto MC = makeInProcessModuleCache(Service.getModuleCacheEntries());
     CompilerInstance::ThreadSafeCloneConfig CloneConfig(std::move(VFS), *DC,

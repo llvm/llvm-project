@@ -129,7 +129,10 @@ std::unique_ptr<ASTUnit> clang::CreateASTUnitFromCommandLine(
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   AST->CodeGenOpts = std::make_unique<CodeGenOptions>(CI->getCodeGenOpts());
-  VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
+  if (CI->getFrontendOpts().needsCAS())
+    std::tie(AST->CAS, AST->ActionCache) = CI->getCASOpts().createDatabases(
+        *Diags, /*CreateEmptyDBsOnFailure=*/true);
+  VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS, AST->CAS);
   AST->FileMgr =
       llvm::makeIntrusiveRefCnt<FileManager>(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
