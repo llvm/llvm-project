@@ -32473,68 +32473,155 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
 }
 
-static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
+/// Return the X86 condition code for a CmpArith atomic RMW pattern that can
+/// be lowered to a lock instruction + setcc, or COND_INVALID if the pattern
+/// is not recognised.
+///
+/// Handles both the "natural" form where the intermediate arithmetic is still
+/// present as a separate instruction, and the InstCombine-folded form where
+/// the intermediate was simplified away and the icmp compares the old value
+/// directly.
+static X86::CondCode getCmpArithCC(const AtomicRMWInst *AI) {
   using namespace llvm::PatternMatch;
   if (!AI->hasOneUse())
-    return false;
+    return X86::COND_INVALID;
 
   Value *Op = AI->getOperand(1);
   CmpPredicate Pred;
   const Instruction *I = AI->user_back();
   AtomicRMWInst::BinOp Opc = AI->getOperation();
+
   if (Opc == AtomicRMWInst::Add) {
-    if (match(I, m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
+    // InstCombine-folded form: icmp eq (old + Op), 0  ->  icmp eq old, (0 - Op)
+    // lock add sets ZF on the new value; old + Op == 0  <=>  old == -Op  [ZF]
+    if (match(I,
+              m_c_ICmp(Pred, m_Sub(m_ZeroInt(), m_Specific(Op)), m_Value()))) {
+      if (Pred == CmpInst::ICMP_EQ)
+        return X86::COND_E;
+      if (Pred == CmpInst::ICMP_NE)
+        return X86::COND_NE;
+    }
+    // Non-folded form: %new = add %old, Op; icmp slt/sgt %new, 0/-1
+    // lock add sets SF on the new value directly.
     if (match(I, m_OneUse(m_c_Add(m_Specific(Op), m_Value())))) {
       if (match(I->user_back(),
                 m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
-        return true;
+        return X86::COND_S;
       if (match(I->user_back(),
                 m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-        return true;
+        return X86::COND_NS;
     }
-    return false;
+    return X86::COND_INVALID;
   }
   if (Opc == AtomicRMWInst::Sub) {
-    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
+    // InstCombine-folded form: icmp eq (old - Op), 0  ->  icmp eq old, Op
+    // lock sub sets ZF on the new value; old - Op == 0  <=>  old == Op  [ZF]
+    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value()))) {
+      if (Pred == CmpInst::ICMP_EQ)
+        return X86::COND_E;
+      if (Pred == CmpInst::ICMP_NE)
+        return X86::COND_NE;
+    }
+    // Non-folded form: %new = sub %old, Op; icmp slt/sgt %new, 0/-1
+    // lock sub sets SF on the new value directly.
     if (match(I, m_OneUse(m_Sub(m_Value(), m_Specific(Op))))) {
       if (match(I->user_back(),
                 m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
-        return true;
+        return X86::COND_S;
       if (match(I->user_back(),
                 m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-        return true;
+        return X86::COND_NS;
     }
-    return false;
+    return X86::COND_INVALID;
   }
+  // Non-folded form for Or/And: %new = or/and %old, Op; icmp P %new, 0/-1
+  // lock or/and sets ZF/SF on the new value directly.
   if ((Opc == AtomicRMWInst::Or &&
        match(I, m_OneUse(m_c_Or(m_Specific(Op), m_Value())))) ||
       (Opc == AtomicRMWInst::And &&
        match(I, m_OneUse(m_c_And(m_Specific(Op), m_Value()))))) {
-    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
-             Pred == CmpInst::ICMP_SLT;
+    if (match(I->user_back(), m_ICmp(Pred, m_Value(), m_ZeroInt()))) {
+      if (Pred == CmpInst::ICMP_EQ)
+        return X86::COND_E;
+      if (Pred == CmpInst::ICMP_NE)
+        return X86::COND_NE;
+      if (Pred == CmpInst::ICMP_SLT)
+        return X86::COND_S;
+    }
     if (match(I->user_back(),
               m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-      return true;
-    return false;
+      return X86::COND_NS;
+    return X86::COND_INVALID;
+  }
+  if (Opc == AtomicRMWInst::And) {
+    // InstCombine-folded form: the intermediate 'and' was simplified away,
+    // leaving an icmp directly on the old value.  The lock and instruction
+    // still sets flags on (old & C), so we recover the right CC algebraically:
+    //   icmp ult old, -C  <=>  (old & C) == 0  [ZF=1]
+    //   icmp ugt old, ~C  <=>  (old & C) != 0  [ZF=0]
+    // When C has the sign bit set, bit-63 is preserved by the AND, so:
+    //   icmp slt old,  0  <=>  (old & C) < 0   [SF=1]
+    //   icmp sgt old, -1  <=>  (old & C) >= 0  [SF=0]
+    auto *CI = dyn_cast<ConstantInt>(Op);
+    if (!CI)
+      return X86::COND_INVALID;
+    const APInt &C = CI->getValue();
+    const APInt *K;
+    if (match(I, m_c_ICmp(Pred, m_Specific(AI), m_APInt(K)))) {
+      if (Pred == ICmpInst::ICMP_ULT && *K == -C)
+        return X86::COND_E;
+      if (Pred == ICmpInst::ICMP_UGT && *K == ~C)
+        return X86::COND_NE;
+      if (C.isNegative()) {
+        if (Pred == ICmpInst::ICMP_SLT && K->isZero())
+          return X86::COND_S;
+        if (Pred == ICmpInst::ICMP_SGT && K->isAllOnes())
+          return X86::COND_NS;
+      }
+    }
+    return X86::COND_INVALID;
   }
   if (Opc == AtomicRMWInst::Xor) {
-    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value())))
-      return Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE;
+    // InstCombine-folded form: icmp eq (old ^ Op), 0  ->  icmp eq old, Op
+    // x ^ c == 0  <=>  x == c, so lock xor ZF=1  <=>  old == Op  [ZF]
+    if (match(I, m_c_ICmp(Pred, m_Specific(Op), m_Value()))) {
+      if (Pred == CmpInst::ICMP_EQ)
+        return X86::COND_E;
+      if (Pred == CmpInst::ICMP_NE)
+        return X86::COND_NE;
+    }
+    // Non-folded form: %new = xor %old, Op; icmp slt/sgt %new, 0/-1
+    // lock xor sets SF on the new value directly.
     if (match(I, m_OneUse(m_c_Xor(m_Specific(Op), m_Value())))) {
       if (match(I->user_back(),
                 m_SpecificICmp(CmpInst::ICMP_SLT, m_Value(), m_ZeroInt())))
-        return true;
+        return X86::COND_S;
       if (match(I->user_back(),
                 m_SpecificICmp(CmpInst::ICMP_SGT, m_Value(), m_AllOnes())))
-        return true;
+        return X86::COND_NS;
     }
-    return false;
+    // InstCombine-folded form: when C has the sign bit set, XOR flips bit-63
+    // so SF(old ^ C) = !SF(old).  The folded predicates are therefore inverted
+    // relative to the non-folded ones above:
+    //   icmp sgt old, -1  <=>  (old ^ C) < 0   [SF=1]
+    //   icmp slt old,  0  <=>  (old ^ C) >= 0  [SF=0]
+    if (auto *CI = dyn_cast<ConstantInt>(Op);
+        CI && CI->getValue().isNegative()) {
+      if (match(I, m_c_ICmp(Pred, m_Specific(AI), m_AllOnes())) &&
+          Pred == ICmpInst::ICMP_SGT)
+        return X86::COND_S;
+      if (match(I, m_c_ICmp(Pred, m_Specific(AI), m_ZeroInt())) &&
+          Pred == ICmpInst::ICMP_SLT)
+        return X86::COND_NS;
+    }
+    return X86::COND_INVALID;
   }
 
-  return false;
+  return X86::COND_INVALID;
+}
+
+static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
+  return getCmpArithCC(AI) != X86::COND_INVALID;
 }
 
 void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
@@ -32549,24 +32636,9 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     assert(TempI->hasOneUse() && "Must have one use");
     ICI = cast<ICmpInst>(TempI->user_back());
   }
-  X86::CondCode CC = X86::COND_INVALID;
-  ICmpInst::Predicate Pred = ICI->getPredicate();
-  switch (Pred) {
-  default:
-    llvm_unreachable("Not supported Pred");
-  case CmpInst::ICMP_EQ:
-    CC = X86::COND_E;
-    break;
-  case CmpInst::ICMP_NE:
-    CC = X86::COND_NE;
-    break;
-  case CmpInst::ICMP_SLT:
-    CC = X86::COND_S;
-    break;
-  case CmpInst::ICMP_SGT:
-    CC = X86::COND_NS;
-    break;
-  }
+  X86::CondCode CC = getCmpArithCC(AI);
+  assert(CC != X86::COND_INVALID && "emitCmpArithAtomicRMWIntrinsic called "
+                                    "without a recognised pattern");
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
   default:
