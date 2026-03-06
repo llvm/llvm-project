@@ -889,23 +889,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     return hadModuleLoaderFatalFailure();
   }
 
-  // If this is the 'import' contextual keyword following an '@', note
-  // that the next token indicates a module name.
-  //
-  // Note that we do not treat 'import' as a contextual
-  // keyword when we're in a caching lexer, because caching lexers only get
-  // used in contexts where import declarations are disallowed.
-  //
-  // Likewise if this is the standard C++ import keyword.
-  if (((LastTokenWasAt && II.isImportKeyword()) ||
-       Identifier.is(tok::kw_import)) &&
-      !InMacroArgs &&
-      (!DisableMacroExpansion || MacroExpansionInDirectivesOverride) &&
-      CurLexerCallback != CLK_CachingLexer) {
-    ModuleImportLoc = Identifier.getLocation();
-    IsAtImport = true;
-    CurLexerCallback = CLK_LexAfterModuleImport;
-  }
   return true;
 }
 
@@ -1005,7 +988,6 @@ void Preprocessor::Lex(Token &Result) {
     CheckPointCounter = 0;
   }
 
-  LastTokenWasAt = Result.is(tok::at);
   if (Result.isNot(tok::kw_export))
     LastExportKeyword.startToken();
 
@@ -1205,8 +1187,8 @@ ModuleNameLoc *ModuleNameLoc::Create(Preprocessor &PP, ModuleIdPath Path) {
 bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                                          SmallVectorImpl<Token> &Suffix,
                                          SmallVectorImpl<IdentifierLoc> &Path,
-                                         bool AllowMacroExpansion,
-                                         bool IsPartition) {
+                                         bool IsPartition,
+                                         bool AllowMacroExpansion) {
   auto ConsumeToken = [&]() {
     if (AllowMacroExpansion)
       Lex(Tok);
@@ -1248,6 +1230,36 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
 
     ConsumeToken();
   }
+}
+
+bool Preprocessor::HandleModuleName(StringRef DirType, SourceLocation UseLoc,
+                                    Token &Tok,
+                                    SmallVectorImpl<IdentifierLoc> &Path,
+                                    SmallVectorImpl<Token> &DirToks,
+                                    bool IsPartition,
+                                    bool AllowMacroExpansion) {
+  bool LeadingSpace = Tok.hasLeadingSpace();
+  unsigned NumToksInDirective = DirToks.size();
+  if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path, IsPartition,
+                            AllowMacroExpansion)) {
+    if (Tok.isNot(tok::eod))
+      CheckEndOfDirective(DirType,
+                          /*EnableMacros=*/false, &DirToks);
+    EnterModuleSuffixTokenStream(DirToks);
+    return true;
+  }
+
+  // Clean the module-name tokens and replace these tokens with
+  // annot_module_name.
+  DirToks.resize(NumToksInDirective);
+  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+  DirToks.emplace_back();
+  DirToks.back().setKind(tok::annot_module_name);
+  DirToks.back().setAnnotationRange(NameLoc->getRange());
+  DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+  DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
+  DirToks.push_back(Tok);
+  return false;
 }
 
 /// [cpp.pre]/p2:
@@ -1314,8 +1326,7 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
       CurPPLexer->ParsingFilename,
       Result.getIdentifierInfo()->isImportKeyword());
 
-  std::optional<Token> NextTok =
-      CurLexer ? CurLexer->peekNextPPToken() : CurTokenLexer->peekNextPPToken();
+  std::optional<Token> NextTok = peekNextPPToken();
   if (!NextTok)
     return false;
 
@@ -1327,7 +1338,6 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
                          tok::header_name)) {
       Result.setKind(tok::kw_import);
       ModuleImportLoc = Result.getLocation();
-      IsAtImport = false;
       return true;
     }
   }
@@ -1382,75 +1392,6 @@ void Preprocessor::EnterModuleSuffixTokenStream(ArrayRef<Token> Toks) {
                    /*DisableMacroExpansion*/ false, /*IsReinject*/ false);
   assert(CurTokenLexer && "Must have a TokenLexer");
   CurTokenLexer->setLexingCXXModuleDirective();
-}
-
-/// Lex a token following the 'import' contextual keyword.
-///
-///     pp-import: [C++20]
-///           import header-name pp-import-suffix[opt] ;
-///           import header-name-tokens pp-import-suffix[opt] ;
-/// [ObjC]    @ import module-name ;
-/// [Clang]   import module-name ;
-///
-///     header-name-tokens:
-///           string-literal
-///           < [any sequence of preprocessing-tokens other than >] >
-///
-///     module-name:
-///           module-name-qualifier[opt] identifier
-///
-///     module-name-qualifier
-///           module-name-qualifier[opt] identifier .
-///
-/// We respond to a pp-import by importing macros from the named module.
-bool Preprocessor::LexAfterModuleImport(Token &Result) {
-  // Figure out what kind of lexer we actually have.
-  recomputeCurLexerKind();
-
-  SmallVector<Token, 32> Suffix;
-  SmallVector<IdentifierLoc, 3> Path;
-  Lex(Result);
-  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
-    return CollectPPImportSuffixAndEnterStream(Suffix);
-
-  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
-  Suffix.clear();
-  Suffix.emplace_back();
-  Suffix.back().setKind(tok::annot_module_name);
-  Suffix.back().setAnnotationRange(NameLoc->getRange());
-  Suffix.back().setAnnotationValue(static_cast<void *>(NameLoc));
-  Suffix.push_back(Result);
-
-  // Consume the pp-import-suffix and expand any macros in it now, if we're not
-  // at the semicolon already.
-  SourceLocation SemiLoc = Result.getLocation();
-  if (Suffix.back().isNot(tok::semi)) {
-    if (Suffix.back().isNot(tok::eof))
-      CollectPPImportSuffix(Suffix);
-    if (Suffix.back().isNot(tok::semi)) {
-      // This is not an import after all.
-      EnterModuleSuffixTokenStream(Suffix);
-      return false;
-    }
-    SemiLoc = Suffix.back().getLocation();
-  }
-
-  Module *Imported = nullptr;
-  if (getLangOpts().Modules) {
-    Imported = TheModuleLoader.loadModule(ModuleImportLoc, Path, Module::Hidden,
-                                          /*IsInclusionDirective=*/false);
-    if (Imported)
-      makeModuleVisible(Imported, SemiLoc);
-  }
-
-  if (Callbacks)
-    Callbacks->moduleImport(ModuleImportLoc, Path, Imported);
-
-  if (!Suffix.empty()) {
-    EnterModuleSuffixTokenStream(Suffix);
-    return false;
-  }
-  return true;
 }
 
 void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
