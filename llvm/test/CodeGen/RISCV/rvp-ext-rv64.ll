@@ -566,7 +566,7 @@ define <2 x i32> @test_pli_w() {
 define <4 x i16> @test_plui_h() {
 ; CHECK-LABEL: test_plui_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    plui.h a0, 6
+; CHECK-NEXT:    plui.h a0, 100
 ; CHECK-NEXT:    ret
   ret <4 x i16> splat (i16 u0x1900)
 }
@@ -574,7 +574,7 @@ define <4 x i16> @test_plui_h() {
 define <4 x i16> @test_plui_h_negative() {
 ; CHECK-LABEL: test_plui_h_negative:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    plui.h a0, -26
+; CHECK-NEXT:    plui.h a0, -412
 ; CHECK-NEXT:    ret
   ret <4 x i16> splat (i16 u0x9900)
 }
@@ -582,7 +582,7 @@ define <4 x i16> @test_plui_h_negative() {
 define <2 x i32> @test_plui_h_v2i32() {
 ; CHECK-LABEL: test_plui_h_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    plui.h a0, 6
+; CHECK-NEXT:    plui.h a0, 100
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0x19001900)
 }
@@ -590,7 +590,7 @@ define <2 x i32> @test_plui_h_v2i32() {
 define <2 x i32> @test_plui_h_negative_v2i32() {
 ; CHECK-LABEL: test_plui_h_negative_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    plui.h a0, -26
+; CHECK-NEXT:    plui.h a0, -412
 ; CHECK-NEXT:    ret
   ret <2 x i32> splat (i32 u0x99009900)
 }

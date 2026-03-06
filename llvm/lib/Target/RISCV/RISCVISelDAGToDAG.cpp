@@ -2899,10 +2899,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Opc = RISCV::PLI_B;
     } else if (isInt<10>(Imm)) {
       Opc = EltSize == 32 ? RISCV::PLI_W : RISCV::PLI_H;
-    } else if (EltSize == 16 && (Imm & 0x3f) == 0) {
+    } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
       Opc = RISCV::PLUI_H;
-      Imm = Imm >> 10;
-    } else if (EltSize == 32 && (Imm & 0x3fffff) == 0) {
+      Imm = Imm >> 6;
+    } else if (EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
       Opc = RISCV::PLUI_W;
       Imm = Imm >> 22;
     }

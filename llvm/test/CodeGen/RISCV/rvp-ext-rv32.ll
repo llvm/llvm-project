@@ -469,7 +469,7 @@ define <2 x i16> @test_pli_b_negative_v2i16() {
 define <2 x i16> @test_plui_h() {
 ; CHECK-LABEL: test_plui_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    plui.h a0, 13
+; CHECK-NEXT:    plui.h a0, 218
 ; CHECK-NEXT:    ret
   ret <2 x i16> splat (i16 u0x3680)
 }
@@ -477,7 +477,7 @@ define <2 x i16> @test_plui_h() {
 define <2 x i16> @test_plui_h_negative() {
 ; CHECK-LABEL: test_plui_h_negative:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    plui.h a0, -19
+; CHECK-NEXT:    plui.h a0, -295
 ; CHECK-NEXT:    ret
   ret <2 x i16> splat (i16 u0xb640)
 }
