@@ -262,18 +262,18 @@ def ApplyMultiReductionFlatteningPatternsOp: Op<Transform_Dialect,
   }];
 }
 
-def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
-    "apply_patterns.vector.multi_reduction_unrolling",
+def ApplyMultiReductionLoweringPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.multi_reduction_lowering",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector multi_reduction operations should be unrolled.
+    Indicates that vector multi_reduction operations should be lowered.
     1-D multi_reductions are converted directly to vector.reduction.
     2-D multi_reductions are unrolled into either a sequence of
     vector.reduction ops (innerreduction) or element-wise arith ops
     (innerparallel).
 
     This populates the patterns from
-    `populateVectorMultiReductionUnrollingPatterns`, i.e.:
+    `populateVectorMultiReductionLoweringPatterns`, i.e.:
     * `OneDimMultiReductionToReduction`
     * `TwoDimMultiReductionToReduction` (innerreduction)
     * `TwoDimMultiReductionToElementWise` (innerparallel)

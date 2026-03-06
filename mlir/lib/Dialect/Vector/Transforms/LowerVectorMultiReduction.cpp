@@ -505,10 +505,10 @@ struct LowerVectorMultiReductionPass
     if (failed(applyPatternsGreedily(op, std::move(flatteningPatterns))))
       signalPassFailure();
 
-    RewritePatternSet unrollingPatterns(context);
-    mlir::vector::populateVectorMultiReductionUnrollingPatterns(
-        unrollingPatterns, this->loweringStrategy);
-    if (failed(applyPatternsGreedily(op, std::move(unrollingPatterns))))
+    RewritePatternSet loweringPatterns(context);
+    mlir::vector::populateVectorMultiReductionLoweringPatterns(
+        loweringPatterns, this->loweringStrategy);
+    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 
@@ -532,7 +532,7 @@ void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
   patterns.add<FlattenMultiReduction>(patterns.getContext(), options, benefit);
 }
 
-void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
+void mlir::vector::populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
   patterns.add<OneDimMultiReductionToReduction>(patterns.getContext(), benefit);
