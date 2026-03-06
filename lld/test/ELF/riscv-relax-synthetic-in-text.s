@@ -6,19 +6,14 @@
 ## been placed inside an executable output section via a linker script.
 ## Synthetic sections do not have relaxAux data structures initialized.
 
-# RUN: ld.lld -T %t/a.ld %t/a.o -o %t/nopie
-# RUN: llvm-objdump -s -j.text %t/nopie | FileCheck %s --check-prefixes=CHECK-NOPIE
+# RUN: ld.lld -pie -T %t/a.ld %t/a.o -o %t/a.out
+# RUN: llvm-objdump -s %t/a.out | FileCheck %s
 
-# RUN: ld.lld -pie -T %t/a.ld %t/a.o -o %t/pie
-# RUN: llvm-objdump -s -j.text %t/pie | FileCheck %s --check-prefix=CHECK-PIE
-
-# CHECK-NOPIE:      Contents of section .text:
-# CHECK-NOPIE-NEXT:  0000 17050000 03350501 00000000 00000000
-# CHECK-NOPIE-NEXT:  0010 18000000 00000000
-
-# CHECK-PIE:        Contents of section .text:
-# CHECK-PIE-NEXT:    0060 17050000 03350501 78000000 00000000
-# CHECK-PIE-NEXT:    0070 00000000 00000000
+# CHECK:      Contents of section .text:
+# CHECK-NEXT: 17050000 03350501 78000000 00000000
+# CHECK-NEXT: 00000000 00000000
+# CHECK-NEXT: Contents of section .dynamic:
+# CHECK-NEXT: fbffff6f 00000000 00000008 00000000
 
 #--- a.s
 .global _start

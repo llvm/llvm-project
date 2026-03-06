@@ -1020,11 +1020,9 @@ bool RISCV::relaxOnce(int pass) const {
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
-    for (InputSection *sec : getInputSections(*osec, storage)) {
-      if (!sec->relaxAux)
-        continue;
-      changed |= relax(ctx, pass, *sec);
-    }
+    for (InputSection *sec : getInputSections(*osec, storage))
+      if (sec->relaxAux)
+        changed |= relax(ctx, pass, *sec);
   }
   return changed;
 }
