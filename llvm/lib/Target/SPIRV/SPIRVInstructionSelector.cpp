@@ -3085,6 +3085,7 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
                                                   SPIRVTypeInst ResType,
                                                   MachineInstr &I) const {
   SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  Register ScalarShiftAmount = GR.getOrCreateConstInt(16, I, Int32Type, TII);
 
   unsigned N = GR.getScalarOrVectorComponentCount(ResType);
   if (N > 1)
@@ -3102,8 +3103,6 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
   if (!selectOpWithSrcs(BitrevReg, Int32Type, I, {ExtReg}, SPIRV::OpBitReverse))
     return false;
 
-  Register ScalarShiftAmount = GR.getOrCreateConstInt(16, I, Int32Type, TII);
-
   Register ShiftConst;
   if (N > 1) {
     ShiftConst = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
@@ -3111,8 +3110,7 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
                        TII.get(SPIRV::OpConstantComposite))
                    .addDef(ShiftConst)
                    .addUse(GR.getSPIRVTypeID(Int32Type));
-    for (unsigned It = I.getNumExplicitDefs(); It < I.getNumExplicitOperands();
-         ++It)
+    for (unsigned It = 0; It < N; ++It)
       MIB.addUse(ScalarShiftAmount);
     MIB.constrainAllUses(TII, TRI, RBI);
   } else {
