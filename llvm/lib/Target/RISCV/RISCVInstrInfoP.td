@@ -1664,6 +1664,7 @@ def STD_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
 def riscv_pshl : RVSDNode<"PSHL", STD_RISCVPackedShift>;
 def riscv_psrl : RVSDNode<"PSRL", STD_RISCVPackedShift>;
 def riscv_psra : RVSDNode<"PSRA", STD_RISCVPackedShift>;
+def riscv_psslai : RVSDNode<"PSSLAI", STD_RISCVPackedShift>;
 
 // Bitwise merge: res = (~op0 & op1) | (op0 & op2)
 def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
@@ -1795,8 +1796,8 @@ let Predicates = [HasStdExtP] in {
            (PSRAI_H GPR:$rs1, uimm4:$shamt)>;
 
   // 16-bit signed saturation shift left patterns
-  def: Pat<(XLenVecI16VT (sshlsat GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
-           (PSSLAI_H GPR:$rs1, uimm4:$shamt)>;
+  def: Pat<(XLenVecI16VT (riscv_psslai GPR:$rs1, timm:$shamt)),
+           (PSSLAI_H GPR:$rs1, timm:$shamt)>;
 
   // 8-bit logical shift left/right
   def: Pat<(XLenVecI8VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
@@ -1979,8 +1980,8 @@ let Predicates = [HasStdExtP, IsRV64] in {
            (PSRAI_W GPR:$rs1, uimm5:$shamt)>;
 
   // 32-bit signed saturation shift left patterns
-  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
-           (PSSLAI_W GPR:$rs1, uimm5:$shamt)>;
+  def: Pat<(v2i32 (riscv_psslai GPR:$rs1, timm:$shamt)),
+           (PSSLAI_W GPR:$rs1, timm:$shamt)>;
 
   // 32-bit logical shift left/right
   def: Pat<(v2i32 (riscv_pshl GPR:$rs1, GPR:$rs2)),
