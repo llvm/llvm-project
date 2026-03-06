@@ -56,8 +56,6 @@ public:
 
   lldb::ChildCacheState Update() override = 0;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 protected:
   virtual lldb::addr_t GetDataAddress() = 0;
 
@@ -217,8 +215,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -526,20 +522,6 @@ lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<D32, D64>::Update() {
                          : lldb::ChildCacheState::eRefetch;
 }
 
-llvm::Expected<size_t> lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  uint32_t idx = *optional_idx;
-  if (idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  return idx;
-}
-
 template <typename D32, typename D64>
 lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<D32, D64>::
     GenericNSArrayMSyntheticFrontEnd::~GenericNSArrayMSyntheticFrontEnd() {
@@ -613,22 +595,6 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   m_data_32 = nullptr;
   delete m_data_64;
   m_data_64 = nullptr;
-}
-
-template <typename D32, typename D64, bool Inline>
-llvm::Expected<size_t>
-lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
-    D32, D64, Inline>::GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  uint32_t idx = *optional_idx;
-  if (idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  return idx;
 }
 
 template <typename D32, typename D64, bool Inline>

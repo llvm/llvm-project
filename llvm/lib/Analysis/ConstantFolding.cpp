@@ -3349,12 +3349,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::copysign:
         return ConstantFP::get(Ty, APFloat::copySign(Op1V, Op2V));
       case Intrinsic::minnum:
-        if (Op1V.isSignaling() || Op2V.isSignaling())
-          return nullptr;
         return ConstantFP::get(Ty, minnum(Op1V, Op2V));
       case Intrinsic::maxnum:
-        if (Op1V.isSignaling() || Op2V.isSignaling())
-          return nullptr;
         return ConstantFP::get(Ty, maxnum(Op1V, Op2V));
       case Intrinsic::minimum:
         return ConstantFP::get(Ty, minimum(Op1V, Op2V));
@@ -4629,6 +4625,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_atan:
       case LibFunc_atanf:
       case LibFunc_atanl:
+      case LibFunc_tanh:
+      case LibFunc_tanhf:
+      case LibFunc_tanhl:
         // Per POSIX, this MAY fail if Op is denormal. We choose not failing.
         return true;
 
