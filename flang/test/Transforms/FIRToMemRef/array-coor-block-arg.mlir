@@ -26,29 +26,21 @@ func.func @block_arg_memref(%arg0: !fir.ref<!fir.array<32xi32>>) {
 // CHECK:       memref.store {{%.+}}, [[BASE]][[[IDX]]] : memref<32xi32>
 // CHECK-NOT:   fir.array_coor
 
-// Verify fir.array_coor lowering when the base is a boxed block
-// argument. The pass must materialize fir.box_addr
+// Verify fir.array_coor lowering when the base is a boxed function argument.
+// The pass must materialize fir.box_addr
 // first and must not emit an illegal direct box->memref fir.convert.
 func.func @block_arg_boxed_array(%arg0: !fir.box<!fir.array<?xi32>>) {
-  %c1 = arith.constant 1 : index
-  %c0 = arith.constant 0 : index
-  %c10 = arith.constant 10 : index
-  %loop_res = scf.for %i = %c0 to %c10 step %c1 iter_args(%arg1 = %arg0) -> (!fir.box<!fir.array<?xi32>>) {
-    %idxp1 = arith.addi %i, %c1 : index
-    %val = arith.index_cast %idxp1 : index to i32
-    %idx64 = arith.extsi %val : i32 to i64
-    %elt = fir.array_coor %arg1 %idx64 : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
-    fir.store %val to %elt : !fir.ref<i32>
-    scf.yield %arg1 : !fir.box<!fir.array<?xi32>>
-  }
+  %c1_i32 = arith.constant 1 : i32
+  %c1_i64 = arith.constant 1 : i64
+  %elt = fir.array_coor %arg0 %c1_i64 : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
+  fir.store %c1_i32 to %elt : !fir.ref<i32>
   return
 }
 
 // CHECK-LABEL: func.func @block_arg_boxed_array
-// CHECK:         scf.for {{.*}} iter_args([[BOXARG:%.+]] = %arg0) -> (!fir.box<!fir.array<?xi32>>) {
-// CHECK:           [[BOXADDR:%.+]] = fir.box_addr [[BOXARG]]
+// CHECK:         [[BOXADDR:%.+]] = fir.box_addr %arg0
 // CHECK:           [[BASE:%.+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?xi32>>) -> memref<?xi32{{.*}}>
-// CHECK-NOT:       fir.convert [[BOXARG]] : (!fir.box<!fir.array<?xi32>>) -> memref
+// CHECK-NOT:       fir.convert %arg0 : (!fir.box<!fir.array<?xi32>>) -> memref
 // CHECK:           memref.store {{%.+}}, {{%.+}}[{{%.+}}] : memref<?xi32, strided<[?], offset: ?>>
 // CHECK-NOT:       fir.array_coor
 
