@@ -13,6 +13,7 @@ func main() {
       raw[1] = 0xfefefefefefefefe
     }
   }
+  var good : String = "hello"
   print("break here")
 }
 
