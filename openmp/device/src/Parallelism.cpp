@@ -68,7 +68,7 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 
 // Invoke an outlined parallel function unwrapping arguments (up to 32).
 [[clang::always_inline]] void invokeMicrotask(int32_t global_tid,
-                                              int32_t bound_tid, void *fn,
+                                              int32_t bound_tid, FnPtrTy fn,
                                               void **args, int64_t nargs) {
   switch (nargs) {
 #include "generated_microtask_cases.gen"
@@ -84,7 +84,7 @@ extern "C" {
 
 [[clang::always_inline]] void __kmpc_parallel_spmd(IdentTy *ident,
                                                    int32_t num_threads,
-                                                   void *fn, void **args,
+                                                   FnPtrTy fn, void **args,
                                                    const int64_t nargs) {
   uint32_t TId = mapping::getThreadIdInBlock();
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
@@ -142,8 +142,8 @@ extern "C" {
 
 [[clang::always_inline]] void
 __kmpc_parallel_60(IdentTy *ident, int32_t, int32_t if_expr,
-                   int32_t num_threads, int proc_bind, void *fn,
-                   void *wrapper_fn, void **args, int64_t nargs,
+                   int32_t num_threads, int proc_bind, FnPtrTy fn,
+                   FnPtrTy wrapper_fn, void **args, int64_t nargs,
                    int32_t nt_strict) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
@@ -261,7 +261,7 @@ __kmpc_parallel_60(IdentTy *ident, int32_t, int32_t if_expr,
                                           1u, true, ident,
                                           /*ForceTeamState=*/true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
-                                          (void *)nullptr, true, ident,
+                                          (FnPtrTy) nullptr, true, ident,
                                           /*ForceTeamState=*/true);
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, true, ident,
                                      /*ForceTeamState=*/true);

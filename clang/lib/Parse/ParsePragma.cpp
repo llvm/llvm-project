@@ -1409,10 +1409,11 @@ void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
   StringRef PragmaName = "export";
 
   using namespace clang::charinfo;
-  auto *TheTokens =
-      (std::pair<std::unique_ptr<Token[]>, size_t> *)Tok.getAnnotationValue();
+  auto *TheTokens = static_cast<std::pair<std::unique_ptr<Token[]>, size_t> *>(
+      Tok.getAnnotationValue());
   PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
-                      false);
+                      /*IsReinject=*/true);
+  Tok.setAnnotationValue(nullptr);
   ConsumeAnnotationToken();
 
   llvm::scope_exit OnReturn([this]() {
@@ -1981,7 +1982,8 @@ void Parser::HandlePragmaAttribute() {
   if ((Tok.is(tok::l_square) && NextToken().is(tok::l_square)) ||
       Tok.isRegularKeywordAttribute()) {
     // Parse the CXX11 style attribute.
-    ParseCXX11AttributeSpecifier(Attrs);
+    SourceLocation EndLoc = Tok.getLocation();
+    ParseCXX11AttributeSpecifier(Attrs, &EndLoc);
   } else if (Tok.is(tok::kw___attribute)) {
     ConsumeToken();
     if (ExpectAndConsume(tok::l_paren, diag::err_expected_lparen_after,

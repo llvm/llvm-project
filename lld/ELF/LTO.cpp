@@ -124,7 +124,7 @@ static lto::Config createConfig(Ctx &ctx) {
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
   for (StringRef pluginFn : ctx.arg.passPlugins)
-    c.PassPlugins.push_back(std::string(pluginFn));
+    c.PassPluginFilenames.push_back(std::string(pluginFn));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.DwoDir = std::string(ctx.arg.dwoDir);
 
@@ -205,9 +205,10 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
                                         ctx.arg.ltoPartitions,
                                         ltoModes[ctx.arg.ltoKind]);
   else
-    ltoObj = std::make_unique<lto::DTLTO>(createConfig(ctx), backend,
-                                          ctx.arg.ltoPartitions,
-                                          ltoModes[ctx.arg.ltoKind]);
+    ltoObj = std::make_unique<lto::DTLTO>(
+        createConfig(ctx), backend, ctx.arg.ltoPartitions,
+        ltoModes[ctx.arg.ltoKind], ctx.arg.outputFile,
+        !ctx.arg.saveTempsArgs.empty());
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;

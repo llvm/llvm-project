@@ -1448,10 +1448,27 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
 
 func.func @omp_teams_num_teams1(%lb : i32) {
   omp.target {
-    // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
+    // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb) ({
       omp.terminator
     }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_num_teams_multidim_with_bounds() {
+  omp.target {
+    %v0 = arith.constant 1 : i32
+    %v1 = arith.constant 2 : i32
+    %lb = arith.constant 3 : i32
+    %ub = arith.constant 4 : i32
+    // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
+    "omp.teams" (%lb, %v0, %v1) ({
+      omp.terminator
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,2,0,0,0>} : (i32, i32, i32) -> ()
     omp.terminator
   }
   return
@@ -3148,5 +3165,45 @@ omp.declare_simd
 func.func @omp_declare_simd_branch() -> () {
   // expected-error @+1 {{'omp.declare_simd' op cannot have both 'inbranch' and 'notinbranch'}}
   omp.declare_simd inbranch notinbranch
+  return
+}
+
+// -----
+
+func.func @iterator_bad_result_type(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{result #0 must be OpenMP iterator-produced list handle, but got 'index'}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    omp.yield(%i : index)
+  } -> index
+  return
+}
+
+// -----
+
+func.func @iterator_missing_yield(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{region must be terminated by omp.yield}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    func.return
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
+func.func @iterator_yield_wrong_num_operands(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{omp.yield in omp.iterator region must yield exactly one value}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    omp.yield(%i, %i : index, index)
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
+func.func @iterator_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{omp.iterated element type ('i64') does not match omp.yield operand type ('index')}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    omp.yield(%i : index)
+  } -> !omp.iterated<i64>
   return
 }

@@ -842,6 +842,20 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
+  bool IsExplicitCast = isa<CStyleCastExpr>(E) || isa<CXXStaticCastExpr>(E) ||
+                        isa<CXXFunctionalCastExpr>(E);
+
+  if ((Kind == CK_IntegralCast || Kind == CK_IntegralToBoolean ||
+       (Kind == CK_NoOp && E->getType()->isIntegerType() &&
+        Ty->isIntegerType())) &&
+      IsExplicitCast) {
+    if (const auto *SourceOBT = E->getType()->getAs<OverflowBehaviorType>()) {
+      if (Ty->isIntegerType() && !Ty->isOverflowBehaviorType()) {
+        Ty = Context.getOverflowBehaviorType(SourceOBT->getBehaviorKind(), Ty);
+      }
+    }
+  }
+
   return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
                                   CurFPFeatureOverrides());
 }

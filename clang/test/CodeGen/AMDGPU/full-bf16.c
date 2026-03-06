@@ -10,10 +10,8 @@
 // CHECK-LABEL: define dso_local bfloat @div(
 // CHECK-SAME: bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca bfloat, align 2, addrspace(5)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca bfloat, align 2, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
 // CHECK-NEXT:    store bfloat [[A]], ptr [[A_ADDR_ASCAST]], align 2

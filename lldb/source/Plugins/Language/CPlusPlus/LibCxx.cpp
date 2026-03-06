@@ -247,6 +247,83 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   return true;
 }
 
+static std::optional<int64_t> LibcxxExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("__value_");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::LibcxxPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -127:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
 /*
  (lldb) fr var ibeg --raw --ptr-depth 1 -T
  (std::__1::__wrap_iter<int *>) ibeg = {

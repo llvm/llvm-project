@@ -376,10 +376,10 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX11-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; GFX11-EXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX11-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; GFX11-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
 ; GFX11-EXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-EXPAND-NEXT:    s_endpgm
 ;
@@ -393,10 +393,10 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX11-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; GFX11-NOEXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
 ; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX11-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; GFX11-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
 ; GFX11-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NOEXPAND-NEXT:    s_endpgm
 ;
@@ -410,10 +410,10 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX12-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; GFX12-EXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
 ; GFX12-EXPAND-NEXT:    s_wait_dscnt 0x1
-; GFX12-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX12-EXPAND-NEXT:    s_wait_dscnt 0x0
 ; GFX12-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; GFX12-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
 ; GFX12-EXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-EXPAND-NEXT:    s_endpgm
 ;
@@ -427,10 +427,10 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX12-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; GFX12-NOEXPAND-NEXT:    ds_load_b32 v2, v2 offset:8
 ; GFX12-NOEXPAND-NEXT:    s_wait_dscnt 0x1
-; GFX12-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX12-NOEXPAND-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; GFX12-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v2
 ; GFX12-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-NOEXPAND-NEXT:    s_endpgm
 
@@ -650,9 +650,9 @@ define amdgpu_kernel void @test_outoforder_lds_and_smem(ptr addrspace(3) %lds_pt
 ; GFX11-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX11-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s0, v0
 ; GFX11-EXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX11-EXPAND-NEXT:    s_endpgm
 ;
@@ -666,9 +666,9 @@ define amdgpu_kernel void @test_outoforder_lds_and_smem(ptr addrspace(3) %lds_pt
 ; GFX11-NOEXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
 ; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX11-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s0, v0
 ; GFX11-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX11-NOEXPAND-NEXT:    s_endpgm
 ;
@@ -682,10 +682,10 @@ define amdgpu_kernel void @test_outoforder_lds_and_smem(ptr addrspace(3) %lds_pt
 ; GFX12-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
 ; GFX12-EXPAND-NEXT:    s_wait_dscnt 0x0
-; GFX12-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX12-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s0, v0
 ; GFX12-EXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX12-EXPAND-NEXT:    s_endpgm
 ;
@@ -699,10 +699,10 @@ define amdgpu_kernel void @test_outoforder_lds_and_smem(ptr addrspace(3) %lds_pt
 ; GFX12-NOEXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
 ; GFX12-NOEXPAND-NEXT:    s_wait_dscnt 0x0
-; GFX12-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX12-NOEXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX12-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s0, v0
 ; GFX12-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
 ; GFX12-NOEXPAND-NEXT:    s_endpgm
 
@@ -861,73 +861,73 @@ define amdgpu_ps void @test_expcnt_exports(float %x, float %y, float %z, float %
 ; GFX9-EXPAND-LABEL: test_expcnt_exports:
 ; GFX9-EXPAND:       ; %bb.0: ; %entry
 ; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX9-EXPAND-NEXT:    exp mrt0 v0, v1, v2, v3
-; GFX9-EXPAND-NEXT:    exp mrt1 v3, v2, v1, v0
-; GFX9-EXPAND-NEXT:    exp mrt2 v0, v3, v1, v2
-; GFX9-EXPAND-NEXT:    exp param0 v4, v4, v4, v4 done
+; GFX9-EXPAND-NEXT:    exp mrt0, v0, v1, v2, v3
+; GFX9-EXPAND-NEXT:    exp mrt1, v3, v2, v1, v0
+; GFX9-EXPAND-NEXT:    exp mrt2, v0, v3, v1, v2
+; GFX9-EXPAND-NEXT:    exp param0, v4, v4, v4, v4 done
 ; GFX9-EXPAND-NEXT:    s_endpgm
 ;
 ; GFX9-NOEXPAND-LABEL: test_expcnt_exports:
 ; GFX9-NOEXPAND:       ; %bb.0: ; %entry
 ; GFX9-NOEXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX9-NOEXPAND-NEXT:    exp mrt0 v0, v1, v2, v3
-; GFX9-NOEXPAND-NEXT:    exp mrt1 v3, v2, v1, v0
-; GFX9-NOEXPAND-NEXT:    exp mrt2 v0, v3, v1, v2
-; GFX9-NOEXPAND-NEXT:    exp param0 v4, v4, v4, v4 done
+; GFX9-NOEXPAND-NEXT:    exp mrt0, v0, v1, v2, v3
+; GFX9-NOEXPAND-NEXT:    exp mrt1, v3, v2, v1, v0
+; GFX9-NOEXPAND-NEXT:    exp mrt2, v0, v3, v1, v2
+; GFX9-NOEXPAND-NEXT:    exp param0, v4, v4, v4, v4 done
 ; GFX9-NOEXPAND-NEXT:    s_endpgm
 ;
 ; GFX10-EXPAND-LABEL: test_expcnt_exports:
 ; GFX10-EXPAND:       ; %bb.0: ; %entry
 ; GFX10-EXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX10-EXPAND-NEXT:    exp mrt0 v0, v1, v2, v3
-; GFX10-EXPAND-NEXT:    exp mrt1 v3, v2, v1, v0
-; GFX10-EXPAND-NEXT:    exp mrt2 v0, v3, v1, v2
-; GFX10-EXPAND-NEXT:    exp param0 v4, v4, v4, v4 done
+; GFX10-EXPAND-NEXT:    exp mrt0, v0, v1, v2, v3
+; GFX10-EXPAND-NEXT:    exp mrt1, v3, v2, v1, v0
+; GFX10-EXPAND-NEXT:    exp mrt2, v0, v3, v1, v2
+; GFX10-EXPAND-NEXT:    exp param0, v4, v4, v4, v4 done
 ; GFX10-EXPAND-NEXT:    s_endpgm
 ;
 ; GFX10-NOEXPAND-LABEL: test_expcnt_exports:
 ; GFX10-NOEXPAND:       ; %bb.0: ; %entry
 ; GFX10-NOEXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX10-NOEXPAND-NEXT:    exp mrt0 v0, v1, v2, v3
-; GFX10-NOEXPAND-NEXT:    exp mrt1 v3, v2, v1, v0
-; GFX10-NOEXPAND-NEXT:    exp mrt2 v0, v3, v1, v2
-; GFX10-NOEXPAND-NEXT:    exp param0 v4, v4, v4, v4 done
+; GFX10-NOEXPAND-NEXT:    exp mrt0, v0, v1, v2, v3
+; GFX10-NOEXPAND-NEXT:    exp mrt1, v3, v2, v1, v0
+; GFX10-NOEXPAND-NEXT:    exp mrt2, v0, v3, v1, v2
+; GFX10-NOEXPAND-NEXT:    exp param0, v4, v4, v4, v4 done
 ; GFX10-NOEXPAND-NEXT:    s_endpgm
 ;
 ; GFX11-EXPAND-LABEL: test_expcnt_exports:
 ; GFX11-EXPAND:       ; %bb.0: ; %entry
 ; GFX11-EXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX11-EXPAND-NEXT:    exp mrt0 v0, v1, v2, v3
-; GFX11-EXPAND-NEXT:    exp mrt1 v3, v2, v1, v0
-; GFX11-EXPAND-NEXT:    exp mrt2 v0, v3, v1, v2
-; GFX11-EXPAND-NEXT:    exp invalid_target_32 v4, v4, v4, v4 done
+; GFX11-EXPAND-NEXT:    exp mrt0, v0, v1, v2, v3
+; GFX11-EXPAND-NEXT:    exp mrt1, v3, v2, v1, v0
+; GFX11-EXPAND-NEXT:    exp mrt2, v0, v3, v1, v2
+; GFX11-EXPAND-NEXT:    exp invalid_target_32, v4, v4, v4, v4 done
 ; GFX11-EXPAND-NEXT:    s_endpgm
 ;
 ; GFX11-NOEXPAND-LABEL: test_expcnt_exports:
 ; GFX11-NOEXPAND:       ; %bb.0: ; %entry
 ; GFX11-NOEXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX11-NOEXPAND-NEXT:    exp mrt0 v0, v1, v2, v3
-; GFX11-NOEXPAND-NEXT:    exp mrt1 v3, v2, v1, v0
-; GFX11-NOEXPAND-NEXT:    exp mrt2 v0, v3, v1, v2
-; GFX11-NOEXPAND-NEXT:    exp invalid_target_32 v4, v4, v4, v4 done
+; GFX11-NOEXPAND-NEXT:    exp mrt0, v0, v1, v2, v3
+; GFX11-NOEXPAND-NEXT:    exp mrt1, v3, v2, v1, v0
+; GFX11-NOEXPAND-NEXT:    exp mrt2, v0, v3, v1, v2
+; GFX11-NOEXPAND-NEXT:    exp invalid_target_32, v4, v4, v4, v4 done
 ; GFX11-NOEXPAND-NEXT:    s_endpgm
 ;
 ; GFX12-EXPAND-LABEL: test_expcnt_exports:
 ; GFX12-EXPAND:       ; %bb.0: ; %entry
 ; GFX12-EXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX12-EXPAND-NEXT:    export mrt0 v0, v1, v2, v3
-; GFX12-EXPAND-NEXT:    export mrt1 v3, v2, v1, v0
-; GFX12-EXPAND-NEXT:    export mrt2 v0, v3, v1, v2
-; GFX12-EXPAND-NEXT:    export invalid_target_32 v4, v4, v4, v4 done
+; GFX12-EXPAND-NEXT:    export mrt0, v0, v1, v2, v3
+; GFX12-EXPAND-NEXT:    export mrt1, v3, v2, v1, v0
+; GFX12-EXPAND-NEXT:    export mrt2, v0, v3, v1, v2
+; GFX12-EXPAND-NEXT:    export invalid_target_32, v4, v4, v4, v4 done
 ; GFX12-EXPAND-NEXT:    s_endpgm
 ;
 ; GFX12-NOEXPAND-LABEL: test_expcnt_exports:
 ; GFX12-NOEXPAND:       ; %bb.0: ; %entry
 ; GFX12-NOEXPAND-NEXT:    v_mov_b32_e32 v4, 1.0
-; GFX12-NOEXPAND-NEXT:    export mrt0 v0, v1, v2, v3
-; GFX12-NOEXPAND-NEXT:    export mrt1 v3, v2, v1, v0
-; GFX12-NOEXPAND-NEXT:    export mrt2 v0, v3, v1, v2
-; GFX12-NOEXPAND-NEXT:    export invalid_target_32 v4, v4, v4, v4 done
+; GFX12-NOEXPAND-NEXT:    export mrt0, v0, v1, v2, v3
+; GFX12-NOEXPAND-NEXT:    export mrt1, v3, v2, v1, v0
+; GFX12-NOEXPAND-NEXT:    export mrt2, v0, v3, v1, v2
+; GFX12-NOEXPAND-NEXT:    export invalid_target_32, v4, v4, v4, v4 done
 ; GFX12-NOEXPAND-NEXT:    s_endpgm
 entry:
   ; Multiple MRT exports

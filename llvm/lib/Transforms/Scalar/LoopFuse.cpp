@@ -545,17 +545,15 @@ public:
 
         collectFusionCandidates(LV);
         Changed |= fuseCandidates();
+        // All loops in the candidate sets have a common parent (or no parent).
+        // Next loop vector will correspond to a different parent. It is safe
+        // to remove all the candidates currently in the set.
+        FusionCandidates.clear();
       }
 
-      // Finished analyzing candidates at this level.
-      // Descend to the next level and clear all of the candidates currently
-      // collected. Note that it will not be possible to fuse any of the
-      // existing candidates with new candidates because the new candidates will
-      // be at a different nest level and thus not be control flow equivalent
-      // with all of the candidates collected so far.
+      // Finished analyzing candidates at this level. Descend to the next level.
       LLVM_DEBUG(dbgs() << "Descend one level!\n");
       LDT.descend();
-      FusionCandidates.clear();
     }
 
     if (Changed)
@@ -591,18 +589,10 @@ private:
       // FusionCandidates.
       bool FoundAdjacent = false;
       for (auto &CurrCandList : FusionCandidates) {
-        if (isStrictlyAdjacent(CurrCand, CurrCandList.front())) {
-          CurrCandList.push_front(CurrCand);
-          FoundAdjacent = true;
-#ifndef NDEBUG
-          if (VerboseFusionDebugging)
-            LLVM_DEBUG(dbgs() << "Adding " << CurrCand
-                              << " to existing candidate list\n");
-#endif
-          break;
-        } else if (isStrictlyAdjacent(CurrCandList.back(), CurrCand)) {
+        if (isStrictlyAdjacent(CurrCandList.back(), CurrCand)) {
           CurrCandList.push_back(CurrCand);
           FoundAdjacent = true;
+          NumFusionCandidates++;
 #ifndef NDEBUG
           if (VerboseFusionDebugging)
             LLVM_DEBUG(dbgs() << "Adding " << CurrCand
@@ -621,7 +611,6 @@ private:
         NewCandList.push_back(CurrCand);
         FusionCandidates.push_back(NewCandList);
       }
-      NumFusionCandidates++;
     }
   }
 

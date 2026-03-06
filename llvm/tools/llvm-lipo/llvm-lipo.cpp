@@ -559,7 +559,8 @@ static void checkUnusedAlignments(ArrayRef<Slice> Slices,
 static SmallVector<Slice, 2>
 buildSlices(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
             const StringMap<const uint32_t> &Alignments,
-            SmallVectorImpl<std::unique_ptr<SymbolicFile>> &ExtractedObjects) {
+            SmallVectorImpl<std::unique_ptr<SymbolicFile>> &ExtractedObjects,
+            SmallVectorImpl<std::unique_ptr<Archive>> &ExtractedArchives) {
   SmallVector<Slice, 2> Slices;
   for (auto &IB : InputBinaries) {
     const Binary *InputBinary = IB.getBinary();
@@ -583,6 +584,16 @@ buildSlices(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
           Slices.emplace_back(std::move(S));
           continue;
         }
+        Expected<std::unique_ptr<Archive>> ArchiveOrError = O.getAsArchive();
+        if (ArchiveOrError) {
+          consumeError(BinaryOrError.takeError());
+          consumeError(IROrError.takeError());
+          Slices.push_back(createSliceFromArchive(LLVMCtx, **ArchiveOrError));
+          ExtractedArchives.push_back(std::move(*ArchiveOrError));
+          continue;
+        }
+        consumeError(IROrError.takeError());
+        consumeError(ArchiveOrError.takeError());
         reportError(InputBinary->getFileName(), BinaryOrError.takeError());
       }
     } else if (const auto *O = dyn_cast<MachOObjectFile>(InputBinary)) {
@@ -614,8 +625,9 @@ createUniversalBinary(LLVMContext &LLVMCtx,
   assert(!OutputFileName.empty() && "Create expects a single output file");
 
   SmallVector<std::unique_ptr<SymbolicFile>, 1> ExtractedObjects;
-  SmallVector<Slice, 1> Slices =
-      buildSlices(LLVMCtx, InputBinaries, Alignments, ExtractedObjects);
+  SmallVector<std::unique_ptr<Archive>, 1> ExtractedArchives;
+  SmallVector<Slice, 1> Slices = buildSlices(
+      LLVMCtx, InputBinaries, Alignments, ExtractedObjects, ExtractedArchives);
   checkArchDuplicates(Slices);
   checkUnusedAlignments(Slices, Alignments);
 
@@ -642,8 +654,9 @@ extractSlice(LLVMContext &LLVMCtx, ArrayRef<OwningBinary<Binary>> InputBinaries,
   }
 
   SmallVector<std::unique_ptr<SymbolicFile>, 2> ExtractedObjects;
-  SmallVector<Slice, 2> Slices =
-      buildSlices(LLVMCtx, InputBinaries, Alignments, ExtractedObjects);
+  SmallVector<std::unique_ptr<Archive>, 2> ExtractedArchives;
+  SmallVector<Slice, 2> Slices = buildSlices(
+      LLVMCtx, InputBinaries, Alignments, ExtractedObjects, ExtractedArchives);
   erase_if(Slices, [ArchType](const Slice &S) {
     return ArchType != S.getArchString();
   });
@@ -704,8 +717,9 @@ replaceSlices(LLVMContext &LLVMCtx,
   StringMap<Slice> ReplacementSlices =
       buildReplacementSlices(ReplacementBinaries, Alignments);
   SmallVector<std::unique_ptr<SymbolicFile>, 2> ExtractedObjects;
-  SmallVector<Slice, 2> Slices =
-      buildSlices(LLVMCtx, InputBinaries, Alignments, ExtractedObjects);
+  SmallVector<std::unique_ptr<Archive>, 2> ExtractedArchives;
+  SmallVector<Slice, 2> Slices = buildSlices(
+      LLVMCtx, InputBinaries, Alignments, ExtractedObjects, ExtractedArchives);
 
   for (auto &Slice : Slices) {
     auto It = ReplacementSlices.find(Slice.getArchString());

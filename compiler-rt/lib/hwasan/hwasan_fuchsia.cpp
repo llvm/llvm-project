@@ -159,7 +159,16 @@ static void FinishThreadInitialization(Thread *thread) {
 }
 
 static void ThreadExitHook(void *hook, thrd_t self) {
-  Thread *thread = static_cast<Thread *>(hook);
+  // In the event this happens to be the initial thread, but thrd/pthread_exit
+  // was called on it, the hook will be NULL, but we can always access the
+  // current thread via the normal internal API.
+  Thread* thread;
+  if (hook) {
+    thread = static_cast<Thread*>(hook);
+    DCHECK_EQ(thread, GetCurrentThread());
+  } else {
+    thread = GetCurrentThread();
+  }
   atomic_signal_fence(memory_order_seq_cst);
   hwasanThreadList().ReleaseThread(thread);
 }

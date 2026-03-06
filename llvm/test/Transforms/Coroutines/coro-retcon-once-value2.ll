@@ -84,9 +84,9 @@ declare fastcc void @deallocate(ptr %ptr)
 declare void @print(i32)
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 12)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[OLDVALUE:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    store i32 [[OLDVALUE]], ptr [[TEMP]], align 4
@@ -97,7 +97,7 @@ declare void @print(i32)
 ; CHECK-LABEL: @f.resume.0(
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP2]], i32 0, i32 1
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CONT:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
@@ -111,10 +111,10 @@ declare void @print(i32)
 ;
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 13)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
-; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[G_FRAME]], ptr [[TMP0]], i32 0, i32 2
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
+; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 12
 ; CHECK-NEXT:    store i8 [[VAL:%.*]], ptr [[VAL_SPILL_ADDR]], align 1
 ; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[OLDVALUE:%.*]] = load i32, ptr [[PTR]], align 4
@@ -126,7 +126,7 @@ declare void @print(i32)
 ; CHECK-LABEL: @g.resume.0(
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP2]], i32 0, i32 1
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[CLEANUP:%.*]], label [[CONT:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
@@ -134,7 +134,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    store i32 [[NEWVALUE]], ptr [[PTR_RELOAD]], align 4
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME]], ptr [[TMP2]], i32 0, i32 2
+; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 12
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i8, ptr [[VAL_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    call fastcc void @deallocate(ptr [[TMP2]])
 ; CHECK-NEXT:    ret i8 [[VAL_RELOAD]]
@@ -142,9 +142,9 @@ declare void @print(i32)
 ;
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 12)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[H_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 1
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[OLDVALUE:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    store i32 [[OLDVALUE]], ptr [[TEMP]], align 4
@@ -155,7 +155,7 @@ declare void @print(i32)
 ; CHECK-LABEL: @h.resume.0(
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds [[H_FRAME:%.*]], ptr [[TMP2]], i32 0, i32 1
+; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CONT:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[TMP2]], align 8
