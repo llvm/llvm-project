@@ -210,16 +210,16 @@ class CompilerInstance : public ModuleLoader {
   /// The list of active output files.
   std::list<llvm::vfs::OutputFile> OutputFiles;
 
+  /// Force an output buffer.
+  std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
+
   using GenModuleActionWrapperFunc =
       std::function<std::unique_ptr<FrontendAction>(
-          const FrontendOptions &opts, std::unique_ptr<FrontendAction> action)>;
+          const FrontendOptions &, std::unique_ptr<FrontendAction>)>;
 
   /// An optional callback function used to wrap all FrontendActions
   /// produced to generate imported modules before they are executed.
   GenModuleActionWrapperFunc GenModuleActionWrapper;
-
-  /// Force an output buffer.
-  std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
 
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
