@@ -24,10 +24,7 @@ define i32 @round_up_pow2_2(i32 %x) {
 define i32 @round_up_pow2_64(i32 %x) {
 ; CHECK-LABEL: define i32 @round_up_pow2_64(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 63
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 0, i32 64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SEL]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 63
 ; CHECK-NEXT:    [[RES:%.*]] = and i32 [[TMP1]], -64
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -42,10 +39,7 @@ define i32 @round_up_pow2_64(i32 %x) {
 define i32 @round_up_pow2_add_commuted(i32 %x) {
 ; CHECK-LABEL: define i32 @round_up_pow2_add_commuted(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 63
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 0, i32 64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 63
 ; CHECK-NEXT:    [[RES:%.*]] = and i32 [[TMP1]], -64
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -60,10 +54,7 @@ define i32 @round_up_pow2_add_commuted(i32 %x) {
 define i32 @round_up_pow2_icmp_ne(i32 %x) {
 ; CHECK-LABEL: define i32 @round_up_pow2_icmp_ne(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 63
-; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_NOT]], i32 0, i32 64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SEL]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 63
 ; CHECK-NEXT:    [[RES:%.*]] = and i32 [[TMP1]], -64
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -78,10 +69,7 @@ define i32 @round_up_pow2_icmp_ne(i32 %x) {
 define <2 x i32> @round_up_pow2_vector(<2 x i32> %x) {
 ; CHECK-LABEL: define <2 x i32> @round_up_pow2_vector(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], splat (i32 63)
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[AND]], zeroinitializer
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 64)
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[SEL]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X]], splat (i32 63)
 ; CHECK-NEXT:    [[RES:%.*]] = and <2 x i32> [[TMP1]], splat (i32 -64)
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
@@ -96,10 +84,7 @@ define <2 x i32> @round_up_pow2_vector(<2 x i32> %x) {
 define <2 x i32> @round_up_pow2_vector_icmp_ne(<2 x i32> %x) {
 ; CHECK-LABEL: define <2 x i32> @round_up_pow2_vector_icmp_ne(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], splat (i32 63)
-; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq <2 x i32> [[AND]], zeroinitializer
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND_NOT]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 64)
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[SEL]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[X]], splat (i32 63)
 ; CHECK-NEXT:    [[RES:%.*]] = and <2 x i32> [[ADD]], splat (i32 -64)
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
@@ -116,9 +101,7 @@ define i32 @round_up_pow2_multiuse_and(i32 %x) {
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 63
 ; CHECK-NEXT:    call void @use(i32 [[AND]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 0, i32 64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SEL]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 63
 ; CHECK-NEXT:    [[RES:%.*]] = and i32 [[TMP1]], -64
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
