@@ -56,8 +56,9 @@ LogicalResult MLProgramPipelineGlobals::buildGlobalMap(ModuleOp module) {
       }
 
       auto symbol = mlir::dyn_cast<SymbolRefAttr>(callable);
-      auto *func = getFromSymbol(op, symbol);
-      callableMap[symbol] = func;
+      if (auto *func = getFromSymbol(op, symbol)) {
+        callableMap[symbol] = func;
+      }
     }
     return WalkResult::advance();
   });
