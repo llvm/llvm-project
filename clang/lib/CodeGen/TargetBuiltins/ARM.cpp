@@ -561,6 +561,12 @@ enum {
       AddRetType | VectorizeRetType | Add1ArgType | InventFloatType
 };
 
+//===----------------------------------------------------------------------===//
+//  Intrinsic maps
+//
+//  Maps that help automate code-generation.
+//===----------------------------------------------------------------------===//
+
 namespace {
 struct ARMVectorIntrinsicInfo {
   const char *NameHint;

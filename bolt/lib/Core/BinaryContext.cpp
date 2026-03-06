@@ -2523,8 +2523,10 @@ BinaryFunction *BinaryContext::getFunctionForSymbol(const MCSymbol *Symbol,
     return nullptr;
 
   BinaryFunction *BF = BFI->second;
-  if (EntryDesc)
-    *EntryDesc = BF->getEntryIDForSymbol(Symbol);
+  if (EntryDesc) {
+    std::optional<uint64_t> EntryID = BF->getEntryIDForSymbol(Symbol);
+    *EntryDesc = EntryID.value_or(0);
+  }
 
   return BF;
 }
