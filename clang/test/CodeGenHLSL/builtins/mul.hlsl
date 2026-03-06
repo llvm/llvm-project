@@ -60,14 +60,15 @@ export int test_vec_vec_muli(int3 a, int3 b) { return mul(a, b); }
 // CHECK: ret i32 %hlsl.dot.i
 export uint test_vec_vec_mulu(uint3 a, uint3 b) { return mul(a, b); }
 
-// Double vector dot product: no dot intrinsic for double vectors.
-// The checks for this test are less precise because the scalar loop may be vectorized depending on the build configuration.
+// Double vector dot product: uses fmul + fmuladd.
+// The initial fmul may be vectorized by VectorCombine depending on build configuration.
 // CHECK-LABEL: test_vec_vec_muld
 // CHECK-NOT: @llvm.dx.fdot
 // CHECK-NOT: @llvm.spv.fdot
 // CHECK: fmul {{.*}} double
-// CHECK: fadd {{.*}} double
-// CHECK: ret double %{{.*}}
+// CHECK: %hlsl.fmad.i = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
+// CHECK: %hlsl.fmad.i.1 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %hlsl.fmad.i)
+// CHECK: ret double %hlsl.fmad.i.1
 export double test_vec_vec_muld(double3 a, double3 b) { return mul(a, b); }
 
 // -- Case 6: vector * matrix -> vector --
