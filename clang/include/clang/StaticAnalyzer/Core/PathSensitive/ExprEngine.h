@@ -387,7 +387,6 @@ public:
   /// Used to generate successor nodes for temporary destructors depending
   /// on whether the corresponding constructor was visited.
   void processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
-                                     NodeBuilderContext &BldCtx,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst,
                                      const CFGBlock *DstT,
                                      const CFGBlock *DstF);

@@ -357,6 +357,8 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
 
 void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
   if (const Stmt *Term = B->getTerminatorStmt()) {
+    ExprEng.setCurrLocationContextAndBlock(Pred->getLocationContext(), B);
+
     switch (Term->getStmtClass()) {
       default:
         llvm_unreachable("Analysis for this terminator not implemented.");
@@ -425,11 +427,10 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
       case Stmt::IndirectGotoStmtClass: {
         // Only 1 successor: the indirect goto dispatch block.
         assert(B->succ_size() == 1);
-        NodeBuilderContext Ctx(*this, B, Pred);
         ExplodedNodeSet Dst;
         IndirectGotoNodeBuilder Builder(
-            Dst, Ctx, cast<IndirectGotoStmt>(Term)->getTarget(),
-            *(B->succ_begin()));
+            Dst, ExprEng.getBuilderContext(),
+            cast<IndirectGotoStmt>(Term)->getTarget(), *(B->succ_begin()));
 
         ExprEng.processIndirectGoto(Builder, Pred);
         // Enqueue the new frontier onto the worklist.
@@ -452,7 +453,6 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         return;
 
       case Stmt::SwitchStmtClass: {
-        ExprEng.setCurrLocationContextAndBlock(Pred->getLocationContext(), B);
         ExplodedNodeSet Dst;
         ExprEng.processSwitch(cast<SwitchStmt>(Term), Pred, Dst);
         // Enqueue the new frontier onto the worklist.
@@ -492,7 +492,6 @@ void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
 void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
                                 const CFGBlock * B, ExplodedNode *Pred) {
   assert(B->succ_size() == 2);
-  ExprEng.setCurrLocationContextAndBlock(Pred->getLocationContext(), B);
   ExplodedNodeSet Dst;
   ExprEng.processBranch(Cond, Pred, Dst, *(B->succ_begin()),
                         *(B->succ_begin() + 1),
@@ -505,10 +504,9 @@ void CoreEngine::HandleCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
                                               const CFGBlock *B,
                                               ExplodedNode *Pred) {
   assert(B->succ_size() == 2);
-  NodeBuilderContext Ctx(*this, B, Pred);
   ExplodedNodeSet Dst;
-  ExprEng.processCleanupTemporaryBranch(BTE, Ctx, Pred, Dst, *(B->succ_begin()),
-                                       *(B->succ_begin() + 1));
+  ExprEng.processCleanupTemporaryBranch(BTE, Pred, Dst, *(B->succ_begin()),
+                                        *(B->succ_begin() + 1));
   // Enqueue the new frontier onto the worklist.
   enqueue(Dst);
 }
@@ -516,7 +514,6 @@ void CoreEngine::HandleCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
 void CoreEngine::HandleStaticInit(const DeclStmt *DS, const CFGBlock *B,
                                   ExplodedNode *Pred) {
   assert(B->succ_size() == 2);
-  ExprEng.setCurrLocationContextAndBlock(Pred->getLocationContext(), B);
   ExplodedNodeSet Dst;
   ExprEng.processStaticInitializer(DS, Pred, Dst, *(B->succ_begin()),
                                    *(B->succ_begin() + 1));
