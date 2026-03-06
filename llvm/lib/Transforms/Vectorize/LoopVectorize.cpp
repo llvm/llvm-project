@@ -198,6 +198,13 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
 
+/// Note: This currently only applies to `llvm.masked.load` and
+/// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
+static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
+    "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
+    cl::desc("Assume the target supports masked memory operations (used for "
+             "testing)."));
+
 // Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
 // that predication is preferred, and this lists all options. I.e., the
 // vectorizer will try to fold the tail-loop (epilogue) into the vector body
@@ -1179,7 +1186,8 @@ public:
   bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
                           unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace);
+           (ForceTargetSupportsMaskedMemoryOps ||
+            TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace));
   }
 
   /// Returns true if the target machine supports masked load operation
@@ -1187,7 +1195,8 @@ public:
   bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
                          unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace);
+           (ForceTargetSupportsMaskedMemoryOps ||
+            TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace));
   }
 
   /// Returns true if the target machine can represent \p V as a masked gather
@@ -8174,7 +8183,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
-  VPlanTransforms::createLoopRegions(*Plan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *Plan);
+  if (CM.foldTailByMasking())
+    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8229,8 +8240,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
-                           CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan);
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar

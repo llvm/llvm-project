@@ -3878,7 +3878,10 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
       case SPNB_RETURNS_NAN: break;
-      case SPNB_RETURNS_OTHER: Opc = ISD::FMINNUM; break;
+      case SPNB_RETURNS_OTHER:
+        Opc = ISD::FMINIMUMNUM;
+        Flags.setNoSignedZeros(true);
+        break;
       case SPNB_RETURNS_ANY:
         if (TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT) ||
             (UseScalarMinMax &&
@@ -3891,7 +3894,10 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
       case SPNB_RETURNS_NAN: break;
-      case SPNB_RETURNS_OTHER: Opc = ISD::FMAXNUM; break;
+      case SPNB_RETURNS_OTHER:
+        Opc = ISD::FMAXIMUMNUM;
+        Flags.setNoSignedZeros(true);
+        break;
       case SPNB_RETURNS_ANY:
         if (TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT) ||
             (UseScalarMinMax &&
@@ -7146,6 +7152,31 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::FP_TO_UINT_SAT, sdl, VT,
                              getValue(I.getArgOperand(0)),
                              DAG.getValueType(VT.getScalarType())));
+    return;
+  }
+  case Intrinsic::convert_from_arbitrary_fp: {
+    // Extract format metadata and convert to semantics enum.
+    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
+    StringRef FormatStr = cast<MDString>(MD)->getString();
+    const fltSemantics *SrcSem =
+        APFloatBase::getArbitraryFPSemantics(FormatStr);
+    if (!SrcSem) {
+      DAG.getContext()->emitError(
+          "convert_from_arbitrary_fp: not implemented format '" + FormatStr +
+          "'");
+      setValue(&I, DAG.getPOISON(DstVT));
+      return;
+    }
+    APFloatBase::Semantics SemEnum = APFloatBase::SemanticsToEnum(*SrcSem);
+
+    SDValue IntVal = getValue(I.getArgOperand(0));
+
+    // Emit ISD::CONVERT_FROM_ARBITRARY_FP node.
+    SDValue SemConst =
+        DAG.getTargetConstant(static_cast<int>(SemEnum), sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, sdl, DstVT, IntVal,
+                             SemConst));
     return;
   }
   case Intrinsic::set_rounding:
