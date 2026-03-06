@@ -36,6 +36,7 @@
 #define LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 #define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 #define LIBC_COPT_PRINTF_DISABLE_STRERROR
+#define LIBC_COPT_PRINTF_DISABLE_FLOAT
 
 // TODO: Remove this check once UTF-16 is supported. It may be necessary to add
 // additional targets for other systems that use UTF-16.
