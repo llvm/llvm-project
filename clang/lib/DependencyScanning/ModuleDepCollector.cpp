@@ -519,7 +519,7 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules, bool IgnoreCWD,
+                                        bool EagerLoadModules,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
@@ -545,7 +545,7 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
-  if (CWD && !IgnoreCWD)
+  if (CWD && !MD.IgnoreCWD)
     HashBuilder.add(*CWD);
 
   // Save and restore options that should not affect the hash, e.g. the exact
@@ -602,10 +602,10 @@ static void checkCompileCacheKeyMatch(cas::ObjectStore &CAS,
 #endif
 
 void ModuleDepCollector::associateWithContextHash(
-    const CowCompilerInvocation &CI, bool IgnoreCWD, ModuleDeps &Deps) {
+    const CowCompilerInvocation &CI, ModuleDeps &Deps) {
   Deps.ID.ContextHash =
       getModuleContextHash(Deps, CI, Service.getOpts().EagerLoadModules,
-                           IgnoreCWD, ScanInstance.getVirtualFileSystem());
+                           ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
@@ -892,7 +892,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
     MD.IsInStableDirectories =
         areOptionsInStableDir(MDC.StableDirs, CI.getHeaderSearchOpts());
 
-  MDC.associateWithContextHash(CI, IgnoreCWD, MD);
+  MD.IgnoreCWD = IgnoreCWD;
+  MDC.associateWithContextHash(CI, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
