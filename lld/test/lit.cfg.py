@@ -183,5 +183,13 @@ if tar_executable:
 if config.ld_lld_default_mingw:
     config.excludes.append("ELF")
 
+config.substitutions.append(("%llvm_obj_root", config.llvm_obj_root))
 if config.enable_threads:
     config.available_features.add("thread_support")
+
+gcc_executable = lit.util.which("gcc", config.environment["PATH"])
+if gcc_executable:
+    config.available_features.add("gcc")
+
+if config.has_gnu_lto:
+    config.available_features.add("gnu_lto")

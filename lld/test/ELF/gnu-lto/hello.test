@@ -1,0 +1,44 @@
+// REQUIRES: gnu_lto, gcc
+// Test if we can link a simple LTO'ed program.
+// Ensure that LLD was used by checking for the output from LLD_VERSION.
+
+// RUN: gcc -DFUNCTIONF=1 -c -flto -x c %s -o %tf.dynamic.o
+// RUN: gcc -c -flto -x c %s -o %t.dynamic.o
+// RUN: gcc -B%llvm_obj_root -fuse-ld=lld -flto %t.dynamic.o %tf.dynamic.o \
+// RUN:     -o %t.dynamic
+// RUN: llvm-objdump -t -j .comment -s %t.dynamic | \
+// RUN:   FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-readelf -s %t.dynamic | \
+// RUN:   FileCheck --check-prefix=READELF %s
+
+// RUN: clang -DFUNCTIONF=1 -c -flto -x c %s -o %tf.clang.o
+// RUN: not gcc -B%llvm_obj_root -fuse-ld=lld -flto %t.dynamic.o %tf.clang.o \
+// RUN:     -o %t.dynamic 2>&1 \
+// RUN:   | FileCheck --check-prefix=MIX %s
+
+// RUN: gcc -DFUNCTIONF=1 -c -flto -x c -fPIE %s -o %tf.pie.o
+// RUN: gcc -c -flto -x c -fPIE %s -o %t.pie.o
+// RUN: gcc -B%llvm_obj_root -fuse-ld=lld -flto -pie %t.pie.o %tf.pie.o \
+// RUN:     -o %t.pie
+// RUN: llvm-objdump -t -j .comment -s %t.pie \
+// RUN:   | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-readelf -s %t.pie | \
+// RUN:   FileCheck --check-prefix=READELF %s
+
+#ifdef FUNCTIONF
+int f(void) { return 0; }
+#else
+int f(void);
+
+int main() {
+  return f();
+}
+#endif
+
+// OBJDUMP: __gnu_lto
+// OBJDUMP: .LLD 1.0
+// OBJDUMP: GCC
+
+// READELF: FUNC GLOBAL DEFAULT {{.*}} main
+
+// MIX: error: Mixing LLVM Bitcode files with GCC IR files is not supported.
