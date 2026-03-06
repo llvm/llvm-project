@@ -121,7 +121,7 @@ jobs:
     # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
       run: |
-        export RUNTIMES="libc"
+        export RUNTIMES="compiler-rt;libc"
 
         export CMAKE_FLAGS="
           -G Ninja
@@ -136,7 +136,6 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}"
 
         if [[ ${{ matrix.include_scudo}} == "ON" ]]; then
-          export RUNTIMES="$RUNTIMES;compiler-rt"
           export CMAKE_FLAGS="$CMAKE_FLAGS
             -DLLVM_LIBC_INCLUDE_SCUDO=ON
             -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
@@ -162,7 +161,7 @@ jobs:
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
         --parallel
-        --target install
+        --target install libc-fuzzer
 
     - name: Test
       # Skip UEFI and baremetal tests until we have testing set up.
