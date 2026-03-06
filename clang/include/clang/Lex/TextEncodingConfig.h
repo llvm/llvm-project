@@ -26,8 +26,7 @@ public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
   static std::error_code
   setConvertersFromOptions(TextEncodingConfig &TEC,
-                           const clang::LangOptions &Opts,
-                           const clang::TargetInfo &TInfo);
+                           const clang::LangOptions &Opts);
 
   llvm::StringRef getExecEncoding() { return ExecEncoding; }
 };

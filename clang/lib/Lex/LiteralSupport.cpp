@@ -127,9 +127,9 @@ static bool IsEscapeValidInUnevaluatedStringLiteral(char Escape) {
 }
 
 static llvm::ErrorOr<char>
-convertCharacter(StringRef Char, llvm::TextEncodingConverter *Converter) {
+convertCharacter(StringRef Char, const llvm::TextEncodingConverter &Converter) {
   SmallString<8> ResultCharConv;
-  std::error_code EC = Converter->convert(Char, ResultCharConv);
+  std::error_code EC = Converter.convert(Char, ResultCharConv);
   if (EC)
     return EC;
   else if (ResultCharConv.size() > 1)
@@ -388,8 +388,9 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
   if (!HadError && EvalMethod != StringLiteralEvalMethod::Unevaluated &&
       Transcode && Converter) {
     // Invalid escapes are written as '?' and then translated.
+    assert(ResultChar <= std::numeric_limits<char>::max());
     char ByteChar = Invalid ? '?' : ResultChar;
-    auto ErrorOrChar = convertCharacter(StringRef(&ByteChar, 1), Converter);
+    auto ErrorOrChar = convertCharacter(StringRef(&ByteChar, 1), *Converter);
     if (ErrorOrChar)
       ResultChar = *ErrorOrChar;
     else {
@@ -1783,7 +1784,6 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   HadError = false;
 
   Kind = kind;
-  const TextEncodingConfig &TEC = PP.getTextEncodingConfig();
 
   const char *TokBegin = begin;
 
@@ -1833,6 +1833,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   uint32_t *buffer_begin = &codepoint_buffer.front();
   uint32_t *buffer_end = buffer_begin + codepoint_buffer.size();
 
+  const TextEncodingConfig &TEC = PP.getTextEncodingConfig();
   llvm::TextEncodingConverter *Converter = nullptr;
   if (isOrdinary())
     Converter = TEC.getConverter(CA_ToExecEncoding);
@@ -1895,11 +1896,13 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
             assert(isOrdinary() && "Only ordinary characters are supported");
             std::string UTF8String;
             convertUTF32ToUTF8String(
-                ArrayRef<char>((const char *)tmp_out_start, 4), UTF8String);
-            auto ErrorOrChar = convertCharacter(UTF8String, Converter);
-            if (ErrorOrChar)
+                ArrayRef<char>(reinterpret_cast<const char *>(tmp_out_start),
+                               4),
+                UTF8String);
+            auto ErrorOrChar = convertCharacter(UTF8String, *Converter);
+            if (ErrorOrChar) {
               *tmp_out_start = *ErrorOrChar;
-            else {
+            } else {
               HadError = true;
               PP.Diag(Loc, diag::err_exec_charset_conversion_failed)
                   << ErrorOrChar.getError().message();
@@ -1933,7 +1936,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
                "unexpected result size for UCN escape character");
         if (!HadError) {
           auto ErrorOrChar =
-              convertCharacter(StringRef(Cp, ResultPtr - Cp), Converter);
+              convertCharacter(StringRef(Cp, ResultPtr - Cp), *Converter);
           if (ErrorOrChar)
             *buffer_begin = *ErrorOrChar;
           else {

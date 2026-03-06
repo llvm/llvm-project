@@ -23,8 +23,7 @@ TextEncodingConfig::getConverter(ConversionAction Action) const {
 
 std::error_code
 TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
-                                             const clang::LangOptions &Opts,
-                                             const clang::TargetInfo &TInfo) {
+                                             const clang::LangOptions &Opts) {
   using namespace llvm;
 
   const char *UTF8 = "UTF-8";

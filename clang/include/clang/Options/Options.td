@@ -3075,10 +3075,13 @@ def fexperimental_strict_floating_point : Flag<["-"], "fexperimental-strict-floa
 def finput_charset_EQ : Joined<["-"], "finput-charset=">,
   Visibility<[ClangOption, FlangOption, FC1Option]>, Group<f_Group>,
   HelpText<"Specify the default character set for source files">;
-def fexec_charset_EQ : Joined<["-"], "fexec-charset=">, Group<f_Group>,
-  HelpText<"Set the execution <charset> for string and character literals. "
-           "Supported character encodings include ISO-8859-1, UTF-8, IBM1047, "
-           "and possibly those supported by ICU or the host iconv library.">;
+def fexec_charset_EQ
+    : Joined<["-"], "fexec-charset=">,
+      Group<f_Group>,
+      HelpText<
+          "Set the execution <encoding> for string and character literals. "
+          "Supported character encodings include ISO-8859-1, UTF-8, IBM1047, "
+          "and possibly those supported by ICU or the host iconv library.">;
 def finstrument_functions
     : Flag<["-"], "finstrument-functions">,
       Group<f_Group>,
@@ -9317,11 +9320,13 @@ def _SLASH_showFilenames_ : CLFlag<"showFilenames-">,
 def _SLASH_source_charset : CLCompileJoined<"source-charset:">,
   HelpText<"Set source encoding, supports only UTF-8">,
   Alias<finput_charset_EQ>;
-def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
-  HelpText<"Set the execution <charset> for string and character literals. "
-           "Supported character encodings include ISO-8859-1, UTF-8, IBM1047, "
-           "and possibly those supported by ICU or the host iconv library.">,
-  Alias<fexec_charset_EQ>;
+def _SLASH_execution_charset
+    : CLCompileJoined<"execution-charset:">,
+      HelpText<
+          "Set the execution <encoding> for string and character literals. "
+          "Supported character encodings include ISO-8859-1, UTF-8, IBM1047, "
+          "and possibly those supported by ICU or the host iconv library.">,
+      Alias<fexec_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
   HelpText<"Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,
