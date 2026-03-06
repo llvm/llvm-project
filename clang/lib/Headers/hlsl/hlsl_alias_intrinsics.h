@@ -3231,6 +3231,105 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) double4 WavePrefixProduct(double4);
 
 //===----------------------------------------------------------------------===//
+// QuadReadAcrossX builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) half QuadReadAcrossX(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) half2 QuadReadAcrossX(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) half3 QuadReadAcrossX(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) half4 QuadReadAcrossX(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int16_t QuadReadAcrossX(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int16_t2 QuadReadAcrossX(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int16_t3 QuadReadAcrossX(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int16_t4 QuadReadAcrossX(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint16_t QuadReadAcrossX(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint16_t2 QuadReadAcrossX(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint16_t3 QuadReadAcrossX(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint16_t4 QuadReadAcrossX(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int QuadReadAcrossX(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int2 QuadReadAcrossX(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int3 QuadReadAcrossX(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int4 QuadReadAcrossX(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint QuadReadAcrossX(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint2 QuadReadAcrossX(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint3 QuadReadAcrossX(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint4 QuadReadAcrossX(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int64_t QuadReadAcrossX(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int64_t2 QuadReadAcrossX(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int64_t3 QuadReadAcrossX(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) int64_t4 QuadReadAcrossX(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint64_t QuadReadAcrossX(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint64_t2 QuadReadAcrossX(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint64_t3 QuadReadAcrossX(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) uint64_t4 QuadReadAcrossX(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) float QuadReadAcrossX(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) float2 QuadReadAcrossX(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) float3 QuadReadAcrossX(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) float4 QuadReadAcrossX(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) double QuadReadAcrossX(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) double2 QuadReadAcrossX(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) double3 QuadReadAcrossX(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
+__attribute__((convergent)) double4 QuadReadAcrossX(double4);
+
+//===----------------------------------------------------------------------===//
 // sign builtins
 //===----------------------------------------------------------------------===//
 
