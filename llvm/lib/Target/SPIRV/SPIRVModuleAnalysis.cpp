@@ -668,9 +668,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           static constexpr int64_t ExcludedFromGlobalDI[] = {
               NS::DebugScope, NS::DebugNoScope, NS::DebugDeclare,
               NS::DebugValue, NS::DebugFunctionDefinition};
-          bool IsExcluded = false;
-          for (unsigned Idx = 0; Idx < std::size(ExcludedFromGlobalDI); ++Idx)
-            IsExcluded |= Ins.getImm() == ExcludedFromGlobalDI[Idx];
+          static_assert(is_sorted_constexpr(ExcludedFromGlobalDI));
+          bool IsExcluded = binary_search(ExcludedFromGlobalDI, Ins.getImm());
           // All other NonSemantic debug info instructions go to global section
           if (!IsExcluded)
             collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
