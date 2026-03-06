@@ -5468,27 +5468,12 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind optsize {
 ;
 ; CHECK-ALIGNED-RV32-V-LABEL: memcmp_eq_zero:
 ; CHECK-ALIGNED-RV32-V:       # %bb.0: # %entry
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 1(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a3, 2(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 3(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a1, 0(a1)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a3, a3, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a4, a4, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a2, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    or a3, a4, a3
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a2, 1(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a4, 0(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a5, 2(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    lbu a0, 3(a0)
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a2, a2, 8
-; CHECK-ALIGNED-RV32-V-NEXT:    or a2, a2, a4
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a5, a5, 16
-; CHECK-ALIGNED-RV32-V-NEXT:    slli a0, a0, 24
-; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a5
-; CHECK-ALIGNED-RV32-V-NEXT:    or a1, a3, a1
-; CHECK-ALIGNED-RV32-V-NEXT:    or a0, a0, a2
-; CHECK-ALIGNED-RV32-V-NEXT:    xor a0, a0, a1
+; CHECK-ALIGNED-RV32-V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v8, (a1)
+; CHECK-ALIGNED-RV32-V-NEXT:    vle8.v v9, (a0)
+; CHECK-ALIGNED-RV32-V-NEXT:    vmv.x.s a0, v8
+; CHECK-ALIGNED-RV32-V-NEXT:    vmv.x.s a1, v9
+; CHECK-ALIGNED-RV32-V-NEXT:    xor a0, a1, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    seqz a0, a0
 ; CHECK-ALIGNED-RV32-V-NEXT:    ret
 ;

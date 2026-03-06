@@ -529,14 +529,11 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    vle8.v v8, (a2)
 ; RV32-NEXT:    addi a2, a0, 128
 ; RV32-NEXT:    vse8.v v8, (a2)
-; RV32-NEXT:    lbu a2, 195(a1)
-; RV32-NEXT:    sb a2, 195(a0)
-; RV32-NEXT:    lbu a2, 194(a1)
-; RV32-NEXT:    sb a2, 194(a0)
-; RV32-NEXT:    lbu a2, 193(a1)
-; RV32-NEXT:    sb a2, 193(a0)
-; RV32-NEXT:    lbu a1, 192(a1)
-; RV32-NEXT:    sb a1, 192(a0)
+; RV32-NEXT:    addi a1, a1, 192
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    addi a0, a0, 192
+; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy196:

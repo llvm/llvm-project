@@ -1902,6 +1902,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
+    // clang-format off
     setTargetDAGCombine(
         {ISD::FCOPYSIGN,    ISD::MGATHER,      ISD::MSCATTER,
          ISD::VP_GATHER,    ISD::VP_SCATTER,   ISD::SRA,
@@ -1911,7 +1912,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
          ISD::MUL,          ISD::SDIV,         ISD::UDIV,
          ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
          ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
-         ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD});
+         ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD,
+         ISD::LOAD});
+  // clang-format on
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -22230,8 +22233,66 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       if (SDValue V = performMemPairCombine(N, DCI))
         return V;
 
-    if (N->getOpcode() != ISD::STORE)
-      break;
+    if (N->getOpcode() == ISD::LOAD) {
+      // Replace unaligned scalar load with naturally aligned vector load and a
+      // bitcast.
+      auto *LD = cast<LoadSDNode>(N);
+      if (!LD->isUnindexed() || !LD->isSimple())
+        break;
+      EVT MemVT = LD->getMemoryVT();
+      EVT RetVT = N->getValueType(0);
+      if (!RetVT.isSimple() || !MemVT.isSimple() || RetVT.isVector() ||
+          RetVT.isScalableVT())
+        break;
+      Align SrcAlign = LD->getBaseAlign();
+      if (allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
+                             LD->getAddressSpace(), SrcAlign,
+                             LD->getMemOperand()->getFlags()))
+        break;
+
+      // First, create a vector with naturally aligned aligned elements for
+      // memory access.
+      unsigned TargetBW = SrcAlign.value() * 8;
+      unsigned TargetNumElts = MemVT.getScalarSizeInBits() / TargetBW;
+      MVT EltVT = MemVT.isFloatingPoint() ? MVT::getFloatingPointVT(TargetBW)
+                                          : MVT::getIntegerVT(TargetBW);
+      MVT MemVecVT = MVT::getVectorVT(EltVT, TargetNumElts);
+
+      // If the proposed VT to perform the load in is illegal, abort.
+      if (!isLegalElementTypeForRVV(EltVT) || !isTypeLegal(MemVecVT))
+        break;
+
+      // If the proposed VT to perform the bitcast in is illegal, abort.
+      MVT MemScalarVT = MemVT.isFloatingPoint()
+                            ? MVT::getFloatingPointVT(TargetBW * TargetNumElts)
+                            : MVT::getIntegerVT(TargetBW * TargetNumElts);
+      if (!isTypeLegal(MemScalarVT))
+        break;
+
+      // Create a non-extending load in the MemVecVT.
+      SDValue TargetLoad = DAG.getLoad(
+          MemVecVT, SDLoc(N), LD->getChain(), LD->getBasePtr(),
+          LD->getPointerInfo(), SrcAlign, LD->getMemOperand()->getFlags());
+
+      // Finally, replace the original load with the bitcasted-extended
+      // TargetLoad, depending on the extension type.
+      SDValue Res;
+      switch (LD->getExtensionType()) {
+      case ISD::NON_EXTLOAD:
+        Res = DAG.getBitcast(RetVT, TargetLoad);
+        break;
+      case ISD::ZEXTLOAD:
+        Res = DAG.getBitcastedZExtOrTrunc(TargetLoad, SDLoc(N), RetVT);
+        break;
+      case ISD::SEXTLOAD:
+        Res = DAG.getBitcastedSExtOrTrunc(TargetLoad, SDLoc(N), RetVT);
+        break;
+      case ISD::EXTLOAD:
+        Res = DAG.getBitcastedAnyExtOrTrunc(TargetLoad, SDLoc(N), RetVT);
+        break;
+      }
+      return DCI.CombineTo(N, Res, cast<LoadSDNode>(TargetLoad)->getChain());
+    }
 
     auto *Store = cast<StoreSDNode>(N);
     SDValue Chain = Store->getChain();
