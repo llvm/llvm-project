@@ -242,7 +242,7 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
         operation will be called after the main mutation stage finishes
         (i.e., after all ops have been processed with `removeBlockingUses`).
 
-        Operations should only the replaced values if the intended
+        Operations should only visit the replaced values if the intended
         transformation applies to all the replaced values. Furthermore, replaced
         values must not be deleted.
       }], "bool", "requiresReplacedValues", (ins), [{}],
@@ -292,7 +292,7 @@ def PromotableRegionOpInterface
 
         Based on the `reachingDef` value representing the value in the memory
         slot at the entry into the operation, `setupPromotion` fills in the
-        `regionsToProcess` with the the reaching definition at the entry of
+        `regionsToProcess` with the reaching definition at the entry of
         all its promotable regions.
 
         `setupPromotion` is allowed to mutate
@@ -303,7 +303,7 @@ def PromotableRegionOpInterface
         The `hasValueStores` flag indicates whether the regions contain
         `store`-like operations that write to the memory slot. This field can be
         used to reduce the amount of book-keeping required to track the reaching
-        definitions, but is correct to consider it always true.
+        definitions.
       }], "void", "setupPromotion",
       (ins
         "const ::mlir::MemorySlot &":$slot,
@@ -336,7 +336,7 @@ def PromotableRegionOpInterface
         The `hasValueStores` flag indicates whether the regions contain
         `store`-like operations that write to the memory slot. This field can be
         used to reduce the amount of book-keeping required to track the reaching
-        definitions, but is correct to consider it always true.
+        definitions.
       }],
       "::mlir::Value", "finalizePromotion",
       (ins
@@ -391,7 +391,7 @@ def DestructurableAllocationOpInterface
     >,
     InterfaceMethod<[{
         Hook triggered once the destructuring of a slot is complete, meaning the
-        original slot is no longer being refered to and could be deleted.
+        original slot is no longer being referred to and could be deleted.
         This will only be called for slots declared by this operation.
 
         Must return a new destructurable allocation op if this hook creates
@@ -415,7 +415,7 @@ def SafeMemorySlotAccessOpInterface
   let methods = [
     InterfaceMethod<[{
         Returns whether all accesses in this operation to the provided slot are
-        done in a safe manner. To be safe, the access most only access the slot
+        done in a safe manner. To be safe, the access must only access the slot
         inside the bounds that its type implies.
 
         If the safety of the accesses depends on the safety of the accesses to

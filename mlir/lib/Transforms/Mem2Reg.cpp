@@ -722,7 +722,7 @@ void MemorySlotPromoter::linkMergePoints() {
   // We want to eliminate unused block arguments. In case connecting a block
   // argument to its predecessor would trigger the use of the predecessor's
   // unused block argument, we need to process merge points in an expanding
-  // worklist, mergePointsToProcess.
+  // worklist, `mergePointArgsToProcess`.
 
   SmallPtrSet<BlockArgument, 8> mergePointArgsUnused;
   SmallVector<BlockArgument> mergePointArgsToProcess;
