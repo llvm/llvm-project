@@ -422,8 +422,7 @@ define <2 x i16> @test_pli_h() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.h a0, 42
 ; CHECK-NEXT:    ret
-  %res = add <2 x i16> <i16 42, i16 42>, <i16 0, i16 0>
-  ret <2 x i16> %res
+  ret <2 x i16> splat (i16 42)
 }
 
 define <2 x i16> @test_pli_h_negative() {
@@ -431,8 +430,7 @@ define <2 x i16> @test_pli_h_negative() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.h a0, -5
 ; CHECK-NEXT:    ret
-  %res = add <2 x i16> <i16 -5, i16 -5>, <i16 0, i16 0>
-  ret <2 x i16> %res
+  ret <2 x i16> splat (i16 -5)
 }
 
 ; Test PLI for v4i8 with unsigned immediate
@@ -441,8 +439,7 @@ define <4 x i8> @test_pli_b() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.b a0, 32
 ; CHECK-NEXT:    ret
-  %res = add <4 x i8> <i8 32, i8 32, i8 32, i8 32>, <i8 0, i8 0, i8 0, i8 0>
-  ret <4 x i8> %res
+  ret <4 x i8> splat (i8 32)
 }
 
 define <4 x i8> @test_pli_b_negative() {
@@ -450,8 +447,7 @@ define <4 x i8> @test_pli_b_negative() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.b a0, -2
 ; CHECK-NEXT:    ret
-  %res = add <4 x i8> <i8 -2, i8 -2, i8 -2, i8 -2>, <i8 0, i8 0, i8 0, i8 0>
-  ret <4 x i8> %res
+  ret <4 x i8> splat (i8 -2)
 }
 
 define i16 @test_extract_vector_16(<2 x i16> %a) {
