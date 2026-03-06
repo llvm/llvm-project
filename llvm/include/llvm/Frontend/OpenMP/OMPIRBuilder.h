@@ -27,6 +27,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/ADT/APSInt.h"
 #include <forward_list>
 #include <map>
 #include <optional>
