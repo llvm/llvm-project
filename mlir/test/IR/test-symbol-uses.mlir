@@ -93,3 +93,18 @@ module {
     return
   }
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/60583:
+// Erasing a dead private function nested inside an inner module must not
+// crash. Previously, SymbolTable was constructed from the outer module and
+// lookup of the inner function asserted because it was in the inner module's
+// symbol table instead.
+// expected-remark@below {{printMemrefF32 function successfully erased}}
+module {
+  module {
+    // expected-remark@below {{symbol has no uses}}
+    func.func private @printMemrefF32(%ptr : memref<*xf32>)
+  }
+}

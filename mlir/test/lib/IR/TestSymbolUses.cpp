@@ -79,11 +79,15 @@ struct SymbolUsesPass
       return operateOnSymbol(nestedOp, module, deadFunctions);
     });
 
-    SymbolTable table(module);
     for (Operation *op : deadFunctions) {
       // In order to test the SymbolTable::erase method, also erase completely
-      // useless functions.
+      // useless functions. Use the nearest symbol table parent of the function
+      // to handle the case where it is nested inside another symbol table.
       auto name = SymbolTable::getSymbolName(op);
+      Operation *symbolTableOp =
+          SymbolTable::getNearestSymbolTable(op->getParentOp());
+      assert(symbolTableOp && "expected a parent symbol table");
+      SymbolTable table(symbolTableOp);
       assert(table.lookup(name) && "expected no unknown operations");
       table.erase(op);
       assert(!table.lookup(name) &&
