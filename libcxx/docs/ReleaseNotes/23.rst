@@ -57,6 +57,9 @@ Deprecations and Removals
 - The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
   It will be removed in LLVM 25.
 
+- ``__wrap_iter``'s (iterator type for ``array``, ``span``, ``string``, ``string_view`` and ``vector``) ``base()``
+  method has been removed as it was non-standard.
+
 Potentially breaking changes
 ----------------------------
 
