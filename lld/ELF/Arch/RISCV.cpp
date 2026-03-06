@@ -384,13 +384,11 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       break;
     case R_RISCV_TLS_GOT_HI20:
       // There is no IE to LE optimization.
-      sym.setFlags(NEEDS_TLSIE);
-      sec.addReloc({R_GOT_PC, type, offset, addend, &sym});
+      rs.handleTlsIe<false>(R_GOT_PC, type, offset, addend, sym);
       continue;
     case R_RISCV_TLS_GD_HI20:
       // There is no GD to IE/LE optimization.
-      sym.setFlags(NEEDS_TLSGD);
-      sec.addReloc({R_TLSGD_PC, type, offset, addend, &sym});
+      rs.handleTlsGd(R_TLSGD_PC, R_NONE, R_NONE, type, offset, addend, sym);
       continue;
 
     // TLSDESC relocations:
