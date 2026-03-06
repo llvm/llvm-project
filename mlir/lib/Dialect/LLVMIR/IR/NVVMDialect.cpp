@@ -3125,25 +3125,22 @@ LogicalResult NVVM::FmaOp::verify() {
     return emitOpError("oob is not supported with saturation or FTZ");
 
   if (!(opBaseType.isF16() || opBaseType.isBF16()) && (isRelu || hasOOB))
-    return emitOpError("relu and oob are only supported for f16 and bf16 fused "
-                       "multiply-add operations");
+    return emitOpError("relu and oob are only supported for f16 and bf16");
 
   if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
-    return emitOpError(
-        "FTZ and saturation are not supported for fused multiply-add "
-        "operations involving f64 type");
+    return emitOpError("FTZ and saturation are not supported for f64 type");
 
   if (opBaseType.isF16() && rndMode != NVVM::FPRoundingMode::RN)
-    return emitOpError("only RN rounding mode is supported for f16 and "
-                       "vector<2xf16> fused multiply-add operations");
+    return emitOpError(
+        "only RN rounding mode is supported for f16 and vector<2xf16>");
 
   if (opBaseType.isBF16()) {
     if (rndMode != NVVM::FPRoundingMode::RN)
-      return emitOpError("only RN rounding mode is supported for bf16 and "
-                         "vector<2xbf16> fused multiply-add operations");
+      return emitOpError(
+          "only RN rounding mode is supported for bf16 and vector<2xbf16>");
     if (satMode != NVVM::SaturationMode::NONE || isFTZ)
-      return emitOpError("FTZ and saturation are not supported for bf16 and "
-                         "vector<2xbf16> fused multiply-add operations");
+      return emitOpError(
+          "FTZ and saturation are not supported for bf16 and vector<2xbf16>");
   }
 
   return success();

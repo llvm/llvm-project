@@ -454,15 +454,7 @@ static llvm::Value *
 createScalarizedIntrinsicCall(llvm::IRBuilderBase &builder,
                               llvm::Intrinsic::ID IID, llvm::Type *opTypeLLVM,
                               ArrayRef<llvm::Value *> operands,
-                              llvm::Type *retType = nullptr) {
-  auto callIntrinsic = [&](ArrayRef<llvm::Value *> args) -> llvm::CallInst * {
-    llvm::SmallVector<llvm::Value *> callArgs(args);
-    if (retType)
-      return createIntrinsicCall(builder, IID, retType,
-                                 callArgs); // overloaded intrinsic call
-    return createIntrinsicCall(builder, IID, callArgs);
-  };
-
+                              llvm::Type *retType) {
   if (opTypeLLVM->isVectorTy() && (opTypeLLVM->getScalarType()->isFloatTy() ||
                                    opTypeLLVM->getScalarType()->isDoubleTy())) {
     llvm::Value *result = llvm::PoisonValue::get(
@@ -472,13 +464,13 @@ createScalarizedIntrinsicCall(llvm::IRBuilderBase &builder,
       for (llvm::Value *op : operands)
         scalarArgs.push_back(
             builder.CreateExtractElement(op, builder.getInt32(i)));
-      llvm::Value *res = callIntrinsic(scalarArgs);
+      llvm::Value *res = createIntrinsicCall(builder, IID, retType, scalarArgs);
       result = builder.CreateInsertElement(result, res, builder.getInt32(i));
     }
     return result;
   }
 
-  return callIntrinsic(operands);
+  return createIntrinsicCall(builder, IID, retType, operands);
 }
 
 void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
@@ -535,7 +527,7 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
 
   auto addIntrinsic = [&](llvm::Intrinsic::ID IID) -> llvm::Value * {
     return createScalarizedIntrinsicCall(builder, IID, opTypeLLVM,
-                                         {argLHS, argRHS});
+                                         {argLHS, argRHS}, opTypeLLVM);
   };
 
   // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
@@ -639,9 +631,8 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
 
   auto fmaIntrinsic = [&](llvm::Intrinsic::ID IID,
                           llvm::Type *retType) -> llvm::Value * {
-    return createScalarizedIntrinsicCall(builder, IID, opTypeLLVM,
-                                         {argA, argB, argC},
-                                         /*retType=*/retType);
+    return createScalarizedIntrinsicCall(
+        builder, IID, opTypeLLVM, {argA, argB, argC}, /*retType=*/retType);
   };
 
   // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
