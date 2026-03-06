@@ -538,17 +538,15 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
-      if (!CurrSrcN->scheduled()) {
+      if (!CurrSrcN->scheduled())
         CurrSrcN->decrUnscheduledSuccs();
-      }
     }
   }
   if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
-      if (!NewSrcN->scheduled()) {
+      if (!NewSrcN->scheduled())
         ++NewSrcN->UnscheduledSuccs;
-      }
     }
   }
 }
