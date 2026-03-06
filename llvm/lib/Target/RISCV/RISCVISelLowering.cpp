@@ -2720,7 +2720,6 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
-  // TODO: We can extract index 0 from a mask vector without a slide.
   if (EltVT == MVT::i1)
     return false;
 
@@ -25234,6 +25233,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &RISCV::FPR16RegClass);
         if (Subtarget.hasStdExtZhinxmin())
           return std::make_pair(0U, &RISCV::GPRF16NoX0RegClass);
+      } else if (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
+        return std::make_pair(0U, &RISCV::FPR16RegClass);
       } else if (VT == MVT::f32) {
         if (Subtarget.hasStdExtF())
           return std::make_pair(0U, &RISCV::FPR32RegClass);
@@ -25331,6 +25332,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::FPR16CRegClass);
       if (Subtarget.hasStdExtZhinxmin())
         return std::make_pair(0U, &RISCV::GPRF16CRegClass);
+    } else if (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
+      return std::make_pair(0U, &RISCV::FPR16CRegClass);
     } else if (VT == MVT::f32) {
       if (Subtarget.hasStdExtF())
         return std::make_pair(0U, &RISCV::FPR32CRegClass);
