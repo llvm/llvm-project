@@ -1,4 +1,4 @@
-//===-- Single-precision tanbf16 function ---------------------------------===//
+//===-- Implementation of tanbf16 function --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,11 +14,10 @@
 #include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/FPUtil/bfloat16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -31,12 +30,13 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
 
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
+  float xf = x;
 
-  //NaN or -/+ INF
-  if(x_abs >= 0x7F80){
-    //NaN
-    if(xbits.is_nan()){
-      if(xbits.is_signaling_nan()){
+  // NaN or -/+ INF
+  if (x_abs >= 0x7F80) {
+    // NaN
+    if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
         return FPBits::quiet_nan().get_val();
       }
@@ -49,17 +49,15 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
   }
 
   // |x| = {0}
-  if(LIBC_UNLIKELY(x_abs== 0)){
+  if (LIBC_UNLIKELY(x_abs == 0)) {
     return x;
   }
-  float xf = x;
+
   // Through Exhaustive testing
   // The last value where tan(x) ~ x is 0x3db8
   if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
     int rounding = fputil::quick_get_round();
-
-    // tan(x) is always slightly larger in magnitude than x
-    // so when rounding away from zero, correct answer is x - 1 ULP
+    // separate case handles it with magnitude of 2^-13
     if ((xbits.is_pos() && rounding == FE_UPWARD) ||
         (xbits.is_neg() && rounding == FE_DOWNWARD))
       return fputil::cast<bfloat16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
