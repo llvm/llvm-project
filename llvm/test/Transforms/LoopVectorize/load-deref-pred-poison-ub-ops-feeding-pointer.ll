@@ -47,8 +47,7 @@ define void @ptr_depends_on_sdiv(ptr noalias %dst, i16 noundef %off) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i16> [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP13]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP24]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP11]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -123,8 +122,7 @@ define void @ptr_depends_on_possibly_poison_value(ptr noalias %dst, i16 %off) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP14]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -194,8 +192,7 @@ define void @ptr_doesnt_depend_on_poison_or_ub(ptr noalias %dst, i16 noundef %of
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
@@ -269,8 +266,7 @@ define void @ptr_depends_on_possibly_poison_value_from_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP15]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -333,7 +329,7 @@ define void @ptr_depends_on_noundef_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 9, i16 10>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 9, [[DOTCAST]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @src, align 1, !noundef [[META10:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @src, align 1, !noundef [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[VEC_IND]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], [[TMP0]]
@@ -343,8 +339,7 @@ define void @ptr_depends_on_noundef_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
