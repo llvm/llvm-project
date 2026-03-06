@@ -261,6 +261,14 @@ public:
   enum EnvironmentType {
     UnknownEnvironment,
 
+    ABIN32,
+    ABI64,
+    EABI,
+    EABIHF,
+    F32,
+    SF,
+    X32,
+
     GNU,
     GNUT64,
     GNUABIN32,
@@ -274,10 +282,7 @@ public:
     GNUSF,
     GNUX32,
     GNUILP32,
-    CODE16,
-    EABI,
-    EABIHF,
-    Android,
+
     Musl,
     MuslABIN32,
     MuslABI64,
@@ -287,12 +292,16 @@ public:
     MuslSF,
     MuslX32,
     MuslWALI,
+
+    Android,
+    CODE16,
     LLVM,
 
     MSVC,
     Itanium,
     Cygnus,
     CoreCLR,
+
     Simulator, // Simulator variants of other systems, e.g., Apple's iOS
     MacABI,    // Mac Catalyst variant of Apple's iOS deployment target.
 
@@ -1185,13 +1194,15 @@ public:
   // Tests whether the target is N32.
   bool isABIN32() const {
     EnvironmentType Env = getEnvironment();
-    return Env == Triple::GNUABIN32 || Env == Triple::MuslABIN32;
+    return Env == Triple::GNUABIN32 || Env == Triple::MuslABIN32 ||
+           Env == Triple::ABIN32;
   }
 
   /// Tests whether the target is X32.
   bool isX32() const {
     EnvironmentType Env = getEnvironment();
-    return Env == Triple::GNUX32 || Env == Triple::MuslX32;
+    return Env == Triple::GNUX32 || Env == Triple::MuslX32 ||
+           Env == Triple::X32;
   }
 
   /// Tests whether the target is eBPF.

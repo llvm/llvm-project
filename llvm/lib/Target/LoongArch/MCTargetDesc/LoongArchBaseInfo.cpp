@@ -51,10 +51,12 @@ static ABI getTripleABI(const Triple &TT) {
   case llvm::Triple::EnvironmentType::UnknownEnvironment:
     TripleABI = ABI_Unknown;
     break;
+  case llvm::Triple::EnvironmentType::SF:
   case llvm::Triple::EnvironmentType::GNUSF:
   case llvm::Triple::EnvironmentType::MuslSF:
     TripleABI = Is64Bit ? ABI_LP64S : ABI_ILP32S;
     break;
+  case llvm::Triple::EnvironmentType::F32:
   case llvm::Triple::EnvironmentType::GNUF32:
   case llvm::Triple::EnvironmentType::MuslF32:
     TripleABI = Is64Bit ? ABI_LP64F : ABI_ILP32F;
