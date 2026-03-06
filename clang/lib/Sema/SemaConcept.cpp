@@ -381,10 +381,14 @@ public:
     return true;
   }
 
-  bool TraverseTypeLoc(TypeLoc TL, bool /*TraverseQualifier*/ = true) {
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
     // We don't care about TypeLocs. So traverse Types instead.
-    return TraverseType(TL.getType().getCanonicalType(),
-                        /*TraverseQualifier=*/true);
+    return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
+  }
+
+  bool TraverseDependentNameType(const DependentNameType *T,
+                                 bool /*TraverseQualifier*/) {
+    return TraverseNestedNameSpecifier(T->getQualifier());
   }
 
   bool TraverseTagType(const TagType *T, bool TraverseQualifier) {
