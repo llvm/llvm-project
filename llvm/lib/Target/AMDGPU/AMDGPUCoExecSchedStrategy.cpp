@@ -54,7 +54,10 @@ InstructionFlavor llvm::classifyFlavor(const MachineInstr *MI,
       Opc == AMDGPU::S_BARRIER_SIGNAL_IMM)
     return InstructionFlavor::Fence;
 
-  if ((SII->isFLAT(*MI) || SII->isFLATGlobal(*MI)) && SII->isDS(*MI))
+  if (Opc == AMDGPU::TENSOR_LOAD_TO_LDS_D2 ||
+      Opc == AMDGPU::TENSOR_LOAD_TO_LDS ||
+      Opc == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32 ||
+      Opc == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B32_SADDR)
     return InstructionFlavor::DMA;
 
   if (SII->isMFMAorWMMA(*MI))
@@ -87,7 +90,6 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) {
   if (!LookDeep)
     return nullptr;
 
-  // TODO -- we may want to think about more advance strategies here.
   unsigned MinDepth = std::numeric_limits<unsigned int>::max();
   SUnit *TargetSU = nullptr;
   for (auto *SU : AllSUs) {
