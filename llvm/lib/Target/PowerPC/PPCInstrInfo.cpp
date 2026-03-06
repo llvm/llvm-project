@@ -3874,18 +3874,78 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   return false;
 }
 
-bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
-                                 MachineInstr **ToErase) const {
+// Return true if SrcMI and MI are both 32-bit or both 64-bit instructions.
+static bool sameWidthMIs(MachineInstr *SrcMI, MachineInstr *MI, bool &Is64Bit) {
+  unsigned Opc = MI->getOpcode();
+  unsigned SrcOpc = SrcMI->getOpcode();
+  if ((SrcOpc == PPC::RLWINM8 || SrcOpc == PPC::RLWINM8_rec) &&
+      (Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8_rec)) {
+    Is64Bit = true;
+    return true;
+  }
+  if ((SrcOpc == PPC::RLWINM || SrcOpc == PPC::RLWINM_rec) &&
+      (Opc == PPC::RLWINM || Opc == PPC::RLWINM_rec))
+    return true;
+  return false;
+}
+
+// This function tries to combine two RLWINMs. We not only perform such
+// optimization in SSA, but also after RA, since some RLWINM is generated after
+// RA.
+bool PPCInstrInfo::simplifyRotateAndMaskInstr(MachineInstr &MI,
+                                              MachineInstr *&ToErase) const {
+  unsigned UseOpc = MI.getOpcode();
+  if (UseOpc != PPC::RLWINM && UseOpc != PPC::RLWINM_rec &&
+      UseOpc != PPC::RLWINM8 && UseOpc != PPC::RLWINM8_rec)
+    return false;
+
+  // Find the source MI.
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
   Register FoldingReg = MI.getOperand(1).getReg();
-  if (!FoldingReg.isVirtual())
+  MachineInstr *SrcMI = nullptr;
+  bool CanErase = false;
+  bool OtherIntermediateUse = true;
+  if (MRI->isSSA()) {
+    if (!FoldingReg.isVirtual())
+      return false;
+    SrcMI = MRI->getVRegDef(FoldingReg);
+  } else {
+    if (!Register::isPhysicalRegister(FoldingReg))
+      return false;
+    SrcMI = getDefMIPostRA(FoldingReg, MI, OtherIntermediateUse);
+  }
+  if (!SrcMI)
     return false;
-  MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
-  if (SrcMI->getOpcode() != PPC::RLWINM &&
-      SrcMI->getOpcode() != PPC::RLWINM_rec &&
-      SrcMI->getOpcode() != PPC::RLWINM8 &&
-      SrcMI->getOpcode() != PPC::RLWINM8_rec)
+
+  // Check if MI and SrcMI are both 32-bit or both 64-bit instructions.
+  // TODO: The pairs of RLWINM8(RLWINM) or RLWINM(RLWINM8) never occur before
+  // RA, but after RA. Even they are not in the same bit-width, we can do the
+  // foldings for RLWINM8(RLWINM)->RLWINM8, or RLWINM(RLWINM8)->RLWINM.
+  bool Is64Bit = false;
+  if (!sameWidthMIs(SrcMI, &MI, Is64Bit))
     return false;
+
+  // Check if the registers(def and use) meet the requirements for folding.
+  MachineOperand ForwardRegOp = SrcMI->getOperand(1);
+  Register ForwardReg = ForwardRegOp.getReg();
+  bool IsFwdFeederRegKilled = false;
+  bool SeenIntermediateUse = false;
+  bool IsMIUseRegKilled = MI.getOperand(1).isKill();
+  if (MRI->isSSA()) {
+    CanErase = !SrcMI->hasImplicitDef() && MRI->hasOneNonDBGUse(FoldingReg);
+  } else {
+    bool KillFwdDefMI = !OtherIntermediateUse && IsMIUseRegKilled;
+    CanErase = KillFwdDefMI && !SrcMI->hasImplicitDef();
+    // In post-RA, if SrcMI also defines the register to be forwarded, we can
+    // only do the folding if SrcMI is going to be erased.
+    if (!CanErase && SrcMI->definesRegister(ForwardReg))
+      return false;
+    // Check if the SrcReg can be forwarded to MI.
+    if (!isRegElgibleForForwarding(ForwardRegOp, *SrcMI, MI, KillFwdDefMI,
+                                   IsFwdFeederRegKilled, SeenIntermediateUse))
+      return false;
+  }
+
   assert((MI.getOperand(2).isImm() && MI.getOperand(3).isImm() &&
           MI.getOperand(4).isImm() && SrcMI->getOperand(2).isImm() &&
           SrcMI->getOperand(3).isImm() && SrcMI->getOperand(4).isImm()) &&
@@ -3896,7 +3956,6 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   uint64_t MBMI = MI.getOperand(3).getImm();
   uint64_t MESrc = SrcMI->getOperand(4).getImm();
   uint64_t MEMI = MI.getOperand(4).getImm();
-
   assert((MEMI < 32 && MESrc < 32 && MBMI < 32 && MBSrc < 32) &&
          "Invalid PPC::RLWINM Instruction!");
   // If MBMI is bigger than MEMI, we always can not get run of ones.
@@ -3919,7 +3978,8 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   // MaskMI:         -----------|--E  B------
   // Result:         -----------|---  -------  (Good candidate)
 
-  // Mark special case.
+  // Mark the special cases of all bits in a 64-bit register or the low 32 bits
+  // in a 64-bit register.
   bool SrcMaskFull = (MBSrc - MESrc == 1) || (MBSrc == 0 && MESrc == 31);
 
   // For other MBMI > MEMI cases, just return.
@@ -3929,8 +3989,8 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   // Handle MBMI <= MEMI cases.
   APInt MaskMI = APInt::getBitsSetWithWrap(32, 32 - MEMI - 1, 32 - MBMI);
   // In MI, we only need low 32 bits of SrcMI, just consider about low 32
-  // bit of SrcMI mask. Note that in APInt, lowerest bit is at index 0,
-  // while in PowerPC ISA, lowerest bit is at index 63.
+  // bit of SrcMI mask. Note that in APInt, the least significant bit is at
+  // index 0, while in PowerPC ISA, the least significant bit is at index 63.
   APInt MaskSrc = APInt::getBitsSetWithWrap(32, 32 - MESrc - 1, 32 - MBSrc);
 
   APInt RotatedSrcMask = MaskSrc.rotl(SHMI);
@@ -3938,29 +3998,23 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   uint32_t NewMB, NewME;
   bool Simplified = false;
 
-  // If final mask is 0, MI result should be 0 too.
+  // If final mask is 0, replace MI with LI/LI8 0 or ANDI_rec/ANDI8_rec 0.
   if (FinalMask.isZero()) {
-    bool Is64Bit =
-        (MI.getOpcode() == PPC::RLWINM8 || MI.getOpcode() == PPC::RLWINM8_rec);
     Simplified = true;
     LLVM_DEBUG(dbgs() << "Replace Instr: ");
     LLVM_DEBUG(MI.dump());
 
-    if (MI.getOpcode() == PPC::RLWINM || MI.getOpcode() == PPC::RLWINM8) {
-      // Replace MI with "LI 0"
-      MI.removeOperand(4);
-      MI.removeOperand(3);
-      MI.removeOperand(2);
-      MI.getOperand(1).ChangeToImmediate(0);
-      MI.setDesc(get(Is64Bit ? PPC::LI8 : PPC::LI));
-    } else {
-      // Replace MI with "ANDI_rec reg, 0"
-      MI.removeOperand(4);
-      MI.removeOperand(3);
-      MI.getOperand(2).setImm(0);
-      MI.setDesc(get(Is64Bit ? PPC::ANDI8_rec : PPC::ANDI_rec));
-      MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
-      if (SrcMI->getOperand(1).isKill()) {
+    LoadImmediateInfo LII;
+    LII.Imm = 0;
+    LII.Is64Bit = Is64Bit;
+    LII.SetCR = (UseOpc == PPC::RLWINM_rec || UseOpc == PPC::RLWINM8_rec);
+    replaceInstrWithLI(MI, LII);
+    if (LII.SetCR) {
+      MI.getOperand(1).setReg(ForwardReg);
+      // FIXME: If the register used by MI is `killed` before change, we need
+      // update the kill flag on the previous use of that register. Here we only
+      // considered the kill flag of the register used by SrcMI.
+      if (ForwardRegOp.isKill()) {
         MI.getOperand(1).setIsKill(true);
         SrcMI->getOperand(1).setIsKill(false);
       } else
@@ -3970,7 +4024,6 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
 
     LLVM_DEBUG(dbgs() << "With: ");
     LLVM_DEBUG(MI.dump());
-
   } else if ((isRunOfOnes((unsigned)(FinalMask.getZExtValue()), NewMB, NewME) &&
               NewMB <= NewME) ||
              SrcMaskFull) {
@@ -3981,15 +4034,14 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
     LLVM_DEBUG(dbgs() << "Converting Instr: ");
     LLVM_DEBUG(MI.dump());
 
-    uint16_t NewSH = (SHSrc + SHMI) % 32;
-    MI.getOperand(2).setImm(NewSH);
-    // If SrcMI mask is full, no need to update MBMI and MEMI.
+    MI.getOperand(2).setImm((SHSrc + SHMI) % 32);
+    // If SrcMI mask is full, do not update MBMI and MEMI.
     if (!SrcMaskFull) {
       MI.getOperand(3).setImm(NewMB);
       MI.getOperand(4).setImm(NewME);
     }
-    MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
-    if (SrcMI->getOperand(1).isKill()) {
+    MI.getOperand(1).setReg(ForwardReg);
+    if (ForwardRegOp.isKill()) {
       MI.getOperand(1).setIsKill(true);
       SrcMI->getOperand(1).setIsKill(false);
     } else
@@ -3999,12 +4051,10 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
     LLVM_DEBUG(dbgs() << "To: ");
     LLVM_DEBUG(MI.dump());
   }
-  if (Simplified & MRI->use_nodbg_empty(FoldingReg) &&
-      !SrcMI->hasImplicitDef()) {
-    // If FoldingReg has no non-debug use and it has no implicit def (it
-    // is not RLWINMO or RLWINM8o), it's safe to delete its def SrcMI.
-    // Otherwise keep it.
-    *ToErase = SrcMI;
+  if (Simplified && CanErase) {
+    // If SrcMI has no implicit def, and FoldingReg has no non-debug use or
+    // its flag is "killed", it's safe to delete SrcMI. Otherwise keep it.
+    ToErase = SrcMI;
     LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
     LLVM_DEBUG(SrcMI->dump());
   }

@@ -1324,7 +1324,7 @@ bool PPCMIPeephole::simplifyCode() {
         Register OrigOp1Reg = MI.getOperand(1).isReg()
                                   ? MI.getOperand(1).getReg()
                                   : PPC::NoRegister;
-        Simplified = TII->combineRLWINM(MI, &ToErase);
+        Simplified = TII->simplifyRotateAndMaskInstr(MI, ToErase);
         if (Simplified) {
           addRegToUpdate(OrigOp1Reg);
           if (MI.getOperand(1).isReg())
