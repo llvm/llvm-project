@@ -128,9 +128,9 @@ public:
   static void insert(std::atomic<FileToRemoveList *> &Head,
                      const std::string &Filename) {
     // Reuse a node with a null filename (left behind by erase) if one exists.
-    // There are two cases where Filename can be null:
-    // - A node left behind by a previous file that we had to remove
-    // - A node whose file is actively being removed by a signal handler right
+    // There are two cases where Filename can be special:
+    // - nullptr: a node left behind by a previous file that we had to remove
+    // - InvalidPathSentinel: a node whose file is actively being removed by a signal handler right
     //   now, in which case, it's OK if this file doesn't get removed.
     char *NewFilename = strdup(Filename.c_str());
     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
@@ -169,8 +169,8 @@ public:
         // if we still own the pointer.
         char *Expected = OldFilename;
         while (!Current->Filename.compare_exchange_strong(Expected, nullptr)) {
-          if (Expected == nullptr)
-            break; // Another actor cleared it; nothing to free.
+          if (Expected == nullptr  || Expected == InvalidPathSentinel)
+            break;
         }
         if (Expected == OldFilename)
           free(OldFilename);
