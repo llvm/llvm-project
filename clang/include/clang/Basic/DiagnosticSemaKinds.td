@@ -2577,6 +2577,19 @@ def warn_uninit_const_pointer : Warning<
   "variable %0 is uninitialized when passed as a const pointer argument here">,
   InGroup<UninitializedConstPointer>, DefaultIgnore;
 
+def warn_erroneous_behavior_uninitialized_read : Warning<
+  "reading from variable %0 with erroneous value is erroneous behavior">,
+  InGroup<ErroneousBehavior>, DefaultIgnore;
+def note_variable_erroneous_init : Note<
+  "variable %0 was default-initialized here; "
+  "consider using '[[indeterminate]]' attribute to opt out">;
+def err_indeterminate_attr_not_on_first_decl : Error<
+  "'[[indeterminate]]' attribute on parameter %0 must appear on the "
+  "first declaration of the function">;
+def err_indeterminate_attr_mismatch : Error<
+  "'[[indeterminate]]' attribute on parameter %0 does not match "
+  "previous declaration">;
+
 def warn_unsequenced_mod_mod : Warning<
   "multiple unsequenced modifications to %0">, InGroup<Unsequenced>;
 def warn_unsequenced_mod_use : Warning<

@@ -30,6 +30,8 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticComment.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -3424,6 +3426,27 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
     S.Diag(FirstVD->getLocation(),
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
+  }
+
+  // C++26 [dcl.attr.indet]/p2:
+  // If a function parameter is declared with the indeterminate attribute, it
+  // shall be so declared in the first declaration of its function. If a
+  // function parameter is declared with the indeterminate attribute in the
+  // first declaration of its function in one translation unit and the same
+  // function is declared without the indeterminate attribute on the same
+  // parameter in its first declaration in another translation unit, the program
+  // is ill-formed, no diagnostic required.
+  if (S.getLangOpts().CPlusPlus26) {
+    const IndeterminateAttr *IA = newDecl->getAttr<IndeterminateAttr>();
+    if (IA && !oldDecl->hasAttr<IndeterminateAttr>()) {
+      S.Diag(IA->getLocation(), diag::err_indeterminate_attr_not_on_first_decl)
+          << newDecl;
+      const FunctionDecl *FirstFD =
+          cast<FunctionDecl>(oldDecl->getDeclContext())->getFirstDecl();
+      const ParmVarDecl *FirstVD =
+          FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
+      S.Diag(FirstVD->getLocation(), diag::note_previous_declaration);
+    }
   }
 
   propagateAttributes(

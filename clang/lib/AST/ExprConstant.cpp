@@ -2576,6 +2576,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
   switch (Val.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
     return false;
   case APValue::Int:
     Result = Val.getInt().getBoolValue();
@@ -4168,9 +4169,11 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
   // Walk the designator's path to find the subobject.
   for (unsigned I = 0, N = Sub.Entries.size(); /**/; ++I) {
-    // Reading an indeterminate value is undefined, but assigning over one is OK.
+    // Reading an indeterminate value is undefined, but assigning over one is
+    // OK. Reading an erroneous value is erroneous behavior also not allowed in
+    // constant expressions.
     if ((O->isAbsent() && !(handler.AccessKind == AK_Construct && I == N)) ||
-        (O->isIndeterminate() &&
+        ((O->isIndeterminate() || O->isErroneous()) &&
          !isValidIndeterminateAccess(handler.AccessKind))) {
       // Object has ended lifetime.
       // If I is non-zero, some subobject (member or array element) of a
@@ -4180,7 +4183,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         return false;
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
-            << handler.AccessKind << O->isIndeterminate()
+            << handler.AccessKind << (O->isIndeterminate() || O->isErroneous())
             << E->getSourceRange();
       return handler.failed();
     }
@@ -4988,6 +4991,7 @@ struct CompoundAssignSubobjectHandler {
     case APValue::Vector:
       return foundVector(Subobj, SubobjType);
     case APValue::Indeterminate:
+    case APValue::Erroneous:
       Info.FFDiag(E, diag::note_constexpr_access_uninit)
           << /*read of=*/0 << /*uninitialized object=*/1
           << E->getLHS()->getSourceRange();
@@ -7756,6 +7760,7 @@ class APValueToBufferConverter {
     // Dig through Src to find the byte at SrcOffset.
     switch (Val.getKind()) {
     case APValue::Indeterminate:
+    case APValue::Erroneous:
     case APValue::None:
       return true;
 

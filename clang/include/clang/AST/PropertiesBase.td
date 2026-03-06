@@ -268,6 +268,9 @@ let Class = PropertyTypeCase<APValue, "None"> in {
 let Class = PropertyTypeCase<APValue, "Indeterminate"> in {
   def : Creator<[{ return APValue::IndeterminateValue(); }]>;
 }
+let Class = PropertyTypeCase<APValue, "Erroneous"> in {
+  def : Creator<[{ return APValue::ErroneousValue(); }]>;
+}
 let Class = PropertyTypeCase<APValue, "Int"> in {
   def : Property<"value", APSInt> {
     let Read = [{ node.getInt() }];
