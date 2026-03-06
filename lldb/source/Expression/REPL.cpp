@@ -38,19 +38,14 @@ REPL::~REPL() = default;
 lldb::REPLSP REPL::Create(Status &err, lldb::LanguageType language,
                           Debugger *debugger, Target *target,
                           const char *repl_options) {
-  uint32_t idx = 0;
   lldb::REPLSP ret;
 
-  while (REPLCreateInstance create_instance =
-             PluginManager::GetREPLCreateCallbackAtIndex(idx)) {
-    LanguageSet supported_languages =
-        PluginManager::GetREPLSupportedLanguagesAtIndex(idx++);
-    if (!supported_languages[language])
+  for (auto &cbs : PluginManager::GetREPLCallbacks()) {
+    if (!cbs.supported_languages[language])
       continue;
-    ret = (*create_instance)(err, language, debugger, target, repl_options);
-    if (ret) {
+    ret = (*cbs.create_callback)(err, language, debugger, target, repl_options);
+    if (ret)
       break;
-    }
   }
 
   return ret;
