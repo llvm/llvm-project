@@ -1532,7 +1532,8 @@ struct WgToSgVectorTransposeOp
 
     // Check that sgLayout, sgData & order are properly transposed for source
     // and result
-    if (!layout.isTransposeOf(sourceLayout, permutation))
+    if (!layout.isTransposeOf(sourceLayout, permutation,
+                              xegpu::LayoutKind::Subgroup))
       return rewriter.notifyMatchFailure(
           op, "Result layout is not a valid transpose of source layout "
               "according to permutation");
@@ -1540,13 +1541,13 @@ struct WgToSgVectorTransposeOp
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
+
     SmallVector<Value> newTransposeOps;
     for (auto src : adaptor.getVector()) {
       auto newTranspose = vector::TransposeOp::create(
           rewriter, op.getLoc(), newResultType, src, permutation);
       newTransposeOps.push_back(newTranspose.getResult());
     }
-
     rewriter.replaceOpWithMultiple(op, {newTransposeOps});
     return success();
   }
