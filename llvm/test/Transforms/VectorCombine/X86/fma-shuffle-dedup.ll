@@ -42,4 +42,98 @@ define <8 x float> @fma_parallel_chains(<4 x float> %a0, <4 x float> %a1) {
   ret <8 x float> %res
 }
 
+; Verify that shuffle deduplication does not reuse shuffles across parallel
+; blocks (block3 and block4), which would create dominance violations.
+define <8 x i32> @no_shuffle_reuse_across_parallel_blocks(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, <4 x i32> %3) {
+; CHECK-LABEL: define <8 x i32> @no_shuffle_reuse_across_parallel_blocks(
+; CHECK-SAME: <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP1:%.*]], <4 x i32> [[TMP2:%.*]], <4 x i32> [[TMP3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V0:%.*]] = add <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    br label %[[BLOCK2:.*]]
+; CHECK:       [[BLOCK2]]:
+; CHECK-NEXT:    [[V1:%.*]] = add <4 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    br i1 true, label %[[BLOCK3:.*]], label %[[BLOCK4:.*]]
+; CHECK:       [[BLOCK3]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[V1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[V1]], <4 x i32> [[V0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP4]], <8 x i32> [[TMP5]])
+; CHECK-NEXT:    br label %[[END:.*]]
+; CHECK:       [[BLOCK4]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[V1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[V1]], <4 x i32> [[V0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP7]], <8 x i32> [[TMP8]])
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi <8 x i32> [ [[TMP6]], %[[BLOCK3]] ], [ [[TMP9]], %[[BLOCK4]] ]
+; CHECK-NEXT:    ret <8 x i32> [[RES]]
+;
+entry:
+  %v0 = add <4 x i32> %0, %1
+  br label %block2
+
+block2:
+  %v1 = add <4 x i32> %2, %3
+  br i1 true, label %block3, label %block4
+
+block3:
+  %4 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+  %5 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v1, <4 x i32> %v0)
+  %6 = shufflevector <4 x i32> %4, <4 x i32> %5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  br label %end
+
+block4:
+  %7 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+  %8 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v1, <4 x i32> %v0)
+  %9 = shufflevector <4 x i32> %7, <4 x i32> %8, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  br label %end
+
+end:
+  %res = phi <8 x i32> [ %6, %block3 ], [ %9, %block4 ]
+  ret <8 x i32> %res
+}
+
+; Verify that shuffle deduplication works when operands are in the same block
+; and the shuffle can be hoisted to dominate multiple uses.
+define <8 x i32> @shuffle_reuse_same_block_different_use(<4 x i32> %arg0, <4 x i32> %arg1, <4 x i32> %arg2, <4 x i32> %arg3) {
+; CHECK-LABEL: define <8 x i32> @shuffle_reuse_same_block_different_use(
+; CHECK-SAME: <4 x i32> [[ARG0:%.*]], <4 x i32> [[ARG1:%.*]], <4 x i32> [[ARG2:%.*]], <4 x i32> [[ARG3:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V0:%.*]] = add <4 x i32> [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    [[V1:%.*]] = add <4 x i32> [[ARG2]], [[ARG3]]
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[V1]], <4 x i32> [[V0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[V1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    br i1 true, label %[[BLOCK2:.*]], label %[[BLOCK3:.*]]
+; CHECK:       [[BLOCK2]]:
+; CHECK-NEXT:    [[MERGED1:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[SHUFFLE2]], <8 x i32> [[SHUFFLE1]])
+; CHECK-NEXT:    br label %[[END:.*]]
+; CHECK:       [[BLOCK3]]:
+; CHECK-NEXT:    [[MERGED2:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[SHUFFLE2]], <8 x i32> [[SHUFFLE1]])
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi <8 x i32> [ [[MERGED1]], %[[BLOCK2]] ], [ [[MERGED2]], %[[BLOCK3]] ]
+; CHECK-NEXT:    ret <8 x i32> [[RES]]
+;
+entry:
+  %v0 = add <4 x i32> %arg0, %arg1
+  %v1 = add <4 x i32> %arg2, %arg3
+  br i1 true, label %block2, label %block3
+
+block2:
+  %4 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+  %5 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v1, <4 x i32> %v0)
+  %6 = shufflevector <4 x i32> %4, <4 x i32> %5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  br label %end
+
+block3:
+  %7 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+  %8 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v1, <4 x i32> %v0)
+  %9 = shufflevector <4 x i32> %7, <4 x i32> %8, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  br label %end
+
+end:
+  %res = phi <8 x i32> [ %6, %block2 ], [ %9, %block3 ]
+  ret <8 x i32> %res
+}
+
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
+declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
