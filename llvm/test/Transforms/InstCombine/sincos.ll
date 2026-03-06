@@ -4,8 +4,6 @@
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE-ALIGN8-LINUX
 ; REQUIRES: arm-registered-target, x86-registered-target
 
-attributes #0 = { readnone nounwind }
-
 declare float @sinf(float) #0
 declare float @cosf(float) #0
 declare double @sin(double) #0
@@ -134,3 +132,47 @@ define float @sincos_multi_use(float %x) {
   %res = fadd float %add, %mul
   ret float %res
 }
+
+; Intrinsic sin + intrinsic cos - should combine
+define float @sincos_intrinsic_f32(float %x) {
+; CHECK-LABEL: @sincos_intrinsic_f32(
+; CHECK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]])
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %s = call float @llvm.sin.f32(float %x)
+  %c = call float @llvm.cos.f32(float %x)
+  %res = fadd float %s, %c
+  ret float %res
+}
+
+; Mixed: libcall sin + intrinsic cos
+define float @sincos_mixed_libcall_sin_intrinsic_cos(float %x) {
+; CHECK-LABEL: @sincos_mixed_libcall_sin_intrinsic_cos(
+; CHECK-NEXT:    [[S:%.*]] = call float @sinf(float [[X:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]])
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %s = call float @sinf(float %x) #0
+  %c = call float @llvm.cos.f32(float %x)
+  %res = fadd float %s, %c
+  ret float %res
+}
+
+; Mixed: intrinsic sin + libcall cos
+define float @sincos_mixed_intrinsic_sin_libcall_cos(float %x) {
+; CHECK-LABEL: @sincos_mixed_intrinsic_sin_libcall_cos(
+; CHECK-NEXT:    [[S:%.*]] = call float @llvm.sin.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = call float @cosf(float [[X]]) #[[ATTR0]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[S]], [[C]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %s = call float @llvm.sin.f32(float %x)
+  %c = call float @cosf(float %x) #0
+  %res = fadd float %s, %c
+  ret float %res
+}
+
+attributes #0 = { nounwind memory(none) }
