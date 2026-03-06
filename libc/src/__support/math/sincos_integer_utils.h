@@ -14,9 +14,18 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/big_int.h"
+#include "src/__support/frac128.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math_extras.h"
+
+#undef LIBC_TARGET_IS_BIG_ENDIAN
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
+    !defined(__ORDER_BIG_ENDIAN__)
+#define LIBC_TARGET_IS_BIG_ENDIAN 0
+#else
+#define LIBC_TARGET_IS_BIG_ENDIAN (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#endif // /LIBC_TARGET_IS_BIG_ENDIAN
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -24,44 +33,28 @@ namespace math {
 
 namespace integer_only {
 
-struct Frac128 : public UInt<128> {
-  using UInt<128>::UInt;
-
-  constexpr Frac128 operator~() const {
-    Frac128 r;
-    r.val[0] = ~val[0];
-    r.val[1] = ~val[1];
-    return r;
-  }
-
-  constexpr Frac128 operator+(const Frac128 &other) const {
-    UInt<128> r = UInt<128>(*this) + (UInt<128>(other));
-    return Frac128(r.val);
-  }
-
-  constexpr Frac128 operator-(const Frac128 &other) const {
-    UInt<128> r = UInt<128>(*this) - (UInt<128>(other));
-    return Frac128(r.val);
-  }
-
-  constexpr Frac128 operator*(const Frac128 &other) const {
-    UInt<128> r = UInt<128>::quick_mul_hi(UInt<128>(other));
-    return Frac128(r.val);
-  }
-};
-
 // 1280 + 64 bits of 2/pi, printed using MPFR.
-// Notice that if we store from the highest bytes to lowest bytes, it is
-// essentially having 2/pi in big-endian.  On the other hand, uint64_t type
-// that will be used for computations later are in little-endian.  So a few
-// bit-reversal instructions will be introduced when we extract the parts
-// out.  It's possble to skip the bit-reversal instructions entirely by
-// having this table presented in little-endian, meaning from the lowest
-// bytes to highest bytes.  The tradeoff will be a bit more complicated and
-// awkward in the computations of the index, but it might be worth it?
 // We also add 8 more bytes to extend to all non-negative exponents.
 LIBC_INLINE_VAR constexpr unsigned TWO_OVER_PI_LENGTH = 1280 / 8 + 7;
 
+#if LIBC_TARGET_IS_BIG_ENDIAN
+LIBC_INLINE_VAR constexpr uint8_t TWO_OVER_PI[TWO_OVER_PI_LENGTH] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA2, 0xF9, 0x83, 0x6E, 0x4E,
+    0x44, 0x15, 0x29, 0xFC, 0x27, 0x57, 0xD1, 0xF5, 0x34, 0xDD, 0xC0, 0xDB,
+    0x62, 0x95, 0x99, 0x3C, 0x43, 0x90, 0x41, 0xFE, 0x51, 0x63, 0xAB, 0xDE,
+    0xBB, 0xC5, 0x61, 0xB7, 0x24, 0x6E, 0x3A, 0x42, 0x4D, 0xD2, 0xE0, 0x06,
+    0x49, 0x2E, 0xEA, 0x09, 0xD1, 0x92, 0x1C, 0xFE, 0x1D, 0xEB, 0x1C, 0xB1,
+    0x29, 0xA7, 0x3E, 0xE8, 0x82, 0x35, 0xF5, 0x2E, 0xBB, 0x44, 0x84, 0xE9,
+    0x9C, 0x70, 0x26, 0xB4, 0x5F, 0x7E, 0x41, 0x39, 0x91, 0xD6, 0x39, 0x83,
+    0x53, 0x39, 0xF4, 0x9C, 0x84, 0x5F, 0x8B, 0xBD, 0xF9, 0x28, 0x3B, 0x1F,
+    0xF8, 0x97, 0xFF, 0xDE, 0x05, 0x98, 0x0F, 0xEF, 0x2F, 0x11, 0x8B, 0x5A,
+    0x0A, 0x6D, 0x1F, 0x6D, 0x36, 0x7E, 0xCF, 0x27, 0xCB, 0x09, 0xB7, 0x4F,
+    0x46, 0x3F, 0x66, 0x9E, 0x5F, 0xEA, 0x2D, 0x75, 0x27, 0xBA, 0xC7, 0xEB,
+    0xE5, 0xF1, 0x7B, 0x3D, 0x07, 0x39, 0xF7, 0x8A, 0x52, 0x92, 0xEA, 0x6B,
+    0xFB, 0x5F, 0xB1, 0x1F, 0x8D, 0x5D, 0x08, 0x56, 0x03, 0x30, 0x46, 0xFC,
+    0x7B, 0x6B, 0xAB, 0xF0, 0xCF, 0xBC, 0x20, 0x9A, 0xF4, 0x36, 0x1D,
+};
+#else  // !LIBC_TARGET_IS_BIG_ENDIAN
 LIBC_INLINE_VAR constexpr uint8_t TWO_OVER_PI[TWO_OVER_PI_LENGTH] = {
     0x1D, 0x36, 0xF4, 0x9A, 0x20, 0xBC, 0xCF, 0xF0, 0xAB, 0x6B, 0x7B, 0xFC,
     0x46, 0x30, 0x03, 0x56, 0x08, 0x5D, 0x8D, 0x1F, 0xB1, 0x5F, 0xFB, 0x6B,
@@ -78,6 +71,7 @@ LIBC_INLINE_VAR constexpr uint8_t TWO_OVER_PI[TWO_OVER_PI_LENGTH] = {
     0xC0, 0xDD, 0x34, 0xF5, 0xD1, 0x57, 0x27, 0xFC, 0x29, 0x15, 0x44, 0x4E,
     0x6E, 0x83, 0xF9, 0xA2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
+#endif // LIBC_TARGET_IS_BIG_ENDIAN
 
 LIBC_INLINE_VAR constexpr Frac128 PI_OVER_2_M1({0x898c'c517'01b8'39a2,
                                                 0x921f'b544'42d1'8469});
@@ -130,17 +124,27 @@ LIBC_INLINE constexpr bool trig_range_reduction(uint64_t x_u, unsigned x_e,
   // lowest part of the 64-bit integer chunk, which is:
   //   idx = the index of the T[j + 7] part.
   unsigned j = e_num >> 3;
-  unsigned idx = (TWO_OVER_PI_LENGTH - 1 - j - 7);
+  unsigned idx =
+      LIBC_TARGET_IS_BIG_ENDIAN ? j : (TWO_OVER_PI_LENGTH - 1 - j - 7);
   unsigned shift = e_num & 7; // s = e - 54 - 8*i
   x_u <<= shift;              // lsb(x_u) = 2^(e - 52 - s)
   UInt<64> x_u64(x_u);
   // Gather parts
+#if LIBC_TARGET_IS_BIG_ENDIAN
+  auto get_uint64 = [](const uint8_t *ptr) -> uint64_t {
+    return ptr[7] | (uint64_t(ptr[6]) << 8) | (uint64_t(ptr[5]) << 16) |
+           (uint64_t(ptr[4]) << 24) | (uint64_t(ptr[3]) << 32) |
+           (uint64_t(ptr[2]) << 40) | (uint64_t(ptr[1]) << 48) |
+           (uint64_t(ptr[0]) << 56);
+  };
+#else  // !LIBC_TARGET_IS_BIG_ENDIAN
   auto get_uint64 = [](const uint8_t *ptr) -> uint64_t {
     return ptr[0] | (uint64_t(ptr[1]) << 8) | (uint64_t(ptr[2]) << 16) |
            (uint64_t(ptr[3]) << 24) | (uint64_t(ptr[4]) << 32) |
            (uint64_t(ptr[5]) << 40) | (uint64_t(ptr[6]) << 48) |
            (uint64_t(ptr[7]) << 56);
   };
+#endif // LIBC_TARGET_IS_BIG_ENDIAN
   // lsb(c0) = 2^(-8i - 64)
   uint64_t c0 = get_uint64(&TWO_OVER_PI[idx]);
   // lsb(p0) = lsb(x_u) * lsb(c0)
@@ -149,9 +153,14 @@ LIBC_INLINE constexpr bool trig_range_reduction(uint64_t x_u, unsigned x_e,
   // msb(p0) = 2^(-62 + 63) = 2^1.
   uint64_t p0 = x_u * c0;
   // lsb(c1) = lsb(c0) * 2^-64 = 2^(-8i - 128)
-  UInt<64> c1(get_uint64(&TWO_OVER_PI[idx - 8]));
   // lsb(c2) = lsb(c1) * 2^-64 = 2^(-8i - 192)
+#if LIBC_TARGET_IS_BIG_ENDIAN
+  UInt<64> c1(get_uint64(&TWO_OVER_PI[idx + 8]));
+  UInt<64> c2(get_uint64(&TWO_OVER_PI[idx + 16]));
+#else  // !LIBC_TARGET_IS_BIG_ENDIAN
+  UInt<64> c1(get_uint64(&TWO_OVER_PI[idx - 8]));
   UInt<64> c2(get_uint64(&TWO_OVER_PI[idx - 16]));
+#endif // LIBC_TARGET_IS_BIG_ENDIAN
   // lsb(p1) = lsb(x_u) * lsb(c1) = 2^(-62 - 64) = 2^-126
   UInt<128> p1 = x_u64.ful_mul(c1);
   // lsb(p2) = lsb(x_u) * lsb(c2) * 2^64 = 2^-126
@@ -162,9 +171,8 @@ LIBC_INLINE constexpr bool trig_range_reduction(uint64_t x_u, unsigned x_e,
   k = static_cast<unsigned>(sum.val[1] >> 62);
   bool round_bit = sum.val[1] & 0x2000'0000'0000'0000;
   // Shift so that the leading bit is 0.5.
-  x_frac.val[0] = (sum.val[0] << 2);
-  x_frac.val[1] = (sum.val[1] << 2) | (sum.val[0] >> 62);
-
+  sum <<= 2;
+  x_frac = Frac128(sum.val);
   // Round to nearest k.
   if (round_bit) {
     // Flip the sign.
@@ -187,15 +195,14 @@ LIBC_INLINE constexpr bool trig_range_reduction(uint64_t x_u, unsigned x_e,
 //                 [0, pi/4], fixed);
 // > dirtyinfnorm( (sin(x) - P(x))/sin(x), [0, pi/4]);
 // 0x1.17a4...p-58
+// Storing absolute values of the coefficients.
 LIBC_INLINE_VAR constexpr Frac128 SIN_COEFF[] = {
-    // Positive coefficients
-    Frac128({0x321f'bc0b'b8ca'f059, 0x0222'2222'221e'eac3}), // x^5
-    Frac128({0x0556'929e'ad60'7cb2, 0x0000'2e3b'c6ab'd75e}), // x^9
-    Frac128({0x4c97'758e'92ac'214c, 0x0000'0000'aec7'1a39}), // x^13
-    // Negative coefficients
     Frac128({0x91b3'96a3'd5c5'fd6a, 0x2aaa'aaaa'aaaa'8ff2}), // x^3
+    Frac128({0x321f'bc0b'b8ca'f059, 0x0222'2222'221e'eac3}), // x^5
     Frac128({0x36aa'355c'3311'996d, 0x000d'00d0'0cdf'8c9b}), // x^7
+    Frac128({0x0556'929e'ad60'7cb2, 0x0000'2e3b'c6ab'd75e}), // x^9
     Frac128({0xa260'c74f'239d'd891, 0x0000'006b'9795'15a2}), // x^11
+    Frac128({0x4c97'758e'92ac'214c, 0x0000'0000'aec7'1a39}), // x^13
 };
 // 128-bit fixed-point minimax polynomial approximation of cos(x) generated by
 // Sollya with:
@@ -203,15 +210,14 @@ LIBC_INLINE_VAR constexpr Frac128 SIN_COEFF[] = {
 //                 [0, pi/4], fixed);
 // > dirtyinfnorm( (cos(x) - P(x))/cos(x), [0, pi/4]);
 // 0x1.269f...p-54
+// Storing absolute values of the coefficients.
 LIBC_INLINE_VAR constexpr Frac128 COS_COEFF[] = {
-    // Positive coefficients
-    Frac128({0x860a'3e6c'cc50'e0d8, 0x0aaa'aaaa'aa77'5c33}), // x^4
-    Frac128({0x84b2'76a3'c971'e7b8, 0x0001'a019'f80a'8ad5}), // x^8
-    Frac128({0xed56'891e'f750'c7a9, 0x0000'0008'dc50'133d}), // x^12
-    // Negative coefficients
     Frac128({0x56f6'2e74'b16e'5555, 0x7fff'ffff'fffe'4bfe}), // x^2
+    Frac128({0x860a'3e6c'cc50'e0d8, 0x0aaa'aaaa'aa77'5c33}), // x^4
     Frac128({0xa87a'8f81'7440'7dd6, 0x005b'05b0'58fc'6fed}), // x^6
+    Frac128({0x84b2'76a3'c971'e7b8, 0x0001'a019'f80a'8ad5}), // x^8
     Frac128({0x0082'310d'4e65'6b1f, 0x0000'049f'7cff'73d2}), // x^10
+    Frac128({0xed56'891e'f750'c7a9, 0x0000'0008'dc50'133d}), // x^12
 };
 
 // Compute sin(x) with relative errors ~ 2^-54.
@@ -225,25 +231,16 @@ LIBC_INLINE constexpr double sin_eval(const Frac128 &x_frac, unsigned k,
   const Frac128 *coeffs = is_cos ? COS_COEFF : SIN_COEFF;
 
   Frac128 xsq = x_frac * x_frac;
-  Frac128 x4 = xsq * xsq;
-  Frac128 poly_pos = fputil::polyeval(x4, coeffs[0], coeffs[1], coeffs[2]);
-  Frac128 poly_neg = fputil::polyeval(x4, coeffs[3], coeffs[4], coeffs[5]);
-  Frac128 r;
+  // Calculating the alternating polynommial
+  // p = x^2 * (C[0] - x^2 C[1] + x^4 C[2] - ...)
+  Frac128 p = xsq * fputil::altpolyeval(xsq, coeffs[0], coeffs[1], coeffs[2],
+                                        coeffs[3], coeffs[4], coeffs[5]);
+  // r ~ 1 - p
+  Frac128 r = ~p;
   if (!is_cos) {
+    // sin(x) = x * r.
     is_neg = (is_neg != x_frac_is_neg);
-    // sin(x) = x + x^5 * poly_pos - x^3 * poly_neg
-    Frac128 x3 = xsq * x_frac;
-    Frac128 x5 = x4 * x_frac;
-    poly_pos = fputil::multiply_add(x5, poly_pos, x_frac);
-    poly_neg = x3 * poly_neg;
-    r = poly_pos - poly_neg;
-  } else {
-    // cos(x) = 1 - (x^2 * poly_neg - x^4 * poly_pos)
-    poly_pos = x4 * poly_pos;
-    poly_neg = xsq * poly_neg;
-    r = poly_neg - poly_pos;
-    // Approximating 1 - r.
-    r = ~r;
+    r *= x_frac;
   }
 
   // Worst-case for range reduction > 2^-61, so the top 64-bits should be
