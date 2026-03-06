@@ -2458,6 +2458,12 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
   FunctionDecl *New = CreateBuiltin(II, R, ID, Loc);
   RegisterLocallyScopedExternCDecl(New, S);
 
+  // Builtin functions shouldn't be owned by any module.
+  if (New->hasOwningModule()) {
+    New->setLocalOwningModule(nullptr);
+    New->setModuleOwnershipKind(Decl::ModuleOwnershipKind::Unowned);
+  }
+
   // TUScope is the translation-unit scope to insert this function into.
   // FIXME: This is hideous. We need to teach PushOnScopeChains to
   // relate Scopes to DeclContexts, and probably eliminate CurContext
