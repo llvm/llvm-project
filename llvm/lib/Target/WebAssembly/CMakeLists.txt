@@ -67,7 +67,6 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyReplacePhysRegs.cpp
   WebAssemblyRuntimeLibcallSignatures.cpp
   WebAssemblySelectionDAGInfo.cpp
-  WebAssemblyFixupAtomics.cpp
   WebAssemblySetP2AlignOperands.cpp
   WebAssemblySortRegion.cpp
   WebAssemblyMemIntrinsicResults.cpp

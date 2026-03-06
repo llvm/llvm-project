@@ -31,7 +31,6 @@
 ; ENABLED-NEXT:  InstructionSelect
 ; NOFALLBACK-NEXT:  WebAssembly Argument Move
 ; NOFALLBACK-NEXT:  WebAssembly Set p2align Operands
-; NOFALLBACK-NEXT:  WebAssembly Fixup Atomics
 ; NOFALLBACK-NEXT:  WebAssembly Fix br_table Defaults
 ; NOFALLBACK-NEXT:  WebAssembly Clean Code After Trap
 ; ENABLED-NEXT:  ResetMachineFunction
@@ -39,7 +38,6 @@
 ; FALLBACK:       WebAssembly Instruction Selection
 ; FALLBACK-NEXT:  WebAssembly Argument Move
 ; FALLBACK-NEXT:  WebAssembly Set p2align Operands
-; FALLBACK-NEXT:  WebAssembly Fixup Atomics
 ; FALLBACK-NEXT:  WebAssembly Fix br_table Defaults
 ; FALLBACK-NEXT:  WebAssembly Clean Code After Trap
 

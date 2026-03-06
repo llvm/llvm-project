@@ -52,7 +52,6 @@ FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
                                        CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyArgumentMove();
 FunctionPass *createWebAssemblySetP2AlignOperands();
-FunctionPass *createWebAssemblyFixupAtomics();
 FunctionPass *createWebAssemblyCleanCodeAfterTrap();
 
 // Late passes.
@@ -104,7 +103,6 @@ void initializeWebAssemblyRegNumberingPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyPass(PassRegistry &);
 void initializeWebAssemblyReplacePhysRegsPass(PassRegistry &);
 void initializeWebAssemblySetP2AlignOperandsPass(PassRegistry &);
-void initializeWebAssemblyFixupAtomicsPass(PassRegistry &);
 
 namespace WebAssembly {
 enum TargetIndex {
