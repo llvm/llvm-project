@@ -470,8 +470,10 @@ func.func @batch_matmul_non_identity_batch(%A: tensor<4x2x8xf32>, %B: tensor<2x8
 #map2 = affine_map<(d0, d1) -> (d0)>
 func.func @op_matvec(%A: tensor<?x?xf32>, %B: tensor<?xf32>, %Out: tensor<?xf32>) -> tensor<?xf32> {
   %0 = linalg.generic
-    {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "reduction"]}
-    ins(%A, %B : tensor<?x?xf32>, tensor<?xf32>) outs(%Out : tensor<?xf32>) {
+    {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%A, %B : tensor<?x?xf32>, tensor<?xf32>)
+    outs(%Out : tensor<?xf32>) {
   ^bb0(%in: f32, %in_0: f32, %out: f32):
     %1 = arith.mulf %in, %in_0 : f32
     %2 = arith.addf %out, %1 : f32
