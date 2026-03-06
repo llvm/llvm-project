@@ -51,6 +51,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "uniformity"
@@ -407,6 +408,13 @@ public:
   void recordTemporalDivergence(ConstValueRefT, const InstructionT *,
                                 const CycleT *);
 
+  /// Check if an instruction with Custom uniformity can be proven divergent
+  /// based on its operands. This queries the target-specific callback.
+  bool isCustomDivergent(const InstructionT &I) const;
+
+  /// \brief Add an instruction that requires custom divergence analysis.
+  void addCustomDivergenceCandidate(const InstructionT *I);
+
 protected:
   const ContextT &Context;
   const FunctionT &F;
@@ -419,6 +427,10 @@ protected:
 
   // Internal worklist for divergence propagation.
   std::vector<const InstructionT *> Worklist;
+
+  // Set of instructions that require custom divergence analysis based on
+  // operand divergence.
+  SmallPtrSet<const InstructionT *, 8> CustomDivergenceCandidates;
 
   /// \brief Mark \p Term as divergent and push all Instructions that become
   /// divergent as a result on the worklist.
@@ -783,6 +795,14 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
   if (isAlwaysUniform(I))
     return;
+  // For custom divergence candidates, try to prove divergence.
+  // If we can't prove it's divergent yet, skip marking it.
+  // The candidate will be re-evaluated as operands become divergent.
+  if (CustomDivergenceCandidates.count(&I)) {
+    if (!isCustomDivergent(I))
+      return; // Can't prove divergent yet, assume uniform
+    // Otherwise, we can prove it's divergent, continue to mark it
+  }
   bool Marked = false;
   if (I.isTerminator()) {
     Marked = DivergentTermBlocks.insert(I.getParent()).second;
@@ -812,6 +832,12 @@ template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::addUniformOverride(
     const InstructionT &Instr) {
   UniformOverrides.insert(&Instr);
+}
+
+template <typename ContextT>
+void GenericUniformityAnalysisImpl<ContextT>::addCustomDivergenceCandidate(
+    const InstructionT *I) {
+  CustomDivergenceCandidates.insert(I);
 }
 
 // Mark as divergent all external uses of values defined in \p DefCycle.
