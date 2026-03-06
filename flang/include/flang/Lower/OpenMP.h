@@ -82,6 +82,7 @@ void genOpenMPSymbolProperties(AbstractConverter &converter,
                                const pft::Variable &var);
 
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
+void genGroupprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
 bool isOpenMPDeviceDeclareTarget(Fortran::lower::AbstractConverter &,
