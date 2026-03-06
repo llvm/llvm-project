@@ -41,6 +41,7 @@ atomic/atom_or.cl
 atomic/atom_sub.cl
 atomic/atom_xchg.cl
 atomic/atom_xor.cl
+atomic/atomic_work_item_fence.cl
 common/degrees.cl
 common/mix.cl
 common/radians.cl
