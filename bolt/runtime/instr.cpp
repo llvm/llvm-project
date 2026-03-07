@@ -1671,7 +1671,7 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   DEBUG(reportNumber("replace mmap stop: ", CountersEnd, 16));
   assert(CountersEnd > CountersStart, "no counters");
 
-  const bool Shared = !__bolt_instr_use_pid;
+  const bool Shared = !__bolt_instr_use_pid | !!__bolt_instr_sleep_time;
   const uint64_t MapPrivateOrShared = Shared ? MAP_SHARED : MAP_PRIVATE;
 
   void *Ret =
