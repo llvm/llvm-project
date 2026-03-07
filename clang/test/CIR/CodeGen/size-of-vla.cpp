@@ -38,16 +38,16 @@ void vla_type_with_element_type_int() {
 // CIR: %[[SIZE_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["size", init]
 // CIR: %[[CONST_10:.*]] = cir.const #cir.int<10> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
-// CIR: %3 = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
+// CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR: %[[SIZE:.*]] = cir.mul nuw %[[CONST_4]], %3 : !u64i
+// CIR: %[[SIZE:.*]] = cir.mul nuw %[[TMP_N]], %[[CONST_4]] : !u64i
 // CIR: cir.store {{.*}} %[[SIZE]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 
 // LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
 // LLVM: %[[SIZE_ADDR:.*]] = alloca i64, i64 1, align 8
 // LLVM: store i64 10, ptr %[[N_ADDR]], align 8
 // LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
-// LLVM: %[[SIZE:.*]] = mul nuw i64 4, %[[TMP_N]]
+// LLVM: %[[SIZE:.*]] = mul nuw i64 %[[TMP_N]], 4
 // LLVM: store i64 %[[SIZE]], ptr %[[SIZE_ADDR]], align 8
 
 // OGCG: %[[N_ADDR:.*]] = alloca i64, align 8
@@ -126,7 +126,7 @@ void vla_expr_element_type_int() {
 // CIR: cir.cleanup.scope {
 // CIR:   %[[ARR_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TMP_N]] : !u64i, ["arr"]
 // CIR:   %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:   %[[SIZE:.*]] = cir.mul nuw %[[CONST_4]], %[[TMP_N]] : !u64i
+// CIR:   %[[SIZE:.*]] = cir.mul nuw %[[TMP_N]], %[[CONST_4]] : !u64i
 // CIR:   cir.store {{.*}} %[[SIZE]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR:   cir.yield
 // CIR: } cleanup normal {
@@ -143,7 +143,7 @@ void vla_expr_element_type_int() {
 // LLVM: %[[STACK_SAVE:.*]] = call ptr @llvm.stacksave.p0()
 // LLVM: store ptr %[[STACK_SAVE]], ptr %[[SAVED_STACK_ADDR]], align 8
 // LLVM: %[[ARR_ADDR:.*]] = alloca i32, i64 %[[TMP_N]], align 16
-// LLVM: %[[SIZE:.*]] = mul nuw i64 4, %[[TMP_N]]
+// LLVM: %[[SIZE:.*]] = mul nuw i64 %[[TMP_N]], 4
 // LLVM: store i64 %[[SIZE]], ptr %[[SIZE_ADDR]], align 8
 // LLVM: %[[TMP_SAVED_STACK:.*]] = load ptr, ptr %[[SAVED_STACK_ADDR]], align 8
 // LLVM: call void @llvm.stackrestore.p0(ptr %[[TMP_SAVED_STACK]])

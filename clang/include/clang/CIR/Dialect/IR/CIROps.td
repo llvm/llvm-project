@@ -2186,7 +2186,9 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
 // AddOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
+def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType, [
+  Commutative
+]> {
   let summary = "Integer or floating-point addition";
   let description = [{
     The `cir.add` operation performs addition on integer or floating-point
@@ -2241,7 +2243,7 @@ def CIR_SubOp : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyArithType> {
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
+def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType, [Commutative]> {
   let summary = "Integer or floating-point multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer or floating-point
@@ -2321,8 +2323,9 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyArithType> {
 // AndOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Commutative, Idempotent traits
-def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType> {
+def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType, [
+  Commutative, Idempotent
+]> {
   let summary = "Bitwise AND";
   let description = [{
     The `cir.and` operation performs a bitwise AND on integer operands.
@@ -2341,8 +2344,9 @@ def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType> {
 // OrOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Commutative, Idempotent traits
-def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType> {
+def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType, [
+  Commutative, Idempotent
+]> {
   let summary = "Bitwise OR";
   let description = [{
     The `cir.or` operation performs a bitwise OR on integer operands.
@@ -2361,7 +2365,7 @@ def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType> {
 // XorOp
 //===----------------------------------------------------------------------===//
 
-def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType> {
+def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType, [Commutative]> {
   let summary = "Bitwise XOR";
   let description = [{
     The `cir.xor` operation performs a bitwise XOR on integer operands.
@@ -2380,7 +2384,9 @@ def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType> {
 // MaxOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType> {
+def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType, [
+  Commutative, Idempotent
+]> {
   let summary = "Integer maximum";
   let description = [{
     The `cir.max` operation computes the maximum of two integer operands.
