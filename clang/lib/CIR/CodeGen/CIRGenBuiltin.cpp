@@ -1565,8 +1565,70 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_flt_rounds:
   case Builtin::BI__builtin_set_flt_rounds:
-  case Builtin::BI__builtin_fpclassify:
-    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_fpclassify: {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
+    mlir::Location Loc = getLoc(e->getBeginLoc());
+
+    mlir::Value NanLiteral = emitScalarExpr(e->getArg(0));
+    mlir::Value InfinityLiteral = emitScalarExpr(e->getArg(1));
+    mlir::Value NormalLiteral = emitScalarExpr(e->getArg(2));
+    mlir::Value SubnormalLiteral = emitScalarExpr(e->getArg(3));
+    mlir::Value ZeroLiteral = emitScalarExpr(e->getArg(4));
+    mlir::Value V = emitScalarExpr(e->getArg(5));
+
+    mlir::Type ResultTy = convertType(e->getType());
+    mlir::Block *EntryBlock = builder.getInsertionBlock();
+    mlir::Region *Region = EntryBlock->getParent();
+
+    // Create Blocks
+    mlir::Block *InfinityBlock = builder.createBlock(Region, Region->end());
+    mlir::Block *NormalBlock = builder.createBlock(Region, Region->end());
+    mlir::Block *SubnormalBlock = builder.createBlock(Region, Region->end());
+    mlir::Block *ZeroBlock = builder.createBlock(Region, Region->end());
+    mlir::Block *EndBlock = builder.createBlock(Region, Region->end());
+    EndBlock->addArgument(ResultTy, Loc);
+
+    // ^EntryBlock
+    builder.setInsertionPointToEnd(EntryBlock);
+    mlir::Value IsNan = builder.createIsFPClass(Loc, V, cir::FPClassTest::Nan);
+    cir::BrCondOp::create(builder, Loc, IsNan, EndBlock,
+                          InfinityBlock,
+                          mlir::ValueRange{NanLiteral},
+                          mlir::ValueRange{});
+
+    // ^InfinityBlock
+    builder.setInsertionPointToEnd(InfinityBlock);
+    mlir::Value IsInfinity =
+        builder.createIsFPClass(Loc, V, cir::FPClassTest::Infinity);
+    cir::BrCondOp::create(builder, Loc, IsInfinity, EndBlock, NormalBlock,
+                          mlir::ValueRange{InfinityLiteral},
+                          mlir::ValueRange{});
+
+    // ^NormalBlock
+    builder.setInsertionPointToEnd(NormalBlock);
+    mlir::Value IsNormal =
+        builder.createIsFPClass(Loc, V, cir::FPClassTest::Normal);
+    cir::BrCondOp::create(builder, Loc, IsNormal, EndBlock, SubnormalBlock,
+                          mlir::ValueRange{NormalLiteral}, mlir::ValueRange{});
+
+    // ^SubnormalBlock
+    builder.setInsertionPointToEnd(SubnormalBlock);
+    mlir::Value IsSubnormal =
+        builder.createIsFPClass(Loc, V, cir::FPClassTest::Subnormal);
+    cir::BrCondOp::create(builder, Loc, IsSubnormal, EndBlock, ZeroBlock,
+                          mlir::ValueRange{SubnormalLiteral},
+                          mlir::ValueRange{});
+
+    // ^ZeroBlock
+    builder.setInsertionPointToEnd(ZeroBlock);
+    cir::BrOp::create(builder, Loc, EndBlock, mlir::ValueRange{ZeroLiteral});
+
+    // ^EndBlock(x)
+    builder.setInsertionPointToEnd(EndBlock);
+    mlir::Value Result = EndBlock->getArgument(0);
+
+    return RValue::get(Result);
+  }
   case Builtin::BIalloca:
   case Builtin::BI_alloca:
   case Builtin::BI__builtin_alloca_uninitialized:
