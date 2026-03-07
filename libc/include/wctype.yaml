@@ -8,3 +8,9 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswupper
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
