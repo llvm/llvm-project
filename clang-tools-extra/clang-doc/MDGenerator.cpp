@@ -339,7 +339,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children)
     serializeReference(OS, *C, 0);
 
@@ -358,7 +358,7 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children) {
     if (!C->Children.empty()) {
       const char *Type;
