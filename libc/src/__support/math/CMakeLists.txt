@@ -1946,6 +1946,17 @@ add_header_library(
 )
 
 add_header_library(
+  hypotbf16
+  HDRS
+    hypotbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.hypot
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   hypotf16
   HDRS
     hypotf16.h

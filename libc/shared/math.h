@@ -150,6 +150,7 @@
 #include "math/getpayloadf128.h"
 #include "math/getpayloadf16.h"
 #include "math/getpayloadl.h"
+#include "math/hypotbf16.h"
 #include "math/hypotf.h"
 #include "math/hypotf16.h"
 #include "math/ilogb.h"

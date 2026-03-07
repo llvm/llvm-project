@@ -3017,6 +3017,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  hypotbf16
+  SRCS
+    hypotbf16.cpp
+  HDRS
+    ../hypotbf16.h
+  DEPENDS
+    libc.src.__support.math.hypotbf16
+)
+
+add_entrypoint_object(
   hypotf
   SRCS
     hypotf.cpp
