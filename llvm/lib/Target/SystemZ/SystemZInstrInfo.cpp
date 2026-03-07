@@ -27,12 +27,14 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -51,6 +53,9 @@ using namespace llvm;
 #include "SystemZGenInstrInfo.inc"
 
 #define DEBUG_TYPE "systemz-II"
+
+STATISTIC(NumRSWorkaround, "The # of times the RegScavenger workaround for the "
+                           "FIE bug was triggered.");
 
 // Return a mask with Count low bits set.
 static uint64_t allOnes(unsigned int Count) {
@@ -227,35 +232,6 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
     MIB.add(MO);
 
   MI.eraseFromParent();
-}
-
-void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineFunction &MF = *MBB->getParent();
-  const Register Reg64 = MI->getOperand(0).getReg();
-  const Register Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
-
-  // EAR can only load the low subregister so us a shift for %a0 to produce
-  // the GR containing %a0 and %a1.
-
-  // ear <reg>, %a0
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A0)
-    .addReg(Reg64, RegState::ImplicitDefine);
-
-  // sllg <reg>, <reg>, 32
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::SLLG), Reg64)
-    .addReg(Reg64)
-    .addReg(0)
-    .addImm(32);
-
-  // ear <reg>, %a1
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A1);
-
-  // lg <reg>, 40(<reg>)
-  MI->setDesc(get(SystemZ::LG));
-  MachineInstrBuilder(MF, MI).addReg(Reg64).addImm(40).addReg(0);
 }
 
 // Emit a zero-extending move from 32-bit GPR SrcReg to 32-bit GPR
@@ -1806,13 +1782,94 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     splitAdjDynAlloc(MI);
     return true;
 
-  case TargetOpcode::LOAD_STACK_GUARD:
-    expandLoadStackGuard(&MI);
+  case SystemZ::MOV_STACKGUARD:
+    expandStackGuardPseudo(MI, SystemZ::MVC);
+    return true;
+
+  case SystemZ::CMP_STACKGUARD:
+    expandStackGuardPseudo(MI, SystemZ::CLC);
     return true;
 
   default:
     return false;
   }
+}
+
+namespace {
+// This is a workaround for https://github.com/llvm/llvm-project/issues/172511
+// and should be removed once that issue is resolved.
+Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
+  NumRSWorkaround++;
+  // Create fresh RegScavenger instance.
+  RegScavenger RS;
+  // Initialize RegScavenger to correct location.
+  RS.enterBasicBlockEnd(*MBB);
+  RS.backward(MI);
+
+  // Attempt to find a free register.
+  Register Scratch = RS.FindUnusedReg(&SystemZ::ADDR64BitRegClass);
+  // If not found, scavenge one, i.e. evict something to a stack spill slot.
+  if (!Scratch) {
+    Scratch =
+        RS.scavengeRegisterBackwards(SystemZ::ADDR64BitRegClass,
+                                     MI,   // Scavenge back to this position.
+                                     true, // Scope must include MI.
+                                     0,
+                                     true // Spills are allowed.
+        );
+  }
+  return Scratch;
+}
+} // namespace
+
+void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
+                                              unsigned Opcode) const {
+  MachineBasicBlock &MBB = *(MI.getParent());
+  const MachineFunction &MF = *(MBB.getParent());
+  const auto DL = MI.getDebugLoc();
+  const Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
+  unsigned int Offset = 0;
+
+  // Check MI (which should be either MOV_STACKGUARD or CMP_STACKGUARD)
+  // to see if the early-clobber flag on the def reg was honored. If so,
+  // return that register. If not, scavenge a new register and return that.
+  // This is a workaround for https://github.com/llvm/llvm-project/issues/172511
+  // and should be removed once that issue is resolved.
+  Register AddrReg = MI.getOperand(0).getReg();
+  Register OpReg = MI.getOperand(1).getReg();
+  // If we can't use AddrReg, scavenge a new one.
+  if (AddrReg == OpReg)
+    AddrReg = scavengeAddrReg(MI, &MBB);
+  // At this point, AddrReg should be set to a usable scratch register.
+
+  // Emit an appropriate pseudo for the guard type, which loads the address of
+  // said guard into the scratch register AddrReg.
+  if (GuardType.empty() || (GuardType == "tls")) {
+    // Emit a load of the TLS block's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
+    // Record the appropriate stack guard offset (40 in the tls case).
+    Offset = 40;
+  } else if (GuardType == "global") {
+    // Emit a load of the global stack guard's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
+  } else {
+    report_fatal_error(
+        (Twine("unknown stack protector type \"") + GuardType + "\".")
+            .str()
+            .c_str());
+  }
+
+  // Construct the appropriate move or compare instruction using the
+  // scratch register.
+  BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(Opcode))
+      .addReg(MI.getOperand(1).getReg())
+      .addImm(MI.getOperand(2).getImm())
+      .addImm(8)
+      .addReg(AddrReg)
+      .addImm(Offset);
+
+  MI.removeFromParent();
 }
 
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
@@ -1831,6 +1888,12 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 18;
   if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
     return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
+  if (MI.getOpcode() == SystemZ::LOAD_TLS_BLOCK_ADDR)
+    // ear (4), sllg (6), ear (4) = 14 bytes
+    return 14;
+  if (MI.getOpcode() == SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR)
+    // Both larl and lgrl are 6 bytes long.
+    return 6;
 
   return MI.getDesc().getSize();
 }

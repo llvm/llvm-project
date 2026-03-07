@@ -1007,6 +1007,10 @@ public:
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
 
+  // Get/set flag indicating whether to emit a __stack_protector_loc section.
+  bool hasStackProtectorGuardRecord() const;
+  void setStackProtectorGuardRecord(bool Flag);
+
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
