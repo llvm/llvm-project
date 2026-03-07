@@ -2242,6 +2242,16 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
+    case ARM::CLEANUPRET:
+    case ARM::CATCHRET: {
+      bool isThumb = STI->isThumb();
+      unsigned RetOpc = isThumb ? ARM::tBX_RET : ARM::BX_RET;
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RetOpc))
+          .add(predOps(ARMCC::AL));
+      MI.eraseFromParent();
+      return true;
+    }
+
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri:
     case ARM::TCRETURNrinotr12: {
