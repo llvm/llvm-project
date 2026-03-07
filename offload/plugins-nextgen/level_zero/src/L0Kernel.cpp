@@ -413,7 +413,7 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
 
 Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                             KernelArgsTy &KernelArgs,
+                             uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
                              KernelLaunchParamsTy LaunchParams,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);

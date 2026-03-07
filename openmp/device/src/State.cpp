@@ -40,6 +40,10 @@ using namespace ompx;
 [[clang::loader_uninitialized]] static Local<KernelLaunchEnvironmentTy *>
     KernelLaunchEnvironmentPtr;
 
+/// The pointer type for dynamic shared memory. This is important to keep
+/// the alignment and address space information.
+using SharedMemPtrTy = decltype(&DynamicSharedBuffer[0]);
+
 ///}
 
 namespace {
@@ -138,6 +142,51 @@ void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
   memory::freeGlobal(Ptr, "Slow path shared memory deallocation");
 }
 
+struct DynCGroupMemTy {
+  void init(KernelLaunchEnvironmentTy *KLE, SharedMemPtrTy NativePtr) {
+    NativeOrNullPtr = nullptr;
+    FallbackPtr = nullptr;
+    Size = 0;
+    Fallback = DynCGroupMemFallbackType::None;
+    if (!KLE)
+      return;
+
+    Size = KLE->DynCGroupMemSize;
+    Fallback = KLE->DynCGroupMemFb;
+    if (Size && Fallback == DynCGroupMemFallbackType::None)
+      NativeOrNullPtr = NativePtr;
+    if (Fallback == DynCGroupMemFallbackType::DefaultMem)
+      FallbackPtr = static_cast<unsigned char *>(KLE->DynCGroupMemFbPtr) +
+                    Size * mapping::getBlockIdInKernel();
+  }
+
+  omp_memspace_handle_t getMemSpace() const {
+    if (Size == 0)
+      return omp_null_mem_space;
+    if (Fallback == DynCGroupMemFallbackType::None)
+      return omp_cgroup_mem_space;
+    return omp_default_mem_space;
+  }
+
+  size_t getSize() const { return Size; }
+
+  SharedMemPtrTy getNativeOrNullPtr() const { return NativeOrNullPtr; }
+
+  unsigned char *getNativeOrFallbackPtr() const {
+    return (Fallback == DynCGroupMemFallbackType::DefaultMem)
+               ? FallbackPtr
+               : getNativeOrNullPtr();
+  }
+
+private:
+  SharedMemPtrTy NativeOrNullPtr;
+  unsigned char *FallbackPtr;
+  size_t Size;
+  DynCGroupMemFallbackType Fallback;
+};
+
+[[clang::loader_uninitialized]] static Local<DynCGroupMemTy> DynCGroupMem;
+
 } // namespace
 
 void *memory::getDynamicBuffer() { return DynamicSharedBuffer; }
@@ -226,13 +275,18 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 } // namespace
 
 void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
-                 KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
+                 KernelLaunchEnvironmentTy *KLE) {
   SharedMemorySmartStack.init(IsSPMD);
+
+  if (KLE == reinterpret_cast<KernelLaunchEnvironmentTy *>(~0))
+    KLE = nullptr;
+
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
+    DynCGroupMem.init(KLE, DynamicSharedBuffer);
     TeamState.init(IsSPMD);
     ThreadStates = nullptr;
     KernelEnvironmentPtr = &KernelEnvironment;
-    KernelLaunchEnvironmentPtr = &KernelLaunchEnvironment;
+    KernelLaunchEnvironmentPtr = KLE;
   }
 }
 
@@ -416,6 +470,25 @@ int omp_get_team_num() { return mapping::getBlockIdInKernel(); }
 int omp_get_initial_device(void) { return -1; }
 
 int omp_is_initial_device(void) { return 0; }
+
+void *omp_get_dyn_gprivate_ptr(size_t Offset, omp_access_t) {
+  return DynCGroupMem.getNativeOrFallbackPtr() + Offset;
+}
+
+void *omp_get_dyn_gprivate_nofb_ptr(size_t Offset, omp_access_t) {
+  unsigned char *Ptr = DynCGroupMem.getNativeOrNullPtr();
+  // Ensure the alignment and address space information is kept.
+  Ptr = (unsigned char *)__builtin_assume_aligned(Ptr, allocator::ALIGNMENT);
+  return (SharedMemPtrTy)(Ptr + Offset);
+}
+
+size_t omp_get_dyn_gprivate_size(omp_access_t) {
+  return DynCGroupMem.getSize();
+}
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t) {
+  return DynCGroupMem.getMemSpace();
+}
 }
 
 extern "C" {

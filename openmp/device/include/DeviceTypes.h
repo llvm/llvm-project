@@ -171,9 +171,24 @@ typedef enum omp_allocator_handle_t {
   KMP_ALLOCATOR_MAX_HANDLE = ~(0LU)
 } omp_allocator_handle_t;
 
+typedef enum omp_memspace_handle_t {
+  omp_null_mem_space = 0,
+  omp_cgroup_mem_space = 5,
+  omp_default_mem_space = 99
+} omp_memspace_handle_t;
+
 #define __PRAGMA(STR) _Pragma(#STR)
 #define OMP_PRAGMA(STR) __PRAGMA(omp STR)
 
 ///}
+
+/// The OpenMP access group type. The criterion for grupping tasks using a
+/// specific grouping property.
+enum omp_access_t {
+  /// Groups the tasks based on the contention group to which they belong.
+  omp_access_cgroup = 0,
+  /// Groups the tasks based on the parallel region to which they bind.
+  omp_access_pteam = 1,
+};
 
 #endif
