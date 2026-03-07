@@ -1,0 +1,8 @@
+{
+    "user_id": "@&USER_ID",
+    "key": {
+        "session_id": "@&SESSION_ID",
+        "request_user_id": "@&USER_ID"
+    },
+    "request_session_id": "@&SESSION_ID"
+}

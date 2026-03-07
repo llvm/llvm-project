@@ -1,0 +1,16 @@
+# Test regex pattern (@#) - comprehensive tests
+
+# Basic regex pattern - matching various string formats
+# RUN: json-diff %S/patterns-regex-expected.json %S/patterns-regex-actual.json
+
+# Regex pattern failure - value doesn't match regex
+# RUN: not json-diff %S/patterns-regex-fail-expected.json %S/patterns-regex-fail-actual.json 2>&1 | FileCheck --check-prefix=NOMATCH %s
+# NOMATCH: Match failure: value 'not-a-version' does not match regex pattern '\d+\.\d+\.\d+'.
+
+# Regex on non-string value (should fail with type error)
+# RUN: not json-diff %S/patterns-edge-regex-nonstring-expected.json %S/patterns-edge-regex-nonstring-actual.json 2>&1 | FileCheck --check-prefix=TYPECHECK %s
+# TYPECHECK: Match failure: regex pattern '\d+' requires string, got 'int'.
+
+# Invalid regex pattern error
+# RUN: not json-diff %S/errors-invalid-regex-expected.json %S/errors-invalid-regex-actual.json 2>&1 | FileCheck --check-prefix=BADREGEX %s
+# BADREGEX: Error: invalid regex pattern '[invalid': unterminated character set at position 0.

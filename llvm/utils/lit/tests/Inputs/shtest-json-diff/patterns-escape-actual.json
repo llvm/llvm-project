@@ -1,0 +1,5 @@
+{
+  "email": "example.com",
+  "pattern": "#not-a-regex",
+  "var": "&not-a-capture"
+}

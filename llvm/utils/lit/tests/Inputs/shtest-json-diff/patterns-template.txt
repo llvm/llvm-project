@@ -1,0 +1,16 @@
+# Test template pattern (@%) - comprehensive tests
+
+# Basic template pattern with defined variables
+# RUN: json-diff --define base=http://test.example.com --define version=v1 %S/patterns-template-expected.json %S/patterns-template-actual.json
+
+# Template pattern with missing definition
+# RUN: not json-diff %S/patterns-template-expected.json %S/patterns-template-actual.json 2>&1 | FileCheck --check-prefix=UNDEF %s
+# UNDEF: Error: template '{base}/api/{version}' references undefined variable: 'base'.
+
+# Invalid --define format (missing '=')
+# RUN: not json-diff --define noequals %S/patterns-template-expected.json %S/patterns-template-actual.json 2>&1 | FileCheck --check-prefix=BADFORMAT %s
+# BADFORMAT: Error: invalid --define format: 'noequals'. Expected name=value.
+
+# Invalid variable name in --define (starts with number)
+# RUN: not json-diff --define 123invalid=value %S/patterns-template-expected.json %S/patterns-template-actual.json 2>&1 | FileCheck --check-prefix=BADNAME %s
+# BADNAME: Error: invalid variable name in --define: '123invalid'.

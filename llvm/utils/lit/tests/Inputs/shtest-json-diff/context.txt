@@ -1,0 +1,73 @@
+# Test context flag with different values
+
+# Test with context=0 - should show minimal diff with no context lines
+# RUN: not json-diff -c 0 %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=CONTEXT0 %s
+
+# CONTEXT0: --- {{.*}}context-expected.json
+# CONTEXT0: +++ {{.*}}context-actual.json
+# CONTEXT0: @@ -4 +4 @@
+# CONTEXT0: -  "field2": "value2",
+# CONTEXT0: +  "field2": "DIFFERENT",
+# CONTEXT0: @@ -10 +10 @@
+# CONTEXT0: -  "field8": "value8",
+# CONTEXT0: +  "field8": "DIFFERENT",
+
+# Test with context=1 - should show 1 line before and after each change
+# RUN: not json-diff -c 1 %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=CONTEXT1 %s
+
+# CONTEXT1: --- {{.*}}context-expected.json
+# CONTEXT1: +++ {{.*}}context-actual.json
+# CONTEXT1: @@ -3,3 +3,3 @@
+# CONTEXT1:   "field10": "value10",
+# CONTEXT1: -  "field2": "value2",
+# CONTEXT1: +  "field2": "DIFFERENT",
+# CONTEXT1:   "field3": "value3",
+# CONTEXT1: @@ -9,3 +9,3 @@
+# CONTEXT1:   "field7": "value7",
+# CONTEXT1: -  "field8": "value8",
+# CONTEXT1: +  "field8": "DIFFERENT",
+# CONTEXT1:   "field9": "value9"
+
+# Test with context=5 - should show 5 lines before and after each change (merges into single hunk)
+# RUN: not json-diff -c 5 %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=CONTEXT5 %s
+
+# CONTEXT5: --- {{.*}}context-expected.json
+# CONTEXT5: +++ {{.*}}context-actual.json
+# CONTEXT5: @@ -1,12 +1,12 @@
+# CONTEXT5: {
+# CONTEXT5:   "field1": "value1",
+# CONTEXT5:   "field10": "value10",
+# CONTEXT5: -  "field2": "value2",
+# CONTEXT5: +  "field2": "DIFFERENT",
+# CONTEXT5:   "field3": "value3",
+# CONTEXT5:   "field4": "value4",
+# CONTEXT5:   "field5": "value5",
+# CONTEXT5:   "field6": "value6",
+# CONTEXT5:   "field7": "value7",
+# CONTEXT5: -  "field8": "value8",
+# CONTEXT5: +  "field8": "DIFFERENT",
+# CONTEXT5:   "field9": "value9"
+# CONTEXT5: }
+
+# Test with long-form --context flag
+# RUN: not json-diff --context=2 %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=LONGFORM %s
+
+# LONGFORM: --- {{.*}}context-expected.json
+# LONGFORM: +++ {{.*}}context-actual.json
+# LONGFORM: @@ -2,5 +2,5 @@
+# LONGFORM:   "field1": "value1",
+# LONGFORM:   "field10": "value10",
+# LONGFORM: -  "field2": "value2",
+# LONGFORM: +  "field2": "DIFFERENT",
+# LONGFORM:   "field3": "value3",
+# LONGFORM:   "field4": "value4",
+
+# Test with invalid context value (negative number)
+# RUN: not json-diff -c -1 %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=INVALID %s
+
+# INVALID: Error: invalid context value: '-1'.
+
+# Test with invalid context value (non-numeric)
+# RUN: not json-diff -c abc %S/context-expected.json %S/context-actual.json 2>&1 | FileCheck --check-prefix=INVALID2 %s
+
+# INVALID2: Error: invalid context value: 'abc'.

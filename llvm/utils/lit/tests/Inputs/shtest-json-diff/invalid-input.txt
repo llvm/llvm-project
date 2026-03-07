@@ -1,0 +1,17 @@
+# Test error handling for invalid input
+
+# Invalid JSON in first file should fail
+# RUN: not json-diff %S/invalid.json %S/dummy.json 2>&1 | FileCheck --check-prefix=INVALID %s
+# INVALID: Error: failed to read JSON from {{.*}}invalid.json
+
+# Invalid JSON in second file should fail
+# RUN: not json-diff %S/dummy.json %S/invalid.json 2>&1 | FileCheck --check-prefix=INVALID2 %s
+# INVALID2: Error: failed to read JSON from {{.*}}invalid.json
+
+# Missing argument should fail
+# RUN: not json-diff %S/dummy.json 2>&1 | FileCheck --check-prefix=ARGS %s
+# ARGS: Error: expected two positional arguments.
+
+# Invalid command-line flag should fail
+# RUN: not json-diff --invalid-flag %S/dummy.json %S/dummy.json 2>&1 | FileCheck --check-prefix=BADFLAG %s
+# BADFLAG: Error: failed to parse command-line arguments: option --invalid-flag not recognized.

@@ -1,0 +1,4 @@
+# Test combined patterns - multiple pattern types in one JSON file
+
+# Combined pattern test - @&, @!, @#, and @% together, including nested patterns
+# RUN: json-diff --define base=http://test %S/patterns-combined-expected.json %S/patterns-combined-actual.json

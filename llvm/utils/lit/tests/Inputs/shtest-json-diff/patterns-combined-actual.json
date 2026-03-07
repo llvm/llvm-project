@@ -1,0 +1,8 @@
+{
+  "request_id": "abc123",
+  "response_id": "abc123",
+  "status": "success",
+  "version": "2.5",
+  "base_url": "http://test",
+  "email": "admin.com"
+}

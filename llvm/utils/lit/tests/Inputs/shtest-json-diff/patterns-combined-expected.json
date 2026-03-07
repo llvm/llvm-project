@@ -1,0 +1,9 @@
+{
+  "request_id": "@&REQ_ID",
+  "response_id": "@&REQ_ID",
+  "timestamp": "@!",
+  "status": "success",
+  "version": "@#\\d+\\.\\d+",
+  "base_url": "@%{base}",
+  "email": "@@admin.com"
+}
