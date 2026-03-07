@@ -65,7 +65,7 @@
 
 // Currently, almost all of the shared libraries rely on the value of
 // $t9 to get the address of current function, instead of PCREL, even
-// on MIPSr6. To be compatiable with them, we have to set $t9 properly.
+// on MIPSr6. To be compatible with them, we have to set $t9 properly.
 // MIPS uses GOT to get the address of preemptible functions.
 #if defined(__mips64)
 #  define C_ASM_TAIL_CALL(t_func, i_func)                       \

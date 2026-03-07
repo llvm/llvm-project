@@ -1,6 +1,6 @@
 /*
   Name:     gmp_compat.c
-  Purpose:  Provide GMP compatiable routines for imath library
+  Purpose:  Provide GMP compatible routines for imath library
   Author:   David Peixotto
 
   Copyright (c) 2012 Qualcomm Innovation Center, Inc. All rights reserved.
