@@ -13,6 +13,8 @@
 // RUN: %check_clang_tidy -std=c++20-or-later -check-suffix=,ALIASES %s readability-redundant-casting %t -- \
 // RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}' \
 // RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
+// RUN: %check_clang_tidy -std=c++23-or-later -check-suffix=,CXX23 %s readability-redundant-casting %t -- \
+// RUN:   -- -fno-delayed-template-parsing
 
 struct A {};
 struct B : A {};
@@ -245,3 +247,20 @@ int g1() {
   return fp();
 }
 } // namespace gh170476
+
+
+#if __cplusplus >= 202302L
+
+struct S {
+  operator int(this const S&);
+};
+
+void testCastingWithExplicitObjectParameterConversionOperator() {
+  int i = int(S {});
+
+  int j = int(S {}.operator int());
+  // CHECK-MESSAGES-CXX23: :[[@LINE-1]]:11: warning: redundant explicit casting to the same type 'int' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES-CXX23: int j = S {}.operator int();
+}
+
+#endif // __cplusplus >= 202302L
