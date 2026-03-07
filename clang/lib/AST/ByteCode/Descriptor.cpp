@@ -8,6 +8,7 @@
 
 #include "Descriptor.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "IntegralAP.h"
@@ -483,3 +484,10 @@ bool Descriptor::hasTrivialDtor() const {
 }
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
+
+unsigned Descriptor::getElemDataSize() const {
+  if ((isPrimitive() || isPrimitiveArray()) && isIntegralType(getPrimType())) {
+    FIXED_SIZE_INT_TYPE_SWITCH(getPrimType(), { return T::bitWidth() / 8; });
+  }
+  return ElemSize;
+}

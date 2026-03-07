@@ -8,6 +8,7 @@
 
 #include "Pointer.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "Floating.h"
 #include "Function.h"
@@ -743,6 +744,15 @@ bool Pointer::pointsToStringLiteral() const {
 
   const Expr *E = block()->getDescriptor()->asExpr();
   return isa_and_nonnull<StringLiteral>(E);
+}
+
+bool Pointer::pointsToLabel() const {
+  if (isZero() || !isBlockPointer())
+    return false;
+
+  if (const Expr *E = BS.Pointee->getDescriptor()->asExpr())
+    return isa<AddrLabelExpr>(E);
+  return false;
 }
 
 std::optional<std::pair<Pointer, Pointer>>

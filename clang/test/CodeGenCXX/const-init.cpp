@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+
+
+
 // CHECK: @a = global i32 10
 int a = 10;
 // CHECK: @ar = constant ptr @a

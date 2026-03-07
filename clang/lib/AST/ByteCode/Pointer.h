@@ -366,7 +366,7 @@ public:
     if (isIntegralPointer()) {
       if (!Int.Desc)
         return 1;
-      return Int.Desc->getElemSize();
+      return Int.Desc->getElemDataSize();
     }
 
     if (BS.Base == RootPtrMark)
@@ -809,6 +809,8 @@ public:
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
   bool pointsToStringLiteral() const;
+  /// Whether this points to a block created for an AddrLabelExpr.
+  bool pointsToLabel() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
