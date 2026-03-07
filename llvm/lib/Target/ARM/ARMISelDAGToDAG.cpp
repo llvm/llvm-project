@@ -2915,7 +2915,7 @@ void ARMDAGToDAGISel::SelectCDE_CXxD(SDNode *N, uint16_t Opcode,
     Ops.push_back(PredReg);
   }
 
-  // Create the CDE intruction
+  // Create the CDE instruction
   SDNode *InstrNode = CurDAG->getMachineNode(Opcode, Loc, MVT::Untyped, Ops);
   SDValue ResultPair = SDValue(InstrNode, 0);
 

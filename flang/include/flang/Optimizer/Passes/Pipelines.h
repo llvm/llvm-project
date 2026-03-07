@@ -132,11 +132,11 @@ enum class EnableOpenMP { None, Simd, Full };
 /// Create a pass pipeline for lowering from HLFIR to FIR
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition
-/// \param optLevel - optimization level used for creating FIR optimization
-///   passes pipeline
-void createHLFIRToFIRPassPipeline(
-    mlir::PassManager &pm, EnableOpenMP enableOpenMP,
-    llvm::OptimizationLevel optLevel = defaultOptLevel);
+/// \param enableOpenMP - whether OpenMP lowering is enabled
+/// \param config - pipeline config (OptLevel, fpMaxminBehavior, etc.)
+void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
+                                  EnableOpenMP enableOpenMP,
+                                  const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
   /// Whether code is being generated for a target device rather than the host

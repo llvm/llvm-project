@@ -370,6 +370,9 @@ TEST(OperationCloneTest, CloneWithDifferentResults) {
   EXPECT_EQ(cloneOp->getResult(0).getType(), builder.getI32Type());
   EXPECT_EQ(cloneOp->getResult(1).getType(), builder.getI16Type());
   EXPECT_FALSE(map.contains(useOp->getResult(0)));
+
+  useOp->destroy();
+  cloneOp->destroy();
 }
 
 } // namespace

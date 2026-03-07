@@ -59,11 +59,7 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
 
     uint32_t best_symfile_abilities = 0;
 
-    SymbolFileCreateInstance create_callback;
-    for (uint32_t idx = 0;
-         (create_callback = PluginManager::GetSymbolFileCreateCallbackAtIndex(
-              idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback : PluginManager::GetSymbolFileCreateCallbacks()) {
       std::unique_ptr<SymbolFile> curr_symfile_up(create_callback(objfile_sp));
 
       if (curr_symfile_up) {

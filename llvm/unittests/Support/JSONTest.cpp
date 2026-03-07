@@ -12,6 +12,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <utility>
 
 namespace llvm {
 namespace json {
@@ -50,6 +51,18 @@ TEST(JSONTest, Constructors) {
   EXPECT_EQ("2.5", s(std::optional<double>(2.5)));
   EXPECT_EQ("[[2.5,null]]", s(std::vector<std::vector<std::optional<double>>>{
                                 {2.5, std::nullopt}}));
+}
+
+TEST(JSONTest, Move) {
+  std::string S = "Hello";
+  Value CopyS = S;
+  EXPECT_EQ(R"("Hello")", s(Value(std::move(CopyS))));
+  EXPECT_EQ("null", s(CopyS));
+
+  int N = 5;
+  Value CopyN = N;
+  EXPECT_EQ("5", s(Value(std::move(CopyN))));
+  EXPECT_EQ("null", s(CopyN));
 }
 
 TEST(JSONTest, StringOwnership) {

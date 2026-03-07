@@ -3,18 +3,29 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define i32 @fold_urem_positive_odd(i32 %x) {
-; CHECK-LABEL: fold_urem_positive_odd:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8969 // =0x2309
-; CHECK-NEXT:    movk w8, #22765, lsl #16
-; CHECK-NEXT:    umull x8, w0, w8
-; CHECK-NEXT:    lsr x8, x8, #32
-; CHECK-NEXT:    sub w9, w0, w8
-; CHECK-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-NEXT:    mov w9, #95 // =0x5f
-; CHECK-NEXT:    lsr w8, w8, #6
-; CHECK-NEXT:    msub w0, w8, w9, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fold_urem_positive_odd:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x8, #301989888 // =0x12000000
+; CHECK-SD-NEXT:    mov w9, w0
+; CHECK-SD-NEXT:    movk x8, #55878, lsl #32
+; CHECK-SD-NEXT:    movk x8, #689, lsl #48
+; CHECK-SD-NEXT:    umulh x8, x9, x8
+; CHECK-SD-NEXT:    mov w9, #95 // =0x5f
+; CHECK-SD-NEXT:    msub w0, w8, w9, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fold_urem_positive_odd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #8969 // =0x2309
+; CHECK-GI-NEXT:    movk w8, #22765, lsl #16
+; CHECK-GI-NEXT:    umull x8, w0, w8
+; CHECK-GI-NEXT:    lsr x8, x8, #32
+; CHECK-GI-NEXT:    sub w9, w0, w8
+; CHECK-GI-NEXT:    add w8, w8, w9, lsr #1
+; CHECK-GI-NEXT:    mov w9, #95 // =0x5f
+; CHECK-GI-NEXT:    lsr w8, w8, #6
+; CHECK-GI-NEXT:    msub w0, w8, w9, w0
+; CHECK-GI-NEXT:    ret
   %1 = urem i32 %x, 95
   ret i32 %1
 }
@@ -37,14 +48,12 @@ define i32 @fold_urem_positive_even(i32 %x) {
 define i32 @combine_urem_udiv(i32 %x) {
 ; CHECK-SD-LABEL: combine_urem_udiv:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #8969 // =0x2309
-; CHECK-SD-NEXT:    movk w8, #22765, lsl #16
-; CHECK-SD-NEXT:    umull x8, w0, w8
-; CHECK-SD-NEXT:    lsr x8, x8, #32
-; CHECK-SD-NEXT:    sub w9, w0, w8
-; CHECK-SD-NEXT:    add w8, w8, w9, lsr #1
+; CHECK-SD-NEXT:    mov x8, #301989888 // =0x12000000
+; CHECK-SD-NEXT:    mov w9, w0
+; CHECK-SD-NEXT:    movk x8, #55878, lsl #32
+; CHECK-SD-NEXT:    movk x8, #689, lsl #48
+; CHECK-SD-NEXT:    umulh x8, x9, x8
 ; CHECK-SD-NEXT:    mov w9, #95 // =0x5f
-; CHECK-SD-NEXT:    lsr w8, w8, #6
 ; CHECK-SD-NEXT:    msub w9, w8, w9, w0
 ; CHECK-SD-NEXT:    add w0, w9, w8
 ; CHECK-SD-NEXT:    ret

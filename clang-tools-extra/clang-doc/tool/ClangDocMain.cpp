@@ -224,15 +224,15 @@ static llvm::Error getMdFiles(const char *Argv0,
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
 static void
-sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+sortUsrToInfo(llvm::StringMap<doc::OwnedPtr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info.get());
+      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(getPtr(Info));
       Namespace->Children.sort();
     }
     if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+      auto *Record = static_cast<clang::doc::RecordInfo *>(getPtr(Info));
       Record->Children.sort();
     }
   }
@@ -339,7 +339,7 @@ Example usage for a project using a compile commands database:
     // Collects all Infos according to their unique USR value. This map is added
     // to from the thread pool below and is protected by the USRToInfoMutex.
     llvm::sys::Mutex USRToInfoMutex;
-    llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
+    llvm::StringMap<doc::OwnedPtr<doc::Info>> USRToInfo;
 
     // First reducing phase (reduce all decls into one info per decl).
     llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
@@ -361,7 +361,7 @@ Example usage for a project using a compile commands database:
           if (FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-          std::vector<std::unique_ptr<doc::Info>> Infos;
+          doc::OwningPtrVec<doc::Info> Infos;
           {
             llvm::TimeTraceScope Red("decoding bitcode");
             for (auto &Bitcode : Group.getValue()) {
@@ -381,7 +381,7 @@ Example usage for a project using a compile commands database:
             }
           } // time trace decoding bitcode
 
-          std::unique_ptr<doc::Info> Reduced;
+          doc::OwnedPtr<doc::Info> Reduced;
 
           {
             llvm::TimeTraceScope Merge("merging bitcode");
@@ -400,7 +400,7 @@ Example usage for a project using a compile commands database:
           {
             llvm::TimeTraceScope Merge("addInfoToIndex");
             std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
-            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get());
+            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, getPtr(Reduced));
           }
           // Save in the result map (needs a lock due to threaded access).
           {

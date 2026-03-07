@@ -52,27 +52,21 @@ public:
   }
 
 protected:
-  std::vector<SystemRuntimeCreateInstance> m_system_runtime_plugins;
+  llvm::SmallVector<SystemRuntimeCreateInstance> m_system_runtime_plugins;
 
   static void RemoveAllRegisteredSystemRuntimePlugins() {
     // Enable all currently registered plugins so we can get a handle to
     // their create callbacks in the loop below. Only enabled plugins
-    // are returned from the PluginManager Get*CreateCallbackAtIndex apis.
+    // are returned from the PluginManager GetSystemRuntimeCreateCallbacks()
+    // api.
     for (const RegisteredPluginInfo &PluginInfo :
          PluginManager::GetSystemRuntimePluginInfo()) {
       PluginManager::SetSystemRuntimePluginEnabled(PluginInfo.name, true);
     }
 
     // Get a handle to the create call backs for all the registered plugins.
-    std::vector<SystemRuntimeCreateInstance> registered_plugin_callbacks;
-    SystemRuntimeCreateInstance create_callback = nullptr;
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetSystemRuntimeCreateCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
-      registered_plugin_callbacks.push_back((create_callback));
-    }
+    llvm::SmallVector<SystemRuntimeCreateInstance> registered_plugin_callbacks =
+        PluginManager::GetSystemRuntimeCreateCallbacks();
 
     // Remove all currently registered plugins.
     for (SystemRuntimeCreateInstance create_callback :
@@ -86,16 +80,11 @@ protected:
 TEST_F(PluginManagerTest, RegisterSystemRuntimePlugin) {
   RegisterMockSystemRuntimePlugins();
 
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginB);
-
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
-            CreateSystemRuntimePluginC);
-
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(3), nullptr);
+  auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+  ASSERT_EQ(callbacks.size(), 3u);
+  ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+  ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginB);
+  ASSERT_EQ(callbacks[2], CreateSystemRuntimePluginC);
 }
 
 // Test basic un-register functionality.
@@ -104,20 +93,17 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePlugin) {
 
   ASSERT_TRUE(PluginManager::UnregisterPlugin(CreateSystemRuntimePluginB));
 
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginC);
-
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2), nullptr);
+  auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+  ASSERT_EQ(callbacks.size(), 2u);
+  ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+  ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginC);
 }
 
 // Test registered plugin info functionality.
 TEST_F(PluginManagerTest, SystemRuntimePluginInfo) {
   RegisterMockSystemRuntimePlugins();
 
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -136,7 +122,7 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginInfo) {
   RegisterMockSystemRuntimePlugins();
 
   // Initial plugin info has all three registered plugins.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
 
@@ -159,7 +145,7 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisable) {
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("b", false));
 
   // Disabling a plugin does not remove it from plugin info.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -170,11 +156,10 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisable) {
   ASSERT_EQ(plugin_info[2].enabled, true);
 
   // Disabling a plugin does remove it from available plugins.
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginC);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2), nullptr);
+  auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+  ASSERT_EQ(callbacks.size(), 2u);
+  ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+  ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginC);
 }
 
 // Test plugin disable and enable functionality.
@@ -182,28 +167,33 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisableThenEnable) {
   RegisterMockSystemRuntimePlugins();
 
   // Initially plugin b is available in slot 1.
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginB);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginB);
+  }
 
   // Disabling it will remove it from available plugins.
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("b", false));
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginC);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 2u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginC);
+  }
 
   // We can re-enable the plugin later and it should go back to the original
   // slot.
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("b", true));
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginB);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
-            CreateSystemRuntimePluginC);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 3u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginB);
+    ASSERT_EQ(callbacks[2], CreateSystemRuntimePluginC);
+  }
 
   // And show up in the plugin info correctly.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -248,12 +238,13 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisableAll) {
   RegisterMockSystemRuntimePlugins();
 
   // Validate initial state of registered plugins.
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginB);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
-            CreateSystemRuntimePluginC);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 3u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginB);
+    ASSERT_EQ(callbacks[2], CreateSystemRuntimePluginC);
+  }
 
   // Disable all the active plugins.
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("a", false));
@@ -261,12 +252,10 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisableAll) {
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("c", false));
 
   // Should have no active plugins.
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0), nullptr);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1), nullptr);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2), nullptr);
+  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbacks().size(), 0u);
 
   // And show up in the plugin info correctly.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -279,22 +268,28 @@ TEST_F(PluginManagerTest, SystemRuntimePluginDisableAll) {
   // Enable plugins in reverse order and validate expected indicies.
   // They should show up in the original plugin order.
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("c", true));
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginC);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 1u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginC);
+  }
 
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("a", true));
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginC);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 2u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginC);
+  }
 
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("b", true));
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginB);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
-            CreateSystemRuntimePluginC);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 3u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginB);
+    ASSERT_EQ(callbacks[2], CreateSystemRuntimePluginC);
+  }
 }
 
 // Test un-registering a disabled plugin works.
@@ -302,7 +297,7 @@ TEST_F(PluginManagerTest, UnRegisterDisabledSystemRuntimePlugin) {
   RegisterMockSystemRuntimePlugins();
 
   // Initial plugin info has all three registered plugins.
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
   ASSERT_EQ(plugin_info.size(), 3u);
 
@@ -324,14 +319,15 @@ TEST_F(PluginManagerTest, UnRegisterDisabledSystemRuntimePlugin) {
 TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginChangesOrder) {
   RegisterMockSystemRuntimePlugins();
 
-  std::vector<RegisteredPluginInfo> plugin_info =
+  llvm::SmallVector<RegisteredPluginInfo> plugin_info =
       PluginManager::GetSystemRuntimePluginInfo();
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginB);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
-            CreateSystemRuntimePluginC);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 3u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginB);
+    ASSERT_EQ(callbacks[2], CreateSystemRuntimePluginC);
+  }
 
   ASSERT_EQ(plugin_info.size(), 3u);
   ASSERT_EQ(plugin_info[0].name, "a");
@@ -346,12 +342,13 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginChangesOrder) {
 
   // Check the callback indices match as expected.
   plugin_info = PluginManager::GetSystemRuntimePluginInfo();
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginC);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
-            CreateSystemRuntimePluginB);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 3u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginC);
+    ASSERT_EQ(callbacks[2], CreateSystemRuntimePluginB);
+  }
 
   // And plugin info should match as well.
   ASSERT_EQ(plugin_info.size(), 3u);
@@ -365,19 +362,22 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginChangesOrder) {
   // un-registering and re-registering "b" it should now stay in
   // the middle of the order.
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("c", false));
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginB);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 2u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginB);
+  }
 
   // And re-enabling
   ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("c", true));
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(0),
-            CreateSystemRuntimePluginA);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(1),
-            CreateSystemRuntimePluginC);
-  ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
-            CreateSystemRuntimePluginB);
+  {
+    auto callbacks = PluginManager::GetSystemRuntimeCreateCallbacks();
+    ASSERT_EQ(callbacks.size(), 3u);
+    ASSERT_EQ(callbacks[0], CreateSystemRuntimePluginA);
+    ASSERT_EQ(callbacks[1], CreateSystemRuntimePluginC);
+    ASSERT_EQ(callbacks[2], CreateSystemRuntimePluginB);
+  }
 }
 
 TEST_F(PluginManagerTest, MatchPluginName) {

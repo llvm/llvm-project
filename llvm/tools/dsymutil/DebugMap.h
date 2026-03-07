@@ -51,8 +51,37 @@ class DebugMapObject;
 class DebugMapObjectFilter;
 
 class DebugMapFilter {
+  using ObjectContainer = std::vector<std::unique_ptr<DebugMapObjectFilter>>;
+
+public:
+  virtual ~DebugMapFilter() = default;
+  using const_iterator = ObjectContainer::const_iterator;
+
+  iterator_range<const_iterator> objects() const {
+    return make_range(begin(), end());
+  }
+
+  const_iterator begin() const { return Objects.begin(); }
+
+  const_iterator end() const { return Objects.end(); }
+
 protected:
   std::vector<std::unique_ptr<DebugMapObjectFilter>> Objects;
+
+private:
+  friend class DebugMap;
+
+  /// For YAML IO support.
+  ///@{
+  friend yaml::MappingTraits<std::unique_ptr<DebugMapFilter>>;
+  friend yaml::MappingTraits<DebugMapFilter>;
+
+  DebugMapFilter() = default;
+
+public:
+  DebugMapFilter(DebugMapFilter &&) = default;
+  DebugMapFilter &operator=(DebugMapFilter &&) = default;
+  ///@}
 };
 
 /// The DebugMap object stores the list of object files to query for debug
@@ -278,13 +307,17 @@ struct SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObject>>> {
           size_t index);
 };
 
+template <> struct MappingTraits<dsymutil::DebugMapObjectFilter> {
+  static void mapping(IO &io, dsymutil::DebugMapObjectFilter &DMO);
+};
+
 template <>
 struct SequenceTraits<
     std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>> {
   static size_t
   size(IO &io,
        std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq);
-  static dsymutil::DebugMapObject &
+  static dsymutil::DebugMapObjectFilter &
   element(IO &,
           std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
           size_t index);
@@ -296,6 +329,14 @@ template <> struct MappingTraits<dsymutil::DebugMap> {
 
 template <> struct MappingTraits<std::unique_ptr<dsymutil::DebugMap>> {
   static void mapping(IO &io, std::unique_ptr<dsymutil::DebugMap> &DM);
+};
+
+template <> struct MappingTraits<dsymutil::DebugMapFilter> {
+  static void mapping(IO &io, dsymutil::DebugMapFilter &DMF);
+};
+
+template <> struct MappingTraits<std::unique_ptr<dsymutil::DebugMapFilter>> {
+  static void mapping(IO &io, std::unique_ptr<dsymutil::DebugMapFilter> &DMF);
 };
 
 } // end namespace yaml

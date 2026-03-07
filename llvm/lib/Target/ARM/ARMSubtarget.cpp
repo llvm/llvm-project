@@ -200,7 +200,7 @@ void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
 }
 
 bool ARMSubtarget::isXRaySupported() const {
-  // We don't currently suppport Thumb, but Windows requires Thumb.
+  // We don't currently support Thumb, but Windows requires Thumb.
   return hasV6Ops() && hasARMOps() && !isTargetWindows();
 }
 

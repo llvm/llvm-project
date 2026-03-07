@@ -56,8 +56,8 @@ TypedefInfo *InfoAsTypedef(Info *I) {
 
 void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
                       const std::vector<CommentInfo> &Actual);
-void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
-                      const std::vector<std::unique_ptr<CommentInfo>> &Actual);
+void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
+                      const std::vector<OwnedPtr<CommentInfo>> &Actual);
 
 void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   EXPECT_EQ(Expected.Kind, Actual.Kind);
@@ -91,8 +91,8 @@ void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
     CheckCommentInfo(Expected[Idx], Actual[Idx]);
 }
 
-void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
-                      const std::vector<std::unique_ptr<CommentInfo>> &Actual) {
+void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
+                      const std::vector<OwnedPtr<CommentInfo>> &Actual) {
   ASSERT_EQ(Expected.size(), Actual.size());
   for (size_t Idx = 0; Idx < Actual.size(); ++Idx)
     CheckCommentInfo(*Expected[Idx], *Actual[Idx]);

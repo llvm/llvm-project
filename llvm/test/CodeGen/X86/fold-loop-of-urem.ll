@@ -798,20 +798,14 @@ define void @simple_urem_skip_const_rem_amt(i32 %N) nounwind {
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    addl $-4, %ebx
 ; CHECK-NEXT:    movl $4, %ebp
-; CHECK-NEXT:    movl $2938661835, %r14d # imm = 0xAF286BCB
+; CHECK-NEXT:    movabsq $970881267157434368, %r14 # imm = 0xD79435E58000000
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    imulq %r14, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movl %ebp, %ecx
-; CHECK-NEXT:    subl %eax, %ecx
-; CHECK-NEXT:    shrl %ecx
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    shrl $4, %ecx
-; CHECK-NEXT:    leal (%rcx,%rcx,8), %eax
-; CHECK-NEXT:    leal (%rcx,%rax,2), %eax
+; CHECK-NEXT:    mulq %r14
+; CHECK-NEXT:    leal (%rdx,%rdx,8), %eax
+; CHECK-NEXT:    leal (%rdx,%rax,2), %eax
 ; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    subl %eax, %edi
 ; CHECK-NEXT:    callq use.i32@PLT

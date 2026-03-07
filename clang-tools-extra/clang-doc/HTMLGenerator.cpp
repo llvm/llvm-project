@@ -25,11 +25,11 @@ using namespace llvm::mustache;
 namespace clang {
 namespace doc {
 
-static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
+static OwnedPtr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
-static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
+static OwnedPtr<MustacheTemplateFile> RecordTemplate = nullptr;
 
-static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
+static OwnedPtr<MustacheTemplateFile> IndexTemplate = nullptr;
 
 class HTMLGenerator : public MustacheGenerator {
 public:
@@ -45,7 +45,7 @@ public:
   Error setupTemplateResources(const ClangDocContext &CDCtx, json::Value &V,
                                SmallString<128> RelativeRootPath);
   llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const ClangDocContext &CDCtx, std::string DirName) override;
 };
 
@@ -183,7 +183,7 @@ Error HTMLGenerator::createResources(ClangDocContext &CDCtx) {
 }
 
 Error HTMLGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "html");

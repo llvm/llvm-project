@@ -36,12 +36,8 @@ static ObjectFileSP
 CreateObjectFromContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
                           lldb::offset_t file_offset, lldb::offset_t file_size,
                           DataBufferSP data_sp, lldb::offset_t &data_offset) {
-  ObjectContainerCreateInstance callback;
-  for (uint32_t idx = 0;
-       (callback = PluginManager::GetObjectContainerCreateCallbackAtIndex(
-            idx)) != nullptr;
-       ++idx) {
-    std::unique_ptr<ObjectContainer> object_container_up(callback(
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    std::unique_ptr<ObjectContainer> object_container_up(cbs.create_callback(
         module_sp, data_sp, data_offset, file, file_offset, file_size));
     if (object_container_up)
       return object_container_up->GetObjectFile(file);
@@ -132,13 +128,9 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   if (extractor_sp && extractor_sp->HasData()) {
     // Check if this is a normal object file by iterating through all
     // object file plugin instances.
-    ObjectFileCreateInstance callback;
-    for (uint32_t idx = 0;
-         (callback = PluginManager::GetObjectFileCreateCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
-      ObjectFileSP object_file_sp(callback(module_sp, extractor_sp, data_offset,
-                                           file, file_offset, file_size));
+    for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+      ObjectFileSP object_file_sp(cbs.create_callback(
+          module_sp, extractor_sp, data_offset, file, file_offset, file_size));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -170,18 +162,14 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
                        "0x%" PRIx64 ")",
                        module_sp->GetFileSpec().GetPath().c_str(),
                        static_cast<void *>(process_sp.get()), header_addr);
-    uint32_t idx;
 
     // Check if this is a normal object file by iterating through all object
     // file plugin instances.
-    ObjectFileCreateMemoryInstance create_callback;
-    for (idx = 0;
-         (create_callback =
-              PluginManager::GetObjectFileCreateMemoryCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
-      object_file_sp.reset(
-          create_callback(module_sp, data_sp, process_sp, header_addr));
+    for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+      if (!cbs.create_memory_callback)
+        continue;
+      object_file_sp.reset(cbs.create_memory_callback(module_sp, data_sp,
+                                                      process_sp, header_addr));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -236,27 +224,17 @@ size_t ObjectFile::GetModuleSpecifications(
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
-  ObjectFileGetModuleSpecifications callback;
-  uint32_t i;
   // Try the ObjectFile plug-ins
-  for (i = 0;
-       (callback =
-            PluginManager::GetObjectFileGetModuleSpecificationsCallbackAtIndex(
-                i)) != nullptr;
-       ++i) {
-    if (callback(file, extractor_sp, data_offset, file_offset, file_size,
-                 specs) > 0)
+  for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
+                                      file_offset, file_size, specs) > 0)
       return specs.GetSize() - initial_count;
   }
 
   // Try the ObjectContainer plug-ins
-  for (i = 0;
-       (callback = PluginManager::
-            GetObjectContainerGetModuleSpecificationsCallbackAtIndex(i)) !=
-       nullptr;
-       ++i) {
-    if (callback(file, extractor_sp, data_offset, file_offset, file_size,
-                 specs) > 0)
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
+                                      file_offset, file_size, specs) > 0)
       return specs.GetSize() - initial_count;
   }
   return 0;

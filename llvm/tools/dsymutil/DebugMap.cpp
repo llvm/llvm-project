@@ -230,17 +230,33 @@ SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
   return seq.size();
 }
 
-dsymutil::DebugMapObject &
+dsymutil::DebugMapObjectFilter &
 SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
     element(IO &io,
             std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
             size_t index) {
-  auto &Objects = reinterpret_cast<
-      std::vector<std::unique_ptr<dsymutil::DebugMapObject>> &>(seq);
-  return SequenceTraits<
-      std::vector<std::unique_ptr<dsymutil::DebugMapObject>>>::element(io,
-                                                                       Objects,
-                                                                       index);
+  if (index >= seq.size()) {
+    seq.resize(index + 1);
+    seq[index].reset(new dsymutil::DebugMapObjectFilter);
+  }
+  return *seq[index];
+}
+
+void MappingTraits<dsymutil::DebugMapObjectFilter>::mapping(
+    IO &io, dsymutil::DebugMapObjectFilter &DMOF) {
+  io.mapRequired("filename", DMOF.Filename);
+}
+
+void MappingTraits<dsymutil::DebugMapFilter>::mapping(
+    IO &io, dsymutil::DebugMapFilter &DMF) {
+  io.mapRequired("objects", DMF.Objects);
+}
+
+void MappingTraits<std::unique_ptr<dsymutil::DebugMapFilter>>::mapping(
+    IO &io, std::unique_ptr<dsymutil::DebugMapFilter> &DMF) {
+  if (!DMF)
+    DMF.reset(new DebugMapFilter());
+  io.mapRequired("objects", DMF->Objects);
 }
 
 void MappingTraits<dsymutil::DebugMap>::mapping(IO &io,
@@ -249,7 +265,7 @@ void MappingTraits<dsymutil::DebugMap>::mapping(IO &io,
   io.mapOptional("binary-path", DM.BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = DM.BinaryTriple;
-  io.mapOptional("objects", DM.Objects);
+  io.mapOptional("objects", DM.getObjects());
 }
 
 void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
@@ -260,7 +276,7 @@ void MappingTraits<std::unique_ptr<dsymutil::DebugMap>>::mapping(
   io.mapOptional("binary-path", DM->BinaryPath);
   if (void *Ctxt = io.getContext())
     reinterpret_cast<YAMLContext *>(Ctxt)->BinaryTriple = DM->BinaryTriple;
-  io.mapOptional("objects", DM->Objects);
+  io.mapOptional("objects", DM->getObjects());
 }
 
 MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(

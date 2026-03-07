@@ -1490,7 +1490,7 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
   }];
   let arguments = (ins XeGPU_MemorySpaceAttr: $memory_kind,
                        XeGPU_FenceScopeAttr: $fence_scope);
-  let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` `` $fence_scope attr-dict}];
+  let assemblyFormat = [{`memory_kind` `=` $memory_kind `,` `fence_scope` `=` $fence_scope attr-dict}];
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 

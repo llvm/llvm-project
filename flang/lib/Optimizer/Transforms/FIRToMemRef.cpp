@@ -172,6 +172,9 @@ private:
   bool memrefIsDeviceData(Operation *memref) const;
 
   mlir::Attribute findCudaDataAttr(Value val) const;
+
+  Value materializeBoxAddressIfNeeded(Value basePtr, PatternRewriter &rewriter,
+                                      Location loc) const;
 };
 
 void FIRToMemRef::populateShapeAndShift(SmallVectorImpl<Value> &shapeVec,
@@ -249,6 +252,18 @@ mlir::Attribute FIRToMemRef::findCudaDataAttr(Value val) const {
     }
   }
   return nullptr;
+}
+
+Value FIRToMemRef::materializeBoxAddressIfNeeded(Value basePtr,
+                                                 PatternRewriter &rewriter,
+                                                 Location loc) const {
+  if (!isa<fir::BoxType>(basePtr.getType()))
+    return basePtr;
+
+  auto boxAddrOp = fir::BoxAddrOp::create(rewriter, loc, basePtr);
+  if (auto cudaAttr = findCudaDataAttr(basePtr))
+    boxAddrOp->setAttr(cuf::getDataAttrName(), cudaAttr);
+  return boxAddrOp.getResult();
 }
 
 void FIRToMemRef::populateShift(SmallVectorImpl<Value> &vec,
@@ -468,9 +483,10 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   FailureOr<Value> converted;
   if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
     rewriter.setInsertionPoint(arrayCoorOp);
-    Type memrefTy = typeConverter.convertMemrefType(blockArg.getType());
+    Value basePtr = materializeBoxAddressIfNeeded(blockArg, rewriter, loc);
+    Type memrefTy = typeConverter.convertMemrefType(basePtr.getType());
     converted =
-        fir::ConvertOp::create(rewriter, loc, memrefTy, blockArg).getResult();
+        fir::ConvertOp::create(rewriter, loc, memrefTy, basePtr).getResult();
     rewriter.setInsertionPointAfter(arrayCoorOp);
   } else if ((memref = firMemref.getDefiningOp()) &&
              enableFIRConvertOptimizations && isMarshalLike(memref) &&
@@ -639,12 +655,7 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
 
   if (isa<fir::BoxType>(basePtr.getType())) {
     Operation *baseOp = basePtr.getDefiningOp();
-    auto boxAddrOp = fir::BoxAddrOp::create(rewriter, loc, basePtr);
-
-    if (auto cudaAttr = findCudaDataAttr(basePtr))
-      boxAddrOp->setAttr(cuf::getDataAttrName(), cudaAttr);
-
-    basePtr = boxAddrOp;
+    basePtr = materializeBoxAddressIfNeeded(basePtr, rewriter, loc);
     memrefTy = typeConverter.convertMemrefType(basePtr.getType());
 
     if (baseOp) {

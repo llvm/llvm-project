@@ -137,17 +137,16 @@ void Value::moveFrom(const Value &&M) {
     break;
   case T_String:
     create<std::string>(std::move(M.as<std::string>()));
-    M.Type = T_Null;
     break;
   case T_Object:
     create<json::Object>(std::move(M.as<json::Object>()));
-    M.Type = T_Null;
     break;
   case T_Array:
     create<json::Array>(std::move(M.as<json::Array>()));
-    M.Type = T_Null;
     break;
   }
+  const_cast<Value &>(M).destroy();
+  M.Type = T_Null;
 }
 
 void Value::destroy() {

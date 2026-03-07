@@ -58,6 +58,21 @@ constexpr float dot2add_impl(half2 a, half2 b, float c) {
 #endif
 }
 
+template <typename T, int N>
+constexpr enable_if_t<!is_same<double, T>::value, T>
+mul_vec_impl(vector<T, N> x, vector<T, N> y) {
+  return dot(x, y);
+}
+
+// Double vectors do not have a dot intrinsic, so expand manually.
+template <typename T, int N>
+enable_if_t<is_same<double, T>::value, T> mul_vec_impl(vector<T, N> x,
+                                                       vector<T, N> y) {
+  T sum = x[0] * y[0];
+  [unroll] for (int i = 1; i < N; ++i) sum = mad(x[i], y[i], sum);
+  return sum;
+}
+
 template <typename T> constexpr T reflect_impl(T I, T N) {
   return I - 2 * N * I * N;
 }

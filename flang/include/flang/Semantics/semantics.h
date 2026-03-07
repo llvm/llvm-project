@@ -68,7 +68,8 @@ class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
       const common::LanguageFeatureControl &, const common::LangOptions &,
-      parser::AllCookedSources &);
+      parser::AllCookedSources &,
+      common::FPMaxminBehavior = common::FPMaxminBehavior::Legacy);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {

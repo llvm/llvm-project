@@ -576,7 +576,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       else
         Mapping.Offset = (kSmallX86_64ShadowOffsetBase &
                           (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
-    } else if (IsWindows && IsX86_64) {
+    } else if (IsWindows && (IsX86_64 || IsAArch64)) {
       Mapping.Offset = kWindowsShadowOffset64;
     } else if (IsMIPS64)
       Mapping.Offset = kMIPS64_ShadowOffset64;

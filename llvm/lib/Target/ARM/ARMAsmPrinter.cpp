@@ -420,7 +420,7 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       // 'Q' should correspond to the low order register and 'R' to the high
       // order register.  Whether this corresponds to the upper or lower half
-      // depends on the endianess mode.
+      // depends on the endianness mode.
       if (ExtraCode[0] == 'Q')
         FirstHalf = ATM.isLittleEndian();
       else

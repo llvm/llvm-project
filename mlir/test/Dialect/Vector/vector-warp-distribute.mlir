@@ -741,15 +741,15 @@ func.func @warp_scf_for_swapped_for_results(%arg0: index) {
 //       CHECK-PROP:     gpu.yield %{{.*}} : vector<32xf32>
 //       CHECK-PROP:   }
 //       CHECK-PROP:   %[[a:.*]] = vector.extract %[[warp_op]][0] : f32 from vector<1xf32>
-//       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle  xor %[[a]], %[[c1]], %[[c32]]
+//       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle xor %[[a]], %[[c1]], %[[c32]]
 //       CHECK-PROP:   %[[a0:.*]] = arith.addf %[[a]], %[[r0]]
-//       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle  xor %[[a0]], %[[c2]], %[[c32]]
+//       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle xor %[[a0]], %[[c2]], %[[c32]]
 //       CHECK-PROP:   %[[a1:.*]] = arith.addf %[[a0]], %[[r1]]
-//       CHECK-PROP:   %[[r2:.*]], %{{.*}} = gpu.shuffle  xor %[[a1]], %[[c4]], %[[c32]]
+//       CHECK-PROP:   %[[r2:.*]], %{{.*}} = gpu.shuffle xor %[[a1]], %[[c4]], %[[c32]]
 //       CHECK-PROP:   %[[a2:.*]] = arith.addf %[[a1]], %[[r2]]
-//       CHECK-PROP:   %[[r3:.*]], %{{.*}} = gpu.shuffle  xor %[[a2]], %[[c8]], %[[c32]]
+//       CHECK-PROP:   %[[r3:.*]], %{{.*}} = gpu.shuffle xor %[[a2]], %[[c8]], %[[c32]]
 //       CHECK-PROP:   %[[a3:.*]] = arith.addf %[[a2]], %[[r3]]
-//       CHECK-PROP:   %[[r4:.*]], %{{.*}} = gpu.shuffle  xor %[[a3]], %[[c16]], %[[c32]]
+//       CHECK-PROP:   %[[r4:.*]], %{{.*}} = gpu.shuffle xor %[[a3]], %[[c16]], %[[c32]]
 //       CHECK-PROP:   %[[a4:.*]] = arith.addf %[[a3]], %[[r4]]
 //       CHECK-PROP:   return %[[a4]] : f32
 func.func @vector_reduction(%laneid: index) -> (f32) {
@@ -829,15 +829,15 @@ func.func @vector_reduction(%laneid: index, %m0: memref<4x2x32xf32>, %m1: memref
 //       CHECK-PROP:     gpu.yield %{{.*}} : vector<64xf32>
 //       CHECK-PROP:   }
 //       CHECK-PROP:   %[[a:.*]] = vector.reduction <add>, %[[warp_op]] : vector<2xf32> into f32
-//       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle  xor %[[a]], %[[c1]], %[[c32]]
+//       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle xor %[[a]], %[[c1]], %[[c32]]
 //       CHECK-PROP:   %[[a0:.*]] = arith.addf %[[a]], %[[r0]]
-//       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle  xor %[[a0]], %[[c2]], %[[c32]]
+//       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle xor %[[a0]], %[[c2]], %[[c32]]
 //       CHECK-PROP:   %[[a1:.*]] = arith.addf %[[a0]], %[[r1]]
-//       CHECK-PROP:   %[[r2:.*]], %{{.*}} = gpu.shuffle  xor %[[a1]], %[[c4]], %[[c32]]
+//       CHECK-PROP:   %[[r2:.*]], %{{.*}} = gpu.shuffle xor %[[a1]], %[[c4]], %[[c32]]
 //       CHECK-PROP:   %[[a2:.*]] = arith.addf %[[a1]], %[[r2]]
-//       CHECK-PROP:   %[[r3:.*]], %{{.*}} = gpu.shuffle  xor %[[a2]], %[[c8]], %[[c32]]
+//       CHECK-PROP:   %[[r3:.*]], %{{.*}} = gpu.shuffle xor %[[a2]], %[[c8]], %[[c32]]
 //       CHECK-PROP:   %[[a3:.*]] = arith.addf %[[a2]], %[[r3]]
-//       CHECK-PROP:   %[[r4:.*]], %{{.*}} = gpu.shuffle  xor %[[a3]], %[[c16]], %[[c32]]
+//       CHECK-PROP:   %[[r4:.*]], %{{.*}} = gpu.shuffle xor %[[a3]], %[[c16]], %[[c32]]
 //       CHECK-PROP:   %[[a4:.*]] = arith.addf %[[a3]], %[[r4]]
 //       CHECK-PROP:   return %[[a4]] : f32
 func.func @vector_reduction_large(%laneid: index) -> (f32) {
@@ -863,15 +863,15 @@ func.func @vector_reduction_large(%laneid: index) -> (f32) {
 //       CHECK-PROP:     gpu.yield %{{.*}}, %{{.*}} : vector<64xf32>, f32
 //       CHECK-PROP:   }
 //       CHECK-PROP:   %[[a:.*]] = vector.reduction <add>, %[[warp_op]]#0 : vector<2xf32> into f32
-//       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle  xor %[[a]], %[[c1]], %[[c32]]
+//       CHECK-PROP:   %[[r0:.*]], %{{.*}} = gpu.shuffle xor %[[a]], %[[c1]], %[[c32]]
 //       CHECK-PROP:   %[[a0:.*]] = arith.addf %[[a]], %[[r0]]
-//       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle  xor %[[a0]], %[[c2]], %[[c32]]
+//       CHECK-PROP:   %[[r1:.*]], %{{.*}} = gpu.shuffle xor %[[a0]], %[[c2]], %[[c32]]
 //       CHECK-PROP:   %[[a1:.*]] = arith.addf %[[a0]], %[[r1]]
-//       CHECK-PROP:   %[[r2:.*]], %{{.*}} = gpu.shuffle  xor %[[a1]], %[[c4]], %[[c32]]
+//       CHECK-PROP:   %[[r2:.*]], %{{.*}} = gpu.shuffle xor %[[a1]], %[[c4]], %[[c32]]
 //       CHECK-PROP:   %[[a2:.*]] = arith.addf %[[a1]], %[[r2]]
-//       CHECK-PROP:   %[[r3:.*]], %{{.*}} = gpu.shuffle  xor %[[a2]], %[[c8]], %[[c32]]
+//       CHECK-PROP:   %[[r3:.*]], %{{.*}} = gpu.shuffle xor %[[a2]], %[[c8]], %[[c32]]
 //       CHECK-PROP:   %[[a3:.*]] = arith.addf %[[a2]], %[[r3]]
-//       CHECK-PROP:   %[[r4:.*]], %{{.*}} = gpu.shuffle  xor %[[a3]], %[[c16]], %[[c32]]
+//       CHECK-PROP:   %[[r4:.*]], %{{.*}} = gpu.shuffle xor %[[a3]], %[[c16]], %[[c32]]
 //       CHECK-PROP:   %[[a4:.*]] = arith.addf %[[a3]], %[[r4]]
 //       CHECK-PROP:   %[[a5:.*]] = arith.addf %[[a4]], %[[warp_op]]#1
 //       CHECK-PROP:   return %[[a5]] : f32
@@ -926,7 +926,7 @@ func.func @warp_constant(%laneid: index) -> (vector<1xf32>) {
 //       CHECK-PROP:     gpu.yield %[[V]] : vector<64xf32>
 //       CHECK-PROP:   }
 //       CHECK-PROP:   %[[E:.*]] = vector.extract %[[R]][1] : f32 from vector<2xf32>
-//       CHECK-PROP:   %[[SHUFFLED:.*]], %{{.*}} = gpu.shuffle  idx %[[E]], %[[C5_I32]]
+//       CHECK-PROP:   %[[SHUFFLED:.*]], %{{.*}} = gpu.shuffle idx %[[E]], %[[C5_I32]]
 //       CHECK-PROP:   return %[[SHUFFLED]] : f32
 func.func @vector_extract_1d(%laneid: index) -> (f32) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
@@ -1061,7 +1061,7 @@ func.func @vector_extract_1element(%laneid: index) -> (f32) {
 //       CHECK-PROP:   %[[DISTR_POS:.*]] = affine.apply #[[$map1]]()[%[[POS]]]
 //       CHECK-PROP:   %[[EXTRACTED:.*]] = vector.extract %[[W]][%[[DISTR_POS]]] : f32 from vector<3xf32>
 //       CHECK-PROP:   %[[FROM_LANE_I32:.*]] = arith.index_cast %[[FROM_LANE]] : index to i32
-//       CHECK-PROP:   %[[SHUFFLED:.*]], %{{.*}} = gpu.shuffle  idx %[[EXTRACTED]], %[[FROM_LANE_I32]], %[[C32]] : f32
+//       CHECK-PROP:   %[[SHUFFLED:.*]], %{{.*}} = gpu.shuffle idx %[[EXTRACTED]], %[[FROM_LANE_I32]], %[[C32]] : f32
 //       CHECK-PROP:   return %[[SHUFFLED]]
 func.func @vector_extract_1d(%laneid: index, %pos: index) -> (f32) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (f32) {

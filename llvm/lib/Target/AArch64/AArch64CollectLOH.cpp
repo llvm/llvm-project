@@ -80,7 +80,7 @@
 //  - .loh AdrpAdrp L2, L1:
 //    L2: ADRP xA, sym1@PAGE
 //    L1: ADRP xA, sym2@PAGE
-//    L2 dominates L1 and xA is not redifined between L2 and L1
+//    L2 dominates L1 and xA is not redefined between L2 and L1
 // This LOH aims at getting rid of redundant ADRP instructions.
 //
 // The overall design for emitting the LOHs is:

@@ -59,33 +59,6 @@ using namespace llvm::dsymutil;
 using namespace object;
 using namespace llvm::dwarf_linker;
 
-/// YAML structure for --allow / --disallow object list files.
-struct ObjectFileEntry {
-  std::string Filename;
-};
-
-struct ObjectFileList {
-  std::vector<ObjectFileEntry> Objects;
-};
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(ObjectFileEntry)
-
-namespace llvm {
-namespace yaml {
-template <> struct MappingTraits<ObjectFileEntry> {
-  static void mapping(IO &IO, ObjectFileEntry &Entry) {
-    IO.mapRequired("filename", Entry.Filename);
-  }
-};
-
-template <> struct MappingTraits<ObjectFileList> {
-  static void mapping(IO &IO, ObjectFileList &List) {
-    IO.mapOptional("objects", List.Objects);
-  }
-};
-} // namespace yaml
-} // namespace llvm
-
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
@@ -754,15 +727,15 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       StringRef Content = (*BufOrErr)->getBuffer();
       if (!Content.trim().empty()) {
         yaml::Input YAMLIn(Content);
-        ObjectFileList ObjList;
-        YAMLIn >> ObjList;
+        std::unique_ptr<DebugMapFilter> DebugMapFilter;
+        YAMLIn >> DebugMapFilter;
         if (YAMLIn.error())
           return make_error<StringError>(
               Twine("cannot parse allow/disallow file '") + FilePath + "'",
               YAMLIn.error());
-        for (const auto &Entry : ObjList.Objects) {
+        for (const auto &Entry : *DebugMapFilter) {
           SmallString<80> Path(Options.LinkOpts.PrependPath);
-          sys::path::append(Path, Entry.Filename);
+          sys::path::append(Path, Entry->getObjectFilename());
           Result.insert(Path);
         }
       }

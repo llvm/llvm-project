@@ -47,11 +47,8 @@ DynamicLoader *DynamicLoader::FindPlugin(Process *process,
         return instance_up.release();
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetDynamicLoaderCreateCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
+    for (auto create_callback :
+         PluginManager::GetDynamicLoaderCreateCallbacks()) {
       std::unique_ptr<DynamicLoader> instance_up(
           create_callback(process, false));
       if (instance_up)

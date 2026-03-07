@@ -415,11 +415,12 @@ def warn_arm_interrupt_save_fp_without_vfp_unit : Warning<
    InGroup<DiagGroup<"arm-interrupt-save-fp-no-vfp-unit">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
-def warn_interrupt_signal_attribute_invalid : Warning<
-  "%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
-  "attribute only applies to functions that have "
-  "%select{no parameters|a 'void' return type}2">,
-  InGroup<IgnoredAttributes>;
+def warn_interrupt_signal_attribute_invalid
+    : Warning<"%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
+              "attribute only applies to functions that have "
+              "%select{no parameters|a 'void' return type}2">,
+      InGroup<IgnoredAttributes>,
+      LegacyStableIds<["warn_interrupt_attribute_invalid"]>;
 def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
 def note_riscv_repeated_interrupt_attribute : Note<

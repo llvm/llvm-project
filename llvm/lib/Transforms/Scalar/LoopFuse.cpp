@@ -252,8 +252,7 @@ struct FusionCandidate {
   BasicBlock *getEntryBlock() const {
     if (GuardBranch)
       return GuardBranch->getParent();
-    else
-      return Preheader;
+    return Preheader;
   }
 
   /// After Peeling the loop is modified quite a bit, hence all of the Blocks
@@ -1377,8 +1376,7 @@ private:
     if (FC0.GuardBranch)
       return DT.dominates(FC0.getEntryBlock(), FC1.getEntryBlock()) &&
              FC0.ExitBlock->getSingleSuccessor() == FC1.getEntryBlock();
-    else
-      return FC0.ExitBlock == FC1.getEntryBlock();
+    return FC0.ExitBlock == FC1.getEntryBlock();
   }
 
   bool isEmptyPreheader(const FusionCandidate &FC) const {
