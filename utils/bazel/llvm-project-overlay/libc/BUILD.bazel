@@ -5,9 +5,11 @@
 # LLVM libc project.
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
+    "libc_copy_header",
     "libc_function",
     "libc_generated_header",
     "libc_header_library",
@@ -98,6 +100,534 @@ libc_generated_header(
     hdr = "staging/include/stdbit.h",
     other_srcs = ["include/stdbit.h.def"],
     yaml_template = "include/stdbit.yaml",
+)
+
+libc_generated_header(
+    name = "include_stdio_h",
+    hdr = "staging/include/stdio.h",
+    other_srcs = ["include/stdio.h.def"],
+    yaml_template = "include/stdio.yaml",
+)
+
+libc_generated_header(
+    name = "include_string_h",
+    hdr = "staging/include/string.h",
+    yaml_template = "include/string.yaml",
+)
+
+libc_generated_header(
+    name = "include_stdlib_h",
+    hdr = "staging/include/stdlib.h",
+    other_srcs = [
+        "include/stdlib.h.def",
+        "include/stdlib-malloc.yaml",
+    ],
+    yaml_template = "include/stdlib.yaml",
+)
+
+libc_generated_header(
+    name = "include_malloc_h",
+    hdr = "staging/include/malloc.h",
+    other_srcs = ["include/stdlib-malloc.yaml"],
+    yaml_template = "include/malloc.yaml",
+)
+
+libc_generated_header(
+    name = "include_signal_h",
+    hdr = "staging/include/signal.h",
+    other_srcs = ["include/signal.h.def"],
+    yaml_template = "include/signal.yaml",
+)
+
+libc_generated_header(
+    name = "include_stdint_h",
+    hdr = "staging/include/stdint.h",
+    other_srcs = ["include/stdint.h.def"],
+    yaml_template = "include/stdint.yaml",
+)
+
+libc_generated_header(
+    name = "include_limits_h",
+    hdr = "staging/include/limits.h",
+    other_srcs = ["include/limits.h.def"],
+    yaml_template = "include/limits.yaml",
+)
+
+libc_generated_header(
+    name = "include_float_h",
+    hdr = "staging/include/float.h",
+    other_srcs = ["include/float.h.def"],
+    yaml_template = "include/float.yaml",
+)
+
+libc_generated_header(
+    name = "include_ctype_h",
+    hdr = "staging/include/ctype.h",
+    other_srcs = [],
+    yaml_template = "include/ctype.yaml",
+)
+
+libc_generated_header(
+    name = "include_fenv_h",
+    hdr = "staging/include/fenv.h",
+    other_srcs = [],
+    yaml_template = "include/fenv.yaml",
+)
+
+libc_generated_header(
+    name = "include_inttypes_h",
+    hdr = "staging/include/inttypes.h",
+    other_srcs = ["include/inttypes.h.def"],
+    yaml_template = "include/inttypes.yaml",
+)
+
+genrule(
+    name = "hdr_elf_proxy_h",
+    srcs = ["include/elf.yaml"],
+    outs = ["hdr/elf_proxy.h"],
+    cmd = "$(location //libc:hdrgen) $(location include/elf.yaml) -o $@ --proxy",
+    tools = ["//libc:hdrgen"],
+)
+
+libc_generated_header(
+    name = "include_assert_h",
+    hdr = "staging/include/assert.h",
+    other_srcs = ["include/assert.h.def"],
+    yaml_template = "include/assert.yaml",
+)
+
+libc_generated_header(
+    name = "include_math_h",
+    hdr = "staging/include/math.h",
+    other_srcs = ["include/math.h.def"],
+    yaml_template = "include/math.yaml",
+)
+
+libc_generated_header(
+    name = "include_fcntl_h",
+    hdr = "staging/include/fcntl.h",
+    other_srcs = ["include/fcntl.h.def"],
+    yaml_template = "include/fcntl.yaml",
+)
+
+libc_generated_header(
+    name = "include_unistd_h",
+    hdr = "staging/include/unistd.h",
+    other_srcs = ["include/unistd.h.def"],
+    yaml_template = "include/unistd.yaml",
+)
+
+libc_generated_header(
+    name = "include_time_h",
+    hdr = "staging/include/time.h",
+    other_srcs = ["include/time.h.def"],
+    yaml_template = "include/time.yaml",
+)
+
+libc_generated_header(
+    name = "include_errno_h",
+    hdr = "staging/include/errno.h",
+    other_srcs = ["include/errno.h.def"],
+    yaml_template = "include/errno.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_wait_h",
+    hdr = "staging/include/sys/wait.h",
+    other_srcs = ["include/sys/wait.h.def"],
+    yaml_template = "include/sys/wait.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_mman_h",
+    hdr = "staging/include/sys/mman.h",
+    other_srcs = ["include/sys/mman.h.def"],
+    yaml_template = "include/sys/mman.yaml",
+)
+
+libc_generated_header(
+    name = "include_poll_h",
+    hdr = "staging/include/poll.h",
+    other_srcs = ["include/poll.h.def"],
+    yaml_template = "include/poll.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_resource_h",
+    hdr = "staging/include/sys/resource.h",
+    other_srcs = ["include/sys/resource.h.def"],
+    yaml_template = "include/sys/resource.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_socket_h",
+    hdr = "staging/include/sys/socket.h",
+    other_srcs = ["include/sys/socket.h.def"],
+    yaml_template = "include/sys/socket.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_stat_h",
+    hdr = "staging/include/sys/stat.h",
+    other_srcs = ["include/sys/stat.h.def"],
+    yaml_template = "include/sys/stat.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_syscall_h",
+    hdr = "staging/include/sys/syscall.h",
+    other_srcs = ["include/sys/syscall.h.def"],
+    yaml_template = "include/sys/syscall.yaml",
+)
+
+libc_generated_header(
+    name = "include_dirent_h",
+    hdr = "staging/include/dirent.h",
+    yaml_template = "include/dirent.yaml",
+)
+
+libc_generated_header(
+    name = "include_dlfcn_h",
+    hdr = "staging/include/dlfcn.h",
+    yaml_template = "include/dlfcn.yaml",
+)
+
+libc_generated_header(
+    name = "include_endian_h",
+    hdr = "staging/include/endian.h",
+    other_srcs = ["include/endian.h.def"],
+    yaml_template = "include/endian.yaml",
+)
+
+libc_generated_header(
+    name = "include_features_h",
+    hdr = "staging/include/features.h",
+    other_srcs = ["include/features.h.def"],
+    yaml_template = "include/features.yaml",
+)
+
+libc_generated_header(
+    name = "include_stdfix_h",
+    hdr = "staging/include/stdfix.h",
+    other_srcs = ["include/stdfix.h.def"],
+    yaml_template = "include/stdfix.yaml",
+)
+
+libc_generated_header(
+    name = "include_sysexits_h",
+    hdr = "staging/include/sysexits.h",
+    other_srcs = ["include/sysexits.h.def"],
+    yaml_template = "include/sysexits.yaml",
+)
+
+libc_generated_header(
+    name = "include_arpa_inet_h",
+    hdr = "staging/include/arpa/inet.h",
+    other_srcs = ["include/arpa/inet.h.def"],
+    yaml_template = "include/arpa/inet.yaml",
+)
+
+libc_generated_header(
+    name = "include_netinet_in_h",
+    hdr = "staging/include/netinet/in.h",
+    other_srcs = ["include/netinet/in.h.def"],
+    yaml_template = "include/netinet/in.yaml",
+)
+
+libc_generated_header(
+    name = "include_complex_h",
+    hdr = "staging/include/complex.h",
+    other_srcs = ["include/complex.h.def"],
+    yaml_template = "include/complex.yaml",
+)
+
+libc_generated_header(
+    name = "include_setjmp_h",
+    hdr = "staging/include/setjmp.h",
+    yaml_template = "include/setjmp.yaml",
+)
+
+libc_generated_header(
+    name = "include_strings_h",
+    hdr = "staging/include/strings.h",
+    yaml_template = "include/strings.yaml",
+)
+
+libc_generated_header(
+    name = "include_search_h",
+    hdr = "staging/include/search.h",
+    yaml_template = "include/search.yaml",
+)
+
+libc_generated_header(
+    name = "include_threads_h",
+    hdr = "staging/include/threads.h",
+    yaml_template = "include/threads.yaml",
+)
+
+libc_generated_header(
+    name = "include_stdckdint_h",
+    hdr = "staging/include/stdckdint.h",
+    other_srcs = ["include/stdckdint.h.def"],
+    yaml_template = "include/stdckdint.yaml",
+)
+
+libc_generated_header(
+    name = "include_pthread_h",
+    hdr = "staging/include/pthread.h",
+    yaml_template = "include/pthread.yaml",
+)
+
+libc_generated_header(
+    name = "include_sched_h",
+    hdr = "staging/include/sched.h",
+    other_srcs = ["include/sched.h.def"],
+    yaml_template = "include/sched.yaml",
+)
+
+libc_generated_header(
+    name = "include_spawn_h",
+    hdr = "staging/include/spawn.h",
+    yaml_template = "include/spawn.yaml",
+)
+
+libc_generated_header(
+    name = "include_link_h",
+    hdr = "staging/include/link.h",
+    other_srcs = ["include/link.h.def"],
+    yaml_template = "include/link.yaml",
+)
+
+libc_generated_header(
+    name = "include_elf_h",
+    hdr = "staging/include/elf.h",
+    other_srcs = ["include/elf.h.def"],
+    yaml_template = "include/elf.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_auxv_h",
+    hdr = "staging/include/sys/auxv.h",
+    other_srcs = ["include/sys/auxv.h.def"],
+    yaml_template = "include/sys/auxv.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_epoll_h",
+    hdr = "staging/include/sys/epoll.h",
+    other_srcs = ["include/sys/epoll.h.def"],
+    yaml_template = "include/sys/epoll.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_ioctl_h",
+    hdr = "staging/include/sys/ioctl.h",
+    other_srcs = ["include/sys/ioctl.h.def"],
+    yaml_template = "include/sys/ioctl.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_ipc_h",
+    hdr = "staging/include/sys/ipc.h",
+    yaml_template = "include/sys/ipc.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_prctl_h",
+    hdr = "staging/include/sys/prctl.h",
+    other_srcs = ["include/sys/prctl.h.def"],
+    yaml_template = "include/sys/prctl.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_random_h",
+    hdr = "staging/include/sys/random.h",
+    other_srcs = ["include/sys/random.h.def"],
+    yaml_template = "include/sys/random.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_select_h",
+    hdr = "staging/include/sys/select.h",
+    other_srcs = ["include/sys/select.h.def"],
+    yaml_template = "include/sys/select.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_statvfs_h",
+    hdr = "staging/include/sys/statvfs.h",
+    yaml_template = "include/sys/statvfs.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_time_h",
+    hdr = "staging/include/sys/time.h",
+    other_srcs = ["include/sys/time.h.def"],
+    yaml_template = "include/sys/time.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_types_h",
+    hdr = "staging/include/sys/types.h",
+    other_srcs = ["include/sys/types.h.def"],
+    yaml_template = "include/sys/types.yaml",
+)
+
+libc_generated_header(
+    name = "include_sys_utsname_h",
+    hdr = "staging/include/sys/utsname.h",
+    yaml_template = "include/sys/utsname.yaml",
+)
+
+libc_generated_header(
+    name = "include_termios_h",
+    hdr = "staging/include/termios.h",
+    other_srcs = ["include/termios.h.def"],
+    yaml_template = "include/termios.yaml",
+)
+
+libc_generated_header(
+    name = "include_uchar_h",
+    hdr = "staging/include/uchar.h",
+    yaml_template = "include/uchar.yaml",
+)
+
+libc_generated_header(
+    name = "include_wchar_h",
+    hdr = "staging/include/wchar.h",
+    other_srcs = ["include/wchar.h.def"],
+    yaml_template = "include/wchar.yaml",
+)
+
+libc_generated_header(
+    name = "include_wctype_h",
+    hdr = "staging/include/wctype.h",
+    yaml_template = "include/wctype.yaml",
+)
+
+libc_generated_header(
+    name = "include_locale_h",
+    hdr = "staging/include/locale.h",
+    other_srcs = ["include/locale.h.def"],
+    yaml_template = "include/locale.yaml",
+)
+
+libc_generated_header(
+    name = "include_nl_types_h",
+    hdr = "staging/include/nl_types.h",
+    yaml_template = "include/nl_types.yaml",
+)
+
+# Static headers that need to be in staging/include
+libc_copy_header(
+    name = "copy_llvm_libc_common_h",
+    src = "include/__llvm-libc-common.h",
+    out = "staging/include/__llvm-libc-common.h",
+)
+
+TYPE_HEADERS = glob(["include/llvm-libc-types/**/*.h"])
+
+genrule(
+    name = "copy_llvm_libc_types",
+    srcs = TYPE_HEADERS,
+    outs = ["staging/include/" + f.replace("include/", "") for f in TYPE_HEADERS],
+    cmd = " && ".join([
+        "cp $(location %s) $(location %s)" % (
+            src,
+            "staging/include/" + src.replace("include/", ""),
+        )
+        for src in TYPE_HEADERS
+    ]),
+)
+
+MACRO_HEADERS = glob(["include/llvm-libc-macros/**/*.h"])
+
+genrule(
+    name = "copy_llvm_libc_macros",
+    srcs = MACRO_HEADERS,
+    outs = ["staging/include/" + f.replace("include/", "") for f in MACRO_HEADERS],
+    cmd = " && ".join([
+        "cp $(location %s) $(location %s)" % (
+            src,
+            "staging/include/" + src.replace("include/", ""),
+        )
+        for src in MACRO_HEADERS
+    ]),
+)
+
+cc_library(
+    name = "public_headers",
+    hdrs = [
+        ":copy_llvm_libc_common_h",
+        ":include_arpa_inet_h",
+        ":include_assert_h",
+        ":include_complex_h",
+        ":include_ctype_h",
+        ":include_dirent_h",
+        ":include_dlfcn_h",
+        ":include_elf_h",
+        ":include_endian_h",
+        ":include_errno_h",
+        ":include_fcntl_h",
+        ":include_features_h",
+        ":include_fenv_h",
+        ":include_float_h",
+        ":include_inttypes_h",
+        ":include_limits_h",
+        ":include_link_h",
+        ":include_locale_h",
+        ":include_malloc_h",
+        ":include_math_h",
+        ":include_netinet_in_h",
+        ":include_nl_types_h",
+        ":include_poll_h",
+        ":include_pthread_h",
+        ":include_sched_h",
+        ":include_search_h",
+        ":include_setjmp_h",
+        ":include_signal_h",
+        ":include_spawn_h",
+        ":include_stdbit_h",
+        ":include_stdckdint_h",
+        ":include_stdfix_h",
+        ":include_stdint_h",
+        ":include_stdio_h",
+        ":include_stdlib_h",
+        ":include_string_h",
+        ":include_strings_h",
+        ":include_sys_auxv_h",
+        ":include_sys_epoll_h",
+        ":include_sys_ioctl_h",
+        ":include_sys_ipc_h",
+        ":include_sys_mman_h",
+        ":include_sys_prctl_h",
+        ":include_sys_random_h",
+        ":include_sys_resource_h",
+        ":include_sys_select_h",
+        ":include_sys_socket_h",
+        ":include_sys_stat_h",
+        ":include_sys_statvfs_h",
+        ":include_sys_syscall_h",
+        ":include_sys_time_h",
+        ":include_sys_types_h",
+        ":include_sys_utsname_h",
+        ":include_sys_wait_h",
+        ":include_sysexits_h",
+        ":include_termios_h",
+        ":include_threads_h",
+        ":include_time_h",
+        ":include_uchar_h",
+        ":include_unistd_h",
+        ":include_wchar_h",
+        ":include_wctype_h",
+    ] + [
+        ":copy_llvm_libc_macros",
+        ":copy_llvm_libc_types",
+    ],
+    features = ["-parse_headers"],  # Needed due to stdbit-macros.h.
+    includes = ["staging/include"],
+    visibility = ["//visibility:public"],
+    deps = [":public_headers_deps"],
 )
 
 # Library containing all headers that can be transitively included by generated llvm-libc
