@@ -343,7 +343,7 @@ let Predicates = [Is64Bit] in
   defm BP : BranchOnReg<[(SPbrreg bb:$imm16, imm:$rcond, i64:$rs1)]>;
 
 // Move integer register on register condition (MOVr).
-let Predicates = [Is64Bit], Constraints = "$f = $rd" in {
+let Predicates = [Is64Bit], Constraints = "$f = $rd", isSelect = 1 in {
   def MOVRrr : F4_4r<0b101111, 0b00000, (outs IntRegs:$rd),
                    (ins I64Regs:$rs1, IntRegs:$rs2, IntRegs:$f, RegCCOp:$rcond),
                    "movr$rcond $rs1, $rs2, $rd",
@@ -356,7 +356,7 @@ let Predicates = [Is64Bit], Constraints = "$f = $rd" in {
 }
 
 // Move FP register on integer register condition (FMOVr).
-let Predicates = [Is64Bit], Constraints = "$f = $rd" in {
+let Predicates = [Is64Bit], Constraints = "$f = $rd", isSelect = 1 in {
   def FMOVRS : F4_4r<0b110101, 0b00101,
                 (outs FPRegs:$rd), (ins I64Regs:$rs1, FPRegs:$rs2, FPRegs:$f,  RegCCOp:$rcond),
                 "fmovrs$rcond $rs1, $rs2, $rd",
@@ -431,7 +431,8 @@ def : Pat<(SPselectreg (i64 simm10:$t), i64:$f, imm:$rcond, i64:$rs1),
 } // Predicates = [Is64Bit]
 
 // ATOMICS.
-let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
+let mayLoad = 1, mayStore = 1,
+  Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
   def CASXArr: F3_1_asi<3, 0b111110,
                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
                                      I64Regs:$swap, ASITag:$asi),

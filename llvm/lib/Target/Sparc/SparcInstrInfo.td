@@ -496,6 +496,7 @@ multiclass F3_12np<string OpcStr, bits<6> Op3Val, InstrItinClass itin = IIC_iu_i
 }
 
 // Load multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
+let mayLoad = 1 in
 multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
            RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_iu_instr> {
   def rr  : F3_1<3, Op3Val,
@@ -512,6 +513,7 @@ multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the LoadASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
+let mayLoad = 1 in
 multiclass LoadASI<string OpcStr, bits<6> Op3Val, RegisterClass RC> {
   def rr  : F3_1_asi<3, Op3Val, (outs RC:$rd), (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi),
                      !strconcat(OpcStr, "a [$addr] $asi, $rd"),
@@ -532,6 +534,7 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
 }
 
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
+let mayStore = 1 in
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
            RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_st> {
   def rr  : F3_1<3, Op3Val,
@@ -548,6 +551,7 @@ multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the StoreASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
+let mayStore = 1 in
 multiclass StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
                InstrItinClass itin = IIC_st> {
   def rr : F3_1_asi<3, Op3Val, (outs), (ins (MEMrr $rs1, $rs2):$addr, RC:$rd, ASITag:$asi),
@@ -694,12 +698,12 @@ let DecoderNamespace = "SparcV9", Predicates = [HasV9] in {
 }
 
 // Coprocessor instructions were removed in v9.
-let DecoderNamespace = "SparcV8", Predicates = [HasNoV9] in {
+let mayLoad = 1, DecoderNamespace = "SparcV8", Predicates = [HasNoV9] in {
   defm LDC    : Load<"ld", 0b110000, load, CoprocRegs, i32>;
   defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
 }
 
-let Defs = [CPSR] in {
+let  mayLoad = 1, Defs = [CPSR] in {
   let rd = 0 in {
     def LDCSRrr : F3_1<3, 0b110001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "ld [$addr], %csr", []>;
@@ -708,7 +712,7 @@ let Defs = [CPSR] in {
   }
 }
 
-let Defs = [FSR] in {
+let mayLoad = 1, Defs = [FSR] in {
   let rd = 0 in {
     def LDFSRrr : F3_1<3, 0b100001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
 		   "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
@@ -795,6 +799,7 @@ let rd = 1, mayStore = 1, Uses = [FSR] in {
 // (Atomic test-and-set)
 // TODO look into the possibility to use this to implment `atomic_flag`.
 // If it's possible, then LDSTUB is the preferred way to do it.
+let mayLoad = 1, mayStore = 1 in {
 def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
                     "ldstub [$addr], $rd", []>;
 def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
@@ -806,10 +811,11 @@ let Predicates = [HasV9], Uses = [ASR3] in
 def LDSTUBAri : F3_2<3, 0b011101, (outs IntRegs:$rd),
                          (ins (MEMri $rs1, $simm13):$addr),
                          "ldstuba [$addr] %asi, $rd", []>;
+}
 
 // Section B.8 - SWAP Register with Memory Instruction
 // (Atomic swap)
-let Constraints = "$val = $rd" in {
+let mayLoad = 1, mayStore = 1, Constraints = "$val = $rd" in {
   def SWAPrr : F3_1<3, 0b001111,
                  (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, IntRegs:$val),
                  "swap [$addr], $rd",
@@ -831,11 +837,12 @@ let Predicates = [HasV9], Uses = [ASR3] in
 
 
 // Section B.9 - SETHI Instruction, p. 104
-def SETHIi: F2_1<0b100,
-                 (outs IntRegs:$rd), (ins i32imm:$imm22),
-                 "sethi $imm22, $rd",
-                 [(set i32:$rd, SETHIimm:$imm22)],
-                 IIC_iu_instr>;
+let isMoveImm = 1 in
+  def SETHIi: F2_1<0b100,
+                  (outs IntRegs:$rd), (ins i32imm:$imm22),
+                  "sethi $imm22, $rd",
+                  [(set i32:$rd, SETHIimm:$imm22)],
+                  IIC_iu_instr>;
 
 // Section B.10 - NOP Instruction, p. 105
 // (It's a special case of SETHI)
@@ -853,7 +860,16 @@ def ANDNri  : F3_2<2, 0b000101,
                    (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "andn $rs1, $simm13, $rd", []>;
 
-defm OR     : F3_12<"or", 0b000010, or, IntRegs, i32, simm13Op>;
+let isMoveReg = 1 in
+  def ORrr  : F3_1<2, 0b000010,
+                    (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
+                    "or $rs1, $rs2, $rd",
+                    [(set i32:$rd, (or i32:$rs1, i32:$rs2))]>;
+let isMoveImm = 1 in
+  def ORri  : F3_2<2, 0b000010,
+                    (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
+                    "or $rs1, $simm13, $rd",
+                    [(set i32:$rd, (or i32:$rs1, (i32 simm13:$simm13)))]>;
 
 def ORNrr   : F3_1<2, 0b000110,
                    (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
@@ -893,9 +909,10 @@ defm SRL : F3_S<"srl", 0b100110, 0, srl, i32, shift_imm5, IntRegs>;
 defm SRA : F3_S<"sra", 0b100111, 0, sra, i32, shift_imm5, IntRegs>;
 
 // Section B.13 - Add Instructions, p. 108
-defm ADD   : F3_12<"add", 0b000000, add, IntRegs, i32, simm13Op>;
+let isAdd = 1 in
+  defm ADD   : F3_12<"add", 0b000000, add, IntRegs, i32, simm13Op>;
 
-let Defs = [ICC] in
+let Defs = [ICC], isAdd = 1 in
   defm ADDCC  : F3_12<"addcc", 0b010000, addc, IntRegs, i32, simm13Op>;
 
 let Uses = [ICC] in
@@ -945,8 +962,10 @@ let Uses = [Y], Defs = [Y, ICC] in {
 }
 
 // Section B.20 - SAVE and RESTORE, p. 117
-defm SAVE    : F3_12np<"save"   , 0b111100>;
-defm RESTORE : F3_12np<"restore", 0b111101>;
+let mayStore = 1 in
+  defm SAVE    : F3_12np<"save"   , 0b111100>;
+let mayLoad = 1 in
+  defm RESTORE : F3_12np<"restore", 0b111101>;
 
 // Section B.21 - Branch on Integer Condition Codes Instructions, p. 119
 // Section A.7 - Branch on Integer Condition Codes with Prediction (SPARC v9)
@@ -1573,7 +1592,7 @@ let mayLoad = 1 in {
                           (tlsld ADDRrr:$addr, tglobaltlsaddr:$sym))]>;
 }
 
-let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
+let Uses = [O6], Defs = [O7], isCall = 1, hasDelaySlot = 1 in
   def TLS_CALL : InstSP<(outs),
                         (ins calltarget:$disp, TailRelocSymTLSCall:$sym,
                          variable_ops),
@@ -1616,7 +1635,7 @@ let isCodeGenOnly = 1, isReturn = 1, hasDelaySlot = 1, isTerminator = 1,
 //===----------------------------------------------------------------------===//
 
 // V9 Conditional Moves.
-let Predicates = [HasV9], Constraints = "$f = $rd" in {
+let Predicates = [HasV9], Constraints = "$f = $rd", isSelect = 1 in {
   // Move Integer Register on Condition (MOVcc) p. 194 of the V9 manual.
   let Uses = [ICC], intcc = 1, cc = 0b00 in {
     def MOVICCrr
@@ -1787,6 +1806,7 @@ let Predicates = [HasV9], rd = 15, rs1 = 0b00000 in
                 (ins simm13Op:$simm13),
                  "sir $simm13", []>;
 
+let mayLoad = 1, mayStore = 1 in {
 // CASA supported on all V9, some LEON3 and all LEON4 processors.
 let Predicates = [HasCASA], Constraints = "$swap = $rd" in
   def CASArr: F3_1_asi<3, 0b111100,
@@ -1801,6 +1821,7 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
                                      IntRegs:$swap),
                  "casa [$rs1] %asi, $rs2, $rd", []>;
+}
 
 // TODO: Add DAG sequence to lower these instructions. Currently, only provided
 // as inline assembler-supported instructions.
