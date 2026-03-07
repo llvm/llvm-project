@@ -29,6 +29,9 @@ int main(int, char**) {
     test_sequence_prepend_range<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
+    test_sequence_prepend_range_decay<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
+      LIBCPP_ASSERT(c.__invariants());
+    });
   });
   test_sequence_prepend_range_move_only<std::deque>();
   // FIXME: This should work - see https://llvm.org/PR162605
