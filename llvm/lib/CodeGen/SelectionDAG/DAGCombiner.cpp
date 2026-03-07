@@ -30185,6 +30185,12 @@ SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL))
     return C;
 
+  if (ISD::isIntEqualitySetCC(Cond) && isNullOrNullSplat(N1) &&
+      DAG.isKnownNeverZero(N0)) {
+    bool isNE = (Cond == ISD::SETNE);
+    return DAG.getBoolConstant(isNE, DL, VT, N0.getValueType());
+  }
+
   if (ISD::isIntEqualitySetCC(Cond) && N0.getOpcode() == ISD::AND &&
       isNullConstant(N1)) {
 
