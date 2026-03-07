@@ -70,6 +70,13 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
     return CI->getValue();
   }
 
+  if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+    if (auto *VecTy = dyn_cast<VectorType>(CFP->getType()))
+      return std::vector<AnyValue>(getEVL(VecTy->getElementCount()),
+                                   AnyValue(CFP->getValue()));
+    return CFP->getValue();
+  }
+
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CDS->getNumElements());
