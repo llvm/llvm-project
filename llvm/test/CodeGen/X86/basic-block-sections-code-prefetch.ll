@@ -11,7 +11,7 @@
 ; RUN: echo 't 3,1' >> %t
 ; RUN: echo 'i 3,0 bar,0,0' >> %t
 ; RUN: echo 'i 2,1 foo,1,0' >> %t
-; RUN: echo 'i 1,1 undef,5,5' >> %t
+; RUN: echo 'i 1,1 extfunc,5,5' >> %t
 ; RUN: echo 'f bar' >> %t
 ; RUN: echo 't 0,0' >> %t
 ; RUN: echo 't 21,1' >> %t
@@ -36,9 +36,9 @@ cond.true:                                           ; preds = %1
 ; CHECK-NEXT:   callq bar@PLT
 ; CHECK-NEXT:   .globl __llvm_prefetch_target_foo_1_1
 ; CHECK-NEXT: __llvm_prefetch_target_foo_1_1:
-; CHECK-NEXT:   prefetchit1     __llvm_prefetch_target_undef_5_5(%rip)
-; CHECK-NEXT:   .weak __llvm_prefetch_target_undef_5_5
-; CHECK-NEXT: __llvm_prefetch_target_undef_5_5:
+; CHECK-NEXT:   prefetchit1     __llvm_prefetch_target_extfunc_5_5(%rip)
+; CHECK-NEXT:   .weak __llvm_prefetch_target_extfunc_5_5
+; CHECK-NEXT: __llvm_prefetch_target_extfunc_5_5:
 
 cond.false:                                          ; preds = %1
   call i32 @baz()
