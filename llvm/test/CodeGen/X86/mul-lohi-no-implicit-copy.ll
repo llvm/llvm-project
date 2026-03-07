@@ -8,17 +8,14 @@
 declare i32 @foo32()
 declare i64 @foo64()
 
-define i32 @mul32_no_implicit_copy(i32 %a0) {
+define i32 @mul32_no_implicit_copy(i32 %a0) nounwind {
 ; CHECK-LABEL: mul32_no_implicit_copy:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    callq foo32@PLT
 ; CHECK-NEXT:    mull %ebx
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %a1 = call i32 @foo32()
   %a2 = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %a0, i32 %a1)
@@ -26,17 +23,14 @@ define i32 @mul32_no_implicit_copy(i32 %a0) {
   ret i32 %a3
 }
 
-define i64 @mul64_no_implicit_copy(i64 %a0) {
+define i64 @mul64_no_implicit_copy(i64 %a0) nounwind {
 ; CHECK-LABEL: mul64_no_implicit_copy:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    callq foo64@PLT
 ; CHECK-NEXT:    mulq %rbx
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %a1 = call i64 @foo64()
   %a2 = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a0, i64 %a1)
