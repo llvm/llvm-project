@@ -148,6 +148,12 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-qualified-alias
+  <clang-tidy/checks/readability/redundant-qualified-alias>` check.
+
+  Finds redundant identity type aliases that re-expose a qualified name and can
+  be replaced with a ``using`` declaration.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 
