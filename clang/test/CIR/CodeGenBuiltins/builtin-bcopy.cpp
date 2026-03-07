@@ -15,7 +15,7 @@ void foo(void) {
   // CIR: %[[V5:.*]] = cir.cast bitcast %[[V4]] : !cir.ptr<!cir.float> -> !cir.ptr<!void>
   // CIR: %[[V6:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[V7:.*]] = cir.const #cir.int<4> : !u64i
-  // CIR: %[[V8:.*]] = cir.binop(mul, %[[V6]], %[[V7]]) : !u64i
+  // CIR: %[[V8:.*]] = cir.mul %[[V6]], %[[V7]] : !u64i
   // CIR: cir.libc.memmove %[[V8]] bytes from %[[V3]] to %[[V5]] : !cir.ptr<!void>, !u64i
   // CIR: cir.return
 
@@ -40,18 +40,52 @@ void foo(void) {
   __builtin_bcopy(f4, f8, sizeof(float) * 4);
 }
 
+void test_conditional_bcopy(void) {
+  // CIR-LABEL: cir.func {{.*}} @_Z22test_conditional_bcopyv()
+  // CIR: cir.ternary
+  // CIR: cir.libc.memmove {{.*}} bytes from {{.*}} to {{.*}} : !cir.ptr<!void>, !u64i
+  // CIR: false
+  // CIR: cir.libc.memmove {{.*}} bytes from {{.*}} to {{.*}} : !cir.ptr<!void>, !u64i
+
+  // LLVM-LABEL: define{{.*}} void @_Z22test_conditional_bcopyv
+  // LLVM: br
+  // LLVM: call void @llvm.memmove
+  // LLVM: br
+  // LLVM: call void @llvm.memmove
+  // LLVM-NOT: phi
+
+  // OGCG-LABEL: define{{.*}} void @_Z22test_conditional_bcopyv
+  // LLVM: br
+  // OGCG: call void @llvm.memmove
+  // LLVM: br
+  // OGCG: call void @llvm.memmove
+  // OGCG-NOT: phi
+
+  char dst[20];
+  char src[20];
+  int _sz = 20, len = 20;
+  return (_sz ? ((_sz >= len) ? __builtin_bcopy(src, dst, len) : foo())
+              : __builtin_bcopy(src, dst, len));
+}
+
 void another_conditional_bcopy(char *dst, char *src, int sz, int len) {
   // CIR-LABEL: cir.func no_inline dso_local @_Z25another_conditional_bcopyPcS_ii
+  // CIR: cir.if
   // CIR: cir.libc.memmove {{.*}} bytes from {{.*}} to {{.*}} : !cir.ptr<!void>, !u64i
+  // cir: else
   // CIR: cir.libc.memmove {{.*}} bytes from {{.*}} to {{.*}} : !cir.ptr<!void>, !u64i
 
   // LLVM-LABEL: define{{.*}} void @_Z25another_conditional_bcopyPcS_ii
+  // LLVM: br
   // LLVM: call void @llvm.memmove
+  // LLVM: br
   // LLVM: call void @llvm.memmove
   // LLVM-NOT: phi
 
   // OGCG-LABEL: define{{.*}} void @_Z25another_conditional_bcopyPcS_ii
+  // OGCG: br
   // OGCG: call void @llvm.memmove
+  // OGCG: br
   // OGCG: call void @llvm.memmove
   // OGCG-NOT: phi
 
