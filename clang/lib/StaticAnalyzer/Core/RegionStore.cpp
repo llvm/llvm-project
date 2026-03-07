@@ -40,16 +40,14 @@ using namespace ento;
 // Representation of binding keys.
 //===----------------------------------------------------------------------===//
 
+
 namespace {
 class BindingKey {
 public:
-  enum Kind {
-    Default = 0x0,
-    Direct = 0x1,
-    Symbolic = 0x2,
-  };
-
+  enum Kind { Default = 0x0, Direct = 0x1 };
 private:
+  enum { Symbolic = 0x2 };
+
   llvm::PointerIntPair<const MemRegion *, 2> P;
   uint64_t Data;
 
@@ -334,13 +332,26 @@ class LimitedRegionBindingsRef : public RegionBindingsRef {
 public:
   LimitedRegionBindingsRef(RegionBindingsRef Base,
                            SmallVectorImpl<SVal> &EscapedValuesDuringBind,
-                           std::optional<unsigned> BindingsLeft)
+                           std::optional<unsigned> BindingsLeft,
+                           unsigned RecursionLeft = 1000)
       : RegionBindingsRef(Base),
+        RecursionLeft(RecursionLeft),
         EscapedValuesDuringBind(&EscapedValuesDuringBind),
-        BindingsLeft(BindingsLeft) {}
+        BindingsLeft(BindingsLeft) {
+  }
 
   bool hasExhaustedBindingLimit() const {
     return BindingsLeft.has_value() && BindingsLeft.value() == 0;
+  }
+
+  bool hasExhaustedRecursionLimit() const {
+    return RecursionLeft == 0;
+  }
+
+  LimitedRegionBindingsRef withRecursionDecreased() const {
+    return LimitedRegionBindingsRef{
+        *this, *EscapedValuesDuringBind, BindingsLeft,
+        RecursionLeft > 0 ? RecursionLeft - 1 : 0};
   }
 
   LimitedRegionBindingsRef withValuesEscaped(SVal V) const {
@@ -361,13 +372,14 @@ public:
                             data_type_ref BindingKeyAndValue) const {
     return LimitedRegionBindingsRef{RegionBindingsRef::commitBindingsToCluster(
                                         BaseRegion, BindingKeyAndValue),
-                                    *EscapedValuesDuringBind, BindingsLeft};
+                                    *EscapedValuesDuringBind, BindingsLeft,
+                                    RecursionLeft};
   }
 
   LimitedRegionBindingsRef removeCluster(const MemRegion *BaseRegion) const {
     return LimitedRegionBindingsRef{
         RegionBindingsRef::removeCluster(BaseRegion), *EscapedValuesDuringBind,
-        BindingsLeft};
+        BindingsLeft, RecursionLeft};
   }
 
   LimitedRegionBindingsRef addBinding(BindingKey K, SVal V) const {
@@ -386,7 +398,8 @@ public:
     }
 
     return LimitedRegionBindingsRef{RegionBindingsRef::addBinding(K, V),
-                                    *EscapedValuesDuringBind, NewBindingsLeft};
+                                    *EscapedValuesDuringBind, NewBindingsLeft,
+                                    RecursionLeft};
   }
 
   LimitedRegionBindingsRef addBinding(const MemRegion *R, BindingKey::Kind k,
@@ -394,6 +407,7 @@ public:
     return addBinding(BindingKey::Make(R, k), V);
   }
 
+  unsigned RecursionLeft;
 private:
   SmallVectorImpl<SVal> *EscapedValuesDuringBind; // nonnull
   std::optional<unsigned> BindingsLeft;
@@ -515,7 +529,7 @@ private:
                         ArrayRef<SVal> Values,
                         InvalidatedRegions *TopLevelRegions);
 
-  const AnalyzerOptions &getOptions() {
+  const AnalyzerOptions &getOptions() const {
     return StateMgr.getOwningEngine().getAnalysisManager().options;
   }
 
@@ -714,6 +728,11 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
+  std::optional<SVal> getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                              const TypedValueRegion *R) const;
+  std::optional<SVal>
+  getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const;
+
   std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
     // Default bindings are always applied over a base region so look up the
@@ -806,7 +825,8 @@ public: // Part of public interface to class.
                     SmallVectorImpl<SVal> &EscapedValuesDuringBind) const {
     return LimitedRegionBindingsRef(
         getRegionBindings(store), EscapedValuesDuringBind,
-        /*BindingsLeft=*/RegionStoreMaxBindingFanOutPlusOne);
+        /*BindingsLeft=*/RegionStoreMaxBindingFanOutPlusOne,
+        /*RecursionLeft=*/1000);
   }
 
   void printJson(raw_ostream &Out, Store S, const char *NL = "\n",
@@ -2451,8 +2471,7 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
 
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
-  const RecordDecl *RD =
-      R->getValueType()->castAsCanonical<RecordType>()->getDecl();
+  const RecordDecl *RD = R->getValueType()->castAs<RecordType>()->getDecl();
   if (!RD->getDefinition())
     return UnknownVal();
 
@@ -2460,6 +2479,11 @@ SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
   // behavior doesn't depend on the struct layout.
   // This way even an empty struct can carry taint, no matter if creduce drops
   // the last field member or not.
+
+  // Try to avoid creating a LCV if it would anyways just refer to a single
+  // default binding.
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(B, R))
+    return *Val;
   return createLazyBinding(B, R);
 }
 
@@ -2513,10 +2537,18 @@ StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
 
 LimitedRegionBindingsRef
 RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
+  
+  struct DepthGuard {
+    DepthGuard() { ++GlobalRecursionDepth; }
+    ~DepthGuard() { --GlobalRecursionDepth; }
+  } guard;
+  if (GlobalRecursionDepth > 1000) {
+    return B.withValuesEscaped(V);
+  }
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bind",
                                  [&L]() { return locDescr(L); });
 
-  if (B.hasExhaustedBindingLimit())
+  if (B.hasExhaustedBindingLimit() || B.hasExhaustedRecursionLimit())
     return B.withValuesEscaped(V);
 
   // We only care about region locations.
@@ -2539,13 +2571,13 @@ RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
   if (const TypedValueRegion* TR = dyn_cast<TypedValueRegion>(R)) {
     QualType Ty = TR->getValueType();
     if (Ty->isArrayType())
-      return bindArray(B, TR, V);
+      return bindArray(B.withRecursionDecreased(), TR, V);
     if (Ty->isStructureOrClassType())
-      return bindStruct(B, TR, V);
+      return bindStruct(B.withRecursionDecreased(), TR, V);
     if (Ty->isVectorType())
-      return bindVector(B, TR, V);
+      return bindVector(B.withRecursionDecreased(), TR, V);
     if (Ty->isUnionType())
-      return bindAggregate(B, TR, V);
+      return bindAggregate(B.withRecursionDecreased(), TR, V);
   }
 
   assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&
@@ -2619,6 +2651,8 @@ std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallArray(
     return std::nullopt;
 
   LimitedRegionBindingsRef NewB = B;
+  // llvm::errs() << "bindArray: RecursionLeft=" << B.RecursionLeft << "\n";
+  llvm::errs() << "bindArray: RecursionLeft=" << B.RecursionLeft << "\n";
 
   for (uint64_t i = 0; i < ArrSize; ++i) {
     auto Idx = svalBuilder.makeArrayIndex(i);
@@ -2636,10 +2670,20 @@ std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallArray(
 LimitedRegionBindingsRef
 RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
                               const TypedValueRegion *R, SVal Init) {
+  
+  struct DepthGuard {
+    DepthGuard() { ++GlobalRecursionDepth; }
+    ~DepthGuard() { --GlobalRecursionDepth; }
+  } guard;
+  if (GlobalRecursionDepth > 1000) {
+    return B.withValuesEscaped(Init);
+  }
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindArray",
                                  [R]() { return R->getDescriptiveName(); });
-  if (B.hasExhaustedBindingLimit())
+  if (B.hasExhaustedBindingLimit() || B.hasExhaustedRecursionLimit())
     return B.withValuesEscaped(Init);
+
+  LimitedRegionBindingsRef BDecreased = B.withRecursionDecreased();
 
   const ArrayType *AT =cast<ArrayType>(Ctx.getCanonicalType(R->getValueType()));
   QualType ElementTy = AT->getElementType();
@@ -2688,11 +2732,11 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     const ElementRegion *ER = MRMgr.getElementRegion(ElementTy, Idx, R, Ctx);
 
     if (ElementTy->isStructureOrClassType())
-      NewB = bindStruct(NewB, ER, *VI);
+      NewB = bindStruct(NewB.withRecursionDecreased(), ER, *VI);
     else if (ElementTy->isArrayType())
-      NewB = bindArray(NewB, ER, *VI);
+      NewB = bindArray(NewB.withRecursionDecreased(), ER, *VI);
     else
-      NewB = bind(NewB, loc::MemRegionVal(ER), *VI);
+      NewB = bind(NewB.withRecursionDecreased(), loc::MemRegionVal(ER), *VI);
   }
 
   // If the init list is shorter than the array length (or the array has
@@ -2707,9 +2751,17 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
 LimitedRegionBindingsRef
 RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
                                const TypedValueRegion *R, SVal V) {
+  
+  struct DepthGuard {
+    DepthGuard() { ++GlobalRecursionDepth; }
+    ~DepthGuard() { --GlobalRecursionDepth; }
+  } guard;
+  if (GlobalRecursionDepth > 1000) {
+    return B.withValuesEscaped(V);
+  }
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindVector",
                                  [R]() { return R->getDescriptiveName(); });
-  if (B.hasExhaustedBindingLimit())
+  if (B.hasExhaustedBindingLimit() || B.hasExhaustedRecursionLimit())
     return B.withValuesEscaped(V);
 
   QualType T = R->getValueType();
@@ -2717,13 +2769,13 @@ RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
 
   // Handle lazy compound values and symbolic values.
   if (isa<nonloc::LazyCompoundVal, nonloc::SymbolVal>(V))
-    return bindAggregate(B, R, V);
+    return bindAggregate(B.withRecursionDecreased(), R, V);
 
   // We may get non-CompoundVal accidentally due to imprecise cast logic or
   // that we are binding symbolic struct value. Kill the field values, and if
   // the value is symbolic go and bind it as a "default" binding.
   if (!isa<nonloc::CompoundVal>(V)) {
-    return bindAggregate(B, R, UnknownVal());
+    return bindAggregate(B.withRecursionDecreased(), R, UnknownVal());
   }
 
   QualType ElemType = VT->getElementType();
@@ -2743,13 +2795,33 @@ RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
     const ElementRegion *ER = MRMgr.getElementRegion(ElemType, Idx, R, Ctx);
 
     if (ElemType->isArrayType())
-      NewB = bindArray(NewB, ER, *VI);
+      NewB = bindArray(NewB.withRecursionDecreased(), ER, *VI);
     else if (ElemType->isStructureOrClassType())
-      NewB = bindStruct(NewB, ER, *VI);
+      NewB = bindStruct(NewB.withRecursionDecreased(), ER, *VI);
     else
-      NewB = bind(NewB, loc::MemRegionVal(ER), *VI);
+      NewB = bind(NewB.withRecursionDecreased(), loc::MemRegionVal(ER), *VI);
   }
   return NewB;
+}
+
+std::optional<SVal>
+RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
+                                            const TypedValueRegion *R) const {
+  if (R != R->getBaseRegion())
+    return std::nullopt;
+
+  const auto *Cluster = B.lookup(R);
+  if (!Cluster || !llvm::hasSingleElement(*Cluster))
+    return std::nullopt;
+
+  const auto [Key, Value] = *Cluster->begin();
+  return Key.isDirect() ? std::optional<SVal>{} : Value;
+}
+
+std::optional<SVal>
+RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
+  auto B = getRegionBindings(LCV.getStore());
+  return getUniqueDefaultBinding(B, LCV.getRegion());
 }
 
 std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
@@ -2757,6 +2829,24 @@ std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
     const RecordDecl *RD, nonloc::LazyCompoundVal LCV) {
   if (B.hasExhaustedBindingLimit())
     return B.withValuesEscaped(LCV);
+
+  // If we try to copy a Conjured value representing the value of the whole
+  // struct, don't try to element-wise copy each field.
+  // That would unnecessarily bind Derived symbols slicing off the subregion for
+  // the field from the whole Conjured symbol.
+  //
+  //   struct Window { int width; int height; };
+  //   Window getWindow(); <-- opaque fn.
+  //   Window w = getWindow(); <-- conjures a new Window.
+  //   Window w2 = w; <-- trivial copy "w", calling "tryBindSmallStruct"
+  //
+  // We should not end up with a new Store for "w2" like this:
+  //   Direct [ 0..31]: Derived{Conj{}, w.width}
+  //   Direct [32..63]: Derived{Conj{}, w.height}
+  // Instead, we should just bind that Conjured value instead.
+  if (std::optional<SVal> Val = getUniqueDefaultBinding(LCV)) {
+    return B.addBinding(BindingKey::Make(R, BindingKey::Default), Val.value());
+  }
 
   FieldVector Fields;
 
@@ -2802,15 +2892,25 @@ std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
 LimitedRegionBindingsRef
 RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
                                const TypedValueRegion *R, SVal V) {
+  
+  struct DepthGuard {
+    DepthGuard() { ++GlobalRecursionDepth; }
+    ~DepthGuard() { --GlobalRecursionDepth; }
+  } guard;
+  if (GlobalRecursionDepth > 1000) {
+    return B.withValuesEscaped(V);
+  }
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindStruct",
                                  [R]() { return R->getDescriptiveName(); });
-  if (B.hasExhaustedBindingLimit())
+  if (B.hasExhaustedBindingLimit() || B.hasExhaustedRecursionLimit())
     return B.withValuesEscaped(V);
 
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
-  const auto *RD = T->castAsRecordDecl();
+  const RecordType* RT = T->castAs<RecordType>();
+  const RecordDecl *RD = RT->getDecl();
+
   if (!RD->isCompleteDefinition())
     return B;
 
@@ -2819,16 +2919,16 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
           V.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallStruct(B, R, RD, *LCV))
       return *NewB;
-    return bindAggregate(B, R, V);
+    return bindAggregate(B.withRecursionDecreased(), R, V);
   }
   if (isa<nonloc::SymbolVal>(V))
-    return bindAggregate(B, R, V);
+    return bindAggregate(B.withRecursionDecreased(), R, V);
 
   // We may get non-CompoundVal accidentally due to imprecise cast logic or
   // that we are binding symbolic struct value. Kill the field values, and if
   // the value is symbolic go and bind it as a "default" binding.
   if (V.isUnknown() || !isa<nonloc::CompoundVal>(V))
-    return bindAggregate(B, R, UnknownVal());
+    return bindAggregate(B.withRecursionDecreased(), R, UnknownVal());
 
   // The raw CompoundVal is essentially a symbolic InitListExpr: an (immutable)
   // list of other values. It appears pretty much only when there's an actual
@@ -2882,7 +2982,7 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
       const CXXBaseObjectRegion *BR =
           MRMgr.getCXXBaseObjectRegion(BRD, R, /*IsVirtual=*/false);
 
-      NewB = bindStruct(NewB, BR, *VI);
+      NewB = bindStruct(NewB.withRecursionDecreased(), BR, *VI);
 
       ++VI;
     }
@@ -2906,9 +3006,9 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
     const FieldRegion* FR = MRMgr.getFieldRegion(*FI, R);
 
     if (FTy->isArrayType())
-      NewB = bindArray(NewB, FR, *VI);
+      NewB = bindArray(NewB.withRecursionDecreased(), FR, *VI);
     else if (FTy->isStructureOrClassType())
-      NewB = bindStruct(NewB, FR, *VI);
+      NewB = bindStruct(NewB.withRecursionDecreased(), FR, *VI);
     else
       NewB = bind(NewB, loc::MemRegionVal(FR), *VI);
     ++VI;
@@ -2929,9 +3029,17 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
 LimitedRegionBindingsRef
 RegionStoreManager::bindAggregate(LimitedRegionBindingsConstRef B,
                                   const TypedRegion *R, SVal Val) {
+  
+  struct DepthGuard {
+    DepthGuard() { ++GlobalRecursionDepth; }
+    ~DepthGuard() { --GlobalRecursionDepth; }
+  } guard;
+  if (GlobalRecursionDepth > 1000) {
+    return B.withValuesEscaped(Val);
+  }
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindAggregate",
                                  [R]() { return R->getDescriptiveName(); });
-  if (B.hasExhaustedBindingLimit())
+  if (B.hasExhaustedBindingLimit() || B.hasExhaustedRecursionLimit())
     return B.withValuesEscaped(Val);
 
   // Remove the old bindings, using 'R' as the root of all regions

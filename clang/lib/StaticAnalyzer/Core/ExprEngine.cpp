@@ -3625,6 +3625,13 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
     ProgramStateRef State, ArrayRef<std::pair<SVal, SVal>> LocAndVals,
     const LocationContext *LCtx, PointerEscapeKind Kind,
     const CallEvent *Call) {
+  struct DepthGuard {
+    DepthGuard() { ++GlobalRecursionDepth; }
+    ~DepthGuard() { --GlobalRecursionDepth; }
+  } guard;
+  if (GlobalRecursionDepth > 1000) {
+    return State;
+  }
   SmallVector<SVal, 8> Escaped;
   for (const std::pair<SVal, SVal> &LocAndVal : LocAndVals) {
     // Cases (1) and (2).
