@@ -299,3 +299,12 @@ func.func @test_partial_expr_nnan(%input: !hlfir.expr<?x?xf64>) -> !hlfir.expr<?
 // CHECK:           }
 // CHECK:           return %[[VAL_7]] : !hlfir.expr<?xf64>
 // CHECK:         }
+
+func.func @test_simple_int(%input: !hlfir.expr<?xi32>) -> i32 {
+  %0 = hlfir.minval %input : (!hlfir.expr<?xi32>) -> i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func.func @test_simple_int(
+// CHECK: fir.do_loop{{.*}}unordered
+// CHECK: arith.minsi %{{.*}}, %{{.*}} : i32
