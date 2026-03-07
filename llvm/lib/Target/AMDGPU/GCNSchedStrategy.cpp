@@ -622,6 +622,40 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
   return SU;
 }
 
+static unsigned
+countCriticalResourceInRemainder(const SchedRemainder &Rem,
+                                 const TargetSchedModel *SchedModel) {
+  if (!SchedModel || !SchedModel->hasInstrSchedModel()) {
+    return 0;
+  }
+  unsigned CriticalResIdx = 0;
+  unsigned CriticalResCount = 0;
+  for (unsigned I = 1, E = SchedModel->getNumProcResourceKinds(); I < E; ++I) {
+    if (SchedModel->getResourceBufferSize(I) != 0) {
+      continue;
+    }
+    unsigned ResCount =
+        Rem.RemainingCounts[I] * SchedModel->getResourceFactor(I);
+    if (ResCount > CriticalResCount) {
+      CriticalResIdx = I;
+      CriticalResCount = ResCount;
+    }
+  }
+  if (CriticalResIdx) {
+    unsigned LatencyPath =
+        Rem.IsAcyclicLatencyLimited ? Rem.CriticalPath : Rem.CyclicCritPath;
+    if (LatencyPath * SchedModel->getLatencyFactor() < CriticalResCount)
+      return CriticalResIdx;
+  }
+  return 0;
+}
+
+void GCNSchedStrategy::updateRemainderCriticalRes() {
+  RemCriticalRes = TrackRemCriticalRes
+                       ? countCriticalResourceInRemainder(Rem, SchedModel)
+                       : 0;
+}
+
 void GCNSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   if (GCNTrackers) {
     MachineInstr *MI = SU->getInstr();
@@ -629,7 +663,8 @@ void GCNSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
               : UpwardTracker.recede(*MI);
   }
 
-  return GenericScheduler::schedNode(SU, IsTopNode);
+  GenericScheduler::schedNode(SU, IsTopNode);
+  updateRemainderCriticalRes();
 }
 
 GCNSchedStageID GCNSchedStrategy::getCurrentStage() {
@@ -708,6 +743,139 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
   GCNTrackers = GCNTrackers & !IsLegacyScheduler;
+}
+
+static unsigned getResourceUseCount(unsigned ResId, const MCSchedClassDesc *SC,
+                                    const TargetSchedModel *SchedModel) {
+  if (!SC) {
+    return 0;
+  }
+  unsigned Count = 0;
+  for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
+                                     PE = SchedModel->getWriteProcResEnd(SC);
+       PI != PE; ++PI) {
+    if (PI->ProcResourceIdx != ResId) {
+      continue;
+    }
+    Count += PI->ReleaseAtCycle - PI->AcquireAtCycle;
+  }
+  return Count;
+}
+
+bool GCNPreRACriticalResource::tryCandidate(SchedCandidate &Cand,
+                                            SchedCandidate &TryCand,
+                                            SchedBoundary *Zone) const {
+  // Initialize the candidate if needed.
+  if (!Cand.isValid()) {
+    TryCand.Reason = FirstValid;
+    return true;
+  }
+
+  // Bias PhysReg Defs and copies to their uses and defined respectively.
+  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
+                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+    return TryCand.Reason != NoCand;
+
+  // Avoid exceeding the target's limit.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
+                  RegExcess, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  // Avoid increasing the max critical pressure in the scheduled region.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
+                  TryCand, Cand, RegCritical, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  // We only compare a subset of features when comparing nodes between
+  // Top and Bottom boundary. Some properties are simply incomparable, in many
+  // other instances we should only override the other boundary if something
+  // is a clear good pick on one boundary. Skip heuristics that are more
+  // "tie-breaking" in nature.
+  bool SameBoundary = Zone != nullptr;
+  if (SameBoundary) {
+    // For loops that are acyclic path limited, aggressively schedule for
+    // latency. Within an single cycle, whenever CurrMOps > 0, allow normal
+    // heuristics to take precedence.
+    if (Rem.IsAcyclicLatencyLimited && !Zone->getCurrMOps() &&
+        tryLatency(TryCand, Cand, *Zone))
+      return TryCand.Reason != NoCand;
+
+    // Prioritize instructions that read unbuffered resources by stall cycles.
+    if (tryLess(Zone->getLatencyStallCycles(TryCand.SU),
+                Zone->getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
+      return TryCand.Reason != NoCand;
+  }
+
+  if (RemCriticalRes) {
+
+    // Prioritize instructions that use critical resource
+    if (tryGreater(getResourceUseCount(RemCriticalRes,
+                                       DAG->getSchedClass(TryCand.SU),
+                                       SchedModel),
+                   getResourceUseCount(RemCriticalRes,
+                                       DAG->getSchedClass(Cand.SU), SchedModel),
+                   TryCand, Cand, ResourceDemand))
+      return TryCand.Reason != NoCand;
+  }
+
+  // Keep clustered nodes together to encourage downstream peephole
+  // optimizations which may reduce resource requirements.
+  //
+  // This is a best effort to set things up for a post-RA pass. Optimizations
+  // like generating loads of multiple registers should ideally be done within
+  // the scheduler pass by combining the loads during DAG postprocessing.
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
+                 Cluster))
+    return TryCand.Reason != NoCand;
+
+  if (SameBoundary) {
+    // Weak edges are for clustering and other constraints.
+    if (tryLess(getWeakLeft(TryCand.SU, TryCand.AtTop),
+                getWeakLeft(Cand.SU, Cand.AtTop), TryCand, Cand, Weak))
+      return TryCand.Reason != NoCand;
+  }
+
+  // Avoid increasing the max pressure of the entire region.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CurrentMax, Cand.RPDelta.CurrentMax, TryCand,
+                  Cand, RegMax, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  if (SameBoundary) {
+    // Avoid critical resource consumption and balance the schedule.
+    TryCand.initResourceDelta(DAG, SchedModel);
+    if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
+                TryCand, Cand, ResourceReduce))
+      return TryCand.Reason != NoCand;
+    if (tryGreater(TryCand.ResDelta.DemandedResources,
+                   Cand.ResDelta.DemandedResources, TryCand, Cand,
+                   ResourceDemand))
+      return TryCand.Reason != NoCand;
+
+    // Avoid serializing long latency dependence chains.
+    // For acyclic path limited loops, latency was already checked above.
+    if (!RegionPolicy.DisableLatencyHeuristic && TryCand.Policy.ReduceLatency &&
+        !Rem.IsAcyclicLatencyLimited && tryLatency(TryCand, Cand, *Zone))
+      return TryCand.Reason != NoCand;
+
+    // Fall through to original instruction order.
+    if ((Zone->isTop() && TryCand.SU->NodeNum < Cand.SU->NodeNum) ||
+        (!Zone->isTop() && TryCand.SU->NodeNum > Cand.SU->NodeNum)) {
+      TryCand.Reason = NodeOrder;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 GCNMaxILPSchedStrategy::GCNMaxILPSchedStrategy(const MachineSchedContext *C)
@@ -933,6 +1101,88 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
   }
 
   return false;
+}
+
+void GCNPostRACriticalResource::updateRemainderCriticalRes() {
+  RemCriticalRes = TrackRemCriticalRes
+                       ? countCriticalResourceInRemainder(Rem, SchedModel)
+                       : 0;
+}
+
+bool GCNPostRACriticalResource::tryCandidate(SchedCandidate &Cand,
+                                             SchedCandidate &TryCand) {
+  // Initialize the candidate if needed.
+  if (!Cand.isValid()) {
+    TryCand.Reason = FirstValid;
+    return true;
+  }
+
+  // Prioritize instructions that read unbuffered resources by stall cycles.
+  if (tryLess(Top.getLatencyStallCycles(TryCand.SU),
+              Top.getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
+    return TryCand.Reason != NoCand;
+
+  if (RemCriticalRes) {
+
+    // Prioritize instructions that use critical resource
+    if (tryGreater(getResourceUseCount(RemCriticalRes,
+                                       DAG->getSchedClass(TryCand.SU),
+                                       SchedModel),
+                   getResourceUseCount(RemCriticalRes,
+                                       DAG->getSchedClass(Cand.SU), SchedModel),
+                   TryCand, Cand, ResourceDemand))
+      return TryCand.Reason != NoCand;
+  }
+
+  // Keep clustered nodes together.
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
+                 Cluster))
+    return TryCand.Reason != NoCand;
+  // Avoid critical resource consumption and balance the schedule.
+  if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
+              TryCand, Cand, ResourceReduce))
+    return TryCand.Reason != NoCand;
+  if (tryGreater(TryCand.ResDelta.DemandedResources,
+                 Cand.ResDelta.DemandedResources, TryCand, Cand,
+                 ResourceDemand))
+    return TryCand.Reason != NoCand;
+
+  // We only compare a subset of features when comparing nodes between
+  // Top and Bottom boundary.
+  if (Cand.AtTop == TryCand.AtTop) {
+    // Avoid serializing long latency dependence chains.
+    if (Cand.Policy.ReduceLatency &&
+        tryLatency(TryCand, Cand, Cand.AtTop ? Top : Bot))
+      return TryCand.Reason != NoCand;
+  }
+
+  // Fall through to original instruction order.
+  if (TryCand.SU->NodeNum < Cand.SU->NodeNum) {
+    TryCand.Reason = NodeOrder;
+    return true;
+  }
+
+  return false;
+}
+
+void GCNPostRACriticalResource::initialize(ScheduleDAGMI *Dag) {
+  PostGenericScheduler::initialize(Dag);
+  setTrackRemainderCriticalRes(
+      Context->MF->getSubtarget<GCNSubtarget>(),
+      !static_cast<GCNPostScheduleDAGMILive *>(Dag)->hasIGLPInstrs());
+  updateRemainderCriticalRes();
+}
+
+void GCNPostRACriticalResource::schedNode(SUnit *SU, bool IsTopNode) {
+  PostGenericScheduler::schedNode(SU, IsTopNode);
+  updateRemainderCriticalRes();
 }
 
 GCNScheduleDAGMILive::GCNScheduleDAGMILive(
@@ -1732,6 +1982,9 @@ bool GCNSchedStage::initGCNRegion() {
         IsInitialStage ? AMDGPU::SchedulingPhase::Initial
                        : AMDGPU::SchedulingPhase::PreRAReentry));
   }
+
+  S.setTrackRemainderCriticalRes(ST, !DAG.RegionsWithIGLPInstrs[RegionIdx]);
+  S.updateRemainderCriticalRes();
 
   return true;
 }
@@ -3209,7 +3462,7 @@ GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(
     : ScheduleDAGMI(C, std::move(S), RemoveKillFlags) {}
 
 void GCNPostScheduleDAGMILive::schedule() {
-  HasIGLPInstrs = hasIGLPInstrs(this);
+  HasIGLPInstrs = ::hasIGLPInstrs(this);
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
