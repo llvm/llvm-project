@@ -142,6 +142,17 @@ C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
 
+Objective-C Language Changes
+-----------------------------
+
+- Clang now emits Objective-C number, array, and dictionary literals as
+  compile-time constant data structures rather than runtime ``objc_msgSend``
+  calls on targets whose runtime supports constant literal classes. The
+  feature can be disabled altogether with ``-fno-objc-constant-literals``,
+  or selectively per literal kind with ``-fno-constant-nsnumber-literals``,
+  ``-fno-constant-nsarray-literals``, and
+  ``-fno-constant-nsdictionary-literals``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

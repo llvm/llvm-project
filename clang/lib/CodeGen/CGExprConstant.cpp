@@ -21,6 +21,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/NSAPI.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -2132,6 +2133,9 @@ private:
   ConstantLValue VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
   ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *E);
+  llvm::Constant *VisitObjCCollectionElement(const Expr *E);
+  ConstantLValue VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  ConstantLValue VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
   ConstantLValue VisitPredefinedExpr(const PredefinedExpr *E);
   ConstantLValue VisitAddrLabelExpr(const AddrLabelExpr *E);
   ConstantLValue VisitCallExpr(const CallExpr *E);
@@ -2352,10 +2356,95 @@ ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
-  assert(E->isExpressibleAsConstantInitializer() &&
-         "this boxed expression can't be emitted as a compile-time constant");
-  const auto *SL = cast<StringLiteral>(E->getSubExpr()->IgnoreParenCasts());
-  return emitConstantObjCStringLiteral(SL, E->getType(), CGM);
+  ASTContext &Context = CGM.getContext();
+  CGObjCRuntime &Runtime = CGM.getObjCRuntime();
+  const Expr *SubExpr = E->getSubExpr();
+  const QualType &Ty = SubExpr->IgnoreParens()->getType();
+
+  assert(SubExpr->isEvaluatable(Context) &&
+         "Non const NSNumber is being emitted as a constant");
+
+  if (const auto *SL = dyn_cast<StringLiteral>(SubExpr->IgnoreParenCasts()))
+    return emitConstantObjCStringLiteral(SL, E->getType(), CGM);
+
+  // Note `@YES` `@NO` need to be handled explicitly
+  // to meet existing plist encoding / decoding expectations
+  bool const IsBoolType =
+      (Ty->isBooleanType() || NSAPI(Context).isObjCBOOLType(Ty));
+  bool BoolValue = false;
+  if (IsBoolType && SubExpr->EvaluateAsBooleanCondition(BoolValue, Context)) {
+    ConstantAddress C = Runtime.GenerateConstantNumber(BoolValue, Ty);
+    return C.withElementType(CGM.getTypes().ConvertTypeForMem(E->getType()));
+  }
+
+  Expr::EvalResult IntResult{};
+  if (SubExpr->EvaluateAsInt(IntResult, Context)) {
+    ConstantAddress C =
+        Runtime.GenerateConstantNumber(IntResult.Val.getInt(), Ty);
+    return C.withElementType(CGM.getTypes().ConvertTypeForMem(E->getType()));
+  }
+
+  llvm::APFloat FloatValue(0.0);
+  if (SubExpr->EvaluateAsFloat(FloatValue, Context)) {
+    ConstantAddress C = Runtime.GenerateConstantNumber(FloatValue, Ty);
+    return C.withElementType(CGM.getTypes().ConvertTypeForMem(E->getType()));
+  }
+
+  llvm_unreachable("SubExpr is expected to be evaluated as a numeric type");
+}
+
+llvm::Constant *
+ConstantLValueEmitter::VisitObjCCollectionElement(const Expr *E) {
+  auto CE = cast<CastExpr>(E);
+  const Expr *Elm = CE->getSubExpr();
+  QualType DestTy = CE->getType();
+
+  assert(CE->getCastKind() == CK_BitCast &&
+         "Expected a CK_BitCast type for valid items in constant objc "
+         "collection literals");
+
+  llvm::Type *DstTy = CGM.getTypes().ConvertType(DestTy);
+  ConstantLValue LV = Visit(Elm);
+  llvm::Constant *ConstVal = cast<llvm::Constant>(LV.Value);
+  llvm::Constant *Val = llvm::ConstantExpr::getBitCast(ConstVal, DstTy);
+  return Val;
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
+  SmallVector<llvm::Constant *, 16> ObjectExpressions;
+  uint64_t NumElements = E->getNumElements();
+  ObjectExpressions.reserve(NumElements);
+
+  for (uint64_t i = 0; i < NumElements; i++) {
+    llvm::Constant *Val = VisitObjCCollectionElement(E->getElement(i));
+    ObjectExpressions.push_back(Val);
+  }
+  ConstantAddress C =
+      CGM.getObjCRuntime().GenerateConstantArray(ObjectExpressions);
+  return C.withElementType(CGM.getTypes().ConvertTypeForMem(E->getType()));
+}
+
+ConstantLValue ConstantLValueEmitter::VisitObjCDictionaryLiteral(
+    const ObjCDictionaryLiteral *E) {
+  SmallVector<llvm::Constant *, 16> KeyExpressions;
+  SmallVector<llvm::Constant *, 16> ObjectExpressions;
+  uint64_t NumElements = E->getNumElements();
+  KeyExpressions.reserve(NumElements);
+  ObjectExpressions.reserve(NumElements);
+
+  for (uint64_t i = 0; i < NumElements; i++) {
+    Expr *KeyExpr = E->getKeyValueElement(i).Key;
+    llvm::Constant *KeyVal = VisitObjCCollectionElement(KeyExpr);
+    KeyExpressions.push_back(KeyVal);
+
+    Expr *ValueExpr = E->getKeyValueElement(i).Value;
+    llvm::Constant *Val = VisitObjCCollectionElement(ValueExpr);
+    ObjectExpressions.push_back(Val);
+  }
+  ConstantAddress C = CGM.getObjCRuntime().GenerateConstantDictionary(
+      E, KeyExpressions, ObjectExpressions);
+  return C.withElementType(CGM.getTypes().ConvertTypeForMem(E->getType()));
 }
 
 ConstantLValue

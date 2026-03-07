@@ -3630,6 +3630,12 @@ def err_invalid_collection_element : Error<
 def err_box_literal_collection : Error<
   "%select{string|character|boolean|numeric}0 literal must be prefixed by '@' "
   "in a collection">;
+def err_objc_literal_nonconstant_at_file_scope : Error<
+  "%select{an array|a dictionary|a numeric literal|a boxed expression|}0 "
+  "literal can only be used at file scope if %select{its contents are all "
+  "also constant literals|its contents are all also constant literals and "
+  "its keys are string literals|constant|constant}0">;
+
 def warn_objc_literal_comparison : Warning<
   "direct comparison of %select{an array literal|a dictionary literal|"
   "a numeric literal|a boxed expression|}0 has undefined behavior">,

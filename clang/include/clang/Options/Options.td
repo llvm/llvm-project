@@ -2099,6 +2099,26 @@ defm constant_cfstrings : BoolFOption<"constant-cfstrings",
           "Disable creation of CodeFoundation-type constant strings">,
   PosFlag<SetFalse>>;
 def fconstant_string_class_EQ : Joined<["-"], "fconstant-string-class=">, Group<f_Group>;
+defm objc_constant_literals : BoolFOption<"objc-constant-literals",
+  LangOpts<"ObjCConstantLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant ObjC literals">>;
+def fconstant_array_class_EQ : Joined<["-"], "fconstant-array-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantArrayClass">>;
+def fconstant_dictionary_class_EQ : Joined<["-"], "fconstant-dictionary-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantDictionaryClass">>;
+def fconstant_integer_number_class_EQ : Joined<["-"], "fconstant-integer-number-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantIntegerNumberClass">>;
+def fconstant_float_number_class_EQ : Joined<["-"], "fconstant-float-number-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantFloatNumberClass">>;
+def fconstant_double_number_class_EQ : Joined<["-"], "fconstant-double-number-class=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<LangOpts<"ObjCConstantDoubleNumberClass">>;
 def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum depth of recursive constexpr function calls">,
@@ -3744,6 +3764,21 @@ def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
 def fno_builtin_ : Joined<["-"], "fno-builtin-">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Disable implicit builtin knowledge of a specific function">;
+defm constant_nsnumber_literals : BoolFOption<"constant-nsnumber-literals",
+  LangOpts<"ConstantNSNumberLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant NSNumber literals">>;
+defm constant_nsarray_literals : BoolFOption<"constant-nsarray-literals",
+  LangOpts<"ConstantNSArrayLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant NSArray literals">>;
+defm constant_nsdictionary_literals : BoolFOption<"constant-nsdictionary-literals",
+  LangOpts<"ConstantNSDictionaryLiterals">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption], " compile-time constant NSDictionary literals">>;
 def fno_common : Flag<["-"], "fno-common">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;

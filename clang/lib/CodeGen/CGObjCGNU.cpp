@@ -563,7 +563,19 @@ public:
   CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
       unsigned protocolClassVersion, unsigned classABI=1);
 
-  ConstantAddress GenerateConstantString(const StringLiteral *) override;
+  ConstantAddress GenerateConstantString(const StringLiteral *SL) override;
+
+  ConstantAddress GenerateConstantNumber(const bool Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APSInt &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress GenerateConstantNumber(const llvm::APFloat &Value,
+                                         const QualType &Ty) override;
+  ConstantAddress
+  GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) override;
+  ConstantAddress GenerateConstantDictionary(
+      const ObjCDictionaryLiteral *E, const ArrayRef<llvm::Constant *> &Keys,
+      const ArrayRef<llvm::Constant *> &Objects) override;
 
   RValue
   GenerateMessageSend(CodeGenFunction &CGF, ReturnValueSlot Return,
@@ -2727,6 +2739,37 @@ ConstantAddress CGObjCGNU::GenerateConstantString(const StringLiteral *SL) {
   ObjCStrings[Str] = ObjCStr;
   ConstantStrings.push_back(ObjCStr);
   return ConstantAddress(ObjCStr, Int8Ty, Align);
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const bool Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const llvm::APSInt &Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantNumber(const llvm::APFloat &Value,
+                                                  const QualType &Ty) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC number literal constant initializers");
+}
+
+ConstantAddress
+CGObjCGNU::GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC array literal constant initializers");
+}
+
+ConstantAddress CGObjCGNU::GenerateConstantDictionary(
+    const ObjCDictionaryLiteral *E, const ArrayRef<llvm::Constant *> &Keys,
+    const ArrayRef<llvm::Constant *> &Objects) {
+  llvm_unreachable("Method should not be called, no GNU runtimes provide these "
+                   "or support ObjC dictionary literal constant initializers");
 }
 
 ///Generates a message send where the super is the receiver.  This is a message
