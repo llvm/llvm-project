@@ -4,8 +4,7 @@
 // RUN: %clangxx_lowfat -O3 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// Verify that the LowFat runtime initializes and basic in-bounds
-// allocations work without errors.
+// Basic in-bounds allocation test.
 
 #include <cstdio>
 
@@ -17,7 +16,7 @@ int main() {
   if (!arr)
     return 1;
 
-  // In-bounds accesses — should not trigger OOB
+  // In-bounds accesses should not trigger OOB.
   arr[0] = 42;
   arr[9] = 99;
 

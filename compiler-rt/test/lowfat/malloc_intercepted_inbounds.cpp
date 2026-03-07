@@ -1,18 +1,18 @@
 // RUN: %clangxx_lowfat -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_lowfat -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 
-// Verify that malloc-intercepted allocations are correctly handled for in-bounds accesses.
+// Basic in-bounds test for malloc-intercepted allocations.
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 int main() {
-  // malloc goes through the LowFat interceptor → produces a LowFat pointer.
+  // malloc goes through the LowFat interceptor and returns a LowFat pointer.
   char *buf = (char *)malloc(32);
   if (!buf) return 1;
 
-  // In-bounds scalar accesses — first and last byte.
+  // In-bounds scalar accesses: first and last byte.
   buf[0] = 'A';
   buf[31] = 'Z';
 

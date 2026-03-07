@@ -3,10 +3,7 @@
 // RUN: %clangxx_lowfat_safe_recover -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_lowfat_safe_recover -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
 
-// Verify that memcpy OOB in recover mode:
-//   1. Prints a WARNING (not ERROR).
-//   2. Execution continues past the call (process exits 0).
-//   3. The reported overflow is positive (access end past allocation end).
+// memcpy OOB write in recover mode must warn and continue.
 
 #include <cstdio>
 #include <cstdlib>
@@ -22,7 +19,7 @@ int main() {
   // CHECK: LOWFAT WARNING: out-of-bounds error detected!
   memcpy(dst, payload, 32);
 
-  // Execution must reach here in recover mode.
+  // Execution should continue in recover mode.
   // CHECK: after memcpy
   printf("after memcpy\n");
 

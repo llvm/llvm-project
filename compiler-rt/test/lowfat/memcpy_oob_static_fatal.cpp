@@ -1,9 +1,7 @@
 // RUN: %clangxx_lowfat_safe -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_lowfat_safe -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// Verify that memcpy writing past the end of a LowFat allocation is detected
-// in fatal mode.  The process must exit with a non-zero code (checked by
-// "not %run") and print the expected diagnostic.
+// memcpy OOB write must be reported in fatal mode.
 
 #include <cstdlib>
 #include <cstring>
@@ -15,7 +13,7 @@ int main() {
 
   const char payload[32] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-  // memcpy of 32 bytes into a 16-byte allocation — overflows by 16 bytes.
+  // memcpy of 32 bytes into a 16-byte allocation overflows by 16 bytes.
   // CHECK: LOWFAT ERROR: out-of-bounds error detected!
   memcpy(dst, payload, 32);
 

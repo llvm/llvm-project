@@ -1,37 +1,16 @@
 // RUN: %clangxx_lowfat -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-MISS
 // RUN: %clangxx_lowfat_safe -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-CATCH
 
-// Demonstrates a behavioral difference between default-fast (%clangxx_lowfat)
-// and safe mode (%clangxx_lowfat_safe).
-//
-// The scenario: a noinline function performs an OOB heap read but its return value
-// is discarded by the caller.
-//
-// Default-fast mode has no PipelineStartEP pass. LLVM's Dead Argument
-// Elimination (DAE)
-// sees peek()'s return value is unused at all call sites and rewrites:
-//   ret %loaded_val  →  ret undef
-// The load becomes dead and is DCE'd. The LowFat pass at OptimizerLastEP finds
-// no load to instrument — the OOB is missed.
-//
-// Safe mode's barrier pass runs at PipelineStartEP and inserts:
-//   1. @llvm.sideeffect() — prevents call-level DCE by blocking memory(none)
-//      inference on peek().
-//   2. @llvm.fake.use(loaded_val) — after every load. fake.use creates a data
-//      dependency on the loaded value without emitting machine code,
-//      preventing DAE from marking the return value as dead. The load survives
-//      to OptimizerLastEP where LowFat instruments it → OOB is caught.
-//
-// Expected outputs:
-//   default-fast (-O3):  load DCE'd by DAE -> no OOB check -> program exits 0 -> DONE
-//   safe (-O3):          fake.use keeps load alive -> OOB detected -> LOWFAT ERROR
+// Mode-difference test for discarded return values at -O3.
+// In default-fast (%clangxx_lowfat), DAE can remove the load before
+// OptimizerLastEP instrumentation, so the OOB read is missed.
+// In safe mode (%clangxx_lowfat_safe), the PipelineStartEP barrier/fake-use
+// keeps the load alive and the OOB read is reported.
 
 #include <cstdio>
 #include <cstdlib>
 
-// noinline: the optimizer cannot see the body from the call site in default-fast
-// mode,
-// so it performs inter-procedural attribute inference rather than inlining.
+// noinline keeps this as an inter-procedural case.
 __attribute__((noinline))
 static double peek(char *p) {
   // 8-byte (double) OOB read. p was allocated with malloc(16); a double starting
@@ -42,7 +21,7 @@ static double peek(char *p) {
 
 int main() {
   char *p = (char *)malloc(16);
-  peek(p);   // Return value discarded — caller has no use for it.
+  peek(p);   // Return value intentionally discarded.
   free(p);
 
   // CHECK-MISS: DONE

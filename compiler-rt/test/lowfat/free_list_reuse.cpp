@@ -4,7 +4,7 @@
 // RUN: %clangxx_lowfat -O3 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// Verify that allocation and free list reuse works correctly, with no OOB errors.
+// Free-list reuse sanity test.
 
 #include <cstdio>
 
@@ -12,7 +12,7 @@ extern "C" void *__lf_malloc(unsigned long size);
 extern "C" void __lf_free(void *ptr);
 
 int main() {
-  // Allocate and free, then allocate again — should reuse from free list
+  // Allocate and free, then allocate again.
   int *a = (int *)__lf_malloc(10 * sizeof(int));
   a[0] = 1;
   __lf_free(a);

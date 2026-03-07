@@ -2,8 +2,7 @@
 // RUN: %clangxx_lowfat_safe -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-ALL
 
 // Verifies that a genuine OOB heap read is detected in both default-fast and
-// safe mode
-// when the loaded value is actually used (returned and passed to printf).
+// safe mode when the loaded value is actually used (returned and printed).
 
 #include <cstdio>
 #include <cstdlib>
@@ -11,13 +10,13 @@
 __attribute__((noinline))
 double oob_read(char *p) {
   // 8-byte read at offset 14 of a 16-byte allocation.
-  // Bytes [14, 22) exceed the slot boundary [0, 16) → genuine OOB.
+  // Bytes [14, 22) exceed the slot boundary [0, 16): genuine OOB.
   return *(double *)(p + 14);
 }
 
 int main() {
   char *p = (char *)malloc(16);
-  double val = oob_read(p);  // return value kept live → load not DCE'd
+  double val = oob_read(p);  // Return value kept live; load is not DCE'd.
   // CHECK-ALL: LOWFAT ERROR: out-of-bounds error detected!
   printf("val=%f\n", val);
   free(p);

@@ -4,8 +4,7 @@
 // RUN: %clangxx_lowfat -O3 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// Verify that purely in-bounds accesses — including memcpy and memset within
-// the allocation size — do not trigger any OOB report.
+// In-bounds accesses, memcpy, and memset should not report OOB.
 
 #include <cstdio>
 #include <cstdlib>

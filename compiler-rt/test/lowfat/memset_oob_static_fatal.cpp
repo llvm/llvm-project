@@ -1,8 +1,7 @@
 // RUN: %clangxx_lowfat -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_lowfat_safe -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// Verify that memset writing past the end of a LowFat allocation is detected
-// in fatal mode.
+// memset OOB write must be reported in fatal mode.
 
 #include <cstdlib>
 #include <cstring>
@@ -12,7 +11,7 @@ int main() {
   char *guard = (char *)malloc(16); // keep adjacent memory mapped
   if (!dst || !guard) return 1;
 
-  // memset of 32 bytes into a 16-byte allocation — overflows by 16 bytes.
+  // memset of 32 bytes into a 16-byte allocation overflows by 16 bytes.
   // CHECK: LOWFAT ERROR: out-of-bounds error detected!
   memset(dst, 0, 32);
 

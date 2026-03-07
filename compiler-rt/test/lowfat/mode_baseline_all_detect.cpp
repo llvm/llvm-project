@@ -3,10 +3,9 @@
 // RUN: %clangxx_lowfat -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-OOB
 // RUN: %clangxx_lowfat_safe -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-OOB
 
-// Baseline: both tested modes detect an OOB access whose result is observable.
-// Contrast with mode_diff_pure_call.cpp where a discarded-result call lets
-// default-fast mode (%clangxx_lowfat) eliminate the load before the LowFat
-// pass even sees it.
+// Baseline: both tested modes detect this OOB read because the result is used.
+// Contrast with mode_diff_pure_call.cpp, where default-fast can remove a dead
+// load before instrumentation.
 
 #include <cstdio>
 #include <cstdlib>
