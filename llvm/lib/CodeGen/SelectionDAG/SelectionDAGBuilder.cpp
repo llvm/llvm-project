@@ -2819,8 +2819,6 @@ void SelectionDAGBuilder::visitUncondBr(const UncondBrInst &I) {
     setValue(&I, Br);
     DAG.setRoot(Br);
   }
-
-  return;
 }
 
 void SelectionDAGBuilder::visitCondBr(const CondBrInst &I) {
