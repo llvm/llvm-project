@@ -32,46 +32,6 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-namespace log10p1f16_internal {
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-
-// ExceptValues for the small-|x| polynomial path (|x| <= 2^-3).
-LIBC_INLINE_VAR constexpr size_t N_LOG10P1F16_EXCEPTS = 3;
-
-LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_LOG10P1F16_EXCEPTS>
-    LOG10P1F16_EXCEPTS = {{
-        // (input, RZ output, RU offset, RD offset, RN offset)
-        // x = 0x1.ep-13
-        {0x0B80U, 0x0683U, 1U, 0U, 0U},
-        // x = -0x1.b8p-13
-        {0x89DCU, 0x8516U, 0U, 1U, 1U},
-        // x = -0x1.42p-8
-        {0x9D08U, 0x9861U, 0U, 1U, 0U},
-    }};
-
-// ExceptValues for the large-|x| table-based path (|x| > 2^-3).
-LIBC_INLINE_VAR constexpr size_t N_LOG10P1F16_EXCEPTS_HI = 6;
-
-LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16,
-                                                N_LOG10P1F16_EXCEPTS_HI>
-    LOG10P1F16_EXCEPTS_HI = {{
-        // (input, RZ output, RU offset, RD offset, RN offset)
-        // x = 0x1.4c4p-2, log10p1f16(x) = 0x1.f3cp-4 (RZ)
-        {0x3531U, 0x2FCFU, 1U, 0U, 0U},
-        // x = 0x1.2p+3, log10p1f16(x) = 0x1p+0 (RZ)
-        {0x4880U, 0x3C00U, 0U, 0U, 0U},
-        // x = 0x1.8cp+6, log10p1f16(x) = 0x1p+1 (RZ)
-        {0x5630U, 0x4000U, 0U, 0U, 0U},
-        // x = 0x1.f44p+6, log10p1f16(x) = 0x1.0ccp+1 (RZ)
-        {0x57D1U, 0x4033U, 1U, 0U, 0U},
-        // x = 0x1.f38p+9, log10p1f16(x) = 0x1.8p+1 (RZ)
-        {0x63CEU, 0x4200U, 0U, 0U, 0U},
-        // x = -0x1.808p-1, log10p1f16(x) = -0x1.354p-1 (RZ)
-        {0xBA02U, 0xB8D4U, 0U, 1U, 1U},
-    }};
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-} // namespace log10p1f16_internal
-
 LIBC_INLINE float16 log10p1f16(float16 x) {
   using namespace math::expxf16_internal;
   using FPBits = fputil::FPBits<float16>;
@@ -124,8 +84,20 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
     // log10(1+x)/x.
     if (x_abs <= 0x3000U) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-      if (auto r = log10p1f16_internal::LOG10P1F16_EXCEPTS.lookup(x_u);
-          LIBC_UNLIKELY(r.has_value()))
+      // ExceptValues for the small-|x| polynomial path (|x| <= 2^-3).
+      constexpr size_t N_LOG10P1F16_EXCEPTS = 3;
+      constexpr fputil::ExceptValues<float16, N_LOG10P1F16_EXCEPTS>
+          LOG10P1F16_EXCEPTS = {{
+              // (input, RZ output, RU offset, RD offset, RN offset)
+              // x = 0x1.ep-13
+              {0x0B80U, 0x0683U, 1U, 0U, 0U},
+              // x = -0x1.b8p-13
+              {0x89DCU, 0x8516U, 0U, 1U, 1U},
+              // x = -0x1.42p-8
+              {0x9D08U, 0x9861U, 0U, 1U, 0U},
+          }};
+
+      if (auto r = LOG10P1F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
         return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
@@ -139,8 +111,38 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
   }
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  if (auto r = log10p1f16_internal::LOG10P1F16_EXCEPTS_HI.lookup(x_u);
-      LIBC_UNLIKELY(r.has_value()))
+  // ExceptValues for the large-|x| table-based path (|x| > 2^-3).
+  constexpr size_t N_LOG10P1F16_EXCEPTS_HI = 12;
+  constexpr fputil::ExceptValues<float16, N_LOG10P1F16_EXCEPTS_HI>
+      LOG10P1F16_EXCEPTS_HI = {{
+          // (input, RZ output, RU offset, RD offset, RN offset)
+          // x = 0x1.3bp-3
+          {0x30ECU, 0x2BF3U, 1U, 0U, 1U},
+          // x = 0x1.ba0p-3
+          {0x32E8U, 0x2D6EU, 1U, 0U, 1U},
+          // x = 0x1.4c4p-2
+          {0x3531U, 0x2FCFU, 1U, 0U, 0U},
+          // x = 0x1.744p+0
+          {0x3DD1U, 0x363CU, 1U, 0U, 1U},
+          // x = 0x1.7d8p+0
+          {0x3DF6U, 0x3656U, 1U, 0U, 1U},
+          // x = 0x1.2p+3
+          {0x4880U, 0x3C00U, 0U, 0U, 0U},
+          // x = 0x1.8cp+6
+          {0x5630U, 0x4000U, 0U, 0U, 0U},
+          // x = 0x1.f44p+6
+          {0x57D1U, 0x4033U, 1U, 0U, 0U},
+          // x = 0x1.f38p+9
+          {0x63CEU, 0x4200U, 0U, 0U, 0U},
+          // x = -0x1.558p-3
+          {0xB156U, 0xAD12U, 0U, 1U, 0U},
+          // x = -0x1.8d8p-2
+          {0xB636U, 0xB2D3U, 0U, 1U, 1U},
+          // x = -0x1.808p-1
+          {0xBA02U, 0xB8D4U, 0U, 1U, 1U},
+      }};
+
+  if (auto r = LOG10P1F16_EXCEPTS_HI.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
