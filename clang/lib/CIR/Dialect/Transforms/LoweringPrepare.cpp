@@ -1492,9 +1492,12 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   // constexpr locals as globals when their address is taken), reuse it.
   if (!mlir::SymbolTable::lookupSymbolIn(
           mlirModule, mlir::StringAttr::get(&getContext(), name))) {
-    auto gv = cir::GlobalOp::create(builder, op.getLoc(), name, ty,
-                                    /*isConstant=*/true,
-                                    cir::GlobalLinkageKind::PrivateLinkage);
+    auto gv = cir::GlobalOp::create(
+        builder, op.getLoc(), name, ty,
+        /*isConstant=*/true,
+        cir::LangAddressSpaceAttr::get(&getContext(),
+                                       cir::LangAddressSpace::Default),
+        cir::GlobalLinkageKind::PrivateLinkage);
     mlir::SymbolTable::setSymbolVisibility(
         gv, mlir::SymbolTable::Visibility::Private);
     gv.setInitialValueAttr(constant);

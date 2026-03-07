@@ -91,3 +91,12 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   // For everything else, we just prefer false unless we opt out.
   return false;
 }
+
+clang::LangAS
+TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &CGM,
+                                           const clang::VarDecl *D) const {
+  assert(!CGM.getLangOpts().OpenCL &&
+         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  return D ? D->getType().getAddressSpace() : LangAS::Default;
+}
