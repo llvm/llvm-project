@@ -181,6 +181,14 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
+  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
+      RD && RD->isLambda() && CCE->getNumArgs() == 1) {
+    const Expr *Arg = CCE->getArg(0);
+    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+      flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+      return;
+    }
+  }
   handleFunctionCall(CCE, CCE->getConstructor(),
                      {CCE->getArgs(), CCE->getNumArgs()},
                      /*IsGslConstruction=*/false);
@@ -428,6 +436,27 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
     const Loan *L = createLoan(FactMgr, MTE);
     CurrentBlockFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
+  }
+}
+
+void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
+  // The lambda gets a single merged origin that aggregates all captured
+  // pointer-like origins. Currently we only need to detect whether the lambda
+  // outlives any capture.
+  OriginList *LambdaList = getOriginsList(*LE);
+  if (!LambdaList)
+    return;
+  bool Kill = true;
+  for (unsigned I = 0; I < LE->capture_size(); ++I) {
+    const Expr *Init = LE->capture_init_begin()[I];
+    if (!Init)
+      continue;
+    OriginList *InitList = getOriginsList(*Init);
+    if (!InitList)
+      continue;
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        LambdaList->getOuterOriginID(), InitList->getOuterOriginID(), Kill));
+    Kill = false;
   }
 }
 

@@ -1784,3 +1784,78 @@ void test_optional_view_arrow() {
     (void)*p;
 }
 } // namespace OwnerArrowOperator
+
+namespace lambda_captures {
+  auto return_ref_capture() {
+    int local = 1;
+    auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+    return lambda; // expected-note {{returned here}}
+  }
+
+  void safe_ref_capture() {
+    int local = 1;
+    auto lambda = [&local]() { return local; };
+    lambda();
+  }
+
+  auto capture_int_by_value() {
+    int x = 1;
+    auto lambda = [x]() { return x; };
+    return lambda;
+  }
+
+  auto capture_view_by_value() {
+    MyObj obj;
+    View v(obj); // expected-warning {{address of stack memory is returned later}}
+    auto lambda = [v]() { return v; };
+    return lambda; // expected-note {{returned here}}
+  }
+
+  void capture_view_by_value_safe() {
+    MyObj obj;
+    View v(obj);
+    auto lambda = [v]() { return v; };
+    lambda();
+  }
+
+  auto capture_pointer_by_ref() {
+    MyObj obj;
+    MyObj* p = &obj;
+    auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
+    return lambda; // expected-note {{returned here}}
+  }
+
+  auto capture_multiple() {
+    int a, b;
+    auto lambda = [&a, &b]() { return a + b; }; // expected-warning 2 {{address of stack memory is returned later}}
+    return lambda; // expected-note 2 {{returned here}}
+  }
+
+  auto capture_raw_pointer_by_value() {
+    int x;
+    int* p = &x; // expected-warning {{address of stack memory is returned later}}
+    auto lambda = [p]() { return p; };
+    return lambda; // expected-note {{returned here}}
+  }
+
+  auto capture_raw_pointer_init_capture() {
+    int x;
+    int* p = &x; // expected-warning {{address of stack memory is returned later}}
+    auto lambda = [q = p]() { return q; };
+    return lambda; // expected-note {{returned here}}
+  }
+
+  auto capture_view_init_capture() {
+    MyObj obj;
+    View v(obj); // expected-warning {{address of stack memory is returned later}}
+    auto lambda = [w = v]() { return w; };
+    return lambda; // expected-note {{returned here}}
+  }
+
+  auto capture_lambda() {
+    int x;
+    auto inner = [&x]() { return x; }; // expected-warning {{address of stack memory is returned later}}
+    auto outer = [inner]() { return inner(); };
+    return outer; // expected-note {{returned here}}
+  }
+} // namespace lambda_captures
