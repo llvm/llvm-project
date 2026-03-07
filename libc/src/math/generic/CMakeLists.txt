@@ -4125,6 +4125,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atanbf16
+  SRCS
+    atanbf16.cpp
+  HDRS
+    ../atanbf16.h
+  DEPENDS
+    libc.src.__support.math.atanbf16
+)
+
+add_entrypoint_object(
   atanf
   SRCS
     atanf.cpp
