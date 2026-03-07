@@ -1076,16 +1076,15 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 }
 
 template <typename T>
-llvm::Expected<std::unique_ptr<Info>>
-ClangDocBitcodeReader::createInfo(unsigned ID) {
+llvm::Expected<OwnedPtr<Info>> ClangDocBitcodeReader::createInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "createInfo");
-  std::unique_ptr<Info> I = std::make_unique<T>();
+  OwnedPtr<Info> I = std::make_unique<T>();
   if (auto Err = readBlock(ID, static_cast<T *>(I.get())))
     return std::move(Err);
-  return std::unique_ptr<Info>{std::move(I)};
+  return OwnedPtr<Info>{std::move(I)};
 }
 
-llvm::Expected<std::unique_ptr<Info>>
+llvm::Expected<OwnedPtr<Info>>
 ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "readBlockToInfo");
   switch (ID) {
@@ -1112,9 +1111,9 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<std::vector<std::unique_ptr<Info>>>
+llvm::Expected<std::vector<OwnedPtr<Info>>>
 ClangDocBitcodeReader::readBitcode() {
-  std::vector<std::unique_ptr<Info>> Infos;
+  std::vector<OwnedPtr<Info>> Infos;
   if (auto Err = validateStream())
     return std::move(Err);
 

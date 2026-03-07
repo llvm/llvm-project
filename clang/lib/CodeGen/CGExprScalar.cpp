@@ -3119,18 +3119,19 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
            "Destination type must be a matrix or builtin type.");
     Value *Mat = Visit(E);
     if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
-      SmallVector<int> Mask;
+      SmallVector<int> Mask(MatTy->getNumElementsFlattened());
       unsigned NumCols = MatTy->getNumColumns();
       unsigned NumRows = MatTy->getNumRows();
-      unsigned ColOffset = NumCols;
-      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
-        ColOffset = SrcMatTy->getNumColumns();
-      for (unsigned R = 0; R < NumRows; R++) {
-        for (unsigned C = 0; C < NumCols; C++) {
-          unsigned I = R * ColOffset + C;
-          Mask.push_back(I);
-        }
-      }
+      auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>();
+      assert(SrcMatTy && "Source type must be a matrix type.");
+      assert(NumRows <= SrcMatTy->getNumRows());
+      assert(NumCols <= SrcMatTy->getNumColumns());
+      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      for (unsigned R = 0; R < NumRows; R++)
+        for (unsigned C = 0; C < NumCols; C++)
+          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }

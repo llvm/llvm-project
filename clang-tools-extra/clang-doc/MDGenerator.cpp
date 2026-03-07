@@ -405,7 +405,7 @@ public:
   static const char *Format;
 
   llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
@@ -415,7 +415,7 @@ public:
 const char *MDGenerator::Format = "md";
 
 llvm::Error MDGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
