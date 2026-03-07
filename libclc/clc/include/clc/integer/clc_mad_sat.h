@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_CLC_MAD_SAT_H__
-#define __CLC_INTEGER_CLC_MAD_SAT_H__
+#ifndef CLC_INTEGER_CLC_MAD_SAT_H
+#define CLC_INTEGER_CLC_MAD_SAT_H
 
 #define __CLC_FUNCTION __clc_mad_sat
 #define __CLC_BODY <clc/shared/ternary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_INTEGER_CLC_MAD_SAT_H__
+#endif // CLC_INTEGER_CLC_MAD_SAT_H

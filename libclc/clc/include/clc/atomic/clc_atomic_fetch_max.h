@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_ATOMIC_CLC_ATOMIC_FETCH_MAX_H__
-#define __CLC_ATOMIC_CLC_ATOMIC_FETCH_MAX_H__
+#ifndef CLC_ATOMIC_CLC_ATOMIC_FETCH_MAX_H
+#define CLC_ATOMIC_CLC_ATOMIC_FETCH_MAX_H
 
 #include <clc/internal/clc.h>
 
@@ -21,4 +21,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_ATOMIC_CLC_ATOMIC_FETCH_MAX_H__
+#endif // CLC_ATOMIC_CLC_ATOMIC_FETCH_MAX_H

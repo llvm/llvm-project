@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_GEOMETRIC_CLC_CROSS_H__
-#define __CLC_GEOMETRIC_CLC_CROSS_H__
+#ifndef CLC_GEOMETRIC_CLC_CROSS_H
+#define CLC_GEOMETRIC_CLC_CROSS_H
 
 #include <clc/internal/clc.h>
 
@@ -30,4 +30,4 @@ _CLC_OVERLOAD _CLC_CONST _CLC_DECL half4 __clc_cross(half4 p0, half4 p1);
 
 #endif
 
-#endif // __CLC_GEOMETRIC_CLC_CROSS_H__
+#endif // CLC_GEOMETRIC_CLC_CROSS_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_CLC_CONVERT_H__
-#define __CLC_CLC_CONVERT_H__
+#ifndef CLC_CLC_CONVERT_H
+#define CLC_CLC_CONVERT_H
 
 #include <clc/internal/clc.h>
 
@@ -105,4 +105,4 @@ _CLC_VECTOR_CONVERT_TO_SUFFIX()
 #undef _CLC_VECTOR_CONVERT_DECL
 #undef _CLC_CONVERT_DECL
 
-#endif // __CLC_CLC_CONVERT_H__
+#endif // CLC_CLC_CONVERT_H

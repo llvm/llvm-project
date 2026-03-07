@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_ATOMIC_CLC_ATOMIC_FLAG_TEST_AND_SET_H__
-#define __CLC_ATOMIC_CLC_ATOMIC_FLAG_TEST_AND_SET_H__
+#ifndef CLC_ATOMIC_CLC_ATOMIC_FLAG_TEST_AND_SET_H
+#define CLC_ATOMIC_CLC_ATOMIC_FLAG_TEST_AND_SET_H
 
 #include <clc/internal/clc.h>
 
@@ -21,4 +21,4 @@ __CLC_DECLARE_ATOMIC_FLAG_TEST_AND_SET(local)
 __CLC_DECLARE_ATOMIC_FLAG_TEST_AND_SET()
 #endif
 
-#endif // __CLC_ATOMIC_CLC_ATOMIC_FLAG_TEST_AND_SET_H__
+#endif // CLC_ATOMIC_CLC_ATOMIC_FLAG_TEST_AND_SET_H

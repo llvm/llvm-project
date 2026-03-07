@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTERNAL_CLC_H_
-#define __CLC_INTERNAL_CLC_H_
+#ifndef CLC_INTERNAL_CLC_H
+#define CLC_INTERNAL_CLC_H
 
 #ifndef cl_clang_storage_class_specifiers
 #error Implementation requires cl_clang_storage_class_specifiers extension!
@@ -33,4 +33,4 @@
 
 #pragma OPENCL EXTENSION all : disable
 
-#endif // __CLC_INTERNAL_CLC_H_
+#endif // CLC_INTERNAL_CLC_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_COPYSIGN_H__
-#define __CLC_MATH_CLC_COPYSIGN_H__
+#ifndef CLC_MATH_CLC_COPYSIGN_H
+#define CLC_MATH_CLC_COPYSIGN_H
 
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 #define __CLC_FUNCTION __clc_copysign
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_MATH_CLC_COPYSIGN_H__
+#endif // CLC_MATH_CLC_COPYSIGN_H

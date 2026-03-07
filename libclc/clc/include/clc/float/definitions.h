@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef CLC_FLOAT_DEFINITIONS_H
+#define CLC_FLOAT_DEFINITIONS_H
+
 #define FLT_DIG 6
 #define FLT_MANT_DIG 24
 #define FLT_MAX_10_EXP +38
@@ -60,3 +63,5 @@
 #define HALF_NAN __builtin_nanf16("")
 
 #endif
+
+#endif // CLC_FLOAT_DEFINITIONS_H

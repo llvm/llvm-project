@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H__
-#define __CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H__
+#ifndef CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H
+#define CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_GEOMETRIC_RET_GENTYPE
@@ -18,4 +18,4 @@
 #undef __CLC_FUNCTION
 #undef __CLC_GEOMETRIC_RET_GENTYPE
 
-#endif // __CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H__
+#endif // CLC_GEOMETRIC_CLC_FAST_NORMALIZE_H

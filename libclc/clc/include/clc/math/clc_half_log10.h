@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_HALF_LOG10_H__
-#define __CLC_MATH_CLC_HALF_LOG10_H__
+#ifndef CLC_MATH_CLC_HALF_LOG10_H
+#define CLC_MATH_CLC_HALF_LOG10_H
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_half_log10
@@ -17,4 +17,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_MATH_CLC_HALF_LOG10_H__
+#endif // CLC_MATH_CLC_HALF_LOG10_H

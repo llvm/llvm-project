@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_COMMON_CLC_DEGREES_H__
-#define __CLC_COMMON_CLC_DEGREES_H__
+#ifndef CLC_COMMON_CLC_DEGREES_H
+#define CLC_COMMON_CLC_DEGREES_H
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #define __CLC_FUNCTION __clc_degrees
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_COMMON_CLC_DEGREES_H__
+#endif // CLC_COMMON_CLC_DEGREES_H

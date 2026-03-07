@@ -1,0 +1,7 @@
+InheritParentConfig: true
+# Disable bugprone-reserved-identifier and bugprone-macro-parentheses as libclc
+# uses reserved identifiers (__prefix) for internal macros/functions.
+# Disable readability-identifier-naming to preserve existing naming (LOG2_HEAD, etc).
+Checks: 'bugprone-*,-bugprone-reserved-identifier,-bugprone-macro-parentheses,performance-*,llvm-header-guard,-readability-identifier-naming'
+WarningsAsErrors: 'bugprone-*'
+HeaderFilterRegex: 'libclc/.*'

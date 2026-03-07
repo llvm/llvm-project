@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_RELATIONAL_CLC_ISUNORDERED_H__
-#define __CLC_RELATIONAL_CLC_ISUNORDERED_H__
+#ifndef CLC_RELATIONAL_CLC_ISUNORDERED_H
+#define CLC_RELATIONAL_CLC_ISUNORDERED_H
 
 #define __CLC_FUNCTION __clc_isunordered
 #define __CLC_BODY <clc/relational/binary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_RELATIONAL_CLC_ISUNORDERED_H__
+#endif // CLC_RELATIONAL_CLC_ISUNORDERED_H
