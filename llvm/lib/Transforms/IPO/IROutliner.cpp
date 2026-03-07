@@ -24,7 +24,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <vector>
 
@@ -1915,7 +1914,6 @@ replaceArgumentUses(OutlinableRegion &Region,
 void replaceConstants(OutlinableRegion &Region) {
   OutlinableGroup &Group = *Region.Parent;
   Function *OutlinedFunction = Group.OutlinedFunction;
-  ValueToValueMapTy VMap;
 
   // Iterate over the constants that need to be elevated into arguments
   for (std::pair<unsigned, Constant *> &Const : Region.AggArgToConstant) {
@@ -1923,16 +1921,23 @@ void replaceConstants(OutlinableRegion &Region) {
     assert(OutlinedFunction && "Overall Function is not defined?");
     Constant *CST = Const.second;
     Argument *Arg = Group.OutlinedFunction->getArg(AggArgIdx);
-    // Identify the argument it will be elevated to, and replace instances of
-    // that constant in the function.
-    VMap[CST] = Arg;
-    LLVM_DEBUG(dbgs() << "Replacing uses of constant " << *CST
+    LLVM_DEBUG(dbgs() << "Replacing instruction uses of constant " << *CST
                       << " in function " << *OutlinedFunction << " with "
                       << *Arg << '\n');
-  }
 
-  RemapFunction(*OutlinedFunction, VMap,
-                RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    for (auto &BB : *OutlinedFunction) {
+      for (Instruction &I : BB) {
+        // We specifically iterate over the direct operands of instructions, to
+        // avoid replacing constants that appear in `ConstantExpr`s
+        for (auto &U : I.operands()) {
+          if (auto *CCandidate = dyn_cast<Constant>(U)) {
+            if (CCandidate == CST)
+              U = Arg;
+          }
+        }
+      }
+    }
+  }
 }
 
 /// It is possible that there is a basic block that already performs the same
