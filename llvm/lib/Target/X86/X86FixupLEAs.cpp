@@ -643,6 +643,9 @@ bool FixupLEAsImpl::optTwoAddrLEA(MachineBasicBlock::iterator &I,
   } else
     return false;
 
+  // optTwoAddrLEA only rewrites when EFLAGS are dead; preserve that on the
+  // replacement so later transforms can still reason about dead flags.
+  NewMI->addRegisterDead(X86::EFLAGS, TRI);
   MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
   MBB.erase(I);
   I = NewMI;
@@ -733,6 +736,9 @@ void FixupLEAsImpl::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
     LLVM_DEBUG(NewMI->dump(););
   }
   if (NewMI) {
+    // processInstructionForSlowLEA is guarded by dead EFLAGS liveness.
+    // Preserve that on the replacement instruction.
+    NewMI->addRegisterDead(X86::EFLAGS, TRI);
     MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
     MBB.erase(I);
     I = NewMI;

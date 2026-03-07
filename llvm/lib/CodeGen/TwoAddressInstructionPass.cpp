@@ -158,7 +158,7 @@ class TwoAddressInstructionImpl {
   bool commuteInstruction(MachineInstr *MI, unsigned DstIdx,
                           unsigned RegBIdx, unsigned RegCIdx, unsigned Dist);
 
-  bool isProfitableToConv3Addr(Register RegA, Register RegB);
+  bool isProfitableToConv3Addr(MachineInstr &MI, Register RegA, Register RegB);
 
   bool convertInstTo3Addr(MachineBasicBlock::iterator &mi,
                           MachineBasicBlock::iterator &nmi, Register RegA,
@@ -786,13 +786,38 @@ bool TwoAddressInstructionImpl::commuteInstruction(MachineInstr *MI,
 
 /// Return true if it is profitable to convert the given 2-address instruction
 /// to a 3-address one.
-bool TwoAddressInstructionImpl::isProfitableToConv3Addr(Register RegA,
+bool TwoAddressInstructionImpl::isProfitableToConv3Addr(MachineInstr &MI,
+                                                        Register RegA,
                                                         Register RegB) {
+  // Narrowly target copy+op patterns:
+  //   %tmp = COPY %src
+  //   %tmp = OP %tmp, ...
+  // and only when removing that copy is obvious.
+  if (RegA.isVirtual() && RegB.isVirtual() && MRI->hasOneNonDBGUse(RegB)) {
+
+    MachineInstr *DefMI = MRI->getUniqueVRegDef(RegB);
+    bool HasCopyDef = DefMI && DefMI->isCopy();
+    bool InSameBlock = HasCopyDef && DefMI->getParent() == MI.getParent();
+    bool HasRegOperands = InSameBlock && DefMI->getOperand(0).isReg() &&
+                          DefMI->getOperand(1).isReg();
+    bool DefinesRegB = HasRegOperands && DefMI->getOperand(0).getReg() == RegB;
+    bool CopySrcIsVirtual =
+        DefinesRegB && DefMI->getOperand(1).getReg().isVirtual();
+
+    if (CopySrcIsVirtual) {
+      auto NextNonDbg = std::next(DefMI->getIterator());
+      while (NextNonDbg != MI.getIterator() && NextNonDbg->isDebugInstr())
+        ++NextNonDbg;
+      if (NextNonDbg == MI.getIterator())
+        return true;
+    }
+  }
+
   // Look for situations like this:
   // %reg1024 = MOV r1
   // %reg1025 = MOV r0
   // %reg1026 = ADD %reg1024, %reg1025
-  // r2            = MOV %reg1026
+  // r2       = MOV %reg1026
   // Turn ADD into a 3-address instruction to avoid a copy.
   MCRegister FromRegB = getMappedReg(RegB, SrcRegMap);
   if (!FromRegB)
@@ -1387,7 +1412,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
   if (ConvertibleTo3Addr) {
     // This instruction is potentially convertible to a true
     // three-address instruction.  Check if it is profitable.
-    if (!regBKilled || isProfitableToConv3Addr(regA, regB)) {
+    if (!regBKilled || isProfitableToConv3Addr(MI, regA, regB)) {
       // Try to convert it.
       if (convertInstTo3Addr(mi, nmi, regA, regB, Dist)) {
         ++NumConvertedTo3Addr;
