@@ -1019,6 +1019,17 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 // The main function that computes the VGPR to SGPR copy score
 // and determines copy further lowering way: v_readfirstlane_b32 or moveToVALU
 bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
+  Register DstReg = Info->Copy->getOperand(0).getReg();
+  for (const MachineOperand &MO : MRI->use_nodbg_operands(DstReg)) {
+    const MachineInstr *UseMI = MO.getParent();
+    if (!UseMI->isInlineAsm())
+      continue;
+    const TargetRegisterClass *RC =
+        UseMI->getRegClassConstraint(MO.getOperandNo(), TII, TRI);
+    if (RC && TRI->isSGPRClass(RC))
+      return false;
+  }
+
   if (Info->SChain.empty()) {
     Info->Score = 0;
     return true;

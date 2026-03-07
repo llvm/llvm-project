@@ -518,8 +518,9 @@ define void @s_maximum_f16(half inreg %src0, half inreg %src1) {
 ; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v1, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v3, vcc
 ; GFX7-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX7-NEXT:    ;;#ASMSTART
-; GFX7-NEXT:    ; use v0
+; GFX7-NEXT:    ; use s4
 ; GFX7-NEXT:    ;;#ASMEND
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1029,8 +1030,9 @@ define void @s_maximum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX950-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX950-NEXT:    v_pk_maximum3_f16 v0, v0, s1, s1
 ; GFX950-NEXT:    s_nop 0
+; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use v0
+; GFX950-NEXT:    ; use s0
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1097,9 +1099,12 @@ define void @s_maximum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    ; use v0
+; GFX12-NEXT:    ; use s0
 ; GFX12-NEXT:    ;;#ASMEND
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x half> @llvm.maximum.v2f16(<2 x half> %src0, <2 x half> %src1)
   %cast = bitcast <2 x half> %op to i32
