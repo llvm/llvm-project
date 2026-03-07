@@ -44,6 +44,30 @@ define i32 @any_v16i8_eq(<16 x i8> %x) {
   ret i32 %c
 }
 
+; CHECK-LABEL: any_v16i8_eq_0:
+; CHECK-NEXT: .functype any_v16i8_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v16i8_eq_0(<16 x i8> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: any_v16i8_ne_1:
+; CHECK-NEXT: .functype any_v16i8_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v16i8_ne_1(<16 x i8> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)
+  %b = icmp ne i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
 ; CHECK-LABEL: all_v16i8_trunc:
 ; CHECK-NEXT: .functype all_v16i8_trunc (v128) -> (i32){{$}}
 ; CHECK-NEXT: i8x16.all_true $push[[R:[0-9]+]]=, $0{{$}}
@@ -73,6 +97,30 @@ define i32 @all_v16i8_ne(<16 x i8> %x) {
 define i32 @all_v16i8_eq(<16 x i8> %x) {
   %a = call i32 @llvm.wasm.alltrue.v16i8(<16 x i8> %x)
   %b = icmp eq i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v16i8_eq_0:
+; CHECK-NEXT: .functype all_v16i8_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: i8x16.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v16i8_eq_0(<16 x i8> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v16i8(<16 x i8> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v16i8_ne_1:
+; CHECK-NEXT: .functype all_v16i8_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: i8x16.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v16i8_ne_1(<16 x i8> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v16i8(<16 x i8> %x)
+  %b = icmp ne i32 %a, 1
   %c = zext i1 %b to i32
   ret i32 %c
 }
@@ -116,6 +164,30 @@ define i32 @any_v8i16_eq(<8 x i16> %x) {
   ret i32 %c
 }
 
+; CHECK-LABEL: any_v8i16_eq_0:
+; CHECK-NEXT: .functype any_v8i16_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v8i16_eq_0(<8 x i16> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: any_v8i16_ne_1:
+; CHECK-NEXT: .functype any_v8i16_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v8i16_ne_1(<8 x i16> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> %x)
+  %b = icmp ne i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
 ; CHECK-LABEL: all_v8i16_trunc:
 ; CHECK-NEXT: .functype all_v8i16_trunc (v128) -> (i32){{$}}
 ; CHECK-NEXT: i16x8.all_true $push[[R:[0-9]+]]=, $0{{$}}
@@ -145,6 +217,30 @@ define i32 @all_v8i16_ne(<8 x i16> %x) {
 define i32 @all_v8i16_eq(<8 x i16> %x) {
   %a = call i32 @llvm.wasm.alltrue.v8i16(<8 x i16> %x)
   %b = icmp eq i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v8i16_eq_0:
+; CHECK-NEXT: .functype all_v8i16_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: i16x8.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v8i16_eq_0(<8 x i16> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v8i16(<8 x i16> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v8i16_ne_1:
+; CHECK-NEXT: .functype all_v8i16_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: i16x8.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v8i16_ne_1(<8 x i16> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v8i16(<8 x i16> %x)
+  %b = icmp ne i32 %a, 1
   %c = zext i1 %b to i32
   ret i32 %c
 }
@@ -188,6 +284,30 @@ define i32 @any_v4i32_eq(<4 x i32> %x) {
   ret i32 %c
 }
 
+; CHECK-LABEL: any_v4i32_eq_0:
+; CHECK-NEXT: .functype any_v4i32_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v4i32_eq_0(<4 x i32> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: any_v4i32_ne_1:
+; CHECK-NEXT: .functype any_v4i32_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v4i32_ne_1(<4 x i32> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> %x)
+  %b = icmp ne i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
 ; CHECK-LABEL: all_v4i32_trunc:
 ; CHECK-NEXT: .functype all_v4i32_trunc (v128) -> (i32){{$}}
 ; CHECK-NEXT: i32x4.all_true $push[[R:[0-9]+]]=, $0{{$}}
@@ -217,6 +337,30 @@ define i32 @all_v4i32_ne(<4 x i32> %x) {
 define i32 @all_v4i32_eq(<4 x i32> %x) {
   %a = call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> %x)
   %b = icmp eq i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v4i32_eq_0:
+; CHECK-NEXT: .functype all_v4i32_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: i32x4.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v4i32_eq_0(<4 x i32> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v4i32_ne_1:
+; CHECK-NEXT: .functype all_v4i32_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: i32x4.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v4i32_ne_1(<4 x i32> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> %x)
+  %b = icmp ne i32 %a, 1
   %c = zext i1 %b to i32
   ret i32 %c
 }
@@ -260,6 +404,30 @@ define i32 @any_v2i64_eq(<2 x i64> %x) {
   ret i32 %c
 }
 
+; CHECK-LABEL: any_v2i64_eq_0:
+; CHECK-NEXT: .functype any_v2i64_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v2i64_eq_0(<2 x i64> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: any_v2i64_ne_1:
+; CHECK-NEXT: .functype any_v2i64_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: v128.any_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @any_v2i64_ne_1(<2 x i64> %x) {
+  %a = call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> %x)
+  %b = icmp ne i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
 ; CHECK-LABEL: all_v2i64_trunc:
 ; CHECK-NEXT: .functype all_v2i64_trunc (v128) -> (i32){{$}}
 ; CHECK-NEXT: i64x2.all_true $push[[R:[0-9]+]]=, $0{{$}}
@@ -289,6 +457,30 @@ define i32 @all_v2i64_ne(<2 x i64> %x) {
 define i32 @all_v2i64_eq(<2 x i64> %x) {
   %a = call i32 @llvm.wasm.alltrue.v2i64(<2 x i64> %x)
   %b = icmp eq i32 %a, 1
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v2i64_eq_0:
+; CHECK-NEXT: .functype all_v2i64_eq_0 (v128) -> (i32){{$}}
+; CHECK-NEXT: i64x2.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v2i64_eq_0(<2 x i64> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v2i64(<2 x i64> %x)
+  %b = icmp eq i32 %a, 0
+  %c = zext i1 %b to i32
+  ret i32 %c
+}
+
+; CHECK-LABEL: all_v2i64_ne_1:
+; CHECK-NEXT: .functype all_v2i64_ne_1 (v128) -> (i32){{$}}
+; CHECK-NEXT: i64x2.all_true $push[[T:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.eqz $push[[R:[0-9]+]]=, $pop[[T]]{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+define i32 @all_v2i64_ne_1(<2 x i64> %x) {
+  %a = call i32 @llvm.wasm.alltrue.v2i64(<2 x i64> %x)
+  %b = icmp ne i32 %a, 1
   %c = zext i1 %b to i32
   ret i32 %c
 }
