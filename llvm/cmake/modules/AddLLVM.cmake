@@ -624,8 +624,16 @@ function(llvm_add_library name)
     add_library(${obj_name} OBJECT EXCLUDE_FROM_ALL
       ${ALL_FILES}
       )
+
+    # TODO(https://github.com/llvm/llvm-project/issues/145406): remove special case.
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
+      # Disable PCH reuse when we add new macro definitions.
+      set(ARG_DISABLE_PCH_REUSE ON)
+    endif()
     llvm_update_compile_flags(${obj_name})
     llvm_update_pch(${obj_name})
+
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
       file(WRITE ${DUMMY_FILE} "// This file intentionally empty\n")
@@ -667,10 +675,6 @@ function(llvm_add_library name)
           add_dependencies(${obj_name} ${link_lib})
         endif()
       endforeach()
-    endif()
-
-    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
     endif()
   endif()
 
@@ -751,6 +755,13 @@ function(llvm_add_library name)
   if(DEFINED windows_resource_file)
     set_windows_version_resource_properties(${name} ${windows_resource_file})
     set(windows_resource_file ${windows_resource_file} PARENT_SCOPE)
+  endif()
+
+  # TODO(https://github.com/llvm/llvm-project/issues/145406): remove special case.
+  if(NOT ARG_COMPONENT_LIB AND ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+    # Disable PCH reuse when we add new macro definitions.
+    set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
   set_output_directory(${name} BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR} LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
@@ -843,9 +854,6 @@ function(llvm_add_library name)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
-      if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-        target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
-      endif()
       llvm_map_components_to_libnames(llvm_libs
         ${LLVM_LINK_COMPONENTS}
        )
@@ -1176,6 +1184,12 @@ macro(add_llvm_executable name)
   if(${cmake_pie})
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
+  # TODO(https://github.com/llvm/llvm-project/issues/145406): remove special case.
+  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
+    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+    # Disable PCH reuse when we add new macro definitions.
+    set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
 
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT LLVM_ENABLE_OBJLIB)
@@ -1252,10 +1266,6 @@ macro(add_llvm_executable name)
 
   if (ARG_EXPORT_SYMBOLS)
     export_executable_symbols(${name})
-  endif()
-
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
-    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND
