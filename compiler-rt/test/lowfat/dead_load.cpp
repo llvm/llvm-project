@@ -1,7 +1,8 @@
 // RUN: %clangxx_lowfat -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-ALL
 // RUN: %clangxx_lowfat_safe -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-ALL
 
-// Verifies that a genuine OOB heap read is detected in both Fast and Safe mode
+// Verifies that a genuine OOB heap read is detected in both default-fast and
+// safe mode
 // when the loaded value is actually used (returned and passed to printf).
 
 #include <cstdio>
