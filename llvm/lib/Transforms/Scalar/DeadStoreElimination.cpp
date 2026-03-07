@@ -174,6 +174,11 @@ static cl::opt<bool> EnableInitializesImprovement(
     "enable-dse-initializes-attr-improvement", cl::init(true), cl::Hidden,
     cl::desc("Enable the initializes attr improvement in DSE"));
 
+static cl::opt<unsigned> MaxDepthRecursion(
+    "dse-max-dom-cond-depth", cl::init(20), cl::Hidden,
+    cl::desc("Limit dominator tree depth for recursion while eliminating "
+             "redundant stores via dominating conditions"));
+
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -1110,10 +1115,6 @@ struct DSEState {
   /// try folding it into a call to calloc.
   bool tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO);
 
-  // Check if there is a dominating condition, that implies that the value
-  // being stored in a ptr is already present in the ptr.
-  bool dominatingConditionImpliesValue(MemoryDef *Def);
-
   /// \returns true if \p Def is a no-op store, either because it
   /// directly stores back a loaded value or stores zero to a calloced object.
   bool storeIsNoop(MemoryDef *Def, const Value *DefUO);
@@ -1123,6 +1124,11 @@ struct DSEState {
   /// Eliminates writes to locations where the value that is being written
   /// is already stored at the same location.
   bool eliminateRedundantStoresOfExistingValues();
+
+  /// If there is a dominating condition that implies the value being stored in
+  /// a pointer, and such a condition appears in a node that dominates the
+  /// store, then the store may be redundant if no write occurs in between.
+  bool eliminateRedundantStoresViaDominatingConditions();
 
   // Return the locations written by the initializes attribute.
   // Note that this function considers:
@@ -2142,6 +2148,124 @@ bool DSEState::eliminateDeadWritesAtEndOfFunction() {
   return MadeChange;
 }
 
+bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
+  bool MadeChange = false;
+  LLVM_DEBUG(dbgs() << "Trying to eliminate MemoryDefs whose value being "
+                       "written is implied by a dominating condition\n");
+
+  // A small struct to record `*Ptr == Val` equality facts.
+  struct EqualityCond {
+    Value *Ptr;
+    Value *Val;
+    Instruction *LI;
+    EqualityCond(Value *Ptr, Value *Val, Instruction *LI)
+        : Ptr(Ptr), Val(Val), LI(LI) {}
+  };
+
+  // We maintain a stack of the active dominating conditions for a given node.
+  SmallVector<EqualityCond, 8> ActiveConditions;
+  auto GetDominatingCondition = [&](BasicBlock *BB)
+      -> std::optional<std::pair<EqualityCond, BasicBlock *>> {
+    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!BI || !BI->isConditional())
+      return std::nullopt;
+
+    // In case both blocks are the same, it is not possible to determine
+    // if optimization is possible. (We would not want to optimize a store
+    // in the FalseBB if condition is true and vice versa.)
+    if (BI->getSuccessor(0) == BI->getSuccessor(1))
+      return std::nullopt;
+
+    Instruction *ICmpL;
+    CmpPredicate Pred;
+    Value *StorePtr, *StoreVal;
+    if (!match(BI->getCondition(),
+               m_c_ICmp(Pred, m_Instruction(ICmpL, m_Load(m_Value(StorePtr))),
+                        m_Value(StoreVal))) ||
+        !ICmpInst::isEquality(Pred))
+      return std::nullopt;
+
+    // Ensure the replacement is allowed when comparing pointers, as
+    // the equality compares addresses only, not pointers' provenance.
+    if (StoreVal->getType()->isPointerTy() &&
+        !canReplacePointersIfEqual(StoreVal, ICmpL, DL))
+      return std::nullopt;
+
+    unsigned ImpliedSuccIdx = (Pred == ICmpInst::ICMP_EQ) ? 0 : 1;
+    BasicBlock *ImpliedSucc = BI->getSuccessor(ImpliedSuccIdx);
+    return {{EqualityCond(StorePtr, StoreVal, ICmpL), ImpliedSucc}};
+  };
+
+  using NodePredicate = std::function<void(DomTreeNode *, unsigned)>;
+  NodePredicate VisitNode = [&](DomTreeNode *Node, unsigned Depth) {
+    if (Depth > MaxDepthRecursion)
+      return;
+
+    BasicBlock *BB = Node->getBlock();
+    // Check for redundant stores against active known conditions.
+    if (auto *Accesses = MSSA.getBlockDefs(BB)) {
+      for (auto &Access : make_early_inc_range(*Accesses)) {
+        auto *Def = dyn_cast<MemoryDef>(&Access);
+        if (!Def)
+          continue;
+
+        auto *SI = dyn_cast<StoreInst>(Def->getMemoryInst());
+        if (!SI || !SI->isUnordered())
+          continue;
+
+        auto It = llvm::find_if(ActiveConditions, [&](const auto &C) {
+          return C.Ptr == SI->getPointerOperand() &&
+                 C.Val == SI->getValueOperand();
+        });
+        if (It == ActiveConditions.end())
+          continue;
+
+        // Found a dominating condition that may imply the value being stored.
+        // Make sure there does not exist any clobbering access between the
+        // load and the potential redundant store.
+        MemoryAccess *LoadAccess = MSSA.getMemoryAccess(It->LI);
+        MemoryAccess *ClobberingAccess =
+            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
+        if (MSSA.dominates(ClobberingAccess, LoadAccess)) {
+          LLVM_DEBUG(dbgs()
+                     << "Removing No-Op Store:\n  DEAD: " << *SI << '\n');
+          deleteDeadInstruction(SI);
+          NumRedundantStores++;
+          MadeChange = true;
+        }
+      }
+    }
+
+    // See whether this basic block establishes a dominating condition.
+    auto MaybeCondition = GetDominatingCondition(BB);
+
+    for (DomTreeNode *Child : Node->children()) {
+      bool IsActive = false;
+      if (MaybeCondition) {
+        const auto &[Cond, ImpliedSucc] = *MaybeCondition;
+        if (DT.dominates(BasicBlockEdge(BB, ImpliedSucc), Child->getBlock())) {
+          // Found a condition that holds for this child, dominated by the
+          // current node via the equality edge. Propagate the condition to
+          // the subchilds by pushing it onto the stack.
+          ActiveConditions.emplace_back(Cond);
+          IsActive = true;
+        }
+      }
+
+      // Recursively visit the children of this node. Upon returning, pop
+      // the no longer active condition before visiting any sibling nodes.
+      VisitNode(Child, Depth + 1);
+      if (IsActive)
+        ActiveConditions.pop_back();
+    }
+  };
+
+  // Do a DFS walk of the dom-tree.
+  VisitNode(DT.getRootNode(), 0);
+
+  return MadeChange;
+}
+
 bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   Instruction *DefI = Def->getMemoryInst();
   MemSetInst *MemSet = dyn_cast<MemSetInst>(DefI);
@@ -2246,61 +2370,6 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   return true;
 }
 
-bool DSEState::dominatingConditionImpliesValue(MemoryDef *Def) {
-  auto *StoreI = cast<StoreInst>(Def->getMemoryInst());
-  BasicBlock *StoreBB = StoreI->getParent();
-  Value *StorePtr = StoreI->getPointerOperand();
-  Value *StoreVal = StoreI->getValueOperand();
-
-  DomTreeNode *IDom = DT.getNode(StoreBB)->getIDom();
-  if (!IDom)
-    return false;
-
-  auto *BI = dyn_cast<BranchInst>(IDom->getBlock()->getTerminator());
-  if (!BI || !BI->isConditional())
-    return false;
-
-  // In case both blocks are the same, it is not possible to determine
-  // if optimization is possible. (We would not want to optimize a store
-  // in the FalseBB if condition is true and vice versa.)
-  if (BI->getSuccessor(0) == BI->getSuccessor(1))
-    return false;
-
-  Instruction *ICmpL;
-  CmpPredicate Pred;
-  if (!match(BI->getCondition(),
-             m_c_ICmp(Pred,
-                      m_CombineAnd(m_Load(m_Specific(StorePtr)),
-                                   m_Instruction(ICmpL)),
-                      m_Specific(StoreVal))) ||
-      !ICmpInst::isEquality(Pred))
-    return false;
-
-  // Ensure the replacement is allowed when comparing pointers, as
-  // the equality compares addresses only, not pointers' provenance.
-  if (StoreVal->getType()->isPointerTy() &&
-      !canReplacePointersIfEqual(StoreVal, ICmpL, DL))
-    return false;
-
-  // In case the else blocks also branches to the if block or the other way
-  // around it is not possible to determine if the optimization is possible.
-  if (Pred == ICmpInst::ICMP_EQ &&
-      !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(0)),
-                    StoreBB))
-    return false;
-
-  if (Pred == ICmpInst::ICMP_NE &&
-      !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(1)),
-                    StoreBB))
-    return false;
-
-  MemoryAccess *LoadAcc = MSSA.getMemoryAccess(ICmpL);
-  MemoryAccess *ClobAcc =
-      MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
-
-  return MSSA.dominates(ClobAcc, LoadAcc);
-}
-
 bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
   Instruction *DefI = Def->getMemoryInst();
   StoreInst *Store = dyn_cast<StoreInst>(DefI);
@@ -2328,9 +2397,6 @@ bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
 
   if (!Store)
     return false;
-
-  if (dominatingConditionImpliesValue(Def))
-    return true;
 
   if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
     if (LoadI->getPointerOperand() == Store->getOperand(1)) {
@@ -2738,6 +2804,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   MadeChange |= State.eliminateRedundantStoresOfExistingValues();
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
+  MadeChange |= State.eliminateRedundantStoresViaDominatingConditions();
 
   while (!State.ToRemove.empty()) {
     Instruction *DeadInst = State.ToRemove.pop_back_val();
