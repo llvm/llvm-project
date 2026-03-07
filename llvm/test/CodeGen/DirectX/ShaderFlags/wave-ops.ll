@@ -70,10 +70,10 @@ entry:
   ret i32 %ret
 }
 
-define noundef i32 @wave_reduce_uproduct(i32 noundef %x) {
+define noundef i32 @wave_uproduct(i32 noundef %x) {
 entry:
-  ; CHECK: Function wave_reduce_uproduct : [[WAVE_FLAG]]
-  %ret = call i32 @llvm.dx.wave.product.i32(i32 %x)
+  ; CHECK: Function wave_uproduct : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.uproduct.i32(i32 %x)
   ret i32 %ret
 }
 
