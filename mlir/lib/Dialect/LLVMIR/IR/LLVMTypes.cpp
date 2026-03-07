@@ -208,6 +208,9 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 bool LLVMFunctionType::isValidArgumentType(Type type) {
+  if (auto structType = dyn_cast<LLVMStructType>(type))
+    return !structType.isOpaque();
+
   return !llvm::isa<LLVMVoidType, LLVMFunctionType>(type);
 }
 
