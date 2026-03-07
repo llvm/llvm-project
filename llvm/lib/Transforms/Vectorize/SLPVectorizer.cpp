@@ -1132,13 +1132,11 @@ class BinOpSameOpcodeHelper {
         break;
       }
       Value *LHS = I->getOperand(1 - Pos);
-      // constant + x cannot be -constant - x
-      // instead, it should be x - -constant
-      if (Pos == 1 ||
-          ((FromOpcode == Instruction::Add || FromOpcode == Instruction::Or ||
-            FromOpcode == Instruction::Xor) &&
-           ToOpcode == Instruction::Sub))
+      // If the target opcode is non-commutative (e.g., shl, sub),
+      // force the variable to the left and the constant to the right.
+      if (Pos == 1 || !Instruction::isCommutative(ToOpcode))
         return SmallVector<Value *>({LHS, RHS});
+
       return SmallVector<Value *>({RHS, LHS});
     }
   };
