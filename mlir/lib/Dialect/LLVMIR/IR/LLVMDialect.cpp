@@ -3854,6 +3854,22 @@ LogicalResult LLVM::BitcastOp::verify() {
   return success();
 }
 
+LogicalResult LLVM::PtrToAddrOp::verify() {
+  auto pointerType =
+      cast<LLVM::LLVMPointerType>(extractVectorElementType(getArg().getType()));
+  auto integerType = cast<IntegerType>(extractVectorElementType(getType()));
+
+  auto dataLayout = DataLayout::closest(*this);
+  std::optional<unsigned> width = dataLayout.getTypeIndexBitwidth(pointerType);
+  assert(width && "pointers always return an index bitwidth");
+  if (width != integerType.getWidth())
+    return emitOpError("bit-width of integer result type ")
+           << integerType << " must match the pointer bitwidth (" << *width
+           << ") specified in the datalayout";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Folder for LLVM::AddrSpaceCastOp
 //===----------------------------------------------------------------------===//
