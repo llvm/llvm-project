@@ -431,38 +431,62 @@ let Predicates = [HasVSX, IsISAFuture] in {
   }
 
   def VUPKHSNTOB : VXForm_VRTB5<387, 0, (outs vrrc:$VRT), (ins vrrc:$VRB),
-                                "vupkhsntob $VRT, $VRB", []>;
+                                "vupkhsntob $VRT, $VRB",
+                                [(set v16i8:$VRT,
+                                  (int_ppc_altivec_vupkhsntob v16i8:$VRB))]>;
   def VUPKLSNTOB : VXForm_VRTB5<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB),
-                                "vupklsntob $VRT, $VRB", []>;
+                                "vupklsntob $VRT, $VRB",
+                                [(set v16i8:$VRT,
+                                  (int_ppc_altivec_vupklsntob v16i8:$VRB))]>;
   def VUPKINT4TOBF16
       : VXForm_VRTB5_UIM2<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
-                          "vupkint4tobf16 $VRT, $VRB, $UIM", []>;
+                          "vupkint4tobf16 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint4tobf16 v16i8:$VRB, timm:$UIM))]>;
   def VUPKINT8TOBF16
       : VXForm_VRTB5_UIM1<387, 1, (outs vrrc:$VRT), (ins vrrc:$VRB, u1imm:$UIM),
-                          "vupkint8tobf16 $VRT, $VRB, $UIM", []>;
+                          "vupkint8tobf16 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint8tobf16 v16i8:$VRB, timm:$UIM))]>;
   def VUPKINT8TOFP32
       : VXForm_VRTB5_UIM2<387, 3, (outs vrrc:$VRT), (ins vrrc:$VRB, u2imm:$UIM),
-                          "vupkint8tofp32 $VRT, $VRB, $UIM", []>;
+                          "vupkint8tofp32 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint8tofp32 v16i8:$VRB, timm:$UIM))]>;
   def VUPKINT4TOFP32
       : VXForm_VRTB5_UIM3<387, 2, (outs vrrc:$VRT), (ins vrrc:$VRB, u3imm:$UIM),
-                          "vupkint4tofp32 $VRT, $VRB, $UIM", []>;
+                          "vupkint4tofp32 $VRT, $VRB, $UIM",
+                          [(set v16i8:$VRT,
+                            (int_ppc_altivec_vupkint4tofp32 v16i8:$VRB, timm:$UIM))]>;
 
   def VUCMPRHN : VXForm_VRTAB5<3, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                               "vucmprhn $VRT, $VRA, $VRB", []>;
+                               "vucmprhn $VRT, $VRA, $VRB",
+                               [(set v16i8:$VRT,
+                                 (int_ppc_altivec_vucmprhn v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLN : VXForm_VRTAB5<67, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                               "vucmprln $VRT, $VRA, $VRB", []>;
+                               "vucmprln $VRT, $VRA, $VRB",
+                               [(set v16i8:$VRT,
+                                 (int_ppc_altivec_vucmprln v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRHB
       : VXForm_VRTAB5<131, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprhb $VRT, $VRA, $VRB", []>;
+                      "vucmprhb $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprhb v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLB
       : VXForm_VRTAB5<195, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprlb $VRT, $VRA, $VRB", []>;
+                      "vucmprlb $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprlb v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRHH
       : VXForm_VRTAB5<259, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprhh $VRT, $VRA, $VRB", []>;
+                      "vucmprhh $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprhh v16i8:$VRA, v16i8:$VRB))]>;
   def VUCMPRLH
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
-                      "vucmprlh $VRT, $VRA, $VRB", []>;
+                      "vucmprlh $VRT, $VRA, $VRB",
+                      [(set v16i8:$VRT,
+                        (int_ppc_altivec_vucmprlh v16i8:$VRA, v16i8:$VRB))]>;
 
   def XVRLW : XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                             "xvrlw $XT, $XA, $XB",
