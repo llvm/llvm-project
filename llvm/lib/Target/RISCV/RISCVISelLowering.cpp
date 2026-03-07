@@ -24612,6 +24612,15 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   if (CCInfo.getStackSize() > RVFI->getArgumentStackSize())
     return false;
 
+  // Do not tail call optimize if any argument needs to be passed indirectly.
+  // The caller allocates stack space and passes a pointer to the callee. On a
+  // tail call the caller's stack frame is deallocated before the callee
+  // executes, invalidating the pointer (use-after-free).
+  for (const auto &VA : ArgLocs) {
+    if (VA.getLocInfo() == CCValAssign::Indirect)
+      return false;
+  }
+
   // Do not tail call opt if either caller or callee uses struct return
   // semantics.
   auto IsCallerStructRet = Caller.hasStructRetAttr();
