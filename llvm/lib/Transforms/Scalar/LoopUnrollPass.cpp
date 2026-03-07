@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -843,6 +844,34 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
   return std::nullopt;
 }
 
+/// Return true if \p L contains a load or store to an alloca whose address
+/// is loop-dependent.  Full-unrolling such loops can eliminate the alloca
+/// entirely once all constant-index accesses are visible to SROA.
+static bool hasLoopDependentArrayAccess(const Loop *L, ScalarEvolution &SE) {
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      Value *Ptr = nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(&I))
+        Ptr = LI->getPointerOperand();
+      else if (auto *SI = dyn_cast<StoreInst>(&I))
+        Ptr = SI->getPointerOperand();
+      else
+        continue;
+
+      SmallVector<const Value *, 4> Objects;
+      getUnderlyingObjects(Ptr, Objects, /*LI=*/nullptr, /*MaxLookup=*/10);
+      for (const Value *Obj : Objects) {
+        if (!isa<AllocaInst>(Obj))
+          continue;
+        const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+        if (SE.getLoopDisposition(PtrSCEV, L) != ScalarEvolution::LoopInvariant)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 static std::optional<unsigned> shouldFullUnroll(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
     ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
@@ -855,7 +884,10 @@ static std::optional<unsigned> shouldFullUnroll(
 
   // When computing the unrolled size, note that BEInsns are not replicated
   // like the rest of the loop body.
-  if (UCE.getUnrolledLoopSize(UP) < UP.Threshold)
+  unsigned Threshold = UP.Threshold;
+  if (hasLoopDependentArrayAccess(L, SE))
+    Threshold *= UP.LoopDependentMemoryAccessThresholdMultiplier;
+  if (UCE.getUnrolledLoopSize(UP) < Threshold)
     return FullUnrollTripCount;
 
   // The loop isn't that small, but we still can fully unroll it if that
