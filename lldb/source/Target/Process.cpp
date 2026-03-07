@@ -402,10 +402,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
       }
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetProcessCreateCallbackAtIndex(idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback : PluginManager::GetProcessCreateCallbacks()) {
       process_sp = create_callback(target_sp, listener_sp, crash_file_path,
                                    can_connect);
       if (process_sp) {
@@ -6448,15 +6445,12 @@ void Process::MapSupportedStructuredDataPlugins(
   // we've consumed all the type names.
   // FIXME: should we return an error if there are type names nobody
   // supports?
-  for (uint32_t plugin_index = 0; !type_names.empty(); plugin_index++) {
-    auto create_instance =
-        PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(
-            plugin_index);
-    if (!create_instance)
+  for (auto &cbs : PluginManager::GetStructuredDataPluginCallbacks()) {
+    if (type_names.empty())
       break;
 
     // Create the plugin.
-    StructuredDataPluginSP plugin_sp = (*create_instance)(*this);
+    StructuredDataPluginSP plugin_sp = (*cbs.create_callback)(*this);
     if (!plugin_sp) {
       // This plugin doesn't think it can work with the process. Move on to the
       // next.

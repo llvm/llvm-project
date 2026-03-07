@@ -226,6 +226,16 @@ public:
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
+
+  // MaxNumOfQueries is the upper limit of the number of names the by-name
+  // scanning API (computeDependencies) can support after a
+  // CompilerInstanceWithContext is initialized. At the time of this commit, the
+  // estimated number of total unique importable names is around 3000 from
+  // Apple's SDKs. We usually import them in parallel, so it is unlikely that
+  // all names are all scanned by the same dependency scanning worker. Therefore
+  // the 64k (20x bigger than our estimate) size is sufficient to hold the
+  // unique source locations to report diagnostics per worker.
+  static const int32_t MaxNumOfQueries = 1 << 16;
 };
 
 } // end namespace tooling
