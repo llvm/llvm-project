@@ -6252,3 +6252,67 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
 }
+
+void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
+                                                 VPRecipeBuilder &RecipeBuilder,
+                                                 VPCostContext &CostCtx) {
+  // Filter out scalar VPlan.
+  if (LoopVectorizationPlanner::getDecisionAndClampRange(
+          [](ElementCount VF) { return VF.isScalar(); }, Range))
+    return;
+
+  // Scan the body of the loop in a topological order to visit each basic block
+  // after having visited its predecessor basic blocks. This is necessary
+  // because we need to preserve the order of the reduction stores into
+  // invariant address when transforming those to a scalar store outside the
+  // vector loop body.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      HeaderVPBB);
+
+  // Collect all loads/stores first. We will start with ones having simpler
+  // decisions followed by more complex ones that are potentially
+  // guided/dependent on the simpler ones.
+  SmallVector<VPInstruction *> MemOps;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI && VPI->getUnderlyingValue() &&
+          is_contained({Instruction::Load, Instruction::Store},
+                       VPI->getOpcode()))
+        MemOps.push_back(VPI);
+    }
+  }
+
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder FinalRedStoresBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+
+  for (VPInstruction *VPI : MemOps) {
+    Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
+    RecipeBuilder.getVPBuilder().setInsertPoint(VPI);
+
+    auto ReplaceWith = [&](VPRecipeBase *New) {
+      RecipeBuilder.setRecipe(Instr, New);
+      RecipeBuilder.getVPBuilder().insert(New);
+      if (VPI->getOpcode() == Instruction::Load)
+        VPI->replaceAllUsesWith(New->getVPSingleValue());
+      VPI->eraseFromParent();
+    };
+
+    if (RecipeBuilder.replaceWithFinalIfReductionStore(FinalRedStoresBuilder,
+                                                       VPI))
+      continue;
+
+    if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
+      ReplaceWith(Histogram);
+      continue;
+    }
+
+    VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
+    if (!Recipe)
+      Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
+
+    ReplaceWith(Recipe);
+  }
+}
