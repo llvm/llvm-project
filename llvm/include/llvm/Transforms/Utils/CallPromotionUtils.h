@@ -17,6 +17,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Support/Compiler.h"
 namespace llvm {
+class AAResults;
 template <typename T> class ArrayRef;
 class Constant;
 class CallBase;
@@ -98,7 +99,7 @@ LLVM_ABI CallBase &promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
 ///     [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI4Impl to i8*),
 ///     i8* bitcast (void (%class.Impl*)* @_ZN4Impl3RunEv to i8*)] }
 ///
-LLVM_ABI bool tryPromoteCall(CallBase &CB);
+LLVM_ABI bool tryPromoteCall(CallBase &CB, AAResults &AA);
 
 /// Predicate and clone the given call site.
 ///

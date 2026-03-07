@@ -65,8 +65,8 @@ entry:
 
 ; Negative test: the assume does NOT dominate the call to foo() because it is
 ; only on one side of a branch. tryPromoteCall must not devirtualize here.
-define dso_local void @non_dominating_assume(ptr noundef %intf, i1 %cond) {
-; CHECK-LABEL: define dso_local void @non_dominating_assume(
+define dso_local void @NonDominatingAssume(ptr noundef %intf, i1 %cond) {
+; CHECK-LABEL: define dso_local void @NonDominatingAssume(
 ; CHECK-SAME: ptr noundef [[INTF:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.type.test(ptr [[INTF]], metadata !"_ZTS4Impl")
@@ -94,6 +94,102 @@ else:
   br label %merge
 
 merge:
+  call void @_ZN4Intf3fooEv(ptr noundef nonnull align 8 dereferenceable(8) %intf)
+  ret void
+}
+
+; Negative test: a call between the assume and foo() could clobber the vptr
+; (e.g. destructor + placement new). tryPromoteCall must not devirtualize.
+declare void @MayClobberVptr(ptr)
+
+define dso_local void @VptrClobbered(ptr noundef %intf) {
+; CHECK-LABEL: define dso_local void @VptrClobbered(
+; CHECK-SAME: ptr noundef [[INTF:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.type.test(ptr [[INTF]], metadata !"_ZTS4Impl")
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    call void @MayClobberVptr(ptr [[INTF]])
+; CHECK-NEXT:    [[VTABLE_I:%.*]] = load ptr, ptr [[INTF]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VTABLE_I]], align 8
+; CHECK-NEXT:    call void [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[INTF]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = call i1 @llvm.type.test(ptr %intf, metadata !"_ZTS4Impl")
+  call void @llvm.assume(i1 %0)
+  call void @MayClobberVptr(ptr %intf)
+  call void @_ZN4Intf3fooEv(ptr noundef nonnull align 8 dereferenceable(8) %intf)
+  ret void
+}
+
+; Positive test: a store to an unrelated global between the assume and foo()
+; cannot alias the vptr slot. With alias analysis, tryPromoteCall can still
+; devirtualize.
+@unrelated_global = dso_local global i32 0, align 4
+
+define dso_local void @UnrelatedWriteNoAlias(ptr noundef %intf) {
+; CHECK-LABEL: define dso_local void @UnrelatedWriteNoAlias(
+; CHECK-SAME: ptr noundef [[INTF:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.type.test(ptr [[INTF]], metadata !"_ZTS4Impl")
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    store i32 99, ptr @unrelated_global, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @secretValue, align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr @glob, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = call i1 @llvm.type.test(ptr %intf, metadata !"_ZTS4Impl")
+  call void @llvm.assume(i1 %0)
+  store i32 99, ptr @unrelated_global, align 4
+  call void @_ZN4Intf3fooEv(ptr noundef nonnull align 8 dereferenceable(8) %intf)
+  ret void
+}
+
+; Negative test: an unknown call on an alias of %intf could clobber the vptr.
+; AA detects that %alias may-alias %intf, so devirtualization is blocked.
+define dso_local void @VptrClobberedViaAlias(ptr noundef %intf) {
+; CHECK-LABEL: define dso_local void @VptrClobberedViaAlias(
+; CHECK-SAME: ptr noundef [[INTF:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.type.test(ptr [[INTF]], metadata !"_ZTS4Impl")
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    call void @MayClobberVptr(ptr [[INTF]])
+; CHECK-NEXT:    [[VTABLE_I:%.*]] = load ptr, ptr [[INTF]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VTABLE_I]], align 8
+; CHECK-NEXT:    call void [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[INTF]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alias = getelementptr i8, ptr %intf, i64 0
+  %0 = call i1 @llvm.type.test(ptr %intf, metadata !"_ZTS4Impl")
+  call void @llvm.assume(i1 %0)
+  call void @MayClobberVptr(ptr %alias)
+  call void @_ZN4Intf3fooEv(ptr noundef nonnull align 8 dereferenceable(8) %intf)
+  ret void
+}
+
+; Negative test: pointer laundered through ptrtoint/inttoptr. AA must still
+; conservatively block devirtualization because the result may alias %intf.
+define dso_local void @VptrClobberedViaIntToPtr(ptr noundef %intf) {
+; CHECK-LABEL: define dso_local void @VptrClobberedViaIntToPtr(
+; CHECK-SAME: ptr noundef [[INTF:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[INTF]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.type.test(ptr [[INTF]], metadata !"_ZTS4Impl")
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    call void @MayClobberVptr(ptr [[INTF]])
+; CHECK-NEXT:    [[VTABLE_I:%.*]] = load ptr, ptr [[INTF]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VTABLE_I]], align 8
+; CHECK-NEXT:    call void [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[INTF]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %intf to i64
+  %laundered = inttoptr i64 %int to ptr
+  %0 = call i1 @llvm.type.test(ptr %intf, metadata !"_ZTS4Impl")
+  call void @llvm.assume(i1 %0)
+  call void @MayClobberVptr(ptr %laundered)
   call void @_ZN4Intf3fooEv(ptr noundef nonnull align 8 dereferenceable(8) %intf)
   ret void
 }

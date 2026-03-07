@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
@@ -697,7 +698,8 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
 // resolve the virtual call to a direct call.
 static bool tryDevirtualizeViaTypeTestAssume(CallBase &CB, Value *Object,
                                              APInt VTableOffset,
-                                             const DataLayout &DL, Module &M) {
+                                             const DataLayout &DL, Module &M,
+                                             AAResults &AA) {
   // Build a dominator tree so we can verify that all execution paths to the
   // call (CB) must go through the assume that uses the type.test result.
   DominatorTree DT(*CB.getFunction());
@@ -710,16 +712,36 @@ static bool tryDevirtualizeViaTypeTestAssume(CallBase &CB, Value *Object,
     if (TypeTestCI->getArgOperand(0) != Object)
       continue;
 
-    // There must be a dominating llvm.assume consuming the type.test result.
-    bool HasDominatingAssume = false;
+    // There must be a dominating llvm.assume consuming the type.test result,
+    // and no instruction between the assume and the indirect call may clobber
+    // the vptr (e.g. via placement new or destructor). We use alias analysis to
+    // check specifically whether an intervening write could alias the vptr slot.
+    // We require the assume and the call to be in the same basic block.
+    MemoryLocation VptrLoc =
+        MemoryLocation(Object, LocationSize::precise(DL.getPointerSize()));
+    bool HasValidAssume = false;
     for (User *TU : TypeTestCI->users()) {
-      if (auto *Assume = dyn_cast<AssumeInst>(TU);
-          Assume && DT.dominates(Assume, &CB)) {
-        HasDominatingAssume = true;
+      auto *Assume = dyn_cast<AssumeInst>(TU);
+      if (!Assume || !DT.dominates(Assume, &CB))
+        continue;
+      // Require assume and CB in the same basic block so we can walk between.
+      if (Assume->getParent() != CB.getParent())
+        continue;
+      // Walk from the assume to CB and check for instructions that could
+      // clobber the vptr (e.g. destructor + placement new).
+      bool Clobbered = false;
+      for (auto It = std::next(Assume->getIterator()); &*It != &CB; ++It) {
+        if (isModSet(AA.getModRefInfo(&*It, VptrLoc))) {
+          Clobbered = true;
+          break;
+        }
+      }
+      if (!Clobbered) {
+        HasValidAssume = true;
         break;
       }
     }
-    if (!HasDominatingAssume)
+    if (!HasValidAssume)
       continue;
 
     // Extract the type metadata identifier, e.g. MDString "_ZTS4Impl".
@@ -773,7 +795,7 @@ static bool tryDevirtualizeViaTypeTestAssume(CallBase &CB, Value *Object,
   return false;
 }
 
-bool llvm::tryPromoteCall(CallBase &CB) {
+bool llvm::tryPromoteCall(CallBase &CB, AAResults &AA) {
   assert(!CB.getCalledFunction());
   Module *M = CB.getCaller()->getParent();
   const DataLayout &DL = M->getDataLayout();
@@ -834,7 +856,7 @@ bool llvm::tryPromoteCall(CallBase &CB) {
     promoteCall(CB, DirectCallee);
     return true;
   }
-  return tryDevirtualizeViaTypeTestAssume(CB, Object, VTableOffset, DL, *M);
+  return tryDevirtualizeViaTypeTestAssume(CB, Object, VTableOffset, DL, *M, AA);
 }
 
 #undef DEBUG_TYPE
