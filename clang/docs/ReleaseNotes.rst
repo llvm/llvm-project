@@ -368,6 +368,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
+- Fixed a crash when attempting to diagnose incompatible conversions involving function types (#GH182534)
 
 OpenACC Specific Changes
 ------------------------

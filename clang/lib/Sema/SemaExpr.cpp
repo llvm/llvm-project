@@ -17538,8 +17538,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     }
     break;
   case AssignConvertType::IncompatiblePointerDiscardsQualifiers: {
-    // Perform array-to-pointer decay if necessary.
-    if (SrcType->isArrayType()) SrcType = Context.getArrayDecayedType(SrcType);
+    // Perform decay if necessary.
+    if (SrcType->isArrayType() || SrcType->isFunctionType())
+      SrcType = Context.getDecayedType(SrcType);
 
     isInvalid = true;
 
@@ -17560,6 +17561,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     // fallthrough
   }
   case AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior:
+    // Perform decay if necessary.
     if (SrcType->isArrayType())
       SrcType = Context.getArrayDecayedType(SrcType);
 
@@ -17652,6 +17654,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::CompatibleOBTDiscards:
     return false;
   case AssignConvertType::IncompatibleOBTKinds: {
+    if (SrcType->isArrayType() || SrcType->isFunctionType()) {
+      SrcType = Context.getDecayedType(SrcType);
+    }
     auto getOBTKindName = [](QualType Ty) -> StringRef {
       if (Ty->isPointerType())
         Ty = Ty->getPointeeType();
