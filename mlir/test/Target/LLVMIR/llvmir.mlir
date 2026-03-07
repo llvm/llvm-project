@@ -3001,6 +3001,20 @@ llvm.func @default_func_attrs_call() {
 
 llvm.func @f()
 
+// CHECK-LABEL: @builtin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @builtin_call() {
+  llvm.call @f() {builtin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: builtin
+
+// -----
+
+llvm.func @f()
+
 // CHECK-LABEL: @nobuiltin_call
 // CHECK: call void @f() #[[ATTRS:[0-9]+]]
 llvm.func @nobuiltin_call() {

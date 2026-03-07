@@ -920,6 +920,18 @@ define void @call_default_func_attrs() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_builtin
+define void @call_builtin() {
+; CHECK: llvm.call @f() {builtin}
+  call void @f() builtin
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_nobuiltin
 define void @call_nobuiltin() {
 ; CHECK: llvm.call @f() {nobuiltin}

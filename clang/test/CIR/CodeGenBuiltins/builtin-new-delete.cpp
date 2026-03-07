@@ -9,18 +9,18 @@
 void test_builtins_basic() {
   __builtin_operator_delete(__builtin_operator_new(4));
   // CIR-LABEL: test_builtins_basic
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
-  // CIR: cir.call @_ZdlPv([[P]]) {{.*}}: (!cir.ptr<!void> {llvm.noundef}) -> ()
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: cir.call @_ZdlPv([[P]]) {{.*}}builtin{{.*}} : (!cir.ptr<!void> {llvm.noundef}) -> ()
   // CIR: cir.return
 
   // LLVM-LABEL: test_builtins_basic
-  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 {{.*}} 4)
-  // LLVM: call void @_ZdlPv(ptr {{.*}} [[P]])
+  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 {{.*}} 4) #[[ATTR_BUILTIN_NEW:.*]]
+  // LLVM: call void @_ZdlPv(ptr {{.*}} [[P]]) #[[ATTR_BUILTIN_DEL:.*]]
   // LLVM: ret void
 
   // OGCG-LABEL: test_builtins_basic
-  // OGCG: [[P:%.*]] = call {{.*}} ptr @_Znwm(i64 {{.*}} 4)
-  // OGCG: call void @_ZdlPv(ptr {{.*}} [[P]])
+  // OGCG: [[P:%.*]] = call {{.*}} ptr @_Znwm(i64 {{.*}} 4) #[[OGCG_ATTR_BUILTIN_NEW:.*]]
+  // OGCG: call void @_ZdlPv(ptr {{.*}} [[P]]) #[[OGCG_ATTR_BUILTIN_DEL:.*]]
   // OGCG: ret void
 }
 
@@ -28,17 +28,22 @@ void test_sized_delete() {
   __builtin_operator_delete(__builtin_operator_new(4), 4);
 
   // CIR-LABEL: test_sized_delete
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
-  // CIR: cir.call @_ZdlPvm([[P]], {{%.*}}) {{.*}}: (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: cir.call @_ZdlPvm([[P]], {{%.*}}) {{.*}}builtin{{.*}} : (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
   // CIR: cir.return
 
   // LLVM-LABEL: test_sized_delete
-  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 {{.*}} 4)
-  // LLVM: call void @_ZdlPvm(ptr {{.*}} [[P]], i64 {{.*}} 4)
+  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 {{.*}} 4) #[[ATTR_BUILTIN_NEW]]
+  // LLVM: call void @_ZdlPvm(ptr {{.*}} [[P]], i64 {{.*}} 4) #[[ATTR_BUILTIN_DEL]]
   // LLVM: ret void
 
   // OGCG-LABEL: test_sized_delete
-  // OGCG: [[P:%.*]] = call {{.*}} ptr @_Znwm(i64 {{.*}} 4)
-  // OGCG: call void @_ZdlPvm(ptr {{.*}} [[P]], i64 {{.*}} 4)
+  // OGCG: [[P:%.*]] = call {{.*}} ptr @_Znwm(i64 {{.*}} 4) #[[OGCG_ATTR_BUILTIN_NEW]]
+  // OGCG: call void @_ZdlPvm(ptr {{.*}} [[P]], i64 {{.*}} 4) #[[OGCG_ATTR_BUILTIN_DEL]]
   // OGCG: ret void
 }
+
+// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}
+// LLVM-DAG: attributes #[[ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
+// OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}
+// OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
