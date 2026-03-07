@@ -96,12 +96,12 @@ static void extractInfosFromCodeWithArgs(StringRef Code,
 CommentInfo MakeOneLineCommentInfo(const std::string &Text) {
   CommentInfo TopComment;
   TopComment.Kind = "FullComment";
-  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  TopComment.Children.emplace_back(allocatePtr<CommentInfo>());
 
   CommentInfo *Brief = TopComment.Children.back().get();
   Brief->Kind = "ParagraphComment";
 
-  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
   Brief->Children.back()->Kind = "TextComment";
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = Text;
