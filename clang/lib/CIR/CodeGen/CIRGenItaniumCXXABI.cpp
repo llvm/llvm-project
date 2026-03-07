@@ -586,6 +586,10 @@ class CIRGenItaniumRTTIBuilder {
   /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
   void buildVMIClassTypeInfo(mlir::Location loc, const CXXRecordDecl *rd);
 
+  /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct, used
+  /// for pointer types.
+  void buildPointerTypeInfo(mlir::Location loc, QualType pointeeTy);
+
 public:
   CIRGenItaniumRTTIBuilder(const CIRGenItaniumCXXABI &abi, CIRGenModule &cgm)
       : cgm(cgm), cxxABI(abi) {}
@@ -1467,7 +1471,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::Pointer:
-    cgm.errorNYI("buildTypeInfo: Pointer");
+    buildPointerTypeInfo(loc, cast<PointerType>(ty)->getPointeeType());
     break;
 
   case Type::MemberPointer:
@@ -1595,6 +1599,55 @@ mlir::Value CIRGenItaniumCXXABI::emitTypeid(CIRGenFunction &cgf, QualType srcTy,
 
   return cgf.getBuilder().createAlignedLoad(loc, typeInfoPtrTy, vtbl,
                                             cgf.getPointerAlign());
+}
+
+/// Compute the flags for a __pbase_type_info, and remove the corresponding
+/// pieces from \p Type.
+static unsigned extractPBaseFlags(ASTContext &ctx, QualType &type) {
+  unsigned flags = 0;
+
+  if (type.isConstQualified())
+    flags |= PTI_Const;
+  if (type.isVolatileQualified())
+    flags |= PTI_Volatile;
+  if (type.isRestrictQualified())
+    flags |= PTI_Restrict;
+  type = type.getUnqualifiedType();
+
+  // Itanium C++ ABI 2.9.5p7:
+  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
+  //   incomplete class type, the incomplete target type flag is set.
+  if (containsIncompleteClassType(type))
+    flags |= PTI_Incomplete;
+
+  if (auto *proto = type->getAs<FunctionProtoType>()) {
+    if (proto->isNothrow()) {
+      flags |= PTI_Noexcept;
+      type = ctx.getFunctionTypeWithExceptionSpec(type, EST_None);
+    }
+  }
+
+  return flags;
+}
+
+/// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct,
+/// used for pointer types.
+void CIRGenItaniumRTTIBuilder::buildPointerTypeInfo(mlir::Location loc,
+                                                    QualType pointeeTy) {
+  // Itanium C++ ABI 2.9.5p7:
+  //   __flags is a flag word describing the cv-qualification and other
+  //   attributes of the type pointed to
+  unsigned flags = extractPBaseFlags(cgm.getASTContext(), pointeeTy);
+  mlir::Type unsignedIntLTy =
+      cgm.getTypes().convertType(cgm.getASTContext().UnsignedIntTy);
+  fields.push_back(cir::IntAttr::get(unsignedIntLTy, flags));
+
+  // Itanium C++ ABI 2.9.5p7:
+  //  __pointee is a pointer to the std::type_info derivation for the
+  //  unqualified type being pointed to.
+  mlir::Attribute pointeeTypeInfo =
+      CIRGenItaniumRTTIBuilder(cxxABI, cgm).buildTypeInfo(loc, pointeeTy);
+  fields.push_back(pointeeTypeInfo);
 }
 
 mlir::Attribute CIRGenItaniumCXXABI::getAddrOfRTTIDescriptor(mlir::Location loc,
@@ -2441,9 +2494,26 @@ static void initCatchParam(CIRGenFunction &cgf, mlir::Value ehToken,
     // We have no way to tell the personality function that we're
     // catching by reference, so if we're catching a pointer,
     // __cxa_begin_catch will actually return that pointer by value.
-    if (isa<PointerType>(caughtType)) {
-      cgf.cgm.errorNYI(loc, "initCatchParam: catching a pointer");
-      return;
+    if (const PointerType *pt = dyn_cast<PointerType>(caughtType)) {
+      QualType pointeeType = pt->getPointeeType();
+      // When catching by reference, generally we should just ignore
+      // this by-value pointer and use the exception object instead.
+      if (!pointeeType->isRecordType()) {
+        cgf.cgm.errorNYI(loc,
+                         "initCatchParam: catching a pointer of non-record");
+      } else {
+        // Pull the pointer for the reference type off.
+        mlir::Type ptrTy = cgf.convertTypeForMem(caughtType);
+
+        // Create the temporary and write the adjusted pointer into it.
+        Address exnPtrTmp = cgf.createTempAlloca(
+            ptrTy, cgf.getPointerAlign(), cgf.getLoc(loc), "exn.byref.tmp");
+        mlir::Value casted = cgf.getBuilder().createBitcast(adjustedExn, ptrTy);
+        cgf.getBuilder().createStore(cgf.getLoc(loc), casted, exnPtrTmp);
+
+        // Bind the reference to the temporary.
+        adjustedExn = exnPtrTmp.emitRawPointer();
+      }
     }
 
     mlir::Value exnCast =
