@@ -16,7 +16,7 @@
 #endif
 
 #if defined(_LIBCPP_ABI_VCRUNTIME)
-#  include <new.h>
+#  include <vcruntime_new.h>
 #else
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 struct nothrow_t {
