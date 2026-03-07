@@ -446,7 +446,7 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
       for (auto &SF : SFS) {
         assert(SF->InstCount == FI.IndexInstruction->size());
         assert(hasValidSharedConst(SF.get(), FI));
-        // Check if there is any stable function that is compatiable with the
+        // Check if there is any stable function that is compatible with the
         // current one.
         if (!checkConstHashCompatible(*SF->IndexOperandHashMap,
                                       *FI.IndexOperandHashMap))
