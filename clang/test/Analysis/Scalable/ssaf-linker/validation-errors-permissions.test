@@ -1,0 +1,13 @@
+// Tests for ssaf-linker input validation requiring file permission support.
+// UNSUPPORTED: system-windows
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// Output parent directory exists but is not writable.
+// RUN: mkdir -p %t/output-dir
+// RUN: chmod -w %t/output-dir
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %t/output-dir/output.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-WRITE-PERM
+// RUN: chmod +w %t/output-dir
+// NO-WRITE-PERM: ssaf-linker: error: failed to validate summary '{{.*}}output.json': Parent directory is not writable
