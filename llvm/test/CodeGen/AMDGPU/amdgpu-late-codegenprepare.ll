@@ -81,8 +81,9 @@ define amdgpu_kernel void @constant_from_offset_cast_generic_inttoptr() {
 
 define amdgpu_kernel void @constant_from_inttoptr() {
 ; GFX9-LABEL: @constant_from_inttoptr(
-; GFX9-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) inttoptr (i64 128 to ptr addrspace(4)), align 4
-; GFX9-NEXT:    store i8 [[LOAD]], ptr addrspace(1) poison, align 1
+; GFX9-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) inttoptr (i64 128 to ptr addrspace(4)), align 4
+; GFX9-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; GFX9-NEXT:    store i8 [[TMP2]], ptr addrspace(1) poison, align 1
 ; GFX9-NEXT:    ret void
 ;
 ; GFX12-LABEL: @constant_from_inttoptr(
@@ -93,6 +94,40 @@ define amdgpu_kernel void @constant_from_inttoptr() {
   %load = load i8, ptr addrspace(4) inttoptr (i64 128 to ptr addrspace(4)), align 1
   store i8 %load, ptr addrspace(1) poison
   ret void
+}
+
+define amdgpu_kernel void @constant_i16_from_dword_aligned() {
+; GFX9-LABEL: @constant_i16_from_dword_aligned(
+; GFX9-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) inttoptr (i64 128 to ptr addrspace(4)), align 4
+; GFX9-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; GFX9-NEXT:    store i16 [[TMP2]], ptr addrspace(1) poison, align 2
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @constant_i16_from_dword_aligned(
+; GFX12-NEXT:    [[LOAD:%.*]] = load i16, ptr addrspace(4) inttoptr (i64 128 to ptr addrspace(4)), align 2
+; GFX12-NEXT:    store i16 [[LOAD]], ptr addrspace(1) poison, align 2
+; GFX12-NEXT:    ret void
+;
+  %load = load i16, ptr addrspace(4) inttoptr (i64 128 to ptr addrspace(4)), align 2
+  store i16 %load, ptr addrspace(1) poison
+  ret void
+}
+
+define i1 @constant_i16_from_null() {
+; GFX9-LABEL: @constant_i16_from_null(
+; GFX9-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) null, align 4
+; GFX9-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; GFX9-NEXT:    [[CMP:%.*]] = icmp ne i16 [[TMP2]], 0
+; GFX9-NEXT:    ret i1 [[CMP]]
+;
+; GFX12-LABEL: @constant_i16_from_null(
+; GFX12-NEXT:    [[LOAD:%.*]] = load i16, ptr addrspace(4) null, align 2
+; GFX12-NEXT:    [[CMP:%.*]] = icmp ne i16 [[LOAD]], 0
+; GFX12-NEXT:    ret i1 [[CMP]]
+;
+  %load = load i16, ptr addrspace(4) null, align 2
+  %cmp = icmp ne i16 %load, 0
+  ret i1 %cmp
 }
 
 define void @broken_phi() {

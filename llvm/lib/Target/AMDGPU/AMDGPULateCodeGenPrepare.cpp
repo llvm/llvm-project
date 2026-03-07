@@ -516,19 +516,13 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   if (!isDWORDAligned(Base))
     return false;
 
-  int64_t Adjust = Offset & 0x3;
-  if (Adjust == 0) {
-    // With a zero adjust, the original alignment could be promoted with a
-    // better one.
-    LI.setAlignment(Align(4));
-    return true;
-  }
-
   IRBuilder<> IRB(&LI);
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
 
   unsigned LdBits = DL.getTypeStoreSizeInBits(LI.getType());
   auto *IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
+
+  int64_t Adjust = Offset & 0x3;
 
   auto *NewPtr = IRB.CreateConstGEP1_64(
       IRB.getInt8Ty(),
@@ -540,10 +534,11 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   NewLd->setMetadata(LLVMContext::MD_range, nullptr);
 
   unsigned ShAmt = Adjust * 8;
+  Value *Shifted = ShAmt ? IRB.CreateLShr(NewLd, ShAmt) : NewLd;
   Value *NewVal = IRB.CreateBitCast(
-      IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt),
-                      DL.typeSizeEqualsStoreSize(LI.getType()) ? IntNTy
-                                                               : LI.getType()),
+      IRB.CreateTrunc(Shifted, DL.typeSizeEqualsStoreSize(LI.getType())
+                                   ? IntNTy
+                                   : LI.getType()),
       LI.getType());
   LI.replaceAllUsesWith(NewVal);
   DeadInsts.emplace_back(&LI);
