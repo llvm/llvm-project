@@ -1526,6 +1526,39 @@ class Foo {
     f2(); // expected-warning {{cannot call function 'f2' while mutex 'mu1' is held}} \
       // expected-warning {{cannot call function 'f2' while mutex 'mu2' is held}}
   }
+
+  // Holding only mu1 (but not mu2) is insufficient to access x.
+  void f3() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    x = 5; // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // Holding only mu2 (but not mu1) is insufficient to access x.
+  void f4() EXCLUSIVE_LOCKS_REQUIRED(mu2) {
+    x = 5; // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}}
+  }
+};
+
+// Test multi-arg guarded_by: GUARDED_BY(mu1, mu2, mu3) requires all three locks.
+class Bar {
+  Mutex mu1, mu2, mu3;
+  int z GUARDED_BY(mu1, mu2, mu3);
+
+  // All three locks held: no warning.
+  void g1() EXCLUSIVE_LOCKS_REQUIRED(mu1, mu2, mu3) {
+    z = 1;
+  }
+
+  // Only mu1 and mu2 held: warn about mu3.
+  void g2() EXCLUSIVE_LOCKS_REQUIRED(mu1, mu2) {
+    z = 1; // expected-warning {{writing variable 'z' requires holding mutex 'mu3' exclusively}}
+  }
+
+  // No locks held: warn about all three.
+  void g3() {
+    z = 1; // expected-warning {{writing variable 'z' requires holding mutex 'mu1' exclusively}} \
+           // expected-warning {{writing variable 'z' requires holding mutex 'mu2' exclusively}} \
+           // expected-warning {{writing variable 'z' requires holding mutex 'mu3' exclusively}}
+  }
 };
 
 Foo *foo;

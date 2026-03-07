@@ -1935,7 +1935,8 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
   }
 
   for (const auto *I : D->specific_attrs<GuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), POK, nullptr, Loc);
+    for (auto *Arg : I->args())
+      warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, POK, nullptr, Loc);
 }
 
 /// Checks pt_guarded_by and pt_guarded_var attributes.
@@ -1999,8 +2000,9 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
     Handler.handleNoMutexHeld(D, PtPOK, AK, Exp->getExprLoc());
 
   for (auto const *I : D->specific_attrs<PtGuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), PtPOK, nullptr,
-                       Exp->getExprLoc());
+    for (auto *Arg : I->args())
+      warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, PtPOK, nullptr,
+                         Exp->getExprLoc());
 }
 
 /// Process a function call, method call, constructor call,

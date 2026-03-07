@@ -207,6 +207,12 @@ Attribute Changes in Clang
   type-level control over overflow behavior. There is also an accompanying type
   specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
+- The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
+  ``pt_guarded_by`` now accept multiple capability arguments.
+  ``GUARDED_BY(mu1, mu2)`` is equivalent to ``GUARDED_BY(mu1) GUARDED_BY(mu2)``
+  and requires all listed capabilities to be held when accessing the guarded
+  variable.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
