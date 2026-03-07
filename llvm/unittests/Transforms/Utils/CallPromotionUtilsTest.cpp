@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -74,6 +76,10 @@ entry:
 declare void @_ZN4Impl3RunEv(ptr %this)
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -85,7 +91,7 @@ declare void @_ZN4Impl3RunEv(ptr %this)
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted = tryPromoteCall(*CI);
+  bool IsPromoted = tryPromoteCall(*CI, AA);
   EXPECT_TRUE(IsPromoted);
   GV = M->getNamedValue("_ZN4Impl3RunEv");
   ASSERT_TRUE(GV);
@@ -107,6 +113,10 @@ entry:
 }
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -115,7 +125,7 @@ entry:
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted = tryPromoteCall(*CI);
+  bool IsPromoted = tryPromoteCall(*CI, AA);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -134,6 +144,10 @@ entry:
 }
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -142,7 +156,7 @@ entry:
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted = tryPromoteCall(*CI);
+  bool IsPromoted = tryPromoteCall(*CI, AA);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -168,6 +182,10 @@ entry:
 declare void @_ZN4Impl3RunEv(ptr %this)
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -176,7 +194,7 @@ declare void @_ZN4Impl3RunEv(ptr %this)
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted = tryPromoteCall(*CI);
+  bool IsPromoted = tryPromoteCall(*CI, AA);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -206,6 +224,10 @@ entry:
 declare void @_ZN4Impl3RunEv(ptr %this)
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -217,7 +239,7 @@ declare void @_ZN4Impl3RunEv(ptr %this)
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted = tryPromoteCall(*CI);
+  bool IsPromoted = tryPromoteCall(*CI, AA);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -247,6 +269,10 @@ entry:
 declare void @_ZN4Impl3RunEv(ptr %this)
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -258,7 +284,7 @@ declare void @_ZN4Impl3RunEv(ptr %this)
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted = tryPromoteCall(*CI);
+  bool IsPromoted = tryPromoteCall(*CI, AA);
   EXPECT_FALSE(IsPromoted);
 }
 
@@ -298,6 +324,10 @@ declare i32 @_ZN1A3vf1Ev(ptr %this)
 declare i32 @_ZN1A3vf2Ev(ptr %this)
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("_Z2g1v");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -309,7 +339,7 @@ declare i32 @_ZN1A3vf2Ev(ptr %this)
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted1 = tryPromoteCall(*CI);
+  bool IsPromoted1 = tryPromoteCall(*CI, AA);
   EXPECT_TRUE(IsPromoted1);
   GV = M->getNamedValue("_ZN1A3vf1Ev");
   ASSERT_TRUE(GV);
@@ -327,7 +357,7 @@ declare i32 @_ZN1A3vf2Ev(ptr %this)
   CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted2 = tryPromoteCall(*CI);
+  bool IsPromoted2 = tryPromoteCall(*CI, AA);
   EXPECT_TRUE(IsPromoted2);
   GV = M->getNamedValue("_ZN1A3vf2Ev");
   ASSERT_TRUE(GV);
@@ -365,6 +395,10 @@ entry:
 declare %struct2 @_ZN4Impl3RunEv(ptr %this)
 )IR");
 
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  AAResults AA(TLI);
+
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -376,7 +410,7 @@ declare %struct2 @_ZN4Impl3RunEv(ptr %this)
   auto *CI = dyn_cast<CallInst>(Inst);
   ASSERT_TRUE(CI);
   ASSERT_FALSE(CI->getCalledFunction());
-  bool IsPromoted = tryPromoteCall(*CI);
+  bool IsPromoted = tryPromoteCall(*CI, AA);
   EXPECT_FALSE(IsPromoted);
 }
 
