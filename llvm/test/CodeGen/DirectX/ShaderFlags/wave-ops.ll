@@ -42,6 +42,13 @@ entry:
   ret i1 %ret
 }
 
+define noundef i32 @wave_bit_or(i32 %x) {
+entry:
+  ; CHECK: Function wave_bit_or : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.reduce.or(i32 %x)
+  ret i32 %ret
+}
+
 define noundef i1 @wave_all_equal(i1 %x) {
 entry:
   ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]
