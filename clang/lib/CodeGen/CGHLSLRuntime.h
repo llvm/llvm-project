@@ -144,6 +144,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(UDot, udot)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddI8Packed, dot4add_i8packed)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddU8Packed, dot4add_u8packed)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllEqual, wave_all_equal)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllTrue, wave_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
@@ -174,6 +175,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpClamp, resource_samplecmp_clamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(SampleCmpLevelZero,
                                    resource_samplecmplevelzero)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Gather, resource_gather)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GatherCmp, resource_gather_cmp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
@@ -280,6 +283,9 @@ public:
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
       llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
+
+  RawAddress createBufferMatrixTempAddress(const LValue &LV, SourceLocation Loc,
+                                           CodeGenFunction &CGF);
 
   bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
                       QualType CType);

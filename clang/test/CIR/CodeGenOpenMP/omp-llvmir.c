@@ -25,7 +25,7 @@
 // CIR:       } step {
 // CIR:         [[LOAD2:%.*]] = cir.load align(4) [[I]] : !cir.ptr<!s32i>, !s32i
 // CIR:         [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
-// CIR:         [[ADD:%.*]] = cir.binop(add, [[LOAD2]], [[ONE]]) nsw : !s32i
+// CIR:         [[ADD:%.*]] = cir.add nsw [[LOAD2]], [[ONE]] : !s32i
 // CIR:         cir.store align(4) [[ADD]], [[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       }
@@ -46,7 +46,6 @@
 // LLVM: br label %[[ENTRY:.*]]
 
 // LLVM: [[ENTRY]]:
-// LLVM: %[[THREAD_NUM:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // LLVM: br label %[[OMP_PARALLEL:.*]]
 
 // LLVM: [[OMP_PARALLEL]]:

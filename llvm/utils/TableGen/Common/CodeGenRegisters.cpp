@@ -174,10 +174,6 @@ void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
       TheDef->getValueAsListOfDefs("SubRegIndices");
   std::vector<const Record *> SRs = TheDef->getValueAsListOfDefs("SubRegs");
 
-  if (SRIs.size() != SRs.size())
-    PrintFatalError(TheDef->getLoc(),
-                    "SubRegs and SubRegIndices must have the same size");
-
   for (const auto &[SRI, SR] : zip_equal(SRIs, SRs)) {
     ExplicitSubRegIndices.push_back(RegBank.getSubRegIdx(SRI));
     ExplicitSubRegs.push_back(RegBank.getReg(SR));
@@ -555,11 +551,6 @@ struct TupleExpander : SetTheory::Expander {
         Def->getValueAsListOfDefs("SubRegIndices");
     unsigned Dim = Indices.size();
     const ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
-    if (Dim != SubRegs->size())
-      PrintFatalError(Def->getLoc(), "SubRegIndices and SubRegs size mismatch");
-    if (Dim < 2)
-      PrintFatalError(Def->getLoc(),
-                      "Tuples must have at least 2 sub-registers");
 
     // Evaluate the sub-register lists to be zipped.
     unsigned Length = ~0u;
@@ -684,16 +675,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
       RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
       TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
-  std::vector<const Record *> TypeList = R->getValueAsListOfDefs("RegTypes");
-  if (TypeList.empty())
-    PrintFatalError(R->getLoc(), "RegTypes list must not be empty!");
-  for (const Record *Type : TypeList) {
-    if (!Type->isSubClassOf("ValueType"))
-      PrintFatalError(R->getLoc(),
-                      "RegTypes list member '" + Type->getName() +
-                          "' does not derive from the ValueType class!");
+  for (const Record *Type : R->getValueAsListOfDefs("RegTypes"))
     VTs.push_back(getValueTypeByHwMode(Type, RegBank.getHwModes()));
-  }
 
   // Allocation order 0 is the full set. AltOrders provides others.
   const SetTheory::RecVec *Elements = RegBank.getSets().expand(R);
@@ -861,7 +844,30 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
 bool CodeGenRegisterClass::Key::operator<(
     const CodeGenRegisterClass::Key &B) const {
   assert(Members && B.Members);
-  return std::tie(*Members, RSI) < std::tie(*B.Members, B.RSI);
+  if (!IgnoreArtificialMembers)
+    return std::tie(*Members, RSI) < std::tie(*B.Members, B.RSI);
+
+  // Do the same lexicographical comparison, but ignoring
+  // artificial registers.
+  auto IA = Members->begin(), EA = Members->end();
+  auto IB = B.Members->begin(), EB = B.Members->end();
+  while (IA != EA && IB != EB) {
+    if ((*IA)->Artificial) {
+      ++IA;
+      continue;
+    }
+    if ((*IB)->Artificial) {
+      ++IB;
+      continue;
+    }
+    if (*IA != *IB)
+      return *IA < *IB;
+    ++IA;
+    ++IB;
+  }
+  if (IA == EA && IB == EB)
+    return RSI < B.RSI;
+  return IA == EA;
 }
 
 // Returns true if RC is a strict subclass.
@@ -1301,7 +1307,7 @@ void CodeGenRegBank::addToMaps(CodeGenRegisterClass *RC) {
 
   // Duplicate classes are rejected by insert().
   // That's OK, we only care about the properties handled by CGRC::Key.
-  CodeGenRegisterClass::Key K(*RC);
+  CodeGenRegisterClass::Key K(*RC, /*IgnoreArtificialMembers=*/true);
   Key2RC.try_emplace(K, RC);
 }
 
@@ -1311,7 +1317,8 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
                                     const CodeGenRegister::Vec *Members,
                                     StringRef Name) {
   // Synthetic sub-class has the same size and alignment as RC.
-  CodeGenRegisterClass::Key K(Members, RC->RSI);
+  CodeGenRegisterClass::Key K(Members, RC->RSI,
+                              /*IgnoreArtificialMembers=*/true);
   RCKeyMap::const_iterator FoundI = Key2RC.find(K);
   if (FoundI != Key2RC.end())
     return {FoundI->second, false};
@@ -1516,7 +1523,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   CoveringLanes = LaneBitmask::getAll();
   for (CodeGenSubRegIndex &Idx : SubRegIndices) {
     if (Idx.getComposites().empty()) {
-      if (Bit > LaneBitmask::BitWidth) {
+      if (Bit >= LaneBitmask::BitWidth) {
         PrintFatalError(
             Twine("Ran out of lanemask bits to represent subregister ") +
             Idx.getName());
@@ -1758,7 +1765,16 @@ static void computeUberSets(std::vector<UberRegSet> &UberSets,
     if (!RegClass.Allocatable)
       continue;
 
-    const CodeGenRegister::Vec &Regs = RegClass.getMembers();
+    // Ignore artificial registers. They may be members of register
+    // classes that together include registers and their subregisters,
+    // in which case it is impossible to normalize the weights of
+    // their register units.
+    CodeGenRegister::Vec Regs;
+    for (const CodeGenRegister *Reg : RegClass.getMembers()) {
+      if (!Reg->Artificial)
+        Regs.push_back(Reg);
+    }
+
     if (Regs.empty())
       continue;
 
@@ -2374,6 +2390,13 @@ void CodeGenRegBank::inferCommonSubClass(CodeGenRegisterClass *RC) {
     if (Intersection.empty())
       continue;
 
+    // Skip casses where the intersection is composed of artificial
+    // registers.
+    if (llvm::all_of(Intersection, [](const CodeGenRegister *Reg) {
+          return Reg->Artificial;
+        }))
+      continue;
+
     // If RC1 and RC2 have different spill sizes or alignments, use the
     // stricter one for sub-classing.  If they are equal, prefer RC1.
     if (RC2->RSI.hasStricterSpillThan(RC1->RSI))
@@ -2413,7 +2436,11 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
     if (I == SRSets.end())
       continue;
     // In most cases, all RC registers support the SubRegIndex.
-    if (I->second.size() == RC->getMembers().size()) {
+    auto IsNotArtificial = [](const CodeGenRegister *R) {
+      return !R->Artificial;
+    };
+    if (I->second.size() ==
+        (size_t)count_if(RC->getMembers(), IsNotArtificial)) {
       RC->setSubClassWithSubReg(&SubIdx, RC);
       continue;
     }
@@ -2461,6 +2488,8 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     TopoSigs.reset();
     for (const CodeGenRegister *Super : RC->getMembers()) {
       const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
+      if (Super->Artificial)
+        continue;
       assert(Sub && "Missing sub-register");
       SubRegs.push_back(Sub);
       TopoSigs.set(Sub->getTopoSig());
@@ -2481,7 +2510,13 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         continue;
       // Compute the subset of RC that maps into SubRC.
       CodeGenRegister::Vec SubSetVec;
-      for (const auto &[Sub, Super] : zip_equal(SubRegs, RC->getMembers())) {
+      auto IsNotArtificial = [](const CodeGenRegister *R) {
+        return !R->Artificial;
+      };
+      auto NonArtificialMembers =
+          make_filter_range(RC->getMembers(), IsNotArtificial);
+      for (const auto &[Sub, Super] :
+           zip_equal(SubRegs, NonArtificialMembers)) {
         if (SubRC.contains(Sub))
           SubSetVec.push_back(Super);
       }
@@ -2490,7 +2525,8 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
         continue;
 
       // RC injects completely into SubRC.
-      if (SubSetVec.size() == RC->getMembers().size()) {
+      if (SubSetVec.size() ==
+          (size_t)count_if(RC->getMembers(), IsNotArtificial)) {
         SubRC.addSuperRegClass(SubIdx, RC);
 
         // We can skip checking subregister indices that can be composed from
@@ -2648,6 +2684,37 @@ CodeGenRegBank::getRegClassForRegister(const Record *R) {
     return nullptr;
   }
   return FoundRC;
+}
+
+bool CodeGenRegBank::regClassContainsReg(const Record *RegClassDef,
+                                         const Record *RegDef,
+                                         ArrayRef<SMLoc> Loc) {
+  // Check all four combinations of Register[ByHwMode] X RegClass[ByHwMode],
+  // starting with the two RegClassByHwMode cases.
+  unsigned NumModes = CGH.getNumModeIds();
+  std::optional<RegisterByHwMode> RegByMode;
+  CodeGenRegister *Reg = nullptr;
+  if (RegDef->isSubClassOf("RegisterByHwMode"))
+    RegByMode = RegisterByHwMode(RegDef, *this);
+  else
+    Reg = getReg(RegDef);
+  if (RegClassDef->isSubClassOf("RegClassByHwMode")) {
+    RegClassByHwMode RC(RegClassDef, *this);
+    for (unsigned M = 0; M < NumModes; ++M) {
+      if (RC.hasMode(M) && !RC.get(M)->contains(Reg ? Reg : RegByMode->get(M)))
+        return false;
+    }
+    return true;
+  }
+  // Otherwise we have a plain register class, check Register[ByHwMode]
+  CodeGenRegisterClass *RC = getRegClass(RegClassDef, Loc);
+  if (Reg)
+    return RC->contains(Reg);
+  for (unsigned M = 0; M < NumModes; ++M) {
+    if (RegByMode->hasMode(M) && !RC->contains(RegByMode->get(M)))
+      return false;
+  }
+  return true; // RegByMode contained for all possible modes.
 }
 
 const CodeGenRegisterClass *

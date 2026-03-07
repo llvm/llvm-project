@@ -85,12 +85,65 @@ struct pair {
 };
 
 template<class Key,class T>
+struct flat_map {
+  using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
+  T& operator[](const Key& key);
+  iterator begin();
+  iterator end();
+  iterator find(const Key& key);
+  iterator erase(iterator);
+};
+
+template<class Key,class T>
 struct unordered_map {
   using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
   T& operator[](const Key& key);
   iterator begin();
   iterator end();
+  iterator find(const Key& key);
   iterator erase(iterator);
+};
+
+template<class Key>
+struct set {
+  using iterator = __gnu_cxx::basic_iterator<const Key>;
+  iterator begin();
+  iterator end();
+  void insert(const Key& key);
+  iterator erase(iterator);
+  void extract(iterator);
+  void clear();
+};
+
+template<class Key>
+struct multiset {
+  using iterator = __gnu_cxx::basic_iterator<const Key>;
+  iterator begin();
+  iterator end();
+  void insert(const Key& key);
+  void clear();
+};
+
+template<class Key, class T>
+struct map {
+  using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
+  T& operator[](const Key& key);
+  iterator begin();
+  iterator end();
+  void insert(const std::pair<const Key, T>& value);
+  template<class... Args>
+  void emplace(Args&&... args);
+  iterator erase(iterator);
+  void clear();
+};
+
+template<class Key, class T>
+struct multimap {
+  using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
+  iterator begin();
+  iterator end();
+  void insert(const std::pair<const Key, T>& value);
+  void clear();
 };
 
 template<typename T>
@@ -135,6 +188,7 @@ struct unique_ptr {
   ~unique_ptr();
   T* release();
   T &operator*();
+  T *operator->();
   T *get() const;
 };
 
@@ -151,6 +205,7 @@ struct optional {
   template<typename U>
   optional(optional<U>&& __t);
 
+  T *operator->();
   T &operator*() &;
   T &&operator*() &&;
   T &value() &;

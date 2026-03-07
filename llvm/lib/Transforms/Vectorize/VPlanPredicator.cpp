@@ -32,21 +32,21 @@ class VPPredicator {
   using EdgeMaskCacheTy =
       DenseMap<std::pair<const VPBasicBlock *, const VPBasicBlock *>,
                VPValue *>;
-  using BlockMaskCacheTy = DenseMap<VPBasicBlock *, VPValue *>;
+  using BlockMaskCacheTy = DenseMap<const VPBasicBlock *, VPValue *>;
   EdgeMaskCacheTy EdgeMaskCache;
 
   BlockMaskCacheTy BlockMaskCache;
 
   /// Create an edge mask for every destination of cases and/or default.
-  void createSwitchEdgeMasks(VPInstruction *SI);
+  void createSwitchEdgeMasks(const VPInstruction *SI);
 
   /// Computes and return the predicate of the edge between \p Src and \p Dst,
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
-  VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
+  VPValue *createEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst);
 
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
-  void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
+  void setBlockInMask(const VPBasicBlock *VPBB, VPValue *Mask) {
     // TODO: Include the masks as operands in the predicated VPlan directly to
     // avoid keeping the map of masks beyond the predication transform.
     assert(!getBlockInMask(VPBB) && "Mask already set");
@@ -64,7 +64,7 @@ class VPPredicator {
 
 public:
   /// Returns the *entry* mask for \p VPBB.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+  VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
     return BlockMaskCache.lookup(VPBB);
   }
 
@@ -73,11 +73,7 @@ public:
     return EdgeMaskCache.lookup({Src, Dst});
   }
 
-  /// Compute and return the mask for the vector loop header block.
-  void createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail);
-
-  /// Compute the predicate of \p VPBB, assuming that the header block of the
-  /// loop is set to True, or to the loop mask when tail folding.
+  /// Compute the predicate of \p VPBB.
   void createBlockInMask(VPBasicBlock *VPBB);
 
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
@@ -85,7 +81,8 @@ public:
 };
 } // namespace
 
-VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
+VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
+                                      const VPBasicBlock *Dst) {
   assert(is_contained(Dst->getPredecessors(), Src) && "Invalid edge");
 
   // Look for cached value.
@@ -153,30 +150,8 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   setBlockInMask(VPBB, BlockMask);
 }
 
-void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
-  if (!FoldTail) {
-    setBlockInMask(HeaderVPBB, nullptr);
-    return;
-  }
-
-  // Introduce the early-exit compare IV <= BTC to form header block mask.
-  // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
-  // constructing the desired canonical IV in the header block as its first
-  // non-phi instructions.
-
-  auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV =
-      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
-  Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-  Builder.insert(IV);
-
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  VPValue *BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
-  setBlockInMask(HeaderVPBB, BlockMask);
-}
-
-void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
-  VPBasicBlock *Src = SI->getParent();
+void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
+  const VPBasicBlock *Src = SI->getParent();
 
   // Create masks where SI is a switch. We create masks for all edges from SI's
   // parent block at the same time. This is more efficient, as we can create and
@@ -265,7 +240,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
+void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -279,9 +254,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
-    if (VPBB == Header) {
-      Predicator.createHeaderMask(Header, FoldTail);
-    } else {
+    if (VPBB != Header) {
       Predicator.createBlockInMask(VPBB);
       Predicator.convertPhisToBlends(VPBB);
     }
@@ -312,34 +285,5 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
-  }
-
-  // If we folded the tail and introduced a header mask, any extract of the
-  // last element must be updated to extract from the last active lane of the
-  // header mask instead (i.e., the lane corresponding to the last active
-  // iteration).
-  if (FoldTail) {
-    assert(Plan.getExitBlocks().size() == 1 &&
-           "only a single-exit block is supported currently");
-    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
-               Plan.getMiddleBlock() &&
-           "the exit block must have middle block as single predecessor");
-
-    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
-    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
-      VPValue *Op;
-      if (!match(&R, m_CombineOr(
-                         m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
-                         m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
-        continue;
-
-      // Compute the index of the last active lane.
-      VPValue *HeaderMask = Predicator.getBlockInMask(Header);
-      VPValue *LastActiveLane =
-          B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
-      auto *Ext =
-          B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
-      R.getVPSingleValue()->replaceAllUsesWith(Ext);
-    }
   }
 }

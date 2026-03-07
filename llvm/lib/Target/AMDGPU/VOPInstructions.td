@@ -1055,6 +1055,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
 
   let VALU = 1;
   let DPP = 1;
+  let isConvergent = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -1065,7 +1066,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let Constraints     = ps.Constraints;
 
   // Copy relevant pseudo op flags
-  let isConvergent         = ps.isConvergent;
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let True16Predicate      = ps.True16Predicate;
   let AssemblerPredicate   = ps.AssemblerPredicate;
@@ -1082,7 +1082,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
-  let isConvergent         = ps.isConvergent;
 }
 
 class VOP_DPP_Base <string OpName, VOPProfile P,
@@ -1097,6 +1096,7 @@ class VOP_DPP_Base <string OpName, VOPProfile P,
 
   let VALU = 1;
   let DPP = 1;
+  let isConvergent = 1;
   let Size = 8;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
@@ -1217,6 +1217,7 @@ class VOP_DPP8_Base<string OpName, VOPProfile P, dag InsDPP8 = P.InsDPP8, string
 
   let VALU = 1;
   let DPP = 1;
+  let isConvergent = 1;
   let Size = 8;
 
   let AsmMatchConverter = "cvtDPP8";

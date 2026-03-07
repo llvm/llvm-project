@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Interfaces/CIROpInterfaces.h"
 
 namespace cir {
 
@@ -32,7 +33,7 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               cir::SideEffect sideEffect,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn);
+                              bool &noUnwind, bool &willReturn, bool &noReturn);
 
 struct LLVMBlockAddressInfo {
   // Get the next tag index

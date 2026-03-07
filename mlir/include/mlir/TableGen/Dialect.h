@@ -88,10 +88,6 @@ public:
   /// operations or types.
   bool isExtensible() const;
 
-  /// Default to use properties for storing Attributes for operations in this
-  /// dialect.
-  bool usePropertiesForAttributes() const;
-
   const llvm::DagInit *getDiscardableAttributes() const;
 
   const llvm::Record *getDef() const { return def; }

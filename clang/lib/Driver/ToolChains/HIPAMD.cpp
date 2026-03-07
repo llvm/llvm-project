@@ -189,7 +189,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     // Emit SPIR-V binary using the translator
     llvm::opt::ArgStringList TrArgs{
         "--spirv-max-version=1.6",
-        "--spirv-ext=+all",
+        "--spirv-ext=+all,-SPV_KHR_untyped_pointers",
         "--spirv-allow-unknown-intrinsics",
         "--spirv-lower-const-expr",
         "--spirv-preserve-auxdata",
