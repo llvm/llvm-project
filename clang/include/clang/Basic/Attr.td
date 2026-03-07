@@ -4175,6 +4175,28 @@ def PtGuardedBy : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def GuardedByAny : InheritableAttr {
+  let Spellings = [GNU<"guarded_by_any">];
+  let Args = [VariadicExprArgument<"Args">];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let TemplateDependent = 1;
+  let ParseArgumentsAsUnevaluated = 1;
+  let InheritEvenIfAlreadyPresent = 1;
+  let Subjects = SubjectList<[Field, SharedVar]>;
+  let Documentation = [Undocumented];
+}
+
+def PtGuardedByAny : InheritableAttr {
+  let Spellings = [GNU<"pt_guarded_by_any">];
+  let Args = [VariadicExprArgument<"Args">];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let TemplateDependent = 1;
+  let ParseArgumentsAsUnevaluated = 1;
+  let InheritEvenIfAlreadyPresent = 1;
+  let Subjects = SubjectList<[Field, SharedVar]>;
+  let Documentation = [Undocumented];
+}
+
 def AcquiredAfter : InheritableAttr {
   let Spellings = [GNU<"acquired_after">];
   let Args = [VariadicExprArgument<"Args">];

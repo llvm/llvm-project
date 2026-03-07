@@ -213,6 +213,12 @@ Attribute Changes in Clang
   and requires all listed capabilities to be held when accessing the guarded
   variable.
 
+- The :doc:`ThreadSafetyAnalysis` introduces two new attributes,
+  ``guarded_by_any`` and ``pt_guarded_by_any``.  Unlike ``guarded_by``, these
+  follow a weaker ownership model: *writing* still requires all listed
+  capabilities to be held exclusively, but *reading* only requires at least one
+  of them to be held.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,

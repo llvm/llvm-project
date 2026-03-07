@@ -41,6 +41,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -1282,6 +1283,12 @@ public:
   void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
                        Expr *MutexExp, til::SExpr *Self, SourceLocation Loc);
 
+  void warnIfAnyMutexNotHeldForRead(const FactSet &FSet, const NamedDecl *D,
+                                    const Expr *Exp,
+                                    llvm::ArrayRef<Expr *> Args,
+                                    ProtectedOperationKind POK,
+                                    SourceLocation Loc);
+
   void checkAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
                    ProtectedOperationKind POK);
   void checkPtAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
@@ -1868,6 +1875,24 @@ void ThreadSafetyAnalyzer::warnIfMutexHeld(const FactSet &FSet,
   }
 }
 
+void ThreadSafetyAnalyzer::warnIfAnyMutexNotHeldForRead(
+    const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
+    llvm::ArrayRef<Expr *> Args, ProtectedOperationKind POK,
+    SourceLocation Loc) {
+  SmallVector<std::string, 2> Names;
+  for (auto *Arg : Args) {
+    CapabilityExpr Cp = SxBuilder.translateAttrExpr(Arg, D, Exp, nullptr);
+    if (Cp.isInvalid() || Cp.shouldIgnore())
+      continue;
+    const FactEntry *LDat = FSet.findLockUniv(FactMan, Cp);
+    if (LDat && LDat->isAtLeast(LK_Shared))
+      return; // At least one held — read access is safe.
+    Names.push_back("'" + Cp.toString() + "'");
+  }
+  if (!Names.empty())
+    Handler.handleGuardedByAnyReadNotHeld(D, POK, llvm::join(Names, ", "), Loc);
+}
+
 /// Checks guarded_by and pt_guarded_by attributes.
 /// Whenever we identify an access (read or write) to a DeclRefExpr that is
 /// marked with guarded_by, we must ensure the appropriate mutexes are held.
@@ -1937,6 +1962,17 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
   for (const auto *I : D->specific_attrs<GuardedByAttr>())
     for (auto *Arg : I->args())
       warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, POK, nullptr, Loc);
+
+  for (const auto *I : D->specific_attrs<GuardedByAnyAttr>()) {
+    if (AK == AK_Written) {
+      // Write requires all capabilities.
+      for (auto *Arg : I->args())
+        warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, POK, nullptr, Loc);
+    } else {
+      // Read requires at least one capability.
+      warnIfAnyMutexNotHeldForRead(FSet, D, Exp, I->args(), POK, Loc);
+    }
+  }
 }
 
 /// Checks pt_guarded_by and pt_guarded_var attributes.
@@ -2003,6 +2039,19 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
     for (auto *Arg : I->args())
       warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, PtPOK, nullptr,
                          Exp->getExprLoc());
+
+  for (const auto *I : D->specific_attrs<PtGuardedByAnyAttr>()) {
+    if (AK == AK_Written) {
+      // Write requires all capabilities.
+      for (auto *Arg : I->args())
+        warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, PtPOK, nullptr,
+                           Exp->getExprLoc());
+    } else {
+      // Read requires at least one capability.
+      warnIfAnyMutexNotHeldForRead(FSet, D, Exp, I->args(), PtPOK,
+                                   Exp->getExprLoc());
+    }
+  }
 }
 
 /// Process a function call, method call, constructor call,

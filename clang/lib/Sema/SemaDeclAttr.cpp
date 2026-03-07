@@ -488,6 +488,27 @@ static void handlePtGuardedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                  PtGuardedByAttr(S.Context, AL, Args.data(), Args.size()));
 }
 
+static void handleGuardedByAnyAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
+    return;
+
+  D->addAttr(::new (S.Context)
+                 GuardedByAnyAttr(S.Context, AL, Args.data(), Args.size()));
+}
+
+static void handlePtGuardedByAnyAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  SmallVector<Expr *, 1> Args;
+  if (!checkGuardedByAttrCommon(S, D, AL, Args))
+    return;
+
+  if (!threadSafetyCheckIsPointer(S, D, AL))
+    return;
+
+  D->addAttr(::new (S.Context)
+                 PtGuardedByAnyAttr(S.Context, AL, Args.data(), Args.size()));
+}
+
 static bool checkAcquireOrderAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
                                         SmallVectorImpl<Expr *> &Args) {
   if (!AL.checkAtLeastNumArgs(S, 1))
@@ -7987,6 +8008,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_PtGuardedBy:
     handlePtGuardedByAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_GuardedByAny:
+    handleGuardedByAnyAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_PtGuardedByAny:
+    handlePtGuardedByAnyAttr(S, D, AL);
     break;
   case ParsedAttr::AT_LockReturned:
     handleLockReturnedAttr(S, D, AL);

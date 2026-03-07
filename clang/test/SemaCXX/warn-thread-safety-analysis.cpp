@@ -1570,6 +1570,50 @@ void func()
 }
 } // end namespace thread_annot_lock_42
 
+namespace guarded_by_any {
+// Test GUARDED_BY_ANY: any one capability suffices for read; all are required
+// for write.
+class Foo {
+  Mutex mu1, mu2;
+  int x GUARDED_BY_ANY(mu1, mu2);
+  int *p PT_GUARDED_BY_ANY(mu1, mu2);
+
+  // All locks held exclusively: read and write both OK.
+  void f1() EXCLUSIVE_LOCKS_REQUIRED(mu1, mu2) {
+    x = 1;
+    *p = 1;
+  }
+
+  // Only mu1 held exclusively: read OK, write warns about mu2.
+  void f2() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    int y = x;
+    int z = *p;
+    x = 1;  // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1; // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // One lock held shared: read OK, write warns about both.
+  void f3() SHARED_LOCKS_REQUIRED(mu1) {
+    int y = x;
+    int z = *p;
+    x = 1;  // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}} \
+            // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1; // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu1' exclusively}} \
+            // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // No locks held: read and write both warn.
+  void f4() {
+    int y = x;  // expected-warning {{reading variable 'x' requires holding at least one of 'mu1', 'mu2'}}
+    int z = *p; // expected-warning {{reading the value pointed to by 'p' requires holding at least one of 'mu1', 'mu2'}}
+    x = 1;      // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}} \
+                // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1;     // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu1' exclusively}} \
+                // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+};
+} // end namespace guarded_by_any
+
 namespace thread_annot_lock_46 {
 // Test the support for annotations on virtual functions.
 class Base {
