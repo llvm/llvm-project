@@ -339,12 +339,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  std::vector<const Index *> Children;
-  Children.reserve(CDCtx.Idx.Children.size());
-  for (const auto &[_, C] : CDCtx.Idx.Children)
-    Children.push_back(&C);
-  llvm::sort(Children, [](const Index *A, const Index *B) { return *A < *B; });
-
+  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children)
     serializeReference(OS, *C, 0);
 
@@ -363,11 +358,7 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  std::vector<const Index *> Children;
-  Children.reserve(CDCtx.Idx.Children.size());
-  for (const auto &[_, C] : CDCtx.Idx.Children)
-    Children.push_back(&C);
-  llvm::sort(Children, [](const Index *A, const Index *B) { return *A < *B; });
+  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children) {
     if (!C->Children.empty()) {
       const char *Type;
@@ -414,7 +405,7 @@ public:
   static const char *Format;
 
   llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
@@ -424,7 +415,7 @@ public:
 const char *MDGenerator::Format = "md";
 
 llvm::Error MDGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
@@ -432,7 +423,7 @@ llvm::Error MDGenerator::generateDocumentation(
   // Collect all output by file name and create the necessary directories.
   llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    doc::Info *Info = Group.getValue().get();
+    doc::Info *Info = getPtr(Group.getValue());
 
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);
