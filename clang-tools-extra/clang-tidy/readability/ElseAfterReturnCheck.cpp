@@ -39,6 +39,23 @@ private:
   const SourceManager &SM;
 };
 
+bool isNoReturnStmt(const Stmt &Stmt) {
+  const auto *Call = dyn_cast<CallExpr>(&Stmt);
+  if (!Call)
+    return false;
+
+  const FunctionDecl *Func = Call->getDirectCallee();
+  if (!Func)
+    return false;
+
+  return Func->isNoReturn();
+}
+
+AST_MATCHER(Stmt, isNoReturnStmt) {
+  const Stmt &S = Node;
+  return isNoReturnStmt(S);
+}
+
 AST_MATCHER_P(Stmt, stripLabelLikeStatements,
               ast_matchers::internal::Matcher<Stmt>, InnerMatcher) {
   const Stmt *S = Node.stripLabelLikeStatements();
@@ -174,7 +191,8 @@ void ElseAfterReturnCheck::registerPPCallbacks(const SourceManager &SM,
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto InterruptsControlFlow = stmt(anyOf(
       returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
-      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
+      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr),
+      stmt(isNoReturnStmt()).bind(InterruptingStr)));
 
   const auto IfWithInterruptingThenElse =
       ifStmt(unless(isConstexpr()), unless(isConsteval()),
@@ -237,6 +255,8 @@ static StringRef getControlFlowString(const Stmt &Stmt) {
     return "break";
   if (isa<CXXThrowExpr>(Stmt))
     return "throw";
+  if (isNoReturnStmt(Stmt))
+    return "noreturn";
   llvm_unreachable("Unknown control flow interrupter");
 }
 
