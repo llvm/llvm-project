@@ -228,7 +228,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   const AttributeList &Attrs = FuncInfo.getAttributes();
   addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
 
-  PointerType *PtrTy = dyn_cast<PointerType>(Arg.Ty->getScalarType());
+  PointerType *PtrTy = dyn_cast<PointerType>(Arg.Ty);
   if (PtrTy) {
     Flags.setPointer();
     Flags.setPointerAddrSpace(PtrTy->getPointerAddressSpace());

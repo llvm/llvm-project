@@ -451,6 +451,7 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC:
     return selectTruncOrPtrToInt(I, MRI, MF);
+  case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_FREEZE:
     return selectCopy(I, MRI);
@@ -895,6 +896,11 @@ bool X86InstructionSelector::selectTruncOrPtrToInt(MachineInstr &I,
   // into the floating class, just replace it with copy, as we are able to
   // select it as a regular move.
   if (canTurnIntoCOPY(DstRC, SrcRC))
+    return selectTurnIntoCOPY(I, MRI, DstReg, DstRC, SrcReg, SrcRC);
+
+  // If the source and the destination are vectors, this is a ptrtoint of
+  // vectors to vectors, just replace it with a copy.
+  if (DstRB.getID() == X86::VECRRegBankID)
     return selectTurnIntoCOPY(I, MRI, DstReg, DstRC, SrcReg, SrcRC);
 
   if (DstRB.getID() != X86::GPRRegBankID)

@@ -15,12 +15,14 @@
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Type.h"
 
@@ -77,6 +79,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v32s16 = LLT::fixed_vector(32, 16);
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
+  const LLT v8p0 = LLT::fixed_vector(8, p0);
+
+  const LLT v16p0 = LLT::fixed_vector(16, p0);
 
   const LLT s8MaxVector = HasAVX512 ? v64s8 : HasAVX ? v32s8 : v16s8;
   const LLT s16MaxVector = HasAVX512 ? v32s16 : HasAVX ? v16s16 : v8s16;
@@ -310,16 +315,50 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
-  // pointer handling
-  const std::initializer_list<LLT> PtrTypes32 = {s1, s8, s16, s32};
-  const std::initializer_list<LLT> PtrTypes64 = {s1, s8, s16, s32, s64};
+  const bool IsPointer64Bit = TM.getPointerSizeInBits(0) == 64;
 
   getActionDefinitionsBuilder(G_PTRTOINT)
-      .legalForCartesianProduct(Is64Bit ? PtrTypes64 : PtrTypes32, {p0})
-      .maxScalar(0, sMaxScalar)
-      .widenScalarToNextPow2(0, /*Min*/ 8);
+      .legalFor({IsPointer64Bit ? s64 : s32, p0})
+      .legalFor(HasSSE2, {{IsPointer64Bit ? v2s64 : v2s32, v2p0}})
+      .legalFor(HasSSE2 && !IsPointer64Bit, {{v4s32, v4p0}})
+      .legalFor(HasAVX, {{IsPointer64Bit ? v4s64 : v8s32,
+                          IsPointer64Bit ? v4p0 : v8p0}})
+      .legalFor(HasAVX512, {{IsPointer64Bit ? v8s64 : v16s32,
+                             IsPointer64Bit ? v8p0 : v16p0}})
+      .clampScalarOrElt(0, sMaxScalar, sMaxScalar)
+      .clampMaxNumElements(1, p0,
+                           IsPointer64Bit ? s64MaxVector.getNumElements()
+                                          : s32MaxVector.getNumElements())
+      .scalarize(0);
 
-  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, sMaxScalar}});
+  getActionDefinitionsBuilder(G_INTTOPTR)
+      .legalFor({{p0, IsPointer64Bit ? s64 : s32}})
+      .legalFor(HasSSE2, {{v2p0, IsPointer64Bit ? v2s64 : v2s32}})
+      .legalFor(HasSSE2 && !IsPointer64Bit, {{v4p0, v4s32}})
+      .legalFor(HasAVX, {{IsPointer64Bit ? v4p0 : v8p0,
+                          IsPointer64Bit ? v4s64 : v8s32}})
+      .legalFor(HasAVX512, {{IsPointer64Bit ? v8p0 : v16p0,
+                             IsPointer64Bit ? v8s64 : v16s32}})
+      .clampMaxNumElements(0, p0,
+                           IsPointer64Bit ? s64MaxVector.getNumElements()
+                                          : s32MaxVector.getNumElements())
+      .scalarize(0);
+
+  getActionDefinitionsBuilder(G_BITCAST)
+      .legalFor({{p0, sMaxScalar}})
+      .legalIf([=](const LegalityQuery &Query) -> bool {
+        auto SSE2Types = {Is64Bit ? v2p0 : v4p0, v2s64, v4s32, v8s16, v16s8};
+        auto AVXTypes = {Is64Bit ? v4p0 : v8p0, v4s64, v8s32, v16s16, v32s8};
+        auto AVX512Types = {Is64Bit ? v8p0 : v16p0, v8s64, v16s32, v32s16,
+                            v64s8};
+        if (HasSSE2 && typeInSet(0, SSE2Types) && typeInSet(1, SSE2Types))
+          return true;
+        if (HasAVX && typeInSet(0, AVXTypes) && typeInSet(1, AVXTypes))
+          return true;
+        if (HasAVX512 && typeInSet(0, AVX512Types) && typeInSet(1, AVX512Types))
+          return true;
+        return false;
+      });
 
   getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
