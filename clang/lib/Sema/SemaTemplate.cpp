@@ -26,6 +26,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
@@ -2472,13 +2473,23 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         NewDefaultLoc = NewTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
 
-        if (!OldTypeParm->getOwningModule())
+        bool SameDefault =
+            getASTContext().isSameDefaultTemplateArgument(OldTypeParm,
+                                                          NewTypeParm);
+        if (Module *ImportedM = OldTypeParm->getImportedOwningModule()) {
+          if (!SameDefault) {
+            InconsistentDefaultArg = true;
+            PrevModuleName = ImportedM->getFullModuleName();
+          }
+        } else if (Module *LocalM = OldTypeParm->getLocalOwningModule()) {
+          if (LocalM->isModuleMapModule()) {
+            if (!SameDefault)
+              RedundantDefaultArg = true;
+          } else {
+            RedundantDefaultArg = true;
+          }
+        } else {
           RedundantDefaultArg = true;
-        else if (!getASTContext().isSameDefaultTemplateArgument(OldTypeParm,
-                                                                NewTypeParm)) {
-          InconsistentDefaultArg = true;
-          PrevModuleName =
-              OldTypeParm->getImportedOwningModule()->getFullModuleName();
         }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldTypeParm && OldTypeParm->hasDefaultArgument()) {
@@ -2527,13 +2538,22 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldNonTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewNonTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
-        if (!OldNonTypeParm->getOwningModule())
+        bool SameDefault = getASTContext().isSameDefaultTemplateArgument(
+            OldNonTypeParm, NewNonTypeParm);
+        if (Module *ImportedM = OldNonTypeParm->getImportedOwningModule()) {
+          if (!SameDefault) {
+            InconsistentDefaultArg = true;
+            PrevModuleName = ImportedM->getFullModuleName();
+          }
+        } else if (Module *LocalM = OldNonTypeParm->getLocalOwningModule()) {
+          if (LocalM->isModuleMapModule()) {
+            if (!SameDefault)
+              RedundantDefaultArg = true;
+          } else {
+            RedundantDefaultArg = true;
+          }
+        } else {
           RedundantDefaultArg = true;
-        else if (!getASTContext().isSameDefaultTemplateArgument(
-                     OldNonTypeParm, NewNonTypeParm)) {
-          InconsistentDefaultArg = true;
-          PrevModuleName =
-              OldNonTypeParm->getImportedOwningModule()->getFullModuleName();
         }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldNonTypeParm && OldNonTypeParm->hasDefaultArgument()) {
@@ -2578,13 +2598,22 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldTemplateParm->getDefaultArgument().getLocation();
         NewDefaultLoc = NewTemplateParm->getDefaultArgument().getLocation();
         SawDefaultArgument = true;
-        if (!OldTemplateParm->getOwningModule())
+        bool SameDefault = getASTContext().isSameDefaultTemplateArgument(
+            OldTemplateParm, NewTemplateParm);
+        if (Module *ImportedM = OldTemplateParm->getImportedOwningModule()) {
+          if (!SameDefault) {
+            InconsistentDefaultArg = true;
+            PrevModuleName = ImportedM->getFullModuleName();
+          }
+        } else if (Module *LocalM = OldTemplateParm->getLocalOwningModule()) {
+          if (LocalM->isModuleMapModule()) {
+            if (!SameDefault)
+              RedundantDefaultArg = true;
+          } else {
+            RedundantDefaultArg = true;
+          }
+        } else {
           RedundantDefaultArg = true;
-        else if (!getASTContext().isSameDefaultTemplateArgument(
-                     OldTemplateParm, NewTemplateParm)) {
-          InconsistentDefaultArg = true;
-          PrevModuleName =
-              OldTemplateParm->getImportedOwningModule()->getFullModuleName();
         }
         PreviousDefaultArgLoc = NewDefaultLoc;
       } else if (OldTemplateParm && OldTemplateParm->hasDefaultArgument()) {
@@ -8137,9 +8166,6 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
           S, ElemT, Val.getVectorElt(I), Loc));
     return MakeInitList(Elts);
   }
-
-  case APValue::Matrix:
-    llvm_unreachable("Matrix template argument expression not yet supported");
 
   case APValue::None:
   case APValue::Indeterminate:
