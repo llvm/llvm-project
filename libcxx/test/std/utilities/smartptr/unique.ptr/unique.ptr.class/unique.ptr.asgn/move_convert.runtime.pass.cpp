@@ -89,7 +89,7 @@ void test_sfinae() {
     static_assert(!std::is_assignable<UAC, const UA&>::value, "");
   }
   { // cannot move if the deleter-types cannot convert
-    static_assert(std::is_assignable<UACD, UAD&&>::value, "");
+    static_assert(!std::is_assignable<UACD, UAD&&>::value, "");
     static_assert(!std::is_assignable<UACD, UAC&&>::value, "");
     static_assert(!std::is_assignable<UAC, UACD&&>::value, "");
   }

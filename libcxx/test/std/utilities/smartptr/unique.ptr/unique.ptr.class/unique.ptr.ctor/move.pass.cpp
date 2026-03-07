@@ -12,6 +12,8 @@
 
 // Test unique_ptr move ctor
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <memory>
 #include <utility>
 #include <cassert>
@@ -24,10 +26,8 @@
 //
 // Concerns
 //   1 The moved from pointer is empty and the new pointer stores the old value.
-//   2 The only requirement on the deleter is that it is MoveConstructible
-//     or a reference.
-//   3 The constructor works for explicitly moved values (i.e. std::move(x))
-//   4 The constructor works for true temporaries (e.g. a return value)
+//   2 The constructor works for explicitly moved values (i.e. std::move(x))
+//   3 The constructor works for true temporaries (e.g. a return value)
 //
 // Plan
 //  1 Explicitly construct unique_ptr<T, D> for various deleter types 'D'.
@@ -73,10 +73,22 @@ void sink3(std::unique_ptr<VT, NCDeleter<VT>&> p) {
 
 template <class ValueT>
 TEST_CONSTEXPR_CXX23 void test_sfinae() {
-  typedef std::unique_ptr<ValueT> U;
-  { // Ensure unique_ptr is non-copyable
+  // Ensure that
+  // - unique_ptr is non-copyable, and
+  // - unique_ptr's move-constructibility is correctly propagated from its deleter's.
+  {
+    typedef std::unique_ptr<ValueT> U;
     static_assert((!std::is_constructible<U, U const&>::value), "");
     static_assert((!std::is_constructible<U, U&>::value), "");
+    static_assert(std::is_move_constructible<U>::value, "");
+    static_assert(!std::is_constructible<U, const U>::value, "");
+  }
+  {
+    typedef std::unique_ptr<ValueT, NCDeleter<ValueT> > U;
+    static_assert(!std::is_constructible<U, U const&>::value, "");
+    static_assert(!std::is_constructible<U, U&>::value, "");
+    static_assert(!std::is_move_constructible<U>::value, "");
+    static_assert(!std::is_constructible<U, const U>::value, "");
   }
 }
 
