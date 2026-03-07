@@ -11,15 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
@@ -673,4 +676,27 @@ bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
       return true;
   }
   return false;
+}
+
+void MachineRegisterInfo::getPhysRegAntiHints(
+    Register VReg, SmallVectorImpl<MCPhysReg> &PhysAntiHints,
+    const VirtRegMap &VRM) const {
+  assert(VReg.isVirtual());
+  if (!AntiHintRegs.inBounds(VReg))
+    return;
+
+  const SmallVector<Register, 4> &AntiHints = AntiHintRegs[VReg];
+
+  for (Register AntiHintVReg : AntiHints) {
+    // Check if the anti-hinted register has been allocated
+    if (VRM.hasPhys(AntiHintVReg)) {
+      MCPhysReg PhysReg = VRM.getPhys(AntiHintVReg);
+      // Add the physical register
+      PhysAntiHints.push_back(PhysReg);
+    }
+  }
+
+  // Remove duplicates
+  llvm::sort(PhysAntiHints);
+  PhysAntiHints.erase(llvm::unique(PhysAntiHints), PhysAntiHints.end());
 }

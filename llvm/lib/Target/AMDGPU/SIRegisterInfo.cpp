@@ -11,18 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SIRegisterInfo.h"
 #include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "amdgpu-si-register-info"
 
 using namespace llvm;
 
@@ -3894,6 +3899,130 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);
   }
+}
+
+bool SIRegisterInfo::shouldApplyAntiHints(Register VirtReg,
+                                          const MachineFunction &MF,
+                                          SmallVector<MCPhysReg, 16> &AntiHints,
+                                          const VirtRegMap *VRM,
+                                          unsigned NumAllocatedVGPRs) const {
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned DynamicVGPRBlockSize = MFI->getDynamicVGPRBlockSize();
+  unsigned TargetOccupancy = MFI->getOccupancy();
+  unsigned CurrentOccupancy =
+      ST.getOccupancyWithNumVGPRs(NumAllocatedVGPRs, DynamicVGPRBlockSize);
+
+  // If we are already at lowest occupancy, then there is no need to protect
+  // against occupancy regression.
+  if (CurrentOccupancy == 1)
+    return true;
+
+  // Set max VGPRs for target and current occupancy to early bail out if we are
+  // close to the limit.
+  unsigned MaxVGPRForTargetOccupancy =
+      ST.getMaxNumVGPRs(TargetOccupancy, DynamicVGPRBlockSize);
+  unsigned MaxVgprsForCurrentOccupancy =
+      ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize);
+  unsigned MaxVGPRsCutOffForTargetOccupancy =
+      (MaxVGPRForTargetOccupancy * 80) / 100;
+  unsigned MaxVGPRsCutOffForCurrentOccupancy =
+      (MaxVgprsForCurrentOccupancy * 95) / 100;
+
+  // Early bail out if we are close to the limit for target occupancy.
+  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForTargetOccupancy)
+    return false;
+
+  // Bail out if we are close to the limit for current occupancy.
+  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForCurrentOccupancy)
+    return false;
+
+  // Safe to apply anti-hints
+  return true;
+}
+
+void SIRegisterInfo::applyRegAllocationAntiHints(
+    Register VirtReg, ArrayRef<MCPhysReg> &Order,
+    SmallVectorImpl<MCPhysReg> &OrderStorage,
+    SmallVector<MCPhysReg, 16> &AntiHints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
+
+  // Early exit to default order if we have no anti-hints or no VRM.
+  if (AntiHints.empty() || !VRM)
+    return;
+
+  // Get total number of allocated VGPRs to determine the current occupancy.
+  unsigned NumAllocatedVGPRs = 0;
+  unsigned NumVGPRs = 0;
+  unsigned NumAGPRs = 0;
+  if (Matrix) {
+    for (MCPhysReg Reg : AMDGPU::VGPR_32RegClass)
+      if (Matrix->isPhysRegUsed(Reg))
+        NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
+    for (MCPhysReg Reg : AMDGPU::AGPR_32RegClass)
+      if (Matrix->isPhysRegUsed(Reg))
+        NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
+  }
+  NumAllocatedVGPRs =
+      AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
+
+  // Early exit if we should not apply anti-hints.
+  if (!shouldApplyAntiHints(VirtReg, MF, AntiHints, VRM, NumAllocatedVGPRs))
+    return;
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned DynamicVGPRBlockSize = MFI->getDynamicVGPRBlockSize();
+  unsigned CurrentOccupancy =
+      ST.getOccupancyWithNumVGPRs(NumAllocatedVGPRs, DynamicVGPRBlockSize);
+  unsigned MaxVGPRsForCurrentOccupancy =
+      ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize);
+
+  // Returns true if Reg fits within the current occupancy VGPR budget.
+  auto IsWithinBudget = [&](MCPhysReg Reg) -> bool {
+    unsigned HighestVGPR = 0;
+    bool IsVGPR = false;
+    for (MCPhysReg SubReg : subregs_inclusive(Reg)) {
+      if (AMDGPU::VGPR_32RegClass.contains(SubReg) ||
+          AMDGPU::AGPR_32RegClass.contains(SubReg)) {
+        HighestVGPR = std::max(HighestVGPR, getHWRegIndex(SubReg));
+        IsVGPR = true;
+      }
+    }
+    return !IsVGPR || HighestVGPR < MaxVGPRsForCurrentOccupancy;
+  };
+
+  // Copy order.
+  OrderStorage.clear();
+  OrderStorage.assign(Order.begin(), Order.end());
+
+  // Helper to check if a register overlaps with any anti-hint.
+  auto isAntiHinted = [&](MCPhysReg Reg) {
+    return std::any_of(
+        AntiHints.begin(), AntiHints.end(),
+        [&](MCPhysReg AntiHint) { return regsOverlap(Reg, AntiHint); });
+  };
+
+  // Find the cutoff point for the current occupancy VGPR budget.
+  auto BeyondBudgetStart =
+      std::find_if(OrderStorage.begin(), OrderStorage.end(),
+                   [&](MCPhysReg Reg) { return !IsWithinBudget(Reg); });
+
+  // Only shuffle within the current occupancy VGPR budget.
+  auto *PartitionPoint =
+      std::stable_partition(OrderStorage.begin(), BeyondBudgetStart,
+                            [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
+
+  Order = OrderStorage;
+  LLVM_DEBUG({
+    size_t NonAntiHintedCount =
+        std::distance(OrderStorage.begin(), PartitionPoint);
+    size_t AntiHintedCount = std::distance(PartitionPoint, OrderStorage.end());
+    dbgs() << "Added " << NonAntiHintedCount
+           << " non-anti-hinted registers first\n"
+           << "Added " << AntiHintedCount
+           << " anti-hinted registers at the end\n";
+  });
+  return;
 }
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {

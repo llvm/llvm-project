@@ -499,6 +499,45 @@ bool TargetRegisterInfo::getRegAllocationHints(
   return false;
 }
 
+void TargetRegisterInfo::applyRegAllocationAntiHints(
+    Register VirtReg, ArrayRef<MCPhysReg> &Order,
+    SmallVectorImpl<MCPhysReg> &OrderStorage,
+    SmallVector<MCPhysReg, 16> &AntiHints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
+
+  if (AntiHints.empty() || !VRM)
+    return;
+
+  auto isAntiHinted = [&](MCPhysReg Reg) {
+    return std::any_of(
+        AntiHints.begin(), AntiHints.end(),
+        [&](MCPhysReg AntiHint) { return regsOverlap(Reg, AntiHint); });
+  };
+
+  // Copy order into storage
+  OrderStorage.clear();
+  OrderStorage.assign(Order.begin(), Order.end());
+
+  // Partition non-anti-hinted register go first
+  auto PartionPoint =
+      std::stable_partition(OrderStorage.begin(), OrderStorage.end(),
+                            [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
+
+  Order = OrderStorage;
+
+  // print the details
+  LLVM_DEBUG({
+    size_t NonAntiHintedCount =
+        std::distance(OrderStorage.begin(), PartionPoint);
+    size_t AntiHintedCount = std::distance(PartionPoint, OrderStorage.end());
+    dbgs() << "Addded " << NonAntiHintedCount
+           << "non-anti-hinted registers first\n"
+           << "Added " << AntiHintedCount << "anit-hinted at the end!\n";
+  });
+
+  return;
+}
+
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
     MCRegister PhysReg, const MachineFunction &MF) const {
   if (!PhysReg)
