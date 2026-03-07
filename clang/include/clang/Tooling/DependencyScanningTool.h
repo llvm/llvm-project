@@ -172,7 +172,8 @@ class CompilerInstanceWithContext {
                               const std::vector<std::string> &CMD)
       : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
-  bool initialize(std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
+  bool initialize(dependencies::DependencyActionController &Controller,
+                  std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
                       DiagEngineWithDiagOpts,
                   IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
 
@@ -187,10 +188,11 @@ public:
   ///        command.
   /// @param DC A diagnostics consumer to report error if the initialization
   ///        fails.
-  static std::optional<CompilerInstanceWithContext>
-  initializeFromCommandline(DependencyScanningTool &Tool, StringRef CWD,
-                            ArrayRef<std::string> CommandLine,
-                            DiagnosticConsumer &DC);
+  static std::optional<CompilerInstanceWithContext> initializeFromCommandline(
+      DependencyScanningTool &Tool, StringRef CWD,
+      ArrayRef<std::string> CommandLine,
+      dependencies::DependencyActionController &Controller,
+      DiagnosticConsumer &DC);
 
   /// @brief Initializing the context and the compiler instance.
   ///        This method must be called before calling
@@ -198,9 +200,10 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  static llvm::Expected<CompilerInstanceWithContext>
-  initializeOrError(DependencyScanningTool &Tool, StringRef CWD,
-                    ArrayRef<std::string> CommandLine);
+  static llvm::Expected<CompilerInstanceWithContext> initializeOrError(
+      DependencyScanningTool &Tool, StringRef CWD,
+      ArrayRef<std::string> CommandLine,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
   bool
   computeDependencies(StringRef ModuleName,
