@@ -32,6 +32,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
 #include <cassert>
@@ -422,6 +423,10 @@ class LLVM_ABI MachineFunction {
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
 
+  /// Prefetch targets in this function. This includes targets that are mapped
+  /// to a basic block and dangling targets.
+  DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargets;
+
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
 
@@ -763,6 +768,16 @@ public:
   }
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
+
+  void
+  setPrefetchTargets(const DenseMap<UniqueBBID, SmallVector<unsigned>> &V) {
+    PrefetchTargets = V;
+  }
+
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &
+  getPrefetchTargets() const {
+    return PrefetchTargets;
+  }
 
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
   /// function.

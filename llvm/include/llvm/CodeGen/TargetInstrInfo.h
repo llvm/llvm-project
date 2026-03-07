@@ -2370,6 +2370,15 @@ public:
     llvm_unreachable("unknown number of operands necessary");
   }
 
+  /// Inserts a code prefetch instruction before `InsertBefore` in block `MBB`
+  /// targetting `GV`.
+  virtual MachineInstr *
+  insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const GlobalValue *GV) const {
+    llvm_unreachable("target did not implement");
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
