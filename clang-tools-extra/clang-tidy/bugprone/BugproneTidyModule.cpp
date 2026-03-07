@@ -69,6 +69,7 @@
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
 #include "ReturnConstRefFromParameterCheck.h"
+#include "SetvbufStackBufferCheck.h"
 #include "SharedPtrArrayMismatchCheck.h"
 #include "SignalHandlerCheck.h"
 #include "SignedCharMisuseCheck.h"
@@ -241,6 +242,8 @@ public:
         "bugprone-raw-memory-call-on-non-trivial-type");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
+    CheckFactories.registerCheck<SetvbufStackBufferCheck>(
+        "bugprone-setvbuf-stack-buffer");
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
         "bugprone-shared-ptr-array-mismatch");
     CheckFactories.registerCheck<SignalHandlerCheck>("bugprone-signal-handler");

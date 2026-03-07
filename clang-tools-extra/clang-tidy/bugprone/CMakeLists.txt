@@ -72,6 +72,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
+  SetvbufStackBufferCheck.cpp
   SharedPtrArrayMismatchCheck.cpp
   SignalHandlerCheck.cpp
   SignedCharMisuseCheck.cpp
