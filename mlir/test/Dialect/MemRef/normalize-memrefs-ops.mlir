@@ -191,8 +191,16 @@ func.func @reinterpret_cast_non_zero_offset(%arg0: index, %arg1: memref<1x10x17x
   %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<1x10x17xf32>
   cf.br ^bb3
 ^bb3:  // pred: ^bb1
-  // CHECK: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %{{.*}} to offset: [0], sizes: [32], strides: [1] : memref<2x17xf32> to memref<32xf32>
-  // CHECK: return %[[REINTERPRET_CAST]], %[[REINTERPRET_CAST]], %{{.*}}, %{{.*}}, %{{.*}} : memref<32xf32>, memref<32xf32>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
-  %reinterpret_cast = memref.reinterpret_cast %alloc_0 to offset: [27], sizes: [1, 5], strides: [17, 1] : memref<2x17xf32> to memref<1x5xf32, strided<[17, 1], offset: 27>>
-  return %reinterpret_cast, %reinterpret_cast, %alloc_0, %alloc, %alloc_1 : memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
+  // CHECK: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %{{.*}} to offset: [27], sizes: [1, 5], strides: [17, 1] : memref<2x17xf32> to memref<1x5xf32, strided<[17, 1], offset: 27>>
+  // CHECK: return %[[REINTERPRET_CAST]], %[[REINTERPRET_CAST]], %{{.*}}, %{{.*}}, %{{.*}} : memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
+    %reinterpret_cast = memref.reinterpret_cast %alloc_0 to offset: [27], sizes: [1, 5], strides: [17, 1] : memref<2x17xf32> to memref<1x5xf32, strided<[17, 1], offset: 27>>
+    return %reinterpret_cast, %reinterpret_cast, %alloc_0, %alloc, %alloc_1 : memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<1x5xf32, strided<[17, 1], offset: 27>>, memref<2x17xf32>, memref<1x10x17xi32>, memref<1x10x17xf32>
 }
+
+  // CHECK-LABEL: strided_gap_skip
+  func.func @strided_gap_skip(%arg0: memref<11x13xf32>) -> memref<2x1xf32, strided<[13, 1], offset: 15>> {
+    // CHECK: %[[VIEW:.*]] = memref.reinterpret_cast %{{.*}} to offset: [15], sizes: [2, 1], strides: [13, 1] : memref<11x13xf32> to memref<2x1xf32, strided<[13, 1], offset: 15>>
+    // CHECK: return %[[VIEW]] : memref<2x1xf32, strided<[13, 1], offset: 15>>
+    %view = memref.reinterpret_cast %arg0 to offset: [15], sizes: [2, 1], strides: [13, 1] : memref<11x13xf32> to memref<2x1xf32, strided<[13, 1], offset: 15>>
+    return %view : memref<2x1xf32, strided<[13, 1], offset: 15>>
+  }
