@@ -9447,6 +9447,81 @@ defm : FMLSIndexedAfterNegPatterns<
 defm : FMLSIndexedAfterNegPatterns<
            TriOpFrag<(any_fma node:$MHS, node:$RHS, node:$LHS)> >;
 
+// Vector FNMUL: -(x * y) -> FMLS(-0.0, x, y), by-element for a splat y.
+// AArch64 has no vector FNMUL, so -(x * y) needs an FNEG on top of the FMUL.
+// FMLS folds it in, and the MOVI has no input dependency, so the FNEG leaves
+// the dependency chain.  The consumed FNEG/FMUL has to be single-use, or it
+// stays live and the MOVI is added rather than substituted.
+// Like the scalar FNMUL patterns above this changes the sign of a NaN result
+// (FMLS negates its multiplicand); LangRef leaves that sign non-deterministic.
+// Plain fmul only: the two forms agree only when negation commutes with
+// rounding, which fails for the directed modes constrained FP can run under.
+// Only f32 and f16 are covered; f64 -0.0 is not a MOVI immediate.
+let HasOneUse = 1 in {
+  def fneg_oneuse : PatFrag<(ops node:$src), (fneg node:$src)>;
+  def fmul_oneuse : PatFrag<(ops node:$lhs, node:$rhs),
+                            (fmul node:$lhs, node:$rhs)>;
+}
+
+// The FNEG can sit above the FMUL or on one of its operands.
+def fnmul_frags : PatFrags<(ops node:$Rn, node:$Rm),
+                           [(fneg (fmul_oneuse node:$Rn, node:$Rm)),
+                            (fmul node:$Rn, (fneg_oneuse node:$Rm))]>;
+
+let Predicates = [HasNEON, HasFullFP16] in {
+  def : Pat<(v8f16 (fnmul_frags (v8f16 V128:$Rn),
+                                (v8f16 (AArch64duplane16 (v8f16 V128_lo:$Rm),
+                                                         VectorIndexH:$idx)))),
+            (FMLSv8i16_indexed (MOVIv8i16 (i32 128), (i32 8)), V128:$Rn,
+                               V128_lo:$Rm, VectorIndexH:$idx)>;
+  def : Pat<(v8f16 (fnmul_frags (v8f16 V128:$Rn),
+                                (v8f16 (AArch64dup (f16 FPR16Op_lo:$Rm))))),
+            (FMLSv8i16_indexed (MOVIv8i16 (i32 128), (i32 8)), V128:$Rn,
+                               (SUBREG_TO_REG (f16 FPR16Op_lo:$Rm), hsub),
+                               (i64 0))>;
+  def : Pat<(v4f16 (fnmul_frags (v4f16 V64:$Rn),
+                                (v4f16 (AArch64duplane16 (v8f16 V128_lo:$Rm),
+                                                         VectorIndexH:$idx)))),
+            (FMLSv4i16_indexed (MOVIv4i16 (i32 128), (i32 8)), V64:$Rn,
+                               V128_lo:$Rm, VectorIndexH:$idx)>;
+  def : Pat<(v4f16 (fnmul_frags (v4f16 V64:$Rn),
+                                (v4f16 (AArch64dup (f16 FPR16Op_lo:$Rm))))),
+            (FMLSv4i16_indexed (MOVIv4i16 (i32 128), (i32 8)), V64:$Rn,
+                               (SUBREG_TO_REG (f16 FPR16Op_lo:$Rm), hsub),
+                               (i64 0))>;
+
+  def : Pat<(v8f16 (fnmul_frags (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+            (FMLSv8f16 (MOVIv8i16 (i32 128), (i32 8)), V128:$Rn, V128:$Rm)>;
+  def : Pat<(v4f16 (fnmul_frags (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+            (FMLSv4f16 (MOVIv4i16 (i32 128), (i32 8)), V64:$Rn, V64:$Rm)>;
+}
+
+let Predicates = [HasNEON] in {
+  def : Pat<(v4f32 (fnmul_frags (v4f32 V128:$Rn),
+                                (v4f32 (AArch64duplane32 (v4f32 V128:$Rm),
+                                                         VectorIndexS:$idx)))),
+            (FMLSv4i32_indexed (MOVIv4i32 (i32 128), (i32 24)), V128:$Rn,
+                               V128:$Rm, VectorIndexS:$idx)>;
+  def : Pat<(v4f32 (fnmul_frags (v4f32 V128:$Rn),
+                                (v4f32 (AArch64dup (f32 FPR32Op:$Rm))))),
+            (FMLSv4i32_indexed (MOVIv4i32 (i32 128), (i32 24)), V128:$Rn,
+                               (SUBREG_TO_REG FPR32Op:$Rm, ssub), (i64 0))>;
+  def : Pat<(v2f32 (fnmul_frags (v2f32 V64:$Rn),
+                                (v2f32 (AArch64duplane32 (v4f32 V128:$Rm),
+                                                         VectorIndexS:$idx)))),
+            (FMLSv2i32_indexed (MOVIv2i32 (i32 128), (i32 24)), V64:$Rn,
+                               V128:$Rm, VectorIndexS:$idx)>;
+  def : Pat<(v2f32 (fnmul_frags (v2f32 V64:$Rn),
+                                (v2f32 (AArch64dup (f32 FPR32Op:$Rm))))),
+            (FMLSv2i32_indexed (MOVIv2i32 (i32 128), (i32 24)), V64:$Rn,
+                               (SUBREG_TO_REG FPR32Op:$Rm, ssub), (i64 0))>;
+
+  def : Pat<(v4f32 (fnmul_frags (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+            (FMLSv4f32 (MOVIv4i32 (i32 128), (i32 24)), V128:$Rn, V128:$Rm)>;
+  def : Pat<(v2f32 (fnmul_frags (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+            (FMLSv2f32 (MOVIv2i32 (i32 128), (i32 24)), V64:$Rn, V64:$Rm)>;
+}
+
 defm FMULX : SIMDFPIndexed<1, 0b1001, "fmulx", int_aarch64_neon_fmulx>;
 defm FMUL  : SIMDFPIndexed<0, 0b1001, "fmul", any_fmul>;
 
