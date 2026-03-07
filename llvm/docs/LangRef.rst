@@ -2162,13 +2162,19 @@ For example:
     call of a function with this attribute is not eliminated via optimization.
     Front ends can provide optional ``srcloc`` metadata nodes on call sites of
     such callees to attach information about where in the source language such a
-    call came from. A string value can be provided as a note.
+    call came from. A string value can be provided as a note. The inliner
+    automatically attaches ``inlined.from`` metadata to track the chain of
+    inlining decisions that led to the call site; see
+    :ref:`inlined.from metadata <md_inlined_from>`.
 ``"dontcall-warn"``
     This attribute denotes that a warning diagnostic should be emitted when a
     call of a function with this attribute is not eliminated via optimization.
     Front ends can provide optional ``srcloc`` metadata nodes on call sites of
     such callees to attach information about where in the source language such a
-    call came from. A string value can be provided as a note.
+    call came from. A string value can be provided as a note. The inliner
+    automatically attaches ``inlined.from`` metadata to track the chain of
+    inlining decisions that led to the call site; see
+    :ref:`inlined.from metadata <md_inlined_from>`.
 ``fn_ret_thunk_extern``
     This attribute tells the code generator that returns from functions should
     be replaced with jumps to externally-defined architecture-specific symbols.
@@ -7560,6 +7566,44 @@ For example, in the code below, the call instruction may only target the
 
     ...
     !0 = !{ptr @add, ptr @sub}
+
+.. _md_inlined_from:
+
+'``inlined.from``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``inlined.from`` metadata is attached to call sites of functions with
+the ``dontcall-error`` or ``dontcall-warn`` attributes by the inliner. It
+records the chain of inlining decisions that led to the call surviving at
+its current location, enabling front ends to emit diagnostics that show
+how the call was reached through a sequence of inlining steps.
+
+The metadata node contains a flat list of alternating pairs: a function
+name (``MDString``) followed by a source location cookie (``i64``). The
+first pair identifies the function that originally contained the call and
+always has a cookie of ``0`` (since the call's own ``srcloc`` metadata
+already provides its location). Each subsequent pair identifies a caller
+into which the previous function was inlined, with the cookie set to the
+``srcloc`` value of the call site that triggered the inlining.
+
+.. code-block:: llvm
+
+    ; After inlining inner() into middle() into outer():
+    call void @dontcall_target(), !srcloc !0, !inlined.from !1
+    ...
+    !0 = !{i64 42}
+    !1 = !{!"inner", i64 0, !"middle", i64 123, !"outer", i64 456}
+
+The ``srcloc`` metadata on the call provides the location cookie for the
+original call site. The ``inlined.from`` entries trace outward: ``inner``
+is where the call was originally written (cookie ``0`` meaning the call's own
+``srcloc`` covers it), ``middle`` inlined ``inner`` at location ``123``, and
+``outer`` inlined ``middle`` at location ``456``.
+
+This metadata is automatically maintained by the inliner. When a function
+containing a ``dontcall-error``/``dontcall-warn`` call site is inlined, the
+inliner appends the caller's name and the call site's source location to the
+existing ``inlined.from`` chain (creating it if it does not yet exist).
 
 '``callback``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^

@@ -94,6 +94,12 @@ def err_fe_backend_error_attr :
 def warn_fe_backend_warning_attr :
   Warning<"call to '%0' declared with 'warning' attribute: %1">, BackendInfo,
   InGroup<BackendWarningAttributes>;
+def note_fe_backend_in : Note<"called by function '%0'">, BackendInfo;
+def note_fe_backend_inlined : Note<"inlined by function '%0'">, BackendInfo;
+def note_fe_backend_inlining_debug_info
+    : Note<"use '-gline-directives-only' (implied by '-g1' or higher) for "
+           "more accurate inlining chain locations">,
+      BackendInfo;
 def warn_toc_unsupported_type : Warning<"-mtocdata option is ignored "
   "for %0 because %1">, InGroup<BackendWarningAttributes>;
 

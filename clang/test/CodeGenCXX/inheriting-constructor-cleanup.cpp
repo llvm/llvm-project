@@ -37,7 +37,7 @@ void f() {
   // EXCEPTIONS: %[[TMP1:.*]] = alloca %struct.S1
   // EXCEPTIONS: %[[TMP2:.*]] = alloca %struct.S2
   // EXCEPTIONS: invoke void (ptr, ptr, ptr, ptr, ...) @_ZN4BaseC2ERK2S1RK2S2PKcz(ptr {{.*}}, ptr noundef nonnull align 1 dereferenceable(1) %[[TMP1]], ptr noundef nonnull align 1 dereferenceable(1) %[[TMP2]], ptr {{.*}})
-  // EXCEPTIONS-NEXT: to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
+  // EXCEPTIONS-NEXT: to label %[[CONT:.*]] unwind label %[[LPAD:.*]], !srcloc
 
   // EXCEPTIONS: [[CONT]]:
   // EXCEPTIONS-NEXT: call void @_ZN9InheritorD1Ev(ptr {{.*}})
