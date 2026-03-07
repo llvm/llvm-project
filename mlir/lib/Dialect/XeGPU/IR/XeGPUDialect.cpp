@@ -501,6 +501,56 @@ DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
       getOrder());
 }
 
+// Derive a new layout by removing dimensions.
+// `dimGroup` specifies a group of dimensions to be removed in the derived
+// layout.
+DistributeLayoutAttr LayoutAttr::dropDims(SmallVector<int64_t> dimGroup) {
+
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+
+  SmallVector<int64_t> sortedDimGroup = dimGroup;
+  llvm::sort(sortedDimGroup);
+
+  for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+    if (!sgLayout.empty()) {
+      sgLayout.erase(sgLayout.begin() + dimIdx);
+      sgData.erase(sgData.begin() + dimIdx);
+    }
+    if (!instData.empty())
+      instData.erase(instData.begin() + dimIdx);
+    if (!laneLayout.empty()) {
+      laneLayout.erase(laneLayout.begin() + dimIdx);
+      laneData.erase(laneData.begin() + dimIdx);
+    }
+  }
+
+  SmallVector<int64_t> newOrder;
+  for (int64_t d : origOrder) {
+    if (llvm::is_contained(dimGroup, d))
+      continue;
+    int64_t offset = llvm::count_if(dimGroup, [&](int64_t s) { return s < d; });
+    newOrder.push_back(d - offset);
+  }
+  if (sgLayout.empty() && laneLayout.empty())
+    newOrder.clear();
+
+  auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
+    if (v.empty())
+      return DenseI32ArrayAttr();
+    SmallVector<int32_t> v32(v.begin(), v.end());
+    return DenseI32ArrayAttr::get(getContext(), v32);
+  };
+  auto droppedLayout = xegpu::LayoutAttr::get(
+      getContext(), toAttr(sgLayout), toAttr(sgData), toAttr(instData),
+      toAttr(laneLayout), toAttr(laneData), toAttr(newOrder));
+  return droppedLayout;
+}
+
 // Derive a new layout by collapsing dimensions.
 // `dimGroup` specifies a group of adjacent dimensions
 // that are collapsed into a single dimension in the derived layout.
@@ -511,26 +561,19 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
   SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
-
-  DenseI32ArrayAttr orderAttr = getOrder();
-  SmallVector<int32_t> orderVec;
-  if (orderAttr && !orderAttr.empty()) {
-    orderVec = llvm::to_vector(
-        llvm::map_range(orderAttr.asArrayRef(),
-                        [](int32_t idx) { return static_cast<int32_t>(idx); }));
-  }
+  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
 
   SmallVector<int64_t> sortedDimGroup = dimGroup;
   llvm::sort(sortedDimGroup);
   int64_t dimBeforeCurrent = -1;
   for (auto dimIdx : sortedDimGroup) {
-    // when order is present, adjacency dims are on order values like [3, 2, 1,
-    // 0] in decreasing order otherwise based on dim indices like [0, 1, 2, 3]
+    // when order attr is present, adjacency dims are values like [3, 2, 1, 0]
+    // in decreasing order; otherwise based on dim indices like [0, 1, 2, 3]
     // in increasing order
     if (dimBeforeCurrent >= 0) {
-      if (!orderVec.empty()) {
-        int64_t orderBefore = orderVec[dimBeforeCurrent];
-        int64_t orderCurrent = orderVec[dimIdx];
+      if (getOrder() && !getOrder().empty()) {
+        int64_t orderBefore = origOrder[dimBeforeCurrent];
+        int64_t orderCurrent = origOrder[dimIdx];
         if (orderBefore != (orderCurrent - 1))
           llvm::report_fatal_error(
               "dimensions being collapsed must be adjacent in order");
@@ -586,54 +629,118 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
     laneData.insert(laneData.begin() + firstDim, collapsedLaneData);
   }
 
-  // go through the values inside collapsedOrder, and re-map the order values
-  // to be in range of [0, N-1] where N is the number of dimensions in
-  // collapsed shape for exmaple, collapse dim group {2, 3} of order[1, 2, 3,
-  // 4] to new order[1, 3, 4]. the loop below remaps it to [1, 2, 3].
-  SmallVector<int32_t> collapsedOrder;
-  if (!orderVec.empty()) {
+  SmallVector<int64_t> newOrder;
+  DenseI32ArrayAttr orderAttr = getOrder();
+  if (orderAttr && !orderAttr.empty()) {
 
     for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
       if (dimIdx != firstDim)
-        orderVec.erase(orderVec.begin() + dimIdx,
-                       orderVec.begin() + dimIdx + 1);
+        origOrder.erase(origOrder.begin() + dimIdx);
     }
-
     // say we have orderVec = {5, 3, 2, 1, 0}
     // Create indices [0, 1, 2, 3, 4]
     SmallVector<size_t> indices =
-        llvm::to_vector(llvm::seq<size_t>(0, orderVec.size()));
+        llvm::to_vector(llvm::seq<size_t>(0, orderAttr.size()));
 
     // Sort indices based on corresponding values
     llvm::sort(indices,
-               [&](size_t a, size_t b) { return orderVec[a] < orderVec[b]; });
-    collapsedOrder = llvm::to_vector(llvm::map_range(
-        indices, [&](size_t i) { return static_cast<int32_t>(i); }));
+               [&](size_t a, size_t b) { return origOrder[a] < origOrder[b]; });
+
+    newOrder = llvm::to_vector(llvm::map_range(
+        indices, [&](size_t i) { return static_cast<int64_t>(i); }));
   }
 
-  // Create collapsed layout
-  SmallVector<int32_t> sgLayout32(sgLayout.begin(), sgLayout.end());
-  SmallVector<int32_t> sgData32(sgData.begin(), sgData.end());
-  SmallVector<int32_t> instData32(instData.begin(), instData.end());
-  SmallVector<int32_t> laneLayout32(laneLayout.begin(), laneLayout.end());
-  SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
-
+  auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
+    if (v.empty())
+      return DenseI32ArrayAttr();
+    SmallVector<int32_t> v32(v.begin(), v.end());
+    return DenseI32ArrayAttr::get(getContext(), v32);
+  };
   auto collapsedLayout = xegpu::LayoutAttr::get(
-      getContext(),
-      sgLayout32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), sgLayout32),
-      sgData32.empty() ? DenseI32ArrayAttr()
-                       : DenseI32ArrayAttr::get(getContext(), sgData32),
-      instData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), instData32),
-      laneLayout32.empty() ? DenseI32ArrayAttr()
-                           : DenseI32ArrayAttr::get(getContext(), laneLayout32),
-      laneData32.empty() ? DenseI32ArrayAttr()
-                         : DenseI32ArrayAttr::get(getContext(), laneData32),
-      collapsedOrder.empty()
-          ? DenseI32ArrayAttr()
-          : DenseI32ArrayAttr::get(getContext(), collapsedOrder));
+      getContext(), toAttr(sgLayout), toAttr(sgData), toAttr(instData),
+      toAttr(laneLayout), toAttr(laneData), toAttr(newOrder));
   return collapsedLayout;
+}
+
+// Derive a new layout by transpose the layout using `permutation`.
+DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
+
+  SmallVector<int64_t> origSgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> origSgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> origInstData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> origLaneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> origLaneData = getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+
+  SmallVector<int32_t> sgLayout;
+  SmallVector<int32_t> sgData;
+  SmallVector<int32_t> instData;
+  SmallVector<int32_t> laneLayout;
+  SmallVector<int32_t> laneData;
+  SmallVector<int32_t> order;
+
+  for (int64_t idx : permutation) {
+    if (!origLaneLayout.empty()) {
+      laneLayout.push_back(static_cast<int32_t>(origLaneLayout[idx]));
+      laneData.push_back(static_cast<int32_t>(origLaneData[idx]));
+    }
+    if (!origInstData.empty())
+      instData.push_back(static_cast<int32_t>(origInstData[idx]));
+    if (!origSgLayout.empty()) {
+      sgLayout.push_back(static_cast<int32_t>(origSgLayout[idx]));
+      sgData.push_back(static_cast<int32_t>(origSgData[idx]));
+    }
+    order.push_back(static_cast<int32_t>(origOrder[idx]));
+  }
+  if (origLaneLayout.empty() && origSgLayout.empty())
+    order.clear();
+
+  auto toAttr = [&](ArrayRef<int32_t> v) -> DenseI32ArrayAttr {
+    return v.empty() ? nullptr : DenseI32ArrayAttr::get(getContext(), v);
+  };
+  return xegpu::LayoutAttr::get(getContext(), toAttr(sgLayout), toAttr(sgData),
+                                toAttr(instData), toAttr(laneLayout),
+                                toAttr(laneData), toAttr(order));
+}
+
+/// Check if this layout is a transpose of another layout.
+bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
+                               ArrayRef<int64_t> perm,
+                               const xegpu::LayoutKind kind) {
+  if (!other)
+    return false;
+  if (getRank() != other.getRank() ||
+      perm.size() != static_cast<size_t>(getRank()))
+    return false;
+  if (!isPermutationVector(perm))
+    return false;
+  auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src,
+                           ArrayRef<int64_t> perm) {
+    for (const auto &ta : llvm::enumerate(perm)) {
+      if (src[ta.index()] != dst[ta.value()])
+        return false;
+    }
+    return true;
+  };
+  if (kind == xegpu::LayoutKind::Subgroup)
+    return checkTranspose(getEffectiveSgLayoutAsInt(),
+                          other.getEffectiveSgLayoutAsInt(), perm) &&
+           checkTranspose(getEffectiveSgDataAsInt(),
+                          other.getEffectiveSgDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
+  if (kind == xegpu::LayoutKind::InstData)
+    return checkTranspose(getEffectiveInstDataAsInt(),
+                          other.getEffectiveInstDataAsInt(), perm);
+  if (kind == xegpu::LayoutKind::Lane)
+    return checkTranspose(getEffectiveLaneLayoutAsInt(),
+                          other.getEffectiveLaneLayoutAsInt(), perm) &&
+           checkTranspose(getEffectiveLaneDataAsInt(),
+                          other.getEffectiveLaneDataAsInt(), perm) &&
+           checkTranspose(getEffectiveOrderAsInt(),
+                          other.getEffectiveOrderAsInt(), perm);
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -864,6 +971,46 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
       parent.setDimData(adjustDims[0], sgData, instData, laneData), getDims());
 }
 
+// Derive a new layout by removing dimensions. `dimGroup` specifies a group of
+// dimensions to be removed in the derived layout.
+//
+// Example: drop the 2nd dimension from a rank-3 sliced view.
+//
+// Suppose:
+//   xegpu.layout = slice<layout<[V0, V1, V2, V3, V4]>, [1, 3]>
+//
+// The slice removes parent dims [1, 3], so the sliced-space dims map to
+// parent dims [V0, V2, V4].
+//
+// If we drop sliced-space dim 1 (the 2nd dim), that corresponds to dropping
+// parent dim 2, result in parent layout [V0, V1, V3, V4] after dropping.
+// After parent dim 2 is removed, sliced dims [1, 3] must be reindexed to [1,
+// 2].
+//
+// Result:
+//   xegpu.layout = slice<layout<[0, 1, 3, 4]>, [1, 2]>
+DistributeLayoutAttr SliceAttr::dropDims(SmallVector<int64_t> dimGroup) {
+  // Map the sliced dims from parent space to collapsed space
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  SmallVector<int64_t> dimsInParentSpace =
+      mapSlicedDimsToParentSpace(dimGroup, sliceDims);
+
+  auto droppedParent = getParent().dropDims(dimsInParentSpace);
+
+  // Adjust the sliced dims after dropping dims in parent space. For example, if
+  // we drop dim 2 in parent space, the dims after dim 2 will all be shifted by
+  // 1, so sliced dim 3 will be adjusted to 2.
+  SmallVector<int64_t> newSliceDims;
+  for (int64_t d : sliceDims) {
+    int64_t offset =
+        llvm::count_if(dimsInParentSpace, [&](int64_t s) { return s < d; });
+    newSliceDims.push_back(d - offset);
+  }
+
+  return SliceAttr::get(getContext(), droppedParent,
+                        DenseI64ArrayAttr::get(getContext(), newSliceDims));
+}
+
 // Derive a new layout by collapsing dimensions.
 // `dimGroup` specifies a group of adjacent dimensions
 // that are collapsed into a single dimension in the derived layout.
@@ -871,14 +1018,72 @@ DistributeLayoutAttr SliceAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 
   // Map the sliced dims from parent space to collapsed space
   SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
-
+  assert("expect sliceDims not being collapsed" &&
+         llvm::none_of(dimGroup, [&](int64_t dim) {
+           return llvm::is_contained(sliceDims, dim);
+         }));
   SmallVector<int64_t> dimsInParentSpace =
       mapSlicedDimsToParentSpace(dimGroup, sliceDims);
 
   auto collapsedParent = getParent().collapseDims(dimsInParentSpace);
-
   return SliceAttr::get(getContext(), collapsedParent,
                         DenseI64ArrayAttr::get(getContext(), sliceDims));
+}
+
+SmallVector<int64_t> getPermForParentLayout(ArrayRef<int64_t> sliceDims,
+                                            ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> sortedSliceDims = llvm::to_vector(sliceDims);
+  llvm::sort(sortedSliceDims);
+
+  for (size_t i = 1; i < sortedSliceDims.size(); ++i) {
+    assert((sortedSliceDims[i] == sortedSliceDims[i - 1] + 1) &&
+           "slice dims non consecutive, cannot be transposed");
+  }
+
+  SmallVector<int64_t> permForParent;
+  if (sortedSliceDims.front() == 0) {
+    // Example: sliceDims.size() = 2, permutation= {1, 0}
+    // result: {3, 2, 1, 0}.
+    for (int64_t dim : permutation)
+      permForParent.push_back(dim + sortedSliceDims.size());
+    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
+      permForParent.push_back(i);
+  } else {
+    // Example: sliceDims.size() = 2, permutation = {0, 1}
+    // result: {3, 2, 0, 1}.
+    for (int64_t i = sortedSliceDims.size() - 1; i >= 0; --i)
+      permForParent.push_back(i + permutation.size());
+    for (int64_t dim : permutation)
+      permForParent.push_back(dim);
+  }
+  return permForParent;
+}
+
+// Derive a new layout by transpose the layout using `permutation`.
+DistributeLayoutAttr SliceAttr::transposeDims(ArrayRef<int64_t> permutation) {
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  DistributeLayoutAttr parent = getParent();
+  SmallVector<int64_t> permForParent =
+      getPermForParentLayout(sliceDims, permutation);
+  auto transposedParent = parent.transposeDims(permForParent);
+  return SliceAttr::get(getContext(), transposedParent,
+                        DenseI64ArrayAttr::get(getContext(), sliceDims));
+}
+
+/// Check if this layout is a transpose of another layout.
+bool SliceAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
+                              ArrayRef<int64_t> perm,
+                              const xegpu::LayoutKind kind) {
+  // other must be a SliceAttr with the same slice dims.
+  auto otherSlice = dyn_cast<xegpu::SliceAttr>(other);
+  if (!otherSlice || getDims() != otherSlice.getDims())
+    return false;
+  // check whether the parent layout is transpose of each other.
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  DistributeLayoutAttr parent = getParent();
+  SmallVector<int64_t> permForParent = getPermForParentLayout(sliceDims, perm);
+  auto otherParent = otherSlice.getParent();
+  return parent.isTransposeOf(otherParent, permForParent, kind);
 }
 
 //===----------------------------------------------------------------------===//

@@ -372,6 +372,18 @@ def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicaliza
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
 }
 
+def ACCRecipeMaterialization : Pass<"acc-recipe-materialization", "mlir::ModuleOp"> {
+  let summary = "Materialize OpenACC private, firstprivate and reduction recipes";
+  let description = [{
+    Materializes OpenACC privatization, firstprivate and reduction recipes by
+    cloning init, copy, combiner, and destroy into the construct. Replaces recipe
+    references with materialized values (including acc.reduction_init and
+    acc.reduction_combine_region for reductions) and removes unused recipe
+    symbols.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::arith::ArithDialect"];
+}
+
 def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"> {
   let summary = "Verify values and symbols live into offload regions for legality";
   let description = [{
