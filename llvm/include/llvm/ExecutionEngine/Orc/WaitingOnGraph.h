@@ -725,34 +725,20 @@ private:
   processExternalDeps(std::vector<std::unique_ptr<SuperNode>> &SNs,
                       GetExternalStateFn &GetExternalState) {
     DenseSet<SuperNode *> FailedSNs;
-    for (auto &SN : SNs) {
-      bool SNHasError = false;
-      SmallVector<ContainerId> ContainersToRemove;
-      for (auto &[Container, Elems] : SN->Deps) {
-        SmallVector<ElementId> ElemToRemove;
-        for (auto &Elem : Elems) {
+    for (auto &SN : SNs)
+      SN->Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
+        return Elements.remove_if([&](ElementId &Elem) {
           switch (GetExternalState(Container, Elem)) {
           case ExternalState::None:
-            break;
+            return false;
           case ExternalState::Ready:
-            ElemToRemove.push_back(Elem);
-            break;
+            return true;
           case ExternalState::Failed:
-            ElemToRemove.push_back(Elem);
-            SNHasError = true;
-            break;
-          }
-        }
-        for (auto &Elem : ElemToRemove)
-          Elems.erase(Elem);
-        if (Elems.empty())
-          ContainersToRemove.push_back(Container);
-      }
-      for (auto &Container : ContainersToRemove)
-        SN->Deps.erase(Container);
-      if (SNHasError)
-        FailedSNs.insert(SN.get());
-    }
+            FailedSNs.insert(SN.get());
+            return true;
+          };
+        });
+      });
 
     return FailedSNs;
   }
