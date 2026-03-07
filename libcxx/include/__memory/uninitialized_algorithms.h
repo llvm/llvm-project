@@ -123,6 +123,18 @@ uninitialized_fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp&
 
 // uninitialized_fill_n
 
+template <class _Alloc, class _ForwardIterator, class _Size, class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+__uninitialized_allocator_fill_n(_Alloc& __alloc, _ForwardIterator __first, _Size __n, const _Tp& __x) {
+  _ForwardIterator __idx = __first;
+  auto __guard           = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
+  for (; __n > 0; ++__idx, (void)--__n)
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__idx), __x);
+  __guard.__complete();
+
+  return __idx;
+}
+
 template <class _ValueType, class _ForwardIterator, class _Size, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 __uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
@@ -140,6 +152,20 @@ inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   return std::__uninitialized_fill_n<_ValueType>(__first, __n, __x);
+}
+
+// __uninitialized_allocator_value_construct_n
+
+template <class _Alloc, class _ForwardIterator, class _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+__uninitialized_allocator_value_construct_n(_Alloc& __alloc, _ForwardIterator __first, _Size __n) {
+  auto __idx   = __first;
+  auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
+  for (; __n > 0; ++__idx, (void)--__n)
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__idx));
+  __guard.__complete();
+
+  return __idx;
 }
 
 #if _LIBCPP_STD_VER >= 17
