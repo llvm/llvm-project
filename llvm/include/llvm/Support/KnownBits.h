@@ -40,6 +40,11 @@ public:
   /// Create a known bits object of BitWidth bits initialized to unknown.
   KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
 
+  /// Create a known bits object of BitWidth bits initialized to AllConflict.
+  static KnownBits getAllConflict(unsigned BitWidth) {
+    return {APInt::getAllOnes(BitWidth), APInt::getAllOnes(BitWidth)};
+  }
+
   /// Get the bit width of this value.
   unsigned getBitWidth() const {
     assert(Zero.getBitWidth() == One.getBitWidth() &&
@@ -64,6 +69,9 @@ public:
 
   /// Returns true if we don't know any bits.
   bool isUnknown() const { return Zero.isZero() && One.isZero(); }
+
+  /// Returns true if all bits conflict.
+  bool isAllConflict() const { return Zero.isAllOnes() && One.isAllOnes(); }
 
   /// Returns true if we don't know the sign bit.
   bool isSignUnknown() const {

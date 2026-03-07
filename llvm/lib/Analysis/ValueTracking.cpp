@@ -83,6 +83,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace vthelper;
 using namespace llvm::PatternMatch;
 
 // Controls the number of uses of the value searched for possible
@@ -96,7 +97,7 @@ static constexpr unsigned MaxInstrsToCheckForFree = 16;
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
-static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
+unsigned vthelper::getBitWidth(Type *Ty, const DataLayout &DL) {
   if (unsigned BitWidth = Ty->getScalarSizeInBits())
     return BitWidth;
 
@@ -105,7 +106,7 @@ static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
 
 // Given the provided Value and, potentially, a context instruction, return
 // the preferred context instruction (if any).
-static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
+const Instruction *vthelper::safeCxtI(const Value *V, const Instruction *CxtI) {
   // If we've been provided with a context instruction, then use that (provided
   // it has been inserted).
   if (CxtI && CxtI->getParent())
@@ -119,9 +120,9 @@ static const Instruction *safeCxtI(const Value *V, const Instruction *CxtI) {
   return nullptr;
 }
 
-static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
-                                   const APInt &DemandedElts,
-                                   APInt &DemandedLHS, APInt &DemandedRHS) {
+bool vthelper::getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                      const APInt &DemandedElts,
+                                      APInt &DemandedLHS, APInt &DemandedRHS) {
   if (isa<ScalableVectorType>(Shuf->getType())) {
     assert(DemandedElts == APInt(1,1));
     DemandedLHS = DemandedRHS = DemandedElts;
@@ -134,10 +135,6 @@ static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                       DemandedElts, DemandedLHS, DemandedRHS);
 }
 
-static void computeKnownBits(const Value *V, const APInt &DemandedElts,
-                             KnownBits &Known, const SimplifyQuery &Q,
-                             unsigned Depth);
-
 void llvm::computeKnownBits(const Value *V, KnownBits &Known,
                             const SimplifyQuery &Q, unsigned Depth) {
   // Since the number of lanes in a scalable vector is unknown at compile time,
@@ -146,7 +143,7 @@ void llvm::computeKnownBits(const Value *V, KnownBits &Known,
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  ::computeKnownBits(V, DemandedElts, Known, Q, Depth);
+  vthelper::computeKnownBits(V, DemandedElts, Known, Q, Depth);
 }
 
 void llvm::computeKnownBits(const Value *V, KnownBits &Known,
@@ -274,9 +271,6 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
       V, OrZero, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo),
       Depth);
 }
-
-static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
-                           const SimplifyQuery &Q, unsigned Depth);
 
 bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
                               unsigned Depth) {
@@ -780,9 +774,9 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   return true;
 }
 
-static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
-                                  Value *&ValOut, Instruction *&CtxIOut,
-                                  const PHINode **PhiOut = nullptr) {
+void vthelper::breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
+                                     Value *&ValOut, Instruction *&CtxIOut,
+                                     const PHINode **PhiOut) {
   ValOut = U->get();
   if (ValOut == PHI)
     return;
@@ -1393,8 +1387,8 @@ static bool isSignedMinMaxIntrinsicClamp(const IntrinsicInst *II,
   return CLow->sle(*CHigh);
 }
 
-static void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
-                                          KnownBits &Known) {
+void vthelper::unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
+                                             KnownBits &Known) {
   const APInt *CLow, *CHigh;
   if (isSignedMinMaxIntrinsicClamp(II, CLow, CHigh))
     Known = Known.unionWith(
@@ -2438,9 +2432,9 @@ KnownBits llvm::computeKnownBits(const Value *V, const SimplifyQuery &Q,
 /// where V is a vector, known zero, and known one values are the
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the demanded elements in the vector specified by DemandedElts.
-void computeKnownBits(const Value *V, const APInt &DemandedElts,
-                      KnownBits &Known, const SimplifyQuery &Q,
-                      unsigned Depth) {
+void vthelper::computeKnownBits(const Value *V, const APInt &DemandedElts,
+                                KnownBits &Known, const SimplifyQuery &Q,
+                                unsigned Depth) {
   if (!DemandedElts) {
     // No demanded elts, better to assume we don't know anything.
     Known.resetAll();
@@ -3689,8 +3683,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
 /// specified, perform context-sensitive analysis and return true if the
 /// pointer couldn't possibly be null at the specified instruction.
 /// Supports values with integer or pointer type and vectors of integers.
-bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
-                    const SimplifyQuery &Q, unsigned Depth) {
+bool vthelper::isKnownNonZero(const Value *V, const APInt &DemandedElts,
+                              const SimplifyQuery &Q, unsigned Depth) {
   Type *Ty = V->getType();
 
 #ifndef NDEBUG
@@ -3792,7 +3786,7 @@ bool llvm::isKnownNonZero(const Value *V, const SimplifyQuery &Q,
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return ::isKnownNonZero(V, DemandedElts, Q, Depth);
+  return vthelper::isKnownNonZero(V, DemandedElts, Q, Depth);
 }
 
 /// If the pair of operators are the same invertible function, return the
