@@ -573,3 +573,81 @@ func.func @cse_recursive_effects_failure() -> (i32, i32, i32) {
   %2 = "test.op_with_memread"() : () -> (i32)
   return %0, %2, %1 : i32, i32, i32
 }
+
+// -----
+
+/// Check that a write on a resource disjoint from DefaultResource does not
+/// block CSE of reads on DefaultResource, because the resources are disjoint.
+// CHECK-LABEL: @cse_non_addressable_write_does_not_block
+func.func @cse_non_addressable_write_does_not_block() -> i32 {
+  // CHECK-NEXT: %[[V:.*]] = "test.op_with_memread"() : () -> i32
+  %0 = "test.op_with_memread"() : () -> (i32)
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource}]} : () -> i32
+  %1 = "test.op_with_memread"() : () -> (i32)
+  // CHECK-NEXT: %{{.*}} = "test.side_effect_op"()
+  // CHECK-NEXT: %{{.*}} = arith.addi %[[V]], %[[V]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
+
+// -----
+
+/// Check that consecutive reads on the same resource (disjoint from DefaultResource) are CSE'd
+/// when there is no intervening write.
+// CHECK-LABEL: @cse_reads_on_same_nonaddressable_resource
+func.func @cse_reads_on_same_nonaddressable_resource() -> i32 {
+  // CHECK-NEXT: %[[V:.*]] = "test.side_effect_op"()
+  %0 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource}]} : () -> i32
+  %1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource}]} : () -> i32
+  // CHECK-NEXT: %{{.*}} = arith.addi %[[V]], %[[V]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
+
+// -----
+
+/// Check that a write to the same resource blocks CSE of reads
+/// on that resource (same resource -> not disjoint -> write may conflict).
+// CHECK-LABEL: @cse_write_same_nonaddressable_resource_blocks
+func.func @cse_write_same_nonaddressable_resource_blocks() -> i32 {
+  // CHECK-NEXT: %[[V0:.*]] = "test.side_effect_op"(){{.*}}"read"
+  %0 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource}]} : () -> i32
+  // CHECK: %[[V1:.*]] = "test.side_effect_op"(){{.*}}"read"
+  %1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource}]} : () -> i32
+  // CHECK: %{{.*}} = arith.addi %[[V0]], %[[V1]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
+
+// -----
+
+/// Check that a write to a resource disjoint from the read resource does NOT
+/// block CSE (sibling resources under different roots are disjoint).
+// CHECK-LABEL: @cse_write_disjoint_nonaddressable_subresource_allows
+func.func @cse_write_disjoint_nonaddressable_subresource_allows() -> i32 {
+  // CHECK-NEXT: %[[V:.*]] = "test.side_effect_op"()
+  %0 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_b}]} : () -> i32
+  %1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  // CHECK-NEXT: %{{.*}} = "test.side_effect_op"()
+  // CHECK-NEXT: %{{.*}} = arith.addi %[[V]], %[[V]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
+
+// -----
+
+/// Check that a write on a resource under DefaultResource still blocks CSE of
+/// reads on DefaultResource (regression guard).
+// CHECK-LABEL: @cse_addressable_custom_resource_write_blocks
+func.func @cse_addressable_custom_resource_write_blocks() -> i32 {
+  // CHECK-NEXT: %[[V0:.*]] = "test.op_with_memread"() : () -> i32
+  %0 = "test.op_with_memread"() : () -> (i32)
+  "test.side_effect_op"() {effects = [{effect="write", test_resource}]} : () -> i32
+  // CHECK: %[[V1:.*]] = "test.op_with_memread"() : () -> i32
+  %1 = "test.op_with_memread"() : () -> (i32)
+  // CHECK: %{{.*}} = arith.addi %[[V0]], %[[V1]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
