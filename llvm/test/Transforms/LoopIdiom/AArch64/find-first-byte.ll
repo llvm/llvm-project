@@ -1006,6 +1006,45 @@ exit:
   ret ptr %res
 }
 
+; Same as @find_first_of_i8 but with non-zero address space pointers.
+; This verifies that the vectorized loop correctly preserves address spaces.
+define ptr addrspace(1) @find_first_of_i8_addrspace(ptr addrspace(1) %search_start, ptr addrspace(1) %search_end, ptr addrspace(1) %needle_start, ptr addrspace(1) %needle_end) #0 {
+; CHECK-LABEL: define ptr addrspace(1) @find_first_of_i8_addrspace(
+; CHECK: @llvm.experimental.vector.match
+; CHECK: ret ptr addrspace(1)
+;
+entry:
+  %search_test = icmp eq ptr addrspace(1) %search_start, %search_end
+  %needle_test = icmp eq ptr addrspace(1) %needle_start, %needle_end
+  %combined_test = or i1 %search_test, %needle_test
+  br i1 %combined_test, label %exit, label %header
+
+header:
+  %search_ptr = phi ptr addrspace(1) [ %search_next, %search_check ], [ %search_start, %entry ]
+  %search_load = load i8, ptr addrspace(1) %search_ptr, align 1
+  br label %match_check
+
+needle_check:
+  %needle_next = getelementptr inbounds i8, ptr addrspace(1) %needle_ptr, i64 1
+  %needle_cmp = icmp eq ptr addrspace(1) %needle_next, %needle_end
+  br i1 %needle_cmp, label %search_check, label %match_check
+
+match_check:
+  %needle_ptr = phi ptr addrspace(1) [ %needle_start, %header ], [ %needle_next, %needle_check ]
+  %needle_load = load i8, ptr addrspace(1) %needle_ptr, align 1
+  %match_cmp = icmp eq i8 %search_load, %needle_load
+  br i1 %match_cmp, label %exit, label %needle_check
+
+search_check:
+  %search_next = getelementptr inbounds i8, ptr addrspace(1) %search_ptr, i64 1
+  %search_cmp = icmp eq ptr addrspace(1) %search_next, %search_end
+  br i1 %search_cmp, label %exit, label %header
+
+exit:
+  %res = phi ptr addrspace(1) [ %search_end, %entry ], [ %search_ptr, %match_check ], [ %search_end, %search_check ]
+  ret ptr addrspace(1) %res
+}
+
 attributes #0 = { "target-features"="+sve2" }
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 10, i32 90}
