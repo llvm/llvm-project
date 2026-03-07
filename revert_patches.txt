@@ -5,3 +5,6 @@ rocwmma and CK needs changes
 breaks build of hipblaslt
 [AMDGPU][AsmParser] Forbid Fake16 instructions in Real16 mode (#176934)
 ---
+breaks build of rocblas and rocprim
+[SLP]Fix the matching of the nodes with the same scalars, but reused
+---
