@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clc/workitem/clc_get_enqueued_local_size.h"
 #include "clc/workitem/clc_get_global_linear_id.h"
 #include "clc/workitem/clc_get_global_size.h"
 #include "clc/workitem/clc_get_group_id.h"
 #include "clc/workitem/clc_get_local_id.h"
-#include "clc/workitem/clc_get_local_size.h"
 #include "clc/workitem/clc_get_work_dim.h"
 
 static size_t get_global_id_no_offset(uint dim) {
-  return __clc_get_group_id(dim) * __clc_get_local_size(dim) +
+  return __clc_get_group_id(dim) * __clc_get_enqueued_local_size(dim) +
          __clc_get_local_id(dim);
 }
 
