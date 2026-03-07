@@ -2,7 +2,7 @@
 // REQUIRES: systemz-registered-target
 // RUN: %clang_cc1 -target-cpu z14 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
-// RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
+// RUN: -Wall -Wno-unused -Wno-sequence-point -Werror -emit-llvm %s -o - | FileCheck %s
 
 #include <vecintrin.h>
 
