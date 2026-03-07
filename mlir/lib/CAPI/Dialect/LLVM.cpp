@@ -49,6 +49,14 @@ MlirType mlirLLVMVoidTypeGet(MlirContext ctx) {
 
 MlirStringRef mlirLLVMVoidTypeGetName(void) { return wrap(LLVMVoidType::name); }
 
+bool mlirTypeIsALLVMArrayType(MlirType type) {
+  return isa<LLVM::LLVMArrayType>(unwrap(type));
+}
+
+MlirTypeID mlirLLVMArrayTypeGetTypeID() {
+  return wrap(LLVM::LLVMArrayType::getTypeID());
+}
+
 MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
   return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
 }
@@ -59,6 +67,10 @@ MlirStringRef mlirLLVMArrayTypeGetName(void) {
 
 MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
   return wrap(cast<LLVM::LLVMArrayType>(unwrap(type)).getElementType());
+}
+
+unsigned mlirLLVMArrayTypeGetNumElements(MlirType type) {
+  return cast<LLVM::LLVMArrayType>(unwrap(type)).getNumElements();
 }
 
 MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,

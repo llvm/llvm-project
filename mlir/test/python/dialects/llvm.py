@@ -102,6 +102,30 @@ def testStructType():
     assert isinstance(typ, llvm.StructType)
 
 
+# CHECK-LABEL: testArrayType
+@constructAndPrintInModule
+def testArrayType():
+    i32 = IntegerType.get_signless(32)
+    i8 = IntegerType.get_signless(8)
+
+    arr = llvm.ArrayType.get(i32, 4)
+    # CHECK: !llvm.array<4 x i32>
+    print(arr)
+    assert arr.element_type == i32
+    assert arr.num_elements == 4
+
+    arr2 = llvm.ArrayType.get(i8, 12)
+    # CHECK: !llvm.array<12 x i8>
+    print(arr2)
+    assert arr2.element_type == i8
+    assert arr2.num_elements == 12
+
+    typ = Type.parse("!llvm.array<4 x i32>")
+    assert isinstance(typ, llvm.ArrayType)
+    assert isinstance(typ, llvm.ArrayType)
+    assert typ == arr
+
+
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
 def testSmoke():
