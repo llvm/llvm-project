@@ -2941,9 +2941,10 @@ static bool isTrigLibCall(CallInst *CI) {
   return CI->doesNotThrow() && CI->doesNotAccessMemory();
 }
 
-static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
-                             bool UseFloat, Value *&Sin, Value *&Cos,
-                             Value *&SinCos, const TargetLibraryInfo *TLI) {
+static bool insertSinCosPiCall(IRBuilderBase &B, Function *OrigCallee,
+                               Value *Arg, bool UseFloat, Value *&Sin,
+                               Value *&Cos, Value *&SinCos,
+                               const TargetLibraryInfo *TLI) {
   Module *M = OrigCallee->getParent();
   Type *ArgTy = Arg->getType();
   Type *ResTy;
@@ -3051,7 +3052,13 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   }
 }
 
-Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B) {
+Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin,
+                                           IRBuilderBase &B) {
+  return optimizeSinCos(CI, IsSin, B, /*IsPi=*/true);
+}
+
+Value *LibCallSimplifier::optimizeSinCos(CallInst *CI, bool IsSin,
+                                         IRBuilderBase &B, bool IsPi) {
   // Make sure the prototype is as expected, otherwise the rest of the
   // function is probably invalid and likely to abort.
   if (!isTrigLibCall(CI))
@@ -3067,21 +3074,41 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
 
   bool IsFloat = Arg->getType()->isFloatTy();
 
-  // Look for all compatible sinpi, cospi and sincospi calls with the same
+  // Look for all compatible sin/cos (or sinpi/cospi) calls with the same
   // argument. If there are enough (in some sense) we can make the
   // substitution.
   Function *F = CI->getFunction();
   for (User *U : Arg->users())
-    classifyArgUse(U, F, IsFloat, SinCalls, CosCalls, SinCosCalls);
+    classifyArgUse(U, F, IsFloat, SinCalls, CosCalls, SinCosCalls, IsPi);
 
-  // It's only worthwhile if both sinpi and cospi are actually used.
+  // It's only worthwhile if both sin and cos are actually used.
   if (SinCalls.empty() || CosCalls.empty())
     return nullptr;
 
   Value *Sin, *Cos, *SinCos;
-  if (!insertSinCosCall(B, CI->getCalledFunction(), Arg, IsFloat, Sin, Cos,
-                        SinCos, TLI))
-    return nullptr;
+  if (IsPi) {
+    // For sinpi/cospi, use platform-specific __sincospi_stret libcall.
+    if (!insertSinCosPiCall(B, CI->getCalledFunction(), Arg, IsFloat, Sin, Cos,
+                            SinCos, TLI))
+      return nullptr;
+  } else {
+    // For sin/cos, use the llvm.sincos intrinsic.
+    IRBuilderBase::InsertPointGuard Guard(B);
+    if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
+      B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    } else {
+      BasicBlock &EntryBB = B.GetInsertBlock()->getParent()->getEntryBlock();
+      B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    }
+
+    Module *M = CI->getModule();
+    Type *ArgTy = Arg->getType();
+    Function *SinCosFunc =
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::sincos, ArgTy);
+    SinCos = B.CreateCall(SinCosFunc, Arg, "sincos");
+    Sin = B.CreateExtractValue(SinCos, 0, "sin");
+    Cos = B.CreateExtractValue(SinCos, 1, "cos");
+  }
 
   auto replaceTrigInsts = [this](SmallVectorImpl<CallInst *> &Calls,
                                  Value *Res) {
@@ -3096,11 +3123,11 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
   return IsSin ? Sin : Cos;
 }
 
-void LibCallSimplifier::classifyArgUse(
-    Value *Val, Function *F, bool IsFloat,
-    SmallVectorImpl<CallInst *> &SinCalls,
-    SmallVectorImpl<CallInst *> &CosCalls,
-    SmallVectorImpl<CallInst *> &SinCosCalls) {
+void LibCallSimplifier::classifyArgUse(Value *Val, Function *F, bool IsFloat,
+                                       SmallVectorImpl<CallInst *> &SinCalls,
+                                       SmallVectorImpl<CallInst *> &CosCalls,
+                                       SmallVectorImpl<CallInst *> &SinCosCalls,
+                                       bool IsPi) {
   auto *CI = dyn_cast<CallInst>(Val);
   if (!CI || CI->use_empty())
     return;
@@ -3117,20 +3144,28 @@ void LibCallSimplifier::classifyArgUse(
       !isTrigLibCall(CI))
     return;
 
-  if (IsFloat) {
-    if (Func == LibFunc_sinpif)
-      SinCalls.push_back(CI);
-    else if (Func == LibFunc_cospif)
-      CosCalls.push_back(CI);
-    else if (Func == LibFunc_sincospif_stret)
-      SinCosCalls.push_back(CI);
+  if (IsPi) {
+    if (IsFloat) {
+      if (Func == LibFunc_sinpif)
+        SinCalls.push_back(CI);
+      else if (Func == LibFunc_cospif)
+        CosCalls.push_back(CI);
+      else if (Func == LibFunc_sincospif_stret)
+        SinCosCalls.push_back(CI);
+    } else {
+      if (Func == LibFunc_sinpi)
+        SinCalls.push_back(CI);
+      else if (Func == LibFunc_cospi)
+        CosCalls.push_back(CI);
+      else if (Func == LibFunc_sincospi_stret)
+        SinCosCalls.push_back(CI);
+    }
   } else {
-    if (Func == LibFunc_sinpi)
+    if (Func == LibFunc_sin || Func == LibFunc_sinf || Func == LibFunc_sinl)
       SinCalls.push_back(CI);
-    else if (Func == LibFunc_cospi)
+    else if (Func == LibFunc_cos || Func == LibFunc_cosf ||
+             Func == LibFunc_cosl)
       CosCalls.push_back(CI);
-    else if (Func == LibFunc_sincospi_stret)
-      SinCosCalls.push_back(CI);
   }
 }
 
@@ -4029,6 +4064,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_cospif:
   case LibFunc_cospi:
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
+  case LibFunc_sinf:
+  case LibFunc_sinl:
+    return optimizeSinCos(CI, /*IsSin*/ true, Builder);
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+    return optimizeSinCos(CI, /*IsSin*/ false, Builder);
   case LibFunc_powf:
   case LibFunc_pow:
   case LibFunc_powl:
@@ -4103,8 +4144,14 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp:
   case LibFunc_exp10:
   case LibFunc_expm1:
-  case LibFunc_cos:
   case LibFunc_sin:
+  case LibFunc_cos:
+    if (Value *V = optimizeSinCos(CI, Func == LibFunc_sin, Builder))
+      return V;
+    if (UnsafeFPShrink &&
+        hasFloatVersion(M, CI->getCalledFunction()->getName()))
+      return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
+    return nullptr;
   case LibFunc_tanh:
     if (UnsafeFPShrink && hasFloatVersion(M, CI->getCalledFunction()->getName()))
       return optimizeUnaryDoubleFP(CI, Builder, TLI, true);
