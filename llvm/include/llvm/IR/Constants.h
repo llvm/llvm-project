@@ -277,6 +277,144 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+/// Class for constant bytes.
+class ConstantByte final : public ConstantData {
+  friend class Constant;
+  friend class ConstantVector;
+
+  APInt Val;
+
+  ConstantByte(Type *Ty, const APInt &V);
+
+  void destroyConstantImpl();
+
+  /// Return a ConstantByte with the specified value and an implied Type. The
+  /// type is the vector type whose byte element type corresponds to the bit
+  /// width of the value.
+  static ConstantByte *get(LLVMContext &Context, ElementCount EC,
+                           const APInt &V);
+
+public:
+  ConstantByte(const ConstantByte &) = delete;
+
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantByte for the given value.
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool isSigned = false,
+                                bool ImplicitTrunc = false);
+
+  /// Return a ConstantByte with the specified byte value for the specified
+  /// type. If the type is wider than 64 bits, the value will be zero-extended
+  /// to fit the type, unless IsSigned is true, in which case the value will
+  /// be interpreted as a 64-bit signed byte and sign-extended to fit
+  /// the type.
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  LLVM_ABI static ConstantByte *get(ByteType *Ty, uint64_t V,
+                                    bool isSigned = false,
+                                    bool ImplicitTrunc = false);
+
+  /// Return a ConstantByte with the specified value for the specified type. The
+  /// value V will be canonicalized to an unsigned APInt. Accessing it with
+  /// either getSExtValue() or getZExtValue() will yield a correctly sized and
+  /// signed value for the type Ty.
+  /// Get a ConstantByte for a specific signed value.
+  /// \param ImplicitTrunc Whether to allow implicit truncation of the value.
+  static ConstantByte *getSigned(ByteType *Ty, int64_t V,
+                                 bool ImplicitTrunc = false) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
+  }
+  static Constant *getSigned(Type *Ty, int64_t V, bool ImplicitTrunc = false) {
+    return get(Ty, V, /*IsSigned=*/true, ImplicitTrunc);
+  }
+
+  /// Return a ConstantByte with the specified value and an implied Type. The
+  /// type is the byte type that corresponds to the bit width of the value.
+  LLVM_ABI static ConstantByte *get(LLVMContext &Context, const APInt &V);
+
+  /// Return a ConstantByte constructed from the string strStart with the given
+  /// radix.
+  LLVM_ABI static ConstantByte *get(ByteType *Ty, StringRef Str, uint8_t Radix);
+
+  /// If Ty is a vector type, return a Constant with a splat of the given
+  /// value. Otherwise return a ConstantByte for the given value.
+  LLVM_ABI static Constant *get(Type *Ty, const APInt &V);
+
+  /// Return the constant as an APInt value reference. This allows clients to
+  /// obtain a full-precision copy of the value.
+  /// Return the constant's value.
+  inline const APInt &getValue() const { return Val; }
+
+  /// getBitWidth - Return the scalar bitwidth of this constant.
+  unsigned getBitWidth() const { return Val.getBitWidth(); }
+
+  /// Return the constant as a 64-bit byte value after it
+  /// has been zero extended as appropriate for the type of this constant. Note
+  /// that this method can assert if the value does not fit in 64 bits.
+  /// Return the zero extended value.
+  inline uint64_t getZExtValue() const { return Val.getZExtValue(); }
+
+  /// Return the constant as a 64-bit byte value after it has been sign
+  /// extended as appropriate for the type of this constant. Note that
+  /// this method can assert if the value does not fit in 64 bits.
+  /// Return the sign extended value.
+  inline int64_t getSExtValue() const { return Val.getSExtValue(); }
+
+  /// Variant of the getType() method to always return a ByteType, which
+  /// reduces the amount of casting needed in parts of the compiler.
+  inline ByteType *getByteType() const {
+    return cast<ByteType>(Value::getType());
+  }
+
+  bool isNegative() const { return Val.isNegative(); }
+
+  /// This is just a convenience method to make client code smaller for a
+  /// common code. It also correctly performs the comparison without the
+  /// potential for an assertion from getZExtValue().
+  bool isZero() const { return Val.isZero(); }
+
+  /// This is just a convenience method to make client code smaller for a
+  /// common case. It also correctly performs the comparison without the
+  /// potential for an assertion from getZExtValue().
+  /// Determine if the value is one.
+  bool isOne() const { return Val.isOne(); }
+
+  /// This function will return true iff every bit in this constant is set
+  /// to true.
+  /// @returns true iff this constant's bits are all set to true.
+  /// Determine if the value is all ones.
+  bool isMinusOne() const { return Val.isAllOnes(); }
+
+  /// This function will return true iff this constant represents the largest
+  /// value that may be represented by the constant's type.
+  /// @returns true iff this is the largest value that may be represented
+  /// by this type.
+  /// Determine if the value is maximal.
+  bool isMaxValue(bool IsSigned) const {
+    if (IsSigned)
+      return Val.isMaxSignedValue();
+    else
+      return Val.isMaxValue();
+  }
+
+  /// This function will return true iff this constant represents the smallest
+  /// value that may be represented by this constant's type.
+  /// @returns true if this is the smallest value that may be represented by
+  /// this type.
+  /// Determine if the value is minimal.
+  bool isMinValue(bool IsSigned) const {
+    if (IsSigned)
+      return Val.isMinSignedValue();
+    else
+      return Val.isMinValue();
+  }
+
+  /// Methods to support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const Value *V) {
+    return V->getValueID() == ConstantByteVal;
+  }
+};
+
+//===----------------------------------------------------------------------===//
 /// ConstantFP - Floating Point Values [float, double]
 ///
 class ConstantFP final : public ConstantData {
@@ -588,10 +726,10 @@ public:
 
 //===----------------------------------------------------------------------===//
 /// ConstantDataSequential - A vector or array constant whose element type is a
-/// simple 1/2/4/8-byte integer or half/bfloat/float/double, and whose elements
-/// are just simple data values (i.e. ConstantInt/ConstantFP).  This Constant
-/// node has no operands because it stores all of the elements of the constant
-/// as densely packed data, instead of as Value*'s.
+/// simple 1/2/4/8-byte integer/byte or half/bfloat/float/double, and whose
+/// elements are just simple data values (i.e. ConstantInt/ConstantByte/
+/// ConstantFP).  This Constant node has no operands because it stores all of
+/// the elements of the constant as densely packed data, instead of as Value*'s.
 ///
 /// This is the common base class of ConstantDataArray and ConstantDataVector.
 ///
@@ -661,7 +799,8 @@ public:
   /// The size of the elements is known to be a multiple of one byte.
   LLVM_ABI uint64_t getElementByteSize() const;
 
-  /// This method returns true if this is an array of \p CharSize integers.
+  /// This method returns true if this is an array of \p CharSize integers or
+  /// bytes.
   LLVM_ABI bool isString(unsigned CharSize = 8) const;
 
   /// This method returns true if the array "isString", ends with a null byte,
@@ -699,8 +838,8 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-/// An array constant whose element type is a simple 1/2/4/8-byte integer or
-/// float/double, and whose elements are just simple data values
+/// An array constant whose element type is a simple 1/2/4/8-byte integer, bytes
+//  or float/double, and whose elements are just simple data values
 /// (i.e. ConstantInt/ConstantFP). This Constant node has no operands because it
 /// stores all of the elements of the constant as densely packed data, instead
 /// of as Value*'s.
@@ -733,9 +872,9 @@ public:
   /// getRaw() constructor - Return a constant with array type with an element
   /// count and element type matching the NumElements and ElementTy parameters
   /// passed in. Note that this can return a ConstantAggregateZero object.
-  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
-  /// the buffer containing the elements. Be careful to make sure Data uses the
-  /// right endianness, the buffer will be used as-is.
+  /// ElementTy must be one of i8/i16/i32/i64/b8/b16/b32/b64/half/bfloat/float/
+  ///  double. Data is the buffer containing the elements. Be careful to make
+  /// sure Data uses the right endianness, the buffer will be used as-is.
   static Constant *getRaw(StringRef Data, uint64_t NumElements,
                           Type *ElementTy) {
     Type *Ty = ArrayType::get(ElementTy, NumElements);
@@ -752,13 +891,25 @@ public:
   LLVM_ABI static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts);
   LLVM_ABI static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts);
 
+  /// getByte() constructors - Return a constant of array type with a byte
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  /// Note that this can return a ConstantAggregateZero object.
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint8_t> Elts);
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint16_t> Elts);
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint32_t> Elts);
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint64_t> Elts);
+
   /// This method constructs a CDS and initializes it with a text string.
   /// The default behavior (AddNull==true) causes a null terminator to
   /// be placed at the end of the array (increasing the length of the string by
   /// one more than the StringRef would normally indicate.  Pass AddNull=false
   /// to disable this behavior.
-  LLVM_ABI static Constant *
-  getString(LLVMContext &Context, StringRef Initializer, bool AddNull = true);
+  LLVM_ABI static Constant *getString(LLVMContext &Context,
+                                      StringRef Initializer,
+                                      bool AddNull = true,
+                                      bool ByteString = false);
 
   /// Specialize the getType() method to always return an ArrayType,
   /// which reduces the amount of casting needed in parts of the compiler.
@@ -805,14 +956,23 @@ public:
   /// getRaw() constructor - Return a constant with vector type with an element
   /// count and element type matching the NumElements and ElementTy parameters
   /// passed in. Note that this can return a ConstantAggregateZero object.
-  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
-  /// the buffer containing the elements. Be careful to make sure Data uses the
-  /// right endianness, the buffer will be used as-is.
+  /// ElementTy must be one of i8/i16/i32/i64/b8/b16/b32/b64/half/bfloat/float/
+  /// double. Data is the buffer containing the elements. Be careful to make
+  /// sure Data uses the right endianness, the buffer will be used as-is.
   static Constant *getRaw(StringRef Data, uint64_t NumElements,
                           Type *ElementTy) {
     Type *Ty = VectorType::get(ElementTy, ElementCount::getFixed(NumElements));
     return getImpl(Data, Ty);
   }
+
+  /// getByte() constructors - Return a constant of vector type with a byte
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint8_t> Elts);
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint16_t> Elts);
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint32_t> Elts);
+  LLVM_ABI static Constant *getByte(Type *ElementType, ArrayRef<uint64_t> Elts);
 
   /// getFP() constructors - Return a constant of vector type with a float
   /// element type taken from argument `ElementType', and count taken from
@@ -826,7 +986,8 @@ public:
 
   /// Return a ConstantVector with the specified constant in each element.
   /// The specified constant has to be a of a compatible type (i8/i16/
-  /// i32/i64/half/bfloat/float/double) and must be a ConstantFP or ConstantInt.
+  /// i32/i64/b8/b16/b32/b64/half/bfloat/float/double) and must be a ConstantFP,
+  /// ConstantByte or ConstantInt.
   LLVM_ABI static Constant *getSplat(unsigned NumElts, Constant *Elt);
 
   /// Returns true if this is a splat constant, meaning that all elements have

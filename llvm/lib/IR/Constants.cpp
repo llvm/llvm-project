@@ -76,6 +76,10 @@ bool Constant::isNullValue() const {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->isZero();
 
+  // 0 is null.
+  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
+    return CB->isZero();
+
   // +0.0 is null.
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     // ppc_fp128 determine isZero using high order double only
@@ -92,6 +96,10 @@ bool Constant::isAllOnesValue() const {
   // Check for -1 integers
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->isMinusOne();
+
+  // Check for MaxValue bytes
+  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
+    return CB->isMinusOne();
 
   // Check for FP which are bitcasted from -1 integers
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
@@ -110,6 +118,10 @@ bool Constant::isOneValue() const {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->isOne();
 
+  // Check for 1 bytes
+  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
+    return CB->isOne();
+
   // Check for FP which are bitcasted from 1 integers
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     return CFP->getValueAPF().bitcastToAPInt().isOne();
@@ -126,6 +138,10 @@ bool Constant::isNotOneValue() const {
   // Check for 1 integers
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return !CI->isOneValue();
+
+  // Check for 1 bytes
+  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
+    return !CB->isOneValue();
 
   // Check for FP which are bitcasted from 1 integers
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
@@ -373,6 +389,8 @@ bool Constant::containsConstantExpression() const {
 /// Constructor to create a '0' constant of arbitrary type.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {
+  case Type::ByteTyID:
+    return ConstantByte::get(Ty, 0);
   case Type::IntegerTyID:
     return ConstantInt::get(Ty, 0);
   case Type::HalfTyID:
@@ -411,6 +429,10 @@ Constant *Constant::getIntegerValue(Type *Ty, const APInt &V) {
   if (PointerType *PTy = dyn_cast<PointerType>(ScalarTy))
     C = ConstantExpr::getIntToPtr(C, PTy);
 
+  // Convert an integer to a byte, if necessary.
+  if (ByteType *BTy = dyn_cast<ByteType>(ScalarTy))
+    C = ConstantExpr::getBitCast(C, BTy);
+
   // Broadcast a scalar to a vector, if necessary.
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
     C = ConstantVector::getSplat(VTy->getElementCount(), C);
@@ -427,6 +449,10 @@ Constant *Constant::getAllOnesValue(Type *Ty) {
     APFloat FL = APFloat::getAllOnesValue(Ty->getFltSemantics());
     return ConstantFP::get(Ty->getContext(), FL);
   }
+
+  if (ByteType *BTy = dyn_cast<ByteType>(Ty))
+    return ConstantByte::get(Ty->getContext(),
+                             APInt::getAllOnes(BTy->getBitWidth()));
 
   VectorType *VTy = cast<VectorType>(Ty);
   return ConstantVector::getSplat(VTy->getElementCount(),
@@ -450,6 +476,13 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
                        ->getElementCount()
                        .getKnownMinValue()
                ? ConstantInt::get(getContext(), CI->getValue())
+               : nullptr;
+
+  if (const auto *CB = dyn_cast<ConstantByte>(this))
+    return Elt < cast<VectorType>(getType())
+                       ->getElementCount()
+                       .getKnownMinValue()
+               ? ConstantByte::get(getContext(), CB->getValue())
                : nullptr;
 
   if (const auto *CFP = dyn_cast<ConstantFP>(this))
@@ -531,6 +564,9 @@ void llvm::deleteConstant(Constant *C) {
   switch (C->getValueID()) {
   case Constant::ConstantIntVal:
     delete static_cast<ConstantInt *>(C);
+    break;
+  case Constant::ConstantByteVal:
+    delete static_cast<ConstantByte *>(C);
     break;
   case Constant::ConstantFPVal:
     delete static_cast<ConstantFP *>(C);
@@ -984,6 +1020,93 @@ void ConstantInt::destroyConstantImpl() {
 }
 
 //===----------------------------------------------------------------------===//
+//                               ConstantByte
+//===----------------------------------------------------------------------===//
+
+ConstantByte::ConstantByte(Type *Ty, const APInt &V)
+    : ConstantData(Ty, ConstantByteVal), Val(V) {
+  assert(V.getBitWidth() ==
+             cast<ByteType>(Ty->getScalarType())->getBitWidth() &&
+         "Invalid constant for type");
+}
+
+// Get a ConstantByte from an APInt.
+ConstantByte *ConstantByte::get(LLVMContext &Context, const APInt &V) {
+  // get an existing value or the insertion position
+  LLVMContextImpl *pImpl = Context.pImpl;
+  std::unique_ptr<ConstantByte> &Slot =
+      V.isZero()  ? pImpl->ByteZeroConstants[V.getBitWidth()]
+      : V.isOne() ? pImpl->ByteOneConstants[V.getBitWidth()]
+                  : pImpl->ByteConstants[V];
+  if (!Slot) {
+    // Get the corresponding byte type for the bit width of the value.
+    ByteType *BTy = ByteType::get(Context, V.getBitWidth());
+    Slot.reset(new ConstantByte(BTy, V));
+  }
+  assert(Slot->getType() == ByteType::get(Context, V.getBitWidth()));
+  return Slot.get();
+}
+
+// Get a ConstantByte vector with each lane set to the same APInt.
+ConstantByte *ConstantByte::get(LLVMContext &Context, ElementCount EC,
+                                const APInt &V) {
+  // Get an existing value or the insertion position.
+  std::unique_ptr<ConstantByte> &Slot =
+      Context.pImpl->ByteSplatConstants[std::make_pair(EC, V)];
+  if (!Slot) {
+    ByteType *BTy = ByteType::get(Context, V.getBitWidth());
+    VectorType *VTy = VectorType::get(BTy, EC);
+    Slot.reset(new ConstantByte(VTy, V));
+  }
+
+#ifndef NDEBUG
+  ByteType *BTy = ByteType::get(Context, V.getBitWidth());
+  VectorType *VTy = VectorType::get(BTy, EC);
+  assert(Slot->getType() == VTy);
+#endif
+  return Slot.get();
+}
+
+Constant *ConstantByte::get(Type *Ty, uint64_t V, bool isSigned,
+                            bool ImplicitTrunc) {
+  Constant *C =
+      get(cast<ByteType>(Ty->getScalarType()), V, isSigned, ImplicitTrunc);
+
+  // For vectors, broadcast the value.
+  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
+    return ConstantVector::getSplat(VTy->getElementCount(), C);
+
+  return C;
+}
+
+ConstantByte *ConstantByte::get(ByteType *Ty, uint64_t V, bool isSigned,
+                                bool ImplicitTrunc) {
+  return get(Ty->getContext(),
+             APInt(Ty->getBitWidth(), V, isSigned, ImplicitTrunc));
+}
+
+Constant *ConstantByte::get(Type *Ty, const APInt &V) {
+  ConstantByte *C = get(Ty->getContext(), V);
+  assert(C->getType() == Ty->getScalarType() &&
+         "ConstantByte type doesn't match the type implied by its value!");
+
+  // For vectors, broadcast the value.
+  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
+    return ConstantVector::getSplat(VTy->getElementCount(), C);
+
+  return C;
+}
+
+ConstantByte *ConstantByte::get(ByteType *Ty, StringRef Str, uint8_t radix) {
+  return get(Ty->getContext(), APInt(Ty->getBitWidth(), Str, radix));
+}
+
+/// Remove the constant from the constant table.
+void ConstantByte::destroyConstantImpl() {
+  llvm_unreachable("You can't ConstantByte->destroyConstantImpl()!");
+}
+
+//===----------------------------------------------------------------------===//
 //                                ConstantFP
 //===----------------------------------------------------------------------===//
 
@@ -1254,6 +1377,19 @@ static Constant *getIntSequenceIfElementsMatch(ArrayRef<Constant *> V) {
 }
 
 template <typename SequentialTy, typename ElementTy>
+static Constant *getByteSequenceIfElementsMatch(ArrayRef<Constant *> V) {
+  assert(!V.empty() && "Cannot get empty byte sequence.");
+
+  SmallVector<ElementTy, 16> Elts;
+  for (Constant *C : V)
+    if (auto *CI = dyn_cast<ConstantByte>(C))
+      Elts.push_back(CI->getZExtValue());
+    else
+      return nullptr;
+  return SequentialTy::getByte(V[0]->getType(), Elts);
+}
+
+template <typename SequentialTy, typename ElementTy>
 static Constant *getFPSequenceIfElementsMatch(ArrayRef<Constant *> V) {
   assert(!V.empty() && "Cannot get empty FP sequence.");
 
@@ -1281,6 +1417,15 @@ static Constant *getSequenceIfElementsMatch(Constant *C,
       return getIntSequenceIfElementsMatch<SequenceTy, uint32_t>(V);
     else if (CI->getType()->isIntegerTy(64))
       return getIntSequenceIfElementsMatch<SequenceTy, uint64_t>(V);
+  } else if (ConstantByte *CB = dyn_cast<ConstantByte>(C)) {
+    if (CB->getType()->isByteTy(8))
+      return getByteSequenceIfElementsMatch<SequenceTy, uint8_t>(V);
+    else if (CB->getType()->isByteTy(16))
+      return getByteSequenceIfElementsMatch<SequenceTy, uint16_t>(V);
+    else if (CB->getType()->isByteTy(32))
+      return getByteSequenceIfElementsMatch<SequenceTy, uint32_t>(V);
+    else if (CB->getType()->isByteTy(64))
+      return getByteSequenceIfElementsMatch<SequenceTy, uint64_t>(V);
   } else if (ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
     if (CFP->getType()->isHalfTy() || CFP->getType()->isBFloatTy())
       return getFPSequenceIfElementsMatch<SequenceTy, uint16_t>(V);
@@ -1346,8 +1491,9 @@ Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant*> V) {
   if (C->isNullValue() && rangeOnlyContains(V.begin(), V.end(), C))
     return ConstantAggregateZero::get(Ty);
 
-  // Check to see if all of the elements are ConstantFP or ConstantInt and if
-  // the element type is compatible with ConstantDataVector.  If so, use it.
+  // Check to see if all of the elements are ConstantFP or ConstantInt or
+  // ConstantByte and if the element type is compatible with ConstantDataVector.
+  // If so, use it.
   if (ConstantDataSequential::isElementTypeCompatible(C->getType()))
     return getSequenceIfElementsMatch<ConstantDataArray>(C, V);
 
@@ -1444,11 +1590,13 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
   bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
+  bool isSplatByte = isa<ConstantByte>(C);
 
-  if (isZero || isUndef || isSplatFP || isSplatInt) {
+  if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
-        isZero = isUndef = isPoison = isSplatFP = isSplatInt = false;
+        isZero = isUndef = isPoison = isSplatFP = isSplatInt = isSplatByte =
+            false;
         break;
       }
   }
@@ -1465,6 +1613,9 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   if (isSplatInt)
     return ConstantInt::get(C->getContext(), T->getElementCount(),
                             cast<ConstantInt>(C)->getValue());
+  if (isSplatByte)
+    return ConstantByte::get(C->getContext(), T->getElementCount(),
+                             cast<ConstantByte>(C)->getValue());
 
   // Check to see if all of the elements are ConstantFP or ConstantInt and if
   // the element type is compatible with ConstantDataVector.  If so, use it.
@@ -1483,6 +1634,9 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
       if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
+      if (isa<ConstantByte>(V))
+        return ConstantByte::get(V->getContext(), EC,
+                                 cast<ConstantByte>(V)->getValue());
       if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
         return ConstantFP::get(V->getContext(), EC,
                                cast<ConstantFP>(V)->getValue());
@@ -1490,7 +1644,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
-    if ((isa<ConstantFP>(V) || isa<ConstantInt>(V)) &&
+    if ((isa<ConstantFP>(V) || isa<ConstantInt>(V) || isa<ConstantByte>(V)) &&
         ConstantDataSequential::isElementTypeCompatible(V->getType()))
       return ConstantDataVector::getSplat(EC.getKnownMinValue(), V);
 
@@ -1503,6 +1657,9 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
     if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
+    if (isa<ConstantByte>(V))
+      return ConstantByte::get(V->getContext(), EC,
+                               cast<ConstantByte>(V)->getValue());
     if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
       return ConstantFP::get(V->getContext(), EC,
                              cast<ConstantFP>(V)->getValue());
@@ -1723,6 +1880,8 @@ Constant *Constant::getSplatValue(bool AllowPoison) const {
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (auto *CI = dyn_cast<ConstantInt>(this))
     return ConstantInt::get(getContext(), CI->getValue());
+  if (auto *CB = dyn_cast<ConstantByte>(this))
+    return ConstantByte::get(getContext(), CB->getValue());
   if (auto *CFP = dyn_cast<ConstantFP>(this))
     return ConstantFP::get(getContext(), CFP->getValue());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
@@ -1782,6 +1941,8 @@ Constant *ConstantVector::getSplatValue(bool AllowPoison) const {
 const APInt &Constant::getUniqueInteger() const {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->getValue();
+  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
+    return CB->getValue();
   // Scalable vectors can use a ConstantExpr to build a splat.
   if (isa<ConstantExpr>(this))
     return cast<ConstantInt>(this->getSplatValue())->getValue();
@@ -1805,6 +1966,10 @@ ConstantRange Constant::toConstantRange() const {
           getSplatValue(/*AllowPoison=*/true)))
     return ConstantRange(CI->getValue());
 
+  if (auto *CB =
+          dyn_cast_or_null<ConstantByte>(getSplatValue(/*AllowPoison=*/true)))
+    return ConstantRange(CB->getValue());
+
   if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
     ConstantRange CR = ConstantRange::getEmpty(BitWidth);
     for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
@@ -1821,7 +1986,8 @@ ConstantRange Constant::toConstantRange() const {
       if (isa<PoisonValue>(Elem))
         continue;
       auto *CI = dyn_cast<ConstantInt>(Elem);
-      if (!CI)
+      auto *CB = dyn_cast<ConstantByte>(Elem);
+      if (!CI && !CB)
         return ConstantRange::getFull(BitWidth);
       CR = CR.unionWith(CI->getValue());
     }
@@ -2868,6 +3034,17 @@ bool ConstantDataSequential::isElementTypeCompatible(Type *Ty) {
     default: break;
     }
   }
+  if (auto *IT = dyn_cast<ByteType>(Ty)) {
+    switch (IT->getBitWidth()) {
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+      return true;
+    default:
+      break;
+    }
+  }
   return false;
 }
 
@@ -3000,17 +3177,54 @@ Constant *ConstantDataArray::getFP(Type *ElementType, ArrayRef<uint64_t> Elts) {
   return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 
-Constant *ConstantDataArray::getString(LLVMContext &Context,
-                                       StringRef Str, bool AddNull) {
+/// getByte() constructors - Return a constant of array type with a byte
+/// element type taken from argument `ElementType', and count taken from
+/// argument `Elts'.  The amount of bits of the contained type must match the
+/// number of bits of the type contained in the passed in ArrayRef.
+/// Note that this can return a ConstantAggregateZero object.
+Constant *ConstantDataArray::getByte(Type *ElementType,
+                                     ArrayRef<uint8_t> Elts) {
+  assert(ElementType->isByteTy(8) && "Element type is not a 8-bit byte type");
+  Type *Ty = ArrayType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
+}
+Constant *ConstantDataArray::getByte(Type *ElementType,
+                                     ArrayRef<uint16_t> Elts) {
+  assert(ElementType->isByteTy(16) && "Element type is not a 16-bit byte type");
+  Type *Ty = ArrayType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
+}
+Constant *ConstantDataArray::getByte(Type *ElementType,
+                                     ArrayRef<uint32_t> Elts) {
+  assert(ElementType->isByteTy(32) && "Element type is not a 32-bit byte type");
+  Type *Ty = ArrayType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
+}
+Constant *ConstantDataArray::getByte(Type *ElementType,
+                                     ArrayRef<uint64_t> Elts) {
+  assert(ElementType->isByteTy(64) && "Element type is not a 64-bit byte type");
+  Type *Ty = ArrayType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
+}
+
+Constant *ConstantDataArray::getString(LLVMContext &Context, StringRef Str,
+                                       bool AddNull, bool ByteString) {
   if (!AddNull) {
     const uint8_t *Data = Str.bytes_begin();
-    return get(Context, ArrayRef(Data, Str.size()));
+    return ByteString
+               ? getByte(Type::getByte8Ty(Context), ArrayRef(Data, Str.size()))
+               : get(Context, ArrayRef(Data, Str.size()));
   }
 
   SmallVector<uint8_t, 64> ElementVals;
   ElementVals.append(Str.begin(), Str.end());
   ElementVals.push_back(0);
-  return get(Context, ElementVals);
+  return ByteString ? getByte(Type::getByte8Ty(Context), ElementVals)
+                    : get(Context, ElementVals);
 }
 
 /// get() constructors - Return a constant with vector type with an element
@@ -3043,6 +3257,40 @@ Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<float> Elts) {
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<double> Elts) {
   auto *Ty = FixedVectorType::get(Type::getDoubleTy(Context), Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
+}
+
+/// getByte() constructors - Return a constant of vector type with a byte
+/// element type taken from argument `ElementType', and count taken from
+/// argument `Elts'.  The amount of bits of the contained type must match the
+/// number of bits of the type contained in the passed in ArrayRef.
+/// Note that this can return a ConstantAggregateZero object.
+Constant *ConstantDataVector::getByte(Type *ElementType,
+                                      ArrayRef<uint8_t> Elts) {
+  assert(ElementType->isByteTy(8) && "Element type is not a 8-bit byte");
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
+}
+Constant *ConstantDataVector::getByte(Type *ElementType,
+                                      ArrayRef<uint16_t> Elts) {
+  assert(ElementType->isByteTy(16) && "Element type is not a 16-bit byte");
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
+}
+Constant *ConstantDataVector::getByte(Type *ElementType,
+                                      ArrayRef<uint32_t> Elts) {
+  assert(ElementType->isByteTy(32) && "Element type is not a 32-bit byte");
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
+}
+Constant *ConstantDataVector::getByte(Type *ElementType,
+                                      ArrayRef<uint64_t> Elts) {
+  assert(ElementType->isByteTy(64) && "Element type is not a 64-bit byte");
+  auto *Ty = FixedVectorType::get(ElementType, Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
@@ -3098,6 +3346,24 @@ Constant *ConstantDataVector::getSplat(unsigned NumElts, Constant *V) {
     return get(V->getContext(), Elts);
   }
 
+  if (ConstantByte *CB = dyn_cast<ConstantByte>(V)) {
+    if (CB->getType()->isByteTy(8)) {
+      SmallVector<uint8_t, 16> Elts(NumElts, CB->getZExtValue());
+      return getByte(V->getType(), Elts);
+    }
+    if (CB->getType()->isByteTy(16)) {
+      SmallVector<uint16_t, 16> Elts(NumElts, CB->getZExtValue());
+      return getByte(V->getType(), Elts);
+    }
+    if (CB->getType()->isByteTy(32)) {
+      SmallVector<uint32_t, 16> Elts(NumElts, CB->getZExtValue());
+      return getByte(V->getType(), Elts);
+    }
+    assert(CB->getType()->isByteTy(64) && "Unsupported ConstantData type");
+    SmallVector<uint64_t, 16> Elts(NumElts, CB->getZExtValue());
+    return getByte(V->getType(), Elts);
+  }
+
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(V)) {
     if (CFP->getType()->isHalfTy()) {
       SmallVector<uint16_t, 16> Elts(
@@ -3124,13 +3390,14 @@ Constant *ConstantDataVector::getSplat(unsigned NumElts, Constant *V) {
 }
 
 uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
-  assert(isa<IntegerType>(getElementType()) &&
-         "Accessor can only be used when element is an integer");
+  assert(
+      (isa<IntegerType>(getElementType()) || isa<ByteType>(getElementType())) &&
+      "Accessor can only be used when element is an integer or byte");
   const char *EltPtr = getElementPointer(Elt);
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getIntegerBitWidth()) {
+  switch (getElementType()->getScalarSizeInBits()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
   case 8:
     return *reinterpret_cast<const uint8_t *>(EltPtr);
@@ -3144,13 +3411,14 @@ uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
 }
 
 APInt ConstantDataSequential::getElementAsAPInt(uint64_t Elt) const {
-  assert(isa<IntegerType>(getElementType()) &&
-         "Accessor can only be used when element is an integer");
+  assert(
+      (isa<IntegerType>(getElementType()) || isa<ByteType>(getElementType())) &&
+      "Accessor can only be used when element is an integer or byte");
   const char *EltPtr = getElementPointer(Elt);
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getIntegerBitWidth()) {
+  switch (getElementType()->getScalarSizeInBits()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
   case 8: {
     auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
@@ -3213,11 +3481,16 @@ Constant *ConstantDataSequential::getElementAsConstant(uint64_t Elt) const {
       getElementType()->isFloatTy() || getElementType()->isDoubleTy())
     return ConstantFP::get(getContext(), getElementAsAPFloat(Elt));
 
+  if (getElementType()->isByteTy())
+    return ConstantByte::get(getElementType(), getElementAsInteger(Elt));
+
   return ConstantInt::get(getElementType(), getElementAsInteger(Elt));
 }
 
 bool ConstantDataSequential::isString(unsigned CharSize) const {
-  return isa<ArrayType>(getType()) && getElementType()->isIntegerTy(CharSize);
+  return isa<ArrayType>(getType()) &&
+         (getElementType()->isIntegerTy(CharSize) ||
+          getElementType()->isByteTy(CharSize));
 }
 
 bool ConstantDataSequential::isCString() const {

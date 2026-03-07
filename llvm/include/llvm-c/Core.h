@@ -169,6 +169,7 @@ typedef enum {
   LLVMBFloatTypeKind = 18,         /**< 16 bit brain floating point type */
   LLVMX86_AMXTypeKind = 19,        /**< X86 AMX */
   LLVMTargetExtTypeKind = 20,      /**< Target extension type */
+  LLVMByteTypeKind = 21,           /**< Arbitrary bit width bytes */
 } LLVMTypeKind;
 
 typedef enum {
@@ -278,6 +279,7 @@ typedef enum {
   LLVMConstantDataArrayValueKind,
   LLVMConstantDataVectorValueKind,
   LLVMConstantIntValueKind,
+  LLVMConstantByteValueKind,
   LLVMConstantFPValueKind,
   LLVMConstantPointerNullValueKind,
   LLVMConstantTokenNoneValueKind,
@@ -1345,6 +1347,7 @@ LLVM_C_ABI void LLVMSetModuleInlineAsm(LLVMModuleRef M, const char *Asm);
  *
  *   types:
  *     integer type
+ *     byte type
  *     real type
  *     function type
  *     sequence types:
@@ -1395,6 +1398,25 @@ LLVM_C_ABI void LLVMDumpType(LLVMTypeRef Val);
  * @see llvm::Type::print()
  */
 LLVM_C_ABI char *LLVMPrintTypeToString(LLVMTypeRef Val);
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup LLVMCCoreTypeByte Byte Types
+ *
+ * Functions in this section operate on byte types.
+ *
+ * @{
+ */
+
+/**
+ * Obtain a byte type from a context with specified bit width.
+ */
+LLVM_C_ABI LLVMTypeRef LLVMByteTypeInContext(LLVMContextRef C,
+                                             unsigned NumBits);
+LLVM_C_ABI unsigned LLVMGetByteTypeWidth(LLVMTypeRef ByteTy);
 
 /**
  * @defgroup LLVMCCoreTypeInt Integer Types
@@ -2012,6 +2034,7 @@ LLVM_C_ABI unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy,
       macro(ConstantExpr)                   \
       macro(ConstantFP)                     \
       macro(ConstantInt)                    \
+      macro(ConstantByte)                   \
       macro(ConstantPointerNull)            \
       macro(ConstantStruct)                 \
       macro(ConstantTokenNone)              \
@@ -2424,6 +2447,36 @@ LLVM_C_ABI LLVMValueRef LLVMConstIntOfStringAndSize(LLVMTypeRef IntTy,
                                                     uint8_t Radix);
 
 /**
+ * Obtain a constant value for a byte type.
+ *
+ * The returned value corresponds to a llvm::ConstantByte.
+ *
+ * @see llvm::ConstantByte::get()
+ *
+ * @param ByteTy Byte type to obtain value of.
+ * @param N The value the returned instance should refer to.
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstByte(LLVMTypeRef ByteTy, unsigned long long N);
+
+/**
+ * Obtain a constant value for a byte of arbitrary precision.
+ *
+ * @see llvm::ConstantByte::get()
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstByteOfArbitraryPrecision(
+    LLVMTypeRef ByteTy, unsigned NumWords, const uint64_t Words[]);
+
+/**
+ * Obtain a constant value for a byte parsed from a string with specified
+ * length.
+ * @see llvm::ConstantByte::get()
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstByteOfStringAndSize(LLVMTypeRef ByteTy,
+                                                     const char *Text,
+                                                     size_t SLen,
+                                                     uint8_t Radix);
+
+/**
  * Obtain a constant value referring to a double floating point value.
  */
 LLVM_C_ABI LLVMValueRef LLVMConstReal(LLVMTypeRef RealTy, double N);
@@ -2466,6 +2519,20 @@ LLVMConstIntGetZExtValue(LLVMValueRef ConstantVal);
  * @see llvm::ConstantInt::getSExtValue()
  */
 LLVM_C_ABI long long LLVMConstIntGetSExtValue(LLVMValueRef ConstantVal);
+
+/**
+ * Obtain the zero extended value for a byte constant value.
+ *
+ * @see llvm::ConstantByte::getZExtValue()
+ */
+unsigned long long LLVMConstByteGetZExtValue(LLVMValueRef ConstantVal);
+
+/**
+ * Obtain the sign extended value for a byte constant value.
+ *
+ * @see llvm::ConstantByte::getSExtValue()
+ */
+long long LLVMConstByteGetSExtValue(LLVMValueRef ConstantVal);
 
 /**
  * Obtain the double value for an floating point constant value.
