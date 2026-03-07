@@ -137,10 +137,12 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   if (TotalCycles == 0)
     return;
 
+  ScheduledSUs.push_back(SU);
   AllSUs.remove(SU);
   PrioritySUs.remove(SU);
 
-  TotalCycles -= BlockingCycles;
+  if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
+    TotalCycles -= BlockingCycles;
 
   if (AllSUs.empty())
     return;
@@ -165,6 +167,14 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
       PrioritySUs.insert(SU);
     }
   }
+}
+
+void HardwareUnitInfo::finalizeCycles() {
+  if (BufferSize <= 1 || !AllSUs.size())
+    return;
+
+  BufferCycles = TotalCycles / AllSUs.size();
+  TotalCycles /= BufferSize;
 }
 
 HardwareUnitInfo *
@@ -216,6 +226,7 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   HWUInfo[(int)InstructionFlavor::WMMA].setProducesCoexecWindow(true);
   HWUInfo[(int)InstructionFlavor::MultiCycleVALU].setProducesCoexecWindow(true);
   HWUInfo[(int)InstructionFlavor::TRANS].setProducesCoexecWindow(true);
+  HWUInfo[(int)InstructionFlavor::DS].setBufferSize(DefaultBufferSizes::DS);
 
   collectHWUIPressure();
 }
@@ -227,6 +238,10 @@ void CandidateHeuristics::collectHWUIPressure() {
   for (auto &SU : DAG->SUnits) {
     const InstructionFlavor Flavor = classifyFlavor(*SU.getInstr(), *SII);
     HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForInst(&SU));
+  }
+
+  for (auto &HWUI : HWUInfo) {
+    HWUI.finalizeCycles();
   }
 
   LLVM_DEBUG(dumpRegionSummary());
@@ -666,7 +681,26 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
 
 bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
-                                                  SchedBoundary &Zone) const {
+                                                  SchedBoundary &Zone) {
+  auto getBufferFullStalls = [this,
+                              &Zone](SUnit *SU) -> unsigned {
+    InstructionFlavor Flavor = classifyFlavor(
+        *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
+    HardwareUnitInfo *HWUI = Heurs.getHWUIFromFlavor(Flavor);
+
+    if (HWUI->getBufferSize() <= 1)
+      return 0;
+
+    // getBufferAvailableCycle assumes top-down scheduling.
+    assert(Zone.isTop());
+    unsigned CurrCycle = Zone.getCurrCycle();
+    unsigned BufferReadyCycle = HWUI->getBufferAvailableCycle(CurrCycle);
+    if (BufferReadyCycle <= CurrCycle)
+      return 0;
+
+    return BufferReadyCycle - CurrCycle;
+  };
+
   // Treat structural and latency stalls as a single scheduling cost for the
   // current cycle.
   struct StallCosts {
@@ -674,6 +708,7 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
     unsigned Structural = 0;
     unsigned Latency = 0;
     unsigned Effective = 0;
+    unsigned Buffer = 0;
   };
 
   unsigned CurrCycle = Zone.getCurrCycle();
@@ -683,7 +718,8 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
     Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
     Costs.Structural = getStructuralStallCycles(Zone, SU);
     Costs.Latency = Zone.getLatencyStallCycles(SU);
-    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency});
+    Costs.Buffer = getBufferFullStalls(SU);
+    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Buffer});
     return Costs;
   };
 
@@ -693,10 +729,10 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
   LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
     dbgs() << "Effective stalls: try=" << TryCosts.Effective
            << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
-           << ", lat=" << TryCosts.Latency << ") cand=" << CandCosts.Effective
+           << ", lat=" << TryCosts.Latency << ", buffer=" << TryCosts.Buffer << ") cand=" << CandCosts.Effective
            << " (ready=" << CandCosts.Ready
            << ", struct=" << CandCosts.Structural
-           << ", lat=" << CandCosts.Latency << ")\n";
+           << ", lat=" << CandCosts.Latency << ", buffer=" << CandCosts.Buffer < ")\n";
   });
 
   return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand, Stall);
