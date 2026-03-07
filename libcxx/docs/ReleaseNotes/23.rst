@@ -46,12 +46,17 @@ Improvements and New Features
 - The ``std::ranges::fold_left_with_iter`` algorithm has been optimized for
   segmented iterators, resulting in a performance improvement of up to 1.38x
   for ``std::deque<int>`` iterators.
+- ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
+  of up to 25x.
 
 Deprecations and Removals
 -------------------------
 
 - The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
   It will be removed in LLVM 25.
+
+- ``__wrap_iter``'s (iterator type for ``array``, ``span``, ``string``, ``string_view`` and ``vector``) ``base()``
+  method has been removed as it was non-standard.
 
 Potentially breaking changes
 ----------------------------
@@ -69,6 +74,10 @@ ABI Affecting Changes
 - ``bitset::operator[]`` returns ``bool`` since LLVM 22, making libc++ conforming. The behaviour can be reverted by
   defining ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this
   flag, since it will be removed in LLVM 24 if there is no evidence that it's required.
+
+- ``vector::iterator`` and ``string::iterator`` no longer use ``__bounded_iter<__wrap_iter<Iter>>``, but instead
+  ``__bounded_iter<Iter>`` directly if ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` and
+  ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` are defined.
 
 Build System Changes
 --------------------

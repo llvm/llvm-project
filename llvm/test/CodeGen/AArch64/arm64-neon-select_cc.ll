@@ -304,4 +304,40 @@ define <3 x float> @test_select_cc_v3f32_fcmp_f64(<3 x float> %a, <3 x float> %b
   ret <3 x float> %r
 }
 
+define <2 x double> @test_select_cc_v2f64_fp128(fp128 %a, fp128 %b, <2 x double> %c, <2 x double> %d) {
+; CHECK-LABEL: test_select_cc_v2f64_fp128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    stp q2, q3, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __eqtf2
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldp q2, q1, [sp] // 32-byte Folded Reload
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v1.16b
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %cmp31 = fcmp oeq fp128 %a, %b
+  %e = select i1 %cmp31, <2 x double> %c, <2 x double> %d
+  ret <2 x double> %e
+}
+
+define <2 x double> @test_select_cc_v2f64_i128(i128 %a, i128 %b, <2 x double> %c, <2 x double> %d) {
+; CHECK-LABEL: test_select_cc_v2f64_i128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    sbcs xzr, x1, x3
+; CHECK-NEXT:    csetm x8, lo
+; CHECK-NEXT:    dup v2.2d, x8
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %cmp31 = icmp ult i128 %a, %b
+  %e = select i1 %cmp31, <2 x double> %c, <2 x double> %d
+  ret <2 x double> %e
+}
+
 attributes #0 = { nounwind}

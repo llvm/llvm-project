@@ -1866,8 +1866,10 @@ def PHintInstOperand : AsmOperandClass {
 
 def phint_op : Operand<i32> {
     let ParserMatchClass = PHintInstOperand;
-   let PrintMethod = "printPHintOp";
-   let OperandType = "OPERAND_IMMEDIATE";
+    let PrintMethod = "printPHintOp";
+    let OperandType = "OPERAND_IMMEDIATE";
+    let MIOperandInfo = (ops i32imm: $policy);
+    let DecoderMethod = "DecodeUImm<3>";
 }
 
 class STSHHI
@@ -8123,32 +8125,40 @@ multiclass SIMDFPTwoScalarCVT<bit U, bit S, bits<5> opc, string asm,
 }
 
 multiclass SIMDTwoScalarBHSD<bit U, bits<5> opc, string asm,
-                             SDPatternOperator OpNode = null_frag> {
+                             SDPatternOperator OpNode, Intrinsic IntrNode> {
   let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     def v1i64  : BaseSIMDTwoScalar<U, 0b11, 0b00, opc, FPR64, FPR64, asm,
-           [(set (i64 FPR64:$Rd), (OpNode (i64 FPR64:$Rn)))]>;
+           [(set (i64 FPR64:$Rd), (IntrNode (i64 FPR64:$Rn)))]>;
     def v1i32  : BaseSIMDTwoScalar<U, 0b10, 0b00, opc, FPR32, FPR32, asm,
-           [(set (i32 FPR32:$Rd), (OpNode (i32 FPR32:$Rn)))]>;
+           [(set (i32 FPR32:$Rd), (IntrNode (i32 FPR32:$Rn)))]>;
     def v1i16  : BaseSIMDTwoScalar<U, 0b01, 0b00, opc, FPR16, FPR16, asm, []>;
     def v1i8   : BaseSIMDTwoScalar<U, 0b00, 0b00, opc, FPR8 , FPR8 , asm, []>;
   }
 
-  def : Pat<(v1i64 (OpNode (v1i64 FPR64:$Rn))),
+  def : Pat<(v1i64 (IntrNode (v1i64 FPR64:$Rn))),
+            (!cast<Instruction>(NAME # v1i64) FPR64:$Rn)>;
+  def : Pat<(f32 (OpNode (f32 FPR32:$Rn))),
+            (!cast<Instruction>(NAME # v1i32) FPR32:$Rn)>;
+  def : Pat<(f64 (OpNode (f64 FPR64:$Rn))),
             (!cast<Instruction>(NAME # v1i64) FPR64:$Rn)>;
 }
 
 multiclass SIMDTwoScalarBHSDTied<bit U, bits<5> opc, string asm,
-                                 Intrinsic OpNode> {
+                                 SDPatternOperator OpNode, Intrinsic IntrNode> {
   let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     def v1i64  : BaseSIMDTwoScalarTied<U, 0b11, opc, FPR64, FPR64, asm,
-        [(set (i64 FPR64:$dst), (OpNode (i64 FPR64:$Rd), (i64 FPR64:$Rn)))]>;
+        [(set (i64 FPR64:$dst), (IntrNode (i64 FPR64:$Rd), (i64 FPR64:$Rn)))]>;
     def v1i32  : BaseSIMDTwoScalarTied<U, 0b10, opc, FPR32, FPR32, asm,
-        [(set (i32 FPR32:$dst), (OpNode (i32 FPR32:$Rd), (i32 FPR32:$Rn)))]>;
+        [(set (i32 FPR32:$dst), (IntrNode (i32 FPR32:$Rd), (i32 FPR32:$Rn)))]>;
     def v1i16  : BaseSIMDTwoScalarTied<U, 0b01, opc, FPR16, FPR16, asm, []>;
     def v1i8   : BaseSIMDTwoScalarTied<U, 0b00, opc, FPR8 , FPR8 , asm, []>;
   }
 
-  def : Pat<(v1i64 (OpNode (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn))),
+  def : Pat<(v1i64 (IntrNode (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn))),
+            (!cast<Instruction>(NAME # v1i64) FPR64:$Rd, FPR64:$Rn)>;
+  def : Pat<(f32 (OpNode (f32 FPR32:$Rd), (f32 FPR32:$Rn))),
+            (!cast<Instruction>(NAME # v1i32) FPR32:$Rd, FPR32:$Rn)>;
+  def : Pat<(f64 (OpNode (f64 FPR64:$Rd), (f64 FPR64:$Rn))),
             (!cast<Instruction>(NAME # v1i64) FPR64:$Rd, FPR64:$Rn)>;
 }
 

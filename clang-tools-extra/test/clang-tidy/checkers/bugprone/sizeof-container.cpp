@@ -1,23 +1,8 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-container %t -- -- -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy %s bugprone-sizeof-container %t -- -- -isystem %clang_tidy_headers -target x86_64-unknown-unknown
+#include <string>
+#include <vector>
 
 namespace std {
-
-typedef unsigned int size_t;
-
-template <typename T>
-struct basic_string {
-  size_t size() const;
-};
-
-template <typename T>
-basic_string<T> operator+(const basic_string<T> &, const T *);
-
-typedef basic_string<char> string;
-
-template <typename T>
-struct vector {
-  size_t size() const;
-};
 
 // std::bitset<> is not a container. sizeof() is reasonable for it.
 template <size_t N>
@@ -41,8 +26,6 @@ struct fake_container2 {
 
 }
 
-using std::size_t;
-
 #define ARRAYSIZE(a) \
   ((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 
@@ -50,7 +33,7 @@ using std::size_t;
   (((sizeof(a)) / (sizeof(*(a)))) / static_cast<size_t>(!((sizeof(a)) % (sizeof(*(a))))))
 
 struct string {
-  std::size_t size() const;
+  size_t size() const;
 };
 
 template<typename T>
