@@ -28,3 +28,15 @@
 // RUN: ssaf-linker %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json
 // RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
 // RUN: rm %t/lu-1+2.json
+
+// Relative input path: cd to the test source directory so that
+// Inputs/tu-1.json is a valid relative path.
+// RUN: cd %S && ssaf-linker Inputs/tu-1.json -o %t/lu-1.json
+// RUN: diff %S/Outputs/lu-1.json %t/lu-1.json
+// RUN: rm %t/lu-1.json
+
+// Relative output path: cd to the temp directory so that lu-1.json
+// (no directory component) resolves relative to the current directory.
+// RUN: cd %t && ssaf-linker %S/Inputs/tu-1.json -o lu-1.json
+// RUN: diff %S/Outputs/lu-1.json %t/lu-1.json
+// RUN: rm %t/lu-1.json

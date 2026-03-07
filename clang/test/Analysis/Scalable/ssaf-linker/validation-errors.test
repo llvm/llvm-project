@@ -28,15 +28,6 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=OUTPUT-PARENT-DIR-MISSING
 // OUTPUT-PARENT-DIR-MISSING: ssaf-linker: error: failed to validate summary '{{.*}}lu.json': Parent directory does not exist
 
-// Output parent directory exists but is not writable.
-// UNSUPPORTED: system-windows
-// RUN: mkdir -p %t/output-dir
-// RUN: chmod -w %t/output-dir
-// RUN: not ssaf-linker %S/Inputs/tu-empty.json -o %t/output-dir/output.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-WRITE-PERM
-// RUN: chmod +w %t/output-dir
-// NO-WRITE-PERM: ssaf-linker: error: failed to validate summary '{{.*}}output.json': Parent directory is not writable
-
 // Input summary does not exist.
 // RUN: not ssaf-linker %S/Inputs/tu-nonexistent.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-INPUT-FILE

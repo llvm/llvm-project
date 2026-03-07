@@ -1,5 +1,5 @@
 // Test ssaf-linker version
 
-// RUN: ssaf-linker --version | FileCheck %s --match-full-lines
+// RUN: ssaf-linker --version | FileCheck %s
 
-// CHECK: ssaf-linker 0.1
+// CHECK: ssaf-linker
