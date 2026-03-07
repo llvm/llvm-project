@@ -9,6 +9,12 @@
 // RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,COMMON-DEFAULT,GFX900,WAVE64 %s
 
 
+// RUN: %clang -### -target amdgcn-amd-amdhsa \
+// RUN:   -x cl -mcpu=gfx900 \
+// RUN:   --rocm-path=%S/Inputs/rocm-no-math-opt-libs \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,GFX900,WAVE64 %s
+
 
 // Make sure the different denormal default is respected for gfx8
 // RUN: %clang -### -target amdgcn-amd-amdhsa \
@@ -158,7 +164,7 @@
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/opencl.bc"
-// ASAN-SAME: "-mlink-bitcode-file" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
+// ASAN-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ocml.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ockl.bc"
 

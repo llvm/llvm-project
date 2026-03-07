@@ -10,7 +10,7 @@ struct S {
 
 // CHECK-LABEL: @_Z23get_offset_of_y_naivelyv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 4
 //
 uintptr_t get_offset_of_y_naively() {
   return ((uintptr_t)(&(((S *)nullptr)->y)));
@@ -28,7 +28,7 @@ struct T {
 
 // CHECK-LABEL: @_Z30get_offset_of_y_naively_nestedv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr getelementptr ([[STRUCT_T:%.*]], ptr null, i32 0, i32 1), i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 8
 //
 uintptr_t get_offset_of_y_naively_nested() {
   return ((uintptr_t)(&(((T *)nullptr)->s.y)));
@@ -36,7 +36,7 @@ uintptr_t get_offset_of_y_naively_nested() {
 
 // CHECK-LABEL: @_Z42get_offset_of_y_naively_nested_with_parensv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr getelementptr ([[STRUCT_T:%.*]], ptr null, i32 0, i32 1), i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 8
 //
 uintptr_t get_offset_of_y_naively_nested_with_parens() {
   return ((uintptr_t)(&((((T *)nullptr)->s).y)));
@@ -44,7 +44,7 @@ uintptr_t get_offset_of_y_naively_nested_with_parens() {
 
 // CHECK-LABEL: @_Z26get_offset_of_zero_storagev(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr (i8, ptr null, i64 16) to i64)
+// CHECK-NEXT:    ret i64 16
 //
 uintptr_t get_offset_of_zero_storage() {
   return ((uintptr_t)(&(((T *)nullptr)->e2)));
@@ -53,7 +53,7 @@ uintptr_t get_offset_of_zero_storage() {
 namespace std { typedef decltype(__nullptr) nullptr_t; }
 // CHECK-LABEL: @_Z29get_offset_of_y_integral_zerov(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 4
 //
 uintptr_t get_offset_of_y_integral_zero() {
   return ((uintptr_t)(&(((S *)0)->y)));
@@ -61,7 +61,7 @@ uintptr_t get_offset_of_y_integral_zero() {
 
 // CHECK-LABEL: @_Z37get_offset_of_y_integral_zero_voidptrv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 4
 //
 uintptr_t get_offset_of_y_integral_zero_voidptr() {
   return ((uintptr_t)(&(((S *)(void*)0)->y)));
@@ -69,7 +69,7 @@ uintptr_t get_offset_of_y_integral_zero_voidptr() {
 
 // CHECK-LABEL: @_Z25get_offset_of_y_nullptr_tv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 4
 //
 uintptr_t get_offset_of_y_nullptr_t() {
   return ((uintptr_t)(&(((S *)std::nullptr_t{})->y)));
@@ -79,7 +79,7 @@ uintptr_t get_offset_of_y_nullptr_t() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[NULL:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr null, ptr [[NULL]], align 8
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr inbounds nuw ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 4
 //
 uintptr_t get_offset_of_y_nullptr_constant() {
   constexpr void *null = nullptr;

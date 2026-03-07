@@ -29,10 +29,6 @@ namespace clang::ssaf {
 
 enum class BuildNamespaceKind : unsigned short { CompilationUnit, LinkUnit };
 
-llvm::StringRef toString(BuildNamespaceKind BNK);
-
-std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str);
-
 /// Represents a single namespace in the build process.
 ///
 /// A BuildNamespace groups program entities, such as those belonging to a
@@ -123,6 +119,7 @@ public:
                                        const NestedBuildNamespace &NBN);
 };
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, BuildNamespaceKind BNK);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const NestedBuildNamespace &NBN);

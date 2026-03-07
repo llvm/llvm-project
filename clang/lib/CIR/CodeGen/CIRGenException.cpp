@@ -193,7 +193,7 @@ static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
-      funcTy, personality.personalityFn, mlir::ArrayAttr(), /*isLocal=*/true);
+      funcTy, personality.personalityFn, {}, /*isLocal=*/true);
 
   return personalityFn.getSymName();
 }
@@ -322,8 +322,13 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
       builder, tryLoc,
       /*tryBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // Create a RunCleanupsScope that allows us to apply any cleanups that
+        // are created for statements within the try body before exiting the
+        // try body.
+        RunCleanupsScope tryBodyCleanups(*this);
         if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
           tryRes = mlir::failure();
+        tryBodyCleanups.forceCleanup();
         cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
@@ -332,19 +337,21 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
         mlir::OpBuilder::InsertionGuard guard(b);
         bool hasCatchAll = false;
         unsigned numHandlers = s.getNumHandlers();
+        mlir::Type ehTokenTy = cir::EhTokenType::get(&getMLIRContext());
         for (unsigned i = 0; i != numHandlers; ++i) {
           const CXXCatchStmt *catchStmt = s.getHandler(i);
           if (!catchStmt->getExceptionDecl())
             hasCatchAll = true;
           mlir::Region *region = result.addRegion();
-          builder.createBlock(region);
+          builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
           addCatchHandlerAttr(catchStmt, handlerAttrs);
         }
         if (!hasCatchAll) {
           // Create unwind region.
           mlir::Region *region = result.addRegion();
-          builder.createBlock(region);
-          cir::ResumeOp::create(builder, loc);
+          mlir::Block *unwindBlock =
+              builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
+          cir::ResumeOp::create(builder, loc, unwindBlock->getArgument(0));
           handlerAttrs.push_back(cir::UnwindAttr::get(&getMLIRContext()));
         }
       });
@@ -368,6 +375,9 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(&handler->front());
 
+    // Get the !cir.eh_token block argument from the handler region.
+    mlir::Value ehToken = handler->front().getArgument(0);
+
     // Enter a cleanup scope, including the catch variable and the
     // end-catch.
     RunCleanupsScope handlerScope(*this);
@@ -375,7 +385,7 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
     // Initialize the catch variable.
     // TODO(cir): Move this out of CXXABI.
     assert(!cir::MissingFeatures::currentFuncletPad());
-    cgm.getCXXABI().emitBeginCatch(*this, catchStmt);
+    cgm.getCXXABI().emitBeginCatch(*this, catchStmt, ehToken);
 
     // Emit the PGO counter increment.
     assert(!cir::MissingFeatures::incrementProfileCounter());

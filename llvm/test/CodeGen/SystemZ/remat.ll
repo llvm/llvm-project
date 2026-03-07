@@ -18,28 +18,28 @@ define void @remat_load(
 ; CHECK-NEXT:    std %f13, 16(%r15) # 8-byte Spill
 ; CHECK-NEXT:    std %f14, 8(%r15) # 8-byte Spill
 ; CHECK-NEXT:    std %f15, 0(%r15) # 8-byte Spill
-; CHECK-NEXT:    lg %r0, 232(%r15)
-; CHECK-NEXT:    lg %r1, 224(%r15)
 ; CHECK-NEXT:    ld %f0, 280(%r15)
 ; CHECK-NEXT:    le %f1, 276(%r15)
 ; CHECK-NEXT:    le %f2, 268(%r15)
-; CHECK-NEXT:    lg %r14, 288(%r15)
 ; CHECK-NEXT:    le %f3, 260(%r15)
-; CHECK-NEXT:    l %r3, 244(%r15)
-; CHECK-NEXT:    lg %r2, 248(%r15)
-; CHECK-NEXT:    stc %r1, 0(%r14)
-; CHECK-NEXT:    sth %r0, 0(%r14)
-; CHECK-NEXT:    st %r3, 0(%r14)
-; CHECK-NEXT:    stg %r2, 0(%r14)
+; CHECK-NEXT:    lg %r14, 288(%r15)
+; CHECK-NEXT:    lb %r3, 231(%r15)
+; CHECK-NEXT:    lh %r2, 238(%r15)
+; CHECK-NEXT:    l %r1, 244(%r15)
+; CHECK-NEXT:    lg %r0, 248(%r15)
+; CHECK-NEXT:    stc %r3, 0(%r14)
+; CHECK-NEXT:    sth %r2, 0(%r14)
+; CHECK-NEXT:    st %r1, 0(%r14)
+; CHECK-NEXT:    stg %r0, 0(%r14)
 ; CHECK-NEXT:    ste %f3, 0(%r14)
 ; CHECK-NEXT:    ste %f2, 0(%r14)
 ; CHECK-NEXT:    ste %f1, 0(%r14)
 ; CHECK-NEXT:    std %f0, 0(%r14)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lg %r0, 224(%r15)
+; CHECK-NEXT:    lb %r0, 231(%r15)
 ; CHECK-NEXT:    stc %r0, 0(%r14)
-; CHECK-NEXT:    lg %r0, 232(%r15)
+; CHECK-NEXT:    lh %r0, 238(%r15)
 ; CHECK-NEXT:    sth %r0, 0(%r14)
 ; CHECK-NEXT:    l %r0, 244(%r15)
 ; CHECK-NEXT:    st %r0, 0(%r14)
@@ -65,8 +65,8 @@ define void @remat_load(
 ; CHECK-NEXT:    br %r14
     i64 %i0, i64 %i1, i64 %i2, i64 %i3, i64 %i4, ; r2-r6
     double %f0, double %f1, double %f2, double %f3, ; f0, f2, f4, f6
-    i8 signext %stackarg0,
-    i16 zeroext %stackarg1,
+    i8 %stackarg0,
+    i16 %stackarg1,
     i32 %stackarg2,
     i64 %stackarg3,
     float %stackarg4,
