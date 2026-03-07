@@ -1151,9 +1151,9 @@ define void @scratch_reg_needed_mubuf_offset(ptr addrspace(5) byval([4096 x i8])
 ; FLATSCR-NEXT:    s_addk_i32 s32, 0x100c
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    s_add_i32 s0, s33, 0x1000
+; FLATSCR-NEXT:    s_add_i32 s41, s33, 0x1000
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
-; FLATSCR-NEXT:    scratch_store_dword off, v0, s0
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s41
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; clobber nonpreserved SGPRs
