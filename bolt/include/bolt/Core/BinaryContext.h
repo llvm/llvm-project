@@ -556,7 +556,14 @@ public:
   }
 
   /// Return functions meant for the output in a sorted order.
-  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
+  const BinaryFunctionListType &getOutputBinaryFunctions() const {
+    return OutputFunctions;
+  }
+
+  /// Update output function list.
+  void updateOutputBinaryFunctions(BinaryFunctionListType &&Functions) {
+    OutputFunctions.swap(Functions);
+  }
 
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
@@ -573,6 +580,9 @@ public:
   createInstructionPatch(uint64_t Address,
                          const InstructionListType &Instructions,
                          const Twine &Name = "");
+
+  /// Create a binary function with a base \p Name.
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
 
   BinaryFunctionListType &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
