@@ -35,6 +35,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
@@ -45,9 +46,11 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
+#include <iterator>
 #include <optional>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -4395,6 +4398,59 @@ Value *llvm::simplifyFCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
   return ::simplifyFCmpInst(Predicate, LHS, RHS, FMF, Q, RecursionLimit);
 }
 
+// The value is only poison, if any of these values are poison.
+// It can be useful to decide if replacing a value with another would be
+// refining or introduce more poison.
+//
+// It is especially useful for select instructions. When it comes to selects and
+// impliesPoison, if select is the ValueAssumedToBePoison it is rare that it
+// yields true for any Value, that isn't a user of the select, due to the fact
+// that a select has more complex poison propagation than other instruction.
+static bool areTheseAllTheValuesThatMayCausePoisonInValue(
+    const SmallVector<const Value *, 2> ValuesAssumedPoison, const Value *V,
+    unsigned Depth) {
+  if (any_of(ValuesAssumedPoison, [V](const auto *P) { return P == V; }))
+    return true;
+
+  if (const Instruction *I = dyn_cast<Instruction>(V)) {
+    // Having a poison generating annotation means that it can be poison
+    // without any of the given values being poison.
+    if (I->hasPoisonGeneratingAnnotations())
+      return false;
+
+    // Filtering out the assumed poison values, so only the relevant ones are
+    // brought forward to the next recursive call.
+    SmallVector<const Value *, 2> ValuesImplyingPoison;
+    copy_if(ValuesAssumedPoison, std::back_inserter(ValuesImplyingPoison),
+            [V](const auto *P) { return impliesPoison(P, V); });
+
+    if (ValuesImplyingPoison.empty())
+      return false;
+
+    const unsigned MaxDepth = 2;
+    if (Depth > MaxDepth)
+      return false;
+
+    return all_of(I->operand_values(),
+                  [&ValuesImplyingPoison, Depth](const auto *Op) {
+                    return areTheseAllTheValuesThatMayCausePoisonInValue(
+                        ValuesImplyingPoison, Op, Depth + 1);
+                  });
+  }
+
+  // A constant can't cause poison, unless it is itself a poison.
+  if (const Constant *C = dyn_cast<Constant>(V))
+    return !C->containsUndefOrPoisonElement();
+
+  return false;
+}
+
+static bool areTheseAllTheValuesThatMayCausePoisonInValue(
+    const SmallVector<const Value *, 2> ValuesAssumedPoison, const Value *V) {
+  return areTheseAllTheValuesThatMayCausePoisonInValue(ValuesAssumedPoison, V,
+                                                       0);
+}
+
 static Value *simplifyWithOpsReplaced(Value *V,
                                       ArrayRef<std::pair<Value *, Value *>> Ops,
                                       const SimplifyQuery &Q,
@@ -4537,6 +4593,43 @@ static Value *simplifyWithOpsReplaced(Value *V,
       // This never returns poison, even if inbounds is set.
       if (NewOps.size() == 2 && match(NewOps[1], m_Zero()))
         return NewOps[0];
+    }
+
+    if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
+      Value *SimplifiedValue = nullptr;
+      Value *Cond = SI->getCondition();
+
+      // The select couldn't act as a poison barrirer for its old operands and
+      // the new condition can't be more poisonus than the old one.
+      if (impliesPoison(NewOps[0], Cond) &&
+          impliesPoison(SI->getTrueValue(), Cond) &&
+          impliesPoison(SI->getFalseValue(), Cond)) {
+
+        // Cond ? V : V -> V
+        // We know that after replacement both of the operands will be the same.
+        // We have to make sure that no refinment happens. This is done by
+        // checking if the select condition can only be poison if any of the
+        // arms are poison. If the condition could be poison and neither of the
+        // arms would be poison, returning the less poisonus value would be a
+        // refinment.
+        if (NewOps[1] == NewOps[2] &&
+            areTheseAllTheValuesThatMayCausePoisonInValue(
+                {SI->getFalseValue(), SI->getTrueValue(), NewOps[1]}, Cond))
+          SimplifiedValue = NewOps[1];
+
+        // TODO: Implement more non refining select optimizations here!
+
+        // If we could do any simplification check if it has any poison
+        // generating flags and handle them.
+        if (SimplifiedValue) {
+          if (SI->hasPoisonGeneratingAnnotations()) {
+            if (!DropFlags)
+              return nullptr;
+            DropFlags->push_back(SI);
+          }
+          return SimplifiedValue;
+        }
+      }
     }
   } else {
     // The simplification queries below may return the original value. Consider:
@@ -5197,6 +5290,16 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     if (NewC.size() == NumElts)
       return ConstantVector::get(NewC);
   }
+
+  CmpPredicate Pred1, Pred2;
+  Value *V1, *V2, *EQV;
+  if (match(Cond,
+            m_And(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(V1), m_Value(EQV)),
+                  m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(V2),
+                                 m_Deferred(EQV)))))
+    if (Value *V = simplifySelectWithEquivalence(
+            {{V2, EQV}, {V1, EQV}}, TrueVal, FalseVal, Q, MaxRecurse))
+      return V;
 
   if (Value *V =
           simplifySelectWithICmpCond(Cond, TrueVal, FalseVal, Q, MaxRecurse))

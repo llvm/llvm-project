@@ -7693,7 +7693,7 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison, const Value *V,
   if (ValAssumedPoison == V)
     return true;
 
-  const unsigned MaxDepth = 2;
+  const unsigned MaxDepth = 3;
   if (Depth >= MaxDepth)
     return false;
 

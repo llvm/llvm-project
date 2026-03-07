@@ -1651,11 +1651,10 @@ define i1 @logical_and_logical_and_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_and_logical_and_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[X:%.*]], [[Z_SHIFT]]
-; CHECK-NEXT:    [[C2:%.*]] = trunc i8 [[X]] to i1
-; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X_M2]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C3]], i1 [[C1]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[TMP1]], i1 [[C2]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[TMP3]], i1 [[C1]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %c1 = icmp eq i8 %y, 42
@@ -1998,13 +1997,11 @@ define i1 @logical_or_logical_or_icmps(i8 %x, i8 %y, i8 %z) {
 define i1 @logical_or_logical_or_icmps_comm1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @logical_or_logical_or_icmps_comm1(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
-; CHECK-NEXT:    [[X_M1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[X_M2:%.*]] = and i8 [[X]], [[Z_SHIFT]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[X_M1]], 0
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[X_M2]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C3]], i1 true, i1 [[C1]]
-; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[TMP1]], i1 true, i1 [[C2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Z_SHIFT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i8 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[TMP3]], i1 true, i1 [[C1]]
 ; CHECK-NEXT:    ret i1 [[OR2]]
 ;
   %c1 = icmp eq i8 %y, 42
