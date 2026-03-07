@@ -969,13 +969,14 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
 CompilerInstance::getOrCreateCASDatabases(DiagnosticsEngine *Diags) {
+  if (CAS && ActionCache)
+    return {CAS, ActionCache};
   if (!Diags)
     Diags = this->Diagnostics.get();
-  // Create a new CAS databases from the CompilerInvocation. Future calls to
-  // createFileManager() will use the same CAS.
+  // Create a new CAS databases from the CompilerInvocation. Future calls will
+  // use the same CAS.
   std::tie(CAS, ActionCache) =
-      getInvocation().getCASOpts().getOrCreateDatabases(
-          *Diags, /*CreateEmptyCASOnFailure=*/true);
+      getCASOpts().createDatabases(*Diags, /*CreateEmptyDBsOnFailure=*/true);
   return {CAS, ActionCache};
 }
 

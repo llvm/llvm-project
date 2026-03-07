@@ -1544,10 +1544,6 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   if (FEOpts.CASIncludeTreeID.empty())
     return BaseFS;
 
-  // If no CAS was provided, create one with CASOptions.
-  if (!CAS)
-    CAS = CASOpts.getOrCreateDatabases(Diags).first;
-
   // Helper for creating a valid (but empty) CAS FS if an error is encountered.
   auto makeEmptyCASFS = [&CAS]() {
     // Try to use the configured CAS, if any.
@@ -1572,6 +1568,8 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   };
 
   // CAS couldn't be created. The error was already reported to Diags.
+  assert((CAS || Diags.hasErrorOccurred()) &&
+         "CAS is missing but not diagnosed");
   if (!CAS)
     return makeEmptyCASFS();
 
