@@ -614,7 +614,8 @@ private:
   template <class _Visitor>
   struct __value_visitor {
     template <class... _Alts>
-    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Alts&&... __alts) const {
+    _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Alts&&... __alts) const
+        -> invoke_result_t<_Visitor&&, decltype((std::forward<_Alts>(__alts).__value))...> {
       __std_visit_exhaustive_visitor_check< _Visitor, decltype((std::forward<_Alts>(__alts).__value))...>();
       return std::__invoke(std::forward<_Visitor>(__visitor), std::forward<_Alts>(__alts).__value...);
     }

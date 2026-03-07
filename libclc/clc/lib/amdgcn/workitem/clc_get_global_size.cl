@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_global_size.h>
+#include "clc/workitem/clc_get_global_size.h"
+#include <amdhsa_abi.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t __clc_get_global_size(uint dim) {
-  switch (dim) {
-  case 0:
-    return __builtin_amdgcn_grid_size_x();
-  case 1:
-    return __builtin_amdgcn_grid_size_y();
-  case 2:
-    return __builtin_amdgcn_grid_size_z();
-  default:
+  if (dim > 2)
     return 1;
-  }
+  __constant amdhsa_implicit_kernarg_v5 *args =
+      (__constant amdhsa_implicit_kernarg_v5 *)
+          __builtin_amdgcn_implicitarg_ptr();
+  return args->block_count[dim] * (uint)args->group_size[dim] +
+         (uint)args->remainder[dim];
 }

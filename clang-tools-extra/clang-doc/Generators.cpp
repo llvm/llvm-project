@@ -53,7 +53,7 @@ Error createFileOpenError(StringRef FileName, std::error_code EC) {
 }
 
 Error MustacheGenerator::setupTemplate(
-    std::unique_ptr<MustacheTemplateFile> &Template, StringRef TemplatePath,
+    OwnedPtr<MustacheTemplateFile> &Template, StringRef TemplatePath,
     std::vector<std::pair<StringRef, StringRef>> Partials) {
   auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
   if (Error Err = T.takeError())
@@ -66,7 +66,7 @@ Error MustacheGenerator::setupTemplate(
 }
 
 Error MustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string DirName) {
   {
     llvm::TimeTraceScope TS("Setup Templates");
