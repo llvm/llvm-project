@@ -1075,9 +1075,7 @@ define i32 @rotr_with_fshr_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p
 ; X86-NEXT:    por %xmm3, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rotr_with_fshr_known_nonzero_vec:
@@ -1099,9 +1097,8 @@ define i32 @rotr_with_fshr_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p
 ; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; X64-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 256, i32 0, i32 0, i32 0>
   %z = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %y)
@@ -1235,9 +1232,7 @@ define i32 @rotl_with_fshl_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p
 ; X86-NEXT:    por %xmm3, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rotl_with_fshl_known_nonzero_vec:
@@ -1257,9 +1252,8 @@ define i32 @rotl_with_fshl_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p
 ; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; X64-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 256, i32 0, i32 0, i32 0>
   %z = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %y)
@@ -2192,9 +2186,7 @@ define i32 @abs_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X86-NEXT:    psubd %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abs_known_nonzero_vec:
@@ -2202,9 +2194,8 @@ define i32 @abs_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpabsd %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %x, i1 0)
@@ -2276,9 +2267,7 @@ define i32 @bswap_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X86-NEXT:    packuswb %xmm2, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: bswap_known_nonzero_vec:
@@ -2286,9 +2275,8 @@ define i32 @bswap_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,u,u,u,u,11,10,9,8,15,14,13,12]
 ; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %x)
@@ -2410,9 +2398,7 @@ define i32 @bitreverse_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X86-NEXT:    por %xmm1, %xmm0
 ; X86-NEXT:    movdqa %xmm0, (%eax)
 ; X86-NEXT:    movd %xmm0, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: bitreverse_known_nonzero_vec:
@@ -2429,9 +2415,8 @@ define i32 @bitreverse_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X64-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vpor %xmm0, %xmm2, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %x)
@@ -2572,9 +2557,7 @@ define i32 @ctpop_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X86-NEXT:    packuswb %xmm2, %xmm1
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ctpop_known_nonzero_vec:
@@ -2595,9 +2578,8 @@ define i32 @ctpop_known_nonzero_vec(<4 x i32> %xx, ptr %p) nounwind {
 ; X64-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %x)
@@ -2742,109 +2724,6 @@ define i32 @sext_maybe_zero(i16 %x) {
   ret i32 %r
 }
 
-define i1 @ctpop_lane0_nonzero() {
-; X86-LABEL: ctpop_lane0_nonzero:
-; X86:       # %bb.0:
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    retl
-;
-; X64-LABEL: ctpop_lane0_nonzero:
-; X64:       # %bb.0:
-; X64-NEXT:    movb $1, %al
-; X64-NEXT:    retq
-  %v0 = insertelement <4 x i8> poison, i8 8, i64 0
-  %w  = call <4 x i8> @llvm.ctpop.v4i8(<4 x i8> %v0)
-  %e0 = extractelement <4 x i8> %w, i64 0
-  %cmp = icmp ne i8 %e0, 0
-  ret i1 %cmp
-}
-
-define i1 @bswap_lane0_nonzero() {
-; X86-LABEL: bswap_lane0_nonzero:
-; X86:       # %bb.0:
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    retl
-;
-; X64-LABEL: bswap_lane0_nonzero:
-; X64:       # %bb.0:
-; X64-NEXT:    movb $1, %al
-; X64-NEXT:    retq
-  %v0 = insertelement <4 x i16> poison, i16 1, i64 0
-  %w  = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> %v0)
-  %e0 = extractelement <4 x i16> %w, i64 0
-  %cmp = icmp ne i16 %e0, 0
-  ret i1 %cmp
-}
-
-define i1 @bitreverse_lane0_nonzero() {
-; X86-LABEL: bitreverse_lane0_nonzero:
-; X86:       # %bb.0:
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    retl
-;
-; X64-LABEL: bitreverse_lane0_nonzero:
-; X64:       # %bb.0:
-; X64-NEXT:    movb $1, %al
-; X64-NEXT:    retq
-  %v0 = insertelement <4 x i8> poison, i8 1, i64 0
-  %w  = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %v0)
-  %e0 = extractelement <4 x i8> %w, i64 0
-  %cmp = icmp ne i8 %e0, 0
-  ret i1 %cmp
-}
-
-define i1 @rotl_lane0_nonzero() {
-; X86-LABEL: rotl_lane0_nonzero:
-; X86:       # %bb.0:
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    retl
-;
-; X64-LABEL: rotl_lane0_nonzero:
-; X64:       # %bb.0:
-; X64-NEXT:    movb $1, %al
-; X64-NEXT:    retq
-  %x  = insertelement <4 x i8> poison, i8 2, i64 0
-  %k  = insertelement <4 x i8> poison, i8 1, i64 0
-  %w  = call <4 x i8> @llvm.fshl.v4i8(<4 x i8> %x, <4 x i8> %x, <4 x i8> %k)
-  %e0 = extractelement <4 x i8> %w, i64 0
-  %cmp = icmp ne i8 %e0, 0
-  ret i1 %cmp
-}
-
-define i1 @rotr_lane0_nonzero() {
-; X86-LABEL: rotr_lane0_nonzero:
-; X86:       # %bb.0:
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    retl
-;
-; X64-LABEL: rotr_lane0_nonzero:
-; X64:       # %bb.0:
-; X64-NEXT:    movb $1, %al
-; X64-NEXT:    retq
-  %x  = insertelement <4 x i8> poison, i8 2, i64 0
-  %k  = insertelement <4 x i8> poison, i8 1, i64 0
-  %w  = call <4 x i8> @llvm.fshr.v4i8(<4 x i8> %x, <4 x i8> %x, <4 x i8> %k)
-  %e0 = extractelement <4 x i8> %w, i64 0
-  %cmp = icmp ne i8 %e0, 0
-  ret i1 %cmp
-}
-
-define i1 @abs_lane0_nonzero() {
-; X86-LABEL: abs_lane0_nonzero:
-; X86:       # %bb.0:
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    retl
-;
-; X64-LABEL: abs_lane0_nonzero:
-; X64:       # %bb.0:
-; X64-NEXT:    movb $1, %al
-; X64-NEXT:    retq
-  %v0 = insertelement <4 x i8> poison, i8 -2, i64 0
-  %w  = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %v0, i1 false)
-  %e0 = extractelement <4 x i8> %w, i64 0
-  %cmp = icmp ne i8 %e0, 0
-  ret i1 %cmp
-}
 define i32 @test_zext_demanded_elts(<4 x i32> %a0, ptr %p) {
 ; X86-LABEL: test_zext_demanded_elts:
 ; X86:       # %bb.0:
