@@ -207,3 +207,4 @@ workitem/get_global_id.cl
 workitem/get_global_linear_id.cl
 workitem/get_global_size.cl
 workitem/get_local_linear_id.cl
+workitem/get_num_groups.cl
