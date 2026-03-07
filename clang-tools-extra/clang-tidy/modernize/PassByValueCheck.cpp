@@ -84,10 +84,11 @@ static TypeMatcher nonConstValueType() {
   return qualType(unless(anyOf(referenceType(), isConstQualified())));
 }
 
-/// Whether or not \p ParamDecl is used exactly one time in \p Ctor.
+/// Whether or not \p ParamDecl is used exactly one time in \p Func.
 ///
-/// Checks both in the init-list and the body of the constructor.
-static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
+/// Checks both in the init-list (for constructors) and the body of the
+/// function.
+static bool paramReferredExactlyOnce(const FunctionDecl *Func,
                                      const ParmVarDecl *ParamDecl) {
   /// \c clang::RecursiveASTVisitor that checks that the given
   /// \c ParmVarDecl is used exactly one time.
@@ -102,11 +103,10 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
         : ParamDecl(ParamDecl) {}
 
     /// Whether or not the parameter variable is referred only once in
-    /// the
-    /// given constructor.
-    bool hasExactlyOneUsageIn(const CXXConstructorDecl *Ctor) {
+    /// the given function.
+    bool hasExactlyOneUsageIn(const FunctionDecl *Func) {
       Count = 0U;
-      TraverseDecl(const_cast<CXXConstructorDecl *>(Ctor));
+      TraverseDecl(const_cast<FunctionDecl *>(Func));
       return Count == 1U;
     }
 
@@ -131,82 +131,82 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     unsigned Count = 0U;
   };
 
-  return ExactlyOneUsageVisitor(ParamDecl).hasExactlyOneUsageIn(Ctor);
+  return ExactlyOneUsageVisitor(ParamDecl).hasExactlyOneUsageIn(Func);
 }
 
-/// Returns true if the given constructor is part of a lvalue/rvalue reference
-/// pair, i.e. `Param` is of lvalue reference type, and there exists another
-/// constructor such that:
-///  - it has the same number of parameters as `Ctor`.
-///  - the parameter at the same index as `Param` is an rvalue reference
-///    of the same pointee type
-///  - all other parameters have the same type as the corresponding parameter in
-///    `Ctor` or are rvalue references with the same pointee type.
+/// Returns true if \p Func has a paired overload where the parameter at the
+/// same index as \p Param is an rvalue reference of the same pointee type.
+///
+/// For constructors, only other constructors of the same class are checked.
+/// For free/member functions, overloads are looked up in the same
+/// DeclContext (namespace or class).
+///
 /// Examples:
+///  void foo(const B& Param)
+///  void foo(B&&)
+///
 ///  A::A(const B& Param)
 ///  A::A(B&&)
-///
-///  A::A(const B& Param, const C&)
-///  A::A(B&& Param, C&&)
-///
-///  A::A(const B&, const C& Param)
-///  A::A(B&&, C&& Param)
-///
-///  A::A(const B&, const C& Param)
-///  A::A(const B&, C&& Param)
-///
-///  A::A(const B& Param, int)
-///  A::A(B&& Param, int)
-static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
+static bool hasRValueOverload(const FunctionDecl *Func,
                               const ParmVarDecl *Param) {
   if (!Param->getType().getCanonicalType()->isLValueReferenceType()) {
     // The parameter is passed by value.
     return false;
   }
   const int ParamIdx = Param->getFunctionScopeIndex();
-  const CXXRecordDecl *Record = Ctor->getParent();
 
-  // Check whether a ctor `C` forms a pair with `Ctor` under the aforementioned
-  // rules.
-  const auto IsRValueOverload = [&Ctor, ParamIdx](const CXXConstructorDecl *C) {
-    if (C == Ctor || C->isDeleted() ||
-        C->getNumParams() != Ctor->getNumParams())
+  // Helper to check whether a candidate function forms an lvalue/rvalue pair.
+  const auto IsRValueOverload = [Func,
+                                 ParamIdx](const FunctionDecl *Candidate) {
+    if (Candidate == Func || Candidate->isDeleted() ||
+        Candidate->getNumParams() != Func->getNumParams())
       return false;
-    for (int I = 0, E = C->getNumParams(); I < E; ++I) {
+    for (int I = 0, E = Candidate->getNumParams(); I < E; ++I) {
       const clang::QualType CandidateParamType =
-          C->parameters()[I]->getType().getCanonicalType();
-      const clang::QualType CtorParamType =
-          Ctor->parameters()[I]->getType().getCanonicalType();
+          Candidate->parameters()[I]->getType().getCanonicalType();
+      const clang::QualType FuncParamType =
+          Func->parameters()[I]->getType().getCanonicalType();
       const bool IsLValueRValuePair =
-          CtorParamType->isLValueReferenceType() &&
+          FuncParamType->isLValueReferenceType() &&
           CandidateParamType->isRValueReferenceType() &&
           CandidateParamType->getPointeeType()->getUnqualifiedDesugaredType() ==
-              CtorParamType->getPointeeType()->getUnqualifiedDesugaredType();
+              FuncParamType->getPointeeType()->getUnqualifiedDesugaredType();
       if (I == ParamIdx) {
         // The parameter of interest must be paired.
         if (!IsLValueRValuePair)
           return false;
       } else {
         // All other parameters can be similar or paired.
-        if (!(CandidateParamType == CtorParamType || IsLValueRValuePair))
+        if (!(CandidateParamType == FuncParamType || IsLValueRValuePair))
           return false;
       }
     }
     return true;
   };
 
-  return llvm::any_of(Record->ctors(), IsRValueOverload);
+  // For constructors, check sibling constructors.
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Func)) {
+    const CXXRecordDecl *Record = Ctor->getParent();
+    return llvm::any_of(Record->ctors(), IsRValueOverload);
+  }
+
+  // For other functions, look up overloads in the same DeclContext.
+  const DeclContext *DC = Func->getDeclContext();
+  const DeclarationName Name = Func->getDeclName();
+  return llvm::any_of(DC->lookup(Name), [IsRValueOverload](const Decl *D) {
+    const auto *FD = dyn_cast<FunctionDecl>(D);
+    return FD && IsRValueOverload(FD);
+  });
 }
 
 /// Find all references to \p ParamDecl across all of the
-/// redeclarations of \p Ctor.
+/// redeclarations of \p Func.
 static SmallVector<const ParmVarDecl *, 2>
-collectParamDecls(const CXXConstructorDecl *Ctor,
-                  const ParmVarDecl *ParamDecl) {
+collectParamDecls(const FunctionDecl *Func, const ParmVarDecl *ParamDecl) {
   SmallVector<const ParmVarDecl *, 2> Results;
   const unsigned ParamIdx = ParamDecl->getFunctionScopeIndex();
 
-  for (const FunctionDecl *Redecl : Ctor->redecls())
+  for (const FunctionDecl *Redecl : Func->redecls())
     Results.push_back(Redecl->getParamDecl(ParamIdx));
   return Results;
 }
@@ -226,6 +226,7 @@ void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
+  // Matcher for constructor member initializer lists (existing behavior).
   Finder->addMatcher(
       traverse(
           TK_AsIs,
@@ -260,6 +261,32 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
                       .bind("Initializer")))
               .bind("Ctor")),
       this);
+
+  // Matcher for function body local variable copies from const-ref parameters.
+  // Matches patterns like:
+  //   void f(const T& param) { T local = param; }
+  if (!ValuesOnly) {
+    Finder->addMatcher(
+        traverse(
+            TK_AsIs,
+            functionDecl(
+                unless(isInstantiated()),
+                hasBody(hasDescendant(
+                    varDecl(
+                        hasLocalStorage(),
+                        hasInitializer(ignoringImplicit(cxxConstructExpr(
+                            hasDeclaration(cxxConstructorDecl(
+                                isCopyConstructor(), unless(isDeleted()))),
+                            hasArgument(
+                                0,
+                                ignoringImplicit(declRefExpr(to(
+                                    parmVarDecl(
+                                        hasType(notTemplateSpecConstRefType()))
+                                        .bind("FuncParam")))))))))
+                        .bind("LocalVar"))))
+                .bind("Func")),
+        this);
+  }
 }
 
 void PassByValueCheck::registerPPCallbacks(const SourceManager &SM,
@@ -268,71 +295,138 @@ void PassByValueCheck::registerPPCallbacks(const SourceManager &SM,
   Inserter.registerPreprocessor(PP);
 }
 
+/// Attempts to rewrite the const-ref parameter declarations to pass-by-value
+/// across all redeclarations. Returns true if fixits were added, false if
+/// rewriting is not possible (e.g. type hidden behind a typedef).
+static bool rewriteParamDeclsToValue(const FunctionDecl *Func,
+                                     const ParmVarDecl *ParamDecl,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts,
+                                     DiagnosticBuilder &Diag) {
+  if (!ParamDecl->getType()->isLValueReferenceType())
+    return true; // Already by value, nothing to rewrite.
+
+  // Check if we can successfully rewrite all declarations.
+  for (const ParmVarDecl *ParmDecl : collectParamDecls(Func, ParamDecl)) {
+    const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
+    auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+    if (RefTL.isNull()) {
+      // We cannot rewrite this instance. The type is probably hidden behind
+      // some `typedef`. Do not offer a fix-it in this case.
+      return false;
+    }
+  }
+  // Rewrite all declarations.
+  for (const ParmVarDecl *ParmDecl : collectParamDecls(Func, ParamDecl)) {
+    const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
+    auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+
+    const TypeLoc ValueTL = RefTL.getPointeeLoc();
+    const CharSourceRange TypeRange = CharSourceRange::getTokenRange(
+        ParmDecl->getBeginLoc(), ParamTL.getEndLoc());
+    std::string ValueStr = Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                                    ValueTL.getSourceRange()),
+                                                SM, LangOpts)
+                               .str();
+    ValueStr += ' ';
+    Diag << FixItHint::CreateReplacement(TypeRange, ValueStr);
+  }
+  return true;
+}
+
 void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("Ctor");
-  const auto *ParamDecl = Result.Nodes.getNodeAs<ParmVarDecl>("Param");
-  const auto *Initializer =
-      Result.Nodes.getNodeAs<CXXCtorInitializer>("Initializer");
   const SourceManager &SM = *Result.SourceManager;
+
+  // Case 1: Constructor member initializer list.
+  if (const auto *Initializer =
+          Result.Nodes.getNodeAs<CXXCtorInitializer>("Initializer")) {
+    const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("Ctor");
+    const auto *ParamDecl = Result.Nodes.getNodeAs<ParmVarDecl>("Param");
+
+    if (IgnoreMacros && ParamDecl->getBeginLoc().isMacroID())
+      return;
+
+    if (!paramReferredExactlyOnce(Ctor, ParamDecl))
+      return;
+
+    if (ParamDecl->getType().getNonReferenceType().isTriviallyCopyableType(
+            *Result.Context))
+      return;
+
+    if (hasRValueOverload(Ctor, ParamDecl))
+      return;
+
+    auto Diag =
+        diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
+
+    if (!rewriteParamDeclsToValue(Ctor, ParamDecl, SM, getLangOpts(), Diag))
+      return;
+
+    // Use std::move in the initialization list.
+    Diag << FixItHint::CreateInsertion(Initializer->getRParenLoc(), ")")
+         << FixItHint::CreateInsertion(
+                Initializer->getLParenLoc().getLocWithOffset(1), "std::move(")
+         << Inserter.createIncludeInsertion(
+                Result.SourceManager->getFileID(
+                    Initializer->getSourceLocation()),
+                "<utility>");
+    return;
+  }
+
+  // Case 2: Function body local variable copy.
+  const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("Func");
+  const auto *ParamDecl = Result.Nodes.getNodeAs<ParmVarDecl>("FuncParam");
+  const auto *LocalVar = Result.Nodes.getNodeAs<VarDecl>("LocalVar");
+  if (!Func || !ParamDecl || !LocalVar)
+    return;
 
   if (IgnoreMacros && ParamDecl->getBeginLoc().isMacroID())
     return;
 
-  // If the parameter is used or anything other than the copy, do not apply
-  // the changes.
-  if (!paramReferredExactlyOnce(Ctor, ParamDecl))
+  if (!paramReferredExactlyOnce(Func, ParamDecl))
     return;
 
-  // If the parameter is trivial to copy, don't move it. Moving a trivially
-  // copyable type will cause a problem with performance-move-const-arg
   if (ParamDecl->getType().getNonReferenceType().isTriviallyCopyableType(
           *Result.Context))
     return;
 
-  // Do not trigger if we find a paired constructor with an rvalue.
-  if (hasRValueOverload(Ctor, ParamDecl))
+  if (hasRValueOverload(Func, ParamDecl))
+    return;
+
+  // Check that the copied type has a usable move constructor.
+  const QualType LocalType = LocalVar->getType().getCanonicalType();
+  const CXXRecordDecl *Record = LocalType->getAsCXXRecordDecl();
+  if (!Record || !Record->hasDefinition())
+    return;
+  bool HasUsableMove = false;
+  for (const CXXConstructorDecl *Ctor : Record->ctors())
+    if (Ctor->isMoveConstructor() && !Ctor->isDeleted()) {
+      HasUsableMove = true;
+      break;
+    }
+  if (!HasUsableMove && !Record->needsImplicitMoveConstructor())
     return;
 
   auto Diag = diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
 
-  // If we received a `const&` type, we need to rewrite the function
-  // declarations.
-  if (ParamDecl->getType()->isLValueReferenceType()) {
-    // Check if we can succesfully rewrite all declarations of the constructor.
-    for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
-      const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
-      if (RefTL.isNull()) {
-        // We cannot rewrite this instance. The type is probably hidden behind
-        // some `typedef`. Do not offer a fix-it in this case.
-        return;
-      }
-    }
-    // Rewrite all declarations.
-    for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
-      const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+  if (!rewriteParamDeclsToValue(Func, ParamDecl, SM, getLangOpts(), Diag))
+    return;
 
-      const TypeLoc ValueTL = RefTL.getPointeeLoc();
-      const CharSourceRange TypeRange = CharSourceRange::getTokenRange(
-          ParmDecl->getBeginLoc(), ParamTL.getEndLoc());
-      std::string ValueStr =
-          Lexer::getSourceText(
-              CharSourceRange::getTokenRange(ValueTL.getSourceRange()), SM,
-              getLangOpts())
-              .str();
-      ValueStr += ' ';
-      Diag << FixItHint::CreateReplacement(TypeRange, ValueStr);
+  // Wrap the initializer with std::move().
+  const Expr *Init = LocalVar->getInit()->IgnoreImplicit();
+  if (const auto *Construct = dyn_cast<CXXConstructExpr>(Init)) {
+    if (Construct->getNumArgs() > 0) {
+      const Expr *Arg = Construct->getArg(0)->IgnoreImplicit();
+      Diag << FixItHint::CreateInsertion(Arg->getBeginLoc(), "std::move(")
+           << FixItHint::CreateInsertion(
+                  Lexer::getLocForEndOfToken(Arg->getEndLoc(), 0, SM,
+                                             getLangOpts()),
+                  ")");
     }
   }
 
-  // Use std::move in the initialization list.
-  Diag << FixItHint::CreateInsertion(Initializer->getRParenLoc(), ")")
-       << FixItHint::CreateInsertion(
-              Initializer->getLParenLoc().getLocWithOffset(1), "std::move(")
-       << Inserter.createIncludeInsertion(
-              Result.SourceManager->getFileID(Initializer->getSourceLocation()),
-              "<utility>");
+  Diag << Inserter.createIncludeInsertion(
+      Result.SourceManager->getFileID(LocalVar->getLocation()), "<utility>");
 }
 
 } // namespace clang::tidy::modernize
