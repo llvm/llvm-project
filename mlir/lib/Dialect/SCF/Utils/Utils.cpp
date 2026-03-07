@@ -1351,6 +1351,15 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
 
+  // The strip-mining transformation splices loop bodies into a new inner loop
+  // without threading iter_args.  If any of the collected loops carries
+  // iter_args, the splice would produce invalid IR (yielded values from the
+  // inner scope used in the outer terminator).  Skip the transformation in
+  // that case.
+  if (llvm::any_of(forOps,
+                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
+    return {};
+
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes
   //   numIterations = ceildiv((upperBound - lowerBound), step)
