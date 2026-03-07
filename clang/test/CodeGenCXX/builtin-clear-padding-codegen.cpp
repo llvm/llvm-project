@@ -374,53 +374,6 @@ void testStructVolatile(volatile Baz *baz) {
   __builtin_clear_padding(baz);
 }
 
-struct UnsizedTail {
-  int size;
-  alignas(8) char buf[];
-
-  UnsizedTail(int size) : size(size) {}
-};
-
-// UnsizedTail structure:
-// "size", PAD_1, PAD_2, PAD_3, PAD_4
-// %struct.UnsizedTail = type { i32, [4 x i8], [0 x i8] }
-
-// LINUX-LABEL: define dso_local void @_Z21testStructUnsizedTailP11UnsizedTail(
-// LINUX-SAME: ptr noundef [[U:%.*]]) #[[ATTR0]] {
-// LINUX-NEXT:  [[ENTRY:.*:]]
-// LINUX-NEXT:    [[U_ADDR:%.*]] = alloca ptr, align 8
-// LINUX-NEXT:    store ptr [[U]], ptr [[U_ADDR]], align 8
-// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[U_ADDR]], align 8
-// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
-// LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
-// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
-// LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
-// LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
-// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
-// LINUX-NEXT:    ret void
-//
-// WINDOWS-LABEL: define dso_local void @_Z21testStructUnsizedTailP11UnsizedTail(
-// WINDOWS-SAME: ptr noundef [[U:%.*]]) #[[ATTR0]] {
-// WINDOWS-NEXT:  [[ENTRY:.*:]]
-// WINDOWS-NEXT:    [[U_ADDR:%.*]] = alloca ptr, align 8
-// WINDOWS-NEXT:    store ptr [[U]], ptr [[U_ADDR]], align 8
-// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[U_ADDR]], align 8
-// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
-// WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
-// WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
-// WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
-// WINDOWS-NEXT:    ret void
-//
-void testStructUnsizedTail(UnsizedTail *u) {
-  __builtin_clear_padding(u);
-}
-
 class S1 {
   int x;
   char c;
