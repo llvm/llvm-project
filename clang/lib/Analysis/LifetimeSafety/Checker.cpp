@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -55,7 +56,8 @@ struct PendingWarning {
 
 using AnnotationTarget =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-using EscapingTarget = llvm::PointerUnion<const Expr *, const FieldDecl *>;
+using EscapingTarget =
+    llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
 
 class LifetimeChecker {
 private:
@@ -109,6 +111,8 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
           NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
         return;
       }
       // Suggest lifetimebound for parameter escaping through return.
@@ -270,6 +274,9 @@ public:
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
+        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+          SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
+                                           MovedExpr, ExpiryLoc);
         else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
@@ -342,6 +349,8 @@ public:
         SemaHelper->reportNoescapeViolation(PVD, E);
       else if (const auto *FD = EscapeTarget.dyn_cast<const FieldDecl *>())
         SemaHelper->reportNoescapeViolation(PVD, FD);
+      else if (const auto *G = EscapeTarget.dyn_cast<const VarDecl *>())
+        SemaHelper->reportNoescapeViolation(PVD, G);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }
