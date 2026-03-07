@@ -3195,6 +3195,8 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
 
   InstantiateAttrs(TemplateArgs, OldParm, NewParm);
 
+  NewParm->deduceParmAddressSpace(Context);
+
   return NewParm;
 }
 

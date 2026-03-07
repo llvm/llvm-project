@@ -4305,14 +4305,13 @@ void CodeGenFunction::EmitCfiCheckStub() {
   ASTContext &C = getContext();
   QualType QInt64Ty = C.getIntTypeForBitwidth(64, false);
 
-  FunctionArgList FnArgs;
-  ImplicitParamDecl ArgCallsiteTypeId(C, QInt64Ty, ImplicitParamKind::Other);
-  ImplicitParamDecl ArgAddr(C, C.VoidPtrTy, ImplicitParamKind::Other);
-  ImplicitParamDecl ArgCFICheckFailData(C, C.VoidPtrTy,
-                                        ImplicitParamKind::Other);
-  FnArgs.push_back(&ArgCallsiteTypeId);
-  FnArgs.push_back(&ArgAddr);
-  FnArgs.push_back(&ArgCFICheckFailData);
+  auto *ArgCallsiteTypeId =
+      ImplicitParamDecl::Create(C, QInt64Ty, ImplicitParamKind::Other);
+  auto *ArgAddr =
+      ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  auto *ArgCFICheckFailData =
+      ImplicitParamDecl::Create(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  FunctionArgList FnArgs{ArgCallsiteTypeId, ArgAddr, ArgCFICheckFailData};
   const CGFunctionInfo &FI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, FnArgs);
 
@@ -4351,14 +4350,12 @@ void CodeGenFunction::EmitCfiCheckFail() {
        SanitizerKind::SO_CFIDerivedCast, SanitizerKind::SO_CFIUnrelatedCast,
        SanitizerKind::SO_CFIICall},
       CheckHandler);
-  FunctionArgList Args;
-  ImplicitParamDecl ArgData(getContext(), getContext().VoidPtrTy,
-                            ImplicitParamKind::Other);
-  ImplicitParamDecl ArgAddr(getContext(), getContext().VoidPtrTy,
-                            ImplicitParamKind::Other);
-  Args.push_back(&ArgData);
-  Args.push_back(&ArgAddr);
+  auto *ArgData = ImplicitParamDecl::Create(
+      getContext(), getContext().VoidPtrTy, ImplicitParamKind::Other);
+  auto *ArgAddr = ImplicitParamDecl::Create(
+      getContext(), getContext().VoidPtrTy, ImplicitParamKind::Other);
 
+  FunctionArgList Args{ArgData, ArgAddr};
   const CGFunctionInfo &FI =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(getContext().VoidTy, Args);
 
@@ -4381,11 +4378,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
   SanOpts = CGM.getLangOpts().Sanitize;
 
   llvm::Value *Data =
-      EmitLoadOfScalar(GetAddrOfLocalVar(&ArgData), /*Volatile=*/false,
-                       CGM.getContext().VoidPtrTy, ArgData.getLocation());
+      EmitLoadOfScalar(GetAddrOfLocalVar(ArgData), /*Volatile=*/false,
+                       CGM.getContext().VoidPtrTy, ArgData->getLocation());
   llvm::Value *Addr =
-      EmitLoadOfScalar(GetAddrOfLocalVar(&ArgAddr), /*Volatile=*/false,
-                       CGM.getContext().VoidPtrTy, ArgAddr.getLocation());
+      EmitLoadOfScalar(GetAddrOfLocalVar(ArgAddr), /*Volatile=*/false,
+                       CGM.getContext().VoidPtrTy, ArgAddr->getLocation());
 
   // Data == nullptr means the calling module has trap behaviour for this check.
   llvm::Value *DataIsNotNullPtr =
