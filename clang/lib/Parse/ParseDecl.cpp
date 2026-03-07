@@ -3430,6 +3430,14 @@ void Parser::ParseDeclarationSpecifiers(
       else {
         // Reject C++11 / C23 attributes that aren't type attributes.
         for (const ParsedAttr &PA : attrs) {
+          // We do not allow annotations as part of parsing the
+          // declaration-specifier of an alias-declaraion.
+          if (PA.isCXX26Annotation() &&
+              DSContext == DeclSpecContext::DSC_alias_declaration) {
+            Diag(Tok, diag::err_annotation_used_on) << 0 /* defining-type-id */;
+            PA.setInvalid();
+            continue;
+          }
           if (!PA.isCXX11Attribute() && !PA.isC23Attribute() &&
               !PA.isRegularKeywordAttribute())
             continue;

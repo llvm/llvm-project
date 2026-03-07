@@ -34,6 +34,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -147,6 +148,41 @@ static void instantiateDependentAlignedAttr(
       instantiateDependentAlignedAttr(S, TemplateArgs, Aligned, New, false);
     }
   }
+}
+
+static void instantiateCxx26AnnotationAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const CXX26AnnotationAttr *CXX26AnnotationAttr, Decl *New) {
+  Expr *CE = CXX26AnnotationAttr->getArg();
+  ExprResult Result = S.SubstExpr(CE, TemplateArgs);
+  if (Result.isInvalid())
+    return;
+
+  CE = Result.get();
+  if (CE->getType()->isRecordType()) {
+    InitializedEntity Entity = InitializedEntity::InitializeTemporary(
+        CE->getType().getUnqualifiedType());
+    InitializationKind Kind =
+        InitializationKind::CreateCopy(CE->getExprLoc(), SourceLocation());
+    InitializationSequence Seq(S, Entity, Kind, CE);
+
+    ExprResult CopyResult = Seq.Perform(S, Entity, Kind, CE);
+    if (CopyResult.isInvalid()) {
+      return;
+    }
+
+    CE = CopyResult.get();
+  }
+
+  Expr::EvalResult V;
+  if (!CE->EvaluateAsRValue(V, S.getASTContext(), true))
+    llvm_unreachable("failed to evaluate annotation expression");
+
+  auto *Annot =
+      CXX26AnnotationAttr::Create(S.Context, CE, *CXX26AnnotationAttr);
+  Annot->setEqLoc(CXX26AnnotationAttr->getEqLoc());
+  Annot->setValue(V.Val);
+  New->addAttr(Annot);
 }
 
 static void instantiateDependentAssumeAlignedAttr(
@@ -863,6 +899,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     const AlignedAttr *Aligned = dyn_cast<AlignedAttr>(TmplAttr);
     if (Aligned && Aligned->isAlignmentDependent()) {
       instantiateDependentAlignedAttr(*this, TemplateArgs, Aligned, New);
+      continue;
+    }
+
+    if (const auto *Cxx26Annotation = dyn_cast<CXX26AnnotationAttr>(TmplAttr)) {
+      instantiateCxx26AnnotationAttr(*this, TemplateArgs, Cxx26Annotation, New);
       continue;
     }
 

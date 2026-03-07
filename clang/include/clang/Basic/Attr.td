@@ -935,6 +935,28 @@ def AlwaysInline : DeclOrStmtAttr {
   let Documentation = [AlwaysInlineDocs];
 }
 
+def CXX26Annotation : InheritableParamAttr {
+  let Spellings = [];
+  let Args = [ExprArgument<"Arg">];
+  let AdditionalMembers = [{
+private:
+  APValue Value;
+  SourceLocation EqLoc;
+
+public:
+
+  const APValue & getValue() const { return Value; }
+  void setValue(APValue V) { Value = V; }
+
+  SourceLocation getEqLoc() const { return EqLoc; }
+  void setEqLoc(SourceLocation Loc) { EqLoc = Loc; }
+  }];
+  let HasCustomParsing = 1;
+  let TemplateDependent = 1;
+  let MeaningfulToClassTemplateDefinition = 1;
+  let Documentation = [InternalOnly];
+}
+
 def Artificial : InheritableAttr {
   let Spellings = [GCC<"artificial">];
   let Subjects = SubjectList<[InlineFunction]>;
