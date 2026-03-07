@@ -188,6 +188,9 @@ private:
   bool selectBitreverse(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
 
+  bool selectBitreverse16(Register ResVReg, SPIRVTypeInst ResType,
+                          MachineInstr &I) const;
+
   bool selectBuildVector(Register ResVReg, SPIRVTypeInst ResType,
                          MachineInstr &I) const;
   bool selectSplatVector(Register ResVReg, SPIRVTypeInst ResType,
@@ -3078,9 +3081,58 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
   return true;
 }
 
+bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
+                                                  SPIRVTypeInst ResType,
+                                                  MachineInstr &I) const {
+  SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  Register ScalarShiftAmount = GR.getOrCreateConstInt(16, I, Int32Type, TII);
+
+  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+  if (N > 1)
+    Int32Type = GR.getOrCreateSPIRVVectorType(Int32Type, N, I, TII);
+
+  Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
+  unsigned ExtendOpcode = GR.isScalarOrVectorSigned(ResType)
+                              ? SPIRV::OpSConvert
+                              : SPIRV::OpUConvert;
+  if (!selectOpWithSrcs(ExtReg, Int32Type, I, {I.getOperand(1).getReg()},
+                        ExtendOpcode))
+    return false;
+
+  Register BitrevReg = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
+  if (!selectOpWithSrcs(BitrevReg, Int32Type, I, {ExtReg}, SPIRV::OpBitReverse))
+    return false;
+
+  Register ShiftConst;
+  if (N > 1) {
+    ShiftConst = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpConstantComposite))
+                   .addDef(ShiftConst)
+                   .addUse(GR.getSPIRVTypeID(Int32Type));
+    for (unsigned It = 0; It < N; ++It)
+      MIB.addUse(ScalarShiftAmount);
+    MIB.constrainAllUses(TII, TRI, RBI);
+  } else {
+    ShiftConst = ScalarShiftAmount;
+  }
+
+  Register ShiftReg = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
+  if (!selectOpWithSrcs(ShiftReg, Int32Type, I, {BitrevReg, ShiftConst},
+                        N > 1 ? SPIRV::OpShiftRightLogicalV
+                              : SPIRV::OpShiftRightLogicalS))
+    return false;
+
+  return selectOpWithSrcs(ResVReg, ResType, I, {ShiftReg}, ExtendOpcode);
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I) const {
+  if (GR.getScalarOrVectorBitWidth(ResType) == 16) {
+    return selectBitreverse16(ResVReg, ResType, I);
+  }
+
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpBitReverse))
       .addDef(ResVReg)
