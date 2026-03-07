@@ -1007,11 +1007,11 @@ define void @or_disjoint_signed(ptr %x_p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[IV]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1045,11 +1045,11 @@ define void @or_disjoint_unsigned(ptr %x_p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_OP]]
-; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1083,11 +1083,11 @@ define void @or_no_disjoint_neg(ptr %x_p) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ARITH:%.*]] = or i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[ARITH]], 100
-; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1099,6 +1099,230 @@ loop:
   %iv = phi i32 [0, %entry], [%iv.next, %backedge]
   %arith = or i32 %iv, %x
   %x_check = icmp slt i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @add_eq(ptr %x_p) {
+; CHECK-LABEL: define void @add_eq
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i32 100, [[X]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp eq i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = add i32 %iv, %x
+  %x_check = icmp eq i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @sub_lv_c_ne(ptr %x_p) {
+; CHECK-LABEL: define void @sub_lv_c_ne
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i32 [[X]], 100
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ne i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[BACKEDGE]], label [[EXIT:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = sub i32 %iv, %x
+  %x_check = icmp ne i32 %arith, 100
+  br i1 %x_check, label %backedge, label %exit
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @sub_c_lv_eq(ptr %x_p) {
+; CHECK-LABEL: define void @sub_c_lv_eq
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i32 [[X]], 100
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp eq i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = sub i32 %x, %iv
+  %x_check = icmp eq i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @or_disjoint_eq(ptr %x_p) {
+; CHECK-LABEL: define void @or_disjoint_eq
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub i32 100, [[X]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp eq i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = or disjoint i32 %iv, %x
+  %x_check = icmp eq i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Negative: plain add (no nsw) with slt should not hoist
+define void @add_no_flags_slt_neg(ptr %x_p) {
+; CHECK-LABEL: define void @add_no_flags_slt_neg
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ARITH:%.*]] = add i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[ARITH]], 100
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = add i32 %iv, %x
+  %x_check = icmp slt i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Negative: plain sub (no nuw) with ult should not hoist
+define void @sub_no_flags_ult_neg(ptr %x_p) {
+; CHECK-LABEL: define void @sub_no_flags_ult_neg
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ARITH:%.*]] = sub i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ult i32 [[ARITH]], 100
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = sub i32 %iv, %x
+  %x_check = icmp ult i32 %arith, 100
   br i1 %x_check, label %exit, label %backedge
 
 backedge:
