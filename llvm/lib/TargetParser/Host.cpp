@@ -2085,6 +2085,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
                       !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
   // AMD cpuid bit for prefetchi is different from Intel
   Features["prefetchi"] = HasExtLeaf21 && ((EAX >> 20) & 1);
+  Features["avx512bmm"] = HasExtLeaf21 && ((EAX >> 23) & 1) && HasAVX512Save;
 
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);

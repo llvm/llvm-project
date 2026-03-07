@@ -248,6 +248,7 @@ X86_FEATURE_COMPAT(AMX_TF32,           "amx-tf32",               0, 118)
 X86_FEATURE_COMPAT(AMX_FP8,            "amx-fp8",                0, 120)
 X86_FEATURE_COMPAT(MOVRS,              "movrs",                  0, 121)
 X86_FEATURE_COMPAT(AMX_MOVRS,          "amx-movrs",              0, 122)
+X86_FEATURE_COMPAT(AVX512BMM,          "avx512bmm",              0, 123)
 
 // Features we don't multiversion on.
 X86_FEATURE       (NF,                 "nf")

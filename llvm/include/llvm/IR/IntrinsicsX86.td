@@ -7341,4 +7341,22 @@ def int_x86_movrsdi : ClangBuiltin<"__builtin_ia32_movrsdi">,
                   [IntrReadMem]>;
 def int_x86_prefetchrs : ClangBuiltin<"__builtin_ia32_prefetchrs">,
         Intrinsic<[], [llvm_ptr_ty], []>;
+
+//===----------------------------------------------------------------------===//
+// BMM intrinsics
+
+def int_x86_avx512_vbmacor_v16hi :
+  DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_v16i16_ty, llvm_v16i16_ty],
+                        [IntrNoMem]>;
+def int_x86_avx512_vbmacor_v32hi :
+  DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty, llvm_v32i16_ty],
+                        [IntrNoMem]>;
+
+def int_x86_avx512_vbmacxor_v16hi :
+  DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16i16_ty, llvm_v16i16_ty, llvm_v16i16_ty],
+                        [IntrNoMem]>;
+def int_x86_avx512_vbmacxor_v32hi :
+  DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32i16_ty, llvm_v32i16_ty, llvm_v32i16_ty],
+                        [IntrNoMem]>;
 }
+//===----------------------------------------------------------------------===//

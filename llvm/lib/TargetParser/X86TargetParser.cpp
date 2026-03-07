@@ -257,7 +257,7 @@ static constexpr FeatureBitset FeaturesZNVER5 =
 
 static constexpr FeatureBitset FeaturesZNVER6 =
     FeaturesZNVER5 | FeatureAVXVNNIINT8 | FeatureAVX512FP16 | FeatureAVXIFMA |
-    FeatureAVXNECONVERT;
+    FeatureAVXNECONVERT | FeatureAVX512BMM;
 
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
@@ -596,6 +596,7 @@ constexpr FeatureBitset ImpliedFeaturesAVX512VL = FeatureAVX512F;
 
 constexpr FeatureBitset ImpliedFeaturesAVX512BF16 = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512BITALG = FeatureAVX512BW;
+constexpr FeatureBitset ImpliedFeaturesAVX512BMM = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512IFMA = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VNNI = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VPOPCNTDQ = FeatureAVX512F;

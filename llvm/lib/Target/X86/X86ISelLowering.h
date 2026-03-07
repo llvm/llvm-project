@@ -1002,6 +1002,10 @@ namespace llvm {
     AESENCWIDE256KL,
     AESDECWIDE256KL,
 
+    // BMM Instructions
+    VBMACOR,
+    VBMACXOR,
+
     /// Compare and Add if Condition is Met. Compare value in operand 2 with
     /// value in memory of operand 1. If condition of operand 4 is met, add
     /// value operand 3 to m32 and write new value in operand 1. Operand 2 is
