@@ -172,12 +172,25 @@ def skipTestIfFn(expected_fn, bugnumber=None):
         return skipTestIfFn_impl
 
 
-def _xfailForDebugInfo(expected_fn, bugnumber=None):
+def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as expected-failure for a specific variant dimension.
+
+    Attaches *expected_fn* to the decorated function as the attribute
+    `__xfail_for_<variant_name>_fn__`.  During test expansion in
+    `LLDBTestCaseFactory`, the metaclass calls this function with the
+    concrete variant value; if it returns a truthy reason string the
+    expanded copy is wrapped with `unittest.expectedFailure`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def expectedFailure_impl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
-
-        func.__xfail_for_debug_info_cat_fn__ = expected_fn
+        setattr(func, f"__xfail_for_{variant_name}_fn__", expected_fn)
         return func
 
     if callable(bugnumber):
@@ -186,12 +199,25 @@ def _xfailForDebugInfo(expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
-def _skipForDebugInfo(expected_fn, bugnumber=None):
+def _skipForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as skipped for a specific variant dimension.
+
+    Attaches *expected_fn* to the decorated function as the attribute
+    `__skip_for_<variant_name>_fn__`.  During test expansion in
+    `LLDBTestCaseFactory`, the metaclass calls this function with the
+    concrete variant value; if it returns a truthy reason string the
+    expanded copy is wrapped with `unittest.skip(reason)`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def skipImpl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
-
-        func.__skip_for_debug_info_cat_fn__ = expected_fn
+        setattr(func, f"__skip_for_{variant_name}_fn__", expected_fn)
         return func
 
     if callable(bugnumber):
@@ -218,7 +244,7 @@ def _decorateTest(
     setting=None,
     asan=None,
 ):
-    def fn(actual_debug_info=None):
+    def fn(**actual_variants):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), lldbplatformutil.getPlatform()
         )
@@ -231,7 +257,9 @@ def _decorateTest(
         skip_for_arch = _match_decorator_property(
             archs, lldbplatformutil.getArchitecture()
         )
-        skip_for_debug_info = _match_decorator_property(debug_info, actual_debug_info)
+        skip_for_debug_info = _match_decorator_property(
+            debug_info, actual_variants.get("debug_info")
+        )
         skip_for_triple = _match_decorator_property(
             triple, lldb.selected_platform.GetTriple()
         )
@@ -311,11 +339,11 @@ def _decorateTest(
 
     if mode == DecorateMode.Skip:
         if debug_info:
-            return _skipForDebugInfo(fn, bugnumber)
+            return _skipForVariant("debug_info", fn, bugnumber)
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
         if debug_info:
-            return _xfailForDebugInfo(fn, bugnumber)
+            return _xfailForVariant("debug_info", fn, bugnumber)
         return expectedFailureIf(fn(), bugnumber)
     else:
         return None
