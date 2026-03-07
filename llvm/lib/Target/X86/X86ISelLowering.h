@@ -118,6 +118,10 @@ namespace llvm {
     /// X86 Select
     SELECTS,
 
+    /// X86 Constant-time Select, implemented with CMOV instruction. This is
+    /// used to implement constant-time select.
+    CT_SELECT,
+
     // Same as SETCC except it's materialized with a sbb and the value is all
     // one's or all zero's.
     SETCC_CARRY, // R = carry_bit ? ~0 : 0
@@ -1173,6 +1177,8 @@ namespace llvm {
     ///
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+    bool isSelectSupported(SelectSupportKind Kind) const override;
+
     /// Replace the results of node with an illegal result
     /// type with new values built out of custom code.
     ///
@@ -1803,6 +1809,7 @@ namespace llvm {
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCT_SELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerConditionalBranch(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;

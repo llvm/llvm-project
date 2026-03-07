@@ -1,0 +1,2994 @@
+diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp b/llvm/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp
+index 81f992678626..fb25ab82a452 100644
+--- a/llvm/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/LegalizeDAG.cpp
+@@ -4369,14 +4369,39 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
+                                                 Node->getFlags()));
+     } else {
+       assert(VT.isInteger());
+-      EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
+-      auto [Tmp2Lo, Tmp2Hi] = DAG.SplitScalar(Tmp2, dl, HalfVT, HalfVT);
+-      auto [Tmp3Lo, Tmp3Hi] = DAG.SplitScalar(Tmp3, dl, HalfVT, HalfVT);
+-      SDValue ResLo =
+-          DAG.getCTSelect(dl, HalfVT, Tmp1, Tmp2Lo, Tmp3Lo, Node->getFlags());
+-      SDValue ResHi =
+-          DAG.getCTSelect(dl, HalfVT, Tmp1, Tmp2Hi, Tmp3Hi, Node->getFlags());
+-      Tmp1 = DAG.getNode(ISD::BUILD_PAIR, dl, VT, ResLo, ResHi);
++      // Expand scalar integer CT_SELECT to constant-time bitwise operations:
++      //   Mask = 0 - (Cond & 1)      // all-ones or all-zeros
++      //   Result = F ^ ((T ^ F) & Mask)
++      //
++      // By expanding here (during legalization) rather than in
++      // SelectionDAGBuilder, the SETCC feeding the condition has already been
++      // legalized. This prevents visitSIGN_EXTEND in the post-legalization
++      // DAGCombiner from matching sext(setcc) -> select(setcc, -1, 0), which
++      // would convert the constant-time pattern back into a data-dependent
++      // conditional move.
++      //
++      // Note: We cannot use SIGN_EXTEND here because type legalization has
++      // already promoted the i1 condition to the target's SetCC type (e.g.
++      // i32 on MIPS). SIGN_EXTEND(i32, i32) would be a no-op, leaving the
++      // mask as 0/1 instead of 0/-1. Instead, we isolate the low bit and
++      // negate to create a proper all-bits mask. This handles all boolean
++      // content types (ZeroOrOne, ZeroOrNegativeOne, Undefined).
++      SDValue T = Tmp2;
++      SDValue F = Tmp3;
++      // Widen the condition to match VT if needed. Type legalization may
++      // promote the i1 condition to a narrower type than VT (e.g. i32
++      // SetCC result with i64 operands on MIPS64). ANY_EXTEND is safe
++      // because we immediately mask to the low bit.
++      SDValue Cond = Tmp1;
++      if (Cond.getValueType() != VT)
++        Cond = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Cond);
++      SDValue One = DAG.getConstant(1, dl, VT);
++      SDValue Bit = DAG.getNode(ISD::AND, dl, VT, Cond, One);
++      SDValue Zero = DAG.getConstant(0, dl, VT);
++      SDValue Mask = DAG.getNode(ISD::SUB, dl, VT, Zero, Bit);
++      SDValue XorTF = DAG.getNode(ISD::XOR, dl, VT, T, F);
++      SDValue MaskedDiff = DAG.getNode(ISD::AND, dl, VT, XorTF, Mask);
++      Tmp1 = DAG.getNode(ISD::XOR, dl, VT, F, MaskedDiff);
+       Tmp1->setFlags(Node->getFlags());
+     }
+     Results.push_back(Tmp1);
+diff --git a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+index 156d82e96b2a..1c68822563ed 100644
+--- a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+@@ -6872,9 +6872,41 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
+     // assert if Cond type is Vector
+     assert(!CondVT.isVector() && "Vector type cond not supported yet");
+ 
+-    // Handle scalar types
+-    if (TLI.isOperationLegalOrCustom(ISD::CT_SELECT, VT) &&
+-        !CondVT.isVector()) {
++    // Decide whether to create a CT_SELECT DAG node or use the inline
++    // fallback expansion. CT_SELECT nodes are protected by visitCT_SELECT
++    // in DAGCombiner from unsafe folds (e.g. sext(setcc) -> select) that
++    // break constant-time guarantees.
++    //
++    // We create CT_SELECT when:
++    //  1. Target has Legal/Custom support for this type.
++    //  2. Scalar integer types — type legalization splits wide types (e.g.
++    //     i64 on 32-bit targets) before operation legalization expands to
++    //     AND/OR/XOR.
++    //  3. Scalar float types where the integer equivalent is legal — the
++    //     expansion bitcasts to integer for bitwise ops.
++    //
++    // We use the inline fallback when:
++    //  - Vector types without target support (Expand) — the legalization
++    //    expansion uses getSplatBuildVector + SIGN_EXTEND of vector i1
++    //    which not all targets support.
++    //  - Float types where the integer equivalent is illegal (e.g. f64 on
++    //    i386 maps to i64, which is illegal). The expansion creates new
++    //    nodes during operation legalization that can't be further
++    //    type-legalized. The inline fallback runs before type legalization
++    //    so the i64 ops get properly split.
++    bool CreateNode;
++    if (TLI.isOperationLegalOrCustom(ISD::CT_SELECT, VT)) {
++      CreateNode = true;
++    } else if (VT.isVector()) {
++      CreateNode = false;
++    } else if (VT.isFloatingPoint()) {
++      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
++      CreateNode = TLI.isTypeLegal(IntVT);
++    } else {
++      CreateNode = true; // Scalar integer — always safe
++    }
++
++    if (CreateNode) {
+       SDValue Result = DAG.getNode(ISD::CT_SELECT, DL, VT, Cond, A, B);
+       setValue(&I, Result);
+       return;
+diff --git a/llvm/test/CodeGen/Mips/ctselect-fallback-edge-cases.ll b/llvm/test/CodeGen/Mips/ctselect-fallback-edge-cases.ll
+index f1831a625d4a..401a742c27ea 100644
+--- a/llvm/test/CodeGen/Mips/ctselect-fallback-edge-cases.ll
++++ b/llvm/test/CodeGen/Mips/ctselect-fallback-edge-cases.ll
+@@ -8,22 +8,24 @@
+ define i1 @test_ctselect_i1(i1 %cond, i1 %a, i1 %b) {
+ ; M32-LABEL: test_ctselect_i1:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    xori $2, $4, 1
+-; M32-NEXT:    and $1, $4, $5
+-; M32-NEXT:    and $2, $2, $6
++; M32-NEXT:    andi $2, $4, 1
++; M32-NEXT:    xor $1, $5, $6
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $1, $2
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_i1:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    sll $1, $6, 0
+-; M64-NEXT:    xori $2, $2, 1
+-; M64-NEXT:    and $1, $2, $1
+-; M64-NEXT:    and $2, $4, $5
++; M64-NEXT:    sll $1, $4, 0
++; M64-NEXT:    xor $2, $5, $6
++; M64-NEXT:    andi $1, $1, 1
+ ; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $6, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %result = call i1 @llvm.ct.select.i1(i1 %cond, i1 %a, i1 %b)
+   ret i1 %result
+ }
+@@ -32,30 +34,18 @@ define i1 @test_ctselect_i1(i1 %cond, i1 %a, i1 %b) {
+ define i32 @test_ctselect_extremal_values(i1 %cond) {
+ ; M32-LABEL: test_ctselect_extremal_values:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    lui $3, 32767
+ ; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    ori $3, $3, 65535
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $3
+-; M32-NEXT:    lui $3, 32768
+-; M32-NEXT:    and $1, $1, $3
++; M32-NEXT:    lui $2, 32768
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    subu $2, $2, $1
+ ;
+ ; M64-LABEL: test_ctselect_extremal_values:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    lui $3, 32767
++; M64-NEXT:    lui $2, 32768
+ ; M64-NEXT:    andi $1, $1, 1
+-; M64-NEXT:    ori $3, $3, 65535
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    lui $3, 32768
+-; M64-NEXT:    and $1, $1, $3
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    subu $2, $2, $1
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 2147483647, i32 -2147483648)
+   ret i32 %result
+ }
+@@ -67,14 +57,14 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
+ ; M32-NEXT:    andi $1, $4, 1
+ ; M32-NEXT:    negu $1, $1
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    and $2, $1, $5
++; M32-NEXT:    and $2, $5, $1
+ ;
+ ; M64-LABEL: test_ctselect_null_ptr:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    andi $1, $4, 1
+ ; M64-NEXT:    dnegu $1, $1
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    and $2, $1, $5
++; M64-NEXT:    and $2, $5, $1
+   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %ptr, ptr null)
+   ret ptr %result
+ }
+@@ -83,23 +73,21 @@ define ptr @test_ctselect_null_ptr(i1 %cond, ptr %ptr) {
+ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
+ ; M32-LABEL: test_ctselect_function_ptr:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $5
+-; M32-NEXT:    and $1, $1, $6
++; M32-NEXT:    andi $2, $4, 1
++; M32-NEXT:    xor $1, $5, $6
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_function_ptr:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    andi $1, $4, 1
+-; M64-NEXT:    dnegu $2, $1
+-; M64-NEXT:    daddiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $5
+-; M64-NEXT:    and $1, $1, $6
++; M64-NEXT:    andi $2, $4, 1
++; M64-NEXT:    xor $1, $5, $6
++; M64-NEXT:    dnegu $2, $2
++; M64-NEXT:    and $1, $1, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $6, $1
+   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %func1, ptr %func2)
+   ret ptr %result
+ }
+@@ -108,26 +96,25 @@ define ptr @test_ctselect_function_ptr(i1 %cond, ptr %func1, ptr %func2) {
+ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
+ ; M32-LABEL: test_ctselect_ptr_cmp:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    xor $1, $4, $5
+-; M32-NEXT:    sltu $1, $zero, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $6
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $7
++; M32-NEXT:    xor $2, $4, $5
++; M32-NEXT:    xor $1, $6, $7
++; M32-NEXT:    sltiu $2, $2, 1
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $7, $1
+ ;
+ ; M64-LABEL: test_ctselect_ptr_cmp:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    xor $1, $4, $5
+-; M64-NEXT:    daddiu $3, $zero, -1
+-; M64-NEXT:    daddiu $2, $zero, -1
+-; M64-NEXT:    movn $3, $zero, $1
+-; M64-NEXT:    xor $2, $3, $2
+-; M64-NEXT:    and $1, $3, $6
+-; M64-NEXT:    and $2, $2, $7
++; M64-NEXT:    xor $2, $4, $5
++; M64-NEXT:    xor $1, $6, $7
++; M64-NEXT:    sltiu $2, $2, 1
++; M64-NEXT:    dsll $2, $2, 32
++; M64-NEXT:    dsrl $2, $2, 32
++; M64-NEXT:    dnegu $2, $2
++; M64-NEXT:    and $1, $1, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $1, $2
++; M64-NEXT:    xor $2, $7, $1
+   %cmp = icmp eq ptr %p1, %p2
+   %result = call ptr @llvm.ct.select.p0(i1 %cmp, ptr %a, ptr %b)
+   ret ptr %result
+@@ -139,23 +126,21 @@ define ptr @test_ctselect_ptr_cmp(ptr %p1, ptr %p2, ptr %a, ptr %b) {
+ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
+ ; M32-LABEL: test_ctselect_struct_ptr:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $5
+-; M32-NEXT:    and $1, $1, $6
++; M32-NEXT:    andi $2, $4, 1
++; M32-NEXT:    xor $1, $5, $6
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_struct_ptr:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    andi $1, $4, 1
+-; M64-NEXT:    dnegu $2, $1
+-; M64-NEXT:    daddiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $5
+-; M64-NEXT:    and $1, $1, $6
++; M64-NEXT:    andi $2, $4, 1
++; M64-NEXT:    xor $1, $5, $6
++; M64-NEXT:    dnegu $2, $2
++; M64-NEXT:    and $1, $1, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $6, $1
+   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %a, ptr %b)
+   ret ptr %result
+ }
+@@ -164,73 +149,65 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
+ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+ ; M32-LABEL: test_ctselect_deeply_nested:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    lw $3, 16($sp)
+-; M32-NEXT:    lw $9, 32($sp)
+-; M32-NEXT:    lw $8, 28($sp)
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
++; M32-NEXT:    lw $1, 20($sp)
++; M32-NEXT:    lw $2, 16($sp)
++; M32-NEXT:    andi $3, $4, 1
++; M32-NEXT:    andi $4, $6, 1
++; M32-NEXT:    lw $6, 28($sp)
++; M32-NEXT:    negu $3, $3
++; M32-NEXT:    xor $2, $2, $1
+ ; M32-NEXT:    and $2, $2, $3
+-; M32-NEXT:    lw $3, 20($sp)
+-; M32-NEXT:    and $1, $1, $3
+ ; M32-NEXT:    andi $3, $5, 1
+-; M32-NEXT:    or $1, $2, $1
+-; M32-NEXT:    andi $2, $6, 1
+-; M32-NEXT:    andi $6, $7, 1
+-; M32-NEXT:    negu $4, $3
+-; M32-NEXT:    addiu $3, $3, -1
+-; M32-NEXT:    addiu $7, $6, -1
+-; M32-NEXT:    and $1, $4, $1
+-; M32-NEXT:    addiu $5, $2, -1
+-; M32-NEXT:    negu $2, $2
+-; M32-NEXT:    negu $6, $6
+-; M32-NEXT:    and $4, $7, $9
+-; M32-NEXT:    lw $7, 24($sp)
+-; M32-NEXT:    and $5, $5, $8
+-; M32-NEXT:    and $3, $3, $7
+-; M32-NEXT:    or $1, $1, $3
+-; M32-NEXT:    and $1, $2, $1
+-; M32-NEXT:    or $1, $1, $5
+-; M32-NEXT:    and $1, $6, $1
++; M32-NEXT:    lw $5, 32($sp)
++; M32-NEXT:    xor $1, $1, $2
++; M32-NEXT:    lw $2, 24($sp)
++; M32-NEXT:    negu $3, $3
++; M32-NEXT:    xor $1, $1, $2
++; M32-NEXT:    and $1, $1, $3
++; M32-NEXT:    andi $3, $7, 1
++; M32-NEXT:    xor $1, $2, $1
++; M32-NEXT:    negu $2, $4
++; M32-NEXT:    negu $3, $3
++; M32-NEXT:    xor $1, $1, $6
++; M32-NEXT:    and $1, $1, $2
++; M32-NEXT:    xor $1, $6, $1
++; M32-NEXT:    xor $1, $1, $5
++; M32-NEXT:    and $1, $1, $3
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $1, $4
++; M32-NEXT:    xor $2, $5, $1
+ ;
+ ; M64-LABEL: test_ctselect_deeply_nested:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sll $3, $8, 0
+-; M64-NEXT:    sll $4, $5, 0
+-; M64-NEXT:    lw $8, 0($sp)
++; M64-NEXT:    xor $2, $8, $9
++; M64-NEXT:    sll $5, $5, 0
++; M64-NEXT:    sll $3, $6, 0
++; M64-NEXT:    sll $6, $11, 0
++; M64-NEXT:    sll $4, $7, 0
++; M64-NEXT:    lw $7, 0($sp)
+ ; M64-NEXT:    andi $1, $1, 1
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    andi $5, $5, 1
++; M64-NEXT:    andi $3, $3, 1
+ ; M64-NEXT:    andi $4, $4, 1
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    negu $5, $4
+-; M64-NEXT:    addiu $4, $4, -1
+-; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    sll $3, $9, 0
+-; M64-NEXT:    and $1, $1, $3
+-; M64-NEXT:    sll $3, $11, 0
+-; M64-NEXT:    or $1, $2, $1
+-; M64-NEXT:    sll $2, $6, 0
+-; M64-NEXT:    sll $6, $7, 0
+-; M64-NEXT:    andi $2, $2, 1
+-; M64-NEXT:    and $1, $5, $1
+-; M64-NEXT:    andi $6, $6, 1
+-; M64-NEXT:    addiu $5, $2, -1
+-; M64-NEXT:    negu $2, $2
+-; M64-NEXT:    addiu $7, $6, -1
+-; M64-NEXT:    negu $6, $6
+-; M64-NEXT:    and $3, $5, $3
+-; M64-NEXT:    sll $5, $10, 0
+-; M64-NEXT:    and $7, $7, $8
+-; M64-NEXT:    and $4, $4, $5
+-; M64-NEXT:    or $1, $1, $4
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    negu $5, $5
++; M64-NEXT:    negu $4, $4
+ ; M64-NEXT:    and $1, $2, $1
+-; M64-NEXT:    or $1, $1, $3
+-; M64-NEXT:    and $1, $6, $1
++; M64-NEXT:    sll $2, $9, 0
++; M64-NEXT:    xor $1, $2, $1
++; M64-NEXT:    sll $2, $10, 0
++; M64-NEXT:    xor $1, $1, $2
++; M64-NEXT:    and $1, $1, $5
++; M64-NEXT:    xor $1, $2, $1
++; M64-NEXT:    negu $2, $3
++; M64-NEXT:    xor $1, $1, $6
++; M64-NEXT:    and $1, $1, $2
++; M64-NEXT:    xor $1, $6, $1
++; M64-NEXT:    xor $1, $1, $7
++; M64-NEXT:    and $1, $1, $4
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $1, $7
++; M64-NEXT:    xor $2, $7, $1
+   %sel1 = call i32 @llvm.ct.select.i32(i1 %c1, i32 %a, i32 %b)
+   %sel2 = call i32 @llvm.ct.select.i32(i1 %c2, i32 %sel1, i32 %c)
+   %sel3 = call i32 @llvm.ct.select.i32(i1 %c3, i32 %sel2, i32 %d)
+diff --git a/llvm/test/CodeGen/Mips/ctselect-fallback-patterns.ll b/llvm/test/CodeGen/Mips/ctselect-fallback-patterns.ll
+index 2e65e586ce5f..a1c5d524c693 100644
+--- a/llvm/test/CodeGen/Mips/ctselect-fallback-patterns.ll
++++ b/llvm/test/CodeGen/Mips/ctselect-fallback-patterns.ll
+@@ -6,16 +6,18 @@
+ define i32 @test_ctselect_smin_zero(i32 %x) {
+ ; M32-LABEL: test_ctselect_smin_zero:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    sra $1, $4, 31
++; M32-NEXT:    slti $1, $4, 0
++; M32-NEXT:    negu $1, $1
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    and $2, $1, $4
++; M32-NEXT:    and $2, $4, $1
+ ;
+ ; M64-LABEL: test_ctselect_smin_zero:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sra $2, $1, 31
++; M64-NEXT:    slti $2, $1, 0
++; M64-NEXT:    negu $2, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    and $2, $2, $1
++; M64-NEXT:    and $2, $1, $2
+   %cmp = icmp slt i32 %x, 0
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
+   ret i32 %result
+@@ -25,17 +27,18 @@ define i32 @test_ctselect_smin_zero(i32 %x) {
+ define i32 @test_ctselect_smax_zero(i32 %x) {
+ ; M32-LABEL: test_ctselect_smax_zero:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    slti $1, $4, 1
+-; M32-NEXT:    movn $4, $zero, $1
++; M32-NEXT:    slt $1, $zero, $4
++; M32-NEXT:    negu $1, $1
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    move $2, $4
++; M32-NEXT:    and $2, $4, $1
+ ;
+ ; M64-LABEL: test_ctselect_smax_zero:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    slti $1, $2, 1
++; M64-NEXT:    sll $1, $4, 0
++; M64-NEXT:    slt $2, $zero, $1
++; M64-NEXT:    negu $2, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    movn $2, $zero, $1
++; M64-NEXT:    and $2, $1, $2
+   %cmp = icmp sgt i32 %x, 0
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 0)
+   ret i32 %result
+@@ -45,27 +48,23 @@ define i32 @test_ctselect_smax_zero(i32 %x) {
+ define i32 @test_ctselect_smin_generic(i32 %x, i32 %y) {
+ ; M32-LABEL: test_ctselect_smin_generic:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    slt $1, $4, $5
+-; M32-NEXT:    xori $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $4
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $5
++; M32-NEXT:    slt $2, $4, $5
++; M32-NEXT:    xor $1, $4, $5
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $5, $1
+ ;
+ ; M64-LABEL: test_ctselect_smin_generic:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    slt $3, $2, $1
+-; M64-NEXT:    xori $3, $3, 1
+-; M64-NEXT:    addiu $3, $3, -1
++; M64-NEXT:    xor $3, $2, $1
++; M64-NEXT:    slt $2, $2, $1
++; M64-NEXT:    negu $2, $2
+ ; M64-NEXT:    and $2, $3, $2
+-; M64-NEXT:    not $3, $3
+-; M64-NEXT:    and $1, $3, $1
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $1, $2
+   %cmp = icmp slt i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 %y)
+   ret i32 %result
+@@ -75,27 +74,23 @@ define i32 @test_ctselect_smin_generic(i32 %x, i32 %y) {
+ define i32 @test_ctselect_smax_generic(i32 %x, i32 %y) {
+ ; M32-LABEL: test_ctselect_smax_generic:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    slt $1, $5, $4
+-; M32-NEXT:    xori $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $4
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $5
++; M32-NEXT:    slt $2, $5, $4
++; M32-NEXT:    xor $1, $4, $5
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $5, $1
+ ;
+ ; M64-LABEL: test_ctselect_smax_generic:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sll $2, $5, 0
+-; M64-NEXT:    slt $3, $2, $1
+-; M64-NEXT:    xori $3, $3, 1
+-; M64-NEXT:    addiu $3, $3, -1
+-; M64-NEXT:    and $1, $3, $1
+-; M64-NEXT:    not $3, $3
++; M64-NEXT:    sll $1, $5, 0
++; M64-NEXT:    sll $2, $4, 0
++; M64-NEXT:    xor $3, $2, $1
++; M64-NEXT:    slt $2, $1, $2
++; M64-NEXT:    negu $2, $2
+ ; M64-NEXT:    and $2, $3, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $1, $2
++; M64-NEXT:    xor $2, $1, $2
+   %cmp = icmp sgt i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 %y)
+   ret i32 %result
+@@ -105,27 +100,23 @@ define i32 @test_ctselect_smax_generic(i32 %x, i32 %y) {
+ define i32 @test_ctselect_umin_generic(i32 %x, i32 %y) {
+ ; M32-LABEL: test_ctselect_umin_generic:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    sltu $1, $4, $5
+-; M32-NEXT:    xori $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $4
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $5
++; M32-NEXT:    sltu $2, $4, $5
++; M32-NEXT:    xor $1, $4, $5
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $5, $1
+ ;
+ ; M64-LABEL: test_ctselect_umin_generic:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    sltu $3, $2, $1
+-; M64-NEXT:    xori $3, $3, 1
+-; M64-NEXT:    addiu $3, $3, -1
++; M64-NEXT:    xor $3, $2, $1
++; M64-NEXT:    sltu $2, $2, $1
++; M64-NEXT:    negu $2, $2
+ ; M64-NEXT:    and $2, $3, $2
+-; M64-NEXT:    not $3, $3
+-; M64-NEXT:    and $1, $3, $1
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $1, $2
+   %cmp = icmp ult i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 %y)
+   ret i32 %result
+@@ -135,27 +126,23 @@ define i32 @test_ctselect_umin_generic(i32 %x, i32 %y) {
+ define i32 @test_ctselect_umax_generic(i32 %x, i32 %y) {
+ ; M32-LABEL: test_ctselect_umax_generic:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    sltu $1, $5, $4
+-; M32-NEXT:    xori $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $4
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $5
++; M32-NEXT:    sltu $2, $5, $4
++; M32-NEXT:    xor $1, $4, $5
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $5, $1
+ ;
+ ; M64-LABEL: test_ctselect_umax_generic:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sll $2, $5, 0
+-; M64-NEXT:    sltu $3, $2, $1
+-; M64-NEXT:    xori $3, $3, 1
+-; M64-NEXT:    addiu $3, $3, -1
+-; M64-NEXT:    and $1, $3, $1
+-; M64-NEXT:    not $3, $3
++; M64-NEXT:    sll $1, $5, 0
++; M64-NEXT:    sll $2, $4, 0
++; M64-NEXT:    xor $3, $2, $1
++; M64-NEXT:    sltu $2, $1, $2
++; M64-NEXT:    negu $2, $2
+ ; M64-NEXT:    and $2, $3, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $1, $2
++; M64-NEXT:    xor $2, $1, $2
+   %cmp = icmp ugt i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 %y)
+   ret i32 %result
+@@ -165,24 +152,24 @@ define i32 @test_ctselect_umax_generic(i32 %x, i32 %y) {
+ define i32 @test_ctselect_abs(i32 %x) {
+ ; M32-LABEL: test_ctselect_abs:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    negu $1, $4
+-; M32-NEXT:    sra $2, $4, 31
++; M32-NEXT:    slti $1, $4, 0
++; M32-NEXT:    negu $2, $4
++; M32-NEXT:    negu $1, $1
++; M32-NEXT:    xor $2, $2, $4
+ ; M32-NEXT:    and $1, $2, $1
+-; M32-NEXT:    not $2, $2
+-; M32-NEXT:    and $2, $2, $4
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $1, $2
++; M32-NEXT:    xor $2, $4, $1
+ ;
+ ; M64-LABEL: test_ctselect_abs:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    sra $3, $1, 31
++; M64-NEXT:    slti $2, $1, 0
++; M64-NEXT:    negu $3, $1
++; M64-NEXT:    negu $2, $2
++; M64-NEXT:    xor $3, $3, $1
+ ; M64-NEXT:    and $2, $3, $2
+-; M64-NEXT:    not $3, $3
+-; M64-NEXT:    and $1, $3, $1
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $1, $2
+   %neg = sub i32 0, %x
+   %cmp = icmp slt i32 %x, 0
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %neg, i32 %x)
+@@ -193,24 +180,24 @@ define i32 @test_ctselect_abs(i32 %x) {
+ define i32 @test_ctselect_nabs(i32 %x) {
+ ; M32-LABEL: test_ctselect_nabs:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    sra $1, $4, 31
+-; M32-NEXT:    negu $3, $4
+-; M32-NEXT:    and $2, $1, $4
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $3
++; M32-NEXT:    slti $1, $4, 0
++; M32-NEXT:    negu $2, $4
++; M32-NEXT:    negu $1, $1
++; M32-NEXT:    xor $3, $4, $2
++; M32-NEXT:    and $1, $3, $1
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $2, $1
+ ;
+ ; M64-LABEL: test_ctselect_nabs:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sra $2, $1, 31
+-; M64-NEXT:    and $3, $2, $1
+-; M64-NEXT:    negu $1, $1
+-; M64-NEXT:    not $2, $2
+-; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    slti $2, $1, 0
++; M64-NEXT:    negu $3, $1
++; M64-NEXT:    negu $2, $2
++; M64-NEXT:    xor $1, $1, $3
++; M64-NEXT:    and $1, $1, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $3, $1
++; M64-NEXT:    xor $2, $3, $1
+   %neg = sub i32 0, %x
+   %cmp = icmp slt i32 %x, 0
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 %x, i32 %neg)
+@@ -221,14 +208,16 @@ define i32 @test_ctselect_nabs(i32 %x) {
+ define i32 @test_ctselect_sign_extend(i32 %x) {
+ ; M32-LABEL: test_ctselect_sign_extend:
+ ; M32:       # %bb.0:
++; M32-NEXT:    slti $1, $4, 0
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    sra $2, $4, 31
++; M32-NEXT:    negu $2, $1
+ ;
+ ; M64-LABEL: test_ctselect_sign_extend:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
++; M64-NEXT:    slti $1, $1, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    sra $2, $1, 31
++; M64-NEXT:    negu $2, $1
+   %cmp = icmp slt i32 %x, 0
+   %result = call i32 @llvm.ct.select.i32(i1 %cmp, i32 -1, i32 0)
+   ret i32 %result
+@@ -270,13 +259,12 @@ define i32 @test_ctselect_constant_folding_false(i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_constant_folding_false:
+ ; M32:       # %bb.0:
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $zero, $5
++; M32-NEXT:    move $2, $5
+ ;
+ ; M64-LABEL: test_ctselect_constant_folding_false:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $zero, $1
++; M64-NEXT:    sll $2, $5, 0
+   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
+   ret i32 %result
+ }
+@@ -285,25 +273,13 @@ define i32 @test_ctselect_constant_folding_false(i32 %a, i32 %b) {
+ define i32 @test_ctselect_identical_operands(i1 %cond, i32 %x) {
+ ; M32-LABEL: test_ctselect_identical_operands:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $5
+-; M32-NEXT:    and $1, $1, $5
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    move $2, $5
+ ;
+ ; M64-LABEL: test_ctselect_identical_operands:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sll $3, $5, 0
+-; M64-NEXT:    andi $1, $1, 1
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    and $1, $1, $3
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    sll $2, $5, 0
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %x, i32 %x)
+   ret i32 %result
+ }
+@@ -312,29 +288,27 @@ define i32 @test_ctselect_identical_operands(i1 %cond, i32 %x) {
+ define i32 @test_ctselect_inverted_condition(i32 %x, i32 %y, i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_inverted_condition:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    xor $1, $4, $5
+-; M32-NEXT:    sltiu $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $6
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $7
++; M32-NEXT:    xor $2, $4, $5
++; M32-NEXT:    xor $1, $7, $6
++; M32-NEXT:    sltiu $2, $2, 1
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_inverted_condition:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    sll $3, $7, 0
+ ; M64-NEXT:    xor $1, $2, $1
+-; M64-NEXT:    sll $2, $6, 0
++; M64-NEXT:    xor $2, $7, $6
+ ; M64-NEXT:    sltiu $1, $1, 1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $1, $2
+-; M64-NEXT:    not $1, $1
+-; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $6, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %cmp = icmp eq i32 %x, %y
+   %not_cmp = xor i1 %cmp, true
+   %result = call i32 @llvm.ct.select.i32(i1 %not_cmp, i32 %a, i32 %b)
+@@ -345,57 +319,51 @@ define i32 @test_ctselect_inverted_condition(i32 %x, i32 %y, i32 %a, i32 %b) {
+ define i32 @test_ctselect_chain(i1 %c1, i1 %c2, i1 %c3, i32 %a, i32 %b, i32 %c, i32 %d) {
+ ; M32-LABEL: test_ctselect_chain:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
++; M32-NEXT:    lw $1, 16($sp)
++; M32-NEXT:    andi $3, $4, 1
++; M32-NEXT:    negu $3, $3
++; M32-NEXT:    xor $2, $7, $1
++; M32-NEXT:    and $2, $2, $3
+ ; M32-NEXT:    andi $3, $5, 1
+-; M32-NEXT:    lw $5, 16($sp)
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    negu $4, $3
+-; M32-NEXT:    addiu $3, $3, -1
+-; M32-NEXT:    and $1, $1, $5
+-; M32-NEXT:    and $2, $2, $7
+-; M32-NEXT:    lw $5, 24($sp)
+-; M32-NEXT:    or $1, $2, $1
++; M32-NEXT:    xor $1, $1, $2
++; M32-NEXT:    lw $2, 20($sp)
++; M32-NEXT:    negu $3, $3
++; M32-NEXT:    xor $1, $1, $2
++; M32-NEXT:    and $1, $1, $3
++; M32-NEXT:    lw $3, 24($sp)
++; M32-NEXT:    xor $1, $2, $1
+ ; M32-NEXT:    andi $2, $6, 1
+-; M32-NEXT:    and $1, $4, $1
+-; M32-NEXT:    addiu $4, $2, -1
++; M32-NEXT:    xor $1, $1, $3
+ ; M32-NEXT:    negu $2, $2
+-; M32-NEXT:    and $4, $4, $5
+-; M32-NEXT:    lw $5, 20($sp)
+-; M32-NEXT:    and $3, $3, $5
+-; M32-NEXT:    or $1, $1, $3
+-; M32-NEXT:    and $1, $2, $1
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $1, $4
++; M32-NEXT:    xor $2, $3, $1
+ ;
+ ; M64-LABEL: test_ctselect_chain:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sll $3, $7, 0
+-; M64-NEXT:    sll $4, $5, 0
++; M64-NEXT:    xor $2, $7, $8
++; M64-NEXT:    sll $3, $5, 0
+ ; M64-NEXT:    andi $1, $1, 1
+-; M64-NEXT:    andi $4, $4, 1
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    negu $5, $4
+-; M64-NEXT:    addiu $4, $4, -1
+-; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    sll $3, $8, 0
+-; M64-NEXT:    and $1, $1, $3
+-; M64-NEXT:    sll $3, $6, 0
+-; M64-NEXT:    sll $6, $10, 0
+-; M64-NEXT:    or $1, $2, $1
++; M64-NEXT:    sll $2, $2, 0
+ ; M64-NEXT:    andi $3, $3, 1
+-; M64-NEXT:    and $1, $5, $1
+-; M64-NEXT:    sll $5, $9, 0
+-; M64-NEXT:    addiu $2, $3, -1
++; M64-NEXT:    negu $1, $1
+ ; M64-NEXT:    negu $3, $3
+-; M64-NEXT:    and $4, $4, $5
+-; M64-NEXT:    and $2, $2, $6
+-; M64-NEXT:    or $1, $1, $4
+-; M64-NEXT:    and $1, $3, $1
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $8, 0
++; M64-NEXT:    xor $1, $2, $1
++; M64-NEXT:    sll $2, $9, 0
++; M64-NEXT:    xor $1, $1, $2
++; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    sll $3, $6, 0
++; M64-NEXT:    xor $1, $2, $1
++; M64-NEXT:    andi $2, $3, 1
++; M64-NEXT:    sll $3, $10, 0
++; M64-NEXT:    xor $1, $1, $3
++; M64-NEXT:    negu $2, $2
++; M64-NEXT:    and $1, $1, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $1, $2
++; M64-NEXT:    xor $2, $3, $1
+   %sel1 = call i32 @llvm.ct.select.i32(i1 %c1, i32 %a, i32 %b)
+   %sel2 = call i32 @llvm.ct.select.i32(i1 %c2, i32 %sel1, i32 %c)
+   %sel3 = call i32 @llvm.ct.select.i32(i1 %c3, i32 %sel2, i32 %d)
+@@ -406,16 +374,17 @@ define i32 @test_ctselect_chain(i1 %c1, i1 %c2, i1 %c3, i32 %a, i32 %b, i32 %c,
+ define i64 @test_ctselect_i64_smin_zero(i64 %x) {
+ ; M32-LABEL: test_ctselect_i64_smin_zero:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    sra $1, $5, 31
+-; M32-NEXT:    and $2, $1, $4
++; M32-NEXT:    slti $1, $5, 0
++; M32-NEXT:    negu $1, $1
++; M32-NEXT:    and $2, $4, $1
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    and $3, $1, $5
++; M32-NEXT:    and $3, $5, $1
+ ;
+ ; M64-LABEL: test_ctselect_i64_smin_zero:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    dsra $1, $4, 63
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    and $2, $1, $4
++; M64-NEXT:    and $2, $4, $1
+   %cmp = icmp slt i64 %x, 0
+   %result = call i64 @llvm.ct.select.i64(i1 %cmp, i64 %x, i64 0)
+   ret i64 %result
+diff --git a/llvm/test/CodeGen/Mips/ctselect-fallback-vector.ll b/llvm/test/CodeGen/Mips/ctselect-fallback-vector.ll
+index 6222f6052e12..302e06b0a733 100644
+--- a/llvm/test/CodeGen/Mips/ctselect-fallback-vector.ll
++++ b/llvm/test/CodeGen/Mips/ctselect-fallback-vector.ll
+@@ -6,21 +6,19 @@
+ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS64-MSA-NEXT:    fill.w $w1, $1
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $8
+-; MIPS64-MSA-NEXT:    slli.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    srai.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $5
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $6
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
++; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+ ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -30,26 +28,24 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
+ ; MIPS32-MSA:       # %bb.0:
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    fill.w $w2, $4
+-; MIPS32-MSA-NEXT:    ldi.b $w1, -1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+-; MIPS32-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+ ; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
+@@ -63,21 +59,19 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
+ define <8 x i16> @test_ctselect_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v8i16:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS64-MSA-NEXT:    fill.h $w1, $1
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $8
+-; MIPS64-MSA-NEXT:    slli.h $w1, $w1, 15
+-; MIPS64-MSA-NEXT:    srai.h $w1, $w1, 15
+-; MIPS64-MSA-NEXT:    shf.h $w2, $w2, 27
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $5
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $6
+-; MIPS64-MSA-NEXT:    shf.h $w2, $w2, 27
++; MIPS64-MSA-NEXT:    fill.h $w2, $1
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
++; MIPS64-MSA-NEXT:    slli.h $w2, $w2, 15
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    srai.h $w2, $w2, 15
++; MIPS64-MSA-NEXT:    shf.h $w0, $w0, 27
++; MIPS64-MSA-NEXT:    shf.h $w1, $w1, 27
+ ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.h $w0, $w0, 27
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -87,28 +81,26 @@ define <8 x i16> @test_ctselect_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
+ ; MIPS32-MSA:       # %bb.0:
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
+-; MIPS32-MSA-NEXT:    fill.h $w1, $4
+-; MIPS32-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS32-MSA-NEXT:    insert.w $w2[0], $2
+-; MIPS32-MSA-NEXT:    slli.h $w1, $w1, 15
+-; MIPS32-MSA-NEXT:    srai.h $w1, $w1, 15
+-; MIPS32-MSA-NEXT:    insert.w $w2[1], $1
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
++; MIPS32-MSA-NEXT:    fill.h $w2, $4
++; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
++; MIPS32-MSA-NEXT:    slli.h $w2, $w2, 15
++; MIPS32-MSA-NEXT:    srai.h $w2, $w2, 15
++; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w2[2], $1
++; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[3], $1
++; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+-; MIPS32-MSA-NEXT:    shf.h $w2, $w2, 177
+-; MIPS32-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS32-MSA-NEXT:    insert.w $w2[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w2[1], $7
+-; MIPS32-MSA-NEXT:    insert.w $w2[2], $1
++; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[3], $1
+-; MIPS32-MSA-NEXT:    shf.h $w2, $w2, 177
++; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    shf.h $w0, $w0, 177
++; MIPS32-MSA-NEXT:    shf.h $w1, $w1, 177
+ ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    shf.h $w0, $w0, 177
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+@@ -123,22 +115,21 @@ define <8 x i16> @test_ctselect_v8i16(i1 %cond, <8 x i16> %a, <8 x i16> %b) {
+ define <16 x i8> @test_ctselect_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v16i8:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    insert.d $w0[0], $5
+-; MIPS64-MSA-NEXT:    insert.d $w1[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+ ; MIPS64-MSA-NEXT:    fill.b $w2, $1
+-; MIPS64-MSA-NEXT:    insert.d $w0[1], $6
+-; MIPS64-MSA-NEXT:    insert.d $w1[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
+ ; MIPS64-MSA-NEXT:    slli.b $w2, $w2, 7
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
+ ; MIPS64-MSA-NEXT:    shf.b $w0, $w0, 27
+-; MIPS64-MSA-NEXT:    shf.b $w1, $w1, 27
+ ; MIPS64-MSA-NEXT:    srai.b $w2, $w2, 7
++; MIPS64-MSA-NEXT:    shf.b $w1, $w1, 27
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+-; MIPS64-MSA-NEXT:    and.v $w0, $w2, $w0
+-; MIPS64-MSA-NEXT:    xori.b $w2, $w2, 255
+-; MIPS64-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS64-MSA-NEXT:    or.v $w0, $w0, $w1
++; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.b $w0, $w0, 27
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+@@ -147,29 +138,28 @@ define <16 x i8> @test_ctselect_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
+ ;
+ ; MIPS32-MSA-LABEL: test_ctselect_v16i8:
+ ; MIPS32-MSA:       # %bb.0:
+-; MIPS32-MSA-NEXT:    insert.w $w0[0], $6
+-; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
++; MIPS32-MSA-NEXT:    lw $1, 28($sp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    fill.b $w2, $4
+-; MIPS32-MSA-NEXT:    insert.w $w0[1], $7
+-; MIPS32-MSA-NEXT:    insert.w $w1[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    slli.b $w2, $w2, 7
+ ; MIPS32-MSA-NEXT:    srai.b $w2, $w2, 7
++; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
++; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+-; MIPS32-MSA-NEXT:    lw $1, 20($sp)
++; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+-; MIPS32-MSA-NEXT:    lw $1, 28($sp)
+-; MIPS32-MSA-NEXT:    insert.w $w1[1], $1
+-; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    shf.b $w0, $w0, 27
++; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+-; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w2, $w0
+-; MIPS32-MSA-NEXT:    xori.b $w2, $w2, 255
++; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    shf.b $w0, $w0, 27
+ ; MIPS32-MSA-NEXT:    shf.b $w1, $w1, 27
+-; MIPS32-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS32-MSA-NEXT:    or.v $w0, $w0, $w1
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    shf.b $w0, $w0, 27
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+@@ -184,18 +174,16 @@ define <16 x i8> @test_ctselect_v16i8(i1 %cond, <16 x i8> %a, <16 x i8> %b) {
+ define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v2i64:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    fill.d $w2, $4
+ ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
+-; MIPS64-MSA-NEXT:    ldi.b $w1, -1
+-; MIPS64-MSA-NEXT:    slli.d $w2, $w2, 63
+-; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
+-; MIPS64-MSA-NEXT:    srai.d $w2, $w2, 63
+-; MIPS64-MSA-NEXT:    xor.v $w1, $w2, $w1
+-; MIPS64-MSA-NEXT:    and.v $w0, $w1, $w0
+ ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
++; MIPS64-MSA-NEXT:    fill.d $w2, $4
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
+ ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
+-; MIPS64-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    slli.d $w2, $w2, 63
++; MIPS64-MSA-NEXT:    srai.d $w2, $w2, 63
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+ ; MIPS64-MSA-NEXT:    copy_s.d $3, $w0[1]
+@@ -214,31 +202,28 @@ define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
+ ; MIPS32-MSA-NEXT:    and $sp, $sp, $1
+ ; MIPS32-MSA-NEXT:    lw $2, 56($fp)
+ ; MIPS32-MSA-NEXT:    lw $1, 60($fp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    sw $4, 12($sp)
+ ; MIPS32-MSA-NEXT:    sw $4, 4($sp)
+-; MIPS32-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS32-MSA-NEXT:    ld.d $w1, 0($sp)
+-; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
+-; MIPS32-MSA-NEXT:    insert.w $w2[0], $2
+-; MIPS32-MSA-NEXT:    slli.d $w1, $w1, 63
+-; MIPS32-MSA-NEXT:    insert.w $w2[1], $1
++; MIPS32-MSA-NEXT:    ld.d $w2, 0($sp)
++; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
++; MIPS32-MSA-NEXT:    slli.d $w2, $w2, 63
++; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 64($fp)
+-; MIPS32-MSA-NEXT:    srai.d $w1, $w1, 63
+-; MIPS32-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w2[2], $1
++; MIPS32-MSA-NEXT:    srai.d $w2, $w2, 63
++; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 68($fp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[3], $1
++; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 48($fp)
+-; MIPS32-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS32-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS32-MSA-NEXT:    insert.w $w2[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w2[1], $7
+-; MIPS32-MSA-NEXT:    insert.w $w2[2], $1
++; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 52($fp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[3], $1
+-; MIPS32-MSA-NEXT:    shf.w $w2, $w2, 177
++; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
++; MIPS32-MSA-NEXT:    shf.w $w1, $w1, 177
+ ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+@@ -257,21 +242,19 @@ define <2 x i64> @test_ctselect_v2i64(i1 %cond, <2 x i64> %a, <2 x i64> %b) {
+ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v4f32:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS64-MSA-NEXT:    fill.w $w1, $1
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $8
+-; MIPS64-MSA-NEXT:    slli.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    srai.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $5
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $6
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
++; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+ ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -281,26 +264,24 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
+ ; MIPS32-MSA:       # %bb.0:
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    fill.w $w2, $5
+-; MIPS32-MSA-NEXT:    ldi.b $w1, -1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+-; MIPS32-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    jr $ra
+ ; MIPS32-MSA-NEXT:    st.w $w0, 0($4)
+   %result = call <4 x float> @llvm.ct.select.v4f32(i1 %cond, <4 x float> %a, <4 x float> %b)
+@@ -311,18 +292,16 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
+ define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double> %b) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v2f64:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    fill.d $w2, $4
+ ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
+-; MIPS64-MSA-NEXT:    ldi.b $w1, -1
+-; MIPS64-MSA-NEXT:    slli.d $w2, $w2, 63
+-; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
+-; MIPS64-MSA-NEXT:    srai.d $w2, $w2, 63
+-; MIPS64-MSA-NEXT:    xor.v $w1, $w2, $w1
+-; MIPS64-MSA-NEXT:    and.v $w0, $w1, $w0
+ ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
++; MIPS64-MSA-NEXT:    fill.d $w2, $4
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
+ ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
+-; MIPS64-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    slli.d $w2, $w2, 63
++; MIPS64-MSA-NEXT:    srai.d $w2, $w2, 63
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+ ; MIPS64-MSA-NEXT:    copy_s.d $3, $w0[1]
+@@ -341,31 +320,28 @@ define <2 x double> @test_ctselect_v2f64(i1 %cond, <2 x double> %a, <2 x double>
+ ; MIPS32-MSA-NEXT:    and $sp, $sp, $1
+ ; MIPS32-MSA-NEXT:    lw $2, 56($fp)
+ ; MIPS32-MSA-NEXT:    lw $1, 60($fp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    sw $5, 12($sp)
+ ; MIPS32-MSA-NEXT:    sw $5, 4($sp)
+-; MIPS32-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS32-MSA-NEXT:    ld.d $w1, 0($sp)
+-; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
+-; MIPS32-MSA-NEXT:    insert.w $w2[0], $2
+-; MIPS32-MSA-NEXT:    slli.d $w1, $w1, 63
+-; MIPS32-MSA-NEXT:    insert.w $w2[1], $1
++; MIPS32-MSA-NEXT:    ld.d $w2, 0($sp)
++; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
++; MIPS32-MSA-NEXT:    slli.d $w2, $w2, 63
++; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 64($fp)
+-; MIPS32-MSA-NEXT:    srai.d $w1, $w1, 63
+-; MIPS32-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w2[2], $1
++; MIPS32-MSA-NEXT:    srai.d $w2, $w2, 63
++; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 68($fp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[3], $1
++; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 48($fp)
+-; MIPS32-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS32-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS32-MSA-NEXT:    insert.w $w2[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w2[1], $7
+-; MIPS32-MSA-NEXT:    insert.w $w2[2], $1
++; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 52($fp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[3], $1
+-; MIPS32-MSA-NEXT:    shf.w $w2, $w2, 177
++; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    shf.w $w0, $w0, 177
++; MIPS32-MSA-NEXT:    shf.w $w1, $w1, 177
+ ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    st.d $w0, 0($4)
+ ; MIPS32-MSA-NEXT:    move $sp, $fp
+ ; MIPS32-MSA-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+@@ -381,16 +357,14 @@ define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32_aligned_load:
+ ; MIPS64-MSA:       # %bb.0:
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
++; MIPS64-MSA-NEXT:    ld.w $w0, 0($6)
+ ; MIPS64-MSA-NEXT:    ld.w $w1, 0($5)
+-; MIPS64-MSA-NEXT:    ldi.b $w2, -1
+-; MIPS64-MSA-NEXT:    fill.w $w0, $1
+-; MIPS64-MSA-NEXT:    slli.w $w0, $w0, 31
+-; MIPS64-MSA-NEXT:    srai.w $w0, $w0, 31
+-; MIPS64-MSA-NEXT:    and.v $w1, $w0, $w1
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    ld.w $w2, 0($6)
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -398,16 +372,14 @@ define <4 x i32> @test_ctselect_v4i32_aligned_load(i1 %cond, ptr %p1, ptr %p2) {
+ ;
+ ; MIPS32-MSA-LABEL: test_ctselect_v4i32_aligned_load:
+ ; MIPS32-MSA:       # %bb.0:
+-; MIPS32-MSA-NEXT:    fill.w $w0, $4
++; MIPS32-MSA-NEXT:    fill.w $w2, $4
++; MIPS32-MSA-NEXT:    ld.w $w0, 0($6)
+ ; MIPS32-MSA-NEXT:    ld.w $w1, 0($5)
+-; MIPS32-MSA-NEXT:    ldi.b $w2, -1
+-; MIPS32-MSA-NEXT:    slli.w $w0, $w0, 31
+-; MIPS32-MSA-NEXT:    srai.w $w0, $w0, 31
+-; MIPS32-MSA-NEXT:    and.v $w1, $w0, $w1
+-; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w2
+-; MIPS32-MSA-NEXT:    ld.w $w2, 0($6)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+ ; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
+@@ -424,16 +396,14 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32_unaligned_load:
+ ; MIPS64-MSA:       # %bb.0:
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
++; MIPS64-MSA-NEXT:    ld.w $w0, 0($6)
+ ; MIPS64-MSA-NEXT:    ld.w $w1, 0($5)
+-; MIPS64-MSA-NEXT:    ldi.b $w2, -1
+-; MIPS64-MSA-NEXT:    fill.w $w0, $1
+-; MIPS64-MSA-NEXT:    slli.w $w0, $w0, 31
+-; MIPS64-MSA-NEXT:    srai.w $w0, $w0, 31
+-; MIPS64-MSA-NEXT:    and.v $w1, $w0, $w1
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    ld.w $w2, 0($6)
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -441,16 +411,14 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
+ ;
+ ; MIPS32-MSA-LABEL: test_ctselect_v4i32_unaligned_load:
+ ; MIPS32-MSA:       # %bb.0:
+-; MIPS32-MSA-NEXT:    fill.w $w0, $4
++; MIPS32-MSA-NEXT:    fill.w $w2, $4
++; MIPS32-MSA-NEXT:    ld.w $w0, 0($6)
+ ; MIPS32-MSA-NEXT:    ld.w $w1, 0($5)
+-; MIPS32-MSA-NEXT:    ldi.b $w2, -1
+-; MIPS32-MSA-NEXT:    slli.w $w0, $w0, 31
+-; MIPS32-MSA-NEXT:    srai.w $w0, $w0, 31
+-; MIPS32-MSA-NEXT:    and.v $w1, $w0, $w1
+-; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w2
+-; MIPS32-MSA-NEXT:    ld.w $w2, 0($6)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+ ; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
+@@ -466,21 +434,19 @@ define <4 x i32> @test_ctselect_v4i32_unaligned_load(i1 %cond, ptr %p1, ptr %p2)
+ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr %out) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32_store:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS64-MSA-NEXT:    fill.w $w1, $1
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $8
+-; MIPS64-MSA-NEXT:    slli.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    srai.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $5
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $6
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
++; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+ ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    jr $ra
+ ; MIPS64-MSA-NEXT:    st.w $w0, 0($9)
+ ;
+@@ -488,27 +454,25 @@ define void @test_ctselect_v4i32_store(i1 %cond, <4 x i32> %a, <4 x i32> %b, ptr
+ ; MIPS32-MSA:       # %bb.0:
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    fill.w $w2, $4
+-; MIPS32-MSA-NEXT:    ldi.b $w1, -1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 40($sp)
+-; MIPS32-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    jr $ra
+ ; MIPS32-MSA-NEXT:    st.w $w0, 0($1)
+   %result = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b)
+@@ -521,31 +485,28 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a,
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32_chain:
+ ; MIPS64-MSA:       # %bb.0:
+ ; MIPS64-MSA-NEXT:    insert.d $w0[0], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $6
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ldi.b $w1, -1
+ ; MIPS64-MSA-NEXT:    fill.w $w2, $1
+ ; MIPS64-MSA-NEXT:    sll $1, $5, 0
+ ; MIPS64-MSA-NEXT:    insert.d $w0[1], $9
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $7
+ ; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
+ ; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+-; MIPS64-MSA-NEXT:    xor.v $w3, $w2, $w1
+-; MIPS64-MSA-NEXT:    and.v $w0, $w3, $w0
+-; MIPS64-MSA-NEXT:    insert.d $w3[0], $6
+-; MIPS64-MSA-NEXT:    insert.d $w3[1], $7
+-; MIPS64-MSA-NEXT:    shf.w $w3, $w3, 177
+-; MIPS64-MSA-NEXT:    and.v $w2, $w2, $w3
+-; MIPS64-MSA-NEXT:    or.v $w0, $w2, $w0
++; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
++; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+ ; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $10
+ ; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $11
+ ; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+-; MIPS64-MSA-NEXT:    and.v $w0, $w2, $w0
+-; MIPS64-MSA-NEXT:    xor.v $w1, $w2, $w1
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $10
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $11
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w0, $w1
++; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
++; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
++; MIPS64-MSA-NEXT:    xor.v $w0, $w1, $w0
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -555,41 +516,38 @@ define <4 x i32> @test_ctselect_v4i32_chain(i1 %cond1, i1 %cond2, <4 x i32> %a,
+ ; MIPS32-MSA:       # %bb.0:
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    fill.w $w2, $4
+-; MIPS32-MSA-NEXT:    ldi.b $w1, -1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    lw $2, 40($sp)
+ ; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    xor.v $w3, $w2, $w1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w3, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w3[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w3[1], $7
+-; MIPS32-MSA-NEXT:    insert.w $w3[2], $1
++; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+-; MIPS32-MSA-NEXT:    insert.w $w3[3], $1
++; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 44($sp)
+-; MIPS32-MSA-NEXT:    and.v $w2, $w2, $w3
+-; MIPS32-MSA-NEXT:    or.v $w0, $w2, $w0
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
+ ; MIPS32-MSA-NEXT:    fill.w $w2, $5
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $2
+ ; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+-; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+-; MIPS32-MSA-NEXT:    and.v $w0, $w2, $w0
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w1
+-; MIPS32-MSA-NEXT:    insert.w $w2[0], $2
+-; MIPS32-MSA-NEXT:    insert.w $w2[1], $1
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 48($sp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[2], $1
++; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 52($sp)
+-; MIPS32-MSA-NEXT:    insert.w $w2[3], $1
+-; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS32-MSA-NEXT:    or.v $w0, $w0, $w1
++; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
++; MIPS32-MSA-NEXT:    and.v $w0, $w0, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w1, $w0
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+ ; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
+@@ -607,20 +565,18 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4
+ ; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
+ ; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    fill.w $w3, $1
+ ; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
+ ; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
+-; MIPS64-MSA-NEXT:    slli.w $w3, $w3, 31
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+-; MIPS64-MSA-NEXT:    srai.w $w3, $w3, 31
+ ; MIPS64-MSA-NEXT:    fadd.w $w2, $w1, $w0
+ ; MIPS64-MSA-NEXT:    fsub.w $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    ldi.b $w1, -1
+-; MIPS64-MSA-NEXT:    xor.v $w1, $w3, $w1
+-; MIPS64-MSA-NEXT:    and.v $w2, $w3, $w2
+-; MIPS64-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    or.v $w0, $w2, $w0
++; MIPS64-MSA-NEXT:    xor.v $w1, $w2, $w0
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -631,11 +587,8 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+-; MIPS32-MSA-NEXT:    fill.w $w3, $5
+ ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
+ ; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+-; MIPS32-MSA-NEXT:    slli.w $w3, $w3, 31
+-; MIPS32-MSA-NEXT:    srai.w $w3, $w3, 31
+ ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+@@ -647,11 +600,12 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4
+ ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+ ; MIPS32-MSA-NEXT:    fadd.w $w2, $w1, $w0
+ ; MIPS32-MSA-NEXT:    fsub.w $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    ldi.b $w1, -1
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w3, $w1
+-; MIPS32-MSA-NEXT:    and.v $w2, $w3, $w2
+-; MIPS32-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    or.v $w0, $w2, $w0
++; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w0
++; MIPS32-MSA-NEXT:    fill.w $w2, $5
++; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    jr $ra
+ ; MIPS32-MSA-NEXT:    st.w $w0, 0($4)
+   %sum = fadd <4 x float> %x, %y
+@@ -664,36 +618,32 @@ define <4 x float> @test_ctselect_v4f32_arithmetic(i1 %cond, <4 x float> %x, <4
+ define void @test_ctselect_v4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32_mixed:
+ ; MIPS64-MSA:       # %bb.0:
++; MIPS64-MSA-NEXT:    ld.w $w0, 0($6)
++; MIPS64-MSA-NEXT:    ld.w $w1, 0($5)
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ld.w $w0, 0($5)
+-; MIPS64-MSA-NEXT:    ldi.b $w2, -1
+-; MIPS64-MSA-NEXT:    fill.w $w1, $1
+-; MIPS64-MSA-NEXT:    addvi.w $w0, $w0, 1
+-; MIPS64-MSA-NEXT:    slli.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    srai.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    ld.w $w2, 0($6)
+-; MIPS64-MSA-NEXT:    addvi.w $w2, $w2, 2
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    addvi.w $w0, $w0, 2
++; MIPS64-MSA-NEXT:    addvi.w $w1, $w1, 1
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w0, $w1
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    jr $ra
+ ; MIPS64-MSA-NEXT:    st.w $w0, 0($7)
+ ;
+ ; MIPS32-MSA-LABEL: test_ctselect_v4i32_mixed:
+ ; MIPS32-MSA:       # %bb.0:
+-; MIPS32-MSA-NEXT:    ld.w $w0, 0($5)
+-; MIPS32-MSA-NEXT:    fill.w $w1, $4
+-; MIPS32-MSA-NEXT:    ldi.b $w2, -1
+-; MIPS32-MSA-NEXT:    slli.w $w1, $w1, 31
+-; MIPS32-MSA-NEXT:    addvi.w $w0, $w0, 1
+-; MIPS32-MSA-NEXT:    srai.w $w1, $w1, 31
+-; MIPS32-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w2
+-; MIPS32-MSA-NEXT:    ld.w $w2, 0($6)
+-; MIPS32-MSA-NEXT:    addvi.w $w2, $w2, 2
++; MIPS32-MSA-NEXT:    ld.w $w0, 0($6)
++; MIPS32-MSA-NEXT:    ld.w $w1, 0($5)
++; MIPS32-MSA-NEXT:    fill.w $w2, $4
++; MIPS32-MSA-NEXT:    addvi.w $w0, $w0, 2
++; MIPS32-MSA-NEXT:    addvi.w $w1, $w1, 1
++; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
+ ; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS32-MSA-NEXT:    or.v $w0, $w0, $w1
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    jr $ra
+ ; MIPS32-MSA-NEXT:    st.w $w0, 0($7)
+   %a = load <4 x i32>, ptr %p1, align 16
+@@ -709,21 +659,19 @@ define void @test_ctselect_v4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
+ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b) nounwind {
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32_args:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS64-MSA-NEXT:    fill.w $w1, $1
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $8
+-; MIPS64-MSA-NEXT:    slli.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    srai.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $5
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $6
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
++; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+ ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+ ; MIPS64-MSA-NEXT:    jr $ra
+@@ -733,26 +681,24 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
+ ; MIPS32-MSA:       # %bb.0:
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    fill.w $w2, $4
+-; MIPS32-MSA-NEXT:    ldi.b $w1, -1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+-; MIPS32-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+ ; MIPS32-MSA-NEXT:    copy_s.w $4, $w0[2]
+@@ -766,21 +712,19 @@ define <4 x i32> @test_ctselect_v4i32_args(i1 %cond, <4 x i32> %a, <4 x i32> %b)
+ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
+ ; MIPS64-MSA-LABEL: test_ctselect_v4i32_multi_use:
+ ; MIPS64-MSA:       # %bb.0:
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w0[0], $7
++; MIPS64-MSA-NEXT:    insert.d $w1[0], $5
+ ; MIPS64-MSA-NEXT:    sll $1, $4, 0
+-; MIPS64-MSA-NEXT:    ldi.b $w0, -1
+-; MIPS64-MSA-NEXT:    fill.w $w1, $1
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $8
+-; MIPS64-MSA-NEXT:    slli.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    srai.w $w1, $w1, 31
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
+-; MIPS64-MSA-NEXT:    xor.v $w0, $w1, $w0
+-; MIPS64-MSA-NEXT:    and.v $w0, $w0, $w2
+-; MIPS64-MSA-NEXT:    insert.d $w2[0], $5
+-; MIPS64-MSA-NEXT:    insert.d $w2[1], $6
+-; MIPS64-MSA-NEXT:    shf.w $w2, $w2, 177
++; MIPS64-MSA-NEXT:    fill.w $w2, $1
++; MIPS64-MSA-NEXT:    insert.d $w0[1], $8
++; MIPS64-MSA-NEXT:    insert.d $w1[1], $6
++; MIPS64-MSA-NEXT:    slli.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS64-MSA-NEXT:    srai.w $w2, $w2, 31
++; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
++; MIPS64-MSA-NEXT:    shf.w $w1, $w1, 177
+ ; MIPS64-MSA-NEXT:    and.v $w1, $w1, $w2
+-; MIPS64-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS64-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS64-MSA-NEXT:    addv.w $w0, $w0, $w0
+ ; MIPS64-MSA-NEXT:    shf.w $w0, $w0, 177
+ ; MIPS64-MSA-NEXT:    copy_s.d $2, $w0[0]
+@@ -791,26 +735,24 @@ define <4 x i32> @test_ctselect_v4i32_multi_use(i1 %cond, <4 x i32> %a, <4 x i32
+ ; MIPS32-MSA:       # %bb.0:
+ ; MIPS32-MSA-NEXT:    lw $2, 24($sp)
+ ; MIPS32-MSA-NEXT:    lw $1, 28($sp)
++; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+ ; MIPS32-MSA-NEXT:    fill.w $w2, $4
+-; MIPS32-MSA-NEXT:    ldi.b $w1, -1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[0], $2
++; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    slli.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    srai.w $w2, $w2, 31
+ ; MIPS32-MSA-NEXT:    insert.w $w0[1], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 32($sp)
+-; MIPS32-MSA-NEXT:    xor.v $w1, $w2, $w1
+ ; MIPS32-MSA-NEXT:    insert.w $w0[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 36($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w0[3], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 16($sp)
+-; MIPS32-MSA-NEXT:    and.v $w0, $w1, $w0
+-; MIPS32-MSA-NEXT:    insert.w $w1[0], $6
+-; MIPS32-MSA-NEXT:    insert.w $w1[1], $7
+ ; MIPS32-MSA-NEXT:    insert.w $w1[2], $1
+ ; MIPS32-MSA-NEXT:    lw $1, 20($sp)
+ ; MIPS32-MSA-NEXT:    insert.w $w1[3], $1
+-; MIPS32-MSA-NEXT:    and.v $w1, $w2, $w1
+-; MIPS32-MSA-NEXT:    or.v $w0, $w1, $w0
++; MIPS32-MSA-NEXT:    xor.v $w1, $w1, $w0
++; MIPS32-MSA-NEXT:    and.v $w1, $w1, $w2
++; MIPS32-MSA-NEXT:    xor.v $w0, $w0, $w1
+ ; MIPS32-MSA-NEXT:    addv.w $w0, $w0, $w0
+ ; MIPS32-MSA-NEXT:    copy_s.w $2, $w0[0]
+ ; MIPS32-MSA-NEXT:    copy_s.w $3, $w0[1]
+diff --git a/llvm/test/CodeGen/Mips/ctselect-fallback.ll b/llvm/test/CodeGen/Mips/ctselect-fallback.ll
+index d89d7fc69871..6a61412367f7 100644
+--- a/llvm/test/CodeGen/Mips/ctselect-fallback.ll
++++ b/llvm/test/CodeGen/Mips/ctselect-fallback.ll
+@@ -11,7 +11,7 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
+ ; M32-NEXT:    negu $2, $2
+ ; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    xor $2, $1, $6
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_i8:
+ ; M64:       # %bb.0:
+@@ -23,7 +23,7 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
+ ; M64-NEXT:    and $1, $2, $1
+ ; M64-NEXT:    sll $2, $6, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    xor $2, $1, $2
++; M64-NEXT:    xor $2, $2, $1
+   %result = call i8 @llvm.ct.select.i8(i1 %cond, i8 %a, i8 %b)
+   ret i8 %result
+ }
+@@ -36,7 +36,7 @@ define i16 @test_ctselect_i16(i1 %cond, i16 %a, i16 %b) {
+ ; M32-NEXT:    negu $2, $2
+ ; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    xor $2, $1, $6
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_i16:
+ ; M64:       # %bb.0:
+@@ -48,7 +48,7 @@ define i16 @test_ctselect_i16(i1 %cond, i16 %a, i16 %b) {
+ ; M64-NEXT:    and $1, $2, $1
+ ; M64-NEXT:    sll $2, $6, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    xor $2, $1, $2
++; M64-NEXT:    xor $2, $2, $1
+   %result = call i16 @llvm.ct.select.i16(i1 %cond, i16 %a, i16 %b)
+   ret i16 %result
+ }
+@@ -56,26 +56,24 @@ define i16 @test_ctselect_i16(i1 %cond, i16 %a, i16 %b) {
+ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_i32:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $5
+-; M32-NEXT:    and $1, $1, $6
++; M32-NEXT:    andi $2, $4, 1
++; M32-NEXT:    xor $1, $5, $6
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_i32:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sll $3, $5, 0
++; M64-NEXT:    xor $2, $5, $6
+ ; M64-NEXT:    andi $1, $1, 1
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    sll $3, $6, 0
+-; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $6, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
+   ret i32 %result
+ }
+@@ -88,22 +86,21 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) {
+ ; M32-NEXT:    negu $3, $3
+ ; M32-NEXT:    xor $2, $6, $1
+ ; M32-NEXT:    and $2, $2, $3
+-; M32-NEXT:    xor $2, $2, $1
++; M32-NEXT:    xor $2, $1, $2
+ ; M32-NEXT:    lw $1, 20($sp)
+ ; M32-NEXT:    xor $4, $7, $1
+ ; M32-NEXT:    and $3, $4, $3
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    xor $3, $3, $1
++; M32-NEXT:    xor $3, $1, $3
+ ;
+ ; M64-LABEL: test_ctselect_i64:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    andi $1, $4, 1
+-; M64-NEXT:    dnegu $2, $1
+-; M64-NEXT:    daddiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $5
+-; M64-NEXT:    and $1, $1, $6
++; M64-NEXT:    andi $2, $4, 1
++; M64-NEXT:    xor $1, $5, $6
++; M64-NEXT:    dnegu $2, $2
++; M64-NEXT:    and $1, $1, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $6, $1
+   %result = call i64 @llvm.ct.select.i64(i1 %cond, i64 %a, i64 %b)
+   ret i64 %result
+ }
+@@ -111,23 +108,21 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) {
+ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) {
+ ; M32-LABEL: test_ctselect_ptr:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $5
+-; M32-NEXT:    and $1, $1, $6
++; M32-NEXT:    andi $2, $4, 1
++; M32-NEXT:    xor $1, $5, $6
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_ctselect_ptr:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    andi $1, $4, 1
+-; M64-NEXT:    dnegu $2, $1
+-; M64-NEXT:    daddiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $5
+-; M64-NEXT:    and $1, $1, $6
++; M64-NEXT:    andi $2, $4, 1
++; M64-NEXT:    xor $1, $5, $6
++; M64-NEXT:    dnegu $2, $2
++; M64-NEXT:    and $1, $1, $2
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $6, $1
+   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %a, ptr %b)
+   ret ptr %result
+ }
+@@ -151,13 +146,12 @@ define i32 @test_ctselect_const_false(i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_const_false:
+ ; M32:       # %bb.0:
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $zero, $5
++; M32-NEXT:    move $2, $5
+ ;
+ ; M64-LABEL: test_ctselect_const_false:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $zero, $1
++; M64-NEXT:    sll $2, $5, 0
+   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
+   ret i32 %result
+ }
+@@ -166,29 +160,27 @@ define i32 @test_ctselect_const_false(i32 %a, i32 %b) {
+ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_icmp_eq:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    xor $1, $4, $5
+-; M32-NEXT:    sltu $1, $zero, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $6
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $7
++; M32-NEXT:    xor $2, $4, $5
++; M32-NEXT:    xor $1, $6, $7
++; M32-NEXT:    sltiu $2, $2, 1
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $7, $1
+ ;
+ ; M64-LABEL: test_ctselect_icmp_eq:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    sll $3, $7, 0
+ ; M64-NEXT:    xor $1, $2, $1
+-; M64-NEXT:    sll $2, $6, 0
+-; M64-NEXT:    sltu $1, $zero, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $1, $2
+-; M64-NEXT:    not $1, $1
+-; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    xor $2, $6, $7
++; M64-NEXT:    sltiu $1, $1, 1
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $7, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %cond = icmp eq i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
+   ret i32 %result
+@@ -197,29 +189,27 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) {
+ define i32 @test_ctselect_icmp_ne(i32 %x, i32 %y, i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_icmp_ne:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    xor $1, $4, $5
+-; M32-NEXT:    sltiu $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $6
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $7
++; M32-NEXT:    xor $2, $4, $5
++; M32-NEXT:    xor $1, $6, $7
++; M32-NEXT:    sltu $2, $zero, $2
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $7, $1
+ ;
+ ; M64-LABEL: test_ctselect_icmp_ne:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    sll $3, $7, 0
+ ; M64-NEXT:    xor $1, $2, $1
+-; M64-NEXT:    sll $2, $6, 0
+-; M64-NEXT:    sltiu $1, $1, 1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $1, $2
+-; M64-NEXT:    not $1, $1
+-; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    xor $2, $6, $7
++; M64-NEXT:    sltu $1, $zero, $1
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $7, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %cond = icmp ne i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
+   ret i32 %result
+@@ -228,29 +218,25 @@ define i32 @test_ctselect_icmp_ne(i32 %x, i32 %y, i32 %a, i32 %b) {
+ define i32 @test_ctselect_icmp_slt(i32 %x, i32 %y, i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_icmp_slt:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    slt $1, $4, $5
+-; M32-NEXT:    xori $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $6
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $7
++; M32-NEXT:    slt $2, $4, $5
++; M32-NEXT:    xor $1, $6, $7
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $7, $1
+ ;
+ ; M64-LABEL: test_ctselect_icmp_slt:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    sll $3, $7, 0
+ ; M64-NEXT:    slt $1, $2, $1
+-; M64-NEXT:    sll $2, $6, 0
+-; M64-NEXT:    xori $1, $1, 1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $1, $2
+-; M64-NEXT:    not $1, $1
+-; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    xor $2, $6, $7
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $7, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %cond = icmp slt i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
+   ret i32 %result
+@@ -259,29 +245,25 @@ define i32 @test_ctselect_icmp_slt(i32 %x, i32 %y, i32 %a, i32 %b) {
+ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
+ ; M32-LABEL: test_ctselect_icmp_ult:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    sltu $1, $4, $5
+-; M32-NEXT:    xori $1, $1, 1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $1, $6
+-; M32-NEXT:    not $1, $1
+-; M32-NEXT:    and $1, $1, $7
++; M32-NEXT:    sltu $2, $4, $5
++; M32-NEXT:    xor $1, $6, $7
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $7, $1
+ ;
+ ; M64-LABEL: test_ctselect_icmp_ult:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+ ; M64-NEXT:    sll $2, $4, 0
+-; M64-NEXT:    sll $3, $7, 0
+ ; M64-NEXT:    sltu $1, $2, $1
+-; M64-NEXT:    sll $2, $6, 0
+-; M64-NEXT:    xori $1, $1, 1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $1, $2
+-; M64-NEXT:    not $1, $1
+-; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    xor $2, $6, $7
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $7, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %cond = icmp ult i32 %x, %y
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
+   ret i32 %result
+@@ -291,28 +273,26 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
+ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
+ ; M32-LABEL: test_ctselect_load:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
++; M32-NEXT:    lw $2, 0($6)
+ ; M32-NEXT:    lw $3, 0($5)
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $3
+-; M32-NEXT:    lw $3, 0($6)
+-; M32-NEXT:    and $1, $1, $3
++; M32-NEXT:    andi $1, $4, 1
++; M32-NEXT:    negu $1, $1
++; M32-NEXT:    xor $3, $3, $2
++; M32-NEXT:    and $1, $3, $1
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $2, $1
+ ;
+ ; M64-LABEL: test_ctselect_load:
+ ; M64:       # %bb.0:
+-; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    lw $3, 0($5)
+-; M64-NEXT:    andi $1, $1, 1
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
++; M64-NEXT:    sll $3, $4, 0
++; M64-NEXT:    lw $1, 0($6)
++; M64-NEXT:    lw $2, 0($5)
++; M64-NEXT:    andi $3, $3, 1
++; M64-NEXT:    xor $2, $2, $1
++; M64-NEXT:    negu $3, $3
+ ; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    lw $3, 0($6)
+-; M64-NEXT:    and $1, $1, $3
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $1, $2
+   %a = load i32, ptr %p1
+   %b = load i32, ptr %p2
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
+@@ -323,41 +303,37 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
+ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
+ ; M32-LABEL: test_ctselect_nested:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $5, 1
++; M32-NEXT:    andi $2, $5, 1
++; M32-NEXT:    xor $1, $6, $7
+ ; M32-NEXT:    andi $3, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    negu $4, $3
+-; M32-NEXT:    and $2, $2, $6
+-; M32-NEXT:    and $1, $1, $7
+-; M32-NEXT:    or $1, $2, $1
+-; M32-NEXT:    addiu $2, $3, -1
+-; M32-NEXT:    lw $3, 16($sp)
+-; M32-NEXT:    and $1, $4, $1
+-; M32-NEXT:    and $2, $2, $3
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    negu $3, $3
++; M32-NEXT:    and $1, $1, $2
++; M32-NEXT:    lw $2, 16($sp)
++; M32-NEXT:    xor $1, $7, $1
++; M32-NEXT:    xor $1, $1, $2
++; M32-NEXT:    and $1, $1, $3
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $1, $2
++; M32-NEXT:    xor $2, $2, $1
+ ;
+ ; M64-LABEL: test_ctselect_nested:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $5, 0
+-; M64-NEXT:    sll $3, $6, 0
+-; M64-NEXT:    sll $4, $4, 0
++; M64-NEXT:    xor $2, $6, $7
++; M64-NEXT:    sll $3, $4, 0
+ ; M64-NEXT:    andi $1, $1, 1
+-; M64-NEXT:    andi $4, $4, 1
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    negu $5, $4
+-; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    sll $3, $7, 0
+-; M64-NEXT:    and $1, $1, $3
+-; M64-NEXT:    addiu $3, $4, -1
+-; M64-NEXT:    or $1, $2, $1
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    andi $3, $3, 1
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    negu $3, $3
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $7, 0
++; M64-NEXT:    xor $1, $2, $1
+ ; M64-NEXT:    sll $2, $8, 0
+-; M64-NEXT:    and $1, $5, $1
+-; M64-NEXT:    and $2, $3, $2
++; M64-NEXT:    xor $1, $1, $2
++; M64-NEXT:    and $1, $1, $3
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $1, $2
++; M64-NEXT:    xor $2, $2, $1
+   %inner = call i32 @llvm.ct.select.i32(i1 %cond2, i32 %a, i32 %b)
+   %result = call i32 @llvm.ct.select.i32(i1 %cond1, i32 %inner, i32 %c)
+   ret i32 %result
+diff --git a/llvm/test/CodeGen/Mips/ctselect-side-effects.ll b/llvm/test/CodeGen/Mips/ctselect-side-effects.ll
+index 6cfa07afdd51..069100e2d2a7 100644
+--- a/llvm/test/CodeGen/Mips/ctselect-side-effects.ll
++++ b/llvm/test/CodeGen/Mips/ctselect-side-effects.ll
+@@ -38,26 +38,24 @@ define i32 @test_constant_fold() {
+ define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
+ ; M32-LABEL: test_protected_no_branch:
+ ; M32:       # %bb.0:
+-; M32-NEXT:    andi $1, $4, 1
+-; M32-NEXT:    negu $2, $1
+-; M32-NEXT:    addiu $1, $1, -1
+-; M32-NEXT:    and $2, $2, $5
+-; M32-NEXT:    and $1, $1, $6
++; M32-NEXT:    andi $2, $4, 1
++; M32-NEXT:    xor $1, $5, $6
++; M32-NEXT:    negu $2, $2
++; M32-NEXT:    and $1, $1, $2
+ ; M32-NEXT:    jr $ra
+-; M32-NEXT:    or $2, $2, $1
++; M32-NEXT:    xor $2, $6, $1
+ ;
+ ; M64-LABEL: test_protected_no_branch:
+ ; M64:       # %bb.0:
+ ; M64-NEXT:    sll $1, $4, 0
+-; M64-NEXT:    sll $3, $5, 0
++; M64-NEXT:    xor $2, $5, $6
+ ; M64-NEXT:    andi $1, $1, 1
+-; M64-NEXT:    negu $2, $1
+-; M64-NEXT:    addiu $1, $1, -1
+-; M64-NEXT:    and $2, $2, $3
+-; M64-NEXT:    sll $3, $6, 0
+-; M64-NEXT:    and $1, $1, $3
++; M64-NEXT:    sll $2, $2, 0
++; M64-NEXT:    negu $1, $1
++; M64-NEXT:    and $1, $2, $1
++; M64-NEXT:    sll $2, $6, 0
+ ; M64-NEXT:    jr $ra
+-; M64-NEXT:    or $2, $2, $1
++; M64-NEXT:    xor $2, $2, $1
+   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
+   ret i32 %result
+ }
+diff --git a/llvm/test/CodeGen/RISCV/ctselect-fallback.ll b/llvm/test/CodeGen/RISCV/ctselect-fallback.ll
+index d4617c7e75da..ee8072703ee3 100644
+--- a/llvm/test/CodeGen/RISCV/ctselect-fallback.ll
++++ b/llvm/test/CodeGen/RISCV/ctselect-fallback.ll
+@@ -101,8 +101,6 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) {
+ ;
+ ; RV32-LABEL: test_ctselect_const_true:
+ ; RV32:       # %bb.0:
+-; RV32-NEXT:    xor a0, a0, a1
+-; RV32-NEXT:    xor a0, a1, a0
+ ; RV32-NEXT:    ret
+   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
+   ret i32 %result
+@@ -208,7 +206,7 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
+ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ ; RV64-LABEL: test_ctselect_nested_and_i1_to_i32:
+ ; RV64:       # %bb.0:
+-; RV64-NEXT:    and a0, a1, a0
++; RV64-NEXT:    and a0, a0, a1
+ ; RV64-NEXT:    xor a2, a2, a3
+ ; RV64-NEXT:    slli a0, a0, 63
+ ; RV64-NEXT:    srai a0, a0, 63
+@@ -218,7 +216,7 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ ;
+ ; RV32-LABEL: test_ctselect_nested_and_i1_to_i32:
+ ; RV32:       # %bb.0:
+-; RV32-NEXT:    and a0, a1, a0
++; RV32-NEXT:    and a0, a0, a1
+ ; RV32-NEXT:    xor a2, a2, a3
+ ; RV32-NEXT:    slli a0, a0, 31
+ ; RV32-NEXT:    srai a0, a0, 31
+@@ -265,8 +263,8 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y) {
+ ; RV64-LABEL: test_ctselect_double_nested_and_i1:
+ ; RV64:       # %bb.0:
+-; RV64-NEXT:    and a1, a2, a1
+-; RV64-NEXT:    and a0, a1, a0
++; RV64-NEXT:    and a0, a0, a1
++; RV64-NEXT:    and a0, a0, a2
+ ; RV64-NEXT:    xor a3, a3, a4
+ ; RV64-NEXT:    slli a0, a0, 63
+ ; RV64-NEXT:    srai a0, a0, 63
+@@ -276,8 +274,8 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
+ ;
+ ; RV32-LABEL: test_ctselect_double_nested_and_i1:
+ ; RV32:       # %bb.0:
+-; RV32-NEXT:    and a1, a2, a1
+-; RV32-NEXT:    and a0, a1, a0
++; RV32-NEXT:    and a0, a0, a1
++; RV32-NEXT:    and a0, a0, a2
+ ; RV32-NEXT:    xor a3, a3, a4
+ ; RV32-NEXT:    slli a0, a0, 31
+ ; RV32-NEXT:    srai a0, a0, 31
+@@ -295,7 +293,7 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
+ define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y, i32 %z) {
+ ; RV64-LABEL: test_ctselect_double_nested_mixed_i1:
+ ; RV64:       # %bb.0:
+-; RV64-NEXT:    and a0, a1, a0
++; RV64-NEXT:    and a0, a0, a1
+ ; RV64-NEXT:    xor a3, a3, a4
+ ; RV64-NEXT:    or a0, a0, a2
+ ; RV64-NEXT:    slli a0, a0, 63
+@@ -309,7 +307,7 @@ define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x,
+ ;
+ ; RV32-LABEL: test_ctselect_double_nested_mixed_i1:
+ ; RV32:       # %bb.0:
+-; RV32-NEXT:    and a0, a1, a0
++; RV32-NEXT:    and a0, a0, a1
+ ; RV32-NEXT:    xor a3, a3, a4
+ ; RV32-NEXT:    or a0, a0, a2
+ ; RV32-NEXT:    slli a0, a0, 31
+@@ -382,7 +380,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) {
+ ; RV32-NEXT:    srai a0, a0, 31
+ ; RV32-NEXT:    and a0, a0, a1
+ ; RV32-NEXT:    lui a1, 522240
+-; RV32-NEXT:    xor a0, a0, a1
++; RV32-NEXT:    or a0, a0, a1
+ ; RV32-NEXT:    ret
+   %result = call float @llvm.ct.select.f32(i1 %cond, float 0x7FF8000000000000, float 0x7FF0000000000000)
+   ret float %result
+@@ -398,7 +396,7 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) {
+ ; RV64-NEXT:    and a0, a0, a1
+ ; RV64-NEXT:    li a1, 2047
+ ; RV64-NEXT:    slli a1, a1, 52
+-; RV64-NEXT:    xor a0, a0, a1
++; RV64-NEXT:    or a0, a0, a1
+ ; RV64-NEXT:    ret
+ ;
+ ; RV32-LABEL: test_ctselect_f64_nan_inf:
+diff --git a/llvm/test/CodeGen/X86/ctselect.ll b/llvm/test/CodeGen/X86/ctselect.ll
+index bf65e04721df..e1abae80cef4 100644
+--- a/llvm/test/CodeGen/X86/ctselect.ll
++++ b/llvm/test/CodeGen/X86/ctselect.ll
+@@ -9,8 +9,8 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
+ ; X64-LABEL: test_ctselect_i8:
+ ; X64:       # %bb.0:
+ ; X64-NEXT:    movl %edi, %eax
+-; X64-NEXT:    xorl %edx, %esi
+ ; X64-NEXT:    andb $1, %al
++; X64-NEXT:    xorl %edx, %esi
+ ; X64-NEXT:    negb %al
+ ; X64-NEXT:    andb %sil, %al
+ ; X64-NEXT:    xorb %dl, %al
+@@ -20,10 +20,10 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
+ ; X32-LABEL: test_ctselect_i8:
+ ; X32:       # %bb.0:
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    xorb %cl, %dl
+-; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    negb %al
+ ; X32-NEXT:    andb %dl, %al
+ ; X32-NEXT:    xorb %cl, %al
+@@ -32,10 +32,10 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) {
+ ; X32-NOCMOV-LABEL: test_ctselect_i8:
+ ; X32-NOCMOV:       # %bb.0:
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorb %cl, %dl
+-; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    negb %al
+ ; X32-NOCMOV-NEXT:    andb %dl, %al
+ ; X32-NOCMOV-NEXT:    xorb %cl, %al
+@@ -58,10 +58,11 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
+ ; X32-LABEL: test_ctselect_i32:
+ ; X32:       # %bb.0:
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl %edx, %eax
+ ; X32-NEXT:    xorl %ecx, %eax
+@@ -70,10 +71,11 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) {
+ ; X32-NOCMOV-LABEL: test_ctselect_i32:
+ ; X32-NOCMOV:       # %bb.0:
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl %edx, %eax
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+@@ -95,45 +97,57 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) {
+ ;
+ ; X32-LABEL: test_ctselect_i64:
+ ; X32:       # %bb.0:
+-; X32-NEXT:    pushl %esi
++; X32-NEXT:    pushl %edi
+ ; X32-NEXT:    .cfi_def_cfa_offset 8
+-; X32-NEXT:    .cfi_offset %esi, -8
+-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
++; X32-NEXT:    pushl %esi
++; X32-NEXT:    .cfi_def_cfa_offset 12
++; X32-NEXT:    .cfi_offset %esi, -12
++; X32-NEXT:    .cfi_offset %edi, -8
++; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
++; X32-NEXT:    andb $1, %dl
++; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+-; X32-NEXT:    xorl %edx, %eax
+-; X32-NEXT:    andl $1, %esi
+-; X32-NEXT:    negl %esi
+-; X32-NEXT:    andl %esi, %eax
+-; X32-NEXT:    xorl %edx, %eax
++; X32-NEXT:    xorl %esi, %eax
++; X32-NEXT:    movzbl %dl, %edi
++; X32-NEXT:    negl %edi
++; X32-NEXT:    andl %edi, %eax
++; X32-NEXT:    xorl %esi, %eax
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    andl %esi, %edx
++; X32-NEXT:    andl %edi, %edx
+ ; X32-NEXT:    xorl %ecx, %edx
+ ; X32-NEXT:    popl %esi
++; X32-NEXT:    .cfi_def_cfa_offset 8
++; X32-NEXT:    popl %edi
+ ; X32-NEXT:    .cfi_def_cfa_offset 4
+ ; X32-NEXT:    retl
+ ;
+ ; X32-NOCMOV-LABEL: test_ctselect_i64:
+ ; X32-NOCMOV:       # %bb.0:
+-; X32-NOCMOV-NEXT:    pushl %esi
++; X32-NOCMOV-NEXT:    pushl %edi
+ ; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+-; X32-NOCMOV-NEXT:    .cfi_offset %esi, -8
+-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
++; X32-NOCMOV-NEXT:    pushl %esi
++; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 12
++; X32-NOCMOV-NEXT:    .cfi_offset %esi, -12
++; X32-NOCMOV-NEXT:    .cfi_offset %edi, -8
++; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
++; X32-NOCMOV-NEXT:    andb $1, %dl
++; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+-; X32-NOCMOV-NEXT:    xorl %edx, %eax
+-; X32-NOCMOV-NEXT:    andl $1, %esi
+-; X32-NOCMOV-NEXT:    negl %esi
+-; X32-NOCMOV-NEXT:    andl %esi, %eax
+-; X32-NOCMOV-NEXT:    xorl %edx, %eax
++; X32-NOCMOV-NEXT:    xorl %esi, %eax
++; X32-NOCMOV-NEXT:    movzbl %dl, %edi
++; X32-NOCMOV-NEXT:    negl %edi
++; X32-NOCMOV-NEXT:    andl %edi, %eax
++; X32-NOCMOV-NEXT:    xorl %esi, %eax
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    andl %esi, %edx
++; X32-NOCMOV-NEXT:    andl %edi, %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+ ; X32-NOCMOV-NEXT:    popl %esi
++; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
++; X32-NOCMOV-NEXT:    popl %edi
+ ; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 4
+ ; X32-NOCMOV-NEXT:    retl
+   %result = call i64 @llvm.ct.select.i64(i1 %cond, i64 %a, i64 %b)
+@@ -155,37 +169,47 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) {
+ ;
+ ; X32-LABEL: test_ctselect_f32:
+ ; X32:       # %bb.0:
+-; X32-NEXT:    pushl %eax
+-; X32-NEXT:    .cfi_def_cfa_offset 8
++; X32-NEXT:    subl $12, %esp
++; X32-NEXT:    .cfi_def_cfa_offset 16
++; X32-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NEXT:    fstps {{[0-9]+}}(%esp)
++; X32-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NEXT:    fstps (%esp)
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+-; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+-; X32-NEXT:    andl %edx, %eax
+-; X32-NEXT:    xorl %ecx, %eax
+-; X32-NEXT:    movl %eax, (%esp)
+-; X32-NEXT:    flds (%esp)
+-; X32-NEXT:    popl %eax
++; X32-NEXT:    movl (%esp), %edx
++; X32-NEXT:    xorl %ecx, %edx
++; X32-NEXT:    andl %eax, %edx
++; X32-NEXT:    xorl %ecx, %edx
++; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
++; X32-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NEXT:    addl $12, %esp
+ ; X32-NEXT:    .cfi_def_cfa_offset 4
+ ; X32-NEXT:    retl
+ ;
+ ; X32-NOCMOV-LABEL: test_ctselect_f32:
+ ; X32-NOCMOV:       # %bb.0:
+-; X32-NOCMOV-NEXT:    pushl %eax
+-; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
++; X32-NOCMOV-NEXT:    subl $12, %esp
++; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 16
++; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    fstps (%esp)
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+-; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+-; X32-NOCMOV-NEXT:    andl %edx, %eax
+-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+-; X32-NOCMOV-NEXT:    movl %eax, (%esp)
+-; X32-NOCMOV-NEXT:    flds (%esp)
+-; X32-NOCMOV-NEXT:    popl %eax
++; X32-NOCMOV-NEXT:    movl (%esp), %edx
++; X32-NOCMOV-NEXT:    xorl %ecx, %edx
++; X32-NOCMOV-NEXT:    andl %eax, %edx
++; X32-NOCMOV-NEXT:    xorl %ecx, %edx
++; X32-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    addl $12, %esp
+ ; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 4
+ ; X32-NOCMOV-NEXT:    retl
+   %result = call float @llvm.ct.select.f32(i1 %cond, float %a, float %b)
+@@ -281,10 +305,11 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) {
+ ; X32-LABEL: test_ctselect_ptr:
+ ; X32:       # %bb.0:
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl %edx, %eax
+ ; X32-NEXT:    xorl %ecx, %eax
+@@ -293,10 +318,11 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) {
+ ; X32-NOCMOV-LABEL: test_ctselect_ptr:
+ ; X32-NOCMOV:       # %bb.0:
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl %edx, %eax
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+@@ -310,24 +336,16 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) {
+ ; X64-LABEL: test_ctselect_const_true:
+ ; X64:       # %bb.0:
+ ; X64-NEXT:    movl %edi, %eax
+-; X64-NEXT:    xorl %esi, %eax
+-; X64-NEXT:    xorl %esi, %eax
+ ; X64-NEXT:    retq
+ ;
+ ; X32-LABEL: test_ctselect_const_true:
+ ; X32:       # %bb.0:
+-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+-; X32-NEXT:    xorl %ecx, %eax
+-; X32-NEXT:    xorl %ecx, %eax
+ ; X32-NEXT:    retl
+ ;
+ ; X32-NOCMOV-LABEL: test_ctselect_const_true:
+ ; X32-NOCMOV:       # %bb.0:
+-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+ ; X32-NOCMOV-NEXT:    retl
+   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
+   ret i32 %result
+@@ -341,14 +359,12 @@ define i32 @test_ctselect_const_false(i32 %a, i32 %b) {
+ ;
+ ; X32-LABEL: test_ctselect_const_false:
+ ; X32:       # %bb.0:
+-; X32-NEXT:    xorl %eax, %eax
+-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
++; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+ ; X32-NEXT:    retl
+ ;
+ ; X32-NOCMOV-LABEL: test_ctselect_const_false:
+ ; X32-NOCMOV:       # %bb.0:
+-; X32-NOCMOV-NEXT:    xorl %eax, %eax
+-; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %eax
++; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+ ; X32-NOCMOV-NEXT:    retl
+   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
+   ret i32 %result
+@@ -443,19 +459,20 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) {
+ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) {
+ ; X64-LABEL: test_ctselect_fcmp_oeq:
+ ; X64:       # %bb.0:
+-; X64-NEXT:    movd %xmm3, %eax
+ ; X64-NEXT:    cmpeqss %xmm1, %xmm0
+-; X64-NEXT:    pxor %xmm3, %xmm2
+-; X64-NEXT:    pand %xmm0, %xmm2
+-; X64-NEXT:    movd %xmm2, %ecx
+-; X64-NEXT:    xorl %eax, %ecx
+-; X64-NEXT:    movd %ecx, %xmm0
++; X64-NEXT:    xorps %xmm3, %xmm2
++; X64-NEXT:    andps %xmm2, %xmm0
++; X64-NEXT:    xorps %xmm3, %xmm0
+ ; X64-NEXT:    retq
+ ;
+ ; X32-LABEL: test_ctselect_fcmp_oeq:
+ ; X32:       # %bb.0:
+-; X32-NEXT:    pushl %eax
+-; X32-NEXT:    .cfi_def_cfa_offset 8
++; X32-NEXT:    subl $12, %esp
++; X32-NEXT:    .cfi_def_cfa_offset 16
++; X32-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NEXT:    fstps {{[0-9]+}}(%esp)
++; X32-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NEXT:    fstps (%esp)
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+ ; X32-NEXT:    flds {{[0-9]+}}(%esp)
+ ; X32-NEXT:    flds {{[0-9]+}}(%esp)
+@@ -466,20 +483,24 @@ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) {
+ ; X32-NEXT:    andb %cl, %dl
+ ; X32-NEXT:    movzbl %dl, %ecx
+ ; X32-NEXT:    negl %ecx
+-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
++; X32-NEXT:    movl (%esp), %edx
+ ; X32-NEXT:    xorl %eax, %edx
+ ; X32-NEXT:    andl %ecx, %edx
+ ; X32-NEXT:    xorl %eax, %edx
+-; X32-NEXT:    movl %edx, (%esp)
+-; X32-NEXT:    flds (%esp)
+-; X32-NEXT:    popl %eax
++; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
++; X32-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NEXT:    addl $12, %esp
+ ; X32-NEXT:    .cfi_def_cfa_offset 4
+ ; X32-NEXT:    retl
+ ;
+ ; X32-NOCMOV-LABEL: test_ctselect_fcmp_oeq:
+ ; X32-NOCMOV:       # %bb.0:
+-; X32-NOCMOV-NEXT:    pushl %eax
+-; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
++; X32-NOCMOV-NEXT:    subl $12, %esp
++; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 16
++; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    fstps (%esp)
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+ ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
+@@ -492,13 +513,13 @@ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) {
+ ; X32-NOCMOV-NEXT:    andb %al, %dl
+ ; X32-NOCMOV-NEXT:    movzbl %dl, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
++; X32-NOCMOV-NEXT:    movl (%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+ ; X32-NOCMOV-NEXT:    andl %eax, %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    movl %edx, (%esp)
+-; X32-NOCMOV-NEXT:    flds (%esp)
+-; X32-NOCMOV-NEXT:    popl %eax
++; X32-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
++; X32-NOCMOV-NEXT:    addl $12, %esp
+ ; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 4
+ ; X32-NOCMOV-NEXT:    retl
+   %cond = fcmp oeq float %x, %y
+@@ -522,12 +543,13 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
+ ; X32-LABEL: test_ctselect_load:
+ ; X32:       # %bb.0:
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    movl (%edx), %edx
+ ; X32-NEXT:    movl (%ecx), %ecx
+ ; X32-NEXT:    xorl %edx, %ecx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl %ecx, %eax
+ ; X32-NEXT:    xorl %edx, %eax
+@@ -536,12 +558,13 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
+ ; X32-NOCMOV-LABEL: test_ctselect_load:
+ ; X32-NOCMOV:       # %bb.0:
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    movl (%edx), %edx
+ ; X32-NOCMOV-NEXT:    movl (%ecx), %ecx
+ ; X32-NOCMOV-NEXT:    xorl %edx, %ecx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl %ecx, %eax
+ ; X32-NOCMOV-NEXT:    xorl %edx, %eax
+@@ -578,17 +601,19 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
+ ; X32-NEXT:    .cfi_offset %esi, -12
+ ; X32-NEXT:    .cfi_offset %edi, -8
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NEXT:    andb $1, %al
++; X32-NEXT:    movb {{[0-9]+}}(%esp), %ah
++; X32-NEXT:    andb $1, %ah
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+-; X32-NEXT:    xorl %edx, %edi
+-; X32-NEXT:    andl $1, %esi
+-; X32-NEXT:    negl %esi
+-; X32-NEXT:    andl %edi, %esi
++; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
++; X32-NEXT:    xorl %edx, %esi
++; X32-NEXT:    movzbl %ah, %edi
++; X32-NEXT:    negl %edi
++; X32-NEXT:    andl %esi, %edi
+ ; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    xorl %esi, %edx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    xorl %edi, %edx
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl %edx, %eax
+ ; X32-NEXT:    xorl %ecx, %eax
+@@ -607,17 +632,19 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) {
+ ; X32-NOCMOV-NEXT:    .cfi_offset %esi, -12
+ ; X32-NOCMOV-NEXT:    .cfi_offset %edi, -8
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
++; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ah
++; X32-NOCMOV-NEXT:    andb $1, %ah
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
+-; X32-NOCMOV-NEXT:    xorl %edx, %edi
+-; X32-NOCMOV-NEXT:    andl $1, %esi
+-; X32-NOCMOV-NEXT:    negl %esi
+-; X32-NOCMOV-NEXT:    andl %edi, %esi
++; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
++; X32-NOCMOV-NEXT:    xorl %edx, %esi
++; X32-NOCMOV-NEXT:    movzbl %ah, %edi
++; X32-NOCMOV-NEXT:    negl %edi
++; X32-NOCMOV-NEXT:    andl %esi, %edi
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    xorl %esi, %edx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    xorl %edi, %edx
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl %edx, %eax
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+@@ -651,10 +678,10 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+ ; X32-NEXT:    andb {{[0-9]+}}(%esp), %al
+-; X32-NEXT:    movzbl %al, %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl %edx, %eax
+ ; X32-NEXT:    xorl %ecx, %eax
+@@ -665,10 +692,10 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+ ; X32-NOCMOV-NEXT:    andb {{[0-9]+}}(%esp), %al
+-; X32-NOCMOV-NEXT:    movzbl %al, %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl %edx, %eax
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+@@ -699,10 +726,10 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+ ; X32-NEXT:    orb {{[0-9]+}}(%esp), %al
+-; X32-NEXT:    movzbl %al, %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl %edx, %eax
+ ; X32-NEXT:    xorl %ecx, %eax
+@@ -713,10 +740,10 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+ ; X32-NOCMOV-NEXT:    orb {{[0-9]+}}(%esp), %al
+-; X32-NOCMOV-NEXT:    movzbl %al, %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl %edx, %eax
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+@@ -735,9 +762,9 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
+ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y) {
+ ; X64-LABEL: test_ctselect_double_nested_and_i1:
+ ; X64:       # %bb.0:
+-; X64-NEXT:    movl %esi, %eax
++; X64-NEXT:    movl %edi, %eax
++; X64-NEXT:    andl %esi, %eax
+ ; X64-NEXT:    andl %edx, %eax
+-; X64-NEXT:    andl %edi, %eax
+ ; X64-NEXT:    xorl %r8d, %ecx
+ ; X64-NEXT:    andl $1, %eax
+ ; X64-NEXT:    negl %eax
+@@ -751,10 +778,10 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+ ; X32-NEXT:    andb {{[0-9]+}}(%esp), %al
+ ; X32-NEXT:    andb {{[0-9]+}}(%esp), %al
+-; X32-NEXT:    movzbl %al, %eax
++; X32-NEXT:    andb $1, %al
+ ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NEXT:    xorl %ecx, %edx
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl %edx, %eax
+ ; X32-NEXT:    xorl %ecx, %eax
+@@ -766,10 +793,10 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+ ; X32-NOCMOV-NEXT:    andb {{[0-9]+}}(%esp), %al
+ ; X32-NOCMOV-NEXT:    andb {{[0-9]+}}(%esp), %al
+-; X32-NOCMOV-NEXT:    movzbl %al, %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
+ ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl %edx, %eax
+ ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+@@ -1403,7 +1430,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) {
+ ; X64-NEXT:    andl $1, %edi
+ ; X64-NEXT:    negl %edi
+ ; X64-NEXT:    andl $4194304, %edi # imm = 0x400000
+-; X64-NEXT:    xorl $2139095040, %edi # imm = 0x7F800000
++; X64-NEXT:    orl $2139095040, %edi # imm = 0x7F800000
+ ; X64-NEXT:    movd %edi, %xmm0
+ ; X64-NEXT:    retq
+ ;
+@@ -1412,10 +1439,11 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) {
+ ; X32-NEXT:    pushl %eax
+ ; X32-NEXT:    .cfi_def_cfa_offset 8
+ ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+-; X32-NEXT:    andl $1, %eax
++; X32-NEXT:    andb $1, %al
++; X32-NEXT:    movzbl %al, %eax
+ ; X32-NEXT:    negl %eax
+ ; X32-NEXT:    andl $4194304, %eax # imm = 0x400000
+-; X32-NEXT:    xorl $2139095040, %eax # imm = 0x7F800000
++; X32-NEXT:    orl $2139095040, %eax # imm = 0x7F800000
+ ; X32-NEXT:    movl %eax, (%esp)
+ ; X32-NEXT:    flds (%esp)
+ ; X32-NEXT:    popl %eax
+@@ -1427,10 +1455,11 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) {
+ ; X32-NOCMOV-NEXT:    pushl %eax
+ ; X32-NOCMOV-NEXT:    .cfi_def_cfa_offset 8
+ ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+-; X32-NOCMOV-NEXT:    andl $1, %eax
++; X32-NOCMOV-NEXT:    andb $1, %al
++; X32-NOCMOV-NEXT:    movzbl %al, %eax
+ ; X32-NOCMOV-NEXT:    negl %eax
+ ; X32-NOCMOV-NEXT:    andl $4194304, %eax # imm = 0x400000
+-; X32-NOCMOV-NEXT:    xorl $2139095040, %eax # imm = 0x7F800000
++; X32-NOCMOV-NEXT:    orl $2139095040, %eax # imm = 0x7F800000
+ ; X32-NOCMOV-NEXT:    movl %eax, (%esp)
+ ; X32-NOCMOV-NEXT:    flds (%esp)
+ ; X32-NOCMOV-NEXT:    popl %eax
+@@ -1449,7 +1478,7 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) {
+ ; X64-NEXT:    movabsq $2251799813685248, %rax # imm = 0x8000000000000
+ ; X64-NEXT:    andq %rdi, %rax
+ ; X64-NEXT:    movabsq $9218868437227405312, %rcx # imm = 0x7FF0000000000000
+-; X64-NEXT:    xorq %rax, %rcx
++; X64-NEXT:    orq %rax, %rcx
+ ; X64-NEXT:    movq %rcx, %xmm0
+ ; X64-NEXT:    retq
+ ;
