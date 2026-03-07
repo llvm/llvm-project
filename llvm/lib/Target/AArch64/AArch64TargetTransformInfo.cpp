@@ -6845,7 +6845,43 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         Ops.push_back(&I->getOperandUse(1));
     }
     break;
-
+  case Instruction::Xor:
+    // NEON has no EON instruction.
+    if (isa<FixedVectorType>(I->getType()) && ST->hasNEON())
+      break;
+    [[fallthrough]];
+  case Instruction::And:
+  case Instruction::Or:
+    // SVE has only BIC.
+    // SVE2 and SME implement "or not" and "xor not" with BSL2N.
+    if (I->getOpcode() != Instruction::And &&
+        isa<ScalableVectorType>(I->getType()) && !ST->hasSVE2() &&
+        !ST->hasSME())
+      break;
+    // Shift can be fold into scalar AND/ORR/EOR,
+    // but not the non-negated operand of BIC/ORN/EON.
+    if (!(I->getType()->isVectorTy() && ST->hasNEON()) &&
+        match(I, m_c_BinOp(m_Shift(m_Value(), m_ConstantInt()), m_Value())))
+      break;
+    for (auto &Op : I->operands()) {
+      // (and/or/xor X, (not Y)) -> (bic/orn/eon X, Y)
+      if (match(Op.get(), m_Not(m_Value()))) {
+        Ops.push_back(&Op);
+        return true;
+      }
+      // (and/or/xor X, (splat (not Y))) -> (bic/orn/eon X, (splat Y))
+      if (match(Op.get(),
+                m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()), m_ZeroInt()),
+                          m_Value(), m_ZeroMask()))) {
+        Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+        Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+        Ops.push_back(&Not);
+        Ops.push_back(&InsertElt);
+        Ops.push_back(&Op);
+        return true;
+      }
+    }
+    break;
   default:
     break;
   }

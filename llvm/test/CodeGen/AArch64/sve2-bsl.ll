@@ -369,3 +369,76 @@ define <vscale x 2 x i64> @orn(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 
   %4 = or <vscale x 2 x i64> %0, %3
   ret <vscale x 2 x i64> %4
 }
+
+define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
+; CHECK-LABEL: array_or_not_nxv4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB29_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    bsl2n z1.d, z1.d, z0.d, z1.d
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    incw x8
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB29_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 4 x i32> %m, splat (i32 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 2
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i32, ptr %a, i64 %index
+  %wide.load = load <vscale x 4 x i32>, ptr %2, align 4
+  %3 = or <vscale x 4 x i32> %wide.load, %not
+  store <vscale x 4 x i32> %3, ptr %2, align 4
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @array_xor_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
+; CHECK-LABEL: array_xor_not_nxv4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB30_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    bsl2n z2.d, z2.d, z0.d, z1.d
+; CHECK-NEXT:    st1w { z2.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    incw x8
+; CHECK-NEXT:    cmp x8, #256
+; CHECK-NEXT:    b.ne .LBB30_1
+; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
+; CHECK-NEXT:    ret
+entry:
+  %not = xor <vscale x 4 x i32> %m, splat (i32 -1)
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl nuw nsw i64 %0, 2
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %2 = getelementptr inbounds nuw i32, ptr %a, i64 %index
+  %wide.load = load <vscale x 4 x i32>, ptr %2, align 4
+  %3 = xor <vscale x 4 x i32> %wide.load, %not
+  store <vscale x 4 x i32> %3, ptr %2, align 4
+  %index.next = add nuw i64 %index, %1
+  %4 = icmp eq i64 %index.next, 256
+  br i1 %4, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:
+  ret void
+}
+
+declare i64 @llvm.vscale.i64()
