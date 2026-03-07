@@ -685,6 +685,10 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                     const std::vector<std::string> *paths,
                                     lldb_private::Status &error,
                                     lldb_private::FileSpec *loaded_image) {
+  // The dlopen setup/calling code cannot be called concurrently on the same
+  // process.
+  std::lock_guard<std::mutex> locker(m_dlopen_mutex);
+
   if (loaded_image)
     loaded_image->Clear();
 
