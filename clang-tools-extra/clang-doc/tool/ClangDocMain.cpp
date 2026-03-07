@@ -361,7 +361,7 @@ Example usage for a project using a compile commands database:
           if (FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-          std::vector<doc::OwnedPtr<doc::Info>> Infos;
+          doc::OwningPtrVec<doc::Info> Infos;
           {
             llvm::TimeTraceScope Red("decoding bitcode");
             for (auto &Bitcode : Group.getValue()) {
