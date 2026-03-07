@@ -24454,8 +24454,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL, *this);
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
-      // Save the incoming indirect pointer for musttail forwarding.
-      RVFI->addIncomingIndirectArg(ArgValue);
       // If the original argument was split and passed by reference (e.g. i128
       // on RV32), we need to load all parts of it here (using the same
       // address). Vectors may be partly split to registers and partly to the
@@ -24464,6 +24462,8 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       InVals.push_back(DAG.getLoad(VA.getValVT(), DL, Chain, ArgValue,
                                    MachinePointerInfo()));
       unsigned ArgIndex = Ins[InsIdx].OrigArgIndex;
+      // Save the incoming indirect pointer for musttail forwarding.
+      RVFI->setIncomingIndirectArg(ArgIndex, ArgValue);
       unsigned ArgPartOffset = Ins[InsIdx].PartOffset;
       assert(VA.getValVT().isVector() || ArgPartOffset == 0);
       while (i + 1 != e && Ins[InsIdx + 1].OrigArgIndex == ArgIndex) {
@@ -24784,15 +24784,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       // of creating a new stack temporary. The incoming pointer points to
       // the caller's caller's frame, which remains valid after a tail call.
       if (IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
-        unsigned IndirectIdx = 0;
-        for (unsigned k = 0; k < OutIdx; ++k) {
-          if (ArgLocs[k].getLocInfo() == CCValAssign::Indirect)
-            ++IndirectIdx;
-        }
-        ArgValue = RVFI->getIncomingIndirectArg(IndirectIdx);
+        unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
+        ArgValue = RVFI->getIncomingIndirectArg(ArgIndex);
         // Skip any split parts of this argument (they are covered by the
         // forwarded pointer).
-        unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
         while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == ArgIndex) {
           ++i;
           ++OutIdx;

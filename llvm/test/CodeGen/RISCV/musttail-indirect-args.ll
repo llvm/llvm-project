@@ -50,6 +50,67 @@ define void @caller_no_musttail_indirect() nounwind {
   ret void
 }
 
+; Verify that non-musttail tail call forwarding an indirect arg from the
+; caller's own parameters also does NOT tail call (the arg lives on the
+; caller's frame, which would be deallocated).
+define i32 @caller_no_musttail_forward_indirect(fp128 %a) nounwind {
+; RV32-LABEL: caller_no_musttail_forward_indirect:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a2, 4(a0)
+; RV32-NEXT:    lw a3, 8(a0)
+; RV32-NEXT:    lw a4, 12(a0)
+; RV32-NEXT:    mv a0, sp
+; RV32-NEXT:    sw a1, 0(sp)
+; RV32-NEXT:    sw a2, 4(sp)
+; RV32-NEXT:    sw a3, 8(sp)
+; RV32-NEXT:    sw a4, 12(sp)
+; RV32-NEXT:    call callee_musttail_indirect
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: caller_no_musttail_forward_indirect:
+; RV64:       # %bb.0:
+; RV64-NEXT:    tail callee_musttail_indirect
+  %call = tail call i32 @callee_musttail_indirect(fp128 %a)
+  ret i32 %call
+}
+
+; Test musttail with two indirect fp128 args on RV32. Both pointers must be
+; forwarded. Exercises the DenseMap with two distinct OrigArgIndex values.
+declare i32 @callee_musttail_two_indirect(fp128 %a, fp128 %b)
+
+define i32 @caller_musttail_two_indirect(fp128 %a, fp128 %b) nounwind {
+; RV32-LABEL: caller_musttail_two_indirect:
+; RV32:       # %bb.0:
+; RV32-NEXT:    tail callee_musttail_two_indirect
+;
+; RV64-LABEL: caller_musttail_two_indirect:
+; RV64:       # %bb.0:
+; RV64-NEXT:    tail callee_musttail_two_indirect
+  %call = musttail call i32 @callee_musttail_two_indirect(fp128 %a, fp128 %b)
+  ret i32 %call
+}
+
+; Test musttail with mixed direct (i32 in register) + indirect (fp128) args.
+; Confirms OrigArgIndex lookup works when not all args are indirect.
+declare i32 @callee_musttail_mixed(i32 %x, fp128 %a)
+
+define i32 @caller_musttail_mixed(i32 %x, fp128 %a) nounwind {
+; RV32-LABEL: caller_musttail_mixed:
+; RV32:       # %bb.0:
+; RV32-NEXT:    tail callee_musttail_mixed
+;
+; RV64-LABEL: caller_musttail_mixed:
+; RV64:       # %bb.0:
+; RV64-NEXT:    tail callee_musttail_mixed
+  %call = musttail call i32 @callee_musttail_mixed(i32 %x, fp128 %a)
+  ret i32 %call
+}
+
 ; Test musttail with i128 on RV32 (indirect, split into 4 x i32 parts).
 declare i64 @callee_musttail_i128(i128 %a)
 
@@ -62,5 +123,21 @@ define i64 @caller_musttail_i128(i128 %a) nounwind {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    tail callee_musttail_i128
   %call = musttail call i64 @callee_musttail_i128(i128 %a)
+  ret i64 %call
+}
+
+; Test musttail with i128 (indirect+split on RV32) plus a trailing i32 direct arg.
+; Exercises the split-skip logic followed by a normal register arg.
+declare i64 @callee_musttail_i128_and_i32(i128 %a, i32 %x)
+
+define i64 @caller_musttail_i128_and_i32(i128 %a, i32 %x) nounwind {
+; RV32-LABEL: caller_musttail_i128_and_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    tail callee_musttail_i128_and_i32
+;
+; RV64-LABEL: caller_musttail_i128_and_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    tail callee_musttail_i128_and_i32
+  %call = musttail call i64 @callee_musttail_i128_and_i32(i128 %a, i32 %x)
   ret i64 %call
 }
