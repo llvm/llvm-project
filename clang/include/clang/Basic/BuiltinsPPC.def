@@ -1158,6 +1158,29 @@ UNALIASED_CUSTOM_MMA_BUILTIN(mma_dmxvf16gerx2, "vW1024*W256V",
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmdmxvf16gerx2, "vW1024*W256Vi255i15i3",
                              "mma,isa-future-instructions")
 
+// Elliptic Curve Cryptography Builtins
+UNALIASED_CUSTOM_BUILTIN(xxmulmul, "VVVi7", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xxmulmulhiadd, "VVVi1i1i1", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xxmulmulloadd, "VVVi1i1", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xxssumudm, "VVVi1", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xxssumudmc, "VVVi1", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xxssumudmcext, "VVVVi1", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsaddadduqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsaddaddsuqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsaddsubuqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsaddsubsuqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t1uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t2uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsmerge2t3uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsmerge3t1uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t1uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t2uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t3uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsrebase2t4uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t1uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t2uqm, "VVV", false, "isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(xsrebase3t3uqm, "VVV", false, "isa-future-instructions")
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN
