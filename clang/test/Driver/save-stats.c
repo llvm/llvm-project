@@ -30,6 +30,8 @@
 // RUN: %clang --target=x86_64-unknown-fuchsia -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=x86_64-unknown-haiku -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=x86_64-unknown-haiku -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
+// RUN: %clang --target=x86_64-unknown-serenity -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
+// RUN: %clang --target=x86_64-unknown-serenity -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=avr -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=avr -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // CHECK-LTO: "-stats-file=save-stats.stats"
