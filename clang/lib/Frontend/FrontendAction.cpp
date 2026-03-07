@@ -977,11 +977,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.createFileManager();
   if (!CI.hasSourceManager()) {
     CI.createSourceManager();
-    if (CI.getDiagnosticOpts().getFormat() == DiagnosticOptions::SARIF) {
-      static_cast<SARIFDiagnosticPrinter *>(&CI.getDiagnosticClient())
-          ->setSarifWriter(
-              std::make_unique<SarifDocumentWriter>(CI.getSourceManager()));
-    }
   }
 
   // Set up embedding for any specified files. Do this before we load any

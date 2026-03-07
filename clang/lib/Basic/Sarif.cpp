@@ -342,9 +342,9 @@ SarifDocumentWriter::createCodeFlow(ArrayRef<ThreadFlow> ThreadFlows) {
   return json::Object{{"threadFlows", createThreadFlows(ThreadFlows)}};
 }
 
-void SarifDocumentWriter::createRun(StringRef ShortToolName,
-                                    StringRef LongToolName,
-                                    StringRef ToolVersion) {
+void SarifDocumentWriter::createRun(std::string ShortToolName,
+                                    std::string LongToolName,
+                                    std::string ToolVersion) {
   // Clear resources associated with a previous run.
   endRun();
 
@@ -439,10 +439,26 @@ json::Object SarifDocumentWriter::createDocument() {
   endRun();
 
   json::Object Doc{
-      {"$schema", SchemaURI},
-      {"version", SchemaVersion},
+      {"$schema", Version.SchemaURI},
+      {"version", Version.SchemaVersion},
   };
   if (!Runs.empty())
     Doc["runs"] = json::Array(Runs);
   return Doc;
+}
+
+ArrayRef<SarifVersion> SarifDocumentWriter::getSupportedVersions() {
+  static const SarifVersion Versions[] = {
+      {"2.1.0", "2.1",
+       "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/"
+       "sarif-schema-2.1.0.json",
+       true}};
+
+  return Versions;
+}
+
+const SarifVersion &SarifDocumentWriter::getDefaultVersion() {
+  const auto Versions = getSupportedVersions();
+  return *std::find_if(Versions.begin(), Versions.end(),
+                       [](const SarifVersion &V) { return V.IsDefault; });
 }

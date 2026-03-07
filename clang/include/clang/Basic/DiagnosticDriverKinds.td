@@ -586,6 +586,20 @@ def err_analyzer_not_built_with_z3 : Error<
   "analyzer constraint manager 'z3' is only available if LLVM was built with "
   "-DLLVM_ENABLE_Z3_SOLVER=ON">;
 
+def err_diagnostic_output_no_value
+    : Error<"'-fdiagnostics-add-output' key '%0' has no value">;
+def err_diagnostic_output_unknown_format
+    : Error<"'-fdiagnostics-add-output' uses unrecognized format '%0'">;
+def err_diagnostic_output_unknown_key
+    : Error<"'-fdiagnostics-add-output' with format '%0' uses unrecognized key "
+            "'%1'">;
+def err_invalid_sarif_version
+    : Error<"'-fdiagnostics-add-output' specifies unsupported SARIF version "
+            "'%0'. Supported versions are: %1">;
+def err_missing_sarif_file_name
+    : Error<"'-fdiagnostics-add-output' with format 'sarif' is missing "
+            "required key 'file'">;
+
 def warn_drv_needs_hvx : Warning<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">,
   InGroup<OptionIgnored>;
