@@ -78,7 +78,7 @@ public:
   /// assembly code.  These flags carry semantic information not
   /// otherwise easily derivable from the IR text.
   ///
-  enum CommentFlag {
+  enum CommentFlag : uint8_t {
     ReloadReuse = 0x1,    // higher bits are reserved for target dep comments.
     NoSchedComment = 0x2,
     TAsmComments = 0x4    // Target Asm comments should start from this value.
@@ -393,7 +393,7 @@ public:
   void clearAsmPrinterFlags() { AsmPrinterFlags = 0; }
 
   /// Return whether an AsmPrinter flag is set.
-  bool getAsmPrinterFlag(CommentFlag Flag) const {
+  bool getAsmPrinterFlag(uint8_t Flag) const {
     assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
            "Flag is out of range for the AsmPrinterFlags field");
     return AsmPrinterFlags & Flag;
@@ -407,7 +407,7 @@ public:
   }
 
   /// Clear specific AsmPrinter flags.
-  void clearAsmPrinterFlag(CommentFlag Flag) {
+  void clearAsmPrinterFlag(uint8_t Flag) {
     assert(isUInt<LLVM_MI_ASMPRINTERFLAGS_BITS>(unsigned(Flag)) &&
            "Flag is out of range for the AsmPrinterFlags field");
     AsmPrinterFlags &= ~Flag;

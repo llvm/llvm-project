@@ -60,7 +60,7 @@ public:
 };
 
 namespace SPIRV {
-enum AsmComments {
+enum AsmComments : uint8_t {
   // It is a half type
   ASM_PRINTER_WIDTH16 = MachineInstr::TAsmComments,
   // It is a 64 bit type
