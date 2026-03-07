@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-mingw                 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-cygwin                -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -fsyntax-only -verify=expected,msc %s
+// RUN: %clang_cc1 -triple x86_64-mingw                 -fsyntax-only -verify=expected,gnu %s
+// RUN: %clang_cc1 -triple x86_64-cygwin                -fsyntax-only -verify=expected,gnu %s
 
 // Test that attaching the exclude_from_explicit_instantiation attribute and
 // either the dllexport or dllimport attribute together causes a warning.
@@ -92,30 +92,30 @@ template struct __declspec(dllexport) class_tmpl_explicit_inst<int>;
 
 // Test that exclude_from_explicit_instantiation is ignored in a non-template context.
 struct class_nontmpl {
-  EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  __declspec(dllexport) EXCLUDE_ATTR void fn_exported_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  __declspec(dllimport) EXCLUDE_ATTR void fn_imported_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported(); // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  __declspec(dllexport) EXCLUDE_ATTR void fn_exported_excluded(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  __declspec(dllimport) EXCLUDE_ATTR void fn_imported_excluded(); // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
-  EXCLUDE_ATTR __declspec(dllexport) static int var_excluded_exported; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  EXCLUDE_ATTR __declspec(dllimport) static int var_excluded_imported; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  __declspec(dllexport) EXCLUDE_ATTR static int var_exported_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  __declspec(dllimport) EXCLUDE_ATTR static int var_imported_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  EXCLUDE_ATTR __declspec(dllexport) static int var_excluded_exported; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  EXCLUDE_ATTR __declspec(dllimport) static int var_excluded_imported; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  __declspec(dllexport) EXCLUDE_ATTR static int var_exported_excluded; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  __declspec(dllimport) EXCLUDE_ATTR static int var_imported_excluded; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
-  struct EXCLUDE_ATTR __declspec(dllexport) nested_excluded_exported {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  struct EXCLUDE_ATTR __declspec(dllimport) nested_excluded_imported {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  struct __declspec(dllexport) EXCLUDE_ATTR nested_exported_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
-  struct __declspec(dllimport) EXCLUDE_ATTR nested_imported_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  struct EXCLUDE_ATTR __declspec(dllexport) nested_excluded_exported {}; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  struct EXCLUDE_ATTR __declspec(dllimport) nested_excluded_imported {}; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  struct __declspec(dllexport) EXCLUDE_ATTR nested_exported_excluded {}; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  struct __declspec(dllimport) EXCLUDE_ATTR nested_imported_excluded {}; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
   template <class T>
-  struct EXCLUDE_ATTR __declspec(dllexport) class_template_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  struct EXCLUDE_ATTR __declspec(dllexport) class_template_excluded {}; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
   template <class T>
-  EXCLUDE_ATTR __declspec(dllexport) static T var_template_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  EXCLUDE_ATTR __declspec(dllexport) static T var_template_excluded; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
   template <class T>
-  EXCLUDE_ATTR __declspec(dllexport) void fn_template_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  EXCLUDE_ATTR __declspec(dllexport) void fn_template_excluded(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
   struct nested {
-    EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+    EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
   };
 
   struct EXCLUDE_ATTR nested_excluded {
@@ -135,27 +135,27 @@ struct class_nontmpl {
 };
 
 // Test that exclude_from_explicit_instantiation is ignored on a non-member entity.
-EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-__declspec(dllexport) EXCLUDE_ATTR void fn_exported_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-__declspec(dllimport) EXCLUDE_ATTR void fn_imported_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
+EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported(); // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+__declspec(dllexport) EXCLUDE_ATTR void fn_exported_excluded(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+__declspec(dllimport) EXCLUDE_ATTR void fn_imported_excluded(); // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
-EXCLUDE_ATTR __declspec(dllexport) int var_excluded_exported; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-EXCLUDE_ATTR __declspec(dllimport) int var_excluded_imported; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-__declspec(dllexport) EXCLUDE_ATTR int var_exported_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-__declspec(dllimport) EXCLUDE_ATTR int var_imported_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
+EXCLUDE_ATTR __declspec(dllexport) int var_excluded_exported; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+EXCLUDE_ATTR __declspec(dllimport) int var_excluded_imported; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+__declspec(dllexport) EXCLUDE_ATTR int var_exported_excluded; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+__declspec(dllimport) EXCLUDE_ATTR int var_imported_excluded; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
-struct EXCLUDE_ATTR __declspec(dllexport) class_excluded_exported {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-struct EXCLUDE_ATTR __declspec(dllimport) class_excluded_imported {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-struct __declspec(dllexport) EXCLUDE_ATTR class_exported_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
-struct __declspec(dllimport) EXCLUDE_ATTR class_imported_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
+struct EXCLUDE_ATTR __declspec(dllexport) class_excluded_exported {}; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+struct EXCLUDE_ATTR __declspec(dllimport) class_excluded_imported {}; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+struct __declspec(dllexport) EXCLUDE_ATTR class_exported_excluded {}; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+struct __declspec(dllimport) EXCLUDE_ATTR class_imported_excluded {}; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
 template <class T>
-struct EXCLUDE_ATTR __declspec(dllexport) class_tmpl_excluded_exported {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
+struct EXCLUDE_ATTR __declspec(dllexport) class_tmpl_excluded_exported {}; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 template <class T>
-EXCLUDE_ATTR __declspec(dllexport) T var_template_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
+EXCLUDE_ATTR __declspec(dllexport) T var_template_excluded; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 template <class T>
-EXCLUDE_ATTR __declspec(dllexport) void fn_template_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
+EXCLUDE_ATTR __declspec(dllexport) void fn_template_excluded(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
 EXCLUDE_ATTR void fn_excluded();
 
@@ -167,6 +167,24 @@ struct EXCLUDE_ATTR class_excluded {
 struct __declspec(dllexport) class_exported {
   EXCLUDE_ATTR void fn_excluded();
 };
-struct __declspec(dllimport) class_imported {
+
+// Test that an excluded member in an imported class can have its definition without any warning.
+struct __declspec(dllimport) class_imported { // #import
+  void fn(); // expected-note{{previous declaration is here}}
   EXCLUDE_ATTR void fn_excluded();
+  static int var;
+  EXCLUDE_ATTR static int var_excluded;
 };
+
+void class_imported::fn() {}
+  // msc-warning@-1{{'class_imported::fn' redeclared without 'dllimport' attribute: 'dllexport' attribute added}}
+  // gnu-warning@-2{{'class_imported::fn' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+  // gnu-note@#import {{previous attribute is here}}
+
+void class_imported::fn_excluded() {}
+
+int class_imported::var = 0;
+  // expected-error@-1{{definition of dllimport static field not allowed}}
+  // expected-note@#import{{attribute is here}}
+
+int class_imported::var_excluded = 0;
