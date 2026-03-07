@@ -877,7 +877,7 @@ def BuiltinAssumeAligned : Builtin {
 
 def BuiltinAssumeDereferenceable : Builtin {
   let Spellings = ["__builtin_assume_dereferenceable"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "void(void const*, size_t)";
 }
 
