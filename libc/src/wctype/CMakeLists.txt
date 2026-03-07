@@ -7,3 +7,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.wctype_utils    
 )
+
+add_entrypoint_object(
+  iswlower
+  SRCS
+    iswlower.cpp
+  HDRS
+    iswlower.h
+  DEPENDS
+    libc.src.__support.wctype_utils    
+)
