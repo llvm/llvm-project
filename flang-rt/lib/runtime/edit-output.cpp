@@ -419,10 +419,28 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
     if (totalLength > width || !exponent) {
       return EmitRepeated(io_, '*', width);
     }
-    if (totalLength < width && digitsBeforePoint == 0 &&
-        zeroesBeforePoint == 0) {
-      zeroesBeforePoint = 1;
-      ++totalLength;
+    if (digitsBeforePoint == 0 && zeroesBeforePoint == 0 && scale <= 0) {
+      // Optional leading zero position (F202X leading zero control).
+      // When scale > 0 (kP with k > 0), digits are moved before the decimal
+      // point, so the leading zero position is not optional -- skip this.
+      // Value has no digits before the decimal point: "0.xxxE+yy" vs ".xxxE+yy"
+      switch (edit.modes.leadingZero) {
+      case MutableModes::LeadingZeroMode::Print:
+        // LZP: always print the optional leading zero
+        zeroesBeforePoint = 1;
+        ++totalLength;
+        break;
+      case MutableModes::LeadingZeroMode::Suppress:
+        // LZS: never print the optional leading zero
+        break;
+      case MutableModes::LeadingZeroMode::Processor:
+        // LZ: processor-defined; add leading zero only when field has room
+        if (totalLength < width) {
+          zeroesBeforePoint = 1;
+          ++totalLength;
+        }
+        break;
+      }
     }
     if (totalLength < width && editWidth == 0) {
       width = totalLength;
@@ -552,7 +570,21 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
             digitsAfterPoint + trailingZeroes ==
         0) {
-      zeroesBeforePoint = 1; // "." -> "0."
+      zeroesBeforePoint = 1; // "."--> "0." (bare decimal point)
+    } else if (digitsBeforePoint == 0 && zeroesBeforePoint == 0 && expo <= 0) {
+      // Optional leading zero position (F202X leading zero control).
+      // Value magnitude < 1: "0.xxx" vs ".xxx"
+      switch (edit.modes.leadingZero) {
+      case MutableModes::LeadingZeroMode::Print:
+        // LZP: always print the optional leading zero
+        zeroesBeforePoint = 1;
+        break;
+      case MutableModes::LeadingZeroMode::Suppress:
+        // LZS: never print the optional leading zero
+        break;
+      case MutableModes::LeadingZeroMode::Processor:
+        break; // handled below after width computation
+      }
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
         1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes +
@@ -561,7 +593,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     if (totalLength > width) {
       return EmitRepeated(io_, '*', width);
     }
-    if (totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0) {
+    if (edit.modes.leadingZero == MutableModes::LeadingZeroMode::Processor &&
+        totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0) {
       zeroesBeforePoint = 1;
       ++totalLength;
     }

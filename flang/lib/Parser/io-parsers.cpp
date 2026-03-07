@@ -634,7 +634,8 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
                     "X " >> pure(format::IntrinsicTypeDataEditDesc::Kind::EX) ||
                     pure(format::IntrinsicTypeDataEditDesc::Kind::E)) ||
             "G " >> pure(format::IntrinsicTypeDataEditDesc::Kind::G) ||
-            "L " >> pure(format::IntrinsicTypeDataEditDesc::Kind::L),
+            ("L "_tok / !letter /* don't occlude LZ, LZS, & LZP */) >>
+                pure(format::IntrinsicTypeDataEditDesc::Kind::L),
         noInt, noInt, noInt)))
 
 // R1307 data-edit-desc (part 2 of 2)
@@ -682,6 +683,12 @@ TYPE_PARSER(construct<format::ControlEditDesc>(
                          pure(format::ControlEditDesc::Kind::BN)) ||
                 "Z " >> construct<format::ControlEditDesc>(
                             pure(format::ControlEditDesc::Kind::BZ))) ||
+    "L " >> ("Z " >> ("S " >> construct<format::ControlEditDesc>(
+                                  pure(format::ControlEditDesc::Kind::LZS)) ||
+                         "P " >> construct<format::ControlEditDesc>(pure(
+                                     format::ControlEditDesc::Kind::LZP)) ||
+                         construct<format::ControlEditDesc>(
+                             pure(format::ControlEditDesc::Kind::LZ)))) ||
     "R " >> ("U " >> construct<format::ControlEditDesc>(
                          pure(format::ControlEditDesc::Kind::RU)) ||
                 "D " >> construct<format::ControlEditDesc>(

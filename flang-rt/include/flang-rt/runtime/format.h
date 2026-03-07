@@ -44,6 +44,12 @@ struct MutableModes {
     return editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
   }
 
+  enum class LeadingZeroMode : std::uint8_t {
+    Processor, // LZ: processor-dependent (default)
+    Suppress, // LZS: suppress optional leading zero
+    Print, // LZP: print optional leading zero
+  };
+
   std::uint8_t editingFlags{0}; // BN, DP, SS
   enum decimal::FortranRounding round{
       executionEnvironment
@@ -53,6 +59,7 @@ struct MutableModes {
   short scale{0}; // kP
   bool inNamelist{false}; // skip ! comments
   bool nonAdvancing{false}; // ADVANCE='NO', or $ or \ in FORMAT
+  LeadingZeroMode leadingZero{LeadingZeroMode::Processor}; // LZ/LZS/LZP
 };
 
 // A single edit descriptor extracted from a FORMAT
