@@ -317,12 +317,23 @@ defvar WaveOpKind_Product = 1;
 defvar WaveOpKind_Min = 2;
 defvar WaveOpKind_Max = 3;
 
+defvar AtomicBinOp_Add = 0;
+defvar AtomicBinOp_And = 1;
+defvar AtomicBinOp_Or = 2;
+defvar AtomicBinOp_Xor = 3;
+defvar AtomicBinOp_IMin = 4;
+defvar AtomicBinOp_IMax = 5;
+defvar AtomicBinOp_UMin = 6;
+defvar AtomicBinOp_UMax = 7;
+defvar AtomicBinOp_Exchange = 8;
+
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
 
 // Intrinsic arg selection
 class IntrinArgSelectType;
 def IntrinArgSelect_Index : IntrinArgSelectType;
+def IntrinArgSelect_HandleIndex : IntrinArgSelectType;
 def IntrinArgSelect_I8 : IntrinArgSelectType;
 def IntrinArgSelect_I32 : IntrinArgSelectType;
 
@@ -332,6 +343,7 @@ class IntrinArgSelect<IntrinArgSelectType type_, int value_> {
 }
 
 class IntrinArgIndex<int index> : IntrinArgSelect<IntrinArgSelect_Index, index>;
+class IntrinArgHandleIndex<int index> : IntrinArgSelect<IntrinArgSelect_HandleIndex, index>;
 class IntrinArgI8<int value> : IntrinArgSelect<IntrinArgSelect_I8, value>;
 class IntrinArgI32<int value> : IntrinArgSelect<IntrinArgSelect_I32, value>;
 
@@ -348,6 +360,14 @@ class IntrinArgI32<int value> : IntrinArgSelect<IntrinArgSelect_I32, value>;
 //   let intrinsics = [
 //     IntrinSelect<int_dx_my_intrinsic,
 //       [IntrinArgIndex<2>, IntrinArgIndex<1>, IntrinArgIndex<0>> ]
+//     >,
+//   ]
+//=========================================================================================
+// Using IntrinArgHandleIndex<>, handle arguments of the intrinsic can be copied to the
+// DXIL OP with required casting in specific order:
+//   let intrinsics = [
+//     IntrinSelect<int_dx_my_intrinsic,
+//       [IntrinArgHandleHandleIndex<2>, IntrinArgHandleIndex<1>, IntrinArgHandleIndex<0>> ]
 //     >,
 //   ]
 //=========================================================================================
@@ -907,6 +927,19 @@ def GetDimensions : DXILOp<72, getDimensions> {
   let Doc = "gets the dimensions of a buffer or texture";
   let arguments = [HandleTy, Int32Ty];
   let result = DimensionsTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def AtomicBinOp : DXILOp<78, atomicBinOp> {
+  let Doc = "performs an atomic operation on a value in memory";
+  let intrinsics = [
+    IntrinSelect<int_dx_interlocked_or,
+    [ IntrinArgHandleIndex<0>, IntrinArgI32<AtomicBinOp_Or>, IntrinArgIndex<1>,
+      IntrinArgIndex<2>, IntrinArgIndex<3>, IntrinArgIndex<4> ]>
+  ];
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 

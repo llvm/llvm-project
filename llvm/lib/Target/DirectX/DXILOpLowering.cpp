@@ -119,6 +119,10 @@ public:
           case IntrinArgSelect::Type::Index:
             Args.push_back(CI->getArgOperand(A.Value));
             break;
+          case IntrinArgSelect::Type::HandleIndex:
+            Args.push_back(createTmpHandleCast(CI->getArgOperand(A.Value),
+                                               OpBuilder.getHandleType()));
+            break;
           case IntrinArgSelect::Type::I8:
             Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
             break;

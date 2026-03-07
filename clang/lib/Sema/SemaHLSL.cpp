@@ -2999,6 +2999,25 @@ static bool CheckArgTypeMatches(Sema *S, Expr *Arg, QualType ExpectedType) {
   return false;
 }
 
+// checks for int or long regardless of sign
+static bool CheckArgTypeMatchesList(Sema *S, Expr *Arg,
+                                    llvm::SmallVector<QualType> ExpectedTypes) {
+  QualType ArgType = Arg->getType().getCanonicalType();
+  bool MatchedType = false;
+  for (const auto ExpectedType : ExpectedTypes)
+    if (ArgType == ExpectedType) {
+      MatchedType = true;
+      return false;
+    }
+  if (!MatchedType) {
+    for (const auto ExpectedType : ExpectedTypes)
+      S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+          << ArgType << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
 static bool CheckAllArgTypesAreCorrect(
     Sema *S, CallExpr *TheCall,
     llvm::function_ref<bool(Sema *S, SourceLocation Loc, int ArgOrdinal,
@@ -3537,6 +3556,22 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     ReturnType = S.Context.FloatTy;
   }
   TheCall->setType(ReturnType);
+
+  return false;
+}
+
+static bool CheckShaderModelVersion(Sema *S, CallExpr *TheCall,
+                                    VersionTuple MinimumSMVersion) {
+  bool IsDXIL = S->getASTContext().getTargetInfo().getTriple().getArch() ==
+                llvm::Triple::dxil;
+  llvm::VersionTuple SMVersion =
+      S->getASTContext().getTargetInfo().getTriple().getOSVersion();
+  if (SMVersion < MinimumSMVersion && IsDXIL) {
+    S->Diag(TheCall->getBeginLoc(),
+            diag::err_hlsl_intrinsic_in_wrong_shader_model)
+        << TheCall << MinimumSMVersion.getAsString();
+    return true;
+  }
 
   return false;
 }
@@ -4170,6 +4205,138 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall,
                                getASTContext().UnsignedIntTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
+    if (SemaRef.checkArgCountRange(TheCall, 3, 4))
+      return true;
+    const ASTContext &AST = SemaRef.getASTContext();
+
+    auto checkResTy = [&](const HLSLAttributedResourceType *ResTy) -> bool {
+      bool IsValid = false;
+      const bool IsUAV = ResTy->getAttrs().ResourceClass == ResourceClass::UAV;
+      const bool HasElemTy = ResTy->hasContainedType();
+      const bool IsRaw = ResTy->isRaw();
+      const bool IsTexture = ResTy->isTexture();
+      const bool IsIntElem =
+          HasElemTy && (ResTy->getContainedType() == AST.IntTy ||
+                        ResTy->getContainedType() == AST.UnsignedIntTy);
+      const bool IsLongElem =
+          HasElemTy && (ResTy->getContainedType() == AST.LongTy ||
+                        ResTy->getContainedType() == AST.UnsignedLongTy);
+
+      // The resource handle must be either
+      IsValid =
+          IsUAV &&
+          ((IsRaw && HasElemTy) || // RWByteAddressBuffer or RWStructuredBuffer
+           (!IsRaw && HasElemTy &&
+            (IsIntElem || IsLongElem)) || // RWBuffer<int/uint/long/ulong>
+           (!IsRaw && HasElemTy && IsTexture &&
+            (IsIntElem || IsLongElem))); // RWTexture<int/uint/long/ulong>
+
+      return !IsValid;
+    };
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
+      return true;
+    // 64bit interlocked is only valid in SM6.6+
+    // Check the final arg (which will be the new value) for the size used.
+    bool Is64Bit =
+        AST.getTypeSize(
+            TheCall->getArg(TheCall->getNumArgs() - 1)->getType()) == 64;
+    if (Is64Bit)
+      if (CheckShaderModelVersion(&SemaRef, TheCall, VersionTuple(6, 6)))
+        return true;
+
+    llvm::SmallVector<QualType> LegalTypes;
+    if (Is64Bit) {
+      LegalTypes = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                    AST.UnsignedLongTy};
+    } else {
+      LegalTypes = {AST.IntTy, AST.UnsignedIntTy};
+    }
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+    // We will have a second index if handling a RWStructuredBuffer
+    if (TheCall->getNumArgs() == 4) {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                              SemaRef.getASTContext().UnsignedIntTy) ||
+          CheckArgTypeMatchesList(&SemaRef, TheCall->getArg(3), LegalTypes))
+        return true;
+    } else {
+      if (CheckArgTypeMatchesList(&SemaRef, TheCall->getArg(2), LegalTypes))
+        return true;
+    }
+
+    TheCall->setType(SemaRef.getASTContext().VoidTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_int:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_uint:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_ll:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_ull: {
+    if (SemaRef.checkArgCountRange(TheCall, 4, 5))
+      return true;
+    const ASTContext &AST = SemaRef.getASTContext();
+    auto checkResTy = [&](const HLSLAttributedResourceType *ResTy) -> bool {
+      bool IsValid = false;
+      const bool IsUAV = ResTy->getAttrs().ResourceClass == ResourceClass::UAV;
+      const bool HasElemTy = ResTy->hasContainedType();
+      const bool IsRaw = ResTy->isRaw();
+      const bool IsTexture = ResTy->isTexture();
+      const bool IsIntElem =
+          HasElemTy && (ResTy->getContainedType() == AST.IntTy ||
+                        ResTy->getContainedType() == AST.UnsignedIntTy);
+      const bool IsLongElem =
+          HasElemTy && (ResTy->getContainedType() == AST.LongTy ||
+                        ResTy->getContainedType() == AST.UnsignedLongTy);
+
+      // The resource handle must be either
+      IsValid =
+          IsUAV &&
+          ((IsRaw && HasElemTy) || // RWByteAddressBuffer or RWStructuredBuffer
+           (!IsRaw && HasElemTy &&
+            (IsIntElem || IsLongElem)) || // RWBuffer<int/uint/long/ulong>
+           (!IsRaw && HasElemTy && IsTexture &&
+            (IsIntElem || IsLongElem))); // RWTexture<int/uint/long/ulong>
+
+      return !IsValid;
+    };
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
+      return true;
+    // 64bit interlocked is only valid in SM6.6+
+    // Check the final arg (which will be the return value) for the size used.
+    bool Is64Bit =
+        AST.getTypeSize(
+            TheCall->getArg(TheCall->getNumArgs() - 1)->getType()) == 64;
+    if (Is64Bit)
+      if (CheckShaderModelVersion(&SemaRef, TheCall, VersionTuple(6, 6)))
+        return true;
+
+    llvm::SmallVector<QualType> LegalTypes;
+    if (Is64Bit) {
+      LegalTypes = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                    AST.UnsignedLongTy};
+    } else {
+      LegalTypes = {AST.IntTy, AST.UnsignedIntTy};
+    }
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+    // We will have a second index if handling a RWStructuredBuffer
+    if (TheCall->getNumArgs() == 5) {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                              SemaRef.getASTContext().UnsignedIntTy) ||
+          CheckArgTypeMatchesList(&SemaRef, TheCall->getArg(3), LegalTypes) ||
+          CheckArgTypeMatchesList(&SemaRef, TheCall->getArg(4), LegalTypes))
+        return true;
+    } else {
+      if (CheckArgTypeMatchesList(&SemaRef, TheCall->getArg(2), LegalTypes) ||
+          CheckArgTypeMatchesList(&SemaRef, TheCall->getArg(3), LegalTypes))
+        return true;
+    }
     break;
   }
   }

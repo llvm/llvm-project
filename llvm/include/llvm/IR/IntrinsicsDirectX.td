@@ -153,6 +153,8 @@ def int_dx_resource_gather_cmp
 // Cast between target extension handle types and dxil-style opaque handles
 def int_dx_resource_casthandle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
 
+def int_dx_interlocked_or: DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_anyint_ty], [IntrWriteMem]>;
+
 def int_dx_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
 def int_dx_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
 def int_dx_asdouble : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_double_ty>], [llvm_anyint_ty, LLVMMatchType<0>], [IntrNoMem]>;

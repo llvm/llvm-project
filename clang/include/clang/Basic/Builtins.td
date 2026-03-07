@@ -5457,6 +5457,20 @@ def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLInterlockedOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_or"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLInterlockedOrRet : LangBuiltin<"HLSL_LANG">,
+    Template<["unsigned int", "int", "unsigned long int", "long int"],
+             ["_uint", "_int", "_ull", "_ll"]> {
+  let Spellings = ["__builtin_hlsl_interlocked_or_ret"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "T(...)";
+}
+
 // Builtins for XRay.
 def XRayCustomEvent : Builtin {
   let Spellings = ["__xray_customevent"];

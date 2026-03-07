@@ -13645,6 +13645,9 @@ def err_hlsl_samplecmp_requires_float
 def err_hlsl_gathercmp_invalid_component
     : Error<"gatherCmp%select{Red|Green|Blue|Alpha}0 operations on the Vulkan target are not supported; only GatherCmp and GatherCmpRed are allowed">;
 
+def err_hlsl_intrinsic_in_wrong_shader_model: Error<
+  "intrinsic %0 requires shader model %1 or greater">;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
