@@ -2046,7 +2046,8 @@ void BinaryFunction::postProcessJumpTables() {
 
     uint64_t EntryOffset = JTAddress - JT->getAddress();
     while (EntryOffset < JT->getSize()) {
-      uint64_t EntryAddress = JT->EntriesAsAddress[EntryOffset / JT->EntrySize];
+      uint64_t EntryAddress =
+          JT->EntriesAsAddress[EntryOffset / JT->getEntrySize()];
       uint64_t TargetOffset = EntryAddress - getAddress();
       if (TargetOffset < getSize()) {
         TakenBranches.emplace_back(JTSiteOffset, TargetOffset);
@@ -2055,7 +2056,7 @@ void BinaryFunction::postProcessJumpTables() {
           registerReferencedOffset(TargetOffset);
       }
 
-      EntryOffset += JT->EntrySize;
+      EntryOffset += JT->getEntrySize();
 
       // A label at the next entry means the end of this jump table.
       if (JT->Labels.count(EntryOffset))

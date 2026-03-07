@@ -799,7 +799,7 @@ void BinaryContext::populateJumpTables() {
     if (opts::StrictMode && JT->Type == JumpTable::JTT_PIC) {
       for (uint64_t Address = JT->getAddress();
            Address < JT->getAddress() + JT->getSize();
-           Address += JT->EntrySize) {
+           Address += JT->getEntrySize()) {
         DataPCRelocations.erase(DataPCRelocations.find(Address));
       }
     }
@@ -965,7 +965,7 @@ BinaryContext::duplicateJumpTable(BinaryFunction &Function, JumpTable *JT,
   (void)Found;
   MCSymbol *NewLabel = Ctx->createNamedTempSymbol("duplicatedJT");
   JumpTable *NewJT =
-      new JumpTable(*NewLabel, JT->getAddress(), JT->EntrySize, JT->Type,
+      new JumpTable(*NewLabel, JT->getAddress(), JT->getEntrySize(), JT->Type,
                     JumpTable::LabelMapType{{Offset, NewLabel}},
                     *getSectionForAddress(JT->getAddress()));
   NewJT->Parents = JT->Parents;
