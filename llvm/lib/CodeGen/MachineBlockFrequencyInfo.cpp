@@ -309,6 +309,11 @@ BlockFrequency MachineBlockFrequencyInfo::getEntryFreq() const {
   return MBFI ? MBFI->getEntryFreq() : BlockFrequency(0);
 }
 
+void MachineBlockFrequencyInfo::eraseBlock(const MachineBasicBlock *MBB) {
+  if (MBFI)
+    MBFI->eraseBlock(MBB);
+}
+
 Printable llvm::printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
                                BlockFrequency Freq) {
   return Printable([&MBFI, Freq](raw_ostream &OS) {

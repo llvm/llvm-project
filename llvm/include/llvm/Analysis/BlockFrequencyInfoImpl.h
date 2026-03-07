@@ -26,7 +26,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
@@ -541,7 +540,6 @@ namespace bfi_detail {
 template <class BlockT> struct TypeMap {};
 template <> struct TypeMap<BasicBlock> {
   using BlockT = BasicBlock;
-  using BlockKeyT = AssertingVH<const BasicBlock>;
   using FunctionT = Function;
   using BranchProbabilityInfoT = BranchProbabilityInfo;
   using LoopT = Loop;
@@ -549,15 +547,11 @@ template <> struct TypeMap<BasicBlock> {
 };
 template <> struct TypeMap<MachineBasicBlock> {
   using BlockT = MachineBasicBlock;
-  using BlockKeyT = const MachineBasicBlock *;
   using FunctionT = MachineFunction;
   using BranchProbabilityInfoT = MachineBranchProbabilityInfo;
   using LoopT = MachineLoop;
   using LoopInfoT = MachineLoopInfo;
 };
-
-template <class BlockT, class BFIImplT>
-class BFICallbackVH;
 
 /// Get the name of a MachineBasicBlock.
 ///
@@ -841,7 +835,6 @@ void IrreducibleGraph::addEdges(const BlockNode &Node,
 ///         series by simulation.)
 template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
   using BlockT = typename bfi_detail::TypeMap<BT>::BlockT;
-  using BlockKeyT = typename bfi_detail::TypeMap<BT>::BlockKeyT;
   using FunctionT = typename bfi_detail::TypeMap<BT>::FunctionT;
   using BranchProbabilityInfoT =
       typename bfi_detail::TypeMap<BT>::BranchProbabilityInfoT;
@@ -849,18 +842,27 @@ template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
   using LoopInfoT = typename bfi_detail::TypeMap<BT>::LoopInfoT;
   using Successor = GraphTraits<const BlockT *>;
   using Predecessor = GraphTraits<Inverse<const BlockT *>>;
-  using BFICallbackVH =
-      bfi_detail::BFICallbackVH<BlockT, BlockFrequencyInfoImpl>;
 
   const BranchProbabilityInfoT *BPI = nullptr;
   const LoopInfoT *LI = nullptr;
   const FunctionT *F = nullptr;
 
   // All blocks in reverse postorder.
-  std::vector<BFICallbackVH> RPOT;
+  std::vector<const BlockT *> RPOT;
   DenseMap<const BlockT *, BlockNode> Nodes;
 
-  BlockNode getNode(const BlockT *BB) const { return Nodes.lookup(BB); }
+  BlockNode getNode(const BlockT *BB) const {
+#ifdef EXPENSIVE_CHECKS
+    // Try to catch cases where blocks were deleted (use-after-free can be
+    // caught by ASan) or moved to a different function, but the BFI was not
+    // updated. This is an asymptotically expensive check.
+    for (auto Node : RPOT)
+      assert((!Node || Node->getParent() == F) &&
+             "BFI stores basic block outside of function, missing update!");
+#endif
+    assert(BB->getParent() == F && "block must be in same function");
+    return Nodes.lookup(BB);
+  }
 
   const BlockT *getBlock(const BlockNode &Node) const {
     assert(Node.Index < RPOT.size());
@@ -1020,14 +1022,15 @@ public:
 
   void setBlockFreq(const BlockT *BB, BlockFrequency Freq);
 
-  void forgetBlock(const BlockT *BB) {
+  void eraseBlock(const BlockT *BB) {
+    assert(BB->getParent() == F && "block must be in same function");
     // We don't erase corresponding items from `Freqs`, `RPOT` and other to
     // avoid invalidating indices. Doing so would have saved some memory, but
     // it's not worth it.
-    auto It = Nodes.find(BB);
-    assert(It != Nodes.end() && "cannot forget block that was never seen");
-    RPOT[It->second.Index] = {}; // Clear value handle.
-    Nodes.erase(It);
+    if (auto It = Nodes.find(BB); It != Nodes.end()) {
+      RPOT[It->second.Index] = nullptr;
+      Nodes.erase(It);
+    }
   }
 
   Scaled64 getFloatingBlockFreq(const BlockT *BB) const {
@@ -1053,45 +1056,6 @@ public:
 
   void verifyMatch(BlockFrequencyInfoImpl<BT> &Other) const;
 };
-
-namespace bfi_detail {
-
-template <class BFIImplT>
-class BFICallbackVH<BasicBlock, BFIImplT> : public CallbackVH {
-  BFIImplT *BFIImpl;
-
-public:
-  BFICallbackVH() = default;
-
-  BFICallbackVH(const BasicBlock *BB, BFIImplT *BFIImpl)
-      : CallbackVH(BB), BFIImpl(BFIImpl) {}
-
-  virtual ~BFICallbackVH() = default;
-
-  void deleted() override {
-    BFIImpl->forgetBlock(cast<BasicBlock>(getValPtr()));
-  }
-
-  operator const BasicBlock *() const {
-    Value *V = *static_cast<const CallbackVH *>(this);
-    return cast<BasicBlock>(V);
-  }
-};
-
-/// Dummy implementation since MachineBasicBlocks aren't Values, so ValueHandles
-/// don't apply to them.
-template <class BFIImplT>
-class BFICallbackVH<MachineBasicBlock, BFIImplT> {
-  const MachineBasicBlock *MBB;
-
-public:
-  BFICallbackVH() = default;
-  BFICallbackVH(const MachineBasicBlock *MBB, BFIImplT *) : MBB(MBB) {}
-
-  operator const MachineBasicBlock *() const { return MBB; }
-};
-
-} // end namespace bfi_detail
 
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
@@ -1148,7 +1112,7 @@ void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
     BlockNode NewNode(Freqs.size());
     It->second = NewNode;
     Freqs.emplace_back();
-    RPOT.emplace_back(BB, this);
+    RPOT.emplace_back(BB);
     BlockFrequencyInfoImplBase::setBlockFreq(NewNode, Freq);
   }
 }
@@ -1157,7 +1121,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeRPOT() {
   const BlockT *Entry = &F->front();
   RPOT.reserve(F->size());
   for (const BlockT *BB : post_order(Entry))
-    RPOT.emplace_back(BB, this);
+    RPOT.emplace_back(BB);
   std::reverse(RPOT.begin(), RPOT.end());
 
   assert(RPOT.size() - 1 <= BlockNode::getMaxIndex() &&

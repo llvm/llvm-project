@@ -250,6 +250,10 @@ void BlockFrequencyInfo::setBlockFreqAndScale(
   BFI->setBlockFreq(ReferenceBB, Freq);
 }
 
+void BlockFrequencyInfo::eraseBlock(const BasicBlock *BB) {
+  BFI->eraseBlock(BB);
+}
+
 /// Pop up a ghostview window with the current block frequency propagation
 /// rendered using dot.
 void BlockFrequencyInfo::view(StringRef title) const {

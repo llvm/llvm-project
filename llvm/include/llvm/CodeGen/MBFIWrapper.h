@@ -24,20 +24,22 @@ class MachineBasicBlock;
 class MachineBlockFrequencyInfo;
 
 class MBFIWrapper {
- public:
-  MBFIWrapper(const MachineBlockFrequencyInfo &I) : MBFI(I) {}
+public:
+  MBFIWrapper(MachineBlockFrequencyInfo &I) : MBFI(I) {}
 
   BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
   void setBlockFreq(const MachineBasicBlock *MBB, BlockFrequency F);
   std::optional<uint64_t>
   getBlockProfileCount(const MachineBasicBlock *MBB) const;
 
+  void eraseBlock(const MachineBasicBlock *MBB);
+
   void view(const Twine &Name, bool isSimple = true);
   BlockFrequency getEntryFreq() const;
   const MachineBlockFrequencyInfo &getMBFI() const { return MBFI; }
 
 private:
-  const MachineBlockFrequencyInfo &MBFI;
+  MachineBlockFrequencyInfo &MBFI;
   DenseMap<const MachineBasicBlock *, BlockFrequency> MergedBBFreq;
 };
 

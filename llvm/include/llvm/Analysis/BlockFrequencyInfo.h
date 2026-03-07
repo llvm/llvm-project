@@ -92,6 +92,9 @@ public:
   setBlockFreqAndScale(const BasicBlock *ReferenceBB, BlockFrequency Freq,
                        SmallPtrSetImpl<BasicBlock *> &BlocksToScale);
 
+  /// Remove basic block from analysis.
+  LLVM_ABI void eraseBlock(const BasicBlock *BB);
+
   /// calculate - compute block frequency info for the given function.
   LLVM_ABI void calculate(const Function &F, const BranchProbabilityInfo &BPI,
                           const LoopInfo &LI);

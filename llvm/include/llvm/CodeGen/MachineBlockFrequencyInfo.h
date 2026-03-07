@@ -80,6 +80,8 @@ public:
   LLVM_ABI std::optional<uint64_t>
   getProfileCountFromFreq(BlockFrequency Freq) const;
 
+  LLVM_ABI void eraseBlock(const MachineBasicBlock *MBB);
+
   LLVM_ABI bool isIrrLoopHeader(const MachineBasicBlock *MBB) const;
 
   /// incrementally calculate block frequencies when we split edges, to avoid

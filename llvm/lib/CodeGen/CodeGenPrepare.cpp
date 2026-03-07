@@ -1134,6 +1134,7 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
       assert(SinglePred == BB &&
              "Single predecessor not the same as predecessor");
       // Merge DestBB into SinglePred/BB and delete it.
+      BFI->eraseBlock(DestBB);
       MergeBlockIntoPredecessor(DestBB);
       // Note: BB(=SinglePred) will not be deleted on this path.
       // DestBB(=its single successor) is the one that was deleted.
@@ -1184,6 +1185,7 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
   // The PHIs are now updated, change everything that refers to BB to use
   // DestBB and remove BB.
   BB->replaceAllUsesWith(DestBB);
+  BFI->eraseBlock(BB);
   BB->eraseFromParent();
   ++NumBlocksElim;
 

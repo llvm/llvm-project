@@ -3230,6 +3230,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Move all of the instructions right before the call.
     OrigBB->splice(CB.getIterator(), &*FirstNewBlock, FirstNewBlock->begin(),
                    FirstNewBlock->end());
+    if (IFI.UpdateProfile && IFI.CallerBFI)
+      IFI.CallerBFI->eraseBlock(&Caller->back());
     // Remove the cloned basic block.
     Caller->back().eraseFromParent();
 
@@ -3375,6 +3377,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Delete the return instruction now and empty ReturnBB now.
     Returns[0]->eraseFromParent();
+    if (IFI.CallerBFI)
+      IFI.CallerBFI->eraseBlock(ReturnBB);
     ReturnBB->eraseFromParent();
   } else if (!CB.use_empty()) {
     // In this case there are no returns to use, so there is no clear source
@@ -3410,6 +3414,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   Br->eraseFromParent();
 
   // Now we can remove the CalleeEntry block, which is now empty.
+  if (IFI.CallerBFI)
+    IFI.CallerBFI->eraseBlock(CalleeEntry);
   CalleeEntry->eraseFromParent();
 
   // If we inserted a phi node, check to see if it has a single value (e.g. all
