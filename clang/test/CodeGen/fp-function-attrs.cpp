@@ -51,7 +51,7 @@ float test_contract_on_pragma(float a, float b, float c) {
 
 // CHECK: define{{.*}} float @_Z23test_contract_on_pragmafff(float noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %b, float noundef nofpclass(nan inf) %c)
 // CHECK: fmul fast float {{%.+}}, {{%.+}}
-// CHECK: fadd reassoc nnan ninf nsz arcp afn float {{%.+}}, {{%.+}}
+// CHECK: fadd fast float {{%.+}}, {{%.+}}
 
 // CHECK: attributes [[FAST_ATTRS]] = { {{.*}}"no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true"{{.*}} }
 // CHECK: attributes [[PRECISE_ATTRS]] = { {{.*}}"no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false"{{.*}} }
