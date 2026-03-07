@@ -831,7 +831,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0
-; GFX9-SDAG-NEXT:    s_cbranch_scc0 .LBB7_6
+; GFX9-SDAG-NEXT:    s_cbranch_scc0 .LBB7_4
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %bb.1
 ; GFX9-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff0, v0
@@ -865,8 +865,6 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:  .LBB7_5: ; %bb.2
 ; GFX9-SDAG-NEXT:    s_endpgm
-; GFX9-SDAG-NEXT:  .LBB7_6:
-; GFX9-SDAG-NEXT:    s_branch .LBB7_4
 ;
 ; GFX9-GISEL-LABEL: test_dynamic_stackalloc_kernel_control_flow:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
@@ -926,7 +924,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
-; GFX11-SDAG-NEXT:    s_cbranch_scc0 .LBB7_6
+; GFX11-SDAG-NEXT:    s_cbranch_scc0 .LBB7_4
 ; GFX11-SDAG-NEXT:  ; %bb.1: ; %bb.1
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, exec_lo
@@ -961,8 +959,6 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s0, s1
 ; GFX11-SDAG-NEXT:  .LBB7_5: ; %bb.2
 ; GFX11-SDAG-NEXT:    s_endpgm
-; GFX11-SDAG-NEXT:  .LBB7_6:
-; GFX11-SDAG-NEXT:    s_branch .LBB7_4
 ;
 ; GFX11-GISEL-LABEL: test_dynamic_stackalloc_kernel_control_flow:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
