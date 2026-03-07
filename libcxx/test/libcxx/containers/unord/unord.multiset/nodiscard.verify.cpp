@@ -46,9 +46,18 @@ void test() {
 
   int key = 0;
 
+#if TEST_STD_VER >= 20
+  std::unordered_multiset<StoredKey, TransparentKeyHash, std::equal_to<>> tus;
+  const std::unordered_multiset<StoredKey, TransparentKeyHash, std::equal_to<>> ctus;
+  TransparentKey tkey;
+#endif
+
 #if TEST_STD_VER >= 17
   us.extract(key);        // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   us.extract(us.begin()); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+#if TEST_STD_VER >= 23
+  tus.extract(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   us.hash_function(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -57,11 +66,6 @@ void test() {
   us.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cus.find(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 20
-  std::unordered_multiset<StoredKey, TransparentKeyHash, std::equal_to<>> tus;
-  const std::unordered_multiset<StoredKey, TransparentKeyHash, std::equal_to<>> ctus;
-
-  TransparentKey tkey;
-
   tus.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ctus.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
