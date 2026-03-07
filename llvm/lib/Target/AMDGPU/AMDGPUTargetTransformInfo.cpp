@@ -1714,13 +1714,12 @@ InstructionCost GCNTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // size (scale_offset bit). Supported for flat/global/constant/scratch
     // (VMEM, max 128 bits) and constant_32bit (SMRD, capped to 128 bits here).
     if (getST()->hasScaleOffset() && Ty && Ty->isSized() &&
-        (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
-         AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
-         AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-         AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+        (AMDGPU::isExtendedGlobalAddrSpace(AddrSpace) ||
+         AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
          AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)) {
-      unsigned StoreSize = getDataLayout().getTypeStoreSize(Ty).getFixedValue();
-      if (StoreSize <= 16 && static_cast<int64_t>(StoreSize) == Scale)
+      TypeSize StoreSize = getDataLayout().getTypeStoreSize(Ty);
+      if (TypeSize::isKnownLE(StoreSize, TypeSize::getFixed(16)) &&
+          static_cast<int64_t>(StoreSize.getFixedValue()) == Scale)
         return 0;
     }
     return 1;
