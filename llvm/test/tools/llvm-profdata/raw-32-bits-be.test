@@ -3,7 +3,7 @@
 UNSUPPORTED: system-windows
 // Header
 RUN: printf '\377lprofR\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\12' >> %t
+RUN: printf '\0\0\0\0\0\0\0\13' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
@@ -27,17 +27,21 @@ RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\1' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\3' >> %t
+RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\344\023\165\112\031\035\265\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
-RUN: printf '\0\377\377\330' >> %t
-RUN: printf '\2\377\377\323' >> %t
+RUN: printf '\0\377\377\320' >> %t
+RUN: printf '\2\377\377\313' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\1' >> %t
+RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\0\0\0\0\0\0\0\023' >> %t
 RUN: printf '\0\0\0\0\0\0\0\067' >> %t

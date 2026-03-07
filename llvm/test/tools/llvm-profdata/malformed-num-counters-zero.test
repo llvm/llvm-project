@@ -18,7 +18,7 @@
 // whenever \12 (LF) is in the input string.
 UNSUPPORTED: system-windows
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\12\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
@@ -56,6 +56,7 @@ RUN: cp %t.profraw %t-good.profraw
 // Make NumCounters = 0 so that we get "number of counters is zero" error message
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t.profraw
@@ -66,11 +67,13 @@ ZERO: malformed instrumentation profile data: number of counters is zero
 // Test a counter value greater than 2^56.
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bad.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bad.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bad.profraw
 // Counter value is 72057594037927937
 RUN: printf '\1\0\0\0\0\0\0\1' >> %t-bad.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-bad.profraw
 
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-good.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-good.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-good.profraw
 // Counter value is 72057594037927937
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-good.profraw

@@ -89,9 +89,17 @@ INSTR_PROF_DATA(IntPtrT, llvm::PointerType::getUnqual(Ctx), Values, \
                 ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
-INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
-                ConstantArray::get(Int16ArrayTy, Int16ArrayVals)) \
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
+INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last + 1],
+                ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
+INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx),
+                NumOffloadProfilingThreads,
+                ConstantInt::get(llvm::Type::getInt16Ty(Ctx),
+                                 NumOffloadProfilingThreadsVal))
+INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx),
+                OffloadDeviceWaveSize,
+                ConstantInt::get(llvm::Type::getInt16Ty(Ctx),
+                                 OffloadDeviceWaveSizeVal))
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes,
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
@@ -324,6 +332,9 @@ INSTR_PROF_SECT_ENTRY(IPSK_data, \
 INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
                       INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
                       INSTR_PROF_CNTS_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_ucnts, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_UCNTS_COMMON), \
+                      INSTR_PROF_UCNTS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_bitmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), \
                       INSTR_PROF_BITS_COFF, "__DATA,")
@@ -720,9 +731,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 10
+#define INSTR_PROF_RAW_VERSION 11
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 13
+#define INSTR_PROF_INDEX_VERSION 14
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 
@@ -767,6 +778,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
 #define INSTR_PROF_VNAME_COMMON __llvm_prf_vns
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
+#define INSTR_PROF_UCNTS_COMMON __llvm_prf_ucnts
 #define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
@@ -784,6 +796,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_COFF ".lprfn$M"
 #define INSTR_PROF_VNAME_COFF ".lprfvn$M"
 #define INSTR_PROF_CNTS_COFF ".lprfc$M"
+#define INSTR_PROF_UCNTS_COFF ".lprfuc$M"
 #define INSTR_PROF_BITS_COFF ".lprfb$M"
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
