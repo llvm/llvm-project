@@ -581,7 +581,7 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
 
   mlir::Type opType = thisOp.getRes().getType();
   llvm::Type *opTypeLLVM = mt.convertType(opType);
-  bool isVectorAdd = opTypeLLVM->isVectorTy();
+  bool isVectorFma = opTypeLLVM->isVectorTy();
 
   llvm::Value *argA = mt.lookupValue(thisOp.getA());
   llvm::Value *argB = mt.lookupValue(thisOp.getB());
@@ -636,8 +636,6 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   };
 
   // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
-  // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
-  // intrinsics are available.
   if (opTypeLLVM->getScalarType()->isHalfTy()) {
     llvm::Value *result;
     if (isOOB) {
@@ -647,7 +645,7 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
     } else {
       unsigned index =
           (isRelu << 3) | (isSat << 2) | (isFTZ << 1) |
-          isVectorAdd; // Op verifier ensures that this index is valid
+          isVectorFma; // Op verifier ensures that this index is valid
       result = fmaIntrinsic(f16IDs[index], opTypeLLVM);
     }
     mt.mapValue(thisOp.getRes(), result);
@@ -662,9 +660,7 @@ void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
                                    : llvm::Intrinsic::nvvm_fma_rn_oob,
                             opTypeLLVM);
     } else {
-      unsigned index =
-          (isRelu << 1) |
-          isVectorAdd; // Op verifier ensures that this index is valid
+      unsigned index = (isRelu << 1) | isVectorFma;
       result = fmaIntrinsic(bf16IDs[index], opTypeLLVM);
     }
     mt.mapValue(thisOp.getRes(), result);
