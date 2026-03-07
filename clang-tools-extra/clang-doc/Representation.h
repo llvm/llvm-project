@@ -34,7 +34,7 @@ template <typename T> using OwnedPtr = std::unique_ptr<T>;
 
 // An abstraction for vectors that are populated and read sequentially.
 // To be eventually transitioned to llvm::ArrayRef for arena storage.
-template <typename T> using OwningVec = std::vector<T>;
+template <typename T> using OwningArray = std::vector<T>;
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
 // To be eventually transitioned to llvm::simple_ilist.
