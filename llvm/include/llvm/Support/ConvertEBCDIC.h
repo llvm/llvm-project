@@ -20,6 +20,10 @@
 
 namespace llvm {
 namespace ConverterEBCDIC {
+/// Converts UTF-8 text to EBCDIC-1047.
+///
+/// Returns std::errc::illegal_byte_sequence for malformed UTF-8 and
+/// std::errc::invalid_argument for truncated UTF-8 input.
 LLVM_ABI std::error_code convertToEBCDIC(StringRef Source,
                                          SmallVectorImpl<char> &Result);
 
