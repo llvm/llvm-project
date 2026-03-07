@@ -924,6 +924,8 @@ namespace llvm {
     bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
+    bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
+
     /// getAddrModeForFlags - Based on the set of address flags, select the most
     /// optimal instruction format to match by.
     PPC::AddrMode getAddrModeForFlags(unsigned Flags) const;

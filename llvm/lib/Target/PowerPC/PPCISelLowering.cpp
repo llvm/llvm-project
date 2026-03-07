@@ -1455,6 +1455,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTargetDAGCombine({ISD::TRUNCATE, ISD::SETCC, ISD::SELECT_CC});
   }
 
+  if (Subtarget.hasP8Vector())
+    setTargetDAGCombine(ISD::BITCAST);
+
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
   if (Subtarget.useCRBits()) {
@@ -18165,6 +18168,81 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAGCombineBuildVector(N, DCI);
   case PPCISD::ADDC:
     return DAGCombineAddc(N, DCI);
+
+  case ISD::BITCAST: {
+    // Optimize the following patterns using vbpermq/vbpermd:
+    //   i16 = bitcast(v16i1 truncate(v16i8))
+    //   i8  = bitcast(v8i1  truncate(v8i16))
+    //   i8  = bitcast(v8i1  truncate(v8i8))
+    SDValue Op0 = N->getOperand(0);
+    EVT ResVT = N->getValueType(0);
+    if (Op0.getOpcode() != ISD::TRUNCATE)
+      break;
+
+    SDValue Src = Op0.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    bool IsV16i8 = (ResVT == MVT::i16 && SrcVT == MVT::v16i8);
+    bool IsV8i16 = (ResVT == MVT::i8 && SrcVT == MVT::v8i16);
+    bool IsV8i8 = (ResVT == MVT::i8 && SrcVT == MVT::v8i8);
+    bool IsLE = Subtarget.isLittleEndian();
+    unsigned EltIdx = IsLE ? 1 : 0;
+
+    if (IsV16i8 || IsV8i16) {
+      SDLoc dl(N);
+      int NumElts = IsV16i8 ? 16 : 8;
+      int EltSize = IsV16i8 ? 8 : 16;
+
+      SmallVector<SDValue, 16> Ops;
+      for (int i = 0; i < 16; ++i) {
+        int ByteIdx = IsLE ? (15 - i) : i;
+        int Index =
+            (ByteIdx < NumElts) ? (ByteIdx * EltSize + (EltSize - 1)) : 128;
+        Ops.push_back(DAG.getConstant(Index, dl, MVT::i8));
+      }
+
+      SDValue Indices = DAG.getBuildVector(MVT::v16i8, dl, Ops);
+      SDValue VBPerm = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
+          DAG.getConstant(Intrinsic::ppc_altivec_vbpermq, dl, MVT::i32),
+          DAG.getBitcast(MVT::v16i8, Src), Indices);
+
+      SDValue V2i64 = DAG.getBitcast(MVT::v2i64, VBPerm);
+      SDValue DW0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, V2i64,
+                                DAG.getIntPtrConstant(EltIdx, dl));
+
+      if (IsV8i16)
+        DW0 = DAG.getNode(ISD::SRL, dl, MVT::i64, DW0,
+                          DAG.getConstant(8, dl, MVT::i32));
+
+      return DAG.getNode(ISD::TRUNCATE, dl, ResVT, DW0);
+    }
+
+    if (IsV8i8 && Subtarget.hasP9Vector()) {
+      SDLoc dl(N);
+      SmallVector<SDValue, 16> Ops;
+      for (int i = 0; i < 16; ++i) {
+        int ByteIdx = IsLE ? (7 - i) : i;
+        int Index = (ByteIdx >= 0 && ByteIdx < 8) ? (ByteIdx * 8 + 7) : 128;
+        Ops.push_back(DAG.getConstant(Index, dl, MVT::i8));
+      }
+
+      SDValue Indices = DAG.getBuildVector(MVT::v16i8, dl, Ops);
+      SDValue Undef = DAG.getUNDEF(MVT::v16i8);
+      SDValue V16i8Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i8,
+                                     Undef, Src, DAG.getIntPtrConstant(0, dl));
+
+      SDValue VBPermD = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
+          DAG.getConstant(Intrinsic::ppc_altivec_vbpermd, dl, MVT::i32),
+          V16i8Src, Indices);
+
+      SDValue DW0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64,
+                                DAG.getBitcast(MVT::v2i64, VBPermD),
+                                DAG.getIntPtrConstant(0, dl));
+      return DAG.getNode(ISD::TRUNCATE, dl, ResVT, DW0);
+    }
+    break;
+  }
   }
 
   return SDValue();
@@ -20603,4 +20681,13 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
 
 bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
   return Subtarget.useCRBits();
+}
+
+/// Targets can use this to indicate that they only support some
+/// VECTOR_SHUFFLE operations. PPC does not support shuffles on i1 element
+/// types, which are instead handled via DAG combine.
+bool PPCTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const {
+  if (VT.getScalarType() == MVT::i1)
+    return false;
+  return true;
 }
