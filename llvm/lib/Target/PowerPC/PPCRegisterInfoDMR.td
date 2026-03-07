@@ -150,3 +150,18 @@ def DMRRC : PPCRegisterClassWithSize<[v1024i1], 128,
 
 def DMRpRC : PPCRegisterClassWithSize<[v2048i1], 128,
                (add DMRp0, DMRp1, DMRp2, DMRp3), 2048>;
+
+// Register Operand Definitions.
+
+defm DMRROWRC : PPCRegOperand<"isDMRROWRegNumber", "dmrrow">;
+defm DMRROWpRC : PPCRegOperand<"isDMRROWpRegNumber", "dmrrowp">;
+defm DMRRC : PPCRegOperand<"isDMRRegNumber", "dmr">;
+defm DMRpRC : PPCRegOperand<"isDMRpRegNumber", "dmrp">;               
+
+// ACC Register Operands share the same AsmOperandClass.
+def wacc : RegisterOperand<WACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+def wacc_hi : RegisterOperand<WACC_HIRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}

@@ -95,5 +95,21 @@ def VSRpRC : PPCRegisterClassWithPriority<[v256i1], 128,
                2, 0, 256>;
 
 
+// Register Operand Definitions.
 
+// ACC Register Operands share the same AsmOperandClass.
+defm ACCRC : PPCRegOperand<"isACCRegNumber", "acc">;
+def uacc : RegisterOperand<UACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
 
+defm VSRpRC : PPCRegOperand<"isVSRpEvenRegNumber">;
+// VSRpRC with encoder/decoder methods (uses VSRpRC class but different operand name)
+def PPCRegVSRpEvenRCAsmOperand : AsmOperandClass {
+  let Name = "RegVSRpEvenRC"; let PredicateMethod = "isVSRpEvenRegNumber";
+}
+def vsrpevenrc : RegisterOperand<VSRpRC> {
+  let ParserMatchClass = PPCRegVSRpEvenRCAsmOperand;
+  let EncoderMethod = "getVSRpEvenEncoding";
+  let DecoderMethod = "decodeVSRpEvenOperands";
+}
