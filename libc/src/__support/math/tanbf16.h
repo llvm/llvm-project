@@ -11,7 +11,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "sincosf16_utils.h"
+#include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
-  using namespace sincosf16_internal;
+  using namespace sincosf_utils_internal;
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits xbits(x);
 
@@ -53,7 +53,7 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
     return x;
   }
 
-  // Through Exhaustive testing
+  // Through Exhaustive testing -
   // The last value where tan(x) ~ x is 0x3db8
   if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
     int rounding = fputil::quick_get_round();
@@ -64,13 +64,17 @@ LIBC_INLINE bfloat16 tanbf16(bfloat16 x) {
     return x;
   }
 
-  float sin_k, cos_k, sin_y, cosm1_y;
-  sincosf16_eval(xf, sin_k, cos_k, sin_y, cosm1_y);
+  double xd = static_cast<double>(xf);
+  uint32_t x_abs_d = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
+  double sin_k, cos_k, sin_y, cosm1_y;
 
-  using fputil::multiply_add;
+  sincosf_eval(xd, x_abs_d, sin_k, cos_k, sin_y, cosm1_y);
+
   return fputil::cast<bfloat16>(
-      multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
-      multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
+      fputil::multiply_add(sin_y, cos_k,
+                           fputil::multiply_add(cosm1_y, sin_k, sin_k)) /
+      fputil::multiply_add(sin_y, -sin_k,
+                           fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
 } // namespace math
