@@ -112,6 +112,8 @@ protected:
 ///   | X+ / X  | Hex + prefix, upper  |   42   |   0x2A  | Minimum # digits   |
 ///   | N / n   | Digit grouped number | 123456 | 123,456 | Ignored            |
 ///   | D / d   | Integer              | 100000 | 100000  | Ignored            |
+///   |+D /+d   | Integer always signed| 100000 | +100000 | Ignored            |
+///   |   +     | Same as +D / +d      |        |         |                    |
 ///   | (empty) | Same as D / d        |        |         |                    |
 ///   ==========================================================================
 ///
@@ -130,6 +132,10 @@ public:
       return;
     }
 
+    // A + prefix indicates that a plus sign shall be
+    // prefixed to non-negativ numbers
+    bool NonNegativePlus = Style.consume_front('+');
+
     IntegerStyle IS = IntegerStyle::Integer;
     if (Style.consume_front("N") || Style.consume_front("n"))
       IS = IntegerStyle::Number;
@@ -138,7 +144,11 @@ public:
 
     Style.consumeInteger(10, Digits);
     assert(Style.empty() && "Invalid integral format style!");
-    write_integer(Stream, V, Digits, IS);
+
+    // We currently only support the + for integer style numbers.
+    NonNegativePlus = NonNegativePlus && IS == IntegerStyle::Integer;
+
+    write_integer(Stream, V, Digits, IS, NonNegativePlus);
   }
 };
 
@@ -248,7 +258,8 @@ struct format_provider<
 ///   ==================================
 ///   |    Y    |       YES / NO       |
 ///   |    y    |       yes / no       |
-///   |  D / d  |    Integer 0 or 1    |
+///   |  D /  d |    Integer 0 or 1    |
+///   | +D / +d |    Integer +0 or +1  |
 ///   |    T    |     TRUE / FALSE     |
 ///   |    t    |     true / false     |
 ///   | (empty) |   Equivalent to 't'  |
@@ -260,6 +271,7 @@ template <> struct format_provider<bool> {
                   .Case("Y", B ? "YES" : "NO")
                   .Case("y", B ? "yes" : "no")
                   .CaseLower("D", B ? "1" : "0")
+                  .CaseLower("+D", B ? "+1" : "+0")
                   .Case("T", B ? "TRUE" : "FALSE")
                   .Cases({"t", ""}, B ? "true" : "false")
                   .Default(B ? "1" : "0");
@@ -295,6 +307,7 @@ struct format_provider<
     : public support::detail::HelperFunctions {
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     FloatStyle S;
+
     if (Style.consume_front("P") || Style.consume_front("p"))
       S = FloatStyle::Percent;
     else if (Style.consume_front("F") || Style.consume_front("f"))
