@@ -19,6 +19,13 @@ foreach(arch ${LOWFAT_TEST_ARCH})
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
 
+  # Propagate custom-config flag to lit as a Python boolean literal.
+  if(LOWFAT_SIZES_CFG)
+    set(LOWFAT_CUSTOM_CONFIG_ENABLED "True")
+  else()
+    set(LOWFAT_CUSTOM_CONFIG_ENABLED "False")
+  endif()
+
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py

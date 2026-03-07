@@ -5,6 +5,8 @@ config.name_suffix = "@LOWFAT_TEST_CONFIG_SUFFIX@"
 config.target_cflags = "@LOWFAT_TEST_TARGET_CFLAGS@"
 config.clang = "@LOWFAT_TEST_TARGET_CC@"
 config.target_arch = "@LOWFAT_TEST_TARGET_ARCH@"
+# True when -DLOWFAT_SIZES_CFG was set at cmake time.
+config.lowfat_custom_config = @LOWFAT_CUSTOM_CONFIG_ENABLED@
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")

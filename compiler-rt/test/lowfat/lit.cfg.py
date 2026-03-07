@@ -70,3 +70,9 @@ if getattr(config, "target_os", "Unknown") not in ["Darwin", "Linux"]:
     # platform truly isn't supported.
     if hasattr(config, "target_os"):
         config.unsupported = True
+
+# Expose 'lowfat-custom-config' feature when the runtime was built with a
+# custom sizes.cfg (i.e. -DLOWFAT_SIZES_CFG was set at cmake time).
+# Tests guarded with REQUIRES: lowfat-custom-config are skipped otherwise.
+if getattr(config, "lowfat_custom_config", False):
+    config.available_features.add("lowfat-custom-config")
