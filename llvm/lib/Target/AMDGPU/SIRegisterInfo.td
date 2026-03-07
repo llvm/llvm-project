@@ -181,6 +181,7 @@ def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
   let HWEncoding = VCC_LO.HWEncoding;
+  let CoveredBySubRegs = 1;
 }
 
 defm EXEC_LO : SIRegLoHi16<"exec_lo", 126, /*ArtificialHigh=*/1, /*isVGPR=*/0,
@@ -377,7 +378,8 @@ def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
 // TODO: Do we need to set DwarfRegAlias on register tuples?
 
 def SGPR_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
-                              (add (sequence "SGPR%u_LO16", 0, 105))> {
+                                (add (sequence "SGPR%u_LO16", 0, 105),
+                                     VCC_LO_LO16, VCC_HI_LO16)> {
   let AllocationPriority = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
@@ -385,7 +387,8 @@ def SGPR_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
 }
 
 def SGPR_HI16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
-                              (add (sequence "SGPR%u_HI16", 0, 105))> {
+                                (add (sequence "SGPR%u_HI16", 0, 105),
+                                     VCC_LO_HI16, VCC_HI_HI16)> {
   let isAllocatable = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
@@ -394,7 +397,7 @@ def SGPR_HI16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
 
 // SGPR 32-bit registers
 def SGPR_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
-                            (add (sequence "SGPR%u", 0, 105))> {
+                              (add (sequence "SGPR%u", 0, 105), VCC_LO, VCC_HI)> {
   // Give all SGPR classes higher priority than VGPR classes, because
   // we want to spill SGPRs to VGPRs.
   let AllocationPriority = 0;
@@ -440,6 +443,30 @@ def SGPR_512Regs : SIRegisterTuples<getSubRegs<16>.ret, SGPR_32, 105, 4, 16, "s"
 
 // SGPR 1024-bit registers
 def SGPR_1024Regs : SIRegisterTuples<getSubRegs<32>.ret, SGPR_32, 105, 4, 32, "s">;
+
+// SGPR tuples involving VCC.
+class VCCTuple<int StartRegIdx, int NumRegs>
+    : RegisterWithSubRegs<
+      "["#!foldl("", !listconcat(!foreach(idx, !range(StartRegIdx, 106), "s"#idx),
+                                 ["vcc_lo", "vcc_hi"])[0...!sub(NumRegs, 1)],
+                 tupleName, regName,
+                 !if(!eq(tupleName, ""), regName, tupleName#","#regName))#"]",
+      !listconcat(!foreach(idx, !range(StartRegIdx, 106), !cast<Register>("SGPR"#idx)),
+                  [VCC_LO, VCC_HI])[0...!sub(NumRegs, 1)]> {
+  let Namespace = "AMDGPU";
+  let SubRegIndices = getSubRegs<NumRegs>.ret;
+  let HWEncoding = !cast<Register>("SGPR"#StartRegIdx).HWEncoding;
+  let CoveredBySubRegs = 1;
+}
+
+def SGPR104_96 : VCCTuple<104, 3>;
+def SGPR104_128 : VCCTuple<104, 4>;
+def SGPR100_224 : VCCTuple<100, 7>;
+def SGPR100_256 : VCCTuple<100, 8>;
+def SGPR96_352 : VCCTuple<96, 11>;
+def SGPR96_384 : VCCTuple<96, 12>;
+def SGPR92_512 : VCCTuple<92, 16>;
+def SGPR76_1024 : VCCTuple<76, 32>;
 
 // Trap handler TMP 32-bit registers
 def TTMP_32 : SIRegisterClass<"AMDGPU", [i32, f32, v2i16, v2f16, v2bf16], 32,
@@ -772,7 +799,7 @@ let GeneratePressureSet = 0, HasSGPR = 1 in {
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16, i1], 32,
-  (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
+  (add SGPR_32, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
    SGPR_NULL, SGPR_NULL_HI, TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE_LO,
    SRC_SHARED_LIMIT_LO, SRC_PRIVATE_BASE_LO, SRC_PRIVATE_LIMIT_LO, SRC_POPS_EXITING_WAVE_ID,
    SRC_VCCZ, SRC_EXECZ, SRC_SCC, SRC_FLAT_SCRATCH_BASE_LO, SRC_FLAT_SCRATCH_BASE_HI)> {
@@ -780,7 +807,7 @@ def SReg_32_XM0_XEXEC : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i
 }
 
 def SReg_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
-  (add SGPR_LO16, VCC_LO_LO16, VCC_HI_LO16, FLAT_SCR_LO_LO16, FLAT_SCR_HI_LO16,
+  (add SGPR_LO16, FLAT_SCR_LO_LO16, FLAT_SCR_HI_LO16,
    XNACK_MASK_LO_LO16, XNACK_MASK_HI_LO16, SGPR_NULL_LO16, SGPR_NULL_HI_LO16, TTMP_LO16,
    TMA_LO_LO16, TMA_HI_LO16, TBA_LO_LO16, TBA_HI_LO16, SRC_SHARED_BASE_LO_LO16,
    SRC_SHARED_LIMIT_LO_LO16, SRC_PRIVATE_BASE_LO_LO16, SRC_PRIVATE_LIMIT_LO_LO16,
@@ -837,7 +864,7 @@ def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v
 }
 
 def SGPR_64 : SIRegisterClass<"AMDGPU", Reg64Types.types, 32,
-                            (add SGPR_64Regs)> {
+                              (add SGPR_64Regs, VCC)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
   let HasSGPR = 1;
@@ -865,7 +892,7 @@ def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16, v4bf16],
 }
 
 def SReg_64_XEXEC_XNULL : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16, v4bf16], 32,
-  (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA,
+  (add SGPR_64, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA,
        SRC_FLAT_SCRATCH_BASE)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
@@ -899,6 +926,7 @@ def SReg_64_Encodable : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v
 multiclass SRegClass<int numRegs,
                      list<ValueType> regTypes,
                      SIRegisterTuples regList,
+                     dag extraRegs,
                      SIRegisterTuples ttmpList = regList,
                      bit hasNull = 0,
                      int copyCost = !sra(!add(numRegs, 1), 1)> {
@@ -908,8 +936,7 @@ multiclass SRegClass<int numRegs,
   defvar ttmpName = !strconcat("TTMP_", suffix);
 
   let AllocationPriority = !sub(numRegs, 1), CopyCost = copyCost, HasSGPR = 1 in {
-    def "" # sgprName : SIRegisterClass<"AMDGPU", regTypes, 32, (add regList)> {
-    }
+    def "" # sgprName : SIRegisterClass<"AMDGPU", regTypes, 32, (add regList, extraRegs)>;
 
     if hasTTMP then {
       def "" # ttmpName : SIRegisterClass<"AMDGPU", regTypes, 32, (add ttmpList)> {
@@ -938,20 +965,20 @@ multiclass SRegClass<int numRegs,
   }
 }
 
-defm "" : SRegClass<3, Reg96Types.types, SGPR_96Regs, TTMP_96Regs>;
-defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs, /*hasNull*/ true>;
-defm "" : SRegClass<5, Reg160Types.types, SGPR_160Regs, TTMP_160Regs>;
-defm "" : SRegClass<6, Reg192Types.types, SGPR_192Regs, TTMP_192Regs>;
-defm "" : SRegClass<7, Reg224Types.types, SGPR_224Regs, TTMP_224Regs>;
-defm "" : SRegClass<8, Reg256Types.types, SGPR_256Regs, TTMP_256Regs, /*hasNull*/ true>;
-defm "" : SRegClass<9, Reg288Types.types, SGPR_288Regs, TTMP_288Regs>;
-defm "" : SRegClass<10, Reg320Types.types, SGPR_320Regs, TTMP_320Regs>;
-defm "" : SRegClass<11, Reg352Types.types, SGPR_352Regs, TTMP_352Regs>;
-defm "" : SRegClass<12, Reg384Types.types, SGPR_384Regs, TTMP_384Regs>;
+defm "" : SRegClass<3, Reg96Types.types, SGPR_96Regs, (add SGPR104_96), TTMP_96Regs>;
+defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, (add SGPR104_128), TTMP_128Regs, /*hasNull*/ true>;
+defm "" : SRegClass<5, Reg160Types.types, SGPR_160Regs, (add), TTMP_160Regs>;
+defm "" : SRegClass<6, Reg192Types.types, SGPR_192Regs, (add), TTMP_192Regs>;
+defm "" : SRegClass<7, Reg224Types.types, SGPR_224Regs, (add SGPR100_224), TTMP_224Regs>;
+defm "" : SRegClass<8, Reg256Types.types, SGPR_256Regs, (add SGPR100_256), TTMP_256Regs, /*hasNull*/ true>;
+defm "" : SRegClass<9, Reg288Types.types, SGPR_288Regs, (add), TTMP_288Regs>;
+defm "" : SRegClass<10, Reg320Types.types, SGPR_320Regs, (add), TTMP_320Regs>;
+defm "" : SRegClass<11, Reg352Types.types, SGPR_352Regs, (add SGPR96_352), TTMP_352Regs>;
+defm "" : SRegClass<12, Reg384Types.types, SGPR_384Regs, (add SGPR96_384), TTMP_384Regs>;
 
 let GlobalPriority = true in {
-defm "" : SRegClass<16, Reg512Types.types, SGPR_512Regs, TTMP_512Regs>;
-defm "" : SRegClass<32, Reg1024Types.types, SGPR_1024Regs>;
+defm "" : SRegClass<16, Reg512Types.types, SGPR_512Regs, (add SGPR92_512), TTMP_512Regs>;
+defm "" : SRegClass<32, Reg1024Types.types, SGPR_1024Regs, (add SGPR76_1024)>;
 }
 
 def VRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
