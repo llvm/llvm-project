@@ -21,6 +21,7 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -36,6 +37,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -1132,6 +1134,22 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       });
     }
   }
+  if (Fortran::evaluate::IsCoarray(var.getSymbol()) &&
+      !Fortran::semantics::IsAllocatableOrPointer(var.getSymbol()) &&
+      !Fortran::semantics::IsDummy(var.getSymbol())) {
+    mlir::Location loc = converter.getCurrentLocation();
+    fir::ExtendedValue exv =
+        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    auto *sym = &var.getSymbol();
+    const Fortran::semantics::Scope &owner = sym->owner();
+    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram) {
+      converter.getFctCtx().attachCleanup([builder, loc, exv]() {
+        mif::DeallocCoarrayOp::create(*builder, loc, fir::getBase(exv),
+                                      /*stat*/ mlir::Value{},
+                                      /*errmsg*/ mlir::Value{});
+      });
+    }
+  }
   if (std::optional<VariableCleanUp> cleanup =
           needDeallocationOrFinalization(var)) {
     auto *builder = &converter.getFirOpBuilder();
@@ -2186,6 +2204,11 @@ void Fortran::lower::mapSymbolAttributes(
   }
 
   if (isDummy) {
+    if (Fortran::evaluate::IsCoarray(sym))
+      // Operation in MIF dialect to create an alias of the coarray not
+      // yet supported (by using the procedure provided by PRIF).
+      TODO(loc, "coarray dummy argument not yet supported.");
+
     mlir::Value dummyArg = symMap.lookupSymbol(sym).getAddr();
     if (lowerToBoxValue(sym, dummyArg, converter)) {
       llvm::SmallVector<mlir::Value> lbounds;
@@ -2478,6 +2501,13 @@ void Fortran::lower::mapSymbolAttributes(
       else
         populateLBoundsExtents(lbounds, extents, ba.dynamicBound(), arg);
     }
+  }
+
+  if (Fortran::evaluate::IsCoarray(sym)) {
+    Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
+    ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
+                       replace);
+    return;
   }
 
   // Allocate or extract raw address for the entity
