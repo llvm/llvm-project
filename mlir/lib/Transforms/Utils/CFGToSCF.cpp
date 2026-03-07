@@ -1235,7 +1235,8 @@ static ReturnLikeExitCombiner createSingleExitBlocksForReturnLike(
 
 /// Checks all preconditions of the transformation prior to any transformations.
 /// Returns failure if any precondition is violated.
-static LogicalResult checkTransformationPreconditions(Region &region) {
+static LogicalResult
+checkTransformationPreconditions(Region &region, CFGToSCFInterface &interface) {
   for (Block &block : region.getBlocks())
     if (block.hasNoPredecessors() && !block.isEntryBlock())
       return block.front().emitOpError(
@@ -1279,7 +1280,21 @@ static LogicalResult checkTransformationPreconditions(Region &region) {
     }
     return WalkResult::advance();
   });
-  return failure(result.wasInterrupted());
+  if (result.wasInterrupted())
+    return failure();
+
+  // Verify all multi-successor terminators are convertible before touching IR.
+  for (Block &block : region.getBlocks()) {
+    if (block.getNumSuccessors() <= 1)
+      continue;
+    Operation *terminator = block.getTerminator();
+    if (!interface.canConvertBranchOp(terminator)) {
+      terminator->emitOpError(
+          "Cannot convert unknown control flow op to structured control flow");
+      return failure();
+    }
+  }
+  return success();
 }
 
 FailureOr<bool> mlir::transformCFGToSCF(Region &region,
@@ -1288,7 +1303,7 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
   if (region.empty() || region.hasOneBlock())
     return false;
 
-  if (failed(checkTransformationPreconditions(region)))
+  if (failed(checkTransformationPreconditions(region, interface)))
     return failure();
 
   DenseMap<Type, Value> typedUndefCache;
