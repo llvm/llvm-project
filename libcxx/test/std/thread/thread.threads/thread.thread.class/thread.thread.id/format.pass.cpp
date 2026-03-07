@@ -52,11 +52,7 @@ void test_format(StringViewT expected, std::thread::id arg) {
 
 template <class CharT>
 void test_fmt() {
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
   test_format(SV("0"), std::thread::id());
-#else
-  test_format(SV("0x0"), std::thread::id());
-#endif
 }
 
 void test() {

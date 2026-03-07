@@ -128,6 +128,11 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #    include <system_error>
 #    include <type_traits>
 #  endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#    include <sstream>
+#  endif
+
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_THREAD
