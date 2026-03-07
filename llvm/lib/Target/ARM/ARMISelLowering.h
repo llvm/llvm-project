@@ -300,6 +300,8 @@ class VectorType;
 
     bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
+    bool preferABDSToABSWithNSW(EVT VT) const override { return VT.isVector(); }
+
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
     bool hasAndNotCompare(SDValue V) const override {
@@ -570,6 +572,7 @@ class VectorType;
     SDValue LowerALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABD(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
