@@ -51,6 +51,11 @@
 #  include <memory>
 #  include <windows.h>
 
+#elif defined(__APPLE__) && defined(_LIBCPP_USE_OS_SYNC)
+
+#  include <os/os_sync_wait_on_address.h>
+#  include <time.h>
+
 #else // <- Add other operating systems here
 
 // Baseline needs no new headers
@@ -88,6 +93,30 @@ template <std::size_t _Size>
 static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
   static_assert(_Size == 4, "Can only wake up on 4 bytes value");
   _LIBCPP_FUTEX(__ptr, FUTEX_WAKE_PRIVATE, __notify_one ? 1 : INT_MAX, 0, 0, 0);
+}
+
+#elif defined(__APPLE__) && defined(_LIBCPP_USE_OS_SYNC)
+
+template <std::size_t _Size, class MaybeTimeout>
+static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
+  static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
+  uint64_t __value = 0;
+  std::memcpy(&__value, __val, _Size);
+  if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
+    os_sync_wait_on_address(const_cast<void*>(__ptr), __value, _Size, OS_SYNC_WAIT_ON_ADDRESS_NONE);
+  } else {
+    os_sync_wait_on_address_with_timeout(
+        const_cast<void*>(__ptr), __value, _Size, OS_SYNC_WAIT_ON_ADDRESS_NONE, CLOCK_MONOTONIC_RAW, maybe_timeout_ns);
+  }
+}
+
+template <std::size_t _Size>
+static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
+  static_assert(_Size == 8 || _Size == 4, "Can only wake up on 8 bytes or 4 bytes value");
+  if (__notify_one)
+    os_sync_wake_by_address_any(const_cast<void*>(__ptr), _Size, OS_SYNC_WAKE_BY_ADDRESS_NONE);
+  else
+    os_sync_wake_by_address_all(const_cast<void*>(__ptr), _Size, OS_SYNC_WAKE_BY_ADDRESS_NONE);
 }
 
 #elif defined(__APPLE__) && defined(_LIBCPP_USE_ULOCK)
