@@ -254,6 +254,16 @@ void MipsDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, getGlobalBaseReg());
     return;
 
+  case ISD::WRITE_REGISTER: {
+    MDNodeSDNode *MD = cast<MDNodeSDNode>(Node->getOperand(1));
+    const MDString *RegStr = cast<MDString>(MD->getMD()->getOperand(0));
+    StringRef Reg = RegStr->getString();
+    if (Reg == "$gp" || Reg == "$28" || Reg == "$28_64" || Reg == "$gp_64") {
+      MachineFunction &MF = CurDAG->getMachineFunction();
+      MF.getInfo<MipsFunctionInfo>()->setGPGlobalRegister(true);
+    }
+    break;
+  }
 #ifndef NDEBUG
   case ISD::LOAD:
   case ISD::STORE:
