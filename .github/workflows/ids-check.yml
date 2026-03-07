@@ -59,7 +59,7 @@ jobs:
                 -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -G Ninja
           cd ${{ github.workspace }}/llvm-project/build/
-          ninja -t targets all | grep "CommonTableGen: phony$" | grep -v "/" | sed 's/:.*//'
+          ninja -t targets all | grep "CommonTableGen: phony$" | grep -v "/" | sed 's/:.*//' | xargs -r ninja
 
       - name: Configure ids
         run: |
