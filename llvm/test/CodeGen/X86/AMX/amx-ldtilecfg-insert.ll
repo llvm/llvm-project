@@ -238,8 +238,7 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %edx
-; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    decl %r8d
+; CHECK-NEXT:    leal -1(%rsi), %r8d
 ; CHECK-NEXT:    jmp .LBB4_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_3: # %if.false
