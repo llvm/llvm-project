@@ -1212,6 +1212,11 @@ public:
       && !isFileVarDecl();
   }
 
+  /// Returns true if this is a file-scope variable with internal linkage.
+  bool isInternalLinkageFileVar() const {
+    return isFileVarDecl() && !isExternallyVisible();
+  }
+
   /// Returns true if a variable has extern or __private_extern__
   /// storage.
   bool hasExternalStorage() const {

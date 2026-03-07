@@ -20477,7 +20477,9 @@ static void DoMarkVarDeclReferenced(
   bool UsableInConstantExpr =
       Var->mightBeUsableInConstantExpressions(SemaRef.Context);
 
-  if (Var->isLocalVarDeclOrParm() && !Var->hasExternalStorage()) {
+  // We skip static data members because they have external linkage.
+  if ((Var->isLocalVarDeclOrParm() || Var->isInternalLinkageFileVar()) &&
+      !Var->hasExternalStorage()) {
     RefsMinusAssignments.insert({Var, 0}).first->getSecond()++;
   }
 

@@ -4618,6 +4618,10 @@ public:
 
   bool ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const;
 
+  /// Determines whether the given source location is in the main file
+  /// and we're in a context where we should warn about unused entities.
+  bool isMainFileLoc(SourceLocation Loc) const;
+
   /// If it's a file scoped decl that must warn if not used, keep track
   /// of it.
   void MarkUnusedFileScopedDecl(const DeclaratorDecl *D);
