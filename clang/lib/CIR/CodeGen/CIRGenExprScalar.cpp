@@ -766,25 +766,28 @@ public:
 
   mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
     QualType promotionType = getPromotionType(e->getSubExpr()->getType());
-    mlir::Value result =
-        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus, promotionType);
+    mlir::Value result = VisitUnaryPlus(e, promotionType);
     if (result && !promotionType.isNull())
       return emitUnPromotedValue(result, e->getType());
     return result;
+  }
+
+  mlir::Value VisitUnaryPlus(const UnaryOperator *e, QualType promotionType) {
+    ignoreResultAssign = false;
+    if (!promotionType.isNull())
+      return cgf.emitPromotedScalarExpr(e->getSubExpr(), promotionType);
+    return Visit(e->getSubExpr());
   }
 
   mlir::Value VisitUnaryMinus(const UnaryOperator *e) {
     QualType promotionType = getPromotionType(e->getSubExpr()->getType());
-    mlir::Value result =
-        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus, promotionType);
+    mlir::Value result = VisitUnaryMinus(e, promotionType);
     if (result && !promotionType.isNull())
       return emitUnPromotedValue(result, e->getType());
     return result;
   }
 
-  mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
-                                   cir::UnaryOpKind kind,
-                                   QualType promotionType) {
+  mlir::Value VisitUnaryMinus(const UnaryOperator *e, QualType promotionType) {
     ignoreResultAssign = false;
     mlir::Value operand;
     if (!promotionType.isNull())
@@ -795,14 +798,13 @@ public:
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
     //            that the overflow behavior is handled correctly.
-    bool nsw = kind == cir::UnaryOpKind::Minus &&
-               e->getType()->isSignedIntegerType() &&
+    bool nsw = e->getType()->isSignedIntegerType() &&
                cgf.getLangOpts().getSignedOverflowBehavior() !=
                    LangOptions::SOB_Defined;
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    return emitUnaryOp(e, kind, operand, nsw);
+    return emitUnaryOp(e, cir::UnaryOpKind::Minus, operand, nsw);
   }
 
   mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
@@ -1560,9 +1562,9 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
     case UO_Real:
       return VisitRealImag(uo, promotionType);
     case UO_Minus:
-      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Minus, promotionType);
+      return VisitUnaryMinus(uo, promotionType);
     case UO_Plus:
-      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Plus, promotionType);
+      return VisitUnaryPlus(uo, promotionType);
     default:
       break;
     }
