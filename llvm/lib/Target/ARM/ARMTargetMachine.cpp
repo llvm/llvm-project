@@ -524,7 +524,7 @@ void ARMPassConfig::addPreEmitPass() {
   // Unpack bundles for:
   // - Thumb2: Constant island pass requires unbundled instructions
   // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
-  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([](const MachineFunction &MF) {
     return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
            MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
