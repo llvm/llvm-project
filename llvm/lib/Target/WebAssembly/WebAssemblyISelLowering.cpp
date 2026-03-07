@@ -199,6 +199,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Combine wide-vector muls, with extend inputs, to extmul_half.
     setTargetDAGCombine(ISD::MUL);
+    setTargetDAGCombine(ISD::SHL);
 
     // Combine vector mask reductions into alltrue/anytrue
     setTargetDAGCombine(ISD::SETCC);
@@ -2800,7 +2801,6 @@ static SDValue unrollVectorShift(SDValue Op, SelectionDAG &DAG) {
 SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
-
   // Only manually lower vector shifts
   assert(Op.getSimpleValueType().isVector());
 
@@ -3713,6 +3713,73 @@ SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Wide vector shift operations such as v8i32 with sign-extended
+// operands cause Type Legalizer crashes because the target-specific
+// extension nodes cannot be directly mapped to the 256-bit size.
+//
+// To resolve the crash and optimize performance, we intercept the
+// illegal v8i32 shift in DAGCombine. We convert the shift amounts
+// into multipliers and manually split the vector into two v4i32 halves.
+//
+// Before: t1: v8i32 = shl (sign_extend v8i16), const_vec
+// After : t2: v4i32 = mul (ext_low_s v8i16), (ext_low_s narrow_vec)
+//         t3: v4i32 = mul (ext_high_s v8i16), (ext_high_s narrow_vec)
+//         t4: v8i32 = concat_vectors t2, t3
+static SDValue performShiftCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  assert(N->getOpcode() == ISD::SHL);
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v8i32)
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  unsigned ExtOpc = LHS.getOpcode();
+  if (ExtOpc != ISD::SIGN_EXTEND && ExtOpc != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  if (RHS.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue ExtendIn = LHS.getOperand(0);
+  EVT FromVT = ExtendIn.getValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned BitWidth = FromVT.getScalarSizeInBits();
+  bool IsSigned = (ExtOpc == ISD::SIGN_EXTEND);
+  unsigned MaxValidShift = IsSigned ? (BitWidth - 1) : BitWidth;
+  SmallVector<SDValue, 16> MulConsts;
+  for (unsigned I = 0; I < NumElts; ++I) {
+    auto *C = dyn_cast<ConstantSDNode>(RHS.getOperand(I));
+    if (!C)
+      return SDValue();
+
+    const APInt &ShiftAmt = C->getAPIntValue();
+    if (ShiftAmt.uge(MaxValidShift))
+      return SDValue();
+
+    APInt MulAmt = APInt(BitWidth, 1).shl(ShiftAmt);
+    MulConsts.push_back(DAG.getConstant(MulAmt, DL, FromVT.getScalarType(),
+                                        /*isTarget=*/false, /*isOpaque=*/true));
+  }
+
+  SDValue NarrowConst = DAG.getBuildVector(FromVT, DL, MulConsts);
+  unsigned ExtLowOpc =
+      IsSigned ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+  unsigned ExtHighOpc =
+      IsSigned ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
+
+  EVT HalfVT = MVT::v4i32;
+  SDValue LHSLo = DAG.getNode(ExtLowOpc, DL, HalfVT, ExtendIn);
+  SDValue LHSHi = DAG.getNode(ExtHighOpc, DL, HalfVT, ExtendIn);
+  SDValue RHSLo = DAG.getNode(ExtLowOpc, DL, HalfVT, NarrowConst);
+  SDValue RHSHi = DAG.getNode(ExtHighOpc, DL, HalfVT, NarrowConst);
+  SDValue MulLo = DAG.getNode(ISD::MUL, DL, HalfVT, LHSLo, RHSLo);
+  SDValue MulHi = DAG.getNode(ISD::MUL, DL, HalfVT, LHSHi, RHSHi);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, MulLo, MulHi);
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3748,5 +3815,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performAnyAllCombine(N, DCI.DAG);
   case ISD::MUL:
     return performMulCombine(N, DCI);
+  case ISD::SHL:
+    return performShiftCombine(N, DCI);
   }
 }
