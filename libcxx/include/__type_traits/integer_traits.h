@@ -17,43 +17,75 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// This trait is to determine whether a type is a /signed integer type/
-// See [basic.fundamental]/p1
-template <class _Tp>
-inline const bool __is_signed_integer_v = false;
-template <>
-inline const bool __is_signed_integer_v<signed char> = true;
-template <>
-inline const bool __is_signed_integer_v<signed short> = true;
-template <>
-inline const bool __is_signed_integer_v<signed int> = true;
-template <>
-inline const bool __is_signed_integer_v<signed long> = true;
-template <>
-inline const bool __is_signed_integer_v<signed long long> = true;
-#if _LIBCPP_HAS_INT128
-template <>
-inline const bool __is_signed_integer_v<__int128_t> = true;
-#endif
+// These traits determine whether a type is a /signed integer type/ or
+// /unsigned integer type/ per [basic.fundamental]/p1-2.
+//
+// Signed/unsigned integer types include the standard integer types
+// (signed/unsigned char, short, int, long, long long), extended integer
+// types (__int128), and bit-precise integer types (_BitInt(N)).
+//
+// Character types (char, wchar_t, char8_t, char16_t, char32_t) and bool
+// are integral but are NOT signed/unsigned integer types.
 
-// This trait is to determine whether a type is an /unsigned integer type/
-// See [basic.fundamental]/p2
+#ifdef __clang__
+
+// On Clang, use compiler builtins to automatically cover _BitInt(N) in
+// addition to all standard and extended integer types.
+
+// clang-format off
+template <class _Tp> inline const bool __is_character_or_bool_v = false;
+template <> inline const bool __is_character_or_bool_v<bool>     = true;
+template <> inline const bool __is_character_or_bool_v<char>     = true;
+template <> inline const bool __is_character_or_bool_v<wchar_t>  = true;
+#  if _LIBCPP_HAS_CHAR8_T
+template <> inline const bool __is_character_or_bool_v<char8_t>  = true;
+#  endif
+template <> inline const bool __is_character_or_bool_v<char16_t> = true;
+template <> inline const bool __is_character_or_bool_v<char32_t> = true;
+// clang-format on
+
+// CV-qualified types are excluded to match the behavior of the explicit
+// specializations in the GCC path (template specializations don't match
+// cv-qualified types).
 template <class _Tp>
-inline const bool __is_unsigned_integer_v = false;
-template <>
-inline const bool __is_unsigned_integer_v<unsigned char> = true;
-template <>
-inline const bool __is_unsigned_integer_v<unsigned short> = true;
-template <>
-inline const bool __is_unsigned_integer_v<unsigned int> = true;
-template <>
-inline const bool __is_unsigned_integer_v<unsigned long> = true;
-template <>
-inline const bool __is_unsigned_integer_v<unsigned long long> = true;
-#if _LIBCPP_HAS_INT128
-template <>
-inline const bool __is_unsigned_integer_v<__uint128_t> = true;
-#endif
+inline const bool __is_signed_integer_v =
+    !__is_const(_Tp) && !__is_volatile(_Tp) && __is_integral(_Tp) && __is_signed(_Tp) && !__is_character_or_bool_v<_Tp>;
+
+template <class _Tp>
+inline const bool __is_unsigned_integer_v =
+    !__is_const(_Tp) && !__is_volatile(_Tp) && __is_integral(_Tp) && __is_unsigned(_Tp) &&
+    !__is_character_or_bool_v<_Tp>;
+
+#else // __clang__
+
+// On other compilers, use explicit specializations for standard types.
+// _BitInt is a Clang extension and not available on GCC/MSVC.
+
+// clang-format off
+template <class _Tp>
+inline const bool __is_signed_integer_v                          = false;
+template <> inline const bool __is_signed_integer_v<signed char>      = true;
+template <> inline const bool __is_signed_integer_v<signed short>     = true;
+template <> inline const bool __is_signed_integer_v<signed int>       = true;
+template <> inline const bool __is_signed_integer_v<signed long>      = true;
+template <> inline const bool __is_signed_integer_v<signed long long> = true;
+#  if _LIBCPP_HAS_INT128
+template <> inline const bool __is_signed_integer_v<__int128_t>       = true;
+#  endif
+
+template <class _Tp>
+inline const bool __is_unsigned_integer_v                            = false;
+template <> inline const bool __is_unsigned_integer_v<unsigned char>      = true;
+template <> inline const bool __is_unsigned_integer_v<unsigned short>     = true;
+template <> inline const bool __is_unsigned_integer_v<unsigned int>       = true;
+template <> inline const bool __is_unsigned_integer_v<unsigned long>      = true;
+template <> inline const bool __is_unsigned_integer_v<unsigned long long> = true;
+#  if _LIBCPP_HAS_INT128
+template <> inline const bool __is_unsigned_integer_v<__uint128_t>        = true;
+#  endif
+// clang-format on
+
+#endif // __clang__
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
