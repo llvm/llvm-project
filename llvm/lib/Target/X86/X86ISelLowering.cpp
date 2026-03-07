@@ -59647,6 +59647,22 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                        Op0.getOperand(0), Op0.getOperand(2));
   }
 
+  // Fold ADD(SBB(Y,0,W),C) -> SBB(Y,-C,W)
+  // SBB(Y,0,W) = Y - 0 - CF = Y - CF; adding C gives Y - CF + C = Y - (-C) -
+  // CF. The SBB flags output must be dead: changing the subtrahend from 0 to -C
+  // produces different EFLAGS bits.
+  if (Op0.getOpcode() == X86ISD::SBB && Op0->hasOneUse() &&
+      X86::isZeroNode(Op0.getOperand(1)) && !Op0->hasAnyUseOfValue(1)) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Op1)) {
+      SDLoc SBBLoc(Op0);
+      return DAG
+          .getNode(X86ISD::SBB, SBBLoc, Op0->getVTList(), Op0.getOperand(0),
+                   DAG.getConstant(-C->getAPIntValue(), SBBLoc, VT),
+                   Op0.getOperand(2))
+          .getValue(0);
+    }
+  }
+
   if (SDValue IFMA52 = matchVPMADD52(N, DAG, DL, VT, Subtarget))
     return IFMA52;
 
