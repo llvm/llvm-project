@@ -2795,6 +2795,8 @@ public:
     ScalarEvolution &SE;
     const BoUpSLP &R;
     const Loop *L = nullptr;
+    const InstructionsState &S;
+    ArrayRef<Value *> VL;
 
     /// \returns the operand data at \p OpIdx and \p Lane.
     OperandData &getData(unsigned OpIdx, unsigned Lane) {
@@ -2996,16 +2998,39 @@ public:
         case ReorderingMode::Load:
         case ReorderingMode::Opcode: {
           bool LeftToRight = Lane > LastLane;
-          Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
-          Value *OpRight = (LeftToRight) ? Op : OpLastLane;
-          int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
-                                        OpIdx, Idx, IsUsed, UsedLanes);
-          if (Score > static_cast<int>(BestOp.Score) ||
-              (Score > 0 && Score == static_cast<int>(BestOp.Score) &&
-               Idx == OpIdx)) {
-            BestOp.Idx = Idx;
-            BestOp.Score = Score;
-            BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
+          auto ScoreLoadOrOpcode = [&](Value *Op, Value *OpLastLane) -> void {
+            Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
+            Value *OpRight = (LeftToRight) ? Op : OpLastLane;
+            int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
+                                          OpIdx, Idx, IsUsed, UsedLanes);
+            if (Score > static_cast<int>(BestOp.Score) ||
+                (Score > 0 && Score == static_cast<int>(BestOp.Score) &&
+                 Idx == OpIdx)) {
+              BestOp.Idx = Idx;
+              BestOp.Score = Score;
+              BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
+            }
+          };
+          ScoreLoadOrOpcode(Op, OpLastLane);
+          // If Op or OpLastLane is Copyable, score against the Copyable Value's
+          // operands
+          if (S.isCopyableElement(VL[Lane]) !=
+              S.isCopyableElement(VL[LastLane])) {
+            bool OpIsCopyable = S.isCopyableElement(VL[Lane]);
+            Instruction *I =
+                dyn_cast<Instruction>(OpIsCopyable ? Op : OpLastLane);
+            if (I && Instruction::isBinaryOp(I->getOpcode())) {
+              Value *IOp0 = I->getOperand(0);
+              Value *NewOp = OpIsCopyable ? IOp0 : Op;
+              Value *NewOpLastLane = OpIsCopyable ? OpLastLane : IOp0;
+              ScoreLoadOrOpcode(NewOp, NewOpLastLane);
+              if (I->isCommutative()) {
+                Value *IOp1 = I->getOperand(1);
+                NewOp = OpIsCopyable ? IOp1 : Op;
+                NewOpLastLane = OpIsCopyable ? OpLastLane : IOp1;
+                ScoreLoadOrOpcode(NewOp, NewOpLastLane);
+              }
+            }
           }
           break;
         }
@@ -3331,7 +3356,7 @@ public:
     VLOperands(ArrayRef<Value *> RootVL, ArrayRef<ValueList> Operands,
                const InstructionsState &S, const BoUpSLP &R)
         : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R),
-          L(R.LI->getLoopFor(S.getMainOp()->getParent())) {
+          L(R.LI->getLoopFor(S.getMainOp()->getParent())), S(S), VL(RootVL) {
       // Append all the operands of RootVL.
       appendOperands(RootVL, Operands, S);
     }
