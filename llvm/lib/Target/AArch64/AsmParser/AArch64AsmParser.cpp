@@ -1551,6 +1551,12 @@ public:
     return Kind == k_Token && getToken() == Str;
   }
   bool isSysCR() const { return Kind == k_SysCR; }
+  template <unsigned low, unsigned high> bool isSysCRInRange() const {
+    if (!isSysCR())
+      return false;
+    unsigned Val = getSysCR();
+    return Val >= low && Val <= high;
+  }
   bool isPrefetch() const { return Kind == k_Prefetch; }
   bool isPSBHint() const { return Kind == k_PSBHint; }
   bool isPHint() const { return Kind == k_PHint; }
@@ -6293,6 +6299,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [0, 1].");
   case Match_InvalidImm0_3:
     return Error(Loc, "immediate must be an integer in range [0, 3].");
+  case Match_InvalidImm0_6:
+    return Error(Loc, "immediate must be an integer in range [0, 6].");
   case Match_InvalidImm0_7:
     return Error(Loc, "immediate must be an integer in range [0, 7].");
   case Match_InvalidImm0_15:
@@ -6317,6 +6325,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 64].");
   case Match_InvalidImmM1_62:
     return Error(Loc, "immediate must be an integer in range [-1, 62].");
+  case Match_InvalidSysCR0_7:
+    return Error(Loc, "expected cM operand where 0 <= M <= 7");
+  case Match_InvalidSysCR8_9:
+    return Error(Loc, "expected cN operand where 8 <= N <= 9");
+  case Match_InvalidSysCR0_15:
+    return Error(Loc, "expected cN operand where 0 <= N <= 15");
   case Match_InvalidMemoryIndexedRange2UImm0:
     return Error(Loc, "vector select offset must be the immediate range 0:1.");
   case Match_InvalidMemoryIndexedRange2UImm1:
@@ -7081,6 +7095,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm0_0:
   case Match_InvalidImm0_1:
   case Match_InvalidImm0_3:
+  case Match_InvalidImm0_6:
   case Match_InvalidImm0_7:
   case Match_InvalidImm0_15:
   case Match_InvalidImm0_31:
@@ -7093,6 +7108,9 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
   case Match_InvalidImmM1_62:
+  case Match_InvalidSysCR0_7:
+  case Match_InvalidSysCR8_9:
+  case Match_InvalidSysCR0_15:
   case Match_InvalidMemoryIndexedRange2UImm0:
   case Match_InvalidMemoryIndexedRange2UImm1:
   case Match_InvalidMemoryIndexedRange2UImm2:

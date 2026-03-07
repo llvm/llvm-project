@@ -11453,11 +11453,14 @@ let Predicates = [HasRCPC3, HasNEON] in {
 //===----------------------------------------------------------------------===//
 // 128-bit System Instructions (FEAT_SYSINSTR128)
 //===----------------------------------------------------------------------===//
-def SYSPxt  : SystemPXtI<0, "sysp">;
+def SYSPxt  : SystemPXtI<0, "sysp"> {
+  let DecoderMethod = "DecodeSyspInstruction";
+}
 
 def SYSPxt_XZR
   : BaseSystemI<0, (outs),
-      (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
+      (ins imm0_6:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm, imm0_7:$op2,
+           SyspXzrPairOperand:$xzr_pair),
       "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
     Sched<[WriteSys]>
 {
@@ -11483,7 +11486,8 @@ def SYSPxt_XZR
 }
 
 def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
-                (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+                (SYSPxt_XZR imm0_6:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm,
+                            imm0_7:$op2, XZR)>;
 
 //---
 // 128-bit System Registers (FEAT_SYSREG128)
