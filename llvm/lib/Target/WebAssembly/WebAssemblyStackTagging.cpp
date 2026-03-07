@@ -213,9 +213,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
-    bool StandardLifetime =
-        memtag::isStandardLifetime(Info, DT, LI, 3) && !SInfo.CallsReturnTwice;
-    if (StandardLifetime) {
+    bool SupportedLifetime =
+        memtag::isSupportedLifetime(Info, DT, LI) && !SInfo.CallsReturnTwice;
+    if (SupportedLifetime) {
       bool combineStore{canCombineStore(Info, AI, DT)};
       Function *StoreTagDecl = nullptr;
       Intrinsic::ID SelectedIntrinsicID;
