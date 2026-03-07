@@ -640,10 +640,15 @@ def LLVM_PtrToAddrOp : LLVM_CastOp<"ptrtoaddr", "PtrToAddr",
     Operation mirroring LLVM's `ptrtoaddr` operation.
 
     This operation casts a pointer (or a vector of pointers) to an integer
-    (or a vector of integers).
+    (or a vector of integers) without capturing the provenance of the pointer.
+    Therefore, an integer returned or derived from `llvm.ptrtoaddr` does not
+    create a legal-to-access pointer when used in `llvm.inttoptr`.
+    Code that only care about the address value of a pointer
+    (e.g. pointer subtraction) should prefer `llvm.ptrtoaddr` over
+    `llvm.ptrtoint`.
+
     The integer type used as the result type is required to be equal in width
     to the pointer type as specified in the data layout.
-
     Use the `llvm-target-to-data-layout` pass to derive an MLIR datalayout from
     an LLVM datalayout.
 
