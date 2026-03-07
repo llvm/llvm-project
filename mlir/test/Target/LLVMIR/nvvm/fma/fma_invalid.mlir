@@ -27,7 +27,7 @@ llvm.func @fma_invalid_relu_sat(%a : f16, %b : f16, %c : f16) -> f16 {
 // -----
 
 llvm.func @fma_invalid_oob_sat(%a : f16, %b : f16, %c : f16) -> f16 {
-  // expected-error@+1 {{oob is not supported with saturation}}
+  // expected-error@+1 {{oob is not supported with saturation or FTZ}}
   %f1 = nvvm.fma %a, %b, %c {oob = true, sat = #nvvm.sat_mode<sat>, rnd = #nvvm.fp_rnd_mode<rn>} : f16
   llvm.return %f1 : f16
 }
