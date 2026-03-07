@@ -21,11 +21,16 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
+#include <memory>
 #include <optional>
 #include <string>
 
 namespace clang {
 namespace doc {
+
+// An abstraction for owned pointers. Initially mapped to OwnedPtr,
+// to be eventually transitioned to bare pointers in an arena.
+template <typename T> using OwnedPtr = std::unique_ptr<T>;
 
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
@@ -89,7 +94,7 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  std::vector<std::unique_ptr<CommentInfo>>
+  std::vector<OwnedPtr<CommentInfo>>
       Children;              // List of child comments for this CommentInfo.
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
   SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
@@ -625,8 +630,7 @@ struct Index : public Reference {
 // A standalone function to call to merge a vector of infos into one.
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
-llvm::Expected<std::unique_ptr<Info>>
-mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
+llvm::Expected<OwnedPtr<Info>> mergeInfos(std::vector<OwnedPtr<Info>> &Values);
 
 struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
