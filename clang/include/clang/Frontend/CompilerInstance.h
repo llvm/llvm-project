@@ -197,6 +197,14 @@ class CompilerInstance : public ModuleLoader {
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
 
+  using GenModuleActionWrapperFunc =
+      std::function<std::unique_ptr<FrontendAction>(
+          const FrontendOptions &, std::unique_ptr<FrontendAction>)>;
+
+  /// An optional callback function used to wrap all FrontendActions
+  /// produced to generate imported modules before they are executed.
+  GenModuleActionWrapperFunc GenModuleActionWrapper;
+
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
 public:
@@ -872,20 +880,24 @@ public:
   class ThreadSafeCloneConfig {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
     DiagnosticConsumer &DiagConsumer;
+    std::shared_ptr<ModuleCache> ModCache;
     std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
   public:
     ThreadSafeCloneConfig(
         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-        DiagnosticConsumer &DiagConsumer,
+        DiagnosticConsumer &DiagConsumer, std::shared_ptr<ModuleCache> ModCache,
         std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector = nullptr)
         : VFS(std::move(VFS)), DiagConsumer(DiagConsumer),
+          ModCache(std::move(ModCache)),
           ModuleDepCollector(std::move(ModuleDepCollector)) {
       assert(this->VFS && "Clone config requires non-null VFS");
+      assert(this->ModCache && "Clone config requires non-null ModuleCache");
     }
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVFS() const { return VFS; }
     DiagnosticConsumer &getDiagConsumer() const { return DiagConsumer; }
+    std::shared_ptr<ModuleCache> getModuleCache() const { return ModCache; }
     std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const {
       return ModuleDepCollector;
     }
@@ -953,6 +965,14 @@ public:
   GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override;
 
   bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override;
+
+  void setGenModuleActionWrapper(GenModuleActionWrapperFunc Wrapper) {
+    GenModuleActionWrapper = Wrapper;
+  }
+
+  GenModuleActionWrapperFunc getGenModuleActionWrapper() const {
+    return GenModuleActionWrapper;
+  }
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));

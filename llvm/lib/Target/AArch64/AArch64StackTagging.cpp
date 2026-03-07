@@ -37,6 +37,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -66,12 +67,6 @@ static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
 static cl::opt<unsigned>
     ClMergeInitSizeLimit("stack-tagging-merge-init-size-limit", cl::init(272),
                          cl::Hidden);
-
-static cl::opt<size_t> ClMaxLifetimes(
-    "stack-tagging-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
-    cl::ReallyHidden,
-    cl::desc("How many lifetime ends to handle for a single alloca."),
-    cl::Optional);
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -219,7 +214,7 @@ public:
     }
 
     // Look through 8-byte initializer list 16 bytes at a time;
-    // If one of the two 8-byte halfs is non-zero non-undef, emit STGP.
+    // If one of the two 8-byte halves is non-zero non-undef, emit STGP.
     // Otherwise, emit zeroes up to next available item.
     uint64_t LastOffset = 0;
     for (uint64_t Offset = 0; Offset < Size; Offset += 16) {
@@ -446,6 +441,24 @@ void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                               ConstantInt::get(IRB.getInt64Ty(), Size)});
 }
 
+static Value *getSlotPtr(IRBuilder<> &IRB, const Triple &TargetTriple,
+                         bool HasInstrumentedAllocas) {
+  if (!HasInstrumentedAllocas)
+    return nullptr;
+
+  if (ClRecordStackHistory == instr ||
+      (!ClRecordStackHistory.getNumOccurrences() &&
+       TargetTriple.isOSDarwin())) {
+    if (TargetTriple.isAndroid() && TargetTriple.isAArch64() &&
+        !TargetTriple.isAndroidVersionLT(35))
+      return memtag::getAndroidSlotPtr(IRB, -3);
+    if (TargetTriple.isOSDarwin() && TargetTriple.isAArch64() &&
+        !TargetTriple.isSimulatorEnvironment())
+      return memtag::getDarwinSlotPtr(IRB, 231);
+  }
+  return nullptr;
+}
+
 Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     const Module &M,
     const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument,
@@ -474,21 +487,9 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   // stack MTE take two slots (16 bytes).
   //
   // Stack history is recorded by default on Darwin.
-  if (ClRecordStackHistory == instr ||
-      (!ClRecordStackHistory.getNumOccurrences() &&
-       TargetTriple.isOSDarwin())) {
+  if (Value *SlotPtr =
+          getSlotPtr(IRB, TargetTriple, !AllocasToInstrument.empty())) {
     constexpr uint64_t TagMask = 0xFULL << 56;
-    Value *SlotPtr = nullptr;
-    if (TargetTriple.isAndroid() && TargetTriple.isAArch64() &&
-        !TargetTriple.isAndroidVersionLT(35) && !AllocasToInstrument.empty()) {
-      SlotPtr = memtag::getAndroidSlotPtr(IRB, -3);
-    } else if (TargetTriple.isOSDarwin() && TargetTriple.isAArch64() &&
-               !TargetTriple.isSimulatorEnvironment()) {
-      SlotPtr = memtag::getDarwinSlotPtr(IRB, 231);
-    } else {
-      return Base;
-    }
-
     auto *IntptrTy = IRB.getIntPtrTy(M.getDataLayout());
     auto *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
     Value *FP = memtag::getFP(IRB);
@@ -591,9 +592,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
-        !SInfo.CallsReturnTwice &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
-                                   ClMaxLifetimes);
+        !SInfo.CallsReturnTwice && memtag::isSupportedLifetime(Info, DT, LI);
     if (StandardLifetime) {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);

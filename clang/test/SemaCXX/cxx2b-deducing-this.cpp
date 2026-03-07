@@ -1431,6 +1431,30 @@ namespace ConstexprBacktrace {
                           // expected-note {{in call to}}
 }
 
+namespace GH176639 {
+
+struct S {
+  void operator()(this S =) // expected-error {{the explicit object parameter cannot have a default argument}}
+          // expected-error@-1 {{expected ';' at end of declaration list}}
+          // expected-error@-2 {{expected expression}}
+};
+
+void foo() {
+  S s{};
+  s(0); // expected-error {{no matching function for call to object of type 'S'}}
+}
+
+struct S2 {
+  void operator()(this S2 = S2 {}){} // expected-error {{the explicit object parameter cannot have a default argument}}
+};
+
+void foo2() {
+  S2 s{};
+  s(0); // expected-error {{no matching function for call to object of type 'S2'}}
+}
+
+}
+
 namespace GH177741 {
 
 struct S {

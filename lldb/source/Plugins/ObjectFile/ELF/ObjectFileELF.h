@@ -79,13 +79,13 @@ public:
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
+  static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 
   // PluginInterface protocol
@@ -274,6 +274,10 @@ private:
   static void ParseARMAttributes(lldb_private::DataExtractor &data,
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
+
+  static void ParseRISCVAttributes(lldb_private::DataExtractor &data,
+                                   uint64_t length,
+                                   lldb_private::ArchSpec &arch_spec);
 
   /// Parses the elf section headers and returns the uuid, debug link name,
   /// crc, archspec.

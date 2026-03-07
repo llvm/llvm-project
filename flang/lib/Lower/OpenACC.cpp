@@ -775,16 +775,9 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
       if (auto *defOp = op.getVar().getDefiningOp())
         addDeclareAttr(builder, defOp, dataClause);
 
-    // TODO: no_create remapping could currently cause segfaults because of the
-    // fir.box_addr that may be inserted in the remapping in the region.
-    // This is an issue if the variable is not mapped (which is OK if its
-    // accesses are not reached inside the construct).
-    bool isNoCreateWithBounds =
-        std::is_same_v<Op, mlir::acc::NoCreateOp> && !bounds.empty();
-
     // Track the symbol and its corresponding mlir::Value if requested so that
     // accesses inside regions can be remapped.
-    if (dataMap && !isNoCreateWithBounds) {
+    if (dataMap) {
       if (componentRef)
         dataMap->emplaceComponent(op.getAccVar(), std::move(*componentRef),
                                   baseAddr);
@@ -1068,15 +1061,31 @@ genDataExitOperations(fir::FirOpBuilder &builder,
 /// Return the corresponding enum value for the mlir::acc::ReductionOperator
 /// from the parser representation.
 static mlir::acc::ReductionOperator
-getReductionOperator(const Fortran::parser::ReductionOperator &op) {
+getReductionOperator(const Fortran::parser::ReductionOperator &op,
+                     mlir::Type reductionTy,
+                     const Fortran::lower::AbstractConverter &converter) {
+  Fortran::common::FPMaxminBehavior maxminMode =
+      converter.getLoweringOptions().getFPMaxminBehavior();
   switch (op.v) {
   case Fortran::parser::ReductionOperator::Operator::Plus:
     return mlir::acc::ReductionOperator::AccAdd;
   case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
   case Fortran::parser::ReductionOperator::Operator::Max:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMaximumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMaxnumf;
+    }
     return mlir::acc::ReductionOperator::AccMax;
   case Fortran::parser::ReductionOperator::Operator::Min:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMinimumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMinnumf;
+    }
     return mlir::acc::ReductionOperator::AccMin;
   case Fortran::parser::ReductionOperator::Operator::Iand:
     return mlir::acc::ReductionOperator::AccIand;
@@ -1122,7 +1131,6 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const auto &objects = std::get<Fortran::parser::AccObjectList>(objectList.t);
   const auto &op = std::get<Fortran::parser::ReductionOperator>(objectList.t);
-  mlir::acc::ReductionOperator mlirOp = getReductionOperator(op);
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objects.v) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -1150,6 +1158,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
 
     if (!isSupportedReductionType(reductionTy))
       TODO(operandLocation, "reduction with unsupported type");
+
+    mlir::acc::ReductionOperator mlirOp =
+        getReductionOperator(op, reductionTy, converter);
 
     if (designator) {
       Fortran::semantics::SomeExpr someExpr = *designator;
@@ -4304,20 +4315,26 @@ genACC(Fortran::lower::AbstractConverter &converter,
           fir::substBase(hostExv, cacheOp.getAccVar());
       converter.bindSymbol(symbol, cacheExv);
     } else {
-      // Must be a derived type component reference.
+      // Derived type component reference.
       assert(designator && "expected designator for non-symbol cache operand");
       std::optional<Fortran::evaluate::Component> componentRef =
           extractComponentFromDesignator(designator);
       assert(componentRef &&
              "expected component reference for derived type cache operand");
-      // Component references are lowered to designate operations.
-      auto designate = base.getDefiningOp<hlfir::DesignateOp>();
-      assert(designate && "expected designate op for component reference");
+      // When component is mapped via a data clause, base may be a declare op
+      // instead of a designate op.
+      auto varIface = base.getDefiningOp<fir::FortranVariableOpInterface>();
+      assert(varIface &&
+             "expected FortranVariableOpInterface for component reference");
+      fir::FortranVariableFlagsAttr attrs;
+      if (auto fortranAttrs = varIface.getFortranAttrs())
+        attrs = fir::FortranVariableFlagsAttr::get(builder.getContext(),
+                                                   *fortranAttrs);
       auto declareOp = hlfir::DeclareOp::create(
           builder, operandLocation, cacheOp.getAccVar(), asFortran.str(),
-          designate.getShape(), designate.getTypeparams(),
+          varIface.getShape(), varIface.getExplicitTypeParams(),
           /*dummyScope=*/nullptr, /*storage=*/nullptr,
-          /*storageOffset=*/0, designate.getFortranAttrsAttr());
+          /*storageOffset=*/0, attrs);
       converter.getSymbolMap().addComponentOverride(*componentRef, declareOp);
     }
   }

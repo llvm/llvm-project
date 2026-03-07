@@ -6,17 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_local_size.h>
+#include "clc/workitem/clc_get_local_size.h"
+#include <amdhsa_abi.h>
 
 _CLC_OVERLOAD _CLC_DEF size_t __clc_get_local_size(uint dim) {
-  switch (dim) {
-  case 0:
-    return __builtin_amdgcn_workgroup_size_x();
-  case 1:
-    return __builtin_amdgcn_workgroup_size_y();
-  case 2:
-    return __builtin_amdgcn_workgroup_size_z();
-  default:
+  if (dim > 2)
     return 1;
-  }
+
+  __constant amdhsa_implicit_kernarg_v5 *args =
+      (__constant amdhsa_implicit_kernarg_v5 *)
+          __builtin_amdgcn_implicitarg_ptr();
+
+  uint group_ids[3] = {__builtin_amdgcn_workgroup_id_x(),
+                       __builtin_amdgcn_workgroup_id_y(),
+                       __builtin_amdgcn_workgroup_id_z()};
+
+  return group_ids[dim] < args->block_count[dim] ? (size_t)args->group_size[dim]
+                                                 : (size_t)args->remainder[dim];
 }

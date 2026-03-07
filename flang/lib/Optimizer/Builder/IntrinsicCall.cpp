@@ -193,6 +193,12 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genCFProcPointer,
      {{{"cptr", asValue}, {"fptr", asInquired}}},
      /*isElemental=*/false},
+    {"c_f_strpointer",
+     &I::genCFStrPointer,
+     {{{"cstrptr_or_cstrarray", asValue},
+       {"fstrptr", asInquired},
+       {"nchars", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_ptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
@@ -298,6 +304,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"extends_type_of",
      &I::genExtendsTypeOf,
      {{{"a", asBox}, {"mold", asBox}}},
+     /*isElemental=*/false},
+    {"f_c_string",
+     &I::genFCString,
+     {{{"string", asAddr}, {"asis", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
@@ -540,7 +550,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genMatmulTranspose,
      {{{"matrix_a", asAddr}, {"matrix_b", asAddr}}},
      /*isElemental=*/false},
-    {"max", &I::genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>},
+    {"max", &I::genExtremum</*isMax=*/true>},
     {"maxloc",
      &I::genMaxloc,
      {{{"array", asBox},
@@ -557,7 +567,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"merge", &I::genMerge},
     {"merge_bits", &I::genMergeBits},
-    {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
+    {"min", &I::genExtremum</*isMax=*/false>},
     {"minloc",
      &I::genMinloc,
      {{{"array", asBox},
@@ -675,6 +685,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"order", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"rrspacing", &I::genRRSpacing},
+    {"rtc", &I::genRtc, {}, /*isElemental=*/false},
     {"same_type_as",
      &I::genSameTypeAs,
      {{{"a", asBox}, {"b", asBox}}},
@@ -786,6 +797,13 @@ static constexpr IntrinsicHandler handlers[]{
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"tokenize",
+     &I::genTokenize,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"out1", asInquired},
+       {"out2", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -3246,6 +3264,99 @@ void IntrinsicLibrary::genCFProcPointer(
   fir::StoreOp::create(builder, loc, cptrBox, fptr);
 }
 
+// C_F_STRPOINTER
+void IntrinsicLibrary::genCFStrPointer(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+
+  mlir::Value cStrAddr;
+  mlir::Value strLen;
+
+  const mlir::Value firstArg = fir::getBase(args[0]);
+  const mlir::Type firstArgType = fir::unwrapRefType(firstArg.getType());
+  const bool isCstrptr = mlir::isa<fir::RecordType>(firstArgType);
+
+  if (isCstrptr) {
+    // CSTRPTR form: Extract address from C_PTR
+    cStrAddr = fir::factory::genCPtrOrCFunptrValue(builder, loc, firstArg);
+
+    assert(isStaticallyPresent(args[2]));
+    mlir::Value nchars = fir::getBase(args[2]);
+    if (fir::isa_ref_type(nchars.getType())) {
+      strLen = fir::LoadOp::create(builder, loc, nchars);
+    } else {
+      strLen = nchars;
+    }
+  } else {
+    // CSTRARRAY form: Get address from CHARACTER array
+    if (const auto boxCharTy =
+            mlir::dyn_cast<fir::BoxCharType>(firstArg.getType())) {
+      const auto charTy = mlir::cast<fir::CharacterType>(boxCharTy.getEleTy());
+      const auto addrTy = builder.getRefType(charTy);
+      auto unboxed = fir::UnboxCharOp::create(
+          builder, loc, mlir::TypeRange{addrTy, builder.getIndexType()},
+          firstArg);
+      cStrAddr = unboxed.getResult(0);
+    } else if (mlir::isa<fir::BoxType>(firstArg.getType())) {
+      cStrAddr = fir::BoxAddrOp::create(builder, loc, firstArg);
+    } else {
+      cStrAddr = firstArg;
+    }
+
+    // Handle optional NCHARS argument
+    if (isStaticallyPresent(args[2])) {
+      mlir::Value nchars = fir::getBase(args[2]);
+      if (fir::isa_ref_type(nchars.getType())) {
+        strLen = fir::LoadOp::create(builder, loc, nchars);
+      } else {
+        strLen = nchars;
+      }
+    } else {
+      const mlir::Type i8PtrTy = builder.getRefType(builder.getIntegerType(8));
+      const mlir::Value strPtr = builder.createConvert(loc, i8PtrTy, cStrAddr);
+
+      const mlir::Type i64Ty = builder.getIntegerType(64);
+      const mlir::FunctionType strlenType =
+          mlir::FunctionType::get(builder.getContext(), {i8PtrTy}, {i64Ty});
+
+      mlir::func::FuncOp strlenFunc = builder.getNamedFunction("strlen");
+      if (!strlenFunc) {
+        strlenFunc = builder.createFunction(loc, "strlen", strlenType);
+        strlenFunc->setAttr(
+            fir::getSymbolAttrName(),
+            mlir::StringAttr::get(builder.getContext(), "strlen"));
+      }
+      auto call = fir::CallOp::create(builder, loc, strlenFunc, {strPtr});
+      strLen = call.getResult(0);
+    }
+  }
+
+  // Handle FSTRPTR (second argument)
+  const auto *fStrPtr = args[1].getBoxOf<fir::MutableBoxValue>();
+  assert(fStrPtr && "FSTRPTR must be a pointer");
+
+  const mlir::Value lenIdx =
+      builder.createConvert(loc, builder.getIndexType(), strLen);
+
+  const mlir::Type charPtrType = fir::PointerType::get(fir::CharacterType::get(
+      builder.getContext(), 1, fir::CharacterType::unknownLen()));
+  const mlir::Value charPtr = builder.createConvert(loc, charPtrType, cStrAddr);
+
+  const fir::CharBoxValue charBox{charPtr, lenIdx};
+  fir::factory::associateMutableBox(builder, loc, *fStrPtr, charBox,
+                                    /*lbounds=*/mlir::ValueRange{});
+
+  // CUDA synchronization if needed
+  if (auto declare = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+          fStrPtr->getAddr().getDefiningOp()))
+    if (declare.getMemref().getDefiningOp() &&
+        mlir::isa<fir::AddrOfOp>(declare.getMemref().getDefiningOp()))
+      if (cuf::isRegisteredDeviceAttr(declare.getDataAttr()) &&
+          !cuf::isCUDADeviceContext(builder.getRegion()))
+        fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc,
+                                                    declare.getMemref());
+}
+
 // C_FUNLOC
 fir::ExtendedValue
 IntrinsicLibrary::genCFunLoc(mlir::Type resultType,
@@ -3853,9 +3964,6 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           EXIT_SUCCESS)
           : fir::getBase(args[0]);
 
-  assert(status.getType() == builder.getDefaultIntegerType() &&
-         "STATUS parameter must be an INTEGER of default kind");
-
   fir::runtime::genExit(builder, loc, status);
 }
 
@@ -3880,6 +3988,32 @@ IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
                                      fir::getBase(args[1])));
+}
+
+// F_C_STRING
+fir::ExtendedValue
+IntrinsicLibrary::genFCString(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() >= 1 && args.size() <= 2);
+
+  mlir::Value string = builder.createBox(loc, args[0]);
+
+  // Handle optional ASIS argument
+  mlir::Value asis = isStaticallyAbsent(args, 1)
+                         ? builder.createBool(loc, false)
+                         : fir::getBase(args[1]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genFCString(builder, loc, resultIrBox, string, asis);
+
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType, "F_C_STRING");
 }
 
 // FINDLOC
@@ -7636,6 +7770,14 @@ IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
   return {};
 }
 
+// RTC
+mlir::Value IntrinsicLibrary::genRtc(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty());
+  mlir::Value time = fir::runtime::genTime(builder, loc);
+  return builder.createConvert(loc, resultType, time);
+}
+
 // SELECTED_CHAR_KIND
 fir::ExtendedValue
 IntrinsicLibrary::genSelectedCharKind(mlir::Type resultType,
@@ -8394,6 +8536,101 @@ void IntrinsicLibrary::genSleep(llvm::ArrayRef<fir::ExtendedValue> args) {
   fir::runtime::genSleep(builder, loc, fir::getBase(args[0]));
 }
 
+// TOKENIZE
+void IntrinsicLibrary::genTokenize(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4 && "TOKENIZE requires 3 or 4 arguments");
+
+  const fir::ExtendedValue &string = args[0];
+  const fir::ExtendedValue &set = args[1];
+
+  // Distinguish forms by the element type of the third argument.  For form 1,
+  // TOKENS is CHARACTER.  For form 2, FIRST is INTEGER.
+  mlir::Type thirdArgEleTy = fir::getElementTypeOf(args[2]);
+  bool isForm1 = fir::isa_char(thirdArgEleTy);
+  [[maybe_unused]] bool isForm2 = fir::isa_integer(thirdArgEleTy);
+  assert((isForm1 || isForm2) &&
+         "TOKENIZE third argument must be CHARACTER or INTEGER");
+
+  mlir::Value stringBox = builder.createBox(loc, string);
+  mlir::Value setBox = builder.createBox(loc, set);
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Type boxNoneRefTy = fir::ReferenceType::get(boxNoneTy);
+
+  // A lambda to return the address of the descriptor storage to pass to the
+  // runtime. For MutableBoxValue, this also handles any required syncing
+  // before/after the runtime call.
+  auto getBoxStorageAddr =
+      [&](const fir::ExtendedValue &exv, llvm::StringRef what,
+          const fir::MutableBoxValue **mutableBoxOut) -> mlir::Value {
+    if (const auto *mb = exv.getBoxOf<fir::MutableBoxValue>()) {
+      if (mutableBoxOut)
+        *mutableBoxOut = mb;
+      mlir::Value addr = fir::factory::getMutableIRBox(builder, loc, *mb);
+      return builder.createConvert(loc, boxNoneRefTy, addr);
+    }
+    if (const auto *bv = exv.getBoxOf<fir::BoxValue>()) {
+      mlir::Value addr = bv->getAddr();
+      if (auto boxTy = fir::dyn_cast_ptrEleTy(addr.getType())) {
+        if (mlir::isa<fir::BaseBoxType>(boxTy))
+          return builder.createConvert(loc, boxNoneRefTy, addr);
+      }
+      fir::emitFatalError(loc, llvm::Twine("TOKENIZE: ") + what +
+                                   " must be a descriptor address");
+    }
+    fir::emitFatalError(loc, llvm::Twine("TOKENIZE: ") + what +
+                                 " not lowered as a boxed entity");
+  };
+
+  if (isForm1) {
+    // Form 1: TOKENIZE(STRING, SET, TOKENS [, SEPARATOR])
+    const fir::ExtendedValue &tokens = args[2];
+    const fir::MutableBoxValue *tokensMutableBox{nullptr};
+    mlir::Value tokensBoxAddr =
+        getBoxStorageAddr(tokens, "TOKENS", &tokensMutableBox);
+
+    // Handle optional SEPARATOR argument
+    mlir::Value separatorBoxAddr;
+    const fir::MutableBoxValue *separatorMutableBox{nullptr};
+    if (!isStaticallyAbsent(args[3])) {
+      const fir::ExtendedValue &separator = args[3];
+      separatorBoxAddr =
+          getBoxStorageAddr(separator, "SEPARATOR", &separatorMutableBox);
+    } else {
+      separatorBoxAddr = builder.createNullConstant(loc, boxNoneRefTy);
+    }
+
+    // Call the Form 1 runtime function
+    fir::runtime::genTokenize(builder, loc, tokensBoxAddr, separatorBoxAddr,
+                              stringBox, setBox);
+
+    if (tokensMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *tokensMutableBox);
+    if (separatorMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *separatorMutableBox);
+
+  } else {
+    // Form 2: TOKENIZE(STRING, SET, FIRST, LAST)
+    const fir::ExtendedValue &first = args[2];
+    const fir::ExtendedValue &last = args[3];
+
+    const fir::MutableBoxValue *firstMutableBox{nullptr};
+    const fir::MutableBoxValue *lastMutableBox{nullptr};
+    mlir::Value firstBoxAddr =
+        getBoxStorageAddr(first, "FIRST", &firstMutableBox);
+    mlir::Value lastBoxAddr = getBoxStorageAddr(last, "LAST", &lastMutableBox);
+
+    // Call the Form 2 runtime function
+    fir::runtime::genTokenizePositions(builder, loc, firstBoxAddr, lastBoxAddr,
+                                       stringBox, setBox);
+
+    if (firstMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *firstMutableBox);
+    if (lastMutableBox)
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, *lastMutableBox);
+  }
+}
+
 // TRANSFER
 fir::ExtendedValue
 IntrinsicLibrary::genTransfer(mlir::Type resultType,
@@ -8492,75 +8729,77 @@ IntrinsicLibrary::genTrim(mlir::Type resultType,
 }
 
 // Compare two FIR values and return boolean result as i1.
-template <Extremum extremum, ExtremumBehavior behavior>
-static mlir::Value createExtremumCompare(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         mlir::Value left, mlir::Value right) {
+template <bool isMax>
+static mlir::Value genExtremumResult(mlir::Location loc,
+                                     fir::FirOpBuilder &builder,
+                                     mlir::Value left, mlir::Value right) {
   mlir::Type type = left.getType();
   mlir::arith::CmpIPredicate integerPredicate =
-      type.isUnsignedInteger()    ? extremum == Extremum::Max
-                                        ? mlir::arith::CmpIPredicate::ugt
-                                        : mlir::arith::CmpIPredicate::ult
-      : extremum == Extremum::Max ? mlir::arith::CmpIPredicate::sgt
-                                  : mlir::arith::CmpIPredicate::slt;
-  static constexpr mlir::arith::CmpFPredicate orderedCmp =
-      extremum == Extremum::Max ? mlir::arith::CmpFPredicate::OGT
-                                : mlir::arith::CmpFPredicate::OLT;
-  mlir::Value result;
+      type.isUnsignedInteger() ? isMax ? mlir::arith::CmpIPredicate::ugt
+                                       : mlir::arith::CmpIPredicate::ult
+      : isMax                  ? mlir::arith::CmpIPredicate::sgt
+                               : mlir::arith::CmpIPredicate::slt;
+  mlir::Value pred;
   if (fir::isa_real(type)) {
-    // Note: the signaling/quit aspect of the result required by IEEE
-    // cannot currently be obtained with LLVM without ad-hoc runtime.
-    if constexpr (behavior == ExtremumBehavior::IeeeMinMaximumNumber) {
-      // Return the number if one of the inputs is NaN and the other is
-      // a number.
-      auto leftIsResult =
-          mlir::arith::CmpFOp::create(builder, loc, orderedCmp, left, right);
-      auto rightIsNan = mlir::arith::CmpFOp::create(
-          builder, loc, mlir::arith::CmpFPredicate::UNE, right, right);
-      result =
-          mlir::arith::OrIOp::create(builder, loc, leftIsResult, rightIsNan);
-    } else if constexpr (behavior == ExtremumBehavior::IeeeMinMaximum) {
-      // Always return NaNs if one the input is NaNs
-      auto leftIsResult =
-          mlir::arith::CmpFOp::create(builder, loc, orderedCmp, left, right);
-      auto leftIsNan = mlir::arith::CmpFOp::create(
-          builder, loc, mlir::arith::CmpFPredicate::UNE, left, left);
-      result =
-          mlir::arith::OrIOp::create(builder, loc, leftIsResult, leftIsNan);
-    } else if constexpr (behavior == ExtremumBehavior::MinMaxss) {
-      // If the left is a NaN, return the right whatever it is.
-      result =
-          mlir::arith::CmpFOp::create(builder, loc, orderedCmp, left, right);
-    } else if constexpr (behavior == ExtremumBehavior::PgfortranLlvm) {
-      // If one of the operand is a NaN, return left whatever it is.
-      static constexpr auto unorderedCmp =
-          extremum == Extremum::Max ? mlir::arith::CmpFPredicate::UGT
-                                    : mlir::arith::CmpFPredicate::ULT;
-      result =
-          mlir::arith::CmpFOp::create(builder, loc, unorderedCmp, left, right);
-    } else {
-      // TODO: ieeeMinNum/ieeeMaxNum
-      static_assert(behavior == ExtremumBehavior::IeeeMinMaxNum,
-                    "ieeeMinNum/ieeeMaxNum behavior not implemented");
+    switch (builder.getFPMaxminBehavior()) {
+    case Fortran::common::FPMaxminBehavior::Portable:
+      // If the left is NaN, return the right whatever it is.
+      // Signed zeros are equal, so max/min(zero, zero) always
+      // returns the second 'zero'.
+      if (mlir::arith::bitEnumContainsAll(
+              builder.getFastMathFlags(),
+              mlir::arith::FastMathFlags::nnan |
+                  mlir::arith::FastMathFlags::nsz)) {
+        // If there are no NaNs and signed zeros, we can use a shorter
+        // arith.max/minnumf representation.
+        if constexpr (isMax)
+          return mlir::arith::MaxNumFOp::create(builder, loc, left, right);
+        else
+          return mlir::arith::MinNumFOp::create(builder, loc, left, right);
+      }
+      [[fallthrough]];
+    case Fortran::common::FPMaxminBehavior::Legacy: {
+      static constexpr mlir::arith::CmpFPredicate pred =
+          isMax ? mlir::arith::CmpFPredicate::OGT
+                : mlir::arith::CmpFPredicate::OLT;
+      mlir::Value cmp =
+          mlir::arith::CmpFOp::create(builder, loc, pred, left, right);
+      return mlir::arith::SelectOp::create(builder, loc, cmp, left, right);
     }
+    case Fortran::common::FPMaxminBehavior::Extremum:
+      if constexpr (isMax)
+        return mlir::arith::MaximumFOp::create(builder, loc, left, right);
+      else
+        return mlir::arith::MinimumFOp::create(builder, loc, left, right);
+    case Fortran::common::FPMaxminBehavior::ExtremeNum:
+      if constexpr (isMax)
+        return mlir::arith::MaxNumFOp::create(builder, loc, left, right);
+      else
+        return mlir::arith::MinNumFOp::create(builder, loc, left, right);
+    }
+
+    llvm_unreachable("unsupported FPMaxminBehavior");
   } else if (fir::isa_integer(type)) {
+    mlir::Value cmpLeft = left;
+    mlir::Value cmpRight = right;
     if (type.isUnsignedInteger()) {
       mlir::Type signlessType = mlir::IntegerType::get(
           builder.getContext(), type.getIntOrFloatBitWidth(),
           mlir::IntegerType::SignednessSemantics::Signless);
-      left = builder.createConvert(loc, signlessType, left);
-      right = builder.createConvert(loc, signlessType, right);
+      cmpLeft = builder.createConvert(loc, signlessType, left);
+      cmpRight = builder.createConvert(loc, signlessType, right);
     }
-    result = mlir::arith::CmpIOp::create(builder, loc, integerPredicate, left,
-                                         right);
+    pred = mlir::arith::CmpIOp::create(builder, loc, integerPredicate, cmpLeft,
+                                       cmpRight);
   } else if (fir::isa_char(type) || fir::isa_char(fir::unwrapRefType(type))) {
     // TODO: ! character min and max is tricky because the result
     // length is the length of the longest argument!
     // So we may need a temp.
     TODO(loc, "intrinsic: min and max for CHARACTER");
   }
-  assert(result && "result must be defined");
-  return result;
+  assert(pred && "pred must be defined");
+
+  return mlir::arith::SelectOp::create(builder, loc, pred, left, right);
 }
 
 // UNLINK
@@ -8860,16 +9099,13 @@ IntrinsicLibrary::genMinval(mlir::Type resultType,
 }
 
 // MIN and MAX
-template <Extremum extremum, ExtremumBehavior behavior>
+template <bool isMax>
 mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
                                           llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() >= 1);
   mlir::Value result = args[0];
-  for (auto arg : args.drop_front()) {
-    mlir::Value mask =
-        createExtremumCompare<extremum, behavior>(loc, builder, result, arg);
-    result = mlir::arith::SelectOp::create(builder, loc, mask, result, arg);
-  }
+  for (auto arg : args.drop_front())
+    result = genExtremumResult<isMax>(loc, builder, result, arg);
   return result;
 }
 
@@ -8931,17 +9167,15 @@ genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genMax(fir::FirOpBuilder &builder, mlir::Location loc,
                    llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "max requires at least one argument");
-  return IntrinsicLibrary{builder, loc}
-      .genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>(args[0].getType(),
-                                                              args);
+  return IntrinsicLibrary{builder, loc}.genExtremum</*isMax=*/true>(
+      args[0].getType(), args);
 }
 
 mlir::Value genMin(fir::FirOpBuilder &builder, mlir::Location loc,
                    llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "min requires at least one argument");
-  return IntrinsicLibrary{builder, loc}
-      .genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>(args[0].getType(),
-                                                              args);
+  return IntrinsicLibrary{builder, loc}.genExtremum</*isMax=*/false>(
+      args[0].getType(), args);
 }
 
 mlir::Value genDivC(fir::FirOpBuilder &builder, mlir::Location loc,

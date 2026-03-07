@@ -515,7 +515,7 @@ using namespace vector;
 /// Comparing to the non-vector-dimension case, two additional things are done
 /// during vectorization of such loops:
 /// - The resulting vector returned from the loop is reduced to a scalar using
-///   `vector.reduce`.
+///   `vector.reduction`.
 /// - In some cases a mask is applied to the vector yielded at the end of the
 ///   loop to prevent garbage values from being written to the accumulator.
 ///
@@ -1383,10 +1383,17 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     }
   }
 
+  // Replace bound operands with their scalar replacements. This is required
+  // when the bounds reference an outer loop's induction variable, which will
+  // be replaced (and eventually erased) once the scalar loop nest is removed.
+  SmallVector<Value, 8> lbOperands, ubOperands;
+  state.getScalarValueReplacementsFor(forOp.getLowerBoundOperands(),
+                                      lbOperands);
+  state.getScalarValueReplacementsFor(forOp.getUpperBoundOperands(),
+                                      ubOperands);
   auto vecForOp = AffineForOp::create(
-      state.builder, forOp.getLoc(), forOp.getLowerBoundOperands(),
-      forOp.getLowerBoundMap(), forOp.getUpperBoundOperands(),
-      forOp.getUpperBoundMap(), newStep, vecIterOperands,
+      state.builder, forOp.getLoc(), lbOperands, forOp.getLowerBoundMap(),
+      ubOperands, forOp.getUpperBoundMap(), newStep, vecIterOperands,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
@@ -1645,7 +1652,7 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   }
 
   // Replace results of reduction loops with the scalar values computed using
-  // `vector.reduce` or similar ops.
+  // `vector.reduction` or similar ops.
   for (auto resPair : state.loopResultScalarReplacement)
     resPair.first.replaceAllUsesWith(resPair.second);
 

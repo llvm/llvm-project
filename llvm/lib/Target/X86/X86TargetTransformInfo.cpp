@@ -1566,7 +1566,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
-    Kind = TTI::SK_PermuteTwoSrc;
+    if (LT.second != MVT::v4f64 && LT.second != MVT::v4i64)
+      Kind = TTI::SK_PermuteTwoSrc;
 
   if (Kind == TTI::SK_Broadcast) {
     // For Broadcasts we are splatting the first element from the first input
@@ -1974,6 +1975,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     { TTI::SK_PermuteSingleSrc, MVT::v16f16, { 1, 1, 1, 1 } }, // vpshufb
     { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 1, 1, 1, 1 } }, // vpshufb
 
+    { TTI::SK_Transpose,        MVT::v4f64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+    { TTI::SK_Transpose,        MVT::v4i64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+
     { TTI::SK_PermuteTwoSrc,    MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
     { TTI::SK_PermuteTwoSrc,    MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps
     { TTI::SK_PermuteTwoSrc,    MVT::v4i64,  { 2, 2, 2, 2 } }, // 2*vpshufd + vpblendd
@@ -2077,6 +2081,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                                // + vpor + vinsertf128
     { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 4, 4, 4, 4 } }, // vextractf128 + 2*pshufb
                                                                // + vpor + vinsertf128
+
+    { TTI::SK_Transpose,     MVT::v4f64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+    { TTI::SK_Transpose,     MVT::v4i64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
 
     { TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
     { TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps
@@ -3128,6 +3135,20 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // Attempt to map directly to (simple) MVT types to let us match custom entries.
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
+
+  // If we're sign-extending a vector comparison result back to the comparison
+  // width, this will be free without AVX512 (or for 8/16-bit types without
+  // BWI).
+  if (!ST->hasAVX512() || (!ST->hasBWI() && DstTy.getScalarSizeInBits() < 32)) {
+    if (I && Opcode == Instruction::CastOps::SExt &&
+        SrcTy.isFixedLengthVector() && SrcTy.getScalarType() == MVT::i1) {
+      if (auto *CmpI = dyn_cast<CmpInst>(I->getOperand(0))) {
+        Type *CmpTy = CmpI->getOperand(0)->getType();
+        if (CmpTy->getScalarSizeInBits() == DstTy.getScalarSizeInBits())
+          return TTI::TCC_Free;
+      }
+    }
+  }
 
   // The function getSimpleVT only handles simple value types.
   if (SrcTy.isSimple() && DstTy.isSimple()) {
@@ -7215,6 +7236,28 @@ unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
+
+  if (I->getOpcode() == Instruction::And &&
+      (ST->hasBMI() || (I->getType()->isVectorTy() && ST->hasSSE2()))) {
+    for (auto &Op : I->operands()) {
+      // (and X, (not Y)) -> (andn X, Y)
+      if (match(Op.get(), m_Not(m_Value())) && !I->getType()->isIntegerTy(8)) {
+        Ops.push_back(&Op);
+        return true;
+      }
+      // (and X, (splat (not Y))) -> (andn X, (splat Y))
+      if (match(Op.get(),
+                m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()), m_ZeroInt()),
+                          m_Value(), m_ZeroMask()))) {
+        Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+        Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+        Ops.push_back(&Not);
+        Ops.push_back(&InsertElt);
+        Ops.push_back(&Op);
+        return true;
+      }
+    }
+  }
 
   FixedVectorType *VTy = dyn_cast<FixedVectorType>(I->getType());
   if (!VTy)

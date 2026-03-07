@@ -5,15 +5,18 @@
 
 set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
-  set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
-  if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
-    list(APPEND runtimes ${proj_dir})
-  else()
-    message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${proj_dir}")
-  endif()
   string(TOUPPER "${proj}" canon_name)
   STRING(REGEX REPLACE "-" "_" canon_name ${canon_name})
-  set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+  if(NOT LLVM_EXTERNAL_${canon_name}_SOURCE_DIR)
+    set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+  endif()
+  set(proj_dir "${LLVM_EXTERNAL_${canon_name}_SOURCE_DIR}")
+  if(NOT IS_DIRECTORY ${proj_dir} OR NOT EXISTS ${proj_dir}/CMakeLists.txt)
+    message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${proj_dir}")
+  endif()
+  list(APPEND runtimes ${proj_dir})
+  list(APPEND RUNTIMES_CMAKE_ARGS
+    "-DLLVM_EXTERNAL_${canon_name}_SOURCE_DIR=${LLVM_EXTERNAL_${canon_name}_SOURCE_DIR}")
 endforeach()
 
 function(get_compiler_rt_path path)
@@ -521,6 +524,7 @@ if(build_runtimes)
                 llvm-symbolizer
                 llvm-xray
                 llvm-offload-binary
+                llvm-gpu-loader
                 not
                 obj2yaml
                 opt
@@ -700,13 +704,6 @@ if(build_runtimes)
     # We need to add the runtimes as a dependency because compiler-rt can be
     # built as part of runtimes and we need the profile runtime for PGO
     add_dependencies(clang-bootstrap-deps runtimes)
-    # The bootstrap build will attempt to configure the offload runtime
-    # before the openmp project which will error out due to failing to
-    # find libomp.so. We must add omp as a dependency before runtimes
-    # are configured.
-    if("openmp" IN_LIST LLVM_ENABLE_PROJECTS AND "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
-      add_dependencies(clang-bootstrap-deps omp)
-    endif()
   endif()
 
   if(LLVM_INCLUDE_TESTS)

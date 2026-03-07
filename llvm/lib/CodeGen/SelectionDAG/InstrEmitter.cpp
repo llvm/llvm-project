@@ -101,12 +101,13 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   // If the node is only used by a CopyToReg and the dest reg is a vreg, use
   // the CopyToReg'd destination register instead of creating a new vreg.
   bool MatchReg = true;
-  const TargetRegisterClass *UseRC = nullptr;
+
   MVT VT = Op.getSimpleValueType();
 
-  // Stick to the preferred register classes for legal types.
-  if (TLI->isTypeLegal(VT))
-    UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
+  // FIXME: The Untyped check is a workaround for SystemZ i128 inline assembly
+  // using i128, when it should probably be using v2i64.
+  const TargetRegisterClass *UseRC =
+      VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
 
   for (SDNode *User : Op->users()) {
     bool Match = true;
@@ -574,10 +575,17 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
     }
   } else if (Opc == TargetOpcode::INSERT_SUBREG ||
              Opc == TargetOpcode::SUBREG_TO_REG) {
-    SDValue N0 = Node->getOperand(0);
-    SDValue N1 = Node->getOperand(1);
-    SDValue N2 = Node->getOperand(2);
-    unsigned SubIdx = N2->getAsZExtVal();
+    SDValue Reg;
+    SDValue SubReg;
+    unsigned SubIdx;
+    if (Opc == TargetOpcode::INSERT_SUBREG) {
+      Reg = Node->getOperand(0);
+      SubReg = Node->getOperand(1);
+      SubIdx = Node->getOperand(2)->getAsZExtVal();
+    } else {
+      SubReg = Node->getOperand(0);
+      SubIdx = Node->getOperand(1)->getAsZExtVal();
+    }
 
     // Figure out the register class to create for the destreg.  It should be
     // the largest legal register class supporting SubIdx sub-registers.
@@ -605,17 +613,15 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
     MachineInstrBuilder MIB =
       BuildMI(*MF, Node->getDebugLoc(), TII->get(Opc), VRBase);
 
-    // If creating a subreg_to_reg, then the first input operand
-    // is an implicit value immediate, otherwise it's a register
-    if (Opc == TargetOpcode::SUBREG_TO_REG) {
-      const ConstantSDNode *SD = cast<ConstantSDNode>(N0);
-      MIB.addImm(SD->getZExtValue());
-    } else
-      AddOperand(MIB, N0, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
-                 IsClone, IsCloned);
+    // If creating an insert_subreg, then the first input operand
+    // is a register
+    if (Reg) {
+      AddOperand(MIB, Reg, 0, nullptr, VRBaseMap, /*IsDebug=*/false, IsClone,
+                 IsCloned);
+    }
     // Add the subregister being inserted
-    AddOperand(MIB, N1, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
-               IsClone, IsCloned);
+    AddOperand(MIB, SubReg, 0, nullptr, VRBaseMap, /*IsDebug=*/false, IsClone,
+               IsCloned);
     MIB.addImm(SubIdx);
     MBB->insert(InsertPos, MIB);
   } else
@@ -1115,6 +1121,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasSameSign())
       MI->setFlag(MachineInstr::MIFlag::SameSign);
+
+    if (Flags.hasNoConvergent())
+      MI->setFlag(MachineInstr::MIFlag::NoConvergent);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the

@@ -148,25 +148,11 @@ LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return D ? D->getType().getAddressSpace() : LangAS::Default;
 }
 
-llvm::Value *TargetCodeGenInfo::performAddrSpaceCast(
-    CodeGen::CodeGenFunction &CGF, llvm::Value *Src, LangAS SrcAddr,
-    llvm::Type *DestTy, bool isNonNull) const {
-  // Since target may map different address spaces in AST to the same address
-  // space, an address space conversion may end up as a bitcast.
-  if (auto *C = dyn_cast<llvm::Constant>(Src))
-    return performAddrSpaceCast(CGF.CGM, C, SrcAddr, DestTy);
-  // Try to preserve the source's name to make IR more readable.
-  return CGF.Builder.CreateAddrSpaceCast(
-      Src, DestTy, Src->hasName() ? Src->getName() + ".ascast" : "");
-}
-
-llvm::Constant *
-TargetCodeGenInfo::performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *Src,
-                                        LangAS SrcAddr,
-                                        llvm::Type *DestTy) const {
-  // Since target may map different address spaces in AST to the same address
-  // space, an address space conversion may end up as a bitcast.
-  return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+StringRef
+TargetCodeGenInfo::getLLVMSyncScopeStr(const LangOptions &LangOpts,
+                                       SyncScope Scope,
+                                       llvm::AtomicOrdering Ordering) const {
+  return ""; /* default sync scope */
 }
 
 llvm::SyncScope::ID
@@ -174,7 +160,8 @@ TargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
                                       SyncScope Scope,
                                       llvm::AtomicOrdering Ordering,
                                       llvm::LLVMContext &Ctx) const {
-  return Ctx.getOrInsertSyncScopeID(""); /* default sync scope */
+  return Ctx.getOrInsertSyncScopeID(
+      getLLVMSyncScopeStr(LangOpts, Scope, Ordering));
 }
 
 void TargetCodeGenInfo::addStackProbeTargetAttributes(

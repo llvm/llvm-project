@@ -336,13 +336,16 @@ if (NOT MSVC)
     )
   endif()
 
-  if (NOT ANDROID)
+  if(NOT ANDROID AND (NOT WIN32 OR MINGW))
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       ${x86_80_BIT_SOURCES}
       x86_64/floatdixf.c
     )
-    if (NOT WIN32)
+
+    # TODO(compnerd) floatundixf.S currently implements the SysV calling
+    # convention, this must be ported to the Windows ABI.
+    if(NOT WIN32)
       set(x86_64_SOURCES
         ${x86_64_SOURCES}
         x86_64/floatundixf.S
@@ -380,7 +383,6 @@ if (NOT MSVC)
   if (NOT ANDROID)
     set(i386_SOURCES
       ${i386_SOURCES}
-      ${x86_80_BIT_SOURCES}
       i386/floatdixf.S
       i386/floatundixf.S
     )
@@ -392,6 +394,12 @@ if (NOT MSVC)
       i386/chkstk.S
       i386/chkstk2.S
     )
+  endif()
+
+  if(NOT ANDROID AND NOT (WIN32 AND NOT MINGW))
+    set(i386_SOURCES
+      ${i386_SOURCES}
+      ${x86_80_BIT_SOURCES})
   endif()
 else () # MSVC
   # Use C versions of functions when building on MSVC
@@ -516,6 +524,10 @@ set(arm_EABI_RT_SOURCES
   arm/aeabi_ldivmod.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S
+  arm/aeabi_uread4.S
+  arm/aeabi_uread8.S
+  arm/aeabi_uwrite4.S
+  arm/aeabi_uwrite8.S
 )
 
 set(arm_EABI_CLIB_SOURCES
@@ -836,6 +848,16 @@ if (NOT OS_NAME MATCHES "AIX")
     ppc/floattitf.c
     ppc/fixtfti.c
     ppc/fixunstfti.c
+    ${powerpc64_SOURCES}
+  )
+endif()
+if (OS_NAME MATCHES "AIX")
+  set(powerpc_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc_SOURCES}
+  )
+  set(powerpc64_SOURCES
+    ppc/init_ifuncs.c
     ${powerpc64_SOURCES}
   )
 endif()

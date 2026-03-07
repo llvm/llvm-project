@@ -121,6 +121,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitHexagonBuiltinExpr(BuiltinID, E);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
@@ -185,7 +187,7 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
 
   // TODO: This list should be expanded or refactored after all GCC-compatible
   // std libcall builtins are implemented.
-  static SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
+  static const SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
       {Builtin::BI__builtin___fprintf_chk, "__fprintf_chkieee128"},
       {Builtin::BI__builtin___printf_chk, "__printf_chkieee128"},
       {Builtin::BI__builtin___snprintf_chk, "__snprintf_chkieee128"},
@@ -214,7 +216,7 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   // The AIX library functions frexpl, ldexpl, and modfl are for 128-bit
   // IBM 'long double' (i.e. __ibm128). Map to the 'double' versions
   // if it is 64-bit 'long double' mode.
-  static SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
+  static const SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
       {Builtin::BI__builtin_frexpl, "frexp"},
       {Builtin::BI__builtin_ldexpl, "ldexp"},
       {Builtin::BI__builtin_modfl, "modf"},
@@ -231,12 +233,12 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
     if (getTriple().isPPC64() &&
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
         F128Builtins.contains(BuiltinID))
-      Name = F128Builtins[BuiltinID];
+      Name = F128Builtins.lookup(BuiltinID);
     else if (getTriple().isOSAIX() &&
              &getTarget().getLongDoubleFormat() ==
                  &llvm::APFloat::IEEEdouble() &&
              AIXLongDouble64Builtins.contains(BuiltinID))
-      Name = AIXLongDouble64Builtins[BuiltinID];
+      Name = AIXLongDouble64Builtins.lookup(BuiltinID);
     else
       Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
   }
@@ -924,10 +926,10 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                  llvm::IntegerType *ResType,
                                                  llvm::Value *EmittedE,
                                                  bool IsDynamic) {
-  uint64_t ObjectSize;
-  if (!E->tryEvaluateObjectSize(ObjectSize, getContext(), Type))
-    return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
-  return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
+  if (std::optional<uint64_t> ObjectSize =
+          E->tryEvaluateObjectSize(getContext(), Type))
+    return ConstantInt::get(ResType, *ObjectSize, /*isSigned=*/true);
+  return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
 }
 
 namespace {
@@ -2875,10 +2877,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmaxf:
     case Builtin::BI__builtin_fmaxf16:
     case Builtin::BI__builtin_fmaxl:
-    case Builtin::BI__builtin_fmaxf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::maxnum,
-                                   Intrinsic::experimental_constrained_maxnum));
+    case Builtin::BI__builtin_fmaxf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::maxnum,
+          Intrinsic::experimental_constrained_maxnum));
+    }
 
     case Builtin::BIfmin:
     case Builtin::BIfminf:
@@ -2887,10 +2892,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fminf:
     case Builtin::BI__builtin_fminf16:
     case Builtin::BI__builtin_fminl:
-    case Builtin::BI__builtin_fminf128:
-      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(*this, E,
-                                   Intrinsic::minnum,
-                                   Intrinsic::experimental_constrained_minnum));
+    case Builtin::BI__builtin_fminf128: {
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.getFastMathFlags().setNoSignedZeros();
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::minnum,
+          Intrinsic::experimental_constrained_minnum));
+    }
 
     case Builtin::BIfmaximum_num:
     case Builtin::BIfmaximum_numf:
@@ -3683,6 +3691,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }
+  case Builtin::BI__builtin_bitreverseg: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::IntegerType *IntTy = cast<llvm::IntegerType>(ArgValue->getType());
+    assert(IntTy &&
+           "LLVM's __builtin_bitreverseg only support integer variants");
+    if (IntTy->getBitWidth() == 1)
+      return RValue::get(ArgValue);
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bitreverse));
+  }
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
@@ -4197,6 +4215,29 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_reduce_minimum:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::vector_reduce_fminimum, "rdx.minimum"));
+  case Builtin::BI__builtin_reduce_assoc_fadd:
+  case Builtin::BI__builtin_reduce_in_order_fadd: {
+    llvm::Value *Vector = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ScalarTy = Vector->getType()->getScalarType();
+    llvm::Value *StartValue = nullptr;
+    if (E->getNumArgs() == 2)
+      StartValue = Builder.CreateFPCast(EmitScalarExpr(E->getArg(1)), ScalarTy);
+    llvm::Value *Args[] = {/*start_value=*/StartValue
+                               ? StartValue
+                               : llvm::ConstantFP::get(ScalarTy, -0.0F),
+                           /*vector=*/Vector};
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_fadd, Vector->getType());
+    llvm::CallBase *Reduce = Builder.CreateCall(F, Args, "rdx.addf");
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd) {
+      // `__builtin_reduce_assoc_fadd` is an associative reduction which
+      // requires the reassoc FMF flag.
+      llvm::FastMathFlags FMF;
+      FMF.setAllowReassoc();
+      cast<llvm::CallBase>(Reduce)->setFastMathFlags(FMF);
+    }
+    return RValue::get(Reduce);
+  }
 
   case Builtin::BI__builtin_matrix_transpose: {
     auto *MatrixTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
@@ -4452,12 +4493,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(SuitableAlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
       initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
-    LangAS AAS = getASTAllocaAddressSpace();
-    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
-    if (AAS != EAS) {
+    if (AI->getAddressSpace() !=
+        CGM.getContext().getTargetAddressSpace(
+            E->getType()->getPointeeType().getAddressSpace())) {
       llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
-      return RValue::get(
-          getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
+      return RValue::get(performAddrSpaceCast(AI, Ty));
     }
     return RValue::get(AI);
   }
@@ -4474,12 +4514,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(AlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
-    LangAS AAS = getASTAllocaAddressSpace();
-    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
-    if (AAS != EAS) {
+    if (AI->getAddressSpace() !=
+        CGM.getContext().getTargetAddressSpace(
+            E->getType()->getPointeeType().getAddressSpace())) {
       llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
-      return RValue::get(
-          getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
+      return RValue::get(performAddrSpaceCast(AI, Ty));
     }
     return RValue::get(AI);
   }
@@ -5712,12 +5751,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_ptrauth_auth:
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
   case Builtin::BI__builtin_ptrauth_blend_discriminator:
   case Builtin::BI__builtin_ptrauth_sign_generic_data:
   case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
   case Builtin::BI__builtin_ptrauth_strip: {
     // Emit the arguments.
-    SmallVector<llvm::Value *, 5> Args;
+    SmallVector<llvm::Value *, 6> Args;
     for (auto argExpr : E->arguments())
       Args.push_back(EmitScalarExpr(argExpr));
 
@@ -5728,6 +5768,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     switch (BuiltinID) {
     case Builtin::BI__builtin_ptrauth_auth_and_resign:
+    case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
       if (Args[4]->getType()->isPointerTy())
         Args[4] = Builder.CreatePtrToInt(Args[4], IntPtrTy);
       [[fallthrough]];
@@ -5755,6 +5796,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         return Intrinsic::ptrauth_auth;
       case Builtin::BI__builtin_ptrauth_auth_and_resign:
         return Intrinsic::ptrauth_resign;
+      case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
+        return Intrinsic::ptrauth_resign_load_relative;
       case Builtin::BI__builtin_ptrauth_blend_discriminator:
         return Intrinsic::ptrauth_blend;
       case Builtin::BI__builtin_ptrauth_sign_generic_data:

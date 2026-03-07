@@ -36,12 +36,8 @@ static ObjectFileSP
 CreateObjectFromContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
                           lldb::offset_t file_offset, lldb::offset_t file_size,
                           DataBufferSP data_sp, lldb::offset_t &data_offset) {
-  ObjectContainerCreateInstance callback;
-  for (uint32_t idx = 0;
-       (callback = PluginManager::GetObjectContainerCreateCallbackAtIndex(
-            idx)) != nullptr;
-       ++idx) {
-    std::unique_ptr<ObjectContainer> object_container_up(callback(
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    std::unique_ptr<ObjectContainer> object_container_up(cbs.create_callback(
         module_sp, data_sp, data_offset, file, file_offset, file_size));
     if (object_container_up)
       return object_container_up->GetObjectFile(file);
@@ -132,13 +128,9 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   if (extractor_sp && extractor_sp->HasData()) {
     // Check if this is a normal object file by iterating through all
     // object file plugin instances.
-    ObjectFileCreateInstance callback;
-    for (uint32_t idx = 0;
-         (callback = PluginManager::GetObjectFileCreateCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
-      ObjectFileSP object_file_sp(callback(module_sp, extractor_sp, data_offset,
-                                           file, file_offset, file_size));
+    for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+      ObjectFileSP object_file_sp(cbs.create_callback(
+          module_sp, extractor_sp, data_offset, file, file_offset, file_size));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -170,18 +162,14 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
                        "0x%" PRIx64 ")",
                        module_sp->GetFileSpec().GetPath().c_str(),
                        static_cast<void *>(process_sp.get()), header_addr);
-    uint32_t idx;
 
     // Check if this is a normal object file by iterating through all object
     // file plugin instances.
-    ObjectFileCreateMemoryInstance create_callback;
-    for (idx = 0;
-         (create_callback =
-              PluginManager::GetObjectFileCreateMemoryCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
-      object_file_sp.reset(
-          create_callback(module_sp, data_sp, process_sp, header_addr));
+    for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+      if (!cbs.create_memory_callback)
+        continue;
+      object_file_sp.reset(cbs.create_memory_callback(module_sp, data_sp,
+                                                      process_sp, header_addr));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -206,51 +194,47 @@ size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
                                            lldb::offset_t file_offset,
                                            lldb::offset_t file_size,
                                            ModuleSpecList &specs,
-                                           DataBufferSP data_sp) {
-  if (!data_sp)
-    data_sp = FileSystem::Instance().CreateDataBuffer(
-        file.GetPath(), g_initial_bytes_to_read, file_offset);
-  if (data_sp) {
+                                           DataExtractorSP extractor_sp) {
+  if (!extractor_sp)
+    extractor_sp = std::make_shared<DataExtractor>();
+  if (!extractor_sp->HasData()) {
+    if (DataBufferSP file_data_sp = FileSystem::Instance().CreateDataBuffer(
+            file.GetPath(), g_initial_bytes_to_read, file_offset))
+      extractor_sp->SetData(file_data_sp);
+  }
+  if (extractor_sp->HasData()) {
     if (file_size == 0) {
       const lldb::offset_t actual_file_size =
           FileSystem::Instance().GetByteSize(file);
       if (actual_file_size > file_offset)
         file_size = actual_file_size - file_offset;
     }
-    return ObjectFile::GetModuleSpecifications(file,        // file spec
-                                               data_sp,     // data bytes
-                                               0,           // data offset
-                                               file_offset, // file offset
-                                               file_size,   // file length
+    return ObjectFile::GetModuleSpecifications(file,         // file spec
+                                               extractor_sp, // data bytes
+                                               0,            // data offset
+                                               file_offset,  // file offset
+                                               file_size,    // file length
                                                specs);
   }
   return 0;
 }
 
 size_t ObjectFile::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
-  ObjectFileGetModuleSpecifications callback;
-  uint32_t i;
   // Try the ObjectFile plug-ins
-  for (i = 0;
-       (callback =
-            PluginManager::GetObjectFileGetModuleSpecificationsCallbackAtIndex(
-                i)) != nullptr;
-       ++i) {
-    if (callback(file, data_sp, data_offset, file_offset, file_size, specs) > 0)
+  for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
+                                      file_offset, file_size, specs) > 0)
       return specs.GetSize() - initial_count;
   }
 
   // Try the ObjectContainer plug-ins
-  for (i = 0;
-       (callback = PluginManager::
-            GetObjectContainerGetModuleSpecificationsCallbackAtIndex(i)) !=
-       nullptr;
-       ++i) {
-    if (callback(file, data_sp, data_offset, file_offset, file_size, specs) > 0)
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    if (cbs.get_module_specifications(file, extractor_sp, data_offset,
+                                      file_offset, file_size, specs) > 0)
       return specs.GetSize() - initial_count;
   }
   return 0;
@@ -490,10 +474,11 @@ WritableDataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
 }
 
 size_t ObjectFile::GetData(lldb::offset_t offset, size_t length,
-                           DataExtractor &data) const {
+                           DataExtractorSP &data_sp) const {
   // The entire file has already been mmap'ed into m_data_nsp, so just copy from
   // there as the back mmap buffer will be shared with shared pointers.
-  return data.SetData(*m_data_nsp, offset, length);
+  data_sp = m_data_nsp->GetSubsetExtractorSP(offset, length);
+  return data_sp->GetByteSize();
 }
 
 size_t ObjectFile::CopyData(lldb::offset_t offset, size_t length,
@@ -507,7 +492,6 @@ size_t ObjectFile::ReadSectionData(Section *section,
                                    lldb::offset_t section_offset, void *dst,
                                    size_t dst_len) {
   assert(section);
-  section_offset *= section->GetTargetByteSize();
 
   // If some other objectfile owns this data, pass this to them.
   if (section->GetObjectFile() != this)
@@ -581,8 +565,11 @@ size_t ObjectFile::ReadSectionData(Section *section,
 
   // The object file now contains a full mmap'ed copy of the object file
   // data, so just use this
-  return GetData(section->GetFileOffset(), GetSectionDataSize(section),
-                 section_data);
+  DataExtractorSP extractor_sp;
+  size_t ret_size = GetData(section->GetFileOffset(),
+                            GetSectionDataSize(section), extractor_sp);
+  section_data = *extractor_sp;
+  return ret_size;
 }
 
 bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
@@ -707,8 +694,7 @@ ObjectFile::GetLoadableData(Target &target) {
       continue;
     DataExtractor section_data;
     section_sp->GetSectionData(section_data);
-    loadable.Contents = llvm::ArrayRef<uint8_t>(section_data.GetDataStart(),
-                                                section_data.GetByteSize());
+    loadable.Contents = section_data.GetData();
     loadables.push_back(loadable);
   }
   return loadables;

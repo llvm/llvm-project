@@ -16,7 +16,7 @@ define <vscale x 2 x double> @fadd_v2f64(<vscale x 2 x double> %a, <vscale x 2 x
 
 define <vscale x 2 x double> @sqrt_v2f64(<vscale x 2 x double> %a) {
 ; CHECK-LABEL: 'sqrt_v2f64'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %a)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %a)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <vscale x 2 x double> %r
 ;
   %r = call <vscale x 2 x double> @llvm.sqrt.v2f64(<vscale x 2 x double> %a)
