@@ -792,6 +792,10 @@ def FeatureFuseCmpCSet : SubtargetFeature<
     "fuse-cset", "HasFuseCmpCSet", "true",
     "CPU can fuse CMP and CSET operations">;
 
+def FeatureFuseFCmpFCSel : SubtargetFeature<
+    "fuse-fcsel", "HasFuseFCmpFCSel", "true",
+    "CPU can fuse FCMP and FCSEL operations">;
+
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
     "CPU fuses AES/PMULL and EOR operations">;
