@@ -22,7 +22,8 @@ namespace clang::tidy::modernize {
 class MakeSmartPtrCheck : public ClangTidyCheck {
 public:
   MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
-                    StringRef MakeSmartPtrFunctionName);
+                    StringRef MakeSmartPtrFunctionName,
+                    StringRef MakeSmartPtrType);
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
@@ -31,6 +32,7 @@ public:
 
 protected:
   using SmartPtrTypeMatcher = ast_matchers::internal::BindableMatcher<QualType>;
+  const StringRef MakeSmartPtrType;
 
   /// Returns matcher that match with different smart pointer types.
   ///

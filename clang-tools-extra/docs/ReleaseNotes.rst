@@ -124,6 +124,17 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`misc-make-smart-ptr
+  <clang-tidy/checks/misc/make-smart-ptr>` check.
+
+  Finds constructions of custom smart pointer types from raw ``new`` expressions
+  and replaces them with a configurable factory function. Unlike
+  :doc:`modernize-make-shared <clang-tidy/checks/modernize/make-shared>` and
+  :doc:`modernize-make-unique <clang-tidy/checks/modernize/make-unique>`,
+  this check requires explicit configuration and allows using custom smart
+  pointer types without
+  losing the default ``std::shared_ptr``/``std::unique_ptr`` support.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
@@ -248,6 +259,14 @@ Changes in existing checks
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
   declarations as unused if they're exported from a module.
+
+- Improved :doc:`modernize-make-shared
+  <clang-tidy/checks/modernize/make-shared>` check by adding a new option
+  `MakeSmartPtrType` to specify the smart pointer type to match.
+
+- Improved :doc:`modernize-make-unique
+  <clang-tidy/checks/modernize/make-unique>` check by adding a new option
+  `MakeSmartPtrType` to specify the smart pointer type to match.
 
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
