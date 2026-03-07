@@ -942,15 +942,18 @@ void VPlanTransforms::createInLoopReductionRecipes(
 }
 
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       bool HasUncountableEarlyExit) {
+                                       UncountableEarlyExitDetail Detail) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
-  VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
+  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  if (HasUncountableEarlyExit) {
-    handleUncountableEarlyExits(Plan, cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
-                                MiddleVPBB);
+  if (Detail != UncountableEarlyExitDetail::None) {
+    handleUncountableEarlyExits(
+        Plan, HeaderVPBB, LatchVPBB, MiddleVPBB,
+        Detail == UncountableEarlyExitDetail::ReadWrite
+            ? EarlyExitStyleTy::MaskedHandleLastIterationInScalarLoop
+            : EarlyExitStyleTy::ReadOnlyUncountableExitsInVectorLoop);
     return;
   }
 

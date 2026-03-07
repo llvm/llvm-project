@@ -30,7 +30,7 @@ loop.end:
 
 define void @loop_contains_store_condition_load_has_single_user(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_condition_load_has_single_user'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+; CHECK:       LV: Not vectorizing: Cannot vectorize early exit loop with writes to memory.
 entry:
   br label %for.body
 
@@ -204,7 +204,7 @@ exit:
 
 define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 dereferenceable(40) readonly %load.array, ptr align 2 noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_to_pointer_with_no_deref_info'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+; CHECK:       LV: Not vectorizing: Cannot vectorize early exit loop with writes to memory.
 entry:
   br label %for.body
 
@@ -287,7 +287,7 @@ exit:
 ;; Vectorizeable, but we really want LICM to sink the store out of the loop
 define void @loop_contains_store_to_invariant_location(ptr dereferenceable(40) readonly %array, ptr align 2 dereferenceable(40) readonly %pred, ptr noalias %store_addr) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_to_invariant_location'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+; CHECK:       LV: Not vectorizing: Cannot vectorize early exit loop with writes to memory.
 entry:
   br label %for.body
 
@@ -313,7 +313,7 @@ exit:
 
 define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_in_latch_block'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+; CHECK:       LV: Not vectorizing: Cannot vectorize early exit loop with writes to memory.
 entry:
   br label %for.body
 
@@ -366,7 +366,7 @@ exit:
 
 define void @loop_contains_store_decrementing_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_decrementing_iv'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+; CHECK:       LV: Not vectorizing: Cannot vectorize early exit loop with writes to memory.
 entry:
   br label %for.body
 

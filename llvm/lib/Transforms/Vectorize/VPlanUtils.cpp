@@ -472,10 +472,9 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
   return 1;
 }
 
-std::optional<VPValue *>
-vputils::getRecipesForUncountableExit(VPlan &Plan,
-                                      SmallVectorImpl<VPRecipeBase *> &Recipes,
-                                      SmallVectorImpl<VPRecipeBase *> &GEPs) {
+std::optional<VPValue *> vputils::getRecipesForUncountableExit(
+    VPlan &Plan, SmallVectorImpl<VPRecipeBase *> &Recipes,
+    SmallVectorImpl<VPRecipeBase *> &GEPs, VPBasicBlock *LatchVPBB) {
   // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
   // the recipes contributing to the uncountable exit condition comparison
@@ -488,43 +487,48 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   // and a live-in base address. This constraint may be relaxed later.
   //
   // VPlan ' for UF>=1' {
-  // Live-in vp<%0> = VF
-  // Live-in ir<64> = original trip-count
+  // Live-in vp<%0> = VF * UF
+  // Live-in vp<%1> = vector-trip-count
+  // Live-in ir<20> = original trip-count
   //
-  // entry:
-  // Successor(s): preheader, vector.ph
+  // ir-bb<entry>:
+  // Successor(s): scalar.ph, vector.ph
   //
   // vector.ph:
-  // Successor(s): vector loop
+  // Successor(s): for.body
   //
-  // <x1> vector loop: {
-  //   vector.body:
-  //     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>
-  //     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>, vp<%0>
-  //     CLONE ir<%ee.addr> = getelementptr ir<0>, vp<%3>
-  //     WIDEN ir<%ee.load> = load ir<%ee.addr>
-  //     WIDEN vp<%4> = icmp eq ir<%ee.load>, ir<0>
-  //     EMIT vp<%5> = any-of vp<%4>
-  //     EMIT vp<%6> = add vp<%2>, vp<%0>
-  //     EMIT vp<%7> = icmp eq vp<%6>, ir<64>
-  //     EMIT branch-on-two-conds vp<%5>, vp<%7>
-  //   No successors
-  // }
-  // Successor(s): early.exit, middle.block
+  // for.body:
+  //   EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+  //   EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, for.inc ]
+  //   EMIT ir<%uncountable.addr> = getelementptr inbounds nuw ir<%pred>,ir<%iv>
+  //   EMIT ir<%uncountable.val> = load ir<%uncountable.addr>
+  //   EMIT ir<%uncountable.cond> = icmp sgt ir<%uncountable.val>, ir<500>
+  // Successor(s): for.inc
+  //
+  // for.inc:
+  //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+  //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
+  //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+  //   EMIT vp<%3> = any-of ir<%uncountable.cond>
+  //   EMIT vp<%4> = icmp eq vp<%index.next>, vp<%1>
+  //   EMIT vp<%5> = or vp<%3>, vp<%4>
+  //   EMIT branch-on-cond vp<%5>
+  // Successor(s): middle.block, for.body
   //
   // middle.block:
-  // Successor(s): preheader
+  // Successor(s): ir-bb<exit>, scalar.ph
   //
-  // preheader:
+  // ir-bb<exit>:
   // No successors
+  //
+  // scalar.ph:
   // }
 
   // Find the uncountable loop exit condition.
-  auto *Region = Plan.getVectorLoopRegion();
   VPValue *UncountableCondition = nullptr;
-  if (!match(Region->getExitingBasicBlock()->getTerminator(),
-             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
-                                m_VPValue())))
+  if (!match(LatchVPBB->getTerminator(),
+             m_BranchOnCond(m_c_BinaryOr(
+                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue()))))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
@@ -548,22 +552,34 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
       Worklist.push_back(Op1);
       Worklist.push_back(Op2);
       Recipes.push_back(V->getDefiningRecipe());
-    } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
-      // Reject masked loads for the time being; they make the exit condition
-      // more complex.
-      if (Load->isMasked())
+    } else if (match(V, m_UnmaskedLoad(m_VPValue(Op1)))) {
+      // TODO: I think there's be a way to match the GEP above and capture it
+      // too.
+      Recipes.push_back(V->getDefiningRecipe());
+      if (!match(Op1, m_GetElementPtr(m_LiveIn(), m_VPValue())))
         return std::nullopt;
-
-      VPValue *GEP = Load->getAddr();
-      if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
-        return std::nullopt;
-
-      Recipes.push_back(Load);
-      Recipes.push_back(GEP->getDefiningRecipe());
-      GEPs.push_back(GEP->getDefiningRecipe());
+      Recipes.push_back(Op1->getDefiningRecipe());
+      GEPs.push_back(Op1->getDefiningRecipe());
     } else
       return std::nullopt;
   }
+
+  // If we couldn't match anything, don't return the condition. It may be
+  // defined outside the loop.
+  if (Recipes.empty() || GEPs.empty())
+    return std::nullopt;
+
+#ifndef NDEBUG
+  // Check dominance ordering
+  VPRecipeBase *RA = Recipes.front();
+  VPDominatorTree VPDT(Plan);
+  bool Ordered = all_of(drop_begin(Recipes), [&VPDT, &RA](VPRecipeBase *RB) {
+    bool Dominates = VPDT.properlyDominates(RB, RA);
+    RA = RB;
+    return Dominates;
+  });
+  assert(Ordered && "Uncountable exit recipes unordered");
+#endif
 
   return UncountableCondition;
 }
