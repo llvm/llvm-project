@@ -282,6 +282,10 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
+  virtual bool preferMemIntrinsicVPExpansion() const {
+    return false;
+  }
+
   virtual std::optional<Instruction *>
   instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return std::nullopt;
