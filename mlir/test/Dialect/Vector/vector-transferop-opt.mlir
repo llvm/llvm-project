@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -test-vector-transferop-opt | FileCheck %s
 
+#leading_dim_1d_map = affine_map<(d0, d1) -> (d0)>
+
 // CHECK-LABEL: func @forward_dead_store
 //   CHECK-NOT:   vector.transfer_write
 //   CHECK-NOT:   vector.transfer_read
@@ -605,5 +607,30 @@ func.func @forward_and_eliminate_stores_through_trivial_aliases(
     scf.yield %24 : vector<[8]x[8]xf32>
   }
   vector.transfer_write %23, %subview_of_cast[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32, strided<[?, 1]>>
+  return
+}
+
+// Regression test for https://github.com/llvm/llvm-project/issues/119861:
+// When two transfer ops in unstructured control flow share the same block
+// argument as an index, ValueBoundsConstraintSet must not crash when
+// isDisjointTransferIndices calls areEqual on those values.
+
+// CHECK-LABEL: func @no_crash_unstructured_cf_shared_index
+func.func @no_crash_unstructured_cf_shared_index(%alloc: memref<10x10xf32>) {
+  %v = arith.constant dense<0.0> : vector<4xf32>
+  %c0 = arith.constant 0 : index
+  cf.br ^bb1(%c0 : index)
+^bb1(%i: index):
+  %limit = arith.constant 10 : index
+  %cond = arith.cmpi slt, %i, %limit : index
+  cf.cond_br %cond, ^bb2, ^bb3
+^bb2:
+  // CHECK: vector.transfer_write
+  vector.transfer_write %v, %alloc[%i, %c0] {permutation_map = #leading_dim_1d_map} : vector<4xf32>, memref<10x10xf32>
+  // CHECK: vector.transfer_write
+  vector.transfer_write %v, %alloc[%i, %limit] {permutation_map = #leading_dim_1d_map} : vector<4xf32>, memref<10x10xf32>
+  %next = arith.addi %i, %limit : index
+  cf.br ^bb1(%next : index)
+^bb3:
   return
 }
