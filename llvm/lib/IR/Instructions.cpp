@@ -1212,7 +1212,7 @@ void CondBrInst::AssertOK() {
          "May only branch on boolean predicates!");
 }
 
-CondBrInst::CondBrInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
+CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                        InsertPosition InsertBefore)
     : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
                  AllocMarker, InsertBefore) {

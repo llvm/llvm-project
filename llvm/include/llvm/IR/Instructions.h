@@ -3238,7 +3238,7 @@ class CondBrInst : public BranchInst {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
   CondBrInst(const CondBrInst &BI);
-  LLVM_ABI CondBrInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
+  LLVM_ABI CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                       InsertPosition InsertBefore);
 
   void AssertOK();
@@ -3255,10 +3255,10 @@ private:
   using BranchInst::isUnconditional;
 
 public:
-  static CondBrInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                            Value *Cond,
+  static CondBrInst *Create(Value *Cond, BasicBlock *IfTrue,
+                            BasicBlock *IfFalse,
                             InsertPosition InsertBefore = nullptr) {
-    return new (AllocMarker) CondBrInst(IfTrue, IfFalse, Cond, InsertBefore);
+    return new (AllocMarker) CondBrInst(Cond, IfTrue, IfFalse, InsertBefore);
   }
 
   /// Transparently provide more efficient getOperand methods.
@@ -3323,7 +3323,7 @@ inline BranchInst *BranchInst::Create(BasicBlock *IfTrue,
 inline BranchInst *BranchInst::Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                                       Value *Cond,
                                       InsertPosition InsertBefore) {
-  return CondBrInst::Create(IfTrue, IfFalse, Cond, InsertBefore);
+  return CondBrInst::Create(Cond, IfTrue, IfFalse, InsertBefore);
 }
 
 inline bool BranchInst::isConditional() const { return isa<CondBrInst>(this); }
