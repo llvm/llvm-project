@@ -2191,19 +2191,19 @@ TEST(CommandLineTest, DefaultValue) {
   EXPECT_TRUE(OS.str().empty());
 
   EXPECT_TRUE(!BoolOption);
-  EXPECT_FALSE(BoolOption.Default.hasValue());
+  EXPECT_FALSE(BoolOption.getDefault().hasValue());
   EXPECT_EQ(0, BoolOption.getNumOccurrences());
 
   EXPECT_EQ("", StrOption);
-  EXPECT_FALSE(StrOption.Default.hasValue());
+  EXPECT_FALSE(StrOption.getDefault().hasValue());
   EXPECT_EQ(0, StrOption.getNumOccurrences());
 
   EXPECT_TRUE(BoolInitOption);
-  EXPECT_TRUE(BoolInitOption.Default.hasValue());
+  EXPECT_TRUE(BoolInitOption.getDefault().hasValue());
   EXPECT_EQ(0, BoolInitOption.getNumOccurrences());
 
   EXPECT_EQ("str-default-value", StrInitOption);
-  EXPECT_TRUE(StrInitOption.Default.hasValue());
+  EXPECT_TRUE(StrInitOption.getDefault().hasValue());
   EXPECT_EQ(0, StrInitOption.getNumOccurrences());
 
   const char *Args2[] = {"prog", "-bool-option", "-str-option=str-value",
@@ -2214,19 +2214,19 @@ TEST(CommandLineTest, DefaultValue) {
   EXPECT_TRUE(OS.str().empty());
 
   EXPECT_TRUE(BoolOption);
-  EXPECT_FALSE(BoolOption.Default.hasValue());
+  EXPECT_FALSE(BoolOption.getDefault().hasValue());
   EXPECT_EQ(1, BoolOption.getNumOccurrences());
 
   EXPECT_EQ("str-value", StrOption);
-  EXPECT_FALSE(StrOption.Default.hasValue());
+  EXPECT_FALSE(StrOption.getDefault().hasValue());
   EXPECT_EQ(1, StrOption.getNumOccurrences());
 
   EXPECT_FALSE(BoolInitOption);
-  EXPECT_TRUE(BoolInitOption.Default.hasValue());
+  EXPECT_TRUE(BoolInitOption.getDefault().hasValue());
   EXPECT_EQ(1, BoolInitOption.getNumOccurrences());
 
   EXPECT_EQ("str-init-value", StrInitOption);
-  EXPECT_TRUE(StrInitOption.Default.hasValue());
+  EXPECT_TRUE(StrInitOption.getDefault().hasValue());
   EXPECT_EQ(1, StrInitOption.getNumOccurrences());
 }
 
