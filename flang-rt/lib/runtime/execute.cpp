@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/execute.h"
+#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include <cstdio>
 #include <cstdlib>
 #include <errno.h>
 #include <future>
@@ -34,12 +36,12 @@ namespace Fortran::runtime {
 // and the processor does not support asynchronous execution. Otherwise it is
 // assigned the value 0
 enum CMD_STAT {
-  ASYNC_NO_SUPPORT_ERR = -2, // system returns -1 with ENOENT
-  NO_SUPPORT_ERR = -1, // Linux setsid() returns -1
+  ASYNC_NO_SUPPORT_ERR = -2, // Linux setsid() returns -1
+  NO_SUPPORT_ERR = -1, // system returns -1 with ENOENT
   CMD_EXECUTED = 0, // command executed with no error
   FORK_ERR = 1, // Linux fork() returns < 0
   EXECL_ERR = 2, // system returns -1 with other errno
-  COMMAND_EXECUTION_ERR = 3, // exit code 1
+  COMMAND_EXECUTION_ERR = 3, // Unexpected execution error
   COMMAND_CANNOT_EXECUTE_ERR = 4, // Linux exit code 126
   COMMAND_NOT_FOUND_ERR = 5, // Linux exit code 127
   INVALID_CL_ERR = 6, // cover all other non-zero exit code
@@ -74,62 +76,91 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     // On Windows, ENOENT means the command interpreter can't be found.
     // On Linux, system calls execl with filepath "/bin/sh", ENOENT means the
     // file pathname does not exist.
+    constexpr char msg[] = "Command line execution is not supported, system "
+                           "returns -1 with errno ENOENT.";
     if (errno == ENOENT) {
       if (!cmdstat) {
-        terminator.Crash("Command line execution is not supported, system "
-                         "returns -1 with errno ENOENT.");
+        terminator.Crash(msg);
       } else {
         StoreIntToDescriptor(cmdstat, NO_SUPPORT_ERR, terminator);
-        CheckAndCopyCharsToDescriptor(cmdmsg,
-            "Command line execution is not supported, system returns -1 with "
-            "errno ENOENT.");
+        CheckAndCopyCharsToDescriptor(cmdmsg, msg);
+        return status;
       }
     } else {
-      char err_buffer[30];
-      char msg[]{"Execution error with system status code: -1, errno: "};
+      char msg[256]{"Execution error with system status code: -1, errno: "};
+      // Append the output of strerror*() to the end of msg. Note that upon
+      // success, the output of strerror*() is always null-terminated.
+      size_t appendIndex = std::strlen(msg);
 #ifdef _WIN32
-      if (strerror_s(err_buffer, sizeof(err_buffer), errno) != 0)
+      if (strerror_s(msg + appendIndex, sizeof(msg) - appendIndex, errno) != 0)
 #else
-      if (strerror_r(errno, err_buffer, sizeof(err_buffer)) != 0)
+      if (strerror_r(errno, msg + appendIndex, sizeof(msg) - appendIndex) != 0)
 #endif
         terminator.Crash("errno to char msg failed.");
-      char *newMsg{static_cast<char *>(AllocateMemoryOrCrash(
-          terminator, std::strlen(msg) + std::strlen(err_buffer) + 1))};
-      std::strcat(newMsg, err_buffer);
 
       if (!cmdstat) {
-        terminator.Crash(newMsg);
+        terminator.Crash(msg);
       } else {
         StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-        CheckAndCopyCharsToDescriptor(cmdmsg, newMsg);
+        CheckAndCopyCharsToDescriptor(cmdmsg, msg);
+        return status;
       }
-      FreeMemory(newMsg);
     }
   }
 
-#ifdef _WIN32
-  // On WIN32 API std::system returns exit status directly
+  // On WIN32 API std::system() returns exit status directly. On other OS'es,
+  // special status codes are handled below.
   std::int64_t exitStatusVal{status};
-  if (exitStatusVal != 0) {
+#ifdef _WIN32
+  if (status == 9009) {
+    // cmd.exe returns status code 9009 for "command not found" error
     if (!cmdstat) {
-      terminator.Crash(
-          "Invalid command quit with exit status code: %d", exitStatusVal);
+      terminator.Crash("Command not found.");
     } else {
-      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
+      StoreIntToDescriptor(cmdstat, COMMAND_NOT_FOUND_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Command not found.");
     }
   }
 #else
-  std::int64_t exitStatusVal{WEXITSTATUS(status)};
-  if (exitStatusVal == 1) {
+
+#if defined(WIFSIGNALED) && defined(WTERMSIG)
+  if (WIFSIGNALED(status)) {
     if (!cmdstat) {
-      terminator.Crash("Command line execution failed with exit code: 1.");
+      terminator.Crash("Killed by signal: %d", WTERMSIG(status));
+    } else {
+      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Killed by signal");
+      return WTERMSIG(status);
+    }
+  }
+#endif
+
+#if defined(WIFSTOPPED) && defined(WSTOPSIG)
+  if (WIFSTOPPED(status)) {
+    if (!cmdstat) {
+      terminator.Crash("Stopped by signal: %d", WSTOPSIG(status));
+    } else {
+      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Stopped by signal");
+      return WSTOPSIG(status);
+    }
+  }
+#endif
+
+#if defined(WIFEXITED) && defined(WEXITSTATUS)
+  // WEXITSTATUS() returns valid value only if WIFEXITED(status) is true
+  if (!WIFEXITED(status)) {
+    if (!cmdstat) {
+      terminator.Crash("Unexpected execution error: %d", status);
     } else {
       StoreIntToDescriptor(cmdstat, COMMAND_EXECUTION_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(
-          cmdmsg, "Command line execution failed with exit code: 1.");
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Unexpected execution error");
+      return status;
     }
-  } else if (exitStatusVal == 126) {
+  }
+  exitStatusVal = WEXITSTATUS(status);
+  // Status codes 126 and 127 are specific to Unix shell.
+  if (exitStatusVal == 126) {
     if (!cmdstat) {
       terminator.Crash("Command cannot be executed with exit code: 126.");
     } else {
@@ -145,39 +176,11 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
       CheckAndCopyCharsToDescriptor(
           cmdmsg, "Command not found with exit code: 127.");
     }
-    // capture all other nonzero exit code
-  } else if (exitStatusVal != 0) {
-    if (!cmdstat) {
-      terminator.Crash(
-          "Invalid command quit with exit status code: %d", exitStatusVal);
-    } else {
-      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
-    }
   }
-#endif
-
-#if defined(WIFSIGNALED) && defined(WTERMSIG)
-  if (WIFSIGNALED(status)) {
-    if (!cmdstat) {
-      terminator.Crash("Killed by signal: %d", WTERMSIG(status));
-    } else {
-      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "Killed by signal");
-    }
-  }
-#endif
-
-#if defined(WIFSTOPPED) && defined(WSTOPSIG)
-  if (WIFSTOPPED(status)) {
-    if (!cmdstat) {
-      terminator.Crash("Stopped by signal: %d", WSTOPSIG(status));
-    } else {
-      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyCharsToDescriptor(cmdmsg, "Stopped by signal");
-    }
-  }
-#endif
+#endif // WIFEXITED and WEXITSTATUS
+#endif // Not _WIN32
+  // At this point, any other status code is not known to be a "crashable
+  // offense" and will be returned in EXITSTAT if provided.
   return exitStatusVal;
 }
 
@@ -202,9 +205,36 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(cmdmsg));
   }
 
+  const char *cmd{newCmd};
+#ifdef _WIN32
+  // Construct a string that looks like
+  //   "cmd.exe /v:on /c \"mycommand & exit /b !ERRORLEVEL!\""
+  // Explanantion:
+  //   /v:on - turns delayed environment variable expansion on, so
+  //     variables written as !VAR! are expanded at execution time
+  //     instead of at parse time. This is required for !ERRORLEVEL!
+  //     to reflect the current error code at the moment exit runs.
+  //   exit /b !ERRORLEVEL! - exits the current cmd instance (/b) and
+  //     sets its process exit code to the current ERRORLEVEL value.
+  //     Because delayed expansion is on, !ERRORLEVEL! is evaluated at
+  //     execution time, so this cmd instance returns the same error
+  //     code as mycommand.
+  // This allows cmd.exe to either return the exit code of mycommand, or
+  // to return its own exit code to the caller. The code 9009 is used
+  // by cmd.exe to indicate "not found" condition.
+  const char prefix[]{"cmd.exe /v:on /c \""};
+  const char suffix[]{" & exit /b !ERRORLEVEL!\""};
+  const size_t newCmdWinLen{
+      (sizeof(prefix) - 1) + std::strlen(newCmd) + (sizeof(suffix) - 1) + 1};
+  char *newCmdWin{
+      static_cast<char *>(AllocateMemoryOrCrash(terminator, newCmdWinLen))};
+  std::snprintf(newCmdWin, newCmdWinLen, "%s%s%s", prefix, newCmd, suffix);
+  cmd = newCmdWin;
+#endif
+
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
-    std::int64_t status{std::system(newCmd)};
+    std::int64_t status{std::system(cmd)};
     std::int64_t exitStatusVal{
         TerminationCheck(status, cmdstat, cmdmsg, terminator)};
     // If sync, assigned processor-dependent exit status. Otherwise unchanged
@@ -218,13 +248,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    // add "cmd.exe /c " to the beginning of command
-    const char *prefix{"cmd.exe /c "};
-    char *newCmdWin{static_cast<char *>(AllocateMemoryOrCrash(
-        terminator, std::strlen(prefix) + std::strlen(newCmd) + 1))};
-    std::strcpy(newCmdWin, prefix);
-    std::strcat(newCmdWin, newCmd);
-
     // Convert the char to wide char
     const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
     wchar_t *wcmd{static_cast<wchar_t *>(
@@ -232,7 +255,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
     }
-    FreeMemory(newCmdWin);
 
     if (CreateProcessW(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
@@ -250,6 +272,13 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
     FreeMemory(wcmd);
 #else
+    // Flush all the output streams before fork() in order to avoid parent's
+    // buffered output to be replicated on the child. (Note: the issue of
+    // duplicated output didn't happen for regular terminal output, but was
+    // easy to reproduce when piping the output to a file.)
+    io::IoErrorHandler handler{terminator};
+    io::ExternalFileUnit::FlushAll(handler);
+    std::fflush(nullptr); // Also flush stdio streams
     pid_t pid{fork()};
     if (pid < 0) {
       if (!cmdstat) {
@@ -278,6 +307,11 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     }
 #endif
   }
+
+#ifdef _WIN32
+  FreeMemory(newCmdWin);
+#endif
+
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
     FreeMemory(newCmd);

@@ -44,7 +44,7 @@ int f(int i) {
       // CIR:  %[[ARR:.*]] = cir.get_member %[[A]][2] {name = "arr"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 3>>
       // CIR:  cir.get_element %[[ARR]][%{{.*}} : !s32i] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
       // LLVM: getelementptr [3 x i32], ptr getelementptr inbounds nuw (i8, ptr @[[F_A]], i64 12), i32 0, i64 %{{.*}}
-      // OGCG: getelementptr inbounds [3 x i32], ptr getelementptr inbounds nuw ({{.*}} @__const._Z1fi.a, i32 0, i32 2), i64 0, i64 %{{.*}}
+      // OGCG: getelementptr inbounds [3 x i32], ptr getelementptr inbounds nuw (i8, ptr @__const._Z1fi.a, i64 12), i64 0, i64 %{{.*}}
       ? a.arr[n]
       // CIR:  cir.ternary
       // LLVM: br i1
@@ -71,7 +71,7 @@ int f(int i) {
         // LLVM: getelementptr [2 x i32], ptr getelementptr inbounds nuw ({{.*}} @[[F_A]], i64 4), i32 0, i64 %{{.*}}
         // LLVM: load i32
 
-        // OGCG: getelementptr inbounds [2 x i32], ptr getelementptr inbounds nuw ({{.*}} @__const._Z1fi.a, i32 0, i32 1), i64 0, i64 %{{.*}}
+        // OGCG: getelementptr inbounds [2 x i32], ptr getelementptr inbounds nuw (i8, ptr @__const._Z1fi.a, i64 4), i64 0, i64 %{{.*}}
         // OGCG: load i32
         : a.y[2 - n]));
   }(i, &A::x);

@@ -100,7 +100,7 @@ add_header_library(
     acospif.h
   DEPENDS
     .inv_trigf_utils
-    libc.src.__support.FPUtil.fenv_implt
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.cast
@@ -1161,6 +1161,17 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  ffmaf128
+  HDRS
+    ffmaf128.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
 )
 
 add_header_library(

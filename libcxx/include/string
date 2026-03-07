@@ -770,30 +770,6 @@ public:
       void>;
 #  endif
 
-#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
-    if (__libcpp_is_constant_evaluated())
-      return __ptr;
-
-    pointer volatile __copy_ptr = __ptr;
-
-    return const_cast<pointer&>(__copy_ptr);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer
-  __asan_volatile_wrapper(const_pointer const& __ptr) const {
-    if (__libcpp_is_constant_evaluated())
-      return __ptr;
-
-    const_pointer volatile __copy_ptr = __ptr;
-
-    return const_cast<const_pointer&>(__copy_ptr);
-  }
-#    define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) __asan_volatile_wrapper(PTR)
-#  else
-#    define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
-#  endif
-
   static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
   static_assert(is_trivially_default_constructible<value_type>::value,
@@ -2211,6 +2187,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS size_type
   __get_short_size() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(!__rep_.__s.__is_long_, "String has to be short when trying to get the short size");
+    __annotate_memory_barrier();
     return __rep_.__s.__size_;
   }
 
@@ -2220,6 +2197,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_size() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long size");
+    __annotate_memory_barrier();
     return __rep_.__l.__size_;
   }
 
@@ -2232,27 +2210,32 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_cap() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long capacity");
+    __annotate_memory_barrier();
     return __rep_.__l.__cap_ * __endian_factor;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_long_pointer() _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
+    __annotate_memory_barrier();
+    return __rep_.__l.__data_;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __get_long_pointer() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__rep_.__l.__is_long_, "String has to be long when trying to get the long pointer");
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(__rep_.__l.__data_);
+    __annotate_memory_barrier();
+    return __rep_.__l.__data_;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS pointer
   __get_short_pointer() _NOEXCEPT {
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(pointer_traits<pointer>::pointer_to(__rep_.__s.__data_[0]));
+    __annotate_memory_barrier();
+    return pointer_traits<pointer>::pointer_to(__rep_.__s.__data_[0]);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS const_pointer
   __get_short_pointer() const _NOEXCEPT {
-    return _LIBCPP_ASAN_VOLATILE_WRAPPER(pointer_traits<const_pointer>::pointer_to(__rep_.__s.__data_[0]));
+    __annotate_memory_barrier();
+    return pointer_traits<const_pointer>::pointer_to(__rep_.__s.__data_[0]);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_pointer() _NOEXCEPT {
@@ -2333,6 +2316,16 @@ private:
       return;
 #    endif
     std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
+#  endif
+  }
+
+  // Prevents speculative load before short/long state is determined.
+  // The following functions are no-ops outside of AddressSanitizer mode.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_memory_barrier() const {
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
+    if (__libcpp_is_constant_evaluated())
+      return;
+    asm volatile("" ::: "memory");
 #  endif
   }
 

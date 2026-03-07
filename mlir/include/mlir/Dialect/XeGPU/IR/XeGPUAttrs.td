@@ -259,6 +259,10 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "xegpu::DistributeLayoutAttr",
                     "collapseDims",
                     (ins "SmallVector<int64_t>": $dimGroup)>,
+    InterfaceMethod<[{Derive a new layout by trasnposing it using `permutation`.}],
+                    "xegpu::DistributeLayoutAttr",
+                    "transposeDims",
+                    (ins "ArrayRef<int64_t>": $permutation)>,
     InterfaceMethod<[{Generates instructions to compute multidimensional coordinates for dist units
                       assigned to a level identified by linearId. The shape parameter
                       represents the higher-level problem size. Each level may access
@@ -266,56 +270,17 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "computeDistributedCoords",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
-    InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
-                     to some other layout according to given permutation of (0...n-1).}],
-                    /*retTy=*/"bool",
-                    /*methodName=*/"isTransposeOf",
-                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other, "ArrayRef<int64_t>": $perm),
-                    /*methodBody=*/[{
-                      if (!other)
-                        return false;
-                      if ($_self.getRank() != other.getRank() || perm.size() != static_cast<size_t>($_self.getRank()))
-                        return false;
-                      // Check if the permutation is valid
-                      if (!isPermutationVector(perm))
-                        return false;
-                      auto checkTranspose = [](ArrayRef<int64_t> dst, ArrayRef<int64_t> src, ArrayRef<int64_t> perm) {
-                        // If both `dst` and `src` are empty, conservatively return true
-                        // here because some layout fields can be empty.
-                        if (dst.empty() && src.empty())
-                          return true;
-                        for (const auto &ta : llvm::enumerate(perm)) {
-                          if (src[ta.index()] != dst[ta.value()])
-                            return false;
-                        }
-                        return true;
-                      };
-                      // Check sgLayout
-                      if (!checkTranspose($_self.getEffectiveSgLayoutAsInt(), other.getEffectiveSgLayoutAsInt(), perm))
-                        return false;
-                      // Check sgData
-                      if (!checkTranspose($_self.getEffectiveSgDataAsInt(), other.getEffectiveSgDataAsInt(), perm))
-                        return false;
-                      // Check instData
-                      if (!checkTranspose($_self.getEffectiveInstDataAsInt(), other.getEffectiveInstDataAsInt(), perm))
-                        return false;
-                      // Check laneLayout
-                      if (!checkTranspose($_self.getEffectiveLaneLayoutAsInt(), other.getEffectiveLaneLayoutAsInt(), perm))
-                        return false;
-                      // Check laneData
-                      if (!checkTranspose($_self.getEffectiveLaneDataAsInt(), other.getEffectiveLaneDataAsInt(), perm))
-                        return false;
-                      // Check order
-                      if (!checkTranspose($_self.getEffectiveOrderAsInt(), other.getEffectiveOrderAsInt(), perm))
-                        return false;
-
-                      return true;
-                    }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>,
-
+    InterfaceMethod</*desc=*/[{Check if this layout is a transpose of
+                     the other layout according to given permutation of (0...n-1).}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isTransposeOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other,
+                                  "ArrayRef<int64_t>": $perm,
+                                  "xegpu::LayoutKind": $kind)>,
     InterfaceMethod</*desc=*/[{Check if this layout is compatible with another layout
                      at a specific level of the layout hierarchy. Unlike isEqualTo,
                      this compares only the effective (non-sliced) fields at the
@@ -503,8 +468,11 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getInstData() && !getLaneLayout())
         return nullptr;
+      // Only preserve order if lane_layout remains, since order requires
+      // sg_layout or lane_layout to be present.
+      auto order = getLaneLayout() ? getOrder() : nullptr;
       return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
-                             getLaneLayout(), getLaneData(), getOrder());
+                             getLaneLayout(), getLaneData(), order);
     }
 
     LayoutAttr dropInstData() const{
@@ -576,6 +544,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
 
+    // Derive a new layout by transposing the layout using `permutation`.
+    DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
+
     /// Delinearizes a linear ID into its multidimensional indices
     /// based on the effective level of the layout.
     FailureOr<SmallVector<Value>>
@@ -593,6 +564,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
 
     /// Check if this layout is equal to another layout.
     bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
+
+    /// Check if this layout is a transpose of another layout.
+    bool isTransposeOf(const xegpu::DistributeLayoutAttr &other, ArrayRef<int64_t> perm, const xegpu::LayoutKind kind);
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -780,6 +754,9 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
 
+    // Derive a new layout by transposing the layout using `permutation`.
+    DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
+
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
     /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
     /// it will coalese two slice operations and return a simplified SliceAttr
@@ -804,6 +781,9 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
 
     /// Check if this layout is equal to another layout.
     bool isEqualTo(const xegpu::DistributeLayoutAttr &other);
+
+    /// Check if this layout is a transpose of another layout.
+    bool isTransposeOf(const xegpu::DistributeLayoutAttr &other, ArrayRef<int64_t> perm, const xegpu::LayoutKind kind);
 
     /// Drop the slice dims to get the original layout.
     SliceAttr dropSliceDims(ArrayRef<int64_t> sliceDimsToDrop);

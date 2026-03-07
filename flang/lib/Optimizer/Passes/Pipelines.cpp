@@ -255,11 +255,12 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 /// Create a pass pipeline for lowering from HLFIR to FIR
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition
-/// \param optLevel - optimization level used for creating FIR optimization
-///   passes pipeline
+/// \param enableOpenMP - whether OpenMP lowering is enabled
+/// \param config - pipeline config (OptLevel, etc.)
 void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
-                                  llvm::OptimizationLevel optLevel) {
+                                  const MLIRToLLVMPassPipelineConfig &config) {
+  llvm::OptimizationLevel optLevel = config.OptLevel;
   if (optLevel.getSizeLevel() > 0 || optLevel.getSpeedupLevel() > 0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
@@ -442,7 +443,7 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
     enableOpenMP = fir::EnableOpenMP::Full;
   if (config.EnableOpenMPSimd)
     enableOpenMP = fir::EnableOpenMP::Simd;
-  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config.OptLevel);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
 
   // Add default optimizer pass pipeline.
   fir::createDefaultFIROptimizerPassPipeline(pm, config);

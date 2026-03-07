@@ -527,15 +527,25 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
         g_contained_##vreg, g_##reg##_invalidates, nullptr,                    \
   }
 
-// Defines miscellaneous status and control registers like cpsr, fpsr etc
-#define DEFINE_MISC_REGS(reg, size, TYPE, lldb_kind)                           \
+// Define cpsr
+#define DEFINE_GPR_CPSR                                                        \
   {                                                                            \
+    "cpsr", nullptr, 4, GPR_OFFSET_NAME(cpsr), lldb::eEncodingUint,            \
+        lldb::eFormatHex,                                                      \
+        { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_FLAGS, \
+          LLDB_INVALID_REGNUM, gpr_cpsr },                                     \
+         nullptr, nullptr, nullptr,                                            \
+  }
+
+// Defines miscellaneous registers that have DWARF/eh_frame numbers, like vg.
+#define DEFINE_MISC_REGS(reg, size, TYPE, lldb_kind)                           \
+   {                                                                           \
     #reg, nullptr, size, TYPE##_OFFSET_NAME(reg), lldb::eEncodingUint,         \
         lldb::eFormatHex, MISC_##TYPE##_KIND(lldb_kind), nullptr, nullptr,     \
         nullptr,                                                               \
-  }
+   }
 
-// Defines miscellaneous status and control registers like cpsr, fpsr etc
+// Defines miscellaneous status and control registers like fpcr, fpsr etc
 // that have no DWARF/eh_frame register numbers.
 #define DEFINE_MISC_LLDB_REGS(reg, size, TYPE, lldb_kind)                           \
   {                                                                            \
@@ -594,8 +604,7 @@ static lldb_private::RegisterInfo g_register_infos_arm64_le[] = {
     DEFINE_GPR64_ALT(sp, x31, LLDB_REGNUM_GENERIC_SP),
     DEFINE_GPR64(pc, LLDB_REGNUM_GENERIC_PC),
 
-    // DEFINE_MISC_LLDB_REGS(name, size, TYPE, lldb kind)
-    DEFINE_MISC_LLDB_REGS(cpsr, 4, GPR, gpr_cpsr),
+    DEFINE_GPR_CPSR,
 
     // DEFINE_GPR32(name, parent name)
     DEFINE_GPR32(w0, x0),
