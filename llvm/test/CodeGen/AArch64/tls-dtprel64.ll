@@ -3,7 +3,7 @@
 
 ; CHECK: R_AARCH64_TLS_DTPREL64   var
 
-@var = thread_local global i32 0, align 4, !dbg !0
+@var = internal thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: noinline nounwind optnone
 define i32 @foo() #0 !dbg !11 {

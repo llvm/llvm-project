@@ -4,13 +4,13 @@
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
 ; CHECK:   DW_AT_name      ("var")
-; CHECK-NEXT:   DW_AT_type      (0x00000040 "int")
+; CHECK-NEXT:   DW_AT_type      (0x{{.*}} "int")
 ; CHECK-NEXT:   DW_AT_external  (true)
 ; CHECK-NEXT:   DW_AT_decl_file ("{{.*}}tls-at-location.c")
 ; CHECK-NEXT:   DW_AT_decl_line (1)
 ; CHECK-NEXT:   DW_AT_location  (DW_OP_const8u 0x0, DW_OP_GNU_push_tls_address)
 
-@var = thread_local global i32 0, align 4, !dbg !0
+@var = internal thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: noinline nounwind optnone
 define i32 @foo() #0 !dbg !11 {
