@@ -3,7 +3,6 @@
 
 // Test that the constrained intrinsics are picking up the exception
 // metadata from the AST instead of the global default from the command line.
-// FIXME: these functions shouldn't trap on SNaN.
 
 #pragma float_control(except, on)
 
@@ -31,22 +30,22 @@ void p(char *str, int x) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[ISZERO:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR4]]
-// CHECK-NEXT:    br i1 [[ISZERO]], label [[FPCLASSIFY_END:%.*]], label [[FPCLASSIFY_NOT_ZERO:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 3) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 516) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 264) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.is.fpclass.f64(double [[TMP0]], i32 144) #[[ATTR4]]
+// CHECK-NEXT:    br i1 [[TMP1]], label [[FPCLASSIFY_END:%.*]], label [[FPCLASSIFY_NOT_NAN:%.*]]
 // CHECK:       fpclassify_end:
-// CHECK-NEXT:    [[FPCLASSIFY_RESULT:%.*]] = phi i32 [ 4, [[ENTRY:%.*]] ], [ 0, [[FPCLASSIFY_NOT_ZERO]] ], [ 1, [[FPCLASSIFY_NOT_NAN:%.*]] ], [ [[TMP2:%.*]], [[FPCLASSIFY_NOT_INF:%.*]] ]
+// CHECK-NEXT:    [[FPCLASSIFY_RESULT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[FPCLASSIFY_NOT_NAN]] ], [ 2, [[FPCLASSIFY_NOT_INF:%.*]] ], [ 3, [[FPCLASSIFY_NOT_NORMAL:%.*]] ], [ 4, [[FPCLASSIFY_NOT_SUBNORMAL:%.*]] ]
 // CHECK-NEXT:    call void @p(ptr noundef @.str.1, i32 noundef [[FPCLASSIFY_RESULT]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
-// CHECK:       fpclassify_not_zero:
-// CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP0]], double [[TMP0]], metadata !"uno", metadata !"fpexcept.strict") #[[ATTR4]]
-// CHECK-NEXT:    br i1 [[CMP]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_NAN]]
 // CHECK:       fpclassify_not_nan:
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[TMP0]]) #[[ATTR5:[0-9]+]]
-// CHECK-NEXT:    [[ISINF:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP1]], double 0x7FF0000000000000, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR4]]
-// CHECK-NEXT:    br i1 [[ISINF]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_INF]]
+// CHECK-NEXT:    br i1 [[TMP2]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_INF]]
 // CHECK:       fpclassify_not_inf:
-// CHECK-NEXT:    [[ISNORMAL:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP1]], double 0x10000000000000, metadata !"uge", metadata !"fpexcept.strict") #[[ATTR4]]
-// CHECK-NEXT:    [[TMP2]] = select i1 [[ISNORMAL]], i32 2, i32 3
+// CHECK-NEXT:    br i1 [[TMP3]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_NORMAL]]
+// CHECK:       fpclassify_not_normal:
+// CHECK-NEXT:    br i1 [[TMP4]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_SUBNORMAL]]
+// CHECK:       fpclassify_not_subnormal:
 // CHECK-NEXT:    br label [[FPCLASSIFY_END]]
 //
 void test_fpclassify(double d) {
@@ -156,7 +155,7 @@ void test_double_isfinite(double d) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[TMP0]]) #[[ATTR5]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[TMP0]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    [[ISINF:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP1]], double 0x7FF0000000000000, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR4]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i64 [[TMP2]], 0
