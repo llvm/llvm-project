@@ -203,10 +203,10 @@ define amdgpu_kernel void @test_mfma_f64_4x4x4f64(ptr addrspace(1) %arg, double 
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_mfma_f64_4x4x4f64 v[4:5], v[0:1], v[2:3], 0
 ; GCN-NEXT:    s_nop 3
-; GCN-NEXT:    v_mfma_f64_4x4x4f64 v[0:1], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 blgp:3
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_mfma_f64_4x4x4f64 v[4:5], v[0:1], v[2:3], v[4:5] cbsz:1 abid:2 blgp:3
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GCN-NEXT:    global_store_dwordx2 v0, v[4:5], s[0:1]
 ; GCN-NEXT:    s_endpgm
 bb:
   %mai.1 = tail call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %a, double %b, double 0.0, i32 0, i32 0, i32 0)
