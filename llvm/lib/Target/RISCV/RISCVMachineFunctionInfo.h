@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -72,6 +73,10 @@ private:
 
   /// Incoming ByVal arguments
   SmallVector<SDValue, 8> IncomingByValArgs;
+
+  /// Incoming indirect argument pointers, keyed by OrigArgIndex.
+  /// Used for musttail forwarding of indirect args.
+  DenseMap<unsigned, SDValue> IncomingIndirectArgs;
 
   /// Is there any vector argument or return?
   bool IsVectorCall = false;
@@ -156,6 +161,15 @@ public:
   void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
   SDValue getIncomingByValArgs(unsigned Idx) { return IncomingByValArgs[Idx]; }
   unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
+
+  void setIncomingIndirectArg(unsigned ArgIndex, SDValue Val) {
+    IncomingIndirectArgs[ArgIndex] = Val;
+  }
+  SDValue getIncomingIndirectArg(unsigned ArgIndex) const {
+    auto It = IncomingIndirectArgs.find(ArgIndex);
+    assert(It != IncomingIndirectArgs.end() && "No incoming indirect arg");
+    return It->second;
+  }
 
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 
