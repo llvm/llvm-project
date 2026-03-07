@@ -695,6 +695,21 @@ void Fortran::lower::CallInterface<T>::declare() {
     mlir::ModuleOp module = converter.getModuleOp();
     mlir::SymbolTable *symbolTable = converter.getMLIRSymbolTable();
     func = fir::FirOpBuilder::getNamedFunction(module, symbolTable, name);
+    if (func) {
+      if constexpr (std::is_same_v<T, Fortran::lower::CalleeInterface>) {
+        mlir::FunctionType ty = genFunctionType();
+        if (!func.getBlocks().empty())
+          fir::emitFatalError(
+              func.getLoc(),
+              "conflicting procedure definition with mismatched signature");
+        if (func.getFunctionType() != ty) {
+          func.setType(ty);
+          for (const auto &placeHolder : llvm::enumerate(inputs))
+            func.setArgAttrs(placeHolder.index(),
+                             placeHolder.value().attributes);
+        }
+      }
+    }
     if (!func) {
       mlir::Location loc = side().getCalleeLocation();
       mlir::MLIRContext &mlirContext = converter.getMLIRContext();
