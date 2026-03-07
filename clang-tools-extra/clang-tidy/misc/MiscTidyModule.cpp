@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "AnonymousNamespaceInHeaderCheck.h"
+#include "BoolBitwiseOperationCheck.h"
 #include "ConfusableIdentifierCheck.h"
 #include "ConstCorrectnessCheck.h"
 #include "CoroutineHostileRAIICheck.h"
@@ -45,6 +46,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AnonymousNamespaceInHeaderCheck>(
         "misc-anonymous-namespace-in-header");
+    CheckFactories.registerCheck<BoolBitwiseOperationCheck>(
+        "misc-bool-bitwise-operation");
     CheckFactories.registerCheck<ConfusableIdentifierCheck>(
         "misc-confusable-identifiers");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(
