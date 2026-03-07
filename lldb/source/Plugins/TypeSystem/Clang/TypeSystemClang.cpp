@@ -2401,6 +2401,12 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
       getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
 }
 
+CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  if (is_signed)
+    return GetType(getASTContext().getPointerDiffType());
+  return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
   if (decl_ctx) {
     DumpDeclContextHiearchy(decl_ctx->getParent());

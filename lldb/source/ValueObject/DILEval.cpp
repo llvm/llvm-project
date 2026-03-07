@@ -539,6 +539,29 @@ Interpreter::Visit(const UnaryOpNode &node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::PointerAdd(lldb::ValueObjectSP ptr, int64_t offset,
+                        uint32_t location) {
+  if (ptr->GetCompilerType().IsPointerToVoid())
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "arithmetic on a pointer to void", location);
+  if (ptr->GetValueAsUnsigned(0) == 0 && offset != 0)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "arithmetic on a nullptr is undefined", location);
+
+  llvm::Expected<uint64_t> byte_size =
+      ptr->GetCompilerType().GetPointeeType().GetByteSize(
+          m_exe_ctx_scope.get());
+  if (!byte_size)
+    return byte_size.takeError();
+  uintptr_t addr = ptr->GetValueAsUnsigned(0) + offset * (*byte_size);
+
+  ExecutionContext exe_ctx(m_target.get(), false);
+  Scalar scalar(addr);
+  return ValueObject::CreateValueObjectFromScalar(
+      m_target, scalar, ptr->GetCompilerType(), "result");
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                               lldb::ValueObjectSP rhs, CompilerType result_type,
                               uint32_t location) {
@@ -569,7 +592,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
     lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
   // Operation '+' works for:
   //   {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
-  // TODO: Pointer arithmetics
+  //   {integer,unscoped_enum} <-> pointer
+  //   pointer <-> {integer,unscoped_enum}
   auto orig_lhs_type = lhs->GetCompilerType();
   auto orig_rhs_type = rhs->GetCompilerType();
   auto type_or_err = ArithmeticConversion(lhs, rhs, location);
@@ -580,18 +604,34 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
   if (result_type.IsScalarType())
     return EvaluateScalarOp(BinaryOpKind::Add, lhs, rhs, result_type, location);
 
-  std::string errMsg =
-      llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
-                    orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
-  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
-                                              location);
+  // Check for pointer arithmetics.
+  // One of the operands must be a pointer and the other one an integer.
+  lldb::ValueObjectSP ptr, offset;
+  if (lhs->GetCompilerType().IsPointerType()) {
+    ptr = lhs;
+    offset = rhs;
+  } else if (rhs->GetCompilerType().IsPointerType()) {
+    ptr = rhs;
+    offset = lhs;
+  }
+
+  if (!ptr || !offset->GetCompilerType().IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
+
+  return PointerAdd(ptr, offset->GetValueAsUnsigned(0), location);
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
   // Operation '-' works for:
   //   {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
-  // TODO: Pointer arithmetics
+  //   pointer <-> {integer,unscoped_enum}
+  //   pointer <-> pointer (if pointee types are compatible)
   auto orig_lhs_type = lhs->GetCompilerType();
   auto orig_rhs_type = rhs->GetCompilerType();
   auto type_or_err = ArithmeticConversion(lhs, rhs, location);
@@ -601,6 +641,62 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
 
   if (result_type.IsScalarType())
     return EvaluateScalarOp(BinaryOpKind::Sub, lhs, rhs, result_type, location);
+
+  auto lhs_type = lhs->GetCompilerType();
+  auto rhs_type = rhs->GetCompilerType();
+
+  // "pointer - integer" operation.
+  if (lhs_type.IsPointerType() && rhs_type.IsInteger())
+    return PointerAdd(lhs, -rhs->GetValueAsUnsigned(0), location);
+
+  // "pointer - pointer" operation.
+  if (lhs_type.IsPointerType() && rhs_type.IsPointerType()) {
+    if (lhs_type.IsPointerToVoid() && rhs_type.IsPointerToVoid()) {
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "arithmetic on pointers to void", location);
+    }
+    // Compare canonical unqualified pointer types.
+    CompilerType lhs_unqualified_type =
+        lhs_type.GetCanonicalType().GetFullyUnqualifiedType();
+    CompilerType rhs_unqualified_type =
+        rhs_type.GetCanonicalType().GetFullyUnqualifiedType();
+    bool comparable = lhs_unqualified_type.CompareTypes(rhs_unqualified_type);
+    if (!comparable) {
+      std::string errMsg = llvm::formatv(
+          "'{0}' and '{1}' are not pointers to compatible types",
+          orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+    }
+
+    llvm::Expected<uint64_t> lhs_byte_size =
+        lhs_type.GetPointeeType().GetByteSize(m_exe_ctx_scope.get());
+    if (!lhs_byte_size)
+      return lhs_byte_size.takeError();
+    // Since pointers have compatible types, both have the same pointee size.
+    int64_t item_size = *lhs_byte_size;
+    int64_t diff = static_cast<int64_t>(lhs->GetValueAsUnsigned(0) -
+                                        rhs->GetValueAsUnsigned(0));
+    if (diff % item_size != 0) {
+      // If address difference isn't divisible by pointee size then performing
+      // the operation is undefined behaviour.
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "undefined pointer arithmetic", location);
+    }
+    diff /= item_size;
+
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        GetTypeSystemFromCU(m_exe_ctx_scope);
+    if (!type_system)
+      return type_system.takeError();
+    CompilerType ptrdiff_t = type_system.get()->GetPointerDiffType(true);
+    if (!ptrdiff_t)
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "unable to determine pointer diff type", location);
+
+    Scalar scalar(diff);
+    return ValueObject::CreateValueObjectFromScalar(m_target, scalar, ptrdiff_t,
+                                                    "result");
+  }
 
   std::string errMsg =
       llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
