@@ -83,6 +83,7 @@ struct CAPIDefGenerator : DefGenerator {
       : DefGenerator(defs, os, defType, valueType, isAttrGenerator) {}
 
   bool emitDecls(StringRef selectedDialect) override;
+  bool emitDefs(StringRef selectedDialect) override;  
 };
 } // namespace
 
@@ -97,13 +98,60 @@ static bool isUnsupportedParam(const AttrOrTypeParameter &param) {
   return false;
 }
 
+static std::string toLower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+}
+
+static void printInitType(const llvm::Init *I, llvm::raw_ostream &OS) {
+  if (!I) {
+    OS << "null Init\n";
+    return;
+  }
+
+  if (isa<llvm::UnsetInit>(I))           OS << "UnsetInit";
+  else if (isa<llvm::BitInit>(I))        OS << "BitInit";
+  else if (isa<llvm::BitsInit>(I))       OS << "BitsInit";
+  else if (isa<llvm::IntInit>(I))        OS << "IntInit";
+  else if (isa<llvm::StringInit>(I))     OS << "StringInit";
+  else if (isa<llvm::ListInit>(I))       OS << "ListInit";
+  else if (isa<llvm::DefInit>(I))        OS << "DefInit";
+  else if (isa<llvm::VarInit>(I))        OS << "VarInit";
+  else if (isa<llvm::VarBitInit>(I))     OS << "VarBitInit";
+  else if (isa<llvm::FieldInit>(I))      OS << "FieldInit";
+  else if (isa<llvm::DagInit>(I))        OS << "DagInit";
+  else if (isa<llvm::UnOpInit>(I))       OS << "UnOpInit";
+  else if (isa<llvm::BinOpInit>(I))      OS << "BinOpInit";
+  else if (isa<llvm::TernOpInit>(I))     OS << "TernOpInit";
+  else if (isa<llvm::FoldOpInit>(I))     OS << "FoldOpInit";
+  else if (isa<llvm::IsAOpInit>(I))      OS << "IsAOpInit";
+  else if (isa<llvm::ExistsOpInit>(I))   OS << "ExistsOpInit";
+  else if (isa<llvm::CondOpInit>(I))     OS << "CondOpInit";
+  else                                   OS << "Unknown Init";
+
+  OS << " : ";
+  I->print(OS);
+  OS << "\n";
+}
+
 static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
   StringRef cppType = param.getCppType();
+  // if (cppType.contains("IncludeStyle")) {
+  //   llvm::errs() << "Found " << cppType << "\n";
+  //   printInitType(param.getDef(), llvm::errs());
+  // }
   if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+    // if (cppType.contains("IncludeStyle")) {
+    //   llvm::errs() << "\tDefInit as epected \n";
+    // }
     const Record *rec = defInit->getDef();
     if (rec->isSubClassOf("EnumParameter")) {
-      std::string type = "mlir";
-      type += namespacePrefix();
+      // if (cppType.contains("IncludeStyle")) {
+      //   llvm::errs() << "\tEnumParameter as epected, underlying is  \n";
+      // }
+
+      std::string type = "";
+      type += toLower(namespacePrefix());
       type += rec->getValueAsString("underlyingEnumName");
       return type;
     }
@@ -112,9 +160,7 @@ static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
   }
   if (cppType == "Type")
     return "MlirType";
-  if (cppType == "Attribute" || cppType == "::mlir::DictionaryAttr" ||
-      cppType == "::mlir::ArrayAttr" || cppType == "DictionaryAttr" ||
-      cppType == "ArrayAttr")
+  if (cppType == "Attribute" || cppType.ends_with("Attr"))
     return "MlirAttribute";
   return cppType.str();
 }
@@ -130,21 +176,58 @@ getGettorParams(ArrayRef<AttrOrTypeParameter> params,
   return builderParams;
 }
 
-static void emitGettorDecl(StringRef name, ArrayRef<AttrOrTypeParameter> params,
-                           raw_ostream &os, bool isAttrGenerator) {
+static bool isEnumParam(const AttrOrTypeParameter &param) {
+  // Do I need a case for StringInits? I've seen cases where some types are 
+  // encoded as strings
+  if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+    const Record *rec = defInit->getDef();
+    return rec->isSubClassOf("EnumParameter");
+  } else {
+    return false;
+  }
+}
+
+static void emitGettorDeclOrDef(StringRef name, ArrayRef<AttrOrTypeParameter> params,
+                                raw_ostream &os, bool isAttrGenerator, bool isDeclGenerator) {
   os << "MLIR_CAPI_EXPORTED ";
   if (isAttrGenerator)
     os << "MlirAttribute ";
   else
     os << "MlirType ";
-  os << "mlir" + namespacePrefix() << name << "Get(";
+  os << llvm::StringRef(namespacePrefix()).lower() << name << "Get(";
   SmallVector<MethodParameter> params_ =
       getGettorParams(params, {{"MlirContext", "context"}});
   for (auto [i, param] : llvm::enumerate(params_)) {
     os << param.getType() << " " << param.getName()
-       << (i < params_.size() - 1 ? ", " : "");
+       << (i < (params_.size() - 1) ? ", " : "");
   }
-  os << ");\n";
+  if (isDeclGenerator) {
+    os << ");\n";
+  } else {
+    os << ") {\n";
+    os << "\treturn wrap(";
+    os << name << "::get(unwrap(context)";
+    if (params.size() > 0) {
+      os << ", ";
+    } 
+    for (auto [i, param] : llvm::enumerate(params)) {
+      // If this is an enum, just use C++ static cast
+      if (isEnumParam(param)) {
+        os << "static_cast<" << param.getCppType() << ">(" << param.getName() << ")";
+      } else {
+        os << "llvm::cast<" << param.getCppType() << ">";
+        // Is this a wrapped type? If so unwrap it, otherwised don't
+        if (llvm::StringRef(mapParamTypeToCAPI(param)).starts_with("Mlir")) {
+          os << "(unwrap(" << param.getName() << "))";
+        } else {
+          os << "(" << param.getName() << ")";
+        }
+      }
+      os << (i < params.size() - 1 ? ", " : "");
+    }
+    os << "));\n";
+    os << "}\n";
+  }
 }
 
 static void emitAccessorDecls(StringRef name,
@@ -155,7 +238,7 @@ static void emitAccessorDecls(StringRef name,
       continue;
     std::string paramName = param.getName().str();
     os << "MLIR_CAPI_EXPORTED ";
-    os << mapParamTypeToCAPI(param) << " mlir" << namespacePrefix() << name
+    os << mapParamTypeToCAPI(param) << " " << toLower(namespacePrefix()) << name
        << "Get" << withCapitalFirstLetter(param.getName().str());
     if (isAttrGenerator)
       os << "(MlirAttribute attr);";
@@ -166,12 +249,12 @@ static void emitAccessorDecls(StringRef name,
 }
 
 static void emitTypeIDDecl(StringRef name, raw_ostream &os) {
-  os << "MLIR_CAPI_EXPORTED MlirTypeID mlir" << namespacePrefix() << name
+  os << "MLIR_CAPI_EXPORTED MlirTypeID " << toLower(namespacePrefix()) << name
      << "GetTypeID();\n";
 }
 
 static void emitIsADecl(StringRef name, raw_ostream &os, bool isAttrGenerator) {
-  os << "MLIR_CAPI_EXPORTED bool mlir";
+  os << "MLIR_CAPI_EXPORTED bool mlir"; // JEG: Perhaps this one is correct?
   if (isAttrGenerator)
     os << "Attribute";
   else
@@ -199,7 +282,7 @@ static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
     llvm::IfDefEmitter scope(os, "GET_" + enumInfo.getEnumClassName().upper() +
                                      "_ENUM_CAPI_DECL");
     os << "// " << enumInfo.getSummary() << "\n";
-    os << "enum mlir" << namespacePrefix() << enumInfo.getEnumClassName();
+    os << "enum " << toLower(namespacePrefix()) << enumInfo.getEnumClassName();
 
     if (!enumInfo.getUnderlyingType().empty())
       os << " : " << enumInfo.getUnderlyingType();
@@ -214,6 +297,8 @@ static bool emitEnumDecls(ArrayRef<const Record *> records, raw_ostream &os) {
         os << formatv("  {0},\n", symbol);
     }
     os << "};\n";
+    // Add convenience typedef
+    os << formatv("typedef enum {0}{1} {0}{1}; \n", toLower(namespacePrefix()), enumInfo.getEnumClassName());
   }
 
   os << "\n";
@@ -248,17 +333,17 @@ static bool emitEnumAttrDecls(ArrayRef<const Record *> records, raw_ostream &os,
                                      enumInfo.getEnumClassName().upper() +
                                      "_ENUM_ATTR_CAPI_DECL");
 
-    os << "MLIR_CAPI_EXPORTED MlirAttribute mlir" << namespacePrefix()
-       << enumInfo.getEnumClassName() << "AttrGet(MlirContext context, mlir"
-       << namespacePrefix() << enumInfo.getEnumClassName() << " value);\n";
+    os << "MLIR_CAPI_EXPORTED MlirAttribute " << namespacePrefix()
+       << enumInfo.getEnumClassName() << "AttrGet(MlirContext context, "
+       << toLower(namespacePrefix()) << enumInfo.getEnumClassName() << " value);\n";
 
     std::string name = enumInfo.getEnumClassName().str() + "Attr";
     emitTypeIDDecl(name, os);
     emitIsADecl(name, os, /*isAttrGenerator*/ true);
 
-    os << "MLIR_CAPI_EXPORTED mlir" << namespacePrefix()
-       << enumInfo.getEnumClassName() << " mlir";
-    os << namespacePrefix() << name << "GetValue(MlirAttribute attr);\n";
+    os << "MLIR_CAPI_EXPORTED " << toLower(namespacePrefix())
+       << enumInfo.getEnumClassName() << " ";
+    os << toLower(namespacePrefix()) << name << "GetValue(MlirAttribute attr);\n";
   }
 
   os << "\n";
@@ -291,7 +376,7 @@ bool CAPIDefGenerator::emitDecls(StringRef selectedDialect) {
     ArrayRef<AttrOrTypeParameter> params = def.getParameters();
     emitAttrTypeHeader(name, os);
     if (!llvm::any_of(params, isUnsupportedParam))
-      emitGettorDecl(name, params, os, isAttrGenerator);
+      emitGettorDeclOrDef(name, params, os, isAttrGenerator, true);
     emitTypeIDDecl(name, os);
     emitIsADecl(name, os, isAttrGenerator);
     if (def.genAccessors() && !params.empty())
@@ -299,6 +384,25 @@ bool CAPIDefGenerator::emitDecls(StringRef selectedDialect) {
   }
 
   os << "\n";
+
+  return false;
+}
+
+bool CAPIDefGenerator::emitDefs(StringRef selectedDialect) {
+  emitSourceFileHeader((defType + "Def C API Defs").str(), os);
+
+  SmallVector<AttrOrTypeDef, 16> defs;
+  collectAllDefs(selectedDialect, defRecords, defs);
+  if (defs.empty())
+    return false;
+
+  for (const AttrOrTypeDef &def : defs) {
+    StringRef name = def.getCppClassName();
+    ArrayRef<AttrOrTypeParameter> params = def.getParameters();
+    if (!llvm::any_of(params, isUnsupportedParam)) {
+        emitGettorDeclOrDef(name, params, os, isAttrGenerator, false);
+    }
+  }
 
   return false;
 }
@@ -344,13 +448,12 @@ static mlir::GenRegistration genAttrDecls(
       return generator.emitDecls(capiDialect);
     });
 
-// static mlir::GenRegistration
-//     genAttrDefs("gen-attrdef-capi-defs", "Generate AttrDef C API
-//     definitions",
-//                 [](const RecordKeeper &records, raw_ostream &os) {
-//                   CAPIAttrDefGenerator generator(records, os);
-//                   return generator.emitDefs(attrDialect);
-//                 });
+static mlir::GenRegistration genAttrDefs(
+  "gen-attrdef-capi-defs", "Generate AttrDef C API definitions",
+  [](const RecordKeeper &records, raw_ostream &os) {
+      CAPIAttrDefGenerator generator(records.getAllDerivedDefinitionsIfDefined("AttrDef"), os);
+      return generator.emitDefs(capiDialect);
+});
 
 //===----------------------------------------------------------------------===//
 // TypeDef
