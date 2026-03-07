@@ -415,8 +415,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
             // the post-inline cleanup and the next DevirtSCCRepeatedPass
             // iteration because the next iteration may not happen and we may
             // miss inlining it.
-            if (tryPromoteCall(
-                    *ICB, FAM.getResult<AAManager>(*ICB->getCaller())))
+            if (tryPromoteCall(*ICB,
+                               FAM.getResult<AAManager>(*ICB->getCaller())))
               NewCallee = ICB->getCalledFunction();
           }
           if (NewCallee) {

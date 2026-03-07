@@ -715,8 +715,8 @@ static bool tryDevirtualizeViaTypeTestAssume(CallBase &CB, Value *Object,
     // There must be a dominating llvm.assume consuming the type.test result,
     // and no instruction between the assume and the indirect call may clobber
     // the vptr (e.g. via placement new or destructor). We use alias analysis to
-    // check specifically whether an intervening write could alias the vptr slot.
-    // We require the assume and the call to be in the same basic block.
+    // check specifically whether an intervening write could alias the vptr
+    // slot. We require the assume and the call to be in the same basic block.
     MemoryLocation VptrLoc =
         MemoryLocation(Object, LocationSize::precise(DL.getPointerSize()));
     bool HasValidAssume = false;

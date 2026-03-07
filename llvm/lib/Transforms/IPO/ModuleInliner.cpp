@@ -261,8 +261,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
           // miss inlining it.
           // FIXME: enable for ctxprof.
           if (CtxProf.isInSpecializedModule())
-            if (tryPromoteCall(
-                    *ICB, FAM.getResult<AAManager>(*ICB->getCaller())))
+            if (tryPromoteCall(*ICB,
+                               FAM.getResult<AAManager>(*ICB->getCaller())))
               NewCallee = ICB->getCalledFunction();
         }
         if (NewCallee)
