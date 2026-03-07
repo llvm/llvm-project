@@ -15,7 +15,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 #include <string>
 
 using namespace llvm;
@@ -70,43 +69,60 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
-static void extractCommentText(const CommentInfo &Comment,
-                               llvm::raw_ostream &OS) {
+struct CommentState {
+  bool Started = false;
+  bool NeedsParagraphBreak = false;
 
-  OS << Comment.Text;
-  bool FirstChild = true;
-
-  for (size_t Idx = 0, End = Comment.Children.size(); Idx < End; ++Idx) {
-    const auto &Child = Comment.Children[Idx];
-    llvm::SmallString<128> ChildBuffer;
-    llvm::raw_svector_ostream ChildOS(ChildBuffer);
-    extractCommentText(*Child, ChildOS);
-
-    if (ChildBuffer.empty())
-      continue;
-
-    if (Idx > 0 && Comment.Kind == CommentKind::CK_ParagraphComment &&
-        Comment.Children[Idx - 1]->Kind == CommentKind::CK_TextComment &&
-        Child->Kind == CommentKind::CK_TextComment)
-      OS << "<br>";
-
-    if (FirstChild)
-      FirstChild = false;
-    else if (Comment.Kind == CommentKind::CK_BlockCommandComment ||
-             Comment.Kind == CommentKind::CK_FullComment)
+  void insertSeparator(llvm::raw_ostream &OS) {
+    if (!Started)
+      return;
+    if (NeedsParagraphBreak) {
       OS << "<br><br>";
+      NeedsParagraphBreak = false;
+    } else {
+      OS << "<br>";
+    }
+  }
+};
 
-    OS << ChildBuffer;
+static void writeTableSafeComment(const CommentInfo &I, llvm::raw_ostream &OS,
+                                  CommentState &State) {
+  switch (I.Kind) {
+  case CommentKind::CK_FullComment:
+    for (const auto &Child : I.Children)
+      writeTableSafeComment(*Child, OS, State);
+    break;
+
+  case CommentKind::CK_ParagraphComment:
+    for (const auto &Child : I.Children)
+      writeTableSafeComment(*Child, OS, State);
+    State.NeedsParagraphBreak =
+        true; // Next content after a paragraph needs a break
+    break;
+
+  case CommentKind::CK_TextComment:
+    if (!I.Text.empty()) {
+      State.insertSeparator(OS);
+      OS << I.Text;
+      State.Started = true;
+    }
+    break;
+
+  // Handle other comment types (BlockCommand, InlineCommand, etc.)
+  default:
+    for (const auto &Child : I.Children)
+      writeTableSafeComment(*Child, OS, State);
+    break;
   }
 }
 
-static void genCommentString(llvm::ArrayRef<CommentInfo> Comments,
-                             llvm::raw_ostream &OS) {
-  uint64_t InitPos = OS.tell();
-  for (const auto &Child : Comments) {
-    extractCommentText(Child, OS);
-  }
-  if (InitPos == OS.tell())
+static void genMDComment(llvm::ArrayRef<CommentInfo> Comments,
+                         llvm::raw_ostream &OS) {
+  CommentState State;
+  for (const auto &C : Comments)
+    writeTableSafeComment(C, OS, State);
+
+  if (!State.Started)
     OS << "--";
 }
 
@@ -208,36 +224,34 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   }
   OS << "|\n\n";
 
-  std::string Buffer;
-  llvm::raw_string_ostream Members(Buffer);
-  Members << "| Name | Value |";
+  OS << "| Name | Value |";
   if (!I.Members.empty()) {
     bool HasComments = false;
     for (const auto &Member : I.Members) {
       if (!Member.Description.empty()) {
         HasComments = true;
-        Members << " Comments |";
+        OS << " Comments |";
         break;
       }
     }
-    Members << "\n";
-    Members << "|:-:|:-:|";
+    OS << "\n";
+    OS << "|---|---|";
     if (HasComments)
-      Members << ":-:|";
-    Members << "\n";
+      OS << "---|";
+    OS << "\n";
     for (const auto &N : I.Members) {
-      Members << "| " << N.Name << " ";
+      OS << "| " << N.Name << " ";
       if (!N.Value.empty())
-        Members << "| " << N.Value << " ";
+        OS << "| " << N.Value << " ";
       if (HasComments) {
-        Members << "| ";
-        genCommentString(ArrayRef(N.Description), Members);
-        Members << " ";
+        OS << "| ";
+        genMDComment(ArrayRef(N.Description), OS);
+        OS << " ";
       }
-      Members << "|\n";
+      OS << "|\n";
     }
   }
-  writeLine(Members.str(), OS);
+  OS << "\n";
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 

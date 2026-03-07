@@ -34,7 +34,7 @@ enum Color {
 // MD-INDEX: ## Enums
 // MD-INDEX: | enum Color |
 // MD-INDEX: | Name | Value | Comments |
-// MD-INDEX: |:-:|:-:|:-:|
+// MD-INDEX: |---|---|---|
 // MD-INDEX: | Red | 0 | Comment 1 |
 // MD-INDEX: | Green | 1 | Comment 2 |
 // MD-INDEX: | Blue | 2 | Comment 3 |
@@ -89,7 +89,7 @@ enum class Shapes {
 
 // MD-INDEX: | enum class Shapes |
 // MD-INDEX: | Name | Value | Comments |
-// MD-INDEX: |:-:|:-:|:-:|
+// MD-INDEX: |---|---|---|
 // MD-INDEX: | Circle | 0 | Comment 1 |
 // MD-INDEX: | Rectangle | 1 | Comment 2 |
 // MD-INDEX: | Triangle | 2 | Comment 3 |
@@ -150,7 +150,7 @@ enum Size : uint8_t {
 
 // MD-INDEX: | enum Size : uint8_t |
 // MD-INDEX: | Name | Value | Comments |
-// MD-INDEX: |:-:|:-:|:-:|
+// MD-INDEX: |---|---|---|
 // MD-INDEX: | Small | 0 | A pearl.<br> Pearls are quite small.<br><br> Pearls are used in jewelry. |
 // MD-INDEX: | Medium | 1 | A tennis ball. |
 // MD-INDEX: | Large | 2 | A football. |
@@ -199,7 +199,7 @@ enum : long long {
 
 // MD-INDEX: | enum (unnamed) : long long |
 // MD-INDEX: | Name | Value | Comments |
-// MD-INDEX: |:-:|:-:|:-:|
+// MD-INDEX: |---|---|---|
 // MD-INDEX: | BigVal | 999999999999 | A very large value |
 // MD-INDEX: **brief** Very long number
 
@@ -245,7 +245,7 @@ public:
 
 // MD-PERM: | enum (unnamed) |
 // MD-PERM: | Name | Value | Comments |
-// MD-PERM: |:-:|:-:|:-:|
+// MD-PERM: |---|---|---|
 // MD-PERM: | Read | 1 | Permission to READ r |
 // MD-PERM: | Write | 2 | Permission to WRITE w |
 // MD-PERM: | Execute | 4 | Permission to EXECUTE x |
@@ -342,7 +342,7 @@ public:
 // MD-ANIMAL: ## Enums
 // MD-ANIMAL: | enum AnimalType |
 // MD-ANIMAL: | Name | Value | Comments |
-// MD-ANIMAL: |:-:|:-:|:-:|
+// MD-ANIMAL: |---|---|---|
 // MD-ANIMAL: | Dog | 0 | Man's best friend |
 // MD-ANIMAL: | Cat | 1 | Man's other best friend |
 // MD-ANIMAL: | Iguana | 2 | A lizard |
@@ -367,7 +367,7 @@ enum Car {
 // MD-VEHICLES: ## Enums
 // MD-VEHICLES: | enum Car |
 // MD-VEHICLES: | Name | Value | Comments |
-// MD-VEHICLES: |:-:|:-:|:-:|
+// MD-VEHICLES: |---|---|---|
 // MD-VEHICLES: | Sedan | 0 | Comment 1 |
 // MD-VEHICLES: | SUV | 1 | Comment 2 |
 // MD-VEHICLES: | Pickup | 2 | Comment 3 |
@@ -418,7 +418,7 @@ enum ColorUserSpecified {
 
 // MD-INDEX: | enum ColorUserSpecified |
 // MD-INDEX: | Name | Value |
-// MD-INDEX: |:-:|:-:|
+// MD-INDEX: |---|---|
 // MD-INDEX: | RedUserSpecified | 65 |
 // MD-INDEX: | GreenUserSpecified | 2 |
 // MD-INDEX: | BlueUserSpecified | 67 |

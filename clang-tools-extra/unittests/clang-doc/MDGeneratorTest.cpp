@@ -72,7 +72,6 @@ TEST_F(MDGeneratorTest, emitNamespaceMD) {
 | Name | Value |
 
 
-
 )raw";
   EXPECT_EQ(Expected, Actual.str());
 }
@@ -137,7 +136,6 @@ ChildStruct
 | Name | Value |
 
 
-
 )raw";
   EXPECT_EQ(Expected, Actual.str());
 }
@@ -194,9 +192,8 @@ TEST_F(MDGeneratorTest, emitEnumMD) {
   std::string Expected = R"raw(| enum class e |
 
 | Name | Value |
-|:-:|:-:|
+|---|---|
 | X | 0 |
-
 
 *Defined at test.cpp#10*
 
