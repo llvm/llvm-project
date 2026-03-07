@@ -936,9 +936,9 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "DoWhileOp",
-  "ForOp", "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "TryOp",
-  "WhileOp"
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp",
+  "DeleteArrayOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "ScopeOp",
+  "SwitchOp", "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -3587,6 +3587,43 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
         $_state.addTypes(resType);
     }]>,
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
+  let summary = "Delete address representing an array";
+  let description = [{
+    `cir.delete_array` operation deletes an array. For example, `delete[] ptr;`
+    will be translated to `cir.delete.array %ptr`.
+
+    The body region contains the deallocation call that will be used to free
+    the array memory.
+  }];
+
+  let arguments = (ins CIR_PointerType:$address);
+  let regions = (region SizedRegion<1>:$body);
+
+  let assemblyFormat = [{
+    $address `:` qualified(type($address)) $body attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$address,
+                   "BuilderCallbackRef":$bodyBuilder), [{
+        assert(bodyBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands(ValueRange{address});
+        $_builder.createBlock(r);
+        bodyBuilder($_builder, $_state.location);
+    }]>
+  ];
+
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
