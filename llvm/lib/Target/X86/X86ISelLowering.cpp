@@ -13558,7 +13558,9 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
   unsigned Opcode = (VT == MVT::v2f64 && !Subtarget.hasAVX2())
                         ? X86ISD::MOVDDUP
                         : X86ISD::VBROADCAST;
-  bool BroadcastFromReg = (Opcode == X86ISD::MOVDDUP) || Subtarget.hasAVX2();
+  bool BroadcastFromReg =
+      (Opcode == X86ISD::MOVDDUP) || Subtarget.hasAVX2() ||
+      (NumEltBits >= 32 && VT.is128BitVector() && Subtarget.hasAVX());
 
   // Check that the mask is a broadcast.
   int BroadcastIdx = getSplatIndex(Mask);
