@@ -1206,7 +1206,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
     Value *SearchStart, Value *SearchEnd, Value *NeedleStart,
     Value *NeedleEnd) {
   // Set up some types and constants that we intend to reuse.
-  auto *PtrTy = Builder.getPtrTy();
+  auto *PtrTy = SearchStart->getType();
   auto *I64Ty = Builder.getInt64Ty();
   auto *PredVTy = ScalableVectorType::get(Builder.getInt1Ty(), VF);
   auto *CharVTy = ScalableVectorType::get(CharTy, VF);
