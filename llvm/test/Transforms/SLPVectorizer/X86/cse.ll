@@ -283,7 +283,7 @@ return:                                           ; preds = %entry, %if.end
 define void @PR19646(ptr %this, i1 %arg) {
 ; CHECK-LABEL: @PR19646(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[IF_END13:%.*]], label [[IF_END13]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_END13:%.*]], label [[IF_END13]]
 ; CHECK:       sw.epilog7:
 ; CHECK-NEXT:    [[DOTIN:%.*]] = getelementptr inbounds [[CLASS_B_53_55:%.*]], ptr [[THIS:%.*]], i64 0, i32 0, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[DOTIN]], align 8
@@ -294,7 +294,7 @@ define void @PR19646(ptr %this, i1 %arg) {
 ; CHECK-NEXT:    [[_DY:%.*]] = getelementptr inbounds [[CLASS_B_53_55]], ptr [[THIS]], i64 0, i32 0, i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[_DY]], align 8
 ; CHECK-NEXT:    [[ADD10:%.*]] = fadd double [[ADD8]], [[TMP2]]
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN12:%.*]], label [[IF_END13]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN12:%.*]], label [[IF_END13]]
 ; CHECK:       if.then12:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    br label [[IF_END13]]
@@ -338,12 +338,9 @@ define void @cse_for_hoisted_instructions_in_preheader(ptr %dst, i32 %a, i1 %c) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> splat (i32 22), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP2]], splat (i32 3)
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
-; CHECK-NEXT:    [[OR_2:%.*]] = or i32 [[A]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP1]], splat (i32 3)
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 10
-; CHECK-NEXT:    store i32 [[OR_2]], ptr [[GEP_2]], align 4
-; CHECK-NEXT:    [[OR_3:%.*]] = or i32 [[A]], 3
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 11
-; CHECK-NEXT:    store i32 [[OR_3]], ptr [[GEP_3]], align 4
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[GEP_2]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

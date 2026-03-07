@@ -223,6 +223,11 @@ static cl::opt<bool> VectorizeCopyableElements(
     cl::desc("Try to replace values with the idempotent instructions for "
              "better vectorization."));
 
+static cl::opt<unsigned> LoopAwareTripCount(
+    "slp-cost-loop-trip-count", cl::init(2), cl::Hidden,
+    cl::desc("Loop trip count, considered by the cost model during "
+             "modeling (0=loops are ignored and considered flat code)"));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -2168,6 +2173,7 @@ public:
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
+    LoopNest.clear();
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -3770,6 +3776,15 @@ private:
   TargetTransformInfo::CastContextHint
   getCastContextHint(const TreeEntry &TE) const;
 
+  /// \returns the scale of the given tree entry to the loop iteration.
+  /// \p Scalar is the scalar value from the entry, if using the parent for the
+  /// external use.
+  /// \p U is the user of the vectorized value from the entry, if using the
+  /// parent for the external use.
+  unsigned getScaleToLoopIterations(const TreeEntry &TE,
+                                    Value *Scalar = nullptr,
+                                    Instruction *U = nullptr) const;
+
   /// \returns the cost of the vectorizable entry.
   InstructionCost getEntryCost(const TreeEntry *E,
                                ArrayRef<Value *> VectorizedVals,
@@ -4716,6 +4731,10 @@ private:
   SmallDenseMap<const TreeEntry *,
                 std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
       CompressEntryToData;
+
+  /// The loop nest, used to check if only a single loop nest is vectorized, not
+  /// multiple, to avoid side-effects from the loop-aware cost model.
+  SmallVector<const Loop *> LoopNest;
 
   /// This POD struct describes one external user in the vectorized tree.
   struct ExternalUser {
@@ -10418,12 +10437,72 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   return {IntrinsicCost, LibCost};
 }
 
+/// Find the innermost loop starting from \p L, for which at least a single
+/// value in \p VL is not invariant.
+static const Loop *findInnermostNonInvariantLoop(const Loop *L,
+                                                 ArrayRef<Value *> VL) {
+  assert(L && "Expected valid loop");
+  auto IsLoopInvariant = [&](const Loop *L, ArrayRef<Value *> VL) {
+    return all_of(VL, [&](Value *V) { return L->isLoopInvariant(V); });
+  };
+  while (L && IsLoopInvariant(L, VL))
+    L = L->getParentLoop();
+  return L;
+}
+
+/// Get the loop nest for the given loop.
+static SmallVector<const Loop *> getLoopNest(const Loop *L) {
+  assert(L && "Expected valid loop");
+  SmallVector<const Loop *> LoopNest;
+  if (LoopAwareTripCount == 0)
+    return LoopNest;
+  while (L) {
+    LoopNest.push_back(L);
+    L = L->getParentLoop();
+  }
+  SmallVector<const Loop *> Res(LoopNest.rbegin(), LoopNest.rend());
+  return Res;
+}
+
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
     SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo) {
   assert(S.getMainOp() &&
          "Expected instructions with same/alternate opcodes only.");
+
+  // Check the loop nest. We need to be sure we handle a single loop nest at a
+  // time to avoid incorrect cost estimation because of the loop aware cost
+  // model.
+  if (VectorizableTree.empty()) {
+    assert(LoopNest.empty() && "Expected empty loop nest");
+    // Process the first node? Initial fill of the loop nest.
+    BasicBlock *Parent = S.getMainOp()->getParent();
+    if (const Loop *L = LI->getLoopFor(Parent)) {
+      L = findInnermostNonInvariantLoop(L, VL);
+      if (L)
+        LoopNest = getLoopNest(L);
+    }
+  } else {
+    BasicBlock *Parent = S.getMainOp()->getParent();
+    if (const Loop *L = LI->getLoopFor(Parent)) {
+      // Check that the new loop nest is not involved.
+      // Otherwise, mark it as a gather node.
+      L = findInnermostNonInvariantLoop(L, VL);
+      if (L) {
+        SmallVector<const Loop *> NewLoopNest = getLoopNest(L);
+        for (const auto [L1, L2] : zip(LoopNest, NewLoopNest)) {
+          if (L1 != L2) {
+            LLVM_DEBUG(dbgs() << "SLP: Different loop nest.\n");
+            return TreeEntry::NeedToGather;
+          }
+        }
+        if (NewLoopNest.size() > LoopNest.size())
+          LoopNest.append(std::next(NewLoopNest.begin(), LoopNest.size()),
+                          NewLoopNest.end());
+      }
+    }
+  }
 
   unsigned ShuffleOrOp =
       S.isAltShuffle() ? (unsigned)Instruction::ShuffleVector : S.getOpcode();
@@ -15211,6 +15290,65 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
+/// Get the assumed loop trip count for the loop \p L.
+static unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE) {
+  if (LoopAwareTripCount == 0)
+    return 1;
+  unsigned Scale = SE.getSmallConstantTripCount(L);
+  if (Scale == 0)
+    Scale = getLoopEstimatedTripCount(const_cast<Loop *>(L)).value_or(0);
+  if (Scale != 0) {
+    // Multiple exiting blocks - choose the minimum between trip count (scale)
+    // and LoopAwareTripCount, since the multiple exit loops can be terminated
+    // early.
+    if (!L->getExitingBlock())
+      return std::min<unsigned>(LoopAwareTripCount, Scale);
+    return Scale;
+  }
+  return LoopAwareTripCount;
+}
+
+unsigned BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
+                                           Instruction *U) const {
+  unsigned Scale = 1;
+  if (TE.State == TreeEntry::SplitVectorize)
+    return Scale;
+  BasicBlock *Parent = nullptr;
+  if (U) {
+    Parent = U->getParent();
+  } else if (TE.isGather()) {
+    EdgeInfo EI = TE.UserTreeIndex;
+    while (EI.UserTE) {
+      if (EI.UserTE->isGather()) {
+        EI = EI.UserTE->UserTreeIndex;
+        continue;
+      }
+      if (EI.UserTE->State == TreeEntry::Vectorize &&
+          EI.UserTE->getOpcode() == Instruction::PHI) {
+        auto *PH = cast<PHINode>(EI.UserTE->getMainOp());
+        Parent = PH->getIncomingBlock(EI.EdgeIdx);
+      } else {
+        Parent = EI.UserTE->getMainOp()->getParent();
+      }
+      break;
+    }
+    if (!Parent)
+      return Scale;
+  } else {
+    Parent = TE.getMainOp()->getParent();
+  }
+  if (const Loop *L = LI->getLoopFor(Parent)) {
+    L = findInnermostNonInvariantLoop(L, Scalar ? ArrayRef(Scalar)
+                                                : ArrayRef(TE.Scalars));
+    if (L) {
+      SmallVector<const Loop *> Nest = getLoopNest(L);
+      for (const Loop *L : reverse(Nest))
+        Scale *= getLoopTripCount(L, *SE);
+    }
+  }
+  return Scale;
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -16705,10 +16843,14 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
     auto *VecTy = getWidenedType(ScalarTy, Op->getVectorFactor());
-    Cost += TTI->getCostOfKeepingLiveOverCall(VecTy);
+    unsigned Scale = getScaleToLoopIterations(*Op);
+    InstructionCost KeepLiveCost = TTI->getCostOfKeepingLiveOverCall(VecTy);
+    KeepLiveCost *= Scale;
+    Cost += KeepLiveCost;
     if (ScalarTy->isVectorTy()) {
       // Handle revec dead vector instructions.
-      Cost -= Op->Scalars.size() * TTI->getCostOfKeepingLiveOverCall(ScalarTy);
+      Cost -= Op->Scalars.size() * TTI->getCostOfKeepingLiveOverCall(ScalarTy) *
+              Scale;
     }
   };
   // Memoize the relationship between blocks, i.e. if there is (at least one)
@@ -17097,7 +17239,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     assert((!TE.isGather() || TE.Idx == 0 || TE.UserTreeIndex) &&
            "Expected gather nodes with users only.");
 
-    InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
+    InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts) *
+                        getScaleToLoopIterations(TE);
     Cost += C;
     NodesCosts.try_emplace(&TE, C);
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
@@ -17420,7 +17563,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       continue;
     if (!NodesCosts.contains(TE.get())) {
       InstructionCost C =
-          getEntryCost(TE.get(), VectorizedVals, CheckedExtracts);
+          getEntryCost(TE.get(), VectorizedVals, CheckedExtracts) *
+          getScaleToLoopIterations(*TE.get());
       NodesCosts.try_emplace(TE.get(), C);
     }
   }
@@ -17472,7 +17616,21 @@ template <typename T> struct ShuffledInsertData {
 InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost) {
-  InstructionCost Cost = TreeCost + ReductionCost;
+  InstructionCost Cost = TreeCost;
+
+  Instruction *ReductionRoot = nullptr;
+  if (UserIgnoreList) {
+    const auto It = find_if(*UserIgnoreList, IsaPred<Instruction>);
+    assert(It != UserIgnoreList->end() && "Expected reduction instruction.");
+    ReductionRoot = cast<Instruction>(*It);
+    // Scale reduction cost to the factor of the loop nest trip count.
+    ReductionCost *=
+        getScaleToLoopIterations(*VectorizableTree.front().get(),
+                                 /*Scalar=*/nullptr, ReductionRoot);
+  }
+
+  // Add the cost for reduction.
+  Cost += ReductionCost;
 
   if (Cost >= -SLPCostThreshold &&
       none_of(ExternalUses, [](const ExternalUser &EU) {
@@ -17763,6 +17921,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       }
     }
 
+    ExtraCost *= getScaleToLoopIterations(EU.E, EU.Scalar,
+                                          cast_or_null<Instruction>(EU.User));
+
     ExtractCost += ExtraCost;
   }
   // Insert externals for extract of operands of casts to be emitted as scalars
@@ -17799,9 +17960,12 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           assert(SLPReVec && "Only supported by REVEC.");
           SrcTy = getWidenedType(SrcTy, VecTy->getNumElements());
         }
-        Cost += TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
-                                      TTI::CastContextHint::None,
-                                      TTI::TCK_RecipThroughput);
+        InstructionCost CastCost =
+            TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
+                                  TTI::CastContextHint::None,
+                                  TTI::TCK_RecipThroughput) *
+            getScaleToLoopIterations(Root, /*Scalar=*/nullptr, ReductionRoot);
+        Cost += CastCost;
       }
     }
   }
@@ -17884,6 +18048,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             })) {
           InstructionCost C =
               ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, FTy, Mask);
+          C *= getScaleToLoopIterations(*TEs.front());
           LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                             << " for final shuffle of insertelement "
                                "external users.\n";
@@ -17902,6 +18067,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         auto *FTy = getWidenedType(TEs.back()->Scalars.front()->getType(), VF);
         InstructionCost C =
             ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, FTy, Mask);
+        C *= getScaleToLoopIterations(*TEs.back());
         LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                           << " for final shuffle of vector node and external "
                              "insertelement users.\n";
@@ -17955,7 +18121,6 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         auto *DstVecTy =
             getWidenedType(Builder.getIntNTy(DstSize), E.getVectorFactor());
         TTI::CastContextHint CCH = getCastContextHint(E);
-        InstructionCost CastCost;
         switch (E.getOpcode()) {
         case Instruction::SExt:
         case Instruction::ZExt:
@@ -17967,8 +18132,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         default:
           break;
         }
-        CastCost += TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
-                                          TTI::TCK_RecipThroughput);
+        InstructionCost CastCost =
+            TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
+                                  TTI::TCK_RecipThroughput) *
+            getScaleToLoopIterations(*VectorizableTree.front().get(),
+                                     /*Scalar=*/nullptr, ReductionRoot);
         Cost += CastCost;
         LLVM_DEBUG(dbgs() << "SLP: Adding cost " << CastCost
                           << " for final resize for reduction from " << SrcVecTy
@@ -17992,8 +18160,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       OS << *SpillCost;
     else
       OS << "<skipped>";
-    OS << ".\nSLP: Extract Cost = " << ExtractCost << ".\n"
-       << "SLP: Total Cost = " << Cost << ".\n";
+    OS << ".\nSLP: Extract Cost = " << ExtractCost << ".\n";
+    if (ReductionRoot)
+      OS << "SLP:  Reduction Cost = " << ReductionCost << ".\n";
+    OS << "SLP: Total Cost = " << Cost << ".\n";
   }
   LLVM_DEBUG(dbgs() << Str);
   if (ViewSLPTree)
