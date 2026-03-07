@@ -19,7 +19,7 @@
 namespace clang {
 namespace doc {
 
-using EmittedInfoList = std::vector<std::unique_ptr<Info>>;
+using EmittedInfoList = std::vector<OwnedPtr<Info>>;
 
 static const SymbolID EmptySID = SymbolID();
 static const SymbolID NonEmptySID =

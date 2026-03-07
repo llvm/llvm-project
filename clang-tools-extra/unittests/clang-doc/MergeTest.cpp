@@ -44,7 +44,7 @@ TEST_F(MergeTest, mergeNamespaceInfos) {
   Two.Children.Enums.emplace_back();
   Two.Children.Enums.back().Name = "TwoEnum";
 
-  std::vector<std::unique_ptr<Info>> Infos;
+  std::vector<OwnedPtr<Info>> Infos;
   Infos.emplace_back(std::make_unique<NamespaceInfo>(std::move(One)));
   Infos.emplace_back(std::make_unique<NamespaceInfo>(std::move(Two)));
 
@@ -116,7 +116,7 @@ TEST_F(MergeTest, mergeRecordInfos) {
   Two.Children.Enums.emplace_back();
   Two.Children.Enums.back().Name = "TwoEnum";
 
-  std::vector<std::unique_ptr<Info>> Infos;
+  std::vector<OwnedPtr<Info>> Infos;
   Infos.emplace_back(std::make_unique<RecordInfo>(std::move(One)));
   Infos.emplace_back(std::make_unique<RecordInfo>(std::move(Two)));
 
@@ -197,7 +197,7 @@ TEST_F(MergeTest, mergeFunctionInfos) {
   TwoParagraphComment->Children.push_back(std::move(TwoTextComment));
   TwoFullComment->Children.push_back(std::move(TwoParagraphComment));
 
-  std::vector<std::unique_ptr<Info>> Infos;
+  std::vector<OwnedPtr<Info>> Infos;
   Infos.emplace_back(std::make_unique<FunctionInfo>(std::move(One)));
   Infos.emplace_back(std::make_unique<FunctionInfo>(std::move(Two)));
 
@@ -249,7 +249,7 @@ TEST_F(MergeTest, mergeEnumInfos) {
   Two.Members.emplace_back("X");
   Two.Members.emplace_back("Y");
 
-  std::vector<std::unique_ptr<Info>> Infos;
+  std::vector<OwnedPtr<Info>> Infos;
   Infos.emplace_back(std::make_unique<EnumInfo>(std::move(One)));
   Infos.emplace_back(std::make_unique<EnumInfo>(std::move(Two)));
 

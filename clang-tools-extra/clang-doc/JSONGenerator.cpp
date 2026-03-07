@@ -66,7 +66,7 @@ public:
   bool Markdown;
 
   Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                              llvm::StringMap<OwnedPtr<doc::Info>> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
@@ -898,8 +898,7 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
   return Error::success();
 }
 
-static void serializeContexts(Info *I,
-                              StringMap<std::unique_ptr<Info>> &Infos) {
+static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   if (I->USR == GlobalNamespaceID)
     return;
   auto ParentUSR = I->ParentUSR;
@@ -922,7 +921,7 @@ static void serializeContexts(Info *I,
 }
 
 Error JSONGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   this->CDCtx = &CDCtx;
   StringSet<> CreatedDirs;

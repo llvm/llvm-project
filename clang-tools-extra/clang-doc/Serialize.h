@@ -33,45 +33,54 @@ namespace serialize {
 // EnumDecl, FunctionDecl and CXXMethodDecl; they are only returned wrapped in
 // its parent scope. For NamespaceDecl and RecordDecl both elements are not
 // nullptr.
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const NamespaceDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const RecordDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const EnumDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const FunctionDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>>
 emitInfo(const VarDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const CXXMethodDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const CXXMethodDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const TypedefDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const TypeAliasDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const ConceptDecl *D,
+                                                   const FullComment *FC,
+                                                   const Location &Loc,
+                                                   bool PublicOnly);
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
-         bool PublicOnly);
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const VarDecl *D,
+                                                   const FullComment *FC,
+                                                   const Location &Loc,
+                                                   bool PublicOnly);
 
 // Function to hash a given USR value for storage.
 // As USRs (Unified Symbol Resolution) could be large, especially for functions
@@ -80,7 +89,7 @@ emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
 // memory (vs storing USRs directly).
 SymbolID hashUSR(llvm::StringRef USR);
 
-std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags);
+std::string serialize(OwnedPtr<Info> &I, DiagnosticsEngine &Diags);
 
 } // namespace serialize
 } // namespace doc

@@ -51,8 +51,8 @@ static std::string writeInfo(Info *I, DiagnosticsEngine &Diags) {
   }
 }
 
-static std::vector<std::unique_ptr<Info>>
-readInfo(StringRef Bitcode, size_t NumInfos, DiagnosticsEngine &Diags) {
+static std::vector<OwnedPtr<Info>> readInfo(StringRef Bitcode, size_t NumInfos,
+                                            DiagnosticsEngine &Diags) {
   llvm::BitstreamCursor Stream(Bitcode);
   doc::ClangDocBitcodeReader Reader(Stream, Diags);
   auto Infos = Reader.readBitcode();
@@ -78,7 +78,7 @@ TEST_F(BitcodeTest, emitNamespaceInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults =
+  std::vector<OwnedPtr<Info>> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckNamespaceInfo(&I, InfoAsNamespace(ReadResults[0].get()));
@@ -121,7 +121,7 @@ TEST_F(BitcodeTest, emitRecordInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults =
+  std::vector<OwnedPtr<Info>> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckRecordInfo(&I, InfoAsRecord(ReadResults[0].get()));
@@ -142,7 +142,7 @@ TEST_F(BitcodeTest, emitFunctionInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults =
+  std::vector<OwnedPtr<Info>> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
@@ -165,7 +165,7 @@ TEST_F(BitcodeTest, emitMethodInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults =
+  std::vector<OwnedPtr<Info>> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
@@ -184,7 +184,7 @@ TEST_F(BitcodeTest, emitEnumInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults =
+  std::vector<OwnedPtr<Info>> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckEnumInfo(&I, InfoAsEnum(ReadResults[0].get()));
@@ -212,7 +212,7 @@ TEST_F(BitcodeTest, emitTypedefInfoBitcode) {
 
   std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults =
+  std::vector<OwnedPtr<Info>> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckTypedefInfo(&I, InfoAsTypedef(ReadResults[0].get()));
@@ -342,7 +342,7 @@ TEST_F(BitcodeTest, emitInfoWithCommentBitcode) {
 
   std::string WriteResult = writeInfo(&F, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults =
+  std::vector<OwnedPtr<Info>> ReadResults =
       readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&F, InfoAsFunction(ReadResults[0].get()));

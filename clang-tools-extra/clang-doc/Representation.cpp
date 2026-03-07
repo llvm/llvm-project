@@ -85,12 +85,12 @@ llvm::StringRef commentKindToString(CommentKind Kind) {
 const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-static llvm::Expected<std::unique_ptr<Info>>
-reduce(std::vector<std::unique_ptr<Info>> &Values) {
+static llvm::Expected<OwnedPtr<Info>>
+reduce(std::vector<OwnedPtr<Info>> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
-  std::unique_ptr<Info> Merged = std::make_unique<T>(Values[0]->USR);
+  OwnedPtr<Info> Merged = std::make_unique<T>(Values[0]->USR);
   T *Tmp = static_cast<T *>(Merged.get());
   for (auto &I : Values)
     Tmp->merge(std::move(*static_cast<T *>(I.get())));
@@ -122,8 +122,7 @@ static void reduceChildren(std::vector<T> &Children,
 }
 
 // Dispatch function.
-llvm::Expected<std::unique_ptr<Info>>
-mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
+llvm::Expected<OwnedPtr<Info>> mergeInfos(std::vector<OwnedPtr<Info>> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no info values to merge");

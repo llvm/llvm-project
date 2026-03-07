@@ -346,7 +346,7 @@ static std::string serialize(T &I, DiagnosticsEngine &Diags) {
   return Buffer.str().str();
 }
 
-std::string serialize(std::unique_ptr<Info> &I, DiagnosticsEngine &Diags) {
+std::string serialize(OwnedPtr<Info> &I, DiagnosticsEngine &Diags) {
   switch (I->IT) {
   case InfoType::IT_namespace:
     return serialize(*static_cast<NamespaceInfo *>(I.get()), Diags);
@@ -488,7 +488,7 @@ static void InsertChild(ScopeChildren &Scope, VarInfo Info) {
 // parameter. Since each variant is used once, it's not worth having a more
 // elaborate system to automatically deduce this information.
 template <typename ChildType>
-static std::unique_ptr<Info> makeAndInsertIntoParent(ChildType Child) {
+static OwnedPtr<Info> makeAndInsertIntoParent(ChildType Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
     auto ParentNS = std::make_unique<NamespaceInfo>();
@@ -940,9 +940,10 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
   }
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const NamespaceDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly) {
   auto NSI = std::make_unique<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*NSI, D, FC, IsInAnonymousNamespace);
@@ -954,7 +955,7 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
                   : NSI->Name;
   NSI->Path = getInfoRelativePath(NSI->Namespace);
   if (NSI->Namespace.empty() && NSI->USR == SymbolID())
-    return {std::unique_ptr<Info>{std::move(NSI)}, nullptr};
+    return {OwnedPtr<Info>{std::move(NSI)}, nullptr};
 
   // Namespaces are inserted into the parent by reference, so we need to return
   // both the parent and the record itself.
@@ -1011,9 +1012,10 @@ static void parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
   }
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const RecordDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly) {
 
   auto RI = std::make_unique<RecordInfo>();
   bool IsInAnonymousNamespace = false;
@@ -1083,9 +1085,10 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
   return {std::move(RI), std::move(Parent)};
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const FunctionDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(Func, D, FC, Loc, IsInAnonymousNamespace);
@@ -1097,9 +1100,10 @@ emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const CXXMethodDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const CXXMethodDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(Func, D, FC, Loc, IsInAnonymousNamespace);
@@ -1140,9 +1144,10 @@ static void extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
   }
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const TypedefDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly) {
   TypedefInfo Info;
   bool IsInAnonymousNamespace = false;
   populateInfo(Info, D, FC, IsInAnonymousNamespace);
@@ -1172,9 +1177,10 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
 
 // A type alias is a C++ "using" declaration for a type. It gets mapped to a
 // TypedefInfo with the IsUsing flag set.
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const TypeAliasDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly) {
   TypedefInfo Info;
   bool IsInAnonymousNamespace = false;
   populateInfo(Info, D, FC, IsInAnonymousNamespace);
@@ -1196,9 +1202,10 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const EnumDecl *D,
+                                                   const FullComment *FC,
+                                                   Location Loc,
+                                                   bool PublicOnly) {
   EnumInfo Enum;
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(Enum, D, FC, Loc, IsInAnonymousNamespace);
@@ -1217,9 +1224,10 @@ emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent<EnumInfo &&>(std::move(Enum))};
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const ConceptDecl *D,
+                                                   const FullComment *FC,
+                                                   const Location &Loc,
+                                                   bool PublicOnly) {
   ConceptInfo Concept;
 
   bool IsInAnonymousNamespace = false;
@@ -1241,9 +1249,10 @@ emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
   return {nullptr, makeAndInsertIntoParent<ConceptInfo &&>(std::move(Concept))};
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
-         bool PublicOnly) {
+std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const VarDecl *D,
+                                                   const FullComment *FC,
+                                                   const Location &Loc,
+                                                   bool PublicOnly) {
   VarInfo Var;
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(Var, D, FC, Loc, IsInAnonymousNamespace);
