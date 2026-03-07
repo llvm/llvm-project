@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if 0
-#include <clc/workitem/clc_get_max_sub_group_size.h>
+#include "clc/amdgpu/amdgpu_utils.h"
+#include "clc/workitem/clc_get_local_linear_id.h"
+#include "clc/workitem/clc_get_sub_group_id.h"
 
-_CLC_OVERLOAD _CLC_DEF uint __clc_get_max_sub_group_size() {
-  return __clc_min(__builtin_amdgcn_wavefrontsize(), enqueued_workgroup_size());
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint __clc_get_sub_group_id(void) {
+  return (uint)__clc_get_local_linear_id() >> __clc_amdgpu_wavesize_log2();
 }
-#endif
