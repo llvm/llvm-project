@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangAnalysisScalable
   ASTEntityMapping.cpp
   EntityLinker/EntityLinker.cpp
+  Frontend/TUSummaryExtractorFrontendAction.cpp
   Model/BuildNamespace.cpp
   Model/EntityId.cpp
   Model/EntityIdTable.cpp
