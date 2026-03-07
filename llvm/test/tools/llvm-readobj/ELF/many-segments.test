@@ -3,12 +3,20 @@
 ## to store the value.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readelf --file-headers %t1 | FileCheck %s --check-prefix=VALID-GNU
-# RUN: llvm-readobj --file-headers %t1 | FileCheck %s --check-prefix=VALID-LLVM
+# RUN: llvm-readelf --file-header --program-headers %t1 | FileCheck %s --check-prefix=VALID-GNU
+# RUN: llvm-readobj --file-header --program-headers %t1 | FileCheck %s --check-prefix=VALID-LLVM
 
 ## The ELF header should have e_phnum == PN_XNUM
 # VALID-LLVM:        ProgramHeaderCount: 65535 (2)
+# VALID-LLVM: ProgramHeaders [
+# VALID-LLVM: ProgramHeader {
+# VALID-LLVM:    Type: PT_LOAD (0x1)
+# VALID-LLVM:  ProgramHeader {
+# VALID-LLVM:    Type: PT_LOAD (0x1)
 # VALID-GNU:         Number of program headers: 65535 (2)
+# VALID-GNU: Program Headers:
+# VALID-GNU:  LOAD
+# VALID-GNU:  LOAD
 
 --- !ELF
 FileHeader:
@@ -30,14 +38,19 @@ ProgramHeaders:
 # RUN: llvm-readobj --file-headers --program-headers %t2 2>&1 | FileCheck %s --implicit-check-not=warning: -DFILE=%t2 --check-prefix=INVALID-LLVM,INVALID-LLVM-DUPLICATE
 # RUN: llvm-readelf --file-headers --program-headers %t2 2>&1 | FileCheck %s --implicit-check-not=warning: -DFILE=%t2 --check-prefix=INVALID-GNU,INVALID-GNU-DUPLICATE
 
-# INVALID-LLVM: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 0
+# INVALID-LLVM: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65536, e_phentsize = 56
 # INVALID-LLVM: ProgramHeaderCount: 65535 (65536)
-# INVALID-LLVM-DUPLICATE: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 0
-# INVALID-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 0
+# INVALID-LLVM: ProgramHeaders [
+# INVALID-LLVM-NOT: ProgramHeader {
+# INVALID-LLVM-DUPLICATE: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65536, e_phentsize = 56
+# INVALID-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65536, e_phentsize = 56
 # INVALID-GNU: Number of program headers: 65535 (65536)
-# INVALID-GNU-DUPLICATE: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 0
-# INVALID-GNU-DUPLICATE: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 0
+# INVALID-GNU: Program Headers:
+# INVALID-GNU-NOT: LOAD
+# INVALID-GNU-DUPLICATE: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65536, e_phentsize = 56
+# INVALID-GNU-DUPLICATE: warning: '[[FILE]]': can't read program headers to build section to segment mapping: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65536, e_phentsize = 56
 
+# Install one program header so yaml2obj does not set e_phentsize to 0.
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -47,3 +60,5 @@ FileHeader:
 Sections:
   - Type: SHT_NULL
     Info: 65536
+ProgramHeaders:
+  - Type:     PT_LOAD
