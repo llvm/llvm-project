@@ -4566,9 +4566,23 @@ SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
   SDValue TVal = Sel.getOperand(2);
   SDValue FVal = Sel.getOperand(3);
 
-  // FIXME: This could be generalized to non-integer comparisons.
-  if (LHS.getValueType() != MVT::i32 && LHS.getValueType() != MVT::i64)
+  EVT CmpVT = LHS.getValueType();
+
+  // Only handle scalar i32/i64 or the common scalar FP types we can lower
+  // efficiently. This excludes vectors and larger/odd FP types like f128.
+  if (CmpVT.isVector() || CmpVT.isScalableVector())
     return Op;
+
+  if (CmpVT.isInteger()) {
+    if (CmpVT != MVT::i32 && CmpVT != MVT::i64)
+      return Op;
+  } else if (CmpVT.isFloatingPoint()) {
+    if (CmpVT != MVT::f16 && CmpVT != MVT::bf16 && CmpVT != MVT::f32 &&
+        CmpVT != MVT::f64)
+      return Op;
+  } else {
+    return Op;
+  }
 
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FVal);
   ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TVal);
@@ -4588,7 +4602,17 @@ SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
   // If the constants line up, perform the transform!
   if (CTVal->isZero() && CFVal->isAllOnes()) {
     SDValue CCVal;
-    SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, DL);
+    SDValue Cmp;
+    if (CmpVT.isInteger()) {
+      Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, DL);
+    } else {
+      AArch64CC::CondCode CC1, CC2;
+      changeFPCCToAArch64CC(CC, CC1, CC2);
+      if (CC2 != AArch64CC::AL)
+        return Op; // Bail out for conditions needing two CCs (e.g. SETONE)
+      Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
+      CCVal = getCondCode(DAG, CC1);
+    }
 
     FVal = Other;
     TVal = DAG.getNode(ISD::XOR, DL, Other.getValueType(), Other,
