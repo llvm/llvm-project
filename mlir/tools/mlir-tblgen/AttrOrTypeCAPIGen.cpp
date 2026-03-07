@@ -103,53 +103,11 @@ static std::string toLower(std::string s) {
     return s;
 }
 
-static void printInitType(const llvm::Init *I, llvm::raw_ostream &OS) {
-  if (!I) {
-    OS << "null Init\n";
-    return;
-  }
-
-  if (isa<llvm::UnsetInit>(I))           OS << "UnsetInit";
-  else if (isa<llvm::BitInit>(I))        OS << "BitInit";
-  else if (isa<llvm::BitsInit>(I))       OS << "BitsInit";
-  else if (isa<llvm::IntInit>(I))        OS << "IntInit";
-  else if (isa<llvm::StringInit>(I))     OS << "StringInit";
-  else if (isa<llvm::ListInit>(I))       OS << "ListInit";
-  else if (isa<llvm::DefInit>(I))        OS << "DefInit";
-  else if (isa<llvm::VarInit>(I))        OS << "VarInit";
-  else if (isa<llvm::VarBitInit>(I))     OS << "VarBitInit";
-  else if (isa<llvm::FieldInit>(I))      OS << "FieldInit";
-  else if (isa<llvm::DagInit>(I))        OS << "DagInit";
-  else if (isa<llvm::UnOpInit>(I))       OS << "UnOpInit";
-  else if (isa<llvm::BinOpInit>(I))      OS << "BinOpInit";
-  else if (isa<llvm::TernOpInit>(I))     OS << "TernOpInit";
-  else if (isa<llvm::FoldOpInit>(I))     OS << "FoldOpInit";
-  else if (isa<llvm::IsAOpInit>(I))      OS << "IsAOpInit";
-  else if (isa<llvm::ExistsOpInit>(I))   OS << "ExistsOpInit";
-  else if (isa<llvm::CondOpInit>(I))     OS << "CondOpInit";
-  else                                   OS << "Unknown Init";
-
-  OS << " : ";
-  I->print(OS);
-  OS << "\n";
-}
-
 static std::string mapParamTypeToCAPI(const AttrOrTypeParameter &param) {
   StringRef cppType = param.getCppType();
-  // if (cppType.contains("IncludeStyle")) {
-  //   llvm::errs() << "Found " << cppType << "\n";
-  //   printInitType(param.getDef(), llvm::errs());
-  // }
   if (const llvm::DefInit *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
-    // if (cppType.contains("IncludeStyle")) {
-    //   llvm::errs() << "\tDefInit as epected \n";
-    // }
     const Record *rec = defInit->getDef();
     if (rec->isSubClassOf("EnumParameter")) {
-      // if (cppType.contains("IncludeStyle")) {
-      //   llvm::errs() << "\tEnumParameter as epected, underlying is  \n";
-      // }
-
       std::string type = "";
       type += toLower(namespacePrefix());
       type += rec->getValueAsString("underlyingEnumName");
