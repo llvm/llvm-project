@@ -1702,49 +1702,132 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
 }
 
 //===----------------------------------------------------------------------===//
-// UnaryOp
+// Unary Operations
 //===----------------------------------------------------------------------===//
 
-def CIR_UnaryOpKind : CIR_I32EnumAttr<"UnaryOpKind", "unary operation kind", [
-  I32EnumAttrCase<"Inc",   0, "inc">,
-  I32EnumAttrCase<"Dec",   1, "dec">,
-  I32EnumAttrCase<"Minus", 2, "minus">,
-  I32EnumAttrCase<"Not",   3, "not">
-]>;
+// Base class for all CIR unary operations.
+// `type` constrains the input/result type.
+class CIR_UnaryOp<string mnemonic, Type type, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([
+        Pure, SameOperandsAndResultType,
+        DeclareOpInterfaceMethods<CIR_UnaryOpInterface>
+      ], traits)>
+{
+  let arguments = (ins type:$input);
 
-def CIR_UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
-  let summary = "Unary operations";
+  let results = (outs type:$result);
+
+  let assemblyFormat = [{
+    $input `:` type($input) attr-dict
+  }];
+}
+
+// Base class for unary ops that support the nsw (no signed wrap) flag.
+class CIR_UnaryOpWithOverflowFlag<string mnemonic, Type type,
+                                   list<Trait> traits = []>
+    : CIR_UnaryOp<mnemonic, type, traits>
+{
+  let arguments = (ins type:$input, UnitProp:$no_signed_wrap);
+
+  let assemblyFormat = [{
+    (`nsw` $no_signed_wrap^)?
+    $input `:` type($input) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// IncOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IncOp : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyType> {
+  let summary = "Increment by one";
   let description = [{
-    `cir.unary` performs the unary operation according to
-    the specified opcode kind: [inc, dec, minus, not].
+    The `cir.inc` operation increments the operand by one. The operand and
+    result must have the same type.
 
-    It requires one input operand and has one result, both types
-    should be the same.
+    The optional `nsw` (no signed wrap) attribute indicates that the result
+    is poison if signed overflow occurs.
 
-    If the `nsw` (no signed wrap) attribute is present, the result is poison if
-    signed overflow occurs.
+    Example:
 
     ```mlir
-    %7 = cir.unary(inc, %1) : i32 -> i32
-    %8 = cir.unary(dec, %2) nsw : i32 -> i32
+    %1 = cir.inc %0 : !s32i
+    %3 = cir.inc nsw %2 : !s32i
     ```
   }];
 
-  let arguments = (ins
-    Arg<CIR_UnaryOpKind, "unary op kind">:$kind,
-    Arg<CIR_AnyType>:$input,
-    UnitAttr:$no_signed_wrap
-  );
+  let hasFolder = 1;
+}
 
-  let results = (outs CIR_AnyType:$result);
+//===----------------------------------------------------------------------===//
+// DecOp
+//===----------------------------------------------------------------------===//
 
-  let assemblyFormat = [{
-      `(` $kind `,` $input `)`
-      (`nsw` $no_signed_wrap^)?
-      `:` type($input) `,` type($result) attr-dict
+def CIR_DecOp : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyType> {
+  let summary = "Decrement by one";
+  let description = [{
+    The `cir.dec` operation decrements the operand by one. The operand and
+    result must have the same type.
+
+    The optional `nsw` (no signed wrap) attribute indicates that the result
+    is poison if signed overflow occurs.
+
+    Example:
+
+    ```mlir
+    %1 = cir.dec %0 : !s32i
+    %3 = cir.dec nsw %2 : !s32i
+    ```
   }];
 
-  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MinusOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
+  let summary = "Unary minus (negation)";
+  let description = [{
+    The `cir.minus` operation negates the operand. The operand and result
+    must have the same type.
+
+    The optional `nsw` (no signed wrap) attribute indicates that the result
+    is poison if signed overflow occurs (e.g. negating the minimum signed
+    integer).
+
+    Example:
+
+    ```mlir
+    %1 = cir.minus %0 : !s32i
+    %3 = cir.minus nsw %2 : !s32i
+    %5 = cir.minus %4 : !cir.float
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// NotOp
+//===----------------------------------------------------------------------===//
+
+def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyType, [Involution]> {
+  let summary = "Bitwise NOT / logical NOT";
+  let description = [{
+    The `cir.not` operation performs a bitwise NOT on integer types or a
+    logical NOT on boolean types. The operand and result must have the same
+    type.
+
+    Example:
+
+    ```mlir
+    %1 = cir.not %0 : !s32i
+    %3 = cir.not %2 : !cir.bool
+    ```
+  }];
+
   let hasFolder = 1;
 }
 
