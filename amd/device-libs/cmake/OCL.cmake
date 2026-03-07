@@ -55,8 +55,15 @@ if (NOT ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW STREQUAL "")
   set(INSTALL_ROOT_SUFFIX "${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW}/bitcode")
 endif()
 
-if (ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_CLANG_RESOURCE_DIR AND DEFINED LLVM_VERSION_MAJOR)
-  set(INSTALL_ROOT_SUFFIX "lib/clang/${LLVM_VERSION_MAJOR}/lib/amdgcn/bitcode")
+if (ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_CLANG_RESOURCE_DIR)
+  if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
+    include(GetClangResourceDir)
+    get_clang_resource_dir( CLANG_RSRC_DIR )
+  else()
+    set(CLANG_RSRC_DIR "lib/clang/${LLVM_VERSION_MAJOR}")
+  endif()
+
+  set(INSTALL_ROOT_SUFFIX "${CLANG_RSRC_DIR}/lib/amdgcn/bitcode")
 endif()
 
 # Set `inc_options` to contain Clang command-line for include directories for
