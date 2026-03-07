@@ -8871,6 +8871,18 @@ bool CheckPrintfHandler::HandlePrintfSpecifier(
   if (!FS.hasStandardConversionSpecifier(S.getLangOpts()))
     HandleNonStandardConversionSpecifier(CS, startSpecifier, specifierLen);
 
+  // Warn about C23 %b/%B format specifiers when not in C23 mode.
+  if ((CS.getKind() == ConversionSpecifier::bArg ||
+       CS.getKind() == ConversionSpecifier::BArg) &&
+      !LangStandard::getLangStandardForKind(S.getLangOpts().LangStd).isC23()) {
+    EmitFormatDiagnostic(
+        S.PDiag(diag::warn_format_conversion_specifier_requires_c23)
+            << CS.toString(),
+        getLocationOfByte(CS.getStart()), /*IsStringLocation*/ true,
+        getSpecifierRange(startSpecifier, specifierLen));
+    return true;
+  }
+
   // The remaining checks depend on the data arguments.
   if (!HasFormatArguments())
     return true;

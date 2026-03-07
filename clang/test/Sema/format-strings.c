@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
-// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify=expected,prec23 -Wformat-nonliteral -isystem %S/Inputs %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify=expected,prec23 -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify=expected,prec23 -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify=expected,prec23 -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
+// RUN: %clang_cc1 -std=c23 -fblocks -fsyntax-only -verify=expected,c23 -Wformat-nonliteral -isystem %S/Inputs %s
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -382,8 +383,10 @@ void test10(int x, float f, int i, long long lli) {
   printf("%qp", (void *)0); // expected-warning{{length modifier 'q' results in undefined behavior or no effect with 'p' conversion specifier}}
   printf("hhX %hhX", (unsigned char)10); // no-warning
   printf("llX %llX", (long long) 10); // no-warning
-  printf("%lb %lB", (long) 10, (long) 10); // no-warning
-  printf("%llb %llB", (long long) 10, (long long) 10); // no-warning
+  printf("%lb %lB", (long) 10, (long) 10); // prec23-warning{{conversion specifier 'b' requires a C standard library compatible with C23; data argument may not be used by format}}
+                                           // prec23-warning@-1{{conversion specifier 'B' requires a C standard library compatible with C23; data argument may not be used by format}}
+  printf("%llb %llB", (long long) 10, (long long) 10); // prec23-warning{{conversion specifier 'b' requires a C standard library compatible with C23; data argument may not be used by format}}
+                                                       // prec23-warning@-1{{conversion specifier 'B' requires a C standard library compatible with C23; data argument may not be used by format}}
   // This is fine, because there is an implicit conversion to an int.
   printf("%d", (unsigned char) 10); // no-warning
   printf("%d", (long long) 10); // expected-warning{{format specifies type 'int' but the argument has type 'long long'}}
@@ -507,7 +510,8 @@ void bug7377_bad_length_mod_usage(void) {
   // Bad flag usage
   printf("%#p", (void *) 0); // expected-warning{{flag '#' results in undefined behavior with 'p' conversion specifier}}
   printf("%0d", -1); // no-warning
-  printf("%0b%0B", -1u, -1u); // no-warning
+  printf("%0b%0B", -1u, -1u); // prec23-warning{{conversion specifier 'b' requires a C standard library compatible with C23; data argument may not be used by format}}
+                              // prec23-warning@-1{{conversion specifier 'B' requires a C standard library compatible with C23; data argument may not be used by format}}
   printf("%-p", (void *) 0); // no-warning
 #if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%#n", (int *) 0); // expected-warning{{flag '#' results in undefined behavior with 'n' conversion specifier}}
@@ -596,7 +600,8 @@ void vprintf_scanf_bad(const char *p, va_list ap, const char *s, ...) {
 void pr8641(void) {
   printf("%#x\n", 10);
   printf("%#X\n", 10);
-  printf("%#b %#15.8B\n", 10, 10u);
+  printf("%#b %#15.8B\n", 10, 10u); // prec23-warning{{conversion specifier 'b' requires a C standard library compatible with C23; data argument may not be used by format}}
+                                    // prec23-warning@-1{{conversion specifier 'B' requires a C standard library compatible with C23; data argument may not be used by format}}
 }
 
 void posix_extensions(void) {
@@ -606,7 +611,9 @@ void posix_extensions(void) {
   printf("%'f\n", (float) 1.0); // no-warning
   printf("%'p\n", (void*) 0); // expected-warning{{results in undefined behavior with 'p' conversion specifier}}
   printf("%'b\n", 123456789); // expected-warning{{results in undefined behavior with 'b' conversion specifier}}
+                              // prec23-warning@-1{{conversion specifier 'b' requires a C standard library compatible with C23; data argument may not be used by format}}
   printf("%'B\n", 123456789); // expected-warning{{results in undefined behavior with 'B' conversion specifier}}
+                              // prec23-warning@-1{{conversion specifier 'B' requires a C standard library compatible with C23; data argument may not be used by format}}
 }
 
 // PR8486
@@ -639,7 +646,8 @@ void check_char(unsigned char x, signed char y) {
   printf("%hhi", x); // no-warning
   printf("%c", x); // no-warning
   printf("%hhu", y); // no-warning
-  printf("%hhb %hhB", x, x); // no-warning
+  printf("%hhb %hhB", x, x); // prec23-warning{{conversion specifier 'b' requires a C standard library compatible with C23; data argument may not be used by format}}
+                             // prec23-warning@-1{{conversion specifier 'B' requires a C standard library compatible with C23; data argument may not be used by format}}
 }
 
 // Test suppression of individual warnings.
@@ -987,33 +995,49 @@ void test_promotion(void) {
 void test_bool(_Bool b, _Bool* bp)
 {
 #if __SIZEOF_INT__ != __SIZEOF_SIZE_T__
-  printf("%zu", b); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
-  printf("%td", b); // expected-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+  printf("%zu", b); // prec23-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+                    // c23-warning-re@-1{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type 'bool'}}
+  printf("%td", b); // prec23-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+                    // c23-warning-re@-1{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type 'bool'}}
 #endif
-  printf("%jd", b); // expected-warning-re{{format specifies type 'intmax_t' (aka '{{.+}}') but the argument has type '_Bool'}}
-  printf("%lld", b); // expected-warning{{format specifies type 'long long' but the argument has type '_Bool'}}
-  printf("%ld", b); // expected-warning{{format specifies type 'long' but the argument has type '_Bool'}}
+  printf("%jd", b); // prec23-warning-re{{format specifies type 'intmax_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+                    // c23-warning-re@-1{{format specifies type 'intmax_t' (aka '{{.+}}') but the argument has type 'bool'}}
+  printf("%lld", b); // prec23-warning{{format specifies type 'long long' but the argument has type '_Bool'}}
+                     // c23-warning@-1{{format specifies type 'long long' but the argument has type 'bool'}}
+  printf("%ld", b); // prec23-warning{{format specifies type 'long' but the argument has type '_Bool'}}
+                    // c23-warning@-1{{format specifies type 'long' but the argument has type 'bool'}}
   printf("%d", b); // promoted from _Bool to int
   printf("%hhd", b); // promoted from _Bool to int
   printf("%hd", b); // promoted from _Bool to int
 #if !defined(__Fuchsia__) && !defined(__ANDROID__) //'%n' specifier not supported on this platform
   // The n conversion specifier only supports signed types
-  printf("%zn", bp); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
-  printf("%jn", bp); // expected-warning-re{{format specifies type 'intmax_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
-  printf("%lln", bp); // expected-warning{{format specifies type 'long long *' but the argument has type '_Bool *'}}
-  printf("%ln", bp); // expected-warning{{format specifies type 'long *' but the argument has type '_Bool *'}}
-  printf("%n", bp); // expected-warning{{format specifies type 'int *' but the argument has type '_Bool *'}}
-  printf("%hhn", bp); // expected-warning{{format specifies type 'signed char *' but the argument has type '_Bool *'}}
+  printf("%zn", bp); // prec23-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
+                     // c23-warning-re@-1{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type 'bool *'}}
+  printf("%jn", bp); // prec23-warning-re{{format specifies type 'intmax_t *' (aka '{{.+}}') but the argument has type '_Bool *'}}
+                     // c23-warning-re@-1{{format specifies type 'intmax_t *' (aka '{{.+}}') but the argument has type 'bool *'}}
+  printf("%lln", bp); // prec23-warning{{format specifies type 'long long *' but the argument has type '_Bool *'}}
+                      // c23-warning@-1{{format specifies type 'long long *' but the argument has type 'bool *'}}
+  printf("%ln", bp); // prec23-warning{{format specifies type 'long *' but the argument has type '_Bool *'}}
+                     // c23-warning@-1{{format specifies type 'long *' but the argument has type 'bool *'}}
+  printf("%n", bp); // prec23-warning{{format specifies type 'int *' but the argument has type '_Bool *'}}
+                    // c23-warning@-1{{format specifies type 'int *' but the argument has type 'bool *'}}
+  printf("%hhn", bp); // prec23-warning{{format specifies type 'signed char *' but the argument has type '_Bool *'}}
+                      // c23-warning@-1{{format specifies type 'signed char *' but the argument has type 'bool *'}}
   printf("%hn", bp); // belong to -Wformat-type-confusion
 #endif
   printf("%c", b); // expected-warning{{using '%c' format specifier, but argument has boolean value}}
-  printf("%s", b); // expected-warning{{format specifies type 'char *' but the argument has type '_Bool'}}
+  printf("%s", b); // prec23-warning{{format specifies type 'char *' but the argument has type '_Bool'}}
+                   // c23-warning@-1{{format specifies type 'char *' but the argument has type 'bool'}}
   printf("%d", b); // promoted from _Bool to int
   printf("%o", b); // promoted from _Bool to int
   printf("%x", b); // promoted from _Bool to int
   printf("%u", b); // promoted from _Bool to int
-  printf("%f", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
-  printf("%e", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
-  printf("%a", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
-  printf("%g", b); // expected-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+  printf("%f", b); // prec23-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+                   // c23-warning@-1{{format specifies type 'double' but the argument has type 'bool'}}
+  printf("%e", b); // prec23-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+                   // c23-warning@-1{{format specifies type 'double' but the argument has type 'bool'}}
+  printf("%a", b); // prec23-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+                   // c23-warning@-1{{format specifies type 'double' but the argument has type 'bool'}}
+  printf("%g", b); // prec23-warning{{format specifies type 'double' but the argument has type '_Bool'}}
+                   // c23-warning@-1{{format specifies type 'double' but the argument has type 'bool'}}
 }
