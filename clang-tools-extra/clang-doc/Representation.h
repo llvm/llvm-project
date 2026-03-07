@@ -34,7 +34,7 @@ template <typename T> using OwnedPtr = std::unique_ptr<T>;
 
 // An abstraction for vectors that are populated and read sequentially.
 // To be eventually transitioned to llvm::ArrayRef for arena storage.
-template <typename T> using OwningArray = std::vector<T>;
+template <typename T> using OwningVec = std::vector<T>;
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
 // To be eventually transitioned to llvm::simple_ilist.
@@ -200,13 +200,13 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningArray<Reference> Namespaces;
-  OwningArray<Reference> Records;
-  OwningArray<FunctionInfo> Functions;
-  OwningArray<EnumInfo> Enums;
-  OwningArray<TypedefInfo> Typedefs;
-  OwningArray<ConceptInfo> Concepts;
-  OwningArray<VarInfo> Variables;
+  OwningVec<Reference> Namespaces;
+  OwningVec<Reference> Records;
+  OwningVec<FunctionInfo> Functions;
+  OwningVec<EnumInfo> Enums;
+  OwningVec<TypedefInfo> Typedefs;
+  OwningVec<ConceptInfo> Concepts;
+  OwningVec<VarInfo> Variables;
 
   void sort();
 };
@@ -249,7 +249,7 @@ struct TemplateSpecializationInfo {
   SymbolID SpecializationOf;
 
   // Template parameters applying to the specialized record/function.
-  OwningArray<TemplateParamInfo> Params;
+  OwningVec<TemplateParamInfo> Params;
 };
 
 struct ConstraintInfo {
@@ -265,11 +265,11 @@ struct ConstraintInfo {
 // or an explicit template specialization.
 struct TemplateInfo {
   // May be empty for non-partial specializations.
-  OwningArray<TemplateParamInfo> Params;
+  OwningVec<TemplateParamInfo> Params;
 
   // Set when this is a specialization of another record/function.
   std::optional<TemplateSpecializationInfo> Specialization;
-  OwningArray<ConstraintInfo> Constraints;
+  OwningVec<ConstraintInfo> Constraints;
 };
 
 // Info for field types.
@@ -304,7 +304,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
                     Other.Description);
   }
 
-  OwningArray<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 
   // Access level associated with this info (public, protected, private, none).
   // AS_public is set as default because the bitcode writer requires the enum
@@ -389,7 +389,7 @@ struct Info {
   InfoType IT = InfoType::IT_default;
 
   // Comment description of this decl.
-  OwningArray<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 
   SmallVector<Context, 4> Contexts;
 };
@@ -514,11 +514,11 @@ struct RecordInfo : public SymbolInfo {
   llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
 
-  OwningArray<BaseRecordInfo>
+  OwningVec<BaseRecordInfo>
       Bases; // List of base/parent records; this includes inherited methods and
              // attributes
 
-  OwningArray<FriendInfo> Friends;
+  OwningVec<FriendInfo> Friends;
 
   ScopeChildren Children;
 };
@@ -582,7 +582,7 @@ struct EnumValueInfo {
   SmallString<16> ValueExpr;
 
   /// Comment description of this field.
-  OwningArray<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -629,7 +629,7 @@ struct Index : public Reference {
   std::optional<SmallString<16>> JumpToSection;
   llvm::StringMap<Index> Children;
 
-  std::vector<const Index *> getSortedChildren() const;
+  OwningVec<const Index *> getSortedChildren() const;
   void sort();
 };
 

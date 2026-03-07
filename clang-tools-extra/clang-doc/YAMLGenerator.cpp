@@ -167,7 +167,7 @@ static void recordInfoMapping(IO &IO, RecordInfo &I) {
   IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
   IO.mapOptional("VirtualParents", I.VirtualParents,
                  llvm::SmallVector<Reference, 4>());
-  IO.mapOptional("ChildRecords", I.Children.Records, std::vector<Reference>());
+  IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
   IO.mapOptional("ChildFunctions", I.Children.Functions);
   IO.mapOptional("ChildEnums", I.Children.Enums);
   IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -237,9 +237,9 @@ template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
     infoMapping(IO, I);
     IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
-                   std::vector<Reference>());
+                   OwningVec<Reference>());
     IO.mapOptional("ChildRecords", I.Children.Records,
-                   std::vector<Reference>());
+                   OwningVec<Reference>());
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);
     IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
