@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_global_size.h>
+#include "clc/workitem/clc_get_global_linear_id.h"
 
-_CLC_DEF _CLC_OVERLOAD size_t get_global_size(uint dim) {
-  return __clc_get_global_size(dim);
+_CLC_OVERLOAD _CLC_DEF _CLC_CONST size_t get_global_linear_id() {
+  return __clc_get_global_linear_id();
 }
