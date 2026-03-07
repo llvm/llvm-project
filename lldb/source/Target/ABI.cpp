@@ -25,20 +25,11 @@ using namespace lldb_private;
 
 ABISP
 ABI::FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  ABISP abi_sp;
-  ABICreateInstance create_callback;
-
-  for (uint32_t idx = 0;
-       (create_callback = PluginManager::GetABICreateCallbackAtIndex(idx)) !=
-       nullptr;
-       ++idx) {
-    abi_sp = create_callback(process_sp, arch);
-
-    if (abi_sp)
+  for (auto create_callback : PluginManager::GetABICreateCallbacks()) {
+    if (ABISP abi_sp = create_callback(process_sp, arch))
       return abi_sp;
   }
-  abi_sp.reset();
-  return abi_sp;
+  return {};
 }
 
 ABI::~ABI() = default;

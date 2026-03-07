@@ -51,9 +51,7 @@ HighlighterManager::getHighlighterFor(lldb::LanguageType language_type,
   if (it != m_highlighters.end())
     return *it->second;
 
-  uint32_t idx = 0;
-  while (HighlighterCreateInstance create_instance =
-             PluginManager::GetHighlighterCreateCallbackAtIndex(idx++)) {
+  for (auto create_instance : PluginManager::GetHighlighterCreateCallbacks()) {
     if (Highlighter *highlighter = create_instance(language_type))
       m_highlighters.try_emplace(language_type,
                                  std::unique_ptr<Highlighter>(highlighter));

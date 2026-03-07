@@ -1,4 +1,5 @@
  ; RUN: %lli -jit-kind=mcjit -force-interpreter=true %s > /dev/null
+ ; RUN: %lli -jit-kind=mcjit -force-interpreter=true -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat %s > /dev/null
 
 define i32 @main() {
  %v0 = insertelement <2 x i8> zeroinitializer, i8 1, i32 1
@@ -37,5 +38,7 @@ define i32 @main() {
  %v28 = insertelement <8 x double> zeroinitializer, double 4.0, i32 4
  %v29 = insertelement <16 x double> zeroinitializer, double 5.0, i32 7
 
+ %v30 = insertelement <16 x i64> splat(i64 1), i64 5, i32 7
+ %v31 = insertelement <16 x double> splat(double 1.0), double 5.0, i32 7
  ret i32 0
 }

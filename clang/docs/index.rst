@@ -22,6 +22,7 @@ Using Clang as a Compiler
    ClangCommandLineReference
    AttributeReference
    DiagnosticsReference
+   AMDGPUBuiltinReference
    WarningSuppressionMappings
    CrossCompilation
    ClangStaticAnalyzer
@@ -126,6 +127,7 @@ Design Documents
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
    ClangIRCodeDuplication
+   ClangIRABILowering
    ClangIRCleanupAndEHDesign
 
 Indices and tables
