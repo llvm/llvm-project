@@ -4942,7 +4942,7 @@ foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
     // them from the dynamic operands would create an inconsistency between
     // the static basis (which would still hold kDynamic) and the dynamic
     // operand list (which would be one element shorter).
-    if (basis && isa<IntegerAttr>(basis)) {
+    if (basis && !isa<ub::PoisonAttr>(basis)) {
       mutableDynamicBasis.erase(dynamicBasisIndex);
     } else {
       ++dynamicBasisIndex;
