@@ -19,6 +19,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
+namespace llvm {
+class Triple;
+} // namespace llvm
+
 namespace clang {
 
 /// OpenMP directives.
@@ -491,7 +495,19 @@ bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
                                               const LangOptions &LangOpts);
-}
+
+/// Checks if the target is an OpenMP accelerator (NVPTX, AMDGPU or SPIRV).
+/// \param T Target triple.
+/// \param OpenMPOffloading True if OpenMP offloading is enabled.
+/// \param NVPTX True if NVPTX is allowed.
+/// \param AMDGPU True if AMDGPU is allowed.
+/// \param SPIRV True if SPIRV is allowed.
+/// \return true if the target is an allowed OpenMP accelerator, false
+/// otherwise.
+bool isOpenMPAccelerator(const llvm::Triple &T, bool OpenMPOffloading,
+                         bool NVPTX = true, bool AMDGPU = true,
+                         bool SPIRV = true);
+} // namespace clang
 
 template <>
 struct llvm::enum_iteration_traits<clang::OpenMPDefaultmapClauseKind> {

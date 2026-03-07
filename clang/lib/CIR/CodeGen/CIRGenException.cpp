@@ -15,6 +15,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Location.h"
 
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -200,8 +201,8 @@ static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
 
 void CIRGenFunction::emitCXXThrowExpr(const CXXThrowExpr *e) {
   const llvm::Triple &triple = getTarget().getTriple();
-  if (cgm.getLangOpts().OpenMPIsTargetDevice &&
-      (triple.isNVPTX() || triple.isAMDGCN())) {
+  if (isOpenMPAccelerator(triple, cgm.getLangOpts().OpenMPIsTargetDevice,
+                          /*NVPTX=*/true, /*AMDGPU=*/true, /*SPIRV=*/false)) {
     cgm.errorNYI("emitCXXThrowExpr OpenMP with NVPTX or AMDGCN Triples");
     return;
   }
@@ -299,7 +300,8 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
   const bool isTargetDevice =
-      (cgm.getLangOpts().OpenMPIsTargetDevice && (t.isNVPTX() || t.isAMDGCN()));
+      isOpenMPAccelerator(t, cgm.getLangOpts().OpenMPIsTargetDevice,
+                          /*NVPTX=*/true, /*AMDGPU=*/true, /*SPIRV=*/false);
   if (isTargetDevice) {
     cgm.errorNYI("emitCXXTryStmt: OpenMP target region offloaded to GPU");
     return mlir::success();

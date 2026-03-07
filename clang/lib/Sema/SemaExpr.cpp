@@ -35,6 +35,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -17138,8 +17139,10 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   }
 
   // NVPTX does not support va_arg expression.
-  if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-      Context.getTargetInfo().getTriple().isNVPTX())
+  if (getLangOpts().OpenMP &&
+      isOpenMPAccelerator(Context.getTargetInfo().getTriple(),
+                          getLangOpts().OpenMPIsTargetDevice, /*NVPTX=*/true,
+                          /*AMDGPU=*/false, /*SPIRV=*/false))
     targetDiag(E->getBeginLoc(), diag::err_va_arg_in_device);
 
   // It might be a __builtin_ms_va_list. (But don't ever mark a va_arg()

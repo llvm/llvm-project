@@ -43,6 +43,7 @@
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
@@ -996,9 +997,10 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
     // functions as the host-callable kernel functions are emitted at codegen.
     ASTContext &Context = D->getASTContext();
     if (Context.getLangOpts().OpenMP &&
-        Context.getLangOpts().OpenMPIsTargetDevice &&
-        ((Context.getTargetInfo().getTriple().isAMDGPU() ||
-          Context.getTargetInfo().getTriple().isNVPTX()) ||
+        (isOpenMPAccelerator(Context.getTargetInfo().getTriple(),
+                             Context.getLangOpts().OpenMPIsTargetDevice,
+                             /*NVPTX=*/true, /*AMDGPU=*/true,
+                             /*SPIRV=*/false) ||
          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(MD)))
       LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
