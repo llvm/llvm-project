@@ -1054,6 +1054,14 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
   return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName);
 }
 
+static bool hasReachableLoopEntry(const Loop &L, const DominatorTree &DT) {
+  for (const BasicBlock *Pred : predecessors(L.getHeader()))
+    if (!L.contains(Pred) && DT.isReachableFromEntry(Pred))
+      return true;
+
+  return false;
+}
+
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
 /// Invalidates DFS Numbering when DTU or DT is provided.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
@@ -1163,8 +1171,14 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
       InnermostPredLoop->addBasicBlockToLoop(NewBB, *LI);
   } else {
     L->addBasicBlockToLoop(NewBB, *LI);
-    if (SplitMakesNewLoopHeader)
-      L->moveToHeader(NewBB);
+    if (SplitMakesNewLoopHeader) {
+      if (!hasReachableLoopEntry(*L, *DT))
+        // Old header lost all entries.
+        L->moveToHeader(NewBB);
+      else
+        // Both OldBB and NewBB have loop entries.
+        LI->erase(L);
+    }
   }
 }
 
