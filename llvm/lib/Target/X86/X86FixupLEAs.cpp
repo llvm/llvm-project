@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
@@ -119,6 +120,13 @@ class FixupLEAsImpl {
   /// and return a pointer to it. Otherwise, return zero.
   MachineInstr *postRAConvertToLEA(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator &MBBI) const;
+
+  /// Fold adjacent mov/inc-dec into a single LEA:
+  ///   mov dst, src
+  ///   dec/inc dst   (flags dead)
+  /// =>
+  ///   lea dst, [src +/- 1]
+  bool foldMovIncDecToLEA(MachineBasicBlock &MBB, const X86Subtarget &ST) const;
 
 public:
   FixupLEAsImpl(ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI)
@@ -229,6 +237,16 @@ static bool isLEA(unsigned Opcode) {
          Opcode == X86::LEA64_32r;
 }
 
+static MachineBasicBlock::iterator
+getPrevNonDebugInstr(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) {
+  while (I != MBB.begin()) {
+    --I;
+    if (!I->isDebugInstr())
+      return I;
+  }
+  return MBB.end();
+}
+
 bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   bool IsSlowLEA = ST.slowLEA();
@@ -244,6 +262,8 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "Start X86FixupLEAs\n";);
   for (MachineBasicBlock &MBB : MF) {
+    foldMovIncDecToLEA(MBB, ST);
+
     // First pass. Try to remove or optimize existing LEAs.
     bool OptIncDecPerBB =
         OptIncDec || llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
@@ -271,6 +291,76 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "End X86FixupLEAs\n";);
 
   return true;
+}
+
+bool FixupLEAsImpl::foldMovIncDecToLEA(MachineBasicBlock &MBB,
+                                       const X86Subtarget &ST) const {
+  bool Changed = false;
+
+  for (auto I = MBB.begin(); I != MBB.end();) {
+    MachineInstr &MI = *I;
+    unsigned Opc = MI.getOpcode();
+
+    bool IsDec = Opc == X86::DEC32r || Opc == X86::DEC64r;
+    bool IsInc = Opc == X86::INC32r || Opc == X86::INC64r;
+    bool Is64BitIncDec = Opc == X86::DEC64r || Opc == X86::INC64r;
+    if (!IsDec && !IsInc) {
+      ++I;
+      continue;
+    }
+
+    if (!MI.registerDefIsDead(X86::EFLAGS, TRI)) {
+      ++I;
+      continue;
+    }
+
+    Register DstReg = MI.getOperand(0).getReg();
+    if (!DstReg.isPhysical() || MI.getOperand(1).getReg() != DstReg) {
+      ++I;
+      continue;
+    }
+
+    auto Prev = getPrevNonDebugInstr(MBB, I);
+    if (Prev == MBB.end()) {
+      ++I;
+      continue;
+    }
+
+    unsigned MovOpc = Is64BitIncDec ? X86::MOV64rr : X86::MOV32rr;
+    if (Prev->getOpcode() != MovOpc || Prev->getOperand(0).getReg() != DstReg) {
+      ++I;
+      continue;
+    }
+
+    Register SrcReg = Prev->getOperand(1).getReg();
+    Register LEASrcReg = SrcReg;
+    unsigned LEAOpc = X86::LEA32r;
+    if (Is64BitIncDec) {
+      LEAOpc = X86::LEA64r;
+    } else if (ST.is64Bit()) {
+      LEAOpc = X86::LEA64_32r;
+      LEASrcReg = getX86SubSuperRegister(SrcReg, 64);
+    }
+
+    MachineInstr *NewMI =
+        BuildMI(MBB, I, MI.getDebugLoc(), TII->get(LEAOpc), DstReg)
+            .addReg(LEASrcReg)
+            .addImm(1)
+            .addReg(0)
+            .addImm(IsDec ? -1 : 1)
+            .addReg(0);
+
+    ++NumLEAs;
+    Changed = true;
+    MBB.getParent()->substituteDebugValuesForInst(MI, *NewMI, 1);
+    MBB.getParent()->substituteDebugValuesForInst(*Prev, *NewMI, 1);
+
+    auto EraseIncDec = I++;
+    MBB.erase(EraseIncDec);
+    MBB.erase(Prev);
+  }
+
+  return Changed;
 }
 
 FixupLEAsImpl::RegUsageState
