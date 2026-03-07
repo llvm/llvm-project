@@ -41,19 +41,17 @@ def build_invocation(flags):
 # Base flags
 lowfat_base = ["-fsanitize=lowfat"]
 
-# Fast mode (OptimizerLastEP)
-lowfat_fast = lowfat_base + ["-mllvm", "-lowfat-mode=fast"]
-# Safe mode (Barrier at PipelineStartEP + instrument at OptimizerLastEP)
+# safe mode (fast mode is the default)
 lowfat_safe = lowfat_base + ["-mllvm", "-lowfat-mode=safe"]
 
-config.substitutions.append(("%clangxx_lowfat ", build_invocation(lowfat_fast)))
+config.substitutions.append(("%clangxx_lowfat ", build_invocation(lowfat_base)))
 config.substitutions.append(("%clangxx_lowfat_safe ", build_invocation(lowfat_safe)))
 
 # Recover mode versions
 config.substitutions.append(
     (
         "%clangxx_lowfat_recover ",
-        build_invocation(lowfat_fast + ["-fsanitize-recover=lowfat"]),
+        build_invocation(lowfat_base + ["-fsanitize-recover=lowfat"]),
     )
 )
 config.substitutions.append(
