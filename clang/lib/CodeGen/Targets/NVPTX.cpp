@@ -236,9 +236,16 @@ RValue NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 void NVPTXTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
+  // nvlink asserts managed attribute match in decl and def
+  if (VD && VD->hasAttr<HIPManagedAttr>() && M.getLangOpts().CUDA) {
+    addNVVMMetadata(GV, "managed", 1);
+    return;
+  }
+
   if (GV->isDeclaration())
     return;
-  const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
+
   if (VD) {
     if (M.getLangOpts().CUDA) {
       if (VD->getType()->isCUDADeviceBuiltinSurfaceType())

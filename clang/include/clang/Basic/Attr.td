@@ -1577,7 +1577,7 @@ def CUDAGridConstant : InheritableAttr {
 def HIPManaged : InheritableAttr {
   let Spellings = [GNU<"managed">, Declspec<"__managed__">];
   let Subjects = SubjectList<[Var]>;
-  let LangOpts = [HIP];
+  let LangOpts = [HIP, CUDA];
   let Documentation = [HIPManagedAttrDocs];
 }
 
