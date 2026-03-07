@@ -89,10 +89,10 @@ static llvm::Expected<OwnedPtr<Info>> reduce(OwningPtrArray<Info> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
-  OwnedPtr<Info> Merged = std::make_unique<T>(Values[0]->USR);
-  T *Tmp = static_cast<T *>(Merged.get());
+  OwnedPtr<Info> Merged = allocatePtr<T>(Values[0]->USR);
+  T *Tmp = static_cast<T *>(getPtr(Merged));
   for (auto &I : Values)
-    Tmp->merge(std::move(*static_cast<T *>(I.get())));
+    Tmp->merge(std::move(*static_cast<T *>(getPtr(I))));
   return std::move(Merged);
 }
 

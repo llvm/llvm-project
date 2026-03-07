@@ -927,7 +927,7 @@ Error JSONGenerator::generateDocumentation(
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    Info *Info = Group.getValue().get();
+    Info *Info = getPtr(Group.getValue());
 
     SmallString<128> Path;
     auto RootDirStr = RootDir.str() + "/json";

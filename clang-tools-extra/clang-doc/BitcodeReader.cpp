@@ -507,8 +507,8 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumValueInfo *I) {
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
-  I->Children.emplace_back(std::make_unique<CommentInfo>());
-  return I->Children.back().get();
+  I->Children.emplace_back(allocatePtr<CommentInfo>());
+  return getPtr(I->Children.back());
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(ConceptInfo *I) {
@@ -1078,8 +1078,8 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 template <typename T>
 llvm::Expected<OwnedPtr<Info>> ClangDocBitcodeReader::createInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "createInfo");
-  OwnedPtr<Info> I = std::make_unique<T>();
-  if (auto Err = readBlock(ID, static_cast<T *>(I.get())))
+  OwnedPtr<Info> I = doc::allocatePtr<T>();
+  if (auto Err = readBlock(ID, static_cast<T *>(getPtr(I))))
     return std::move(Err);
   return OwnedPtr<Info>{std::move(I)};
 }

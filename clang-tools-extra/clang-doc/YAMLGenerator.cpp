@@ -357,7 +357,7 @@ llvm::Error YAMLGenerator::generateDocumentation(
     StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   for (const auto &Group : Infos) {
-    doc::Info *Info = Group.getValue().get();
+    doc::Info *Info = getPtr(Group.getValue());
 
     // Output file names according to the USR except the global namesapce.
     // Anonymous namespaces are taken care of in serialization, so here we can
