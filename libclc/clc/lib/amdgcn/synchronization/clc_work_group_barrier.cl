@@ -10,8 +10,22 @@
 #include <clc/synchronization/clc_work_group_barrier.h>
 
 _CLC_OVERLOAD _CLC_DEF void
-__clc_work_group_barrier(int memory_scope, int memory_order,
+__clc_work_group_barrier(int memory_scope,
                          __CLC_MemorySemantics memory_semantics) {
-  __clc_mem_fence(memory_scope, memory_order, memory_semantics);
-  __builtin_amdgcn_s_barrier();
+  if (memory_semantics == 0) {
+    __builtin_amdgcn_s_barrier();
+  } else {
+    int memory_order_before =
+        memory_semantics & (__CLC_MEMORY_GLOBAL | __CLC_MEMORY_LOCAL)
+            ? __ATOMIC_SEQ_CST
+            : __ATOMIC_RELEASE;
+    int memory_order_after =
+        memory_semantics & (__CLC_MEMORY_GLOBAL | __CLC_MEMORY_LOCAL)
+            ? __ATOMIC_SEQ_CST
+            : __ATOMIC_ACQUIRE;
+
+    __clc_mem_fence(memory_scope, memory_order_before, memory_semantics);
+    __builtin_amdgcn_s_barrier();
+    __clc_mem_fence(memory_scope, memory_order_after, memory_semantics);
+  }
 }
