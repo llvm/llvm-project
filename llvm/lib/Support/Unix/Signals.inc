@@ -98,6 +98,10 @@ static std::atomic<SignalHandlerFunctionType> OneShotPipeSignalFunction =
     nullptr;
 
 namespace {
+/// Sentinel stored in a node after the signal handler has removed the file;
+/// not a valid path, never freed.
+static char InvalidPathSentinel[] = "\01\02\03\04";
+
 /// Signal-safe removal of files.
 /// Inserting and erasing from the list isn't signal-safe, but removal of files
 /// themselves is signal-safe. Memory is freed when the head is freed, deletion
@@ -107,8 +111,8 @@ class FileToRemoveList {
   std::atomic<FileToRemoveList *> Next = nullptr;
 
   FileToRemoveList() = default;
-  // Not signal-safe.
-  FileToRemoveList(const std::string &str) : Filename(strdup(str.c_str())) {}
+  // Takes ownership of \p filename.
+  FileToRemoveList(char *filename) : Filename(filename) {}
 
 public:
   // Not signal-safe.
@@ -116,19 +120,34 @@ public:
     if (FileToRemoveList *N = Next.exchange(nullptr))
       delete N;
     if (char *F = Filename.exchange(nullptr))
-      free(F);
+      if (F != InvalidPathSentinel)
+        free(F);
   }
 
   // Not signal-safe.
   static void insert(std::atomic<FileToRemoveList *> &Head,
                      const std::string &Filename) {
-    // Insert the new file at the end of the list.
-    FileToRemoveList *NewHead = new FileToRemoveList(Filename);
+    // Reuse a node with a null filename (left behind by erase) if one exists.
+    // There are two cases where Filename can be special:
+    // - nullptr: a node left behind by a previous file that we had to remove
+    // - InvalidPathSentinel: a node whose file is actively being removed by a signal handler right
+    //   now, in which case, it's OK if this file doesn't get removed.
+    char *NewFilename = strdup(Filename.c_str());
     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
-    FileToRemoveList *OldHead = nullptr;
-    while (!InsertionPoint->compare_exchange_strong(OldHead, NewHead)) {
-      InsertionPoint = &OldHead->Next;
-      OldHead = nullptr;
+    for (FileToRemoveList *Current = Head.load(); Current;
+         Current = Current->Next.load()) {
+      char *NullFilename = nullptr;
+      if (Current->Filename.compare_exchange_strong(NullFilename, NewFilename))
+        return; // Reused a slot.
+      InsertionPoint = &Current->Next;
+    }
+
+    // Append the new node at the end; on CAS failure, advance to the new tail.
+    FileToRemoveList *NewNode = new FileToRemoveList(NewFilename);
+    FileToRemoveList *OldNext = nullptr;
+    while (!InsertionPoint->compare_exchange_strong(OldNext, NewNode)) {
+      InsertionPoint = &OldNext->Next;
+      OldNext = nullptr;
     }
   }
 
@@ -145,11 +164,15 @@ public:
       if (char *OldFilename = Current->Filename.load()) {
         if (OldFilename != Filename)
           continue;
-        // Leave an empty filename.
-        OldFilename = Current->Filename.exchange(nullptr);
-        // The filename might have become null between the time we
-        // compared it and we exchanged it.
-        if (OldFilename)
+        // Leave an empty filename. Use CAS to avoid racing with the signal
+        // handler (which can't take the writer lock); only clear and free
+        // if we still own the pointer.
+        char *Expected = OldFilename;
+        while (!Current->Filename.compare_exchange_strong(Expected, nullptr)) {
+          if (Expected == nullptr  || Expected == InvalidPathSentinel)
+            break;
+        }
+        if (Expected == OldFilename)
           free(OldFilename);
       }
     }
@@ -175,20 +198,18 @@ public:
 
   // Signal-safe.
   static void removeAllFiles(std::atomic<FileToRemoveList *> &Head) {
-    // If cleanup were to occur while we're removing files we'd have a bad time.
-    // Make sure we're OK by preventing cleanup from doing anything while we're
-    // removing files. If cleanup races with us and we win we'll have a leak,
-    // but we won't crash.
+    // This signal-safe code cannot acquire the writer lock, and needs to defend
+    // against racing writes from the `erase` method above.
     FileToRemoveList *OldHead = Head.exchange(nullptr);
 
     for (FileToRemoveList *currentFile = OldHead; currentFile;
          currentFile = currentFile->Next.load()) {
-      // If erasing was occuring while we're trying to remove files we'd look
-      // at free'd data. Take away the path and put it back when done.
-      if (char *path = currentFile->Filename.exchange(nullptr)) {
+      // Take exclusive ownership by swapping in the sentinel (signal-safe: no
+      // allocation or free). Then put the path back so we don't leak.
+      if (char *path = currentFile->Filename.exchange(InvalidPathSentinel)) {
         removeFile(path);
-
-        // We're done removing the file, erasing can safely proceed.
+        // Add the path back to the list to create a global root referencing the
+        // heap allocation, which will pacify leak checkers that run at exit.
         currentFile->Filename.exchange(path);
       }
     }
