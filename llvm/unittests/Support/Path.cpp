@@ -11,6 +11,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -2584,7 +2585,9 @@ TEST_F(FileSystemTest, makeLongFormPath) {
 
   // Setup: A test directory longer than 8 characters for which a distinct
   // short 8.3 form name will be created on Windows. Typically, 123456~1.
-  constexpr const char *OneDir = "\\123456789"; // >8 chars
+  const char *OneDir = LLVM_WINDOWS_PREFER_FORWARD_SLASH
+                           ? "/123456789"
+                           : "\\123456789"; // >8 chars
 
   // Setup: Create a path where even if all components were reduced to short 8.3
   // form names, the total length would exceed MAX_PATH.
@@ -2617,6 +2620,8 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   ASSERT_FALSE(DotAndDotDot.empty())
       << "Expected short 8.3 form path for test directory.";
   auto ContainsDotAndDotDot = [](llvm::StringRef S) {
+    if (LLVM_WINDOWS_PREFER_FORWARD_SLASH)
+      return S.contains("/./") && S.contains("/../");
     return S.contains("\\.\\") && S.contains("\\..\\");
   };
   ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDot))

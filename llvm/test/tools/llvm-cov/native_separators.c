@@ -3,7 +3,7 @@
 // This test is Windows-only. It checks that all paths, which are generated
 // in the index and source coverage reports, are native path. For example,
 // on Windows all '/' are converted to '\'.
-// REQUIRES: system-windows
+// REQUIRES: system-windows, !windows-prefer-forward-slash
 
 // RUN: llvm-profdata merge %S/Inputs/double_dots.proftext -o %t.profdata
 // RUN: llvm-cov show %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -o %t.dir

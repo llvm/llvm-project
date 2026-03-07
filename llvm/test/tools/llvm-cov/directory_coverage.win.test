@@ -1,4 +1,4 @@
-# REQUIRES: system-windows
+# REQUIRES: system-windows, !windows-prefer-forward-slash
 # RUN: mkdir -p %t
 
 # RUN: llvm-cov show %S/Inputs/directory_coverage/main.covmapping \
