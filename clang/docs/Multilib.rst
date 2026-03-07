@@ -306,6 +306,63 @@ For a more comprehensive example see
     # of the flag value names from this flag declaration.
     Default: no-multithreaded
 
+RISC-V multilib
+===============
+
+Generating multilib.yaml from GCC
+---------------------------------
+
+The ``llvm/utils/gen-riscv-multilib-yaml-from-gcc.py`` script converts the
+output of ``riscv*-*-gcc --print-multi-lib`` into a Clang YAML multilib
+configuration file.
+
+The script invokes Clang with ``-print-multi-flags-experimental`` to obtain
+canonicalized ``-march`` strings (with version numbers and implied
+z-extensions), which are used directly as Variant Flags. This avoids the need
+for regex-based Mappings in the generated YAML.
+
+Usage:
+
+.. code-block:: shell
+
+  # Pipe GCC output directly
+  riscv64-unknown-elf-gcc --print-multi-lib | \
+      python3 llvm/utils/gen-riscv-multilib-yaml-from-gcc.py --clang /path/to/clang
+
+  # Or specify the GCC path
+  python3 llvm/utils/gen-riscv-multilib-yaml-from-gcc.py \
+      --gcc /path/to/riscv64-unknown-elf-gcc \
+      --clang /path/to/clang \
+      -o multilib.yaml
+
+The ``--clang`` option is required because the script needs a Clang binary to
+canonicalize the ``-march`` strings. The ``--gcc`` option is optional; if
+omitted, the script reads ``--print-multi-lib`` output from stdin.
+
+The generated YAML uses an ``Exclusive`` group named ``riscv-multilib`` to
+ensure that only one variant is selected per compilation.
+
+Multilib reuse for RISC-V
+-------------------------
+
+When using a YAML multilib configuration for RISC-V baremetal targets, Clang
+supports *multilib reuse*: if no variant exactly matches the requested
+architecture, Clang will attempt to find a compatible variant using
+``selectRISCVMultilib()``.
+
+A multilib variant is considered compatible if:
+
+- The ABI matches exactly.
+- The variant's extensions are a subset of the requested architecture.
+  For example, a variant built with ``-march=rv32im`` is compatible with
+  ``-march=rv32imc`` (the ``c`` extension is extra but not harmful).
+- The atomic extension (``a``) must match: a variant without ``a`` cannot be
+  used for an architecture with ``a``, and vice versa. This is because software
+  and hardware atomic operations cannot coexist correctly.
+
+This reuse logic is the same one used for GCC toolchain multilib selection and
+is shared between both code paths.
+
 Design principles
 =================
 

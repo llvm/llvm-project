@@ -258,7 +258,12 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
-static void
+/// Parse a YAML multilib configuration and attempt selection.
+/// Returns true if selection succeeded, false otherwise.
+/// On failure, Result.Multilibs is still populated for fallback or
+/// diagnostics. Result.SelectedMultilibs may contain error multilibs
+/// that should be consumed by the caller before clearing.
+static bool
 findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
                       StringRef MultilibPath, const ArgList &Args,
                       DetectedMultilibs &Result,
@@ -266,16 +271,21 @@ findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
       D.getVFS().getBufferForFile(MultilibPath);
   if (!MB)
-    return;
+    return false;
   Multilib::flags_list Flags = TC.getMultilibFlags(Args);
   llvm::ErrorOr<MultilibSet> ErrorOrMultilibSet =
       MultilibSet::parseYaml(*MB.get());
   if (ErrorOrMultilibSet.getError())
-    return;
+    return false;
   Result.Multilibs = ErrorOrMultilibSet.get();
-  if (Result.Multilibs.select(D, Flags, Result.SelectedMultilibs,
-                              &CustomFlagsMacroDefines))
-    return;
+  return Result.Multilibs.select(D, Flags, Result.SelectedMultilibs,
+                                 &CustomFlagsMacroDefines);
+}
+
+/// Emit diagnostics when no multilib was found.
+static void diagnoseNoMultilibMatch(const Driver &D,
+                                    const Multilib::flags_list &Flags,
+                                    DetectedMultilibs &Result) {
   D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
   std::stringstream ss;
 
@@ -334,8 +344,23 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
     // specific suffix
     SysRoot = computeClangRuntimesSysRoot(D, /*IncludeTriple=*/false);
     SmallVector<StringRef> CustomFlagMacroDefines;
-    findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result,
-                          CustomFlagMacroDefines);
+    bool Selected = findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result,
+                                          CustomFlagMacroDefines);
+
+    // For RISC-V, try multilib reuse if exact YAML match failed.
+    if (!Selected && Triple.isRISCV()) {
+      Multilib::flags_list Flags = getMultilibFlags(Args);
+      Selected = tools::riscv::selectRISCVMultilib(D, Result.Multilibs, Flags,
+                                                   Result.SelectedMultilibs);
+    }
+
+    if (!Selected) {
+      Multilib::flags_list Flags = getMultilibFlags(Args);
+      diagnoseNoMultilibMatch(D, Flags, Result);
+    }
+
+    // Always propagate results: Multilibs for print-multi-lib,
+    // CustomFlagMacroDefines for -D flags from custom multilib flags.
     SelectedMultilibs = Result.SelectedMultilibs;
     Multilibs = Result.Multilibs;
     MultilibMacroDefines.append(CustomFlagMacroDefines.begin(),
