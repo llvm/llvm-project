@@ -204,6 +204,8 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
     if (MI.shouldUpdateAdditionalCallInfo())
       MF->eraseAdditionalCallInfo(&MI);
 
+  MBBFreqInfo.eraseBlock(MBB);
+
   // Remove the block.
   MF->erase(MBB);
   EHScopeMembership.erase(MBB);

@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -193,6 +194,8 @@ bool TailDuplicator::tailDuplicateAndUpdate(
   // If it is dead, remove it.
   if (isDead) {
     NumTailDupRemoved += MBB->size();
+    if (MBFI)
+      MBFI->eraseBlock(MBB);
     removeDeadBlock(MBB, RemovalCallback);
     ++NumDeadBlocks;
   }

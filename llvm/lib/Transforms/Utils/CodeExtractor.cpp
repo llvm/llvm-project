@@ -1154,6 +1154,8 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
   auto newFuncIt = newFunction->begin();
   for (BasicBlock *Block : Blocks) {
     // Delete the basic block from the old function, and the list of blocks
+    if (BFI)
+      BFI->eraseBlock(Block);
     Block->removeFromParent();
 
     // Insert this basic block into the new function

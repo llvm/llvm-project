@@ -43,6 +43,12 @@ MBFIWrapper::getBlockProfileCount(const MachineBasicBlock *MBB) const {
   return MBFI.getBlockProfileCount(MBB);
 }
 
+void MBFIWrapper::eraseBlock(const MachineBasicBlock *MBB) {
+  if (auto I = MergedBBFreq.find(MBB); I != MergedBBFreq.end())
+    MergedBBFreq.erase(I);
+  MBFI.eraseBlock(MBB);
+}
+
 void MBFIWrapper::view(const Twine &Name, bool isSimple) {
   MBFI.view(Name, isSimple);
 }
