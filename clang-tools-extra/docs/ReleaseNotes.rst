@@ -299,8 +299,13 @@ Changes in existing checks
   when a member expression has a non-identifier name.
 
 - Improved :doc:`readability-else-after-return
-  <clang-tidy/checks/readability/else-after-return>` check by fixing missed
-  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels.
+  <clang-tidy/checks/readability/else-after-return>` check:
+
+  - Fixed missed diagnostics when ``if`` statements appear in unbraced
+    ``switch`` case labels.
+
+  - Diagnose and remove redundant ``else`` branches after calls to
+    ``[[noreturn]]`` functions.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message

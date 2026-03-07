@@ -438,3 +438,15 @@ LABEL:
       f(0);
   }
 }
+
+[[noreturn]] void noReturn();
+
+void testNoReturn() {
+  if (true) {
+    noReturn();
+  } else { // comment-28
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'noreturn'
+    // CHECK-FIXES: {{^}}  } // comment-28
+    f(0);
+  }
+}
