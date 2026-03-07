@@ -238,6 +238,9 @@ private:
   // which are supposed to be new functions. We use them as the targets for
   // call graph matching.
   void findFunctionsWithoutProfile();
+  // Match orphan IR functions to unused top-level profile entries by demangled
+  // basename, without requiring a matched caller in the call graph.
+  void matchFunctionsWithoutProfileByBasename();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm
