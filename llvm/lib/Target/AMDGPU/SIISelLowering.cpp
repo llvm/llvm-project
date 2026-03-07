@@ -13233,13 +13233,17 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
       DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleDownFactor, ZeroInt);
   SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
 
-  // TODO: Switch to fcmp oeq 0 for finite only. Can't fully remove this check
-  // with finite only or nsz because rsq(+/-0) = +/-inf
-
   // TODO: Check for DAZ and expand to subnormals
-  SDValue IsZeroOrInf =
-      DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
-                  DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
+
+  SDValue IsZeroOrInf;
+  if (Flags.hasNoInfs()) {
+    SDValue Zero = DAG.getConstantFP(0.0, DL, MVT::f64);
+    IsZeroOrInf = DAG.getSetCC(DL, MVT::i1, SqrtX, Zero, ISD::SETOEQ);
+  } else {
+    IsZeroOrInf =
+        DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
+                    DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
+  }
 
   // If x is +INF, +0, or -0, use its original value
   return DAG.getNode(ISD::SELECT, DL, MVT::f64, IsZeroOrInf, SqrtX, SqrtRet,
