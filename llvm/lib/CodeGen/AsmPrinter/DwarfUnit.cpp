@@ -61,6 +61,10 @@ void DIEDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   CU.addBaseTypeRef(getActiveDIE(), Idx);
 }
 
+void DIEDwarfExpression::emitDIERef(DIE &Ref) {
+  CU.addDIEEntry(getActiveDIE(), dwarf::DW_FORM_ref_addr, Ref);
+}
+
 void DIEDwarfExpression::enableTemporaryBuffer() {
   assert(!IsBuffering && "Already buffering?");
   IsBuffering = true;
@@ -389,6 +393,10 @@ void DwarfUnit::addDIEEntry(DIE &Die, dwarf::Attribute Attribute, DIE &Entry) {
   addDIEEntry(Die, Attribute, DIEEntry(Entry));
 }
 
+void DwarfUnit::addDIEEntry(DIEValueList &Die, dwarf::Form Form, DIE &Entry) {
+  addAttribute(Die, (dwarf::Attribute)0, Form, DIEEntry(Entry));
+}
+
 void DwarfUnit::addDIETypeSignature(DIE &Die, uint64_t Signature) {
   // Flag the type unit reference as a declaration so that if it contains
   // members (implicit special members, static data member definitions, member
@@ -447,6 +455,30 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
   DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
   DwarfExpr.setMemoryLocationKind();
   DwarfExpr.addExpression(Expr);
+  addBlock(Die, Attribute, DwarfExpr.finalize());
+}
+
+void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
+                         const DIVariableExpression *Expr) {
+  // Emitting a DIVariableExpression normally involves an extension
+  // operator, so just drop this in strict mode.
+  // See http://dwarfstd.org/ShowIssue.php?issue=161109.2.
+  if (Asm->TM.Options.DebugStrictDwarf)
+    return;
+
+  DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+  DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+  DwarfExpr.setMemoryLocationKind();
+  DINodeArray Vars = Expr->getVariableArray();
+  DwarfExpr.addExpression(
+      Expr->getExpression(),
+      [&](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
+        if (auto *VarDie = getDIE(Vars[Idx])) {
+          DwarfExpr.addVariableReference(*VarDie);
+          return true;
+        }
+        return false;
+      });
   addBlock(Die, Attribute, DwarfExpr.finalize());
 }
 
@@ -1208,6 +1240,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     } else if (auto *Exp =
                    dyn_cast_or_null<DIExpression>(CTy->getRawSizeInBits())) {
       addBlock(Buffer, dwarf::DW_AT_bit_size, Exp);
+    } else if (auto *VarExp = dyn_cast_or_null<DIVariableExpression>(
+                   CTy->getRawSizeInBits())) {
+      addBlock(Buffer, dwarf::DW_AT_bit_size, VarExp);
     } else {
       uint64_t Size = CTy->getSizeInBits() >> 3;
       // Add size if non-zero (derived types might be zero-sized.)
@@ -1890,6 +1925,9 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
         addDIEEntry(MemberDie, dwarf::DW_AT_bit_size, *VarDIE);
     } else if (auto *Exp = dyn_cast<DIExpression>(DT->getRawSizeInBits())) {
       addBlock(MemberDie, dwarf::DW_AT_bit_size, Exp);
+    } else if (auto *VarExp = dyn_cast_or_null<DIVariableExpression>(
+                   DT->getRawSizeInBits())) {
+      addBlock(MemberDie, dwarf::DW_AT_bit_size, VarExp);
     } else {
       Size = DT->getSizeInBits();
       FieldSize = DD->getBaseTypeSize(DT);
@@ -1915,6 +1953,9 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
       if (!Asm->TM.Options.DebugStrictDwarf || DD->getDwarfVersion() >= 6) {
         addBlock(MemberDie, dwarf::DW_AT_data_bit_offset, Expr);
       }
+    } else if (auto *VarExp = dyn_cast_or_null<DIVariableExpression>(
+                   DT->getRawOffsetInBits())) {
+      addBlock(MemberDie, dwarf::DW_AT_data_bit_offset, VarExp);
     } else {
       uint32_t AlignInBytes = DT->getAlignInBytes();
       uint64_t OffsetInBytes;

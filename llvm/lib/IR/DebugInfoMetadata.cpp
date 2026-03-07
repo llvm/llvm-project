@@ -2604,6 +2604,16 @@ DIExpression *DIExpression::appendExt(const DIExpression *Expr,
   return appendToStack(Expr, getExtOps(FromSize, ToSize, Signed));
 }
 
+DIVariableExpression *DIVariableExpression::getImpl(LLVMContext &Context,
+                                                    Metadata *Expr,
+                                                    Metadata *VarArray,
+                                                    StorageType Storage,
+                                                    bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIVariableExpression, (Expr, VarArray));
+  Metadata *Ops[] = {Expr, VarArray};
+  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIVariableExpression, Ops);
+}
+
 DIGlobalVariableExpression *
 DIGlobalVariableExpression::getImpl(LLVMContext &Context, Metadata *Variable,
                                     Metadata *Expression, StorageType Storage,

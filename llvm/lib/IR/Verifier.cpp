@@ -1422,8 +1422,9 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
 
   auto *Size = N.getRawSizeInBits();
   CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
-              isa<DIExpression>(Size),
-          "SizeInBits must be a constant or DIVariable or DIExpression");
+              isa<DIExpression>(Size) || isa<DIVariableExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression or "
+          "DIVariableExpression");
 }
 
 /// Detect mutually exclusive flags.
@@ -1514,8 +1515,9 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
 
   auto *Size = N.getRawSizeInBits();
   CheckDI(!Size || isa<ConstantAsMetadata>(Size) || isa<DIVariable>(Size) ||
-              isa<DIExpression>(Size),
-          "SizeInBits must be a constant or DIVariable or DIExpression");
+              isa<DIExpression>(Size) || isa<DIVariableExpression>(Size),
+          "SizeInBits must be a constant or DIVariable or DIExpression or "
+          "DIVariableExpression");
 }
 
 void Verifier::visitDISubroutineType(const DISubroutineType &N) {
@@ -1840,6 +1842,18 @@ void Verifier::visitDIGlobalVariableExpression(
     visitDIExpression(*Expr);
     if (auto Fragment = Expr->getFragmentInfo())
       verifyFragmentExpression(*GVE.getVariable(), *Fragment, &GVE);
+  }
+}
+
+void Verifier::visitDIVariableExpression(const DIVariableExpression &N) {
+  CheckDI(N.getExpression(), "missing expression");
+  if (auto *Expr = N.getExpression())
+    visitDIExpression(*Expr);
+  if (auto *Vars = N.getRawVariableArray()) {
+    CheckDI(isa<MDTuple>(Vars), "invalid composite elements", &N, Vars);
+    for (Metadata *V : N.getVariableArray()->operands()) {
+      CheckDI(isa<DIVariable>(V), "invalid variable", &N);
+    }
   }
 }
 
