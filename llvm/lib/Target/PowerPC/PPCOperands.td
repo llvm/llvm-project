@@ -85,6 +85,16 @@ multiclass SignedImmediateWithPCRel<ValueType vt, code pred,
 }
 
 //===----------------------------------------------------------------------===//
+// Immediate transformation functions
+//===----------------------------------------------------------------------===//
+
+// NEG_S32 - Negate a signed 32-bit immediate value
+def NEG_S32 : SDNodeXForm<imm, [{
+  // Transformation function: -imm
+  return getI32Imm(-N->getSExtValue(), SDLoc(N));
+}]>;
+
+//===----------------------------------------------------------------------===//
 // Immediate AsmOperand definitions
 //===----------------------------------------------------------------------===//
 def U1Imm : ImmediateAsmOperand<"isUImm<1>">;
@@ -107,6 +117,7 @@ def S16Imm : ImmediateAsmOperand<"isS16Imm","addS16ImmOperands">;
 def S17Imm : ImmediateAsmOperand<"isS17Imm","addS16ImmOperands">;
 def S32Imm : ImmediateAsmOperand<"isS32Imm">;
 def S34Imm : ImmediateAsmOperand<"isS34Imm">;
+def NegS32Imm : ImmediateAsmOperand<"isS32Imm","addNegImmOperands">;
 
 //===----------------------------------------------------------------------===//
 // i32 immediate operands
@@ -153,6 +164,9 @@ defm s32imm : SignedImmediateWithPCRel<i32,
 defm s34imm : SignedImmediate<i32,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34">;
+defm neg_s32imm : SignedImmediate<i32,
+  [{ return isInt<32>(Imm); }], NEG_S32,
+  "NegS32Imm", 32, "PPC::fixup_ppc_imm32">;
 
 //===----------------------------------------------------------------------===//
 // i64 immediate operands
@@ -164,6 +178,10 @@ defm s32imm64 : SignedImmediateWithPCRel<i64,
 defm s34imm64 : SignedImmediateWithPCRel<i64,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34", "PPC::fixup_ppc_pcrel34">;
+defm neg_s32imm64 : SignedImmediate<i64,
+  [{ return isInt<32>(Imm); }], NEG_S32,
+  "NegS32Imm", 32, "PPC::fixup_ppc_imm32">;
+
 
 //===----------------------------------------------------------------------===//
 // Special case immediate operands

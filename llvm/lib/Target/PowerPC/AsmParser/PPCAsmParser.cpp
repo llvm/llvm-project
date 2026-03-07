@@ -161,6 +161,48 @@ public:
                                MCContext &Ctx) override;
 };
 
+// Helper function to negate an operand - used by both PPCOperand and
+// PPCAsmParser to add the negation of \p Op as an operand to \p Inst.
+//
+// Originally this helper is only used to lower pseudo-subtraction mnemonics
+// (e.g. SUBI, SUBIS, SUBIC, SUBIC_rec, PSUBI) into their real ADD-family
+// equivalents by negating the immediate or expression operand before
+// appending it.  Now it's also used by PPCOperand for PSUBIS.
+//
+// The negation is performed as follows:
+// - If \p Op is an immediate, the negated integer value is added directly.
+// - If \p Op is a unary-minus expression (i.e. \c -E), the inner
+//   sub-expression \c E is added, effectively cancelling the double negation.
+// - If \p Op is a binary-subtraction expression (i.e. \c LHS-RHS), the
+//   operands are swapped to produce \c RHS-LHS.
+// - Otherwise, a new unary-minus expression wrapping \p Op's expression is
+//   created and added.
+//
+// \param Inst  The instruction being built; the negated operand is appended.
+// \param Op    The source operand whose value is to be negated.
+// \param Ctx   The MC context used to allocate new expression nodes.
+static void addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
+  if (Op.isImm()) {
+    Inst.addOperand(MCOperand::createImm(-Op.getImm()));
+    return;
+  }
+  const MCExpr *Expr = Op.getExpr();
+  if (const MCUnaryExpr *UnExpr = dyn_cast<MCUnaryExpr>(Expr)) {
+    if (UnExpr->getOpcode() == MCUnaryExpr::Minus) {
+      Inst.addOperand(MCOperand::createExpr(UnExpr->getSubExpr()));
+      return;
+    }
+  } else if (const MCBinaryExpr *BinExpr = dyn_cast<MCBinaryExpr>(Expr)) {
+    if (BinExpr->getOpcode() == MCBinaryExpr::Sub) {
+      const MCExpr *NE =
+          MCBinaryExpr::createSub(BinExpr->getRHS(), BinExpr->getLHS(), Ctx);
+      Inst.addOperand(MCOperand::createExpr(NE));
+      return;
+    }
+  }
+  Inst.addOperand(MCOperand::createExpr(MCUnaryExpr::createMinus(Expr, Ctx)));
+}
+
 /// PPCOperand - Instances of this class represent a parsed PowerPC machine
 /// instruction.
 struct PPCOperand : public MCParsedAsmOperand {
@@ -174,6 +216,7 @@ struct PPCOperand : public MCParsedAsmOperand {
 
   SMLoc StartLoc, EndLoc;
   bool IsPPC64;
+  MCContext *Ctx;
 
   struct TokOp {
     const char *Data;
@@ -640,6 +683,20 @@ public:
     }
   }
 
+  void addNegImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+
+    if (Kind == Immediate) {
+      Inst.addOperand(MCOperand::createImm(-getImm()));
+      return;
+    }
+
+    // Create an MCOperand using the static helper function.
+    assert(Ctx && "MCContext is required for for non immediates");
+    MCOperand Op = MCOperand::createExpr(getExpr());
+    addNegOperand(Inst, Op, *Ctx);
+  }
+
   void addBranchTargetOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     if (Kind == Immediate)
@@ -660,19 +717,21 @@ public:
 
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
-  static std::unique_ptr<PPCOperand> CreateToken(StringRef Str, SMLoc S,
-                                                 bool IsPPC64) {
+  static std::unique_ptr<PPCOperand>
+  CreateToken(StringRef Str, SMLoc S, bool IsPPC64, MCContext *Ctx = nullptr) {
     auto Op = std::make_unique<PPCOperand>(Token);
     Op->Tok.Data = Str.data();
     Op->Tok.Length = Str.size();
     Op->StartLoc = S;
     Op->EndLoc = S;
     Op->IsPPC64 = IsPPC64;
+    Op->Ctx = Ctx;
     return Op;
   }
 
   static std::unique_ptr<PPCOperand>
-  CreateTokenWithStringCopy(StringRef Str, SMLoc S, bool IsPPC64) {
+  CreateTokenWithStringCopy(StringRef Str, SMLoc S, bool IsPPC64,
+                            MCContext *Ctx = nullptr) {
     // Allocate extra memory for the string and copy it.
     // FIXME: This is incorrect, Operands are owned by unique_ptr with a default
     // deleter which will destroy them by simply using "delete", not correctly
@@ -686,11 +745,13 @@ public:
     Op->StartLoc = S;
     Op->EndLoc = S;
     Op->IsPPC64 = IsPPC64;
+    Op->Ctx = Ctx;
     return Op;
   }
 
   static std::unique_ptr<PPCOperand> CreateImm(int64_t Val, SMLoc S, SMLoc E,
                                                bool IsPPC64,
+                                               MCContext *Ctx = nullptr,
                                                bool IsMemOpBase = false) {
     auto Op = std::make_unique<PPCOperand>(Immediate);
     Op->Imm.Val = Val;
@@ -698,57 +759,66 @@ public:
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsPPC64 = IsPPC64;
+    Op->Ctx = Ctx;
     return Op;
   }
 
   static std::unique_ptr<PPCOperand> CreateExpr(const MCExpr *Val, SMLoc S,
-                                                SMLoc E, bool IsPPC64) {
+                                                SMLoc E, bool IsPPC64,
+                                                MCContext *Ctx = nullptr) {
     auto Op = std::make_unique<PPCOperand>(Expression);
     Op->Expr.Val = Val;
     Op->Expr.CRVal = EvaluateCRExpr(Val);
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsPPC64 = IsPPC64;
+    Op->Ctx = Ctx;
     return Op;
   }
 
-  static std::unique_ptr<PPCOperand>
-  CreateTLSReg(const MCSymbolRefExpr *Sym, SMLoc S, SMLoc E, bool IsPPC64) {
+  static std::unique_ptr<PPCOperand> CreateTLSReg(const MCSymbolRefExpr *Sym,
+                                                  SMLoc S, SMLoc E,
+                                                  bool IsPPC64,
+                                                  MCContext *Ctx = nullptr) {
     auto Op = std::make_unique<PPCOperand>(TLSRegister);
     Op->TLSReg.Sym = Sym;
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsPPC64 = IsPPC64;
+    Op->Ctx = Ctx;
     return Op;
   }
 
   static std::unique_ptr<PPCOperand>
-  CreateContextImm(int64_t Val, SMLoc S, SMLoc E, bool IsPPC64) {
+  CreateContextImm(int64_t Val, SMLoc S, SMLoc E, bool IsPPC64,
+                   MCContext *Ctx = nullptr) {
     auto Op = std::make_unique<PPCOperand>(ContextImmediate);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsPPC64 = IsPPC64;
+    Op->Ctx = Ctx;
     return Op;
   }
 
   static std::unique_ptr<PPCOperand>
-  CreateFromMCExpr(const MCExpr *Val, SMLoc S, SMLoc E, bool IsPPC64) {
+  CreateFromMCExpr(const MCExpr *Val, SMLoc S, SMLoc E, bool IsPPC64,
+                   MCContext *Ctx = nullptr) {
     if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Val))
-      return CreateImm(CE->getValue(), S, E, IsPPC64);
+      return CreateImm(CE->getValue(), S, E, IsPPC64, Ctx);
 
     if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(Val))
       if (getSpecifier(SRE) == PPC::S_TLS ||
           getSpecifier(SRE) == PPC::S_TLS_PCREL)
-        return CreateTLSReg(SRE, S, E, IsPPC64);
+        return CreateTLSReg(SRE, S, E, IsPPC64, Ctx);
 
     if (const auto *SE = dyn_cast<MCSpecifierExpr>(Val)) {
       int64_t Res;
       if (PPC::evaluateAsConstant(*SE, Res))
-        return CreateContextImm(Res, S, E, IsPPC64);
+        return CreateContextImm(Res, S, E, IsPPC64, Ctx);
     }
 
-    return CreateExpr(Val, S, E, IsPPC64);
+    return CreateExpr(Val, S, E, IsPPC64, Ctx);
   }
 
 private:
@@ -789,29 +859,6 @@ void PPCOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     MAI.printExpr(OS, *getTLSReg());
     break;
   }
-}
-
-static void
-addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
-  if (Op.isImm()) {
-    Inst.addOperand(MCOperand::createImm(-Op.getImm()));
-    return;
-  }
-  const MCExpr *Expr = Op.getExpr();
-  if (const MCUnaryExpr *UnExpr = dyn_cast<MCUnaryExpr>(Expr)) {
-    if (UnExpr->getOpcode() == MCUnaryExpr::Minus) {
-      Inst.addOperand(MCOperand::createExpr(UnExpr->getSubExpr()));
-      return;
-    }
-  } else if (const MCBinaryExpr *BinExpr = dyn_cast<MCBinaryExpr>(Expr)) {
-    if (BinExpr->getOpcode() == MCBinaryExpr::Sub) {
-      const MCExpr *NE = MCBinaryExpr::createSub(BinExpr->getRHS(),
-                                                 BinExpr->getLHS(), Ctx);
-      Inst.addOperand(MCOperand::createExpr(NE));
-      return;
-    }
-  }
-  Inst.addOperand(MCOperand::createExpr(MCUnaryExpr::createMinus(Expr, Ctx)));
 }
 
 void PPCAsmParser::processInstruction(MCInst &Inst,
@@ -1454,7 +1501,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
     if (!matchRegisterName(IntVal))
       return Error(S, "invalid register name");
 
-    Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
+    Operands.push_back(
+        PPCOperand::CreateImm(IntVal, S, E, isPPC64(), &getContext()));
     return false;
   }
   case AsmToken::Identifier:
@@ -1475,7 +1523,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
   }
 
   // Push the parsed operand into the list of operands
-  Operands.push_back(PPCOperand::CreateFromMCExpr(EVal, S, E, isPPC64()));
+  Operands.push_back(
+      PPCOperand::CreateFromMCExpr(EVal, S, E, isPPC64(), &getContext()));
 
   // Check whether this is a TLS call expression
   const char TlsGetAddr[] = "__tls_get_addr";
@@ -1522,10 +1571,11 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
         EVal = MCBinaryExpr::createAdd(EVal, TlsCallAddend, getContext());
       // Add a __tls_get_addr operand with addend a, b, or a+b.
       Operands.back() = PPCOperand::CreateFromMCExpr(
-          EVal, S, Parser.getTok().getLoc(), false);
+          EVal, S, Parser.getTok().getLoc(), false, &getContext());
     }
 
-    Operands.push_back(PPCOperand::CreateFromMCExpr(TLSSym, S, E, isPPC64()));
+    Operands.push_back(
+        PPCOperand::CreateFromMCExpr(TLSSym, S, E, isPPC64(), &getContext()));
   }
 
   // Otherwise, check for D-form memory operands
@@ -1552,8 +1602,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
     E = Parser.getTok().getLoc();
     if (parseToken(AsmToken::RParen, "missing ')'"))
       return true;
-    Operands.push_back(
-        PPCOperand::CreateImm(IntVal, S, E, isPPC64(), /*IsMemOpBase=*/true));
+    Operands.push_back(PPCOperand::CreateImm(
+        IntVal, S, E, isPPC64(), &getContext(), /*IsMemOpBase=*/true));
   }
 
   return false;
@@ -1581,18 +1631,20 @@ bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   size_t Dot = Name.find('.');
   StringRef Mnemonic = Name.slice(0, Dot);
   if (!NewOpcode.empty()) // Underlying memory for Name is volatile.
-    Operands.push_back(
-        PPCOperand::CreateTokenWithStringCopy(Mnemonic, NameLoc, isPPC64()));
+    Operands.push_back(PPCOperand::CreateTokenWithStringCopy(
+        Mnemonic, NameLoc, isPPC64(), &getContext()));
   else
-    Operands.push_back(PPCOperand::CreateToken(Mnemonic, NameLoc, isPPC64()));
+    Operands.push_back(
+        PPCOperand::CreateToken(Mnemonic, NameLoc, isPPC64(), &getContext()));
   if (Dot != StringRef::npos) {
     SMLoc DotLoc = SMLoc::getFromPointer(NameLoc.getPointer() + Dot);
     StringRef DotStr = Name.substr(Dot);
     if (!NewOpcode.empty()) // Underlying memory for Name is volatile.
-      Operands.push_back(
-          PPCOperand::CreateTokenWithStringCopy(DotStr, DotLoc, isPPC64()));
+      Operands.push_back(PPCOperand::CreateTokenWithStringCopy(
+          DotStr, DotLoc, isPPC64(), &getContext()));
     else
-      Operands.push_back(PPCOperand::CreateToken(DotStr, DotLoc, isPPC64()));
+      Operands.push_back(
+          PPCOperand::CreateToken(DotStr, DotLoc, isPPC64(), &getContext()));
   }
 
   // If there are no more operands then finish
