@@ -66,12 +66,13 @@ public:
 protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
                uint32_t align)
-      : sectionKind(kind), keepUnique(false), hasAltEntry(false), align(align),
-        data(data), section(section) {}
+      : sectionKind(kind), keepUnique(false), hasAltEntry(false), isCold(false),
+        align(align), data(data), section(section) {}
 
   InputSection(const InputSection &rhs)
       : sectionKind(rhs.sectionKind), keepUnique(false), hasAltEntry(false),
-        align(rhs.align), data(rhs.data), section(rhs.section) {}
+        isCold(rhs.isCold), align(rhs.align), data(rhs.data),
+        section(rhs.section) {}
 
   Kind sectionKind;
 
@@ -84,6 +85,14 @@ public:
   // Does this section have symbols at offsets other than zero? (NOTE: only
   // applies to ConcatInputSections.)
   bool hasAltEntry : 1;
+  // Is this considered cold? Computed before ICF. Currently reflects whether
+  // any symbol in the section has the N_COLD_FUNC nlist flag set. Cold
+  // sections are placed at the end of their containing output section to
+  // improve locality of non-cold input sections. When a section is given an
+  // explicit priority (via order file, --bp-startup-sort, or
+  // --bp-compression-sort), this flag is unset so that the priority-based
+  // ordering takes precedence over cold partitioning.
+  bool isCold : 1;
   uint32_t align = 1;
 
   OutputSection *parent = nullptr;

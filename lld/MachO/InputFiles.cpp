@@ -673,6 +673,8 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 
   assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
 
+  bool isCold = sym.n_desc & N_COLD_FUNC;
+
   if (sym.n_type & N_EXT) {
     // -load_hidden makes us treat global symbols as linkage unit scoped.
     // Duplicates are reported but the symbol does not go in the export trie.
@@ -716,13 +718,15 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
     return symtab->addDefined(
         name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
         isPrivateExtern, sym.n_desc & REFERENCED_DYNAMICALLY,
-        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden);
+        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden, isCold);
   }
   bool includeInSymtab = !isPrivateLabel(name) && !isEhFrameSection(isec);
-  return make<Defined>(
+  auto *defined = make<Defined>(
       name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false, includeInSymtab,
       sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
+  defined->cold = isCold;
+  return defined;
 }
 
 // Absolute symbols are defined symbols that do not have an associated
@@ -730,6 +734,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                                      StringRef name, bool forceHidden) {
+  bool isCold = sym.n_desc & N_COLD_FUNC;
   assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
 
   if (sym.n_type & N_EXT) {
@@ -738,14 +743,16 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                               /*isWeakDef=*/false, isPrivateExtern,
                               /*isReferencedDynamically=*/false,
                               sym.n_desc & N_NO_DEAD_STRIP,
-                              /*isWeakDefCanBeHidden=*/false);
+                              /*isWeakDefCanBeHidden=*/false, isCold);
   }
-  return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
-                       /*isWeakDef=*/false,
-                       /*isExternal=*/false, /*isPrivateExtern=*/false,
-                       /*includeInSymtab=*/true,
-                       /*isReferencedDynamically=*/false,
-                       sym.n_desc & N_NO_DEAD_STRIP);
+  auto *defined = make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
+                                /*isWeakDef=*/false,
+                                /*isExternal=*/false, /*isPrivateExtern=*/false,
+                                /*includeInSymtab=*/true,
+                                /*isReferencedDynamically=*/false,
+                                sym.n_desc & N_NO_DEAD_STRIP);
+  defined->cold = isCold;
+  return defined;
 }
 
 template <class NList>

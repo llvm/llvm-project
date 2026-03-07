@@ -32,6 +32,10 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   static bool isCodeSection(const Section &sec) {
     return sec.flags & ELF::SHF_EXECINSTR;
   }
+  static bool isColdSection(const Section &sec) {
+    return sec.name.starts_with(".text.unlikely") ||
+           sec.name.starts_with(".text.split");
+  }
   ArrayRef<Defined *> getSymbols(const Section &sec) {
     auto it = secToSym.find(&sec);
     if (it == secToSym.end())
