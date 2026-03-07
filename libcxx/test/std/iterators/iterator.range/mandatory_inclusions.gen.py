@@ -9,8 +9,8 @@
 # In addition to being available via inclusion of the <iterator> header,
 # the function templates in [iterator.range] are available when any of the following
 # headers are included: <array>, <deque>, <flat_map>, <flat_set>, <forward_list>,
-# <list>, <map>, <regex>, <set>, <span>, <string>, <string_view>, <unordered_map>,
-# <unordered_set>, <vector>.
+# <list>, <map>, <optional>, <regex>, <set>, <span>, <stacktrace>, <string>,
+# <string_view>, <unordered_map>, <unordered_set>, <valarray>, <vector>.
 
 # UNSUPPORTED: c++03
 
@@ -37,13 +37,16 @@ headers = list(
             "forward_list",
             "list",
             "map",
+            "optional",
             "regex",
             "set",
             "span",
+            # "stacktrace", # unimplemented
             "string",
             "string_view",
             "unordered_map",
             "unordered_set",
+            "valarray",
             "vector",
         ],
     )
