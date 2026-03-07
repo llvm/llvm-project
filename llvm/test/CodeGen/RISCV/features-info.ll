@@ -68,6 +68,7 @@
 ; CHECK-NEXT:   fusion-lui-addi                  - Enable LUI+ADDI macro fusion.
 ; CHECK-NEXT:   fusion-lui-load                  - Enable LUI + load macrofusion.
 ; CHECK-NEXT:   fusion-mul-add                   - Enable MUL+ADD macrofusion.
+; CHECK-NEXT:   fusion-qc-e-li-load-store        - Enable QC.E.LI + Load/Store macrofusion.
 ; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
 ; CHECK-NEXT:   fusion-shifted-zextw             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   fusion-shxadd-load               - Enable SH(1|2|3)ADD(.UW) + load macrofusion.
