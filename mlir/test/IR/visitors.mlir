@@ -422,3 +422,25 @@ func.func @test_no_skip_block_erasure_block_args(%arg0: i32, %arg1: i32) -> i32 
 module {}
 // CHECK-LABEL: Block post-order erasures (no skip)
 // CHECK-NEXT:  Erasing block ^bb0 from region 0 from operation 'builtin.module'
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/116370:
+// ForwardDominanceIterator<NoGraphRegions=true> should skip graph regions
+// (such as scf.forall.in_parallel's body) instead of asserting.
+// CHECK-LABEL: Op forward dominance post-order visits
+// CHECK: Visiting op 'scf.forall'
+// CHECK-NOT: Visiting op 'tensor.parallel_insert_slice'
+// CHECK: Op reverse dominance post-order visits
+func.func @graph_region_skip(%fill: tensor<2xf32>, %output: tensor<2xf32>) {
+  %c0 = arith.constant 0.0 : f32
+  %0 = linalg.fill ins(%c0 : f32) outs(%fill : tensor<2xf32>) -> tensor<2xf32>
+  %1 = scf.forall (%i) in (2) shared_outs(%arg1 = %output) -> (tensor<2xf32>) {
+    %2 = tensor.extract_slice %0[%i][1][1] : tensor<2xf32> to tensor<1xf32>
+    %3 = tensor.extract_slice %arg1[%i][1][1] : tensor<2xf32> to tensor<1xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %3 into %arg1[%i][1][1] : tensor<1xf32> into tensor<2xf32>
+    }
+  }
+  return
+}

@@ -40,10 +40,10 @@ struct ReverseIterator {
 /// enumerated according to their successor relationship. Unreachable blocks are
 /// not enumerated. Blocks may not be erased during the traversal.
 ///
-/// Note: If `NoGraphRegions` is set to "true", this iterator asserts that each
-/// visited region has SSA dominance. In either case, the ops in such regions
-/// are visited in forward order, but for regions without SSA dominance this
-/// does not guarantee that defining ops are visited before their users.
+/// Note: If `NoGraphRegions` is set to "true", graph regions (regions without
+/// SSA dominance) are skipped during the traversal. If set to "false" (the
+/// default), graph regions are visited but without dominance guarantees (i.e.,
+/// defining ops are not guaranteed to be visited before their users).
 template <bool NoGraphRegions = false>
 struct ForwardDominanceIterator {
   static Block &makeIterable(Block &range) {
@@ -51,14 +51,15 @@ struct ForwardDominanceIterator {
   }
 
   static auto makeIterable(Region &region) {
-    if (NoGraphRegions) {
-      // Only regions with SSA dominance are allowed.
-      assert(mayHaveSSADominance(region) && "graph regions are not allowed");
+    Block *null = nullptr;
+    if (NoGraphRegions && !mayHaveSSADominance(region)) {
+      // Skip graph regions.
+      return llvm::make_pointee_range(
+          llvm::make_range(llvm::df_end(null), llvm::df_end(null)));
     }
 
     // Create DFS iterator. Blocks are enumerated according to their successor
     // relationship.
-    Block *null = nullptr;
     auto it = region.empty()
                   ? llvm::make_range(llvm::df_end(null), llvm::df_end(null))
                   : llvm::depth_first(&region.front());
@@ -79,8 +80,8 @@ struct ForwardDominanceIterator {
 /// Cycles in the block graph are broken in an unspecified way. Unreachable
 /// blocks are not enumerated. Blocks may not be erased during the traversal.
 ///
-/// Note: If `NoGraphRegions` is set to "true", this iterator asserts that each
-/// visited region has SSA dominance.
+/// Note: If `NoGraphRegions` is set to "true", graph regions (regions without
+/// SSA dominance) are skipped during the traversal.
 template <bool NoGraphRegions = false>
 struct ReverseDominanceIterator {
   // llvm::reverse uses RangeT::rbegin and RangeT::rend.
@@ -93,14 +94,15 @@ struct ReverseDominanceIterator {
   }
 
   static auto makeIterable(Region &region) {
-    if (NoGraphRegions) {
-      // Only regions with SSA dominance are allowed.
-      assert(mayHaveSSADominance(region) && "graph regions are not allowed");
+    Block *null = nullptr;
+    if (NoGraphRegions && !mayHaveSSADominance(region)) {
+      // Skip graph regions.
+      return llvm::make_pointee_range(
+          llvm::make_range(llvm::po_end(null), llvm::po_end(null)));
     }
 
     // Create post-order iterator. Blocks are enumerated according to their
     // successor relationship.
-    Block *null = nullptr;
     auto it = region.empty()
                   ? llvm::make_range(llvm::po_end(null), llvm::po_end(null))
                   : llvm::post_order(&region.front());
