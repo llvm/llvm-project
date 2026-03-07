@@ -21,7 +21,7 @@ def RDTSCP : I<0x01, MRM_F9, (outs), (ins), "rdtscp", []>, TB;
 
 // CPU flow control instructions
 
-let mayLoad = 1, mayStore = 0, hasSideEffects = 1, isTrap = 1 in {
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0, isTrap = 1 in {
   def TRAP    : I<0x0B, RawFrm, (outs), (ins), "ud2", [(trap)]>, TB;
 
   def UD1Wm   : I<0xB9, MRMSrcMem, (outs), (ins GR16:$src1, i16mem:$src2),
