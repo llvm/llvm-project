@@ -153,16 +153,18 @@ general capability model.  The prior names are still in use, and will be
 mentioned under the tag *previously* where appropriate.
 
 
-GUARDED_BY(c) and PT_GUARDED_BY(c)
-----------------------------------
+GUARDED_BY(...) and PT_GUARDED_BY(...)
+--------------------------------------
 
 ``GUARDED_BY`` is an attribute on data members, which declares that the data
 member is protected by the given capability.  Read operations on the data
 require shared access, while write operations require exclusive access.
+Multiple capabilities may be specified; all of them must be held to access
+the data member.
 
 ``PT_GUARDED_BY`` is similar, but is intended for use on pointers and smart
 pointers. There is no constraint on the data member itself, but the *data that
-it points to* is protected by the given capability.
+it points to* is protected by the given capabilities.
 
 .. code-block:: c++
 
@@ -179,6 +181,28 @@ it points to* is protected by the given capability.
 
     *p3 = 42;           // Warning!
     p3.reset(new int);  // OK.
+  }
+
+When multiple capabilities are listed, all of them must be held:
+
+.. code-block:: c++
+
+  Mutex mu1, mu2;
+  int a    GUARDED_BY(mu1, mu2);   // Requires both mu1 and mu2.
+  int *p   PT_GUARDED_BY(mu1, mu2);
+
+  void test() {
+    mu1.Lock();
+    a = 0;       // Warning!  mu2 is not held.
+    *p = 0;      // Warning!  mu2 is not held.
+    mu1.Unlock();
+
+    mu1.Lock();
+    mu2.Lock();
+    a = 0;       // OK.
+    *p = 0;      // OK.
+    mu2.Unlock();
+    mu1.Unlock();
   }
 
 
@@ -860,11 +884,11 @@ implementation.
   #define SCOPED_CAPABILITY \
     THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)
 
-  #define GUARDED_BY(x) \
-    THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
+  #define GUARDED_BY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(__VA_ARGS__))
 
-  #define PT_GUARDED_BY(x) \
-    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
+  #define PT_GUARDED_BY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(__VA_ARGS__))
 
   #define ACQUIRED_BEFORE(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(acquired_before(__VA_ARGS__))
