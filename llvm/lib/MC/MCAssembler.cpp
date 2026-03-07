@@ -232,6 +232,9 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return Size;
   }
 
+  case MCFragment::FT_PrefAlign:
+    return F.getSize();
+
   case MCFragment::FT_Nops:
     return cast<MCNopsFragment>(F).getNumBytes();
 
@@ -464,6 +467,23 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     }
   } break;
 
+  case MCFragment::FT_PrefAlign: {
+    OS << StringRef(F.getContents().data(), F.getContents().size());
+    uint64_t PadSize = FragmentSize - F.getContents().size();
+    if (F.getPrefAlignEmitNops()) {
+      if (!Asm.getBackend().writeNopData(OS, PadSize, F.getSubtargetInfo()))
+        reportFatalInternalError("unable to write nop sequence of " +
+                                 Twine(PadSize) + " bytes");
+    } else if (F.getPrefAlignFill() == 0) {
+      OS.write_zeros(PadSize);
+    } else {
+      char B = char(F.getPrefAlignFill());
+      for (uint64_t I = 0; I < PadSize; ++I)
+        OS << B;
+    }
+    break;
+  }
+
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
@@ -596,6 +616,10 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // Disallowed for API usage. AsmParser changes non-zero fill values to
         // 0.
         assert(F.getAlignFill() == 0 && "Invalid align in virtual section!");
+        break;
+      case MCFragment::FT_PrefAlign:
+        assert(!F.getPrefAlignEmitNops() && F.getPrefAlignFill() == 0 &&
+               "Invalid align in BSS");
         break;
       case MCFragment::FT_Fill:
         HasNonZero = cast<MCFillFragment>(F).getValue() != 0;
@@ -770,6 +794,37 @@ void MCAssembler::relaxAlign(MCFragment &F) {
     Size = 0;
   F.VarContentStart = F.getFixedSize();
   F.VarContentEnd = F.VarContentStart + Size;
+  if (F.VarContentEnd > F.getParent()->ContentStorage.size())
+    F.getParent()->ContentStorage.resize(F.VarContentEnd);
+}
+
+// Compute the body size by walking forward from F to the End symbol and
+// summing fragment sizes. This avoids depending on stale layout offsets.
+void MCAssembler::relaxPrefAlign(MCFragment &F) {
+  uint64_t RawStart = F.Offset + F.getFixedSize();
+  const MCSymbol &End = F.getPrefAlignEnd();
+  if (!End.getFragment() || End.getFragment()->getParent() != F.getParent()) {
+    recordError(SMLoc(), "end symbol '" + End.getName() +
+                             "' must be in the current section");
+    return;
+  }
+  const MCFragment *EndFrag = End.getFragment();
+  if (EndFrag->getLayoutOrder() <= F.getLayoutOrder())
+    return;
+  uint64_t BodySize = 0;
+  for (const MCFragment *Cur = F.getNext();; Cur = Cur->getNext()) {
+    if (Cur == EndFrag) {
+      BodySize += End.getOffset();
+      break;
+    }
+    BodySize += computeFragmentSize(*Cur);
+  }
+  Align NewAlign =
+      std::min(Align(llvm::bit_ceil(BodySize)), F.getPrefAlignPreferred());
+  F.setPrefAlignComputed(NewAlign);
+  uint64_t NewPadSize = offsetToAlignment(RawStart, NewAlign);
+  F.VarContentStart = F.getFixedSize();
+  F.VarContentEnd = F.VarContentStart + NewPadSize;
   if (F.VarContentEnd > F.getParent()->ContentStorage.size())
     F.getParent()->ContentStorage.resize(F.VarContentEnd);
 }
@@ -995,6 +1050,9 @@ void MCAssembler::relaxFragment(MCFragment &F) {
   case MCFragment::FT_BoundaryAlign:
     relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));
     break;
+  case MCFragment::FT_PrefAlign:
+    relaxPrefAlign(F);
+    break;
   case MCFragment::FT_CVInlineLines:
     getContext().getCVContext().encodeInlineLineTable(
         *this, static_cast<MCCVInlineLineTableFragment &>(F));
@@ -1012,6 +1070,8 @@ void MCAssembler::layoutSection(MCSection &Sec) {
     F.Offset = Offset;
     if (F.getKind() == MCFragment::FT_Align)
       relaxAlign(F);
+    else if (F.getKind() == MCFragment::FT_PrefAlign)
+      relaxPrefAlign(F);
     Offset += computeFragmentSize(F);
   }
 }

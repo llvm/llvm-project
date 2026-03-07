@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 
-; CHECK:          .p2align 4
+; CHECK:          .prefalign 16
 ; CHECK-LABEL:    __cfi_f1:
 ; CHECK-COUNT-11:   nop
 ; CHECK-NEXT:       movl $12345678, %eax
@@ -13,9 +13,9 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
   ret void
 }
 
-; CHECK:          .p2align 4
+; CHECK:          .prefalign 16
 ; CHECK-NOT:      __cfi_f2:
-; CHECK-NOT:        nop
+; CHECK-NOT:        {{^[[:space:]]+}}nop
 ; CHECK-LABEL:    f2:
 define void @f2(ptr noundef %x) {
 ; CHECK:            addl -4(%r{{..}}), %r10d
@@ -23,9 +23,9 @@ define void @f2(ptr noundef %x) {
   ret void
 }
 
-; CHECK:          .p2align 4
+; CHECK:          .prefalign 16
 ; CHECK-LABEL:    __cfi_f3:
-; CHECK-NOT:        nop
+; CHECK-NOT:        {{^[[:space:]]+}}nop
 ; CHECK-NEXT:       movl $12345678, %eax
 ; CHECK-COUNT-11:   nop
 ; CHECK-LABEL:    f3:
@@ -35,9 +35,9 @@ define void @f3(ptr noundef %x) #0 !kcfi_type !1 {
   ret void
 }
 
-; CHECK:          .p2align 4
+; CHECK:          .prefalign 16
 ; CHECK-NOT:      __cfi_f4:
-; CHECK-COUNT-16:   nop
+; CHECK-COUNT-16:   {{^[[:space:]]+}}nop
 ; CHECK-LABEL:    f4:
 define void @f4(ptr noundef %x) #0 {
 ; CHECK:            addl -15(%r{{..}}), %r10d

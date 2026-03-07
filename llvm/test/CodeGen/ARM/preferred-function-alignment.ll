@@ -1,15 +1,18 @@
 ; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m85 < %s | FileCheck --check-prefixes=CHECK,ALIGN-64,ALIGN-CS-16 %s
 ; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m23 < %s | FileCheck --check-prefixes=CHECK,ALIGN-16,ALIGN-CS-16 %s
 
-; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-a5 < %s  | FileCheck --check-prefixes=CHECK,ALIGN-32,ALIGN-CS-32 %s
-; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m33 < %s | FileCheck --check-prefixes=CHECK,ALIGN-32,ALIGN-CS-16 %s
-; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m55 < %s | FileCheck --check-prefixes=CHECK,ALIGN-32,ALIGN-CS-16 %s
+; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-a5 < %s  | FileCheck --check-prefixes=CHECK,ALIGN-32A,ALIGN-CS-32 %s
+; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m33 < %s | FileCheck --check-prefixes=CHECK,ALIGN-32T,ALIGN-CS-16 %s
+; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m55 < %s | FileCheck --check-prefixes=CHECK,ALIGN-32T,ALIGN-CS-16 %s
 ; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m7 < %s | FileCheck --check-prefixes=CHECK,ALIGN-64,ALIGN-CS-16 %s
 
 ; CHECK-LABEL: test
 ; ALIGN-16: .p2align 1
-; ALIGN-32: .p2align 2
-; ALIGN-64: .p2align 3
+; ALIGN-32A: .p2align 2
+; ALIGN-32T: .p2align 1
+; ALIGN-32T-NEXT: .prefalign 4
+; ALIGN-64: .p2align 1
+; ALIGN-64-NEXT: .prefalign 8
 
 define void @test() {
   ret void

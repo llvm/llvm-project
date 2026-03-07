@@ -1046,19 +1046,20 @@ void AsmPrinter::emitFunctionHeader() {
 
   emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment()) {
-    // Make sure that the preferred alignment directive (.prefalign) is
-    // supported before using it. The preferred alignment directive will not
-    // have the intended effect unless function sections are enabled, so check
-    // for that as well.
+    Align PrefAlign = MF->getPreferredAlignment();
+    // Use .prefalign when the integrated assembler supports it and the target
+    // has a preferred alignment distinct from the minimum. The end symbol must
+    // be created here, before the function body, so that .prefalign can
+    // reference it; emitFunctionBody will emit the label at the function end.
     if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment() &&
-        TM.getFunctionSections()) {
-      Align Alignment = MF->getAlignment();
-      Align PrefAlignment = MF->getPreferredAlignment();
-      emitAlignment(Alignment, &F);
-      if (Alignment != PrefAlignment)
-        OutStreamer->emitPrefAlign(PrefAlignment);
+        MF->getAlignment() != PrefAlign) {
+      emitAlignment(MF->getAlignment(), &F);
+      CurrentFnEnd = createTempSymbol("func_end");
+      OutStreamer->emitPrefAlign(PrefAlign, *CurrentFnEnd,
+                                 /*EmitNops=*/true, /*Fill=*/0,
+                                 getSubtargetInfo());
     } else {
-      emitAlignment(MF->getPreferredAlignment(), &F);
+      emitAlignment(PrefAlign, &F);
     }
   }
 
@@ -2365,9 +2366,11 @@ void AsmPrinter::emitFunctionBody() {
   // SPIR-V supports label instructions only inside a block, not after the
   // function body.
   if (TT.getObjectFormat() != Triple::SPIRV &&
-      (EmitFunctionSize || needFuncLabels(*MF, *this))) {
-    // Create a symbol for the end of function.
-    CurrentFnEnd = createTempSymbol("func_end");
+      (EmitFunctionSize || needFuncLabels(*MF, *this) || CurrentFnEnd)) {
+    // Create a symbol for the end of function, if not already pre-created
+    // (e.g. for .prefalign directive).
+    if (!CurrentFnEnd)
+      CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
   }
 
@@ -3121,6 +3124,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnSymForSize = CurrentFnSym;
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
+  CurrentFnEnd = nullptr;
   CurrentSectionBeginSym = nullptr;
   CurrentFnCallsiteEndSymbols.clear();
   MBBSectionRanges.clear();

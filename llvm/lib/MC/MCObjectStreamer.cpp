@@ -690,8 +690,14 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   F->STI = STI;
 }
 
-void MCObjectStreamer::emitPrefAlign(Align Alignment) {
-  getCurrentSectionOnly()->ensurePreferredAlignment(Alignment);
+void MCObjectStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
+                                     bool EmitNops, uint8_t Fill,
+                                     const MCSubtargetInfo &STI) {
+  auto *F = getCurrentFragment();
+  F->makePrefAlign(Alignment, End, EmitNops, Fill);
+  if (EmitNops)
+    F->STI = &STI;
+  newFragment();
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

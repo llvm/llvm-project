@@ -1,104 +1,138 @@
-// RUN: llvm-mc -triple x86_64 %s -o - | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -filetype=obj -triple x86_64 %s -o - | llvm-readelf -SW - | FileCheck --check-prefix=OBJ %s
+# RUN: llvm-mc -triple x86_64 %s -o - | FileCheck --check-prefix=ASM %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t
+# RUN: llvm-readelf -SW %t | FileCheck --check-prefix=OBJ %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DIS %s
+# RUN: llvm-objdump -s -j .text.f1 -j .text.f2 -j .text.f6 %t | FileCheck --check-prefix=HEX %s
 
-// Minimum alignment >= preferred alignment, no effect on sh_addralign.
-// ASM: .section .text.f1lt
-// ASM: .p2align 2
-// ASM: .prefalign 2 
-// OBJ: .text.f1lt        PROGBITS        0000000000000000 000040 000003 00  AX  0   0  4
-.section .text.f1lt,"ax",@progbits
+## MinAlign >= PrefAlign: the three-way rule is bounded by MinAlign regardless
+## of body size, so sh_addralign stays at MinAlign.
+# ASM: .section .text.f1
+# ASM: .p2align 2
+# ASM: .prefalign 2, .Lf1_end, 0
+# OBJ: .text.f1          PROGBITS        0000000000000000 {{[0-9a-f]+}} 000003 00  AX  0   0  4
+# HEX:      Contents of section .text.f1:
+# HEX-NEXT:  0000 f8f8f8 ...
+.section .text.f1,"ax",@progbits
 .p2align 2
-.prefalign 2
+.prefalign 2, .Lf1_end, 0
 .rept 3
-nop
+clc
 .endr
+.Lf1_end:
 
-// ASM: .section .text.f1eq
-// ASM: .p2align 2
-// ASM: .prefalign 2 
-// OBJ: .text.f1eq        PROGBITS        0000000000000000 000044 000004 00  AX  0   0  4
-.section .text.f1eq,"ax",@progbits
+## Multiple .prefalign on the same end symbol: effective PrefAlign is the maximum.
+# ASM: .section .text.f2
+# ASM: .prefalign 8, .Lf2_end, 0
+# ASM: .prefalign 16, .Lf2_end, 0
+# ASM: .prefalign 8, .Lf2_end, 0
+# OBJ: .text.f2          PROGBITS        0000000000000000 {{[0-9a-f]+}} 000009 00  AX  0   0 16
+# HEX-NEXT: Contents of section .text.f2:
+# HEX-NEXT:  0000 f8f8f8f8 f8f8f8f8 f8 .........
+.section .text.f2,"ax",@progbits
 .p2align 2
-.prefalign 2
-.rept 4
-nop
-.endr
-
-// ASM: .section .text.f1gt
-// ASM: .p2align 2
-// ASM: .prefalign 2 
-// OBJ: .text.f1gt        PROGBITS        0000000000000000 000048 000005 00  AX  0   0  4
-.section .text.f1gt,"ax",@progbits
-.p2align 2
-.prefalign 2
-.rept 5
-nop
-.endr
-
-// Minimum alignment < preferred alignment, sh_addralign influenced by section size.
-// Use maximum of all .prefalign directives.
-// ASM: .section .text.f2lt
-// ASM: .p2align 2
-// ASM: .prefalign 8
-// ASM: .prefalign 16 
-// ASM: .prefalign 8
-// OBJ: .text.f2lt        PROGBITS        0000000000000000 000050 000003 00  AX  0   0  4
-.section .text.f2lt,"ax",@progbits
-.p2align 2
-.prefalign 8
-.prefalign 16
-.prefalign 8
-.rept 3
-nop
-.endr
-
-// ASM: .section .text.f2between1
-// OBJ: .text.f2between1  PROGBITS        0000000000000000 000054 000008 00  AX  0   0  8
-.section .text.f2between1,"ax",@progbits
-.p2align 2
-.prefalign 8
-.prefalign 16
-.prefalign 8
-.rept 8
-nop
-.endr
-
-// OBJ: .text.f2between2  PROGBITS        0000000000000000 00005c 000009 00  AX  0   0 16
-.section .text.f2between2,"ax",@progbits
-.p2align 2
-.prefalign 8
-.prefalign 16
-.prefalign 8
+.prefalign 8, .Lf2_end, 0
+.prefalign 16, .Lf2_end, 0
+.prefalign 8, .Lf2_end, 0
 .rept 9
-nop
+clc
 .endr
+.Lf2_end:
 
-// OBJ: .text.f2between3  PROGBITS        0000000000000000 000068 000010 00  AX  0   0 16
-.section .text.f2between3,"ax",@progbits
+## Multiple functions in a section, each with its own .prefalign.
+## nop fill; f3b's 5-byte padding is a NOP.
+## f3b: ComputedAlign=8,  padding=5
+## f3c: ComputedAlign=16, padding=0
+# ASM: .prefalign 16, .Lf3a_end, nop
+# ASM: .prefalign 16, .Lf3b_end, nop
+# ASM: .prefalign 16, .Lf3c_end, 204
+# OBJ: .text.f3          PROGBITS        0000000000000000 {{[0-9a-f]+}} 000020 00  AX  0   0 16
+# DIS: Disassembly of section .text.f3:
+# DIS:       0: clc
+# DIS-NEXT:  1: clc
+# DIS-NEXT:  2: clc
+# DIS-NEXT:  3: nopl
+# DIS-NEXT:  8: stc
+# DIS:       f: stc
+# DIS-NEXT: 10: clc
+# DIS:      1f: clc
+# DIS-EMPTY:
+.section .text.f3,"ax",@progbits
 .p2align 2
-.prefalign 8
-.prefalign 16
-.prefalign 8
+.prefalign 16, .Lf3a_end, nop
+.rept 3
+clc
+.endr
+.Lf3a_end:
+.prefalign 16, .Lf3b_end, nop
+.rept 8
+stc
+.endr
+.Lf3b_end:
+.prefalign 16, .Lf3c_end, 0xcc
 .rept 16
-nop
+clc
 .endr
+.Lf3c_end:
+## No-op prefalign
+.prefalign 16, .Lf3d_end, 0xcc
+.Lf3d_end:
+.prefalign 16, .Lf3a_end, 0xcc
 
-// OBJ: .text.f2gt1       PROGBITS        0000000000000000 000078 000011 00  AX  0   0 16
-.section .text.f2gt1,"ax",@progbits
+## Two functions in one section where the second function's padding depends on
+## the first function's size.
+# OBJ: .text.f4          PROGBITS        0000000000000000 {{[0-9a-f]+}} 00001e 00  AX  0   0 16
+# DIS: Disassembly of section .text.f4:
+# DIS:       0: pushq
+# DIS:       7: retq
+# DIS-NEXT:  8: nopl
+# DIS-NEXT: 10: movl
+# DIS:      1d: retq
+# DIS-EMPTY:
+.section .text.f4,"ax",@progbits
 .p2align 2
-.prefalign 8
-.prefalign 16
-.prefalign 8
-.rept 17
-nop
-.endr
+.prefalign 16, .Lf4a_end, nop
+pushq %rbp
+movq %rsp, %rbp
+xorl %eax, %eax
+popq %rbp
+retq
+.Lf4a_end:
+.prefalign 16, .Lf4b_end, nop
+movl $0, 0
+xorl %eax, %eax
+retq
+.Lf4b_end:
 
-// OBJ: .text.f2gt2       PROGBITS        0000000000000000 00008c 000021 00  AX  0   0 16
-.section .text.f2gt2,"ax",@progbits
-.p2align 2
-.prefalign 8
-.prefalign 16
-.prefalign 8
-.rept 33
-nop
+## sh_addralign stays at 32, not downgraded by .prefalign.
+# OBJ: .text.f5          PROGBITS        0000000000000000 {{[0-9a-f]+}} 000003 00  AX  0   0 32
+.section .text.f5,"ax",@progbits
+.p2align 5
+.prefalign 16, .Lf5_end, 0
+.rept 3
+clc
 .endr
+.Lf5_end:
+
+## body_size > PrefAlign: ComputedAlign is clamped to PrefAlign.
+## body=20, pref=8 => ComputedAlign=8, padding=7 zero bytes.
+# OBJ: .text.f6          PROGBITS        0000000000000000 {{[0-9a-f]+}} 00001c 00  AX  0   0  8
+# HEX-NEXT: Contents of section .text.f6:
+# HEX-NEXT:  0000 01000000 00000000 f8f8f8f8 f8f8f8f8 ................
+# HEX-NEXT:  0010 f8f8f8f8 f8f8f8f8 f8f8f8f8 ............
+.section .text.f6,"ax",@progbits
+.byte 1
+.prefalign 8, .Lf6_end, 0
+.rept 20
+clc
+.endr
+.Lf6_end:
+
+## .prefalign in a BSS section with zero fill.
+# ASM: .bss
+# ASM: .prefalign 16, .Lbss_end, 0
+# OBJ: .bss              NOBITS          0000000000000000 {{[0-9a-f]+}} 000004 00  WA  0   0  4
+.bss
+.p2align 2
+.prefalign 16, .Lbss_end, 0
+.space 4
+.Lbss_end:

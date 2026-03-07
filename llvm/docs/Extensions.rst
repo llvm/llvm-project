@@ -31,17 +31,27 @@ hexadecimal format instead of decimal if desired.
 ``.prefalign`` directive
 ------------------------
 
-The ``.prefalign`` directive sets the preferred alignment for a section,
-and enables the section's final alignment to be set in a way that is
-dependent on the section size (currently only supported with ELF).
+.. code-block:: gas
 
-If the section size is less than the section's minimum alignment as
-determined using ``.align`` family directives, the section's alignment
-will be equal to its minimum alignment. Otherwise, if the section size is
-between the minimum alignment and the preferred alignment, the section's
-alignment will be equal to the power of 2 greater than or equal to the
-section size. Otherwise, the section's alignment will be equal to the
-preferred alignment.
+  .prefalign <pref_align>, <end_sym>, nop
+  .prefalign <pref_align>, <end_sym>, <fill_byte>
+
+The ``.prefalign`` directive pads the current location so that the code
+between the directive and ``end_sym`` starts at an alignment that depends
+on the size of that code (currently only supported with ELF). ``align``
+must be a power of 2. ``end_sym`` must be a symbol defined in the same
+section. The fill operand is required: ``nop`` fills the padding with
+target-appropriate NOP instructions, while an integer in ``[0, 255]``
+fills the padding with that byte value.
+
+The alignment is determined by the *body_size* (the number of bytes between
+the padded start and ``end_sym``):
+
+- If *body_size* < *pref_align*: align to the smallest power of 2
+  greater than or equal to *body_size*.
+- If *body_size* ≥ *pref_align*: align to *pref_align*.
+
+To also enforce a minimum alignment, emit a ``.p2align`` before ``.prefalign``.
 
 Machine-specific Assembly Syntax
 ================================

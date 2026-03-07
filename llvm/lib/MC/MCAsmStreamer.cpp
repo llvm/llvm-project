@@ -286,7 +286,8 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -1562,8 +1563,15 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitPrefAlign(Align Alignment) {
-  OS << "\t.prefalign\t" << Alignment.value();
+void MCAsmStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
+                                  bool EmitNops, uint8_t Fill,
+                                  const MCSubtargetInfo &) {
+  OS << "\t.prefalign\t" << Alignment.value() << ", ";
+  End.print(OS, MAI);
+  if (EmitNops)
+    OS << ", nop";
+  else
+    OS << ", " << static_cast<unsigned>(Fill);
   EmitEOL();
 }
 
