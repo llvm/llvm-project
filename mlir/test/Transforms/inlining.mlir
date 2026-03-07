@@ -375,3 +375,25 @@ func.func @inline_with_complex_ops() -> complex<f32> {
   %r = call @double_square_complex(%c) : (complex<f32>) -> (complex<f32>)
   return %r : complex<f32>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/108376:
+// Inlining a function whose test.return arity doesn't match the call result
+// count (e.g., mixing llvm.func returning void with test.return returning
+// values) should not crash with an assertion failure.
+
+// CHECK-LABEL: llvm.func @inline_test_return_arity_mismatch
+llvm.func @inline_test_return_arity_mismatch(%arg0: f16, %arg1: f16) attributes {llvm.emit_c_interface} {
+  // CHECK: test.op_with_bitcast_type
+  // CHECK: test.op_with_bitcast_type
+  // CHECK: llvm.return
+  // CHECK-NOT: llvm.call
+  llvm.call @inline_test_return_arity_mismatch_callee(%arg0, %arg1) : (f16, f16) -> ()
+  llvm.return
+}
+llvm.func @inline_test_return_arity_mismatch_callee(%arg0: f16, %arg1: f16) {
+  %0 = "test.op_with_bitcast_type"(%arg0) : (f16) -> tensor<4xf32>
+  %1 = "test.op_with_bitcast_type"(%arg1) : (f16) -> tensor<2xi32>
+  "test.return"(%0, %1) : (tensor<4xf32>, tensor<2xi32>) -> ()
+}

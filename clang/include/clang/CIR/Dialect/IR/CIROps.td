@@ -3992,12 +3992,13 @@ def CIR_MemSetOp : CIR_Op<"libc.memset"> {
 
   let arguments = (ins
     Arg<CIR_VoidPtrType, "", [MemWrite]>:$dst,
+    OptionalAttr<I64Attr>:$alignment,
     CIR_UInt8:$val,
     CIR_AnyFundamentalUIntType:$len
   );
 
   let assemblyFormat = [{
-    $len `bytes` `at` $dst `to` $val attr-dict
+    $len `bytes` `at` $dst (`align` `(` $alignment^ `)`)? `to` $val attr-dict
     `:` qualified(type($dst)) `,` type($val) `,` type($len)
   }];
 }

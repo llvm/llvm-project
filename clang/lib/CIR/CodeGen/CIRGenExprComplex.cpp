@@ -328,9 +328,7 @@ public:
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitPackIndexingExpr");
-    return {};
+    return Visit(e->getSelectedExpr());
   }
 };
 } // namespace

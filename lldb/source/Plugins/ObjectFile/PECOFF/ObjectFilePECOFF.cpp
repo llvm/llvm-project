@@ -1108,27 +1108,6 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   return std::nullopt;
 }
 
-std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
-  llvm::StringRef pdb_file;
-  const llvm::codeview::DebugInfo *pdb_info = nullptr;
-  if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
-    // DebugInfo section is corrupt.
-    Log *log = GetLog(LLDBLog::Object);
-    llvm::StringRef file = m_binary->getFileName();
-    LLDB_LOG_ERROR(
-        log, std::move(Err),
-        "Failed to read Codeview record for PDB debug info file ({1}): {0}",
-        file);
-    return std::nullopt;
-  }
-  if (pdb_file.empty()) {
-    // No DebugInfo section present.
-    return std::nullopt;
-  }
-  return FileSpec(pdb_file, FileSpec::GuessPathStyle(pdb_file).value_or(
-                                FileSpec::Style::native));
-}
-
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
