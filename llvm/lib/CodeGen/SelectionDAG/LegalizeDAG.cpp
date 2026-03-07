@@ -4550,6 +4550,82 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     Results.push_back(Tmp1);
     break;
+  case ISD::CT_SELECT: {
+    Tmp1 = Node->getOperand(0);
+    Tmp2 = Node->getOperand(1);
+    Tmp3 = Node->getOperand(2);
+    EVT VT = Tmp2.getValueType();
+    if (VT.isVector()) {
+      // Constant-time vector blending using pattern F ^ ((T ^ F) & Mask)
+      // where Mask = broadcast(i1 ? -1 : 0) to match vector element width.
+      //
+      // This formulation uses only XOR and AND operations, avoiding branches
+      // that would leak timing information. It's equivalent to:
+      //   Mask==0xFF: F ^ ((T ^ F) & 0xFF) = F ^ (T ^ F) = T
+      //   Mask==0x00: F ^ ((T ^ F) & 0x00) = F ^ 0 = F
+
+      EVT IntVT = VT;
+      SDValue T = Tmp2; // True value
+      SDValue F = Tmp3; // False value
+
+      // Step 1: Handle floating-point vectors by bitcasting to integer
+      if (VT.isFloatingPoint()) {
+        IntVT = EVT::getVectorVT(
+            *DAG.getContext(),
+            EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits()),
+            VT.getVectorElementCount());
+        T = DAG.getNode(ISD::BITCAST, dl, IntVT, T);
+        F = DAG.getNode(ISD::BITCAST, dl, IntVT, F);
+      }
+
+      // Step 2: Broadcast the i1 condition to a vector of i1s
+      // Creates [cond, cond, cond, ...] with i1 elements
+      EVT VecI1Ty = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                     VT.getVectorNumElements());
+      SDValue VecCond = DAG.getSplatBuildVector(VecI1Ty, dl, Tmp1);
+
+      // Step 3: Sign-extend i1 vector to get all-bits mask
+      // true (i1=1) -> 0xFFFFFFFF..., false (i1=0) -> 0x00000000
+      // Sign extension is constant-time: pure arithmetic, no branches
+      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, IntVT, VecCond);
+
+      // Step 4: Compute constant-time blend: F ^ ((T ^ F) & Mask)
+      // All operations (XOR, AND) execute in constant time
+      SDValue TXorF = DAG.getNode(ISD::XOR, dl, IntVT, T, F);
+      SDValue MaskedDiff = DAG.getNode(ISD::AND, dl, IntVT, TXorF, Mask);
+      Tmp1 = DAG.getNode(ISD::XOR, dl, IntVT, F, MaskedDiff);
+
+      // Step 5: Bitcast back to original floating-point type if needed
+      if (VT.isFloatingPoint()) {
+        Tmp1 = DAG.getNode(ISD::BITCAST, dl, VT, Tmp1);
+      }
+
+      Tmp1->setFlags(Node->getFlags());
+    } else if (VT.isFloatingPoint()) {
+      EVT IntegerVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+      Tmp2 = DAG.getBitcast(IntegerVT, Tmp2);
+      Tmp3 = DAG.getBitcast(IntegerVT, Tmp3);
+      Tmp1 = DAG.getBitcast(VT, DAG.getCTSelect(dl, IntegerVT, Tmp1, Tmp2, Tmp3,
+                                                Node->getFlags()));
+    } else {
+      assert(VT.isInteger());
+      // Expand: Result = F ^ ((T ^ F) & Mask), Mask = 0 - (Cond & 1).
+      // SUB+AND creates the mask because i1 is already type-promoted;
+      // SIGN_EXTEND(i32, i32) would be a no-op leaving mask as 0/1.
+      SDValue Cond = Tmp1;
+      if (Cond.getValueType() != VT)
+        Cond = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Cond);
+      SDValue Mask = DAG.getNode(
+          ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT),
+          DAG.getNode(ISD::AND, dl, VT, Cond, DAG.getConstant(1, dl, VT)));
+      SDValue Diff = DAG.getNode(ISD::XOR, dl, VT, Tmp2, Tmp3);
+      Tmp1 = DAG.getNode(ISD::XOR, dl, VT, Tmp3,
+                         DAG.getNode(ISD::AND, dl, VT, Diff, Mask));
+      Tmp1->setFlags(Node->getFlags());
+    }
+    Results.push_back(Tmp1);
+    break;
+  }
   case ISD::BR_JT: {
     SDValue Chain = Node->getOperand(0);
     SDValue Table = Node->getOperand(1);
@@ -5910,7 +5986,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
     break;
   }
-  case ISD::SELECT: {
+  case ISD::SELECT:
+  case ISD::CT_SELECT: {
     unsigned ExtOp, TruncOp;
     if (Node->getValueType(0).isVector() ||
         Node->getValueType(0).getSizeInBits() == NVT.getSizeInBits()) {
@@ -5928,7 +6005,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp2 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));
     // Perform the larger operation, then round down.
-    Tmp1 = DAG.getSelect(dl, NVT, Tmp1, Tmp2, Tmp3);
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3);
+    Tmp1->setFlags(Node->getFlags());
     if (TruncOp != ISD::FP_ROUND)
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1);
     else

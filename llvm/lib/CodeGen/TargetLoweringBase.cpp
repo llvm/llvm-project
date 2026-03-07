@@ -1149,7 +1149,8 @@ void TargetLoweringBase::initActions() {
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
                         ISD::FTANH,          ISD::FATAN2,
-                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP},
+                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
+                        ISD::CT_SELECT},
                        VT, Expand);
 
     // Overflow operations default to expand
