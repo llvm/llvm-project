@@ -1112,7 +1112,8 @@ static void checkAndSanitizeDiags(SmallVectorImpl<StoredDiagnostic> &
 /// contain any translation-unit information, false otherwise.
 bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                     std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
-                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                    std::function<void(CompilerInstance &)> OnCompilerCreated) {
   if (!Invocation)
     return true;
 
@@ -1221,6 +1222,9 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   if (!Act->BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return true;
+
+  if (OnCompilerCreated)
+    OnCompilerCreated(*Clang);
 
   if (SavedMainFileBuffer) {
     StoredDiagnostics.clear();
@@ -1633,7 +1637,8 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 bool ASTUnit::LoadFromCompilerInvocation(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     unsigned PrecompilePreambleAfterNParses,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    std::function<void(CompilerInstance &)> OnCompilerCreated) {
   if (!Invocation)
     return true;
 
@@ -1663,7 +1668,8 @@ bool ASTUnit::LoadFromCompilerInvocation(
   llvm::CrashRecoveryContextCleanupRegistrar<llvm::MemoryBuffer>
     MemBufferCleanup(OverrideMainBuffer.get());
 
-  return Parse(std::move(PCHContainerOps), std::move(OverrideMainBuffer), VFS);
+  return Parse(std::move(PCHContainerOps), std::move(OverrideMainBuffer), VFS,
+               OnCompilerCreated);
 }
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(

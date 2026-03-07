@@ -13,6 +13,7 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
@@ -326,7 +327,7 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   const auto &LangTo = Context.getLangOpts();
   const auto &LangFrom = Unit->getASTContext().getLangOpts();
 
-  // FIXME: Currenty we do not support CTU across C++ and C and across
+  // FIXME: Currently we do not support CTU across C++ and C and across
   // different dialects of C++.
   if (LangTo.CPlusPlus != LangFrom.CPlusPlus) {
     ++NumLangMismatch;
@@ -429,7 +430,9 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(
     if (!LoadAttempt)
       return LoadAttempt.takeError();
 
-    std::unique_ptr<ASTUnit> LoadedUnit = std::move(LoadAttempt.get());
+    std::unique_ptr<ASTUnit> LoadedUnit = std::move(LoadAttempt->Unit);
+    UnitMacroExpansionsMap[LoadedUnit.get()] =
+        std::move(LoadAttempt->MacroExpansions);
 
     // Need the raw pointer and the unique_ptr as well.
     ASTUnit *Unit = LoadedUnit.get();
@@ -448,6 +451,16 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(
     // Found in the cache.
     return ASTCacheEntry->second.get();
   }
+}
+
+const MacroExpansionContext *
+CrossTranslationUnitContext::ASTUnitStorage::getMacroExpansionsForUnit(
+    const ASTUnit *Unit) const {
+  auto UnitMacroExpansions = UnitMacroExpansionsMap.find(Unit);
+  if (UnitMacroExpansions != UnitMacroExpansionsMap.end()) {
+    return UnitMacroExpansions->second.get();
+  }
+  return nullptr;
 }
 
 llvm::Expected<ASTUnit *>
@@ -543,6 +556,13 @@ llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
   return Unit;
 }
 
+CrossTranslationUnitContext::LoadResult::LoadResult(
+    std::unique_ptr<ASTUnit> Unit,
+    std::unique_ptr<MacroExpansionContext> MacroExpansions)
+    : Unit(std::move(Unit)), MacroExpansions(std::move(MacroExpansions)) {}
+
+CrossTranslationUnitContext::LoadResult::~LoadResult() = default;
+
 CrossTranslationUnitContext::ASTLoader::ASTLoader(
     CompilerInstance &CI, StringRef CTUDir, StringRef InvocationListFilePath)
     : CI(CI), CTUDir(CTUDir), InvocationListFilePath(InvocationListFilePath) {}
@@ -577,10 +597,19 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
       new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
       DiagnosticIDs::create(), *DiagOpts, DiagClient);
-  return ASTUnit::LoadFromASTFile(
+  auto Unit = ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, CI.getVirtualFileSystemPtr(), DiagOpts, Diags,
       CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
+
+  std::unique_ptr<MacroExpansionContext> MacroExpansions;
+  if (Unit) {
+    MacroExpansions.reset(new MacroExpansionContext(
+        Unit->getPreprocessor(), Unit->getLocalPreprocessingEntities(),
+        Unit->getLangOpts()));
+  }
+
+  return LoadResult(std::move(Unit), std::move(MacroExpansions));
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the
@@ -620,13 +649,23 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
       CI.getDiagnostics().getDiagnosticIDs()};
   auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
                                                             DiagClient);
+  std::unique_ptr<MacroExpansionContext> MacroExpansions;
 
   // This runs the driver which isn't expected to be free of sandbox violations.
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-  return CreateASTUnitFromCommandLine(
+  auto Unit = CreateASTUnitFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),
       CI.getPCHContainerOperations(), DiagOpts, Diags,
-      CI.getHeaderSearchOpts().ResourceDir);
+      CI.getHeaderSearchOpts().ResourceDir, false, StringRef(), false,
+      CaptureDiagsKind::None, {}, true, 0, TU_Complete, false, false, false,
+      SkipFunctionBodiesScope::None, false, false, false, false, std::nullopt,
+      nullptr, nullptr, [&MacroExpansions](CompilerInstance &CI) {
+        MacroExpansions.reset(new MacroExpansionContext(CI.getLangOpts()));
+        MacroExpansions->registerForPreprocessor(CI.getPreprocessor());
+      });
+  MacroExpansions->dumpExpansionRanges();
+  MacroExpansions->dumpExpandedTexts();
+  return LoadResult(std::move(Unit), std::move(MacroExpansions));
 }
 
 llvm::Expected<InvocationListTy>
@@ -803,14 +842,30 @@ CrossTranslationUnitContext::getOrCreateASTImporter(ASTUnit *Unit) {
   ASTImporter *NewImporter = new ASTImporter(
       Context, Context.getSourceManager().getFileManager(), From,
       From.getSourceManager().getFileManager(), false, ImporterSharedSt);
+  NewImporter->setFileIDImportHandler([this, Unit](FileID ToID, FileID FromID) {
+    assert(ImportedFileIDs.find(ToID) == ImportedFileIDs.end() &&
+           "FileID already imported, should not happen.");
+    ImportedFileIDs[ToID] = std::make_pair(FromID, Unit);
+  });
   ASTUnitImporterMap[From.getTranslationUnitDecl()].reset(NewImporter);
   return *NewImporter;
 }
 
-std::optional<clang::MacroExpansionContext>
+std::optional<std::pair<MacroExpansionContext, SourceLocation>>
 CrossTranslationUnitContext::getMacroExpansionContextForSourceLocation(
     const clang::SourceLocation &ToLoc) const {
-  // FIXME: Implement: Record such a context for every imported ASTUnit; lookup.
+  auto [ToID, ToOffset] = Context.getSourceManager().getDecomposedLoc(ToLoc);
+  auto FileAndUnit = ImportedFileIDs.find(ToID);
+  if (FileAndUnit == ImportedFileIDs.end())
+    return std::nullopt;
+
+  auto [FromID, FromUnit] = FileAndUnit->second;
+  SourceLocation FromLoc =
+      FromUnit->getSourceManager().getComposedLoc(FromID, ToOffset);
+
+  if (const auto *ME = ASTStorage.getMacroExpansionsForUnit(FromUnit)) {
+    return {{*ME, FromLoc}};
+  }
   return std::nullopt;
 }
 

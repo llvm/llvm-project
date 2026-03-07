@@ -18,6 +18,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
@@ -381,9 +382,9 @@ PreprocessingRecord::findMacroDefinition(const MacroInfo *MI) {
   return MacroDefinitions.lookup(MI);
 }
 
-void PreprocessingRecord::addMacroExpansion(const Token &Id,
-                                            const MacroInfo *MI,
-                                            SourceRange Range) {
+void PreprocessingRecord::addMacroExpansion(
+    const Token &Id, const MacroInfo *MI, SourceRange Range,
+    std::optional<std::string> Expanded) {
   // We don't record nested macro expansions.
   if (Id.getLocation().isMacroID())
     return;
@@ -391,8 +392,11 @@ void PreprocessingRecord::addMacroExpansion(const Token &Id,
   if (MI->isBuiltinMacro())
     addPreprocessedEntity(new (*this)
                               MacroExpansion(Id.getIdentifierInfo(), Range));
-  else if (MacroDefinitionRecord *Def = findMacroDefinition(MI))
-    addPreprocessedEntity(new (*this) MacroExpansion(Def, Range));
+  else if (MacroDefinitionRecord *Def = findMacroDefinition(MI)) {
+    PPEntityID Entity =
+        addPreprocessedEntity(new (*this) MacroExpansion(Def, Range, Expanded));
+    ExpansionIDs[Id.getLocation()] = Entity;
+  }
 }
 
 void PreprocessingRecord::Ifdef(SourceLocation Loc, const Token &MacroNameTok,
@@ -447,6 +451,7 @@ void PreprocessingRecord::MacroExpands(const Token &Id,
                                        const MacroDefinition &MD,
                                        SourceRange Range,
                                        const MacroArgs *Args) {
+  // The expansion string will be filled in by OnTokenLexed.
   addMacroExpansion(Id, MD.getMacroInfo(), Range);
 }
 
@@ -515,4 +520,58 @@ size_t PreprocessingRecord::getTotalMemory() const {
     + llvm::capacity_in_bytes(PreprocessedEntities)
     + llvm::capacity_in_bytes(LoadedPreprocessedEntities)
     + llvm::capacity_in_bytes(SkippedRanges);
+}
+
+static void dumpTokenInto(const Preprocessor &PP, raw_ostream &OS, Token Tok) {
+  assert(Tok.isNot(tok::raw_identifier));
+
+  // Ignore annotation tokens like: _Pragma("pack(push, 1)")
+  if (Tok.isAnnotation())
+    return;
+
+  if (IdentifierInfo *II = Tok.getIdentifierInfo()) {
+    // FIXME: For now, we don't respect whitespaces between macro expanded
+    // tokens. We just emit a space after every identifier to produce a valid
+    // code for `int a ;` like expansions.
+    //              ^-^-- Space after the 'int' and 'a' identifiers.
+    OS << II->getName() << ' ';
+  } else if (Tok.isLiteral() && !Tok.needsCleaning() && Tok.getLiteralData()) {
+    OS << StringRef(Tok.getLiteralData(), Tok.getLength());
+  } else {
+    char Tmp[256];
+    if (Tok.getLength() < sizeof(Tmp)) {
+      const char *TokPtr = Tmp;
+      // FIXME: Might use a different overload for cleaner callsite.
+      unsigned Len = PP.getSpelling(Tok, TokPtr);
+      OS.write(TokPtr, Len);
+    } else {
+      OS << "<too long token>";
+    }
+  }
+}
+
+void PreprocessingRecord::onTokenLexed(const Token &Tok,
+                                       const Preprocessor *PP) {
+  SourceLocation SLoc = Tok.getLocation();
+  if (SLoc.isFileID())
+    return;
+
+  // Remove spelling location.
+  SourceLocation CurrExpansionLoc = SourceMgr.getExpansionLoc(SLoc);
+
+  SmallString<40> TokenAsString;
+  llvm::raw_svector_ostream OS(TokenAsString);
+
+  // FIXME: Prepend newlines and space to produce the exact same output as the
+  // preprocessor would for this token.
+
+  dumpTokenInto(*PP, OS, Tok);
+
+  auto ExpansionId = ExpansionIDs.find(CurrExpansionLoc);
+  if (ExpansionId != ExpansionIDs.end()) {
+    if (auto *ME = dyn_cast<MacroExpansion>(
+            getPreprocessedEntity(ExpansionId->second))) {
+      ME->appendExpandedText(TokenAsString);
+    }
+  }
 }

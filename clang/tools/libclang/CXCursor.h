@@ -188,6 +188,7 @@ public:
   const IdentifierInfo *getName() const;
   const MacroDefinitionRecord *getDefinition() const;
   SourceRange getSourceRange() const;
+  std::optional<std::string> getExpandedText() const;
 };
 
 /// Unpack a given macro expansion cursor to retrieve its info.

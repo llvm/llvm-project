@@ -52,6 +52,7 @@ class IdentifierInfo;
 class MacroInfo;
 class SourceManager;
 class Token;
+class Preprocessor;
 
   /// Base class that describes a preprocessed entity, which may be a
   /// preprocessor directive or macro expansion.
@@ -169,15 +170,17 @@ class Token;
     /// The definition of this macro or the name of the macro if it is
     /// a builtin macro.
     llvm::PointerUnion<IdentifierInfo *, MacroDefinitionRecord *> NameOrDef;
+    std::optional<std::string> Expanded;
 
   public:
     MacroExpansion(IdentifierInfo *BuiltinName, SourceRange Range)
-        : PreprocessedEntity(MacroExpansionKind, Range),
-          NameOrDef(BuiltinName) {}
+        : PreprocessedEntity(MacroExpansionKind, Range), NameOrDef(BuiltinName),
+          Expanded(std::nullopt) {}
 
-    MacroExpansion(MacroDefinitionRecord *Definition, SourceRange Range)
-        : PreprocessedEntity(MacroExpansionKind, Range), NameOrDef(Definition) {
-    }
+    MacroExpansion(MacroDefinitionRecord *Definition, SourceRange Range,
+                   std::optional<StringRef> Expanded)
+        : PreprocessedEntity(MacroExpansionKind, Range), NameOrDef(Definition),
+          Expanded(Expanded) {}
 
     /// True if it is a builtin macro.
     bool isBuiltinMacro() const { return isa<IdentifierInfo *>(NameOrDef); }
@@ -193,6 +196,17 @@ class Token;
     /// this is a builtin macro.
     MacroDefinitionRecord *getDefinition() const {
       return NameOrDef.dyn_cast<MacroDefinitionRecord *>();
+    }
+
+    void appendExpandedText(StringRef Token) {
+      if (Expanded)
+        Expanded->append(Token);
+      else
+        Expanded = Token;
+    }
+
+    const std::optional<std::string> &getExpandedText() const {
+      return Expanded;
     }
 
     // Implement isa/cast/dyncast/etc.
@@ -354,6 +368,8 @@ class Token;
     /// Mapping from MacroInfo structures to their definitions.
     llvm::DenseMap<const MacroInfo *, MacroDefinitionRecord *> MacroDefinitions;
 
+    llvm::DenseMap<SourceLocation, PPEntityID> ExpansionIDs;
+
     /// External source of preprocessed entities.
     ExternalPreprocessingRecordSource *ExternalSource = nullptr;
 
@@ -398,6 +414,8 @@ class Token;
   public:
     /// Construct a new preprocessing record.
     explicit PreprocessingRecord(SourceManager &SM);
+
+    void onTokenLexed(const Token &Tok, const Preprocessor *PP);
 
     /// Allocate memory in the preprocessing record.
     void *Allocate(unsigned Size, unsigned Align = 8) {
@@ -555,7 +573,8 @@ class Token;
                             SourceLocation EndifLoc) override;
 
     void addMacroExpansion(const Token &Id, const MacroInfo *MI,
-                           SourceRange Range);
+                           SourceRange Range,
+                           std::optional<std::string> Expanded = std::nullopt);
 
     /// Cached result of the last \see getPreprocessedEntitiesInRange
     /// query.
