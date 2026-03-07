@@ -514,9 +514,8 @@ struct RecordInfo : public SymbolInfo {
   llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
 
-  OwningVec<BaseRecordInfo>
-      Bases; // List of base/parent records; this includes inherited methods and
-             // attributes
+  OwningVec<BaseRecordInfo> Bases; // List of base/parent records; this includes
+                                   // inherited methods and attributes
 
   OwningVec<FriendInfo> Friends;
 

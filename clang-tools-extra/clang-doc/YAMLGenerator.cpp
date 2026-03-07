@@ -238,8 +238,7 @@ template <> struct MappingTraits<NamespaceInfo> {
     infoMapping(IO, I);
     IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
                    OwningVec<Reference>());
-    IO.mapOptional("ChildRecords", I.Children.Records,
-                   OwningVec<Reference>());
+    IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);
     IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
