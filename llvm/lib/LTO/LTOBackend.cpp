@@ -22,6 +22,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CGData/CodeGenData.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
@@ -218,6 +219,9 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
     LoadedPlugin->registerPassBuilderCallbacks(PB);
 }
 
+// Required to call InitTargetOptionsFromCodeGenFlags().
+static codegen::RegisterCodeGenFlags F;
+
 static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   const Triple &TheTriple = M.getTargetTriple();
@@ -239,7 +243,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
-  TargetOptions TargetOpts = Conf.Options;
+  TargetOptions TargetOpts = Conf.InitTargetOptions(TheTriple);
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
   }
@@ -529,8 +533,8 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
               std::unique_ptr<TargetMachine> TM =
                   createTargetMachine(C, T, *MPartInCtx);
 
-              codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
-                      CombinedIndex);
+              ::codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
+                        CombinedIndex);
             },
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
@@ -594,7 +598,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {
-    codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
+    ::codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
   } else {
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel, Mod,
                  CombinedIndex);
@@ -655,7 +659,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (CodeGenOnly) {
     // If CodeGenOnly is set, we only perform code generation and skip
     // optimization. This value may differ from Conf.CodeGenOnly.
-    codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
+    ::codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
@@ -678,7 +682,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         if (IRAddStream)
           cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
-        codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+        ::codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
         return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
       };
 

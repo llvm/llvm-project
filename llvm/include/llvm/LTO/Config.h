@@ -15,6 +15,7 @@
 #define LLVM_LTO_CONFIG_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
@@ -48,7 +49,11 @@ struct Config {
   // Note: when adding fields here, consider whether they need to be added to
   // computeLTOCacheKey in LTO.cpp.
   std::string CPU;
-  TargetOptions Options;
+  // Callback to modify the target options once they are instantiated.
+  std::function<TargetOptions(const Triple &TheTriple)> InitTargetOptions =
+      [](const Triple &TheTriple) {
+        return codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+      };
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
   // LTO will register both lists of plugins, but

@@ -24,6 +24,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -139,7 +140,7 @@ std::string llvm::computeLTOCacheKey(
     const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-    const GVSummaryMapTy &DefinedGlobals,
+    const GVSummaryMapTy &DefinedGlobals, const Triple &TT,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
@@ -173,14 +174,18 @@ std::string llvm::computeLTOCacheKey(
     Hasher.update(ArrayRef<uint8_t>(&I, 1));
   };
   AddString(Conf.CPU);
-  // FIXME: Hash more of Options. For now all clients initialize Options from
-  // command-line flags (which is unsupported in production), but may set
-  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
-  // DataSections and DebuggerTuning via command line flags.
-  AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
-  AddUnsigned(Conf.Options.FunctionSections);
-  AddUnsigned(Conf.Options.DataSections);
-  AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
+  TargetOptions Opts = Conf.InitTargetOptions(TT);
+
+  // FIXME: Hash more of TargetOptions. For now all clients initialize
+  // TargetOptions from command-line flags (which is unsupported in production),
+  // but may set X86RelaxRelocations. The clang driver can also pass
+  // FunctionSections, DataSections and DebuggerTuning via command line flags.
+  // Alternatively, we could store these options in the IR, instead, which has
+  // other trade-offs.
+  AddUnsigned(Opts.MCOptions.X86RelaxRelocations);
+  AddUnsigned(Opts.FunctionSections);
+  AddUnsigned(Opts.DataSections);
+  AddUnsigned((unsigned)Opts.DebuggerTuning);
   for (auto &A : Conf.MAttrs)
     AddString(A);
   if (Conf.RelocModel)
@@ -1588,7 +1593,7 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) {
+      MapVector<StringRef, BitcodeModule> &ModuleMap, Triple TheTriple) {
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (in-process)",
                                    ModuleID);
@@ -1617,7 +1622,7 @@ public:
     // The module may be cached, this helps handling it.
     std::string Key = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TheTriple, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
@@ -1633,7 +1638,8 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap,
+      Triple TheTriple) override {
     StringRef ModulePath = BM.getModuleIdentifier();
     assert(ModuleToDefinedGVSummaries.count(ModulePath));
     const GVSummaryMapTy &DefinedGlobals =
@@ -1651,7 +1657,7 @@ public:
                                         "thin backend");
           Error E = runThinLTOBackendThread(
               AddStream, Cache, Task, BM, CombinedIndex, ImportList, ExportList,
-              ResolvedODR, DefinedGlobals, ModuleMap);
+              ResolvedODR, DefinedGlobals, ModuleMap, TheTriple);
           if (E) {
             std::unique_lock<std::mutex> L(ErrMu);
             if (Err)
@@ -1701,7 +1707,8 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap,
+      Triple TheTriple) override {
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (first round)",
                                    ModuleID);
@@ -1736,7 +1743,7 @@ public:
     // Get CGKey for caching object in CGCache.
     std::string CGKey = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TheTriple, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheCGAddStreamOrErr =
         CGCache(Task, CGKey, ModuleID);
     if (Error Err = CacheCGAddStreamOrErr.takeError())
@@ -1798,7 +1805,8 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap,
+      Triple TheTriple) override {
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (second round)",
                                    ModuleID);
@@ -1822,7 +1830,7 @@ public:
     // CGData hash.
     std::string Key = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TheTriple, CfiFunctionDefs, CfiFunctionDecls);
     Key = recomputeLTOCacheKey(Key,
                                /*ExtraID=*/std::to_string(CombinedCGDataHash));
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
@@ -1915,7 +1923,8 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap,
+      Triple TheTriple) override {
     StringRef ModulePath = BM.getModuleIdentifier();
 
     // The contents of this file may be used as input to a native link, and must
@@ -2178,7 +2187,17 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
 
+  auto GetTripleFromConf = [&]() -> Triple {
+    if (!Conf.OverrideTriple.empty())
+      return Triple(Conf.OverrideTriple);
+    if (!RegularLTO.CombinedModule->getTargetTriple().empty())
+      return RegularLTO.CombinedModule->getTargetTriple();
+    return Triple(Conf.DefaultTriple);
+  };
+
   auto RunBackends = [&](ThinBackendProc *BackendProcess) -> Error {
+    Triple TheTriple = GetTripleFromConf();
+    assert(!TheTriple.getTriple().empty() && "Empty TargetTriple for ThinLTO!");
     auto ProcessOneModule = [&](int I) -> Error {
       auto &Mod = *(ModuleMap.begin() + I);
       // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for
@@ -2186,12 +2205,12 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       return BackendProcess->start(
           RegularLTO.ParallelCodeGenParallelismLevel + I, Mod.second,
           ImportLists[Mod.first], ExportLists[Mod.first],
-          ResolvedODR[Mod.first], ThinLTO.ModuleMap);
+          ResolvedODR[Mod.first], ThinLTO.ModuleMap, TheTriple);
     };
 
     BackendProcess->setup(ModuleMap.size(),
                           RegularLTO.ParallelCodeGenParallelismLevel,
-                          RegularLTO.CombinedModule->getTargetTriple());
+                          TheTriple);
 
     if (BackendProcess->getThreadCount() == 1 ||
         BackendProcess->isSensitiveToInputOrder()) {
@@ -2430,7 +2449,7 @@ public:
     // The module may be cached, this helps handling it.
     J.CacheKey = computeLTOCacheKey(Conf, CombinedIndex, J.ModuleID, ImportList,
                                     ExportList, ResolvedODR, DefinedGlobals,
-                                    CfiFunctionDefs, CfiFunctionDecls);
+                                    Triple, CfiFunctionDefs, CfiFunctionDecls);
 
     // The module may be cached, this helps handling it.
     auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
@@ -2456,7 +2475,8 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap,
+      llvm::Triple TheTriple) override {
 
     StringRef ModulePath = BM.getModuleIdentifier();
 
@@ -2524,14 +2544,14 @@ public:
   void buildCommonRemoteCompilerOptions() {
     const lto::Config &C = Conf;
     auto &Ops = CodegenOptions;
-
     Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
 
-    if (C.Options.EmitAddrsig)
+    TargetOptions TO = C.InitTargetOptions(Triple);
+    if (TO.EmitAddrsig)
       Ops.push_back("-faddrsig");
-    if (C.Options.FunctionSections)
+    if (TO.FunctionSections)
       Ops.push_back("-ffunction-sections");
-    if (C.Options.DataSections)
+    if (TO.DataSections)
       Ops.push_back("-fdata-sections");
 
     if (C.RelocModel == Reloc::PIC_)

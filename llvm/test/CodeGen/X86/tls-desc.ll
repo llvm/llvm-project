@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686 --relocation-model=pic -enable-tlsdesc | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 --relocation-model=pic -enable-tlsdesc | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64 --relocation-model=pic -enable-tlsdesc | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -mtriple=x86_64-unknown-fuchsia --relocation-model=pic | FileCheck %s --check-prefix=X64-FUCHSIA
 
 @x = thread_local global i32 0, align 4
 @y = internal thread_local global i32 1, align 4
@@ -62,6 +63,19 @@ define ptr @f1() nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X64-FUCHSIA-LABEL: f1:
+; X64-FUCHSIA:       # %bb.0:
+; X64-FUCHSIA-NEXT:    pushq %rax
+; X64-FUCHSIA-NEXT:    #APP
+; X64-FUCHSIA-NEXT:    #NO_APP
+; X64-FUCHSIA-NEXT:    leaq x@tlsdesc(%rip), %rax
+; X64-FUCHSIA-NEXT:    callq *x@tlscall(%rax)
+; X64-FUCHSIA-NEXT:    addq %fs:0, %rax
+; X64-FUCHSIA-NEXT:    #APP
+; X64-FUCHSIA-NEXT:    #NO_APP
+; X64-FUCHSIA-NEXT:    popq %rcx
+; X64-FUCHSIA-NEXT:    retq
   %a = call { i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=r,=r,=r,=r,=r,=r,~{dirflag},~{fpsr},~{flags}"()
   %b = call ptr @llvm.threadlocal.address.p0(ptr @x)
   %a.0 = extractvalue { i32, i32, i32, i32, i32, i32 } %a, 0
@@ -109,6 +123,15 @@ define i32 @f2() nounwind {
 ; X64-NEXT:    movl (%rax,%rcx), %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X64-FUCHSIA-LABEL: f2:
+; X64-FUCHSIA:       # %bb.0:
+; X64-FUCHSIA-NEXT:    pushq %rax
+; X64-FUCHSIA-NEXT:    leaq x@tlsdesc(%rip), %rax
+; X64-FUCHSIA-NEXT:    callq *x@tlscall(%rax)
+; X64-FUCHSIA-NEXT:    movl %fs:(%rax), %eax
+; X64-FUCHSIA-NEXT:    popq %rcx
+; X64-FUCHSIA-NEXT:    retq
   %1 = tail call ptr @llvm.threadlocal.address.p0(ptr @x)
   %2 = load i32, ptr %1
   ret i32 %2
@@ -147,6 +170,15 @@ define ptr @f3() nounwind {
 ; X64-NEXT:    addq %fs:0, %rax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X64-FUCHSIA-LABEL: f3:
+; X64-FUCHSIA:       # %bb.0:
+; X64-FUCHSIA-NEXT:    pushq %rax
+; X64-FUCHSIA-NEXT:    leaq x@tlsdesc(%rip), %rax
+; X64-FUCHSIA-NEXT:    callq *x@tlscall(%rax)
+; X64-FUCHSIA-NEXT:    addq %fs:0, %rax
+; X64-FUCHSIA-NEXT:    popq %rcx
+; X64-FUCHSIA-NEXT:    retq
   %1 = tail call ptr @llvm.threadlocal.address.p0(ptr @x)
   ret ptr %1
 }
@@ -192,6 +224,17 @@ define i32 @f4() nounwind {
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; X64-FUCHSIA-LABEL: f4:
+; X64-FUCHSIA:       # %bb.0:
+; X64-FUCHSIA-NEXT:    pushq %rax
+; X64-FUCHSIA-NEXT:    leaq _TLS_MODULE_BASE_@tlsdesc(%rip), %rax
+; X64-FUCHSIA-NEXT:    callq *_TLS_MODULE_BASE_@tlscall(%rax)
+; X64-FUCHSIA-NEXT:    movl %fs:y@DTPOFF(%rax), %ecx
+; X64-FUCHSIA-NEXT:    addl %fs:z@DTPOFF(%rax), %ecx
+; X64-FUCHSIA-NEXT:    movl %ecx, %eax
+; X64-FUCHSIA-NEXT:    popq %rcx
+; X64-FUCHSIA-NEXT:    retq
   %1 = load i32, ptr @y, align 4
   %2 = load i32, ptr @z, align 4
   %3 = add nsw i32 %1, %2

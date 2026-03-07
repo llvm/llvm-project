@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
@@ -46,15 +47,23 @@ std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
 
 lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.EmitAddrsig = true;
+  bool emitAsm = ctx.config.emit == EmitKind::ASM;
+  c.InitTargetOptions = [emitAsm](const Triple &TT) {
+    TargetOptions options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
+    options.EmitAddrsig = true;
+    // Always emit a section per function/datum with LTO. LLVM LTO should get
+    // most of the benefit of linker GC, but there are still opportunities for
+    // ICF.
+    options.FunctionSections = true;
+    options.DataSections = true;
+
+    if (emitAsm)
+      options.MCOptions.AsmVerbose = true;
+    return options;
+  };
+
   for (StringRef C : ctx.config.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
-
-  // Always emit a section per function/datum with LTO. LLVM LTO should get most
-  // of the benefit of linker GC, but there are still opportunities for ICF.
-  c.Options.FunctionSections = true;
-  c.Options.DataSections = true;
 
   // Use static reloc model on 32-bit x86 because it usually results in more
   // compact code, and because there are also known code generation bugs when
@@ -95,7 +104,6 @@ lto::Config BitcodeCompiler::createConfig() {
     };
   } else if (ctx.config.emit == EmitKind::ASM) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
-    c.Options.MCOptions.AsmVerbose = true;
   }
 
   if (!ctx.config.saveTempsArgs.empty())

@@ -38,8 +38,14 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 
 static lto::Config createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe;
+
+  bool emitAddrsig = config->icfLevel == ICFLevel::safe;
+  c.InitTargetOptions = [emitAddrsig](const Triple &TT) {
+    TargetOptions options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
+    options.EmitAddrsig = emitAddrsig;
+    return options;
+  };
+
   for (StringRef C : config->mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
   for (StringRef pluginFn : config->passPlugins)

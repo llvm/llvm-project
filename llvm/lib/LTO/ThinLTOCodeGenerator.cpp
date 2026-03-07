@@ -374,15 +374,14 @@ public:
 
     llvm::lto::Config Conf;
     Conf.OptLevel = OptLevel;
-    Conf.Options = TMBuilder.Options;
     Conf.CPU = TMBuilder.MCpu;
     Conf.MAttrs.push_back(TMBuilder.MAttr);
     Conf.RelocModel = TMBuilder.RelocModel;
     Conf.CGOptLevel = TMBuilder.CGOptLevel;
     Conf.Freestanding = Freestanding;
-    std::string Key =
-        computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
-                           ResolvedODR, DefinedGVSummaries);
+    std::string Key = computeLTOCacheKey(
+        Conf, Index, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGVSummaries, TMBuilder.TheTriple);
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
