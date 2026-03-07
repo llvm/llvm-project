@@ -770,6 +770,7 @@ LowerItaniumCXXABI::lowerDynamicCast(cir::DynamicCastOp op,
              })
       .getResult();
 }
+
 mlir::Value
 LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
                                            mlir::OpBuilder &builder) const {
