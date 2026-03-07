@@ -393,6 +393,9 @@ public:
   getSerializableDirectMachineOperandTargetFlags() const override;
 
   MCInst getNop() const override;
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
 };
 
 } // end namespace llvm

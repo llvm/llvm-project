@@ -298,7 +298,10 @@ define void @spill_ptr32_args_to_registers(i8 addrspace(1)* %p) {
 entry:
 ; CHECK-LABEL: spill_ptr32_args_to_registers DS 0H
 ; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:    L#stack_update7 DS 0H
 ; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:    L#end_of_prologue7 DS 0H
 ; CHECK-NEXT:    lgr 2,1
 ; CHECK-NEXT:    lg 6,24(5)
 ; CHECK-NEXT:    lg 5,16(5)
