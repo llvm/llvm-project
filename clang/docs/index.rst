@@ -27,6 +27,7 @@ Using Clang as a Compiler
    CrossCompilation
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
+   LifetimeSafety
    SafeBuffers
    ScalableStaticAnalysisFramework/Framework
    DataFlowAnalysisIntro
