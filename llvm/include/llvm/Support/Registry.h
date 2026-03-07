@@ -45,11 +45,42 @@ namespace detail {
 template <typename R> struct IsRegistryType : std::false_type {};
 template <typename T, typename... CtorParamTypes>
 struct IsRegistryType<Registry<T, CtorParamTypes...>> : std::true_type {};
+
+// The endpoint to the instance to hold registered components by a linked list.
+//
+// This is split out from `Registry<T>` to guard against implicit instantiations
+// due to an absence of or error in an explicit instantiation, which breaks
+// dylib buils on Windows silently.
+template <typename R> struct RegistryLinkListStorage {
+  typename R::node *Head;
+  typename R::node *Tail;
+};
+
+// The accessor to the endpoint.
+//
+// ATTENTION: Be careful when attempting to "refactor" or "simplify" this.
+//
+// - This shall not be a member of `RegistryLinkList`, to control instantiation
+//   timing separately.
+//
+// - The body also shall not be inlined here; otherwise, the guard from a
+//   missed explicit instantiation definition won't work.
+//
+// - Use an accessor function that returns a reference to a function-local
+//   static variable, rather than using a variable template or a static member
+//   variable in a class template directly since functions can be imported
+//   without the `dllimport` annotation.
+template <typename R> RegistryLinkListStorage<R> &getRegistryLinkListInstance();
+
+// Utility to guard against missing declarations or mismatched use of
+// `LLVM_DECLARE_REGISTRY` and `LLVM_INSTANTIATE_REGISTRY`.
+template <typename R>
+struct RegistryLinkListDeclarationMarker : std::false_type {};
 } // namespace detail
 
-/// A global registry used in conjunction with static constructors to make
-/// pluggable components (like targets or garbage collectors) "just work" when
-/// linked with an executable.
+// A global registry used in conjunction with static constructors to make
+// pluggable components (like targets or garbage collectors) "just work" when
+// linked with an executable.
 template <typename T, typename... CtorParamTypes> class Registry {
   static_assert(
       !detail::IsRegistryType<T>::value,
@@ -67,13 +98,6 @@ private:
   Registry() = delete;
 
   friend class node;
-  // These must be must two separate declarations to workaround a 20 year
-  // old MSVC bug with dllexport and multiple static fields in the same
-  // declaration causing error C2487 "member of dll interface class may not
-  // be declared with dll interface".
-  // https://developercommunity.visualstudio.com/t/c2487-in-dllexport-class-with-static-members/69878
-  static inline node *Head = nullptr;
-  static inline node *Tail = nullptr;
 
 public:
   /// Node in linked list of entries.
@@ -92,11 +116,8 @@ public:
   /// Add a node to the Registry: this is the interface between the plugin and
   /// the executable.
   ///
-  /// This function is exported by the executable and called by the plugin to
-  /// add a node to the executable's registry. Therefore it's not defined here
-  /// to avoid it being instantiated in the plugin and is instead defined in
-  /// the executable (see LLVM_INSTANTIATE_REGISTRY below).
   static void add_node(node *N) {
+    auto &[Head, Tail] = detail::getRegistryLinkListInstance<Registry>();
     if (Tail)
       Tail->Next = N;
     else
@@ -122,9 +143,9 @@ public:
     const entry &operator*() const { return Cur->Val; }
   };
 
-  // begin is not defined here in order to avoid usage of an undefined static
-  // data member, instead it's instantiated by LLVM_INSTANTIATE_REGISTRY.
-  static iterator begin() { return iterator(Head); }
+  static iterator begin() {
+    return iterator(detail::getRegistryLinkListInstance<Registry>().Head);
+  }
   static iterator end() { return iterator(nullptr); }
 
   static iterator_range<iterator> entries() {
@@ -155,23 +176,81 @@ public:
 
 } // end namespace llvm
 
-#ifdef _WIN32
-/// Instantiate a registry class.
-#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
+// Helper macros to instantiate registry class.
+//
+// To provide a `Registry` interface, follow these steps:
+//
+// 1.Define your plugin base interface. The interface must have a virtual
+//   destructor and the appropriate dllexport/dllimport/visibility annotation.
+//
+//   namespace your_ns {
+//     class YOURLIB_API SomethingPluginBase {
+//       virtual ~SomethingPluginBase() = default;
+//       virtual void TheInterface() = 0;
+//     };
+//
+// 2.Declare an alias to your `Registry` for convenience.
+//
+//   namespace your_ns {
+//     using YourRegistry = llvm::Registry<SomethingPluginBase>;
+//   }
+//
+// 3.Declare the specialization of the `Registry`, in the global namespace.
+//   The declaration must be placed before any use of the `YourRegistry`.
+//
+//   LLVM_DECLARE_REGISTRY(your_ns::YourRegistry)
+//
+// 4.In a .cpp file, define the specialization in the global namespace.
+//
+//   LLVM_DEFINE_REGISTRY(your_ns::YourRegistry)
+//
+// Technically, these macros don't instantiate `Registry` despite the name.
+// They handle underlying storage that used by `Registry` indirectly, enforcing
+// proper declarations/definitions by compilers or linkers. If you forget to
+// place `LLVM_DEFINE_REGISTRY`, your linker will complain about a missing
+// `getRegistryLinkListInstance` definiton.
+#define LLVM_DECLARE_REGISTRY(REGISTRY_CLASS)                                  \
+  namespace llvm::detail {                                                     \
+  template <>                                                                  \
+  struct RegistryLinkListDeclarationMarker<REGISTRY_CLASS> : std::true_type {  \
+  };                                                                           \
+  template <>                                                                  \
+  RegistryLinkListStorage<REGISTRY_CLASS> &                                    \
+  getRegistryLinkListInstance<REGISTRY_CLASS>();                               \
+  }
+#define LLVM_DEFINE_REGISTRY(REGISTRY_CLASS)                                   \
+  namespace llvm::detail {                                                     \
+  static_assert(RegistryLinkListDeclarationMarker<REGISTRY_CLASS>::value,      \
+                "Missing matching registry delcaration of " #REGISTRY_CLASS    \
+                ". Place `LLVM_DECLARE_REGISTRY(" #REGISTRY_CLASS              \
+                ")` in a header.");                                            \
+  template <>                                                                  \
+  LLVM_ABI_EXPORT RegistryLinkListStorage<REGISTRY_CLASS> &                    \
+  getRegistryLinkListInstance<REGISTRY_CLASS>() {                              \
+    static RegistryLinkListStorage<REGISTRY_CLASS> Instance;                   \
+    return Instance;                                                           \
+  }                                                                            \
+  }
+
+#define LLVM_DETAIL_INSTANTIATE_REGISTRY_1(ABITAG, REGISTRY_CLASS)             \
+  LLVM_DECLARE_REGISTRY(REGISTRY_CLASS)                                        \
+  LLVM_DEFINE_REGISTRY(REGISTRY_CLASS)                                         \
   namespace llvm {                                                             \
-  template class LLVM_ABI_EXPORT Registry<REGISTRY_CLASS::type>;               \
+  template class ABITAG Registry<REGISTRY_CLASS::type>;                        \
   static_assert(!REGISTRY_CLASS::HasCtorParamTypes,                            \
                 "LLVM_INSTANTIATE_REGISTRY can't be used with extra "          \
-                "constructor parameter types");                                \
+                "constructor parameter types. Use "                            \
+                "LLVM_DECLARE/DEFINE_REGISTRY istead.");                       \
   }
+
+/// Old style helper macro to instantiate registry class.
+///
+#ifdef _WIN32
+#define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
+  LLVM_DETAIL_INSTANTIATE_REGISTRY_1(LLVM_ABI_EXPORT, REGISTRY_CLASS)
 #else
 #define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
-  namespace llvm {                                                             \
-  template class Registry<REGISTRY_CLASS::type>;                               \
-  static_assert(!REGISTRY_CLASS::HasCtorParamTypes,                            \
-                "LLVM_INSTANTIATE_REGISTRY can't be used with extra "          \
-                "constructor parameter types");                                \
-  }
+  LLVM_DETAIL_INSTANTIATE_REGISTRY_1(, REGISTRY_CLASS)
 #endif
 
 #endif // LLVM_SUPPORT_REGISTRY_H
