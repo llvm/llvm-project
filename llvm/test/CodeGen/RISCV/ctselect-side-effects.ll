@@ -40,17 +40,16 @@ define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    and a0, a1, a0
-; RV64-NEXT:    xor a0, a0, a2
+; RV64-NEXT:    xor a0, a2, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_protected_no_branch:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    neg a3, a0
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    and a1, a3, a1
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    xor a1, a1, a2
+; RV32-NEXT:    slli a0, a0, 31
+; RV32-NEXT:    srai a0, a0, 31
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    xor a0, a2, a0
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
   ret i32 %result

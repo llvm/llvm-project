@@ -14,12 +14,7 @@ define <vscale x 4 x i32> @ctsel_nxv4i32_basic(i1 %cond, <vscale x 4 x i32> %a, 
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv4i32_basic:
@@ -29,12 +24,7 @@ define <vscale x 4 x i32> @ctsel_nxv4i32_basic(i1 %cond, <vscale x 4 x i32> %a, 
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv4i32_basic:
@@ -44,12 +34,7 @@ define <vscale x 4 x i32> @ctsel_nxv4i32_basic(i1 %cond, <vscale x 4 x i32> %a, 
 ; RV32-V128-NEXT:    vmv.v.x v12, a0
 ; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmv.v.i v12, 0
-; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv4i32_basic:
@@ -59,12 +44,7 @@ define <vscale x 4 x i32> @ctsel_nxv4i32_basic(i1 %cond, <vscale x 4 x i32> %a, 
 ; RV64-V256-NEXT:    vmv.v.x v12, a0
 ; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-V256-NEXT:    ret
   %r = call <vscale x 4 x i32> @llvm.ct.select.nxv4i32(i1 %cond, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
@@ -74,70 +54,46 @@ define <vscale x 4 x i32> @ctsel_nxv4i32_basic(i1 %cond, <vscale x 4 x i32> %a, 
 define <vscale x 4 x i32> @ctsel_nxv4i32_load(i1 %cond, ptr %p1, ptr %p2) {
 ; RV64-LABEL: ctsel_nxv4i32_load:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vl2re32.v v8, (a1)
-; RV64-NEXT:    vl2re32.v v10, (a2)
+; RV64-NEXT:    vl2re32.v v8, (a2)
 ; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v12, a0
-; RV64-NEXT:    vmsne.vi v0, v12, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a0
+; RV64-NEXT:    vmsne.vi v0, v10, 0
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV64-NEXT:    vle32.v v8, (a1), v0.t
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv4i32_load:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vl2re32.v v8, (a1)
-; RV32-NEXT:    vl2re32.v v10, (a2)
+; RV32-NEXT:    vl2re32.v v8, (a2)
 ; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmv.v.x v12, a0
-; RV32-NEXT:    vmsne.vi v0, v12, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v10, a0
+; RV32-NEXT:    vmsne.vi v0, v10, 0
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV32-NEXT:    vle32.v v8, (a1), v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv4i32_load:
 ; RV32-V128:       # %bb.0:
-; RV32-V128-NEXT:    vl2re32.v v8, (a1)
-; RV32-V128-NEXT:    vl2re32.v v10, (a2)
+; RV32-V128-NEXT:    vl2re32.v v8, (a2)
 ; RV32-V128-NEXT:    andi a0, a0, 1
-; RV32-V128-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV32-V128-NEXT:    vmv.v.x v12, a0
-; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
-; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmv.v.i v12, 0
-; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV32-V128-NEXT:    vmv.v.x v10, a0
+; RV32-V128-NEXT:    vmsne.vi v0, v10, 0
+; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV32-V128-NEXT:    vle32.v v8, (a1), v0.t
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv4i32_load:
 ; RV64-V256:       # %bb.0:
-; RV64-V256-NEXT:    vl2re32.v v8, (a1)
-; RV64-V256-NEXT:    vl2re32.v v10, (a2)
+; RV64-V256-NEXT:    vl2re32.v v8, (a2)
 ; RV64-V256-NEXT:    andi a0, a0, 1
-; RV64-V256-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; RV64-V256-NEXT:    vmv.v.x v12, a0
-; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
-; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-V256-NEXT:    vmv.v.x v10, a0
+; RV64-V256-NEXT:    vmsne.vi v0, v10, 0
+; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV64-V256-NEXT:    vle32.v v8, (a1), v0.t
 ; RV64-V256-NEXT:    ret
   %a = load <vscale x 4 x i32>, ptr %p1, align 16
   %b = load <vscale x 4 x i32>, ptr %p2, align 16
@@ -155,16 +111,10 @@ define void @ctsel_nxv4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
 ; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vadd.vv v8, v8, v8
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; RV64-NEXT:    vadd.vv v10, v10, v10
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
-; RV64-NEXT:    vs2r.v v8, (a3)
+; RV64-NEXT:    vadd.vv v10, v8, v8, v0.t
+; RV64-NEXT:    vs2r.v v10, (a3)
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv4i32_mixed:
@@ -175,16 +125,10 @@ define void @ctsel_nxv4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vadd.vv v8, v8, v8
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
-; RV32-NEXT:    vs2r.v v8, (a3)
+; RV32-NEXT:    vadd.vv v10, v8, v8, v0.t
+; RV32-NEXT:    vs2r.v v10, (a3)
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv4i32_mixed:
@@ -195,16 +139,10 @@ define void @ctsel_nxv4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
 ; RV32-V128-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV32-V128-NEXT:    vmv.v.x v12, a0
 ; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
-; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmv.v.i v12, 0
-; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vadd.vv v8, v8, v8
+; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; RV32-V128-NEXT:    vadd.vv v10, v10, v10
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
-; RV32-V128-NEXT:    vs2r.v v8, (a3)
+; RV32-V128-NEXT:    vadd.vv v10, v8, v8, v0.t
+; RV32-V128-NEXT:    vs2r.v v10, (a3)
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv4i32_mixed:
@@ -215,16 +153,10 @@ define void @ctsel_nxv4i32_mixed(i1 %cond, ptr %p1, ptr %p2, ptr %out) {
 ; RV64-V256-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; RV64-V256-NEXT:    vmv.v.x v12, a0
 ; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
-; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vadd.vv v8, v8, v8
+; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; RV64-V256-NEXT:    vadd.vv v10, v10, v10
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
-; RV64-V256-NEXT:    vs2r.v v8, (a3)
+; RV64-V256-NEXT:    vadd.vv v10, v8, v8, v0.t
+; RV64-V256-NEXT:    vs2r.v v10, (a3)
 ; RV64-V256-NEXT:    ret
   %a = load <vscale x 4 x i32>, ptr %p1, align 16
   %b = load <vscale x 4 x i32>, ptr %p2, align 16
@@ -290,105 +222,65 @@ define <vscale x 4 x i32> @ctsel_nxv4i32_chain(i1 %c1, i1 %c2,
 ; RV64-LABEL: ctsel_nxv4i32_chain:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v14, 0
+; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v14, a0
+; RV64-NEXT:    vmsne.vi v0, v14, 0
 ; RV64-NEXT:    andi a1, a1, 1
-; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vmsne.vi v0, v16, 0
-; RV64-NEXT:    vmv.v.x v18, a1
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmerge.vim v16, v14, -1, v0
+; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmsne.vi v0, v18, 0
+; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    vmsne.vi v0, v10, 0
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmerge.vim v14, v14, -1, v0
-; RV64-NEXT:    vand.vv v8, v16, v8
-; RV64-NEXT:    vnot.v v16, v16
-; RV64-NEXT:    vand.vv v10, v16, v10
-; RV64-NEXT:    vnot.v v16, v14
-; RV64-NEXT:    vor.vv v8, v8, v10
-; RV64-NEXT:    vand.vv v8, v14, v8
-; RV64-NEXT:    vand.vv v10, v16, v12
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv4i32_chain:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v14, 0
+; RV32-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v14, a0
+; RV32-NEXT:    vmsne.vi v0, v14, 0
 ; RV32-NEXT:    andi a1, a1, 1
-; RV32-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmv.v.x v16, a0
-; RV32-NEXT:    vmsne.vi v0, v16, 0
-; RV32-NEXT:    vmv.v.x v18, a1
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmerge.vim v16, v14, -1, v0
+; RV32-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmsne.vi v0, v18, 0
+; RV32-NEXT:    vmv.v.x v10, a1
+; RV32-NEXT:    vmsne.vi v0, v10, 0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmerge.vim v14, v14, -1, v0
-; RV32-NEXT:    vand.vv v8, v16, v8
-; RV32-NEXT:    vnot.v v16, v16
-; RV32-NEXT:    vand.vv v10, v16, v10
-; RV32-NEXT:    vnot.v v16, v14
-; RV32-NEXT:    vor.vv v8, v8, v10
-; RV32-NEXT:    vand.vv v8, v14, v8
-; RV32-NEXT:    vand.vv v10, v16, v12
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv4i32_chain:
 ; RV32-V128:       # %bb.0:
 ; RV32-V128-NEXT:    andi a0, a0, 1
-; RV32-V128-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmv.v.i v14, 0
+; RV32-V128-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV32-V128-NEXT:    vmv.v.x v14, a0
+; RV32-V128-NEXT:    vmsne.vi v0, v14, 0
 ; RV32-V128-NEXT:    andi a1, a1, 1
-; RV32-V128-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-V128-NEXT:    vmv.v.x v16, a0
-; RV32-V128-NEXT:    vmsne.vi v0, v16, 0
-; RV32-V128-NEXT:    vmv.v.x v18, a1
 ; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmerge.vim v16, v14, -1, v0
+; RV32-V128-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-V128-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-V128-NEXT:    vmsne.vi v0, v18, 0
+; RV32-V128-NEXT:    vmv.v.x v10, a1
+; RV32-V128-NEXT:    vmsne.vi v0, v10, 0
 ; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmerge.vim v14, v14, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v16, v8
-; RV32-V128-NEXT:    vnot.v v16, v16
-; RV32-V128-NEXT:    vand.vv v10, v16, v10
-; RV32-V128-NEXT:    vnot.v v16, v14
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
-; RV32-V128-NEXT:    vand.vv v8, v14, v8
-; RV32-V128-NEXT:    vand.vv v10, v16, v12
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv4i32_chain:
 ; RV64-V256:       # %bb.0:
 ; RV64-V256-NEXT:    andi a0, a0, 1
-; RV64-V256-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v14, 0
+; RV64-V256-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; RV64-V256-NEXT:    vmv.v.x v14, a0
+; RV64-V256-NEXT:    vmsne.vi v0, v14, 0
 ; RV64-V256-NEXT:    andi a1, a1, 1
-; RV64-V256-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-V256-NEXT:    vmv.v.x v16, a0
-; RV64-V256-NEXT:    vmsne.vi v0, v16, 0
-; RV64-V256-NEXT:    vmv.v.x v18, a1
 ; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmerge.vim v16, v14, -1, v0
+; RV64-V256-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-V256-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-V256-NEXT:    vmsne.vi v0, v18, 0
+; RV64-V256-NEXT:    vmv.v.x v10, a1
+; RV64-V256-NEXT:    vmsne.vi v0, v10, 0
 ; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmerge.vim v14, v14, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v16, v8
-; RV64-V256-NEXT:    vnot.v v16, v16
-; RV64-V256-NEXT:    vand.vv v10, v16, v10
-; RV64-V256-NEXT:    vnot.v v16, v14
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
-; RV64-V256-NEXT:    vand.vv v8, v14, v8
-; RV64-V256-NEXT:    vand.vv v10, v16, v12
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV64-V256-NEXT:    ret
                                                <vscale x 4 x i32> %a,
                                                <vscale x 4 x i32> %b,
@@ -407,12 +299,7 @@ define <vscale x 8 x i16> @ctsel_nxv8i16_basic(i1 %cond, <vscale x 8 x i16> %a, 
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv8i16_basic:
@@ -422,12 +309,7 @@ define <vscale x 8 x i16> @ctsel_nxv8i16_basic(i1 %cond, <vscale x 8 x i16> %a, 
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv8i16_basic:
@@ -437,12 +319,7 @@ define <vscale x 8 x i16> @ctsel_nxv8i16_basic(i1 %cond, <vscale x 8 x i16> %a, 
 ; RV32-V128-NEXT:    vmv.v.x v12, a0
 ; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-V128-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-V128-NEXT:    vmv.v.i v12, 0
-; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv8i16_basic:
@@ -452,12 +329,7 @@ define <vscale x 8 x i16> @ctsel_nxv8i16_basic(i1 %cond, <vscale x 8 x i16> %a, 
 ; RV64-V256-NEXT:    vmv.v.x v12, a0
 ; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-V256-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-V256-NEXT:    ret
   %r = call <vscale x 8 x i16> @llvm.ct.select.nxv8i16(i1 %cond, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %r
@@ -470,12 +342,7 @@ define <vscale x 16 x i8> @ctsel_nxv16i8_basic(i1 %cond, <vscale x 16 x i8> %a, 
 ; RV64-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv16i8_basic:
@@ -484,12 +351,7 @@ define <vscale x 16 x i8> @ctsel_nxv16i8_basic(i1 %cond, <vscale x 16 x i8> %a, 
 ; RV32-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv16i8_basic:
@@ -498,12 +360,7 @@ define <vscale x 16 x i8> @ctsel_nxv16i8_basic(i1 %cond, <vscale x 16 x i8> %a, 
 ; RV32-V128-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; RV32-V128-NEXT:    vmv.v.x v12, a0
 ; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
-; RV32-V128-NEXT:    vmv.v.i v12, 0
-; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv16i8_basic:
@@ -512,12 +369,7 @@ define <vscale x 16 x i8> @ctsel_nxv16i8_basic(i1 %cond, <vscale x 16 x i8> %a, 
 ; RV64-V256-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; RV64-V256-NEXT:    vmv.v.x v12, a0
 ; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-V256-NEXT:    ret
   %r = call <vscale x 16 x i8> @llvm.ct.select.nxv16i8(i1 %cond, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %r
@@ -532,42 +384,37 @@ define <vscale x 2 x i64> @ctsel_nxv2i64_basic(i1 %cond, <vscale x 2 x i64> %a, 
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv2i64_basic:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV32-NEXT:    vxor.vv v8, v8, v10
 ; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.i v12, 0
 ; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vand.vv v8, v8, v12
+; RV32-NEXT:    vxor.vv v8, v10, v8
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv2i64_basic:
 ; RV32-V128:       # %bb.0:
+; RV32-V128-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV32-V128-NEXT:    vxor.vv v8, v8, v10
 ; RV32-V128-NEXT:    andi a0, a0, 1
-; RV32-V128-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; RV32-V128-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-V128-NEXT:    vmv.v.x v12, a0
 ; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-V128-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-V128-NEXT:    vmv.v.i v12, 0
 ; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vand.vv v8, v8, v12
+; RV32-V128-NEXT:    vxor.vv v8, v10, v8
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv2i64_basic:
@@ -577,12 +424,7 @@ define <vscale x 2 x i64> @ctsel_nxv2i64_basic(i1 %cond, <vscale x 2 x i64> %a, 
 ; RV64-V256-NEXT:    vmv.v.x v12, a0
 ; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-V256-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-V256-NEXT:    ret
   %r = call <vscale x 2 x i64> @llvm.ct.select.nxv2i64(i1 %cond, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %r
@@ -597,12 +439,7 @@ define <vscale x 4 x float> @ctsel_nxv4f32_basic(i1 %cond, <vscale x 4 x float> 
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv4f32_basic:
@@ -612,12 +449,7 @@ define <vscale x 4 x float> @ctsel_nxv4f32_basic(i1 %cond, <vscale x 4 x float> 
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
-; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv4f32_basic:
@@ -627,12 +459,7 @@ define <vscale x 4 x float> @ctsel_nxv4f32_basic(i1 %cond, <vscale x 4 x float> 
 ; RV32-V128-NEXT:    vmv.v.x v12, a0
 ; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmv.v.i v12, 0
-; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv4f32_basic:
@@ -642,12 +469,7 @@ define <vscale x 4 x float> @ctsel_nxv4f32_basic(i1 %cond, <vscale x 4 x float> 
 ; RV64-V256-NEXT:    vmv.v.x v12, a0
 ; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-V256-NEXT:    ret
   %r = call <vscale x 4 x float> @llvm.ct.select.nxv4f32(i1 %cond, <vscale x 4 x float> %a, <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %r
@@ -657,74 +479,50 @@ define <vscale x 4 x float> @ctsel_nxv4f32_basic(i1 %cond, <vscale x 4 x float> 
 define <vscale x 4 x float> @ctsel_nxv4f32_arith(i1 %cond, <vscale x 4 x float> %x, <vscale x 4 x float> %y) {
 ; RV64-LABEL: ctsel_nxv4f32_arith:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; RV64-NEXT:    vfadd.vv v12, v8, v10
-; RV64-NEXT:    vfsub.vv v8, v8, v10
 ; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmv.v.x v10, a0
-; RV64-NEXT:    vmsne.vi v0, v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vmerge.vim v10, v10, -1, v0
-; RV64-NEXT:    vand.vv v12, v10, v12
-; RV64-NEXT:    vnot.v v10, v10
-; RV64-NEXT:    vand.vv v8, v10, v8
-; RV64-NEXT:    vor.vv v8, v12, v8
+; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v12, a0
+; RV64-NEXT:    vmsne.vi v0, v12, 0
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV64-NEXT:    vfsub.vv v12, v8, v10
+; RV64-NEXT:    vfadd.vv v12, v8, v10, v0.t
+; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv4f32_arith:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; RV32-NEXT:    vfadd.vv v12, v8, v10
-; RV32-NEXT:    vfsub.vv v8, v8, v10
 ; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vmsne.vi v0, v10, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v10, 0
-; RV32-NEXT:    vmerge.vim v10, v10, -1, v0
-; RV32-NEXT:    vand.vv v12, v10, v12
-; RV32-NEXT:    vnot.v v10, v10
-; RV32-NEXT:    vand.vv v8, v10, v8
-; RV32-NEXT:    vor.vv v8, v12, v8
+; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vmv.v.x v12, a0
+; RV32-NEXT:    vmsne.vi v0, v12, 0
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV32-NEXT:    vfsub.vv v12, v8, v10
+; RV32-NEXT:    vfadd.vv v12, v8, v10, v0.t
+; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv4f32_arith:
 ; RV32-V128:       # %bb.0:
-; RV32-V128-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vfadd.vv v12, v8, v10
-; RV32-V128-NEXT:    vfsub.vv v8, v8, v10
 ; RV32-V128-NEXT:    andi a0, a0, 1
-; RV32-V128-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-V128-NEXT:    vmv.v.x v10, a0
-; RV32-V128-NEXT:    vmsne.vi v0, v10, 0
-; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-V128-NEXT:    vmv.v.i v10, 0
-; RV32-V128-NEXT:    vmerge.vim v10, v10, -1, v0
-; RV32-V128-NEXT:    vand.vv v12, v10, v12
-; RV32-V128-NEXT:    vnot.v v10, v10
-; RV32-V128-NEXT:    vand.vv v8, v10, v8
-; RV32-V128-NEXT:    vor.vv v8, v12, v8
+; RV32-V128-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV32-V128-NEXT:    vmv.v.x v12, a0
+; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
+; RV32-V128-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV32-V128-NEXT:    vfsub.vv v12, v8, v10
+; RV32-V128-NEXT:    vfadd.vv v12, v8, v10, v0.t
+; RV32-V128-NEXT:    vmv.v.v v8, v12
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv4f32_arith:
 ; RV64-V256:       # %bb.0:
-; RV64-V256-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vfadd.vv v12, v8, v10
-; RV64-V256-NEXT:    vfsub.vv v8, v8, v10
 ; RV64-V256-NEXT:    andi a0, a0, 1
-; RV64-V256-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-V256-NEXT:    vmv.v.x v10, a0
-; RV64-V256-NEXT:    vmsne.vi v0, v10, 0
-; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v10, 0
-; RV64-V256-NEXT:    vmerge.vim v10, v10, -1, v0
-; RV64-V256-NEXT:    vand.vv v12, v10, v12
-; RV64-V256-NEXT:    vnot.v v10, v10
-; RV64-V256-NEXT:    vand.vv v8, v10, v8
-; RV64-V256-NEXT:    vor.vv v8, v12, v8
+; RV64-V256-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV64-V256-NEXT:    vmv.v.x v12, a0
+; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
+; RV64-V256-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV64-V256-NEXT:    vfsub.vv v12, v8, v10
+; RV64-V256-NEXT:    vfadd.vv v12, v8, v10, v0.t
+; RV64-V256-NEXT:    vmv.v.v v8, v12
 ; RV64-V256-NEXT:    ret
   %sum  = fadd <vscale x 4 x float> %x, %y
   %diff = fsub <vscale x 4 x float> %x, %y
@@ -740,42 +538,37 @@ define <vscale x 2 x double> @ctsel_nxv2f64_basic(i1 %cond, <vscale x 2 x double
 ; RV64-NEXT:    vmv.v.x v12, a0
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v12, 0
-; RV64-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-NEXT:    vand.vv v8, v12, v8
-; RV64-NEXT:    vnot.v v12, v12
-; RV64-NEXT:    vand.vv v10, v12, v10
-; RV64-NEXT:    vor.vv v8, v8, v10
+; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: ctsel_nxv2f64_basic:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV32-NEXT:    vxor.vv v8, v8, v10
 ; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.i v12, 0
 ; RV32-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-NEXT:    vand.vv v8, v12, v8
-; RV32-NEXT:    vnot.v v12, v12
-; RV32-NEXT:    vand.vv v10, v12, v10
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vand.vv v8, v8, v12
+; RV32-NEXT:    vxor.vv v8, v10, v8
 ; RV32-NEXT:    ret
 ;
 ; RV32-V128-LABEL: ctsel_nxv2f64_basic:
 ; RV32-V128:       # %bb.0:
+; RV32-V128-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
+; RV32-V128-NEXT:    vxor.vv v8, v8, v10
 ; RV32-V128-NEXT:    andi a0, a0, 1
-; RV32-V128-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; RV32-V128-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-V128-NEXT:    vmv.v.x v12, a0
 ; RV32-V128-NEXT:    vmsne.vi v0, v12, 0
 ; RV32-V128-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-V128-NEXT:    vmv.v.i v12, 0
 ; RV32-V128-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV32-V128-NEXT:    vand.vv v8, v12, v8
-; RV32-V128-NEXT:    vnot.v v12, v12
-; RV32-V128-NEXT:    vand.vv v10, v12, v10
-; RV32-V128-NEXT:    vor.vv v8, v8, v10
+; RV32-V128-NEXT:    vand.vv v8, v8, v12
+; RV32-V128-NEXT:    vxor.vv v8, v10, v8
 ; RV32-V128-NEXT:    ret
 ;
 ; RV64-V256-LABEL: ctsel_nxv2f64_basic:
@@ -785,12 +578,7 @@ define <vscale x 2 x double> @ctsel_nxv2f64_basic(i1 %cond, <vscale x 2 x double
 ; RV64-V256-NEXT:    vmv.v.x v12, a0
 ; RV64-V256-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-V256-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-V256-NEXT:    vmv.v.i v12, 0
-; RV64-V256-NEXT:    vmerge.vim v12, v12, -1, v0
-; RV64-V256-NEXT:    vand.vv v8, v12, v8
-; RV64-V256-NEXT:    vnot.v v12, v12
-; RV64-V256-NEXT:    vand.vv v10, v12, v10
-; RV64-V256-NEXT:    vor.vv v8, v8, v10
+; RV64-V256-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; RV64-V256-NEXT:    ret
   %r = call <vscale x 2 x double> @llvm.ct.select.nxv2f64(i1 %cond, <vscale x 2 x double> %a, <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %r
