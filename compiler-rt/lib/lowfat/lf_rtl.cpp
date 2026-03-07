@@ -33,27 +33,36 @@ bool lowfat_inited = false;
 // interceptor-level OOB (memset/memcpy/memmove) warns-and-continues or aborts.
 bool lowfat_recover = false;
 
+// Maximum number of size classes across both modes.
+// In POW2-only mode kNumSizeClasses=27; with a custom config it can be up to
+// LOWFAT_MAX_ARRAY_SIZE. We size the static arrays at compile time using
+// whichever is larger so the same translation unit works in both modes.
+#ifdef LOWFAT_CUSTOM_CONFIG
+  static constexpr uptr kMaxSizeClasses = LOWFAT_NUM_SIZE_CLASSES;
+#else
+  static constexpr uptr kMaxSizeClasses = kNumSizeClasses;
+#endif
+
 // Region table - initialized in __lf_init
-// TODO: not actually needed, to use for convenience
-RegionInfo kRegions[kNumSizeClasses];
+RegionInfo kRegions[kMaxSizeClasses];
 
 // Pointers to the start of each mapped region
-static uptr region_bases[kNumSizeClasses];
+static uptr region_bases[kMaxSizeClasses];
 
 // Bump pointer: next fresh address to allocate from in each region
-static uptr region_next_alloc[kNumSizeClasses];
+static uptr region_next_alloc[kMaxSizeClasses];
 
 // Segregated free lists: one singly-linked list per size class
 // Free blocks store a pointer to the next free block at their start
 struct FreeBlock {
   FreeBlock *next;
 };
-static FreeBlock *free_lists[kNumSizeClasses];
+static FreeBlock *free_lists[kMaxSizeClasses];
 
 // Per-size-class spin mutexes protecting region_next_alloc and free_lists.
 // Using one lock per size class allows concurrent allocation across different
 // size classes, which is the common case in multi-threaded programs.
-static StaticSpinMutex region_locks[kNumSizeClasses];
+static StaticSpinMutex region_locks[kMaxSizeClasses];
 
 static void InitializeFlags() {
   SetCommonFlagsDefaults();
@@ -78,9 +87,15 @@ static void InitializeFlags() {
 static void InitRegionTable() {
   for (uptr i = 0; i < kNumSizeClasses; i++) {
     uptr size = SizeClassToSize(i);
-    kRegions[i].size = size;
+    kRegions[i].size      = size;
     kRegions[i].alignment = size;
+#ifdef LOWFAT_CUSTOM_CONFIG
+    // For non-POW2 sizes the mask is meaningless (base computed via magic
+    // multiply); store 0 to make this explicit and catch accidental usage.
+    kRegions[i].mask = kLowFatGenIsPow2[i] ? (uptr)kLowFatGenMasks[i] : 0;
+#else
     kRegions[i].mask = ~(size - 1);
+#endif
     free_lists[i] = nullptr;
   }
 }
@@ -92,21 +107,25 @@ static bool InitMemoryRegions() {
     uptr region_start = GetRegionStart(i);
     
     // Reserve the region without committing physical memory
-    // MmapFixedNoReserve maps memory but doesn't allocate physical pages
-    // until they're accessed (lazy allocation)
+    // MmapFixedNoReserve maps memory but doesn't allocate physical pages until they're accessed
     bool success = MmapFixedNoReserve(region_start, kRegionSize, "lowfat_region");
     
-    if (!success) {
-      // Printf("LowFat: Failed to map region %zu at 0x%zx\n", i, region_start);
+    if (!success)
       return false;
-    }
     
     region_bases[i] = region_start;
-    region_next_alloc[i] = region_start;
+    
+    // The first allocation must be aligned to the object size relative to absolute zero.
+    // This is required for the magic-number fixed point math to securely compute object bases.
+    uptr size = kRegions[i].size;
+    uptr offset = region_start % size;
+    uptr initial_alloc = region_start;
+    if (offset != 0)
+      initial_alloc += (size - offset);
+      
+    region_next_alloc[i] = initial_alloc;
   }
   
-  // Printf("LowFat: Mapped %zu regions starting at 0x%zx\n", 
-  //        kNumSizeClasses, kRegionBase);
   return true;
 }
 
@@ -137,9 +156,6 @@ void *Allocate(uptr size) {
   // 2. Fall back to bump allocation
   uptr region_end = GetRegionStart(class_index) + kRegionSize;
   uptr addr = region_next_alloc[class_index];
-
-  // Ensure alignment (should already be aligned)
-  addr = (addr + alloc_size - 1) & ~(alloc_size - 1);
 
   if (addr + alloc_size > region_end)
     return nullptr;
