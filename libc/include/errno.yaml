@@ -5,7 +5,8 @@ standards:
   - Linux
   - POSIX
 macros: []
-types: []
+types:
+  - type_name: errno_t
 enums: []
 objects: []
 functions: []
