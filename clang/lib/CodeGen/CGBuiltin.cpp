@@ -2827,7 +2827,8 @@ private:
     OccuppiedIntervals = Merged;
   }
 
-  llvm::SmallVector<BitInterval> GetPaddingIntervals(uint64_t SizeInBits) const {
+  llvm::SmallVector<BitInterval>
+  GetPaddingIntervals(uint64_t SizeInBits) const {
     llvm::SmallVector<BitInterval> Results;
     if (OccuppiedIntervals.size() == 1 &&
         OccuppiedIntervals.front().First == 0 &&
