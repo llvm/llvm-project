@@ -241,30 +241,37 @@ int __asan_address_is_poisoned(void const volatile *addr) {
 uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   if (!size)
     return 0;
-  uptr end = beg + size;
+  uptr last = beg + size - 1;
   if (!AddrIsInMem(beg))
     return beg;
-  if (!AddrIsInMem(end))
-    return end;
-  CHECK_LT(beg, end);
+  if (!AddrIsInMem(last))
+    return last;
+  CHECK_LE(beg, last);
   // First check the first and the last application bytes,
-  // then check the ASAN_SHADOW_GRANULARITY-aligned region by calling
+  // then check the ASAN_SHADOW_GRANULARITY-aligned inner region by calling
   // mem_is_zero on the corresponding shadow.
-  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(end - 1)) {
+  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(last)) {
     uptr aligned_b = RoundUpTo(beg, ASAN_SHADOW_GRANULARITY);
-    uptr aligned_e = RoundDownTo(end, ASAN_SHADOW_GRANULARITY);
-    if (aligned_e <= aligned_b)
+    uptr aligned_l = RoundDownTo(last, ASAN_SHADOW_GRANULARITY);
+    // aligned_b may cross a memory range boundary (Low/Mid/HighMemEnd)
+    // or even wrap on 32-bit. In that case MemToShadow(aligned_b) would be
+    // invalid and the shadow region could span ShadowGap, causing
+    // mem_is_zero() to access unmapped memory.
+    // If the aligned inner region is empty (including the case when aligned_b
+    // is wrapped), skip the rest of the fast check.
+    if (aligned_l <= aligned_b ||
+        UNLIKELY(aligned_b < beg))  // address space overflow?
       return 0;
     uptr shadow_beg = MemToShadow(aligned_b);
-    uptr shadow_end = MemToShadow(aligned_e);
-    CHECK_LE(shadow_beg, shadow_end);
+    uptr shadow_last = MemToShadow(aligned_l);
+    CHECK_LE(shadow_beg, shadow_last);
     if (__sanitizer::mem_is_zero((const char*)shadow_beg,
-                                 shadow_end - shadow_beg))
+                                 shadow_last - shadow_beg))
       return 0;
   }
   // The fast check failed, so we have a poisoned byte somewhere.
   // Find it slowly.
-  for (; beg < end; beg++)
+  for (; beg <= last; beg++)
     if (__asan::AddressIsPoisoned(beg))
       return beg;
   UNREACHABLE("mem_is_zero returned false, but poisoned byte was not found");
