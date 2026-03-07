@@ -668,6 +668,25 @@ InsertionPoint AllocMemConversion::findAllocaInsertionPoint(
     // there were value operands to the allocmem so insert after the last one
     LLVM_DEBUG(llvm::dbgs()
                << "--Placing after last operand: " << *lastOperand << "\n");
+    // Check we aren't moving across a stackrestore scope boundary.
+    // The last operand may have been defined in an earlier stacksave/
+    // stackrestore scope (e.g. due to CSE merging identical size computations,
+    // or HLFIR-to-FIR lowering reusing a single size value across scopes).
+    // Placing the alloca at the operand's location would put it in the wrong
+    // scope, where it gets reclaimed before the allocmem's actual use.
+    // Fall back to the allocmem's own location, matching the "operand declared
+    // in a different block" bail-out logic above.
+    if (lastOperand->getBlock() == oldAlloc->getBlock()) {
+      for (mlir::Operation *op = lastOperand->getNextNode();
+           op && op != oldAlloc.getOperation(); op = op->getNextNode()) {
+        if (mlir::isa<mlir::LLVM::StackRestoreOp>(op)) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "--stackrestore found between lastOperand and "
+                        "allocmem, falling back to allocmem location\n");
+          return checkReturn(oldAlloc.getOperation());
+        }
+      }
+    }
     // check we aren't moving out of an omp region
     auto lastOpOmpRegion =
         lastOperand->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
