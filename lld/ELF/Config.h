@@ -329,6 +329,7 @@ struct Config {
   bool fixCortexA8;
   bool formatBinary = false;
   bool fortranCommon;
+  bool btfMerge;
   bool gcSections;
   bool gdbIndex;
   bool gnuHash = false;
@@ -566,6 +567,7 @@ struct InStruct {
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
+  std::unique_ptr<SyntheticSection> btfSection;
   std::unique_ptr<SyntheticSection> gnuProperty;
   std::unique_ptr<SyntheticSection> gnuStack;
   std::unique_ptr<GotSection> got;

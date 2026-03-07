@@ -32,6 +32,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/BTF/BTFBuilder.h"
+#include "llvm/DebugInfo/BTF/BTFDedup.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Support/DJB.h"
@@ -3506,6 +3508,48 @@ void GdbIndexSection::writeTo(uint8_t *buf) {
 
 bool GdbIndexSection::isNeeded() const { return !chunks.empty(); }
 
+template <class ELFT>
+BtfSection<ELFT>::BtfSection(Ctx &ctx)
+    : SyntheticSection(ctx, ".BTF", SHT_PROGBITS, 0, 1) {
+  llvm::TimeTraceScope timeScope("Merge BTF");
+  const bool isLE = ELFT::Endianness == llvm::endianness::little;
+  llvm::BTFBuilder builder;
+
+  // Collect all .BTF input sections and merge them.
+  // Mark originals dead so they don't appear in the output.
+  for (InputSectionBase *s : ctx.inputSections) {
+    if (s->name != ".BTF" || !s->isLive())
+      continue;
+    s->markDead();
+    ArrayRef<uint8_t> data = s->content();
+    StringRef raw(reinterpret_cast<const char *>(data.data()), data.size());
+    Expected<uint32_t> idBase = builder.merge(raw, isLE);
+    if (!idBase) {
+      Warn(ctx) << s << ": failed to parse .BTF section: "
+                << toString(idBase.takeError());
+      continue;
+    }
+  }
+
+  if (builder.typesCount() == 0)
+    return;
+
+  // Deduplicate merged types.
+  if (Error e = llvm::BTF::dedup(builder)) {
+    Warn(ctx) << "BTF deduplication failed: " << toString(std::move(e));
+    // Fall through and emit un-deduped BTF.
+    builder.write(outputData, isLE);
+    return;
+  }
+
+  builder.write(outputData, isLE);
+}
+
+template <class ELFT>
+void BtfSection<ELFT>::writeTo(uint8_t *buf) {
+  memcpy(buf, outputData.data(), outputData.size());
+}
+
 VersionDefinitionSection::VersionDefinitionSection(Ctx &ctx)
     : SyntheticSection(ctx, ".gnu.version_d", SHT_GNU_verdef, SHF_ALLOC,
                        sizeof(uint32_t)) {}
@@ -4663,6 +4707,11 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   if (ctx.arg.andFeatures || ctx.aarch64PauthAbiCoreInfo) {
     ctx.in.gnuProperty = std::make_unique<GnuPropertySection>(ctx);
     add(*ctx.in.gnuProperty);
+  }
+
+  if (ctx.arg.btfMerge) {
+    ctx.in.btfSection = std::make_unique<BtfSection<ELFT>>(ctx);
+    add(*ctx.in.btfSection);
   }
 
   if (ctx.arg.debugNames) {

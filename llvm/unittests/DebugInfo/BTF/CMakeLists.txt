@@ -5,6 +5,8 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(DebugInfoBTFTests
+  BTFBuilderTest.cpp
+  BTFDedupTest.cpp
   BTFParserTest.cpp
   )
 

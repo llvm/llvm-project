@@ -1436,6 +1436,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args.hasArg(OPT_fix_cortex_a8) && !args.hasArg(OPT_relocatable);
   ctx.arg.fortranCommon =
       args.hasFlag(OPT_fortran_common, OPT_no_fortran_common, false);
+  ctx.arg.btfMerge =
+      args.hasFlag(OPT_btf_merge, OPT_no_btf_merge, false) &&
+      !args.hasArg(OPT_relocatable);
   ctx.arg.gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   ctx.arg.gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   ctx.arg.gdbIndex = args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
