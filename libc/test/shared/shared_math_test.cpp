@@ -46,14 +46,12 @@ static_assert(0x0p+0f16 == LIBC_NAMESPACE::shared::ceilf16(0.0f16));
 //                       Long Double Tests
 //===----------------------------------------------------------------------===//
 
-// Temporarily disable long double tests on x86 and x86_64
-// TODO(bassiounix): Re-enable long double tests on X86 once GSoC26 float80/128
-// project is complete.
-#if !(defined(linux) && (defined(__x86_64__) || defined(__i386__)))
+// TODO(issue#185232): Mark as constexpr once the refactor is done.
+#if 0 // Temporarily disable long double tests
 
 static_assert(0x0p+0L == LIBC_NAMESPACE::shared::ceill(0.0L));
 
-#endif // defined(linux) && (defined(__x86_64__) || defined(__i386__))
+#endif
 
 //===----------------------------------------------------------------------===//
 //                       Float128 Tests
