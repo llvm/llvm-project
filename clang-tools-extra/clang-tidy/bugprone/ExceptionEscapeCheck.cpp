@@ -68,7 +68,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       TreatFunctionsWithoutSpecificationAsThrowing(
           Options.get("TreatFunctionsWithoutSpecificationAsThrowing",
                       TreatFunctionsWithoutSpecification::None)) {
-  llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
+  SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
       IgnoredExceptionsVec, CheckedSwapFunctionsVec;
   RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
                                        false);

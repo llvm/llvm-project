@@ -10,7 +10,7 @@
 
 namespace clang::tidy::hicpp {
 
-IgnoredRemoveResultCheck::IgnoredRemoveResultCheck(llvm::StringRef Name,
+IgnoredRemoveResultCheck::IgnoredRemoveResultCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : UnusedReturnValueCheck(Name, Context,
                              {
