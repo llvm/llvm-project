@@ -5121,6 +5121,91 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
+/// Try to canonicalize a homogeneous, tightly-packed struct to a vector type.
+///
+/// For structs where all elements have the same type and are tightly packed
+/// (no padding), we can represent them as a fixed vector which enables better
+/// optimization (e.g., vector selects instead of memcpy).
+///
+/// \param STy The struct type to try to canonicalize.
+/// \param DL The DataLayout for size/alignment queries.
+/// \returns The equivalent vector type, or nullptr if not applicable.
+static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
+                                                      const DataLayout &DL) {
+  unsigned NumElts = STy->getNumElements();
+  if (NumElts != 2 && NumElts != 4)
+    return nullptr;
+
+  // All elements must be the same type.
+  Type *EltTy = STy->getElementType(0);
+  for (unsigned I = 1; I < NumElts; ++I)
+    if (STy->getElementType(I) != EltTy)
+      return nullptr;
+
+  // Element type must be valid for vectors.
+  if (!VectorType::isValidElementType(EltTy))
+    return nullptr;
+
+  // Only allow integer types >= 8 bits or floating point.
+  if (auto *IT = dyn_cast<IntegerType>(EltTy)) {
+    if (IT->getBitWidth() < 8)
+      return nullptr;
+  } else if (!EltTy->isFloatingPointTy()) {
+    return nullptr;
+  }
+
+  // Element size must be fixed and non-zero.
+  TypeSize EltTS = DL.getTypeAllocSize(EltTy);
+  if (!EltTS.isFixed())
+    return nullptr;
+  uint64_t EltSize = EltTS.getFixedValue();
+  if (EltSize < 1)
+    return nullptr;
+
+  const StructLayout *SL = DL.getStructLayout(STy);
+  uint64_t StructSize = SL->getSizeInBytes();
+  if (StructSize == 0)
+    return nullptr;
+
+  // Must be tightly packed: size == NumElts * EltSize.
+  if (StructSize != NumElts * EltSize)
+    return nullptr;
+
+  // Verify each element is at the expected offset (no padding).
+  for (unsigned I = 0; I < NumElts; ++I)
+    if (SL->getElementOffset(I) != I * EltSize)
+      return nullptr;
+
+  return FixedVectorType::get(EltTy, NumElts);
+}
+
+/// Returns true if this partition has PHI/select related users that can
+/// benefit from canonicalizing homogeneous struct partitions to vectors.
+static bool hasPhiOrSelectUsersInPartition(Partition &P) {
+  auto IsPhiOrSelectRelated = [](const Slice &S) {
+    const auto *I = dyn_cast<Instruction>(S.getUse()->getUser());
+    if (!I)
+      return false;
+
+    if (isa<PHINode>(I) || isa<SelectInst>(I))
+      return true;
+
+    if (const auto *MI = dyn_cast<MemTransferInst>(I))
+      return isa<PHINode>(MI->getRawSource()) ||
+             isa<SelectInst>(MI->getRawSource()) ||
+             isa<PHINode>(MI->getRawDest()) ||
+             isa<SelectInst>(MI->getRawDest());
+
+    return false;
+  };
+
+  if (any_of(P, IsPhiOrSelectRelated))
+    return true;
+
+  return any_of(P.splitSliceTails(),
+                [&](const Slice *S) { return IsPhiOrSelectRelated(*S); });
+}
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
@@ -5193,6 +5278,27 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
         isIntegerWideningViable(P, LargestIntTy, DL))
       return {LargestIntTy, true, nullptr};
+
+    // Try homogeneous struct to vector canonicalization, but only when
+    // the conversion would actually benefit from vectorization: either
+    // the partition has non-splittable typed uses, or the alloca is
+    // involved in phi/select patterns (enabling speculation).
+    //
+    // When all uses are splittable (memcpy/lifetime only) and there's no
+    // phi/select involvement, converting to vector just changes memcpy
+    // split types without enabling promotion, propagating vector types to
+    // other allocas and causing insertelement/extractelement overhead.
+    {
+      bool HasNonSplittable =
+          any_of(P, [](const Slice &S) { return !S.isSplittable(); });
+      bool ShouldConvert = HasNonSplittable;
+      if (!ShouldConvert)
+        ShouldConvert = hasPhiOrSelectUsersInPartition(P);
+      if (ShouldConvert)
+        if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
+          if (auto *VTy = tryCanonicalizeStructToVector(STy, DL))
+            return {VTy, false, nullptr};
+    }
 
     // Fallback to TypePartitionTy and we probably won't promote.
     return {TypePartitionTy, false, nullptr};
