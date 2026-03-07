@@ -2989,6 +2989,109 @@ entry:
   ret <2 x i64> %9
 }
 
+define <4 x i64> @smull_no_cycle(<4 x i32> %v, i8 %s, ptr %p) {
+; CHECK-NEON-LABEL: smull_no_cycle:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    sub sp, sp, #48
+; CHECK-NEON-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEON-NEXT:    .cfi_offset w30, -16
+; CHECK-NEON-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEON-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEON-NEXT:    sxtb x8, w0
+; CHECK-NEON-NEXT:    mov v1.d[0], x8
+; CHECK-NEON-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEON-NEXT:    smull v1.2d, v1.2s, v0.2s
+; CHECK-NEON-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEON-NEXT:    fmov x8, d1
+; CHECK-NEON-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-NEON-NEXT:    strh wzr, [x1, x8, lsl #1]
+; CHECK-NEON-NEXT:    bl foo
+; CHECK-NEON-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEON-NEXT:    mov x8, xzr
+; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-NEON-NEXT:    ldrh w8, [x8]
+; CHECK-NEON-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-NEON-NEXT:    mov v0.d[0], x8
+; CHECK-NEON-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEON-NEXT:    smull v1.2d, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-NEON-NEXT:    add sp, sp, #48
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smull_no_cycle:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    sub sp, sp, #48
+; CHECK-SVE-NEXT:    str x30, [sp, #32] // 8-byte Spill
+; CHECK-SVE-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-SVE-NEXT:    .cfi_offset w30, -16
+; CHECK-SVE-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SVE-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SVE-NEXT:    sxtb x8, w0
+; CHECK-SVE-NEXT:    mov v1.d[0], x8
+; CHECK-SVE-NEXT:    xtn v1.2s, v1.2d
+; CHECK-SVE-NEXT:    smull v1.2d, v1.2s, v0.2s
+; CHECK-SVE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SVE-NEXT:    fmov x8, d1
+; CHECK-SVE-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-SVE-NEXT:    strh wzr, [x1, x8, lsl #1]
+; CHECK-SVE-NEXT:    bl foo
+; CHECK-SVE-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SVE-NEXT:    mov x8, xzr
+; CHECK-SVE-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; CHECK-SVE-NEXT:    ldrh w8, [x8]
+; CHECK-SVE-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
+; CHECK-SVE-NEXT:    mov v0.d[0], x8
+; CHECK-SVE-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SVE-NEXT:    smull v1.2d, v0.2s, v1.2s
+; CHECK-SVE-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-SVE-NEXT:    add sp, sp, #48
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: smull_no_cycle:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sub sp, sp, #32
+; CHECK-GI-NEXT:    str d8, [sp, #16] // 8-byte Spill
+; CHECK-GI-NEXT:    str x30, [sp, #24] // 8-byte Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset b8, -16
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    sxtb x8, w0
+; CHECK-GI-NEXT:    mov d8, v0.d[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v1.s[1], wzr
+; CHECK-GI-NEXT:    smull v1.2d, v1.2s, v0.2s
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Spill
+; CHECK-GI-NEXT:    strh wzr, [x1, x8, lsl #1]
+; CHECK-GI-NEXT:    bl foo
+; CHECK-GI-NEXT:    mov x8, xzr
+; CHECK-GI-NEXT:    ldr x30, [sp, #24] // 8-byte Reload
+; CHECK-GI-NEXT:    ldrh w8, [x8]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.s[1], wzr
+; CHECK-GI-NEXT:    smull v1.2d, v0.2s, v8.2s
+; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr d8, [sp, #16] // 8-byte Reload
+; CHECK-GI-NEXT:    add sp, sp, #32
+; CHECK-GI-NEXT:    ret
+  %ext = sext <4 x i32> %v to <4 x i64>
+  %scalar = sext i8 %s to i64
+  %vec1 = insertelement <4 x i64> zeroinitializer, i64 %scalar, i64 0
+  %mul1 = mul <4 x i64> %vec1, %ext
+  %e = extractelement <4 x i64> %mul1, i64 0
+  %gep = getelementptr i16, ptr %p, i64 %e
+  store i16 0, ptr %gep
+  call void @foo()
+  %ld = load i16, ptr null
+  %ldext = zext i16 %ld to i64
+  %vec2 = insertelement <4 x i64> %vec1, i64 %ldext, i64 2
+  %mul2 = mul <4 x i64> %vec2, %ext
+  ret <4 x i64> %mul2
+}
+
+declare void @foo()
 declare <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8>, <8 x i8>)
 declare <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8>, <8 x i8>)
 declare <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8>, <8 x i8>)
