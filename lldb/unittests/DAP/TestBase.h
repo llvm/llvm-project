@@ -112,7 +112,6 @@ protected:
   void SetUp() override;
   void TearDown() override;
 
-  bool GetDebuggerSupportsTarget(llvm::StringRef platform);
   void CreateDebugger();
   void LoadCore();
 };

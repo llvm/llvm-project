@@ -10,6 +10,7 @@
 #include "Handler/RequestHandler.h"
 #include "Protocol/ProtocolBase.h"
 #include "TestBase.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Testing/Support/Error.h"
@@ -38,10 +39,7 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
 #ifndef __linux__
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   CreateDebugger();
-
-  if (!GetDebuggerSupportsTarget("X86"))
-    GTEST_SKIP() << "Unsupported platform";
-
+  SKIP_UNLESS_PLATFORM_SUPPORTED(dap->debugger, "X86");
   LoadCore();
 
   DisconnectRequestHandler handler(*dap);

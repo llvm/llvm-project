@@ -9,6 +9,7 @@
 #ifndef LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
 #define LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
 
+#include "lldb/API/SBDebugger.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "llvm/ADT/Twine.h"
@@ -16,6 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gtest/gtest.h"
 #include <string>
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -65,12 +67,26 @@ private:
   std::string Buffer;
 };
 
+/// Check if the debugger supports the given platform.
+bool DebuggerSupportsPlatform(lldb::SBDebugger &debugger,
+                              llvm::StringRef platform);
+
+#define SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, platform)                     \
+  if (!::lldb_private::DebuggerSupportsPlatform(debugger, platform)) {         \
+    GTEST_SKIP() << "Unsupported platform";                                    \
+  }
+
 template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
   std::string encoded;
   llvm::raw_string_ostream OS(encoded);
   OS << toJSON(input);
   return llvm::json::parse<T>(encoded);
 }
+
+std::pair<lldb::SBTarget, lldb::SBProcess> LoadCore(lldb::SBDebugger &debugger,
+                                                    llvm::StringRef binary_path,
+                                                    llvm::StringRef core_path);
+
 } // namespace lldb_private
 
 #endif
