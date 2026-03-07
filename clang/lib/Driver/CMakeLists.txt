@@ -100,6 +100,7 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
+  clangDependencyScanning
   clangFrontend
   clangSerialization
   clangLex
