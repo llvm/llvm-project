@@ -3867,7 +3867,13 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
         evalExpr.u);
     stmtCtx.finalizeAndPop();
     if (isByRef) {
-      fir::StoreOp::create(builder, loc, result, lhs);
+      // For user-defined combiners the assignment expression (e.g.
+      // "omp_out%x = omp_out%x + omp_in%x") already wrote into omp_out
+      // as a side-effect. We only need to yield the lhs reference.
+      // Only store result back if its type actually matches the element type.
+      mlir::Type eleTy = fir::unwrapRefType(lhs.getType());
+      if (result.getType() == eleTy)
+        fir::StoreOp::create(builder, loc, result, lhs);
       mlir::omp::YieldOp::create(builder, loc, lhs);
     } else {
       mlir::omp::YieldOp::create(builder, loc, result);
@@ -3943,6 +3949,30 @@ appendCombiner(const parser::OpenMPDeclareReductionConstruct &construct,
   llvm_unreachable("Expecting reduction combiner");
 }
 
+// Map parser intrinsic operators to ReductionIdentifier.
+// Only operators valid for OpenMP reductions are mapped.
+static ReductionProcessor::ReductionIdentifier
+getRedIdFromParserIntrOp(parser::DefinedOperator::IntrinsicOperator intrOp) {
+  switch (intrOp) {
+  case parser::DefinedOperator::IntrinsicOperator::Add:
+    return ReductionProcessor::ReductionIdentifier::ADD;
+  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+    return ReductionProcessor::ReductionIdentifier::SUBTRACT;
+  case parser::DefinedOperator::IntrinsicOperator::Multiply:
+    return ReductionProcessor::ReductionIdentifier::MULTIPLY;
+  case parser::DefinedOperator::IntrinsicOperator::AND:
+    return ReductionProcessor::ReductionIdentifier::AND;
+  case parser::DefinedOperator::IntrinsicOperator::OR:
+    return ReductionProcessor::ReductionIdentifier::OR;
+  case parser::DefinedOperator::IntrinsicOperator::EQV:
+    return ReductionProcessor::ReductionIdentifier::EQV;
+  case parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return ReductionProcessor::ReductionIdentifier::NEQV;
+  default:
+    llvm_unreachable("unexpected intrinsic operator for reduction");
+  }
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
@@ -3960,28 +3990,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &identifier =
       std::get<parser::OmpReductionIdentifier>(specifier.t);
 
-  std::string reductionNameStr = Fortran::common::visit(
-      common::visitors{
-          [](const parser::ProcedureDesignator &pd) -> std::string {
-            return std::get<parser::Name>(pd.u).ToString();
-          },
-          [](const parser::DefinedOperator &defOp) -> std::string {
-            return Fortran::common::visit(
-                common::visitors{
-                    [](const parser::DefinedOpName &opName) -> std::string {
-                      return opName.v.ToString();
-                    },
-                    [](parser::DefinedOperator::IntrinsicOperator intrOp)
-                        -> std::string {
-                      return std::string(
-                          parser::DefinedOperator::EnumToString(intrOp));
-                    },
-                },
-                defOp.u);
-          },
-      },
-      identifier.u);
-
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
     mlir::Type reductionType = getReductionType(converter, specifier);
@@ -3991,10 +3999,51 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     ClauseProcessor cp(converter, semaCtx, clauses);
     cp.processInitializer(symTable, genInitValueCB);
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
+
+    // Build the reduction name to match what processReductionArguments uses
+    // when looking up the DeclareReductionOp by name. For intrinsic operators,
+    // use getReductionName(redId, ...) to produce the canonical name (e.g.,
+    // "add_reduction_byref_rec_..."). For user-defined reductions, use the
+    // raw symbol name to match the sym->name().ToString() lookup path.
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    const auto &kindMap = builder.getKindMap();
+    mlir::Type redType =
+        isByRef
+            ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
+            : reductionType;
+
+    std::string reductionNameStr = Fortran::common::visit(
+        common::visitors{
+            [&](const parser::ProcedureDesignator &pd) -> std::string {
+              // User-defined named reductions: use raw name to match
+              // lookupSymbol in processReductionArguments.
+              return std::get<parser::Name>(pd.u).ToString();
+            },
+            [&](const parser::DefinedOperator &defOp) -> std::string {
+              return Fortran::common::visit(
+                  common::visitors{
+                      [&](const parser::DefinedOpName &opName) -> std::string {
+                        // User-defined operator reductions: use raw name.
+                        return opName.v.ToString();
+                      },
+                      [&](parser::DefinedOperator::IntrinsicOperator intrOp)
+                          -> std::string {
+                        // Intrinsic operators: use canonical naming to match
+                        // processReductionArguments lookup.
+                        auto redId = getRedIdFromParserIntrOp(intrOp);
+                        return ReductionProcessor::getReductionName(
+                            redId, kindMap, redType, isByRef);
+                      },
+                  },
+                  defOp.u);
+            },
+        },
+        identifier.u);
+
     ReductionProcessor::createDeclareReductionHelper<
-        mlir::omp::DeclareReductionOp>(
-        converter, reductionNameStr, reductionType,
-        converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
+        mlir::omp::DeclareReductionOp>(converter, reductionNameStr, redType,
+                                       converter.getCurrentLocation(), isByRef,
+                                       genCombinerCB, genInitValueCB);
   }
 }
 
