@@ -6,11 +6,14 @@ define <4 x double> @PR167793(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vhaddpd %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vhaddpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; CHECK-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vaddpd %xmm1, %xmm2, %xmm1
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm0[2,3],ymm1[2,3]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm1 = xmm1[1],xmm2[1]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; CHECK-NEXT:    vaddpd %ymm0, %ymm3, %ymm0
-; CHECK-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm2[1],ymm0[3],ymm2[3]
 ; CHECK-NEXT:    retq
   %i5 = shufflevector <4 x double> %a0, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   %i6 = fadd <4 x double> %a0, %i5

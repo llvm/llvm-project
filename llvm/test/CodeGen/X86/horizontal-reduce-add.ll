@@ -191,7 +191,7 @@ define i32 @PR37890_v8i32(<8 x i32> %a)  {
 ; AVX1-FAST-LABEL: PR37890_v8i32:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
@@ -278,7 +278,7 @@ define i16 @PR37890_v16i16(<16 x i16> %a)  {
 ; AVX1-FAST-LABEL: PR37890_v16i16:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
@@ -369,11 +369,11 @@ define i32 @PR37890_v16i32(<16 x i32> %a)  {
 ;
 ; AVX1-FAST-LABEL: PR37890_v16i32:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
-; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-FAST-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
 ; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vphaddd %xmm2, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax

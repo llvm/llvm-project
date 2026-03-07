@@ -413,12 +413,15 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_negC_pack(<8 x half> %A, <8 x 
 ; GFX1170-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
 ; GFX1170-NEXT:    v_mov_b16_e32 v8.l, v15.l
 ; GFX1170-NEXT:    v_mov_b16_e32 v9.l, v14.l
-; GFX1170-NEXT:    v_perm_b32 v14, v13, v12, 0x5040100
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_perm_b32 v13, v19, v18, 0x5040100
-; GFX1170-NEXT:    v_perm_b32 v12, v17, v16, 0x5040100
+; GFX1170-NEXT:    v_mov_b16_e32 v14.l, v19.l
+; GFX1170-NEXT:    v_mov_b16_e32 v19.l, v13.l
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1170-NEXT:    v_perm_b32 v15, v8, v9, 0x5040100
-; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1170-NEXT:    v_perm_b32 v13, v14, v18, 0x5040100
+; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1170-NEXT:    v_perm_b32 v14, v19, v12, 0x5040100
+; GFX1170-NEXT:    v_perm_b32 v12, v17, v16, 0x5040100
 ; GFX1170-NEXT:    v_wmma_f16_16x16x16_f16 v[12:15], v[0:3], v[4:7], v[12:15] neg_lo:[0,0,1]
 ; GFX1170-NEXT:    global_store_b128 v[10:11], v[12:15], off
 ; GFX1170-NEXT:    s_endpgm
@@ -429,12 +432,17 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_negC_pack(<8 x half> %A, <8 x 
 ; GFX12-NEXT:    flat_load_b128 v[12:15], v[8:9] offset:16
 ; GFX12-NEXT:    flat_load_b128 v[16:19], v[8:9]
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x101
-; GFX12-NEXT:    v_perm_b32 v15, v15, v14, 0x5040100
-; GFX12-NEXT:    v_perm_b32 v14, v13, v12, 0x5040100
+; GFX12-NEXT:    v_perm_b32 v8, v13, v12, 0x5040100
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    v_perm_b32 v9, v17, v16, 0x5040100
+; GFX12-NEXT:    v_perm_b32 v15, v15, v14, 0x5040100
 ; GFX12-NEXT:    v_perm_b32 v13, v19, v18, 0x5040100
-; GFX12-NEXT:    v_perm_b32 v12, v17, v16, 0x5040100
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_lshrrev_b32_e32 v9, 16, v9
+; GFX12-NEXT:    v_perm_b32 v14, v8, v12, 0x5040100
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_perm_b32 v12, v9, v16, 0x5040100
 ; GFX12-NEXT:    v_wmma_f16_16x16x16_f16 v[12:15], v[0:3], v[4:7], v[12:15] neg_lo:[0,0,1]
 ; GFX12-NEXT:    global_store_b128 v[10:11], v[12:15], off
 ; GFX12-NEXT:    s_endpgm

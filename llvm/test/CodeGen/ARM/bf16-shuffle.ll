@@ -269,7 +269,8 @@ entry:
 define dso_local <4 x bfloat> @test_vext_unaligned_bf16(<8 x bfloat> %a) {
 ; CHECK-LABEL: test_vext_unaligned_bf16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vext.16 d0, d0, d1, #3
+; CHECK-NEXT:    vext.16 q0, q0, q8, #3
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bx lr
 entry:
   %vext = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 3, i32 4, i32 5, i32 6>

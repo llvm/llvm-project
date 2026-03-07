@@ -31,18 +31,16 @@ entry:
 define <4 x float> @simple_mul_no_contract(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: simple_mul_no_contract:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v4.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v2.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    fmul v3.2s, v1.2s, v4.2s
-; CHECK-NEXT:    fmul v4.2s, v2.2s, v4.2s
+; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v0.4s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    uzp1 v3.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fmul v4.2s, v1.2s, v2.2s
+; CHECK-NEXT:    fmul v2.2s, v3.2s, v2.2s
 ; CHECK-NEXT:    fmul v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fmla v3.2s, v0.2s, v2.2s
-; CHECK-NEXT:    fsub v0.2s, v4.2s, v1.2s
-; CHECK-NEXT:    zip1 v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    fmla v4.2s, v0.2s, v3.2s
+; CHECK-NEXT:    fsub v0.2s, v2.2s, v1.2s
+; CHECK-NEXT:    zip1 v0.4s, v0.4s, v4.4s
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -149,14 +147,12 @@ entry:
 define <4 x float> @add_external_use(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: add_external_use:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v4.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v2.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    fsub v1.2s, v4.2s, v1.2s
+; CHECK-NEXT:    uzp1 v2.4s, v0.4s, v0.4s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    uzp1 v3.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fsub v1.2s, v2.2s, v1.2s
+; CHECK-NEXT:    fadd v0.2s, v0.2s, v3.2s
 ; CHECK-NEXT:    zip1 v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 entry:
