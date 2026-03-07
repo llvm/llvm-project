@@ -4369,14 +4369,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                                                 Node->getFlags()));
     } else {
       assert(VT.isInteger());
-      EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
-      auto [Tmp2Lo, Tmp2Hi] = DAG.SplitScalar(Tmp2, dl, HalfVT, HalfVT);
-      auto [Tmp3Lo, Tmp3Hi] = DAG.SplitScalar(Tmp3, dl, HalfVT, HalfVT);
-      SDValue ResLo =
-          DAG.getCTSelect(dl, HalfVT, Tmp1, Tmp2Lo, Tmp3Lo, Node->getFlags());
-      SDValue ResHi =
-          DAG.getCTSelect(dl, HalfVT, Tmp1, Tmp2Hi, Tmp3Hi, Node->getFlags());
-      Tmp1 = DAG.getNode(ISD::BUILD_PAIR, dl, VT, ResLo, ResHi);
+      // Expand: Result = F ^ ((T ^ F) & Mask), Mask = 0 - (Cond & 1).
+      // SUB+AND creates the mask because i1 is already type-promoted;
+      // SIGN_EXTEND(i32, i32) would be a no-op leaving mask as 0/1.
+      SDValue Cond = Tmp1;
+      if (Cond.getValueType() != VT)
+        Cond = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Cond);
+      SDValue Mask = DAG.getNode(
+          ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT),
+          DAG.getNode(ISD::AND, dl, VT, Cond, DAG.getConstant(1, dl, VT)));
+      SDValue Diff = DAG.getNode(ISD::XOR, dl, VT, Tmp2, Tmp3);
+      Tmp1 = DAG.getNode(ISD::XOR, dl, VT, Tmp3,
+                          DAG.getNode(ISD::AND, dl, VT, Diff, Mask));
       Tmp1->setFlags(Node->getFlags());
     }
     Results.push_back(Tmp1);

@@ -6872,9 +6872,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // assert if Cond type is Vector
     assert(!CondVT.isVector() && "Vector type cond not supported yet");
 
-    // Handle scalar types
-    if (TLI.isOperationLegalOrCustom(ISD::CT_SELECT, VT) &&
-        !CondVT.isVector()) {
+    // Create a CT_SELECT node for scalar types so it survives DAGCombiner
+    // (visitCT_SELECT is conservative) and expands to AND/OR/XOR during
+    // operation legalization, after SETCC is lowered. Unsupported vectors
+    // and floats with illegal integer equivalents (e.g. f64 on i386) use
+    // the inline fallback which runs before type legalization.
+    bool CreateNode =
+        TLI.isOperationLegalOrCustom(ISD::CT_SELECT, VT) ||
+        (!VT.isVector() &&
+         (!VT.isFloatingPoint() ||
+          TLI.isTypeLegal(
+              EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits()))));
+
+    if (CreateNode) {
       SDValue Result = DAG.getNode(ISD::CT_SELECT, DL, VT, Cond, A, B);
       setValue(&I, Result);
       return;
