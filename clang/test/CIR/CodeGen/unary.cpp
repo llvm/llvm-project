@@ -13,7 +13,7 @@ unsigned up0() {
 // CHECK: cir.func{{.*}} @_Z3up0v() -> (!u32i{{.*}})
 // CHECK:   %[[A:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[OUTPUT:.*]] = cir.unary(plus, %[[INPUT]])
+// CHECK-NOT: cir.unary
 
 // LLVM: define{{.*}} i32 @_Z3up0v()
 // LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
@@ -231,7 +231,7 @@ float fpPlus() {
 // CHECK: cir.func{{.*}} @_Z6fpPlusv() -> (!cir.float{{.*}})
 // CHECK:   %[[A:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
-// CHECK:   %[[OUTPUT:.*]] = cir.unary(plus, %[[INPUT]])
+// CHECK-NOT: cir.unary
 
 // LLVM: define{{.*}} float @_Z6fpPlusv()
 // LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
@@ -411,7 +411,7 @@ void chars(char c) {
 
   int c1 = +c;
   // CHECK: %[[PROMO:.*]] = cir.cast integral %{{.+}} : !s8i -> !s32i
-  // CHECK: cir.unary(plus, %[[PROMO]]) : !s32i, !s32i
+  // CHECK-NOT: cir.unary
   int c2 = -c;
   // CHECK: %[[PROMO:.*]] = cir.cast integral %{{.+}} : !s8i -> !s32i
   // CHECK: cir.unary(minus, %[[PROMO]]) nsw : !s32i, !s32i
@@ -432,8 +432,8 @@ _Float16 fp16UPlus(_Float16 f) {
 // CHECK: cir.func{{.*}} @_Z9fp16UPlusDF16_({{.*}}) -> (!cir.f16{{.*}})
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[F:.*]]
 // CHECK:   %[[PROMOTED:.*]] = cir.cast floating %[[INPUT]] : !cir.f16 -> !cir.float
-// CHECK:   %[[RESULT:.*]] = cir.unary(plus, %[[PROMOTED]])
-// CHECK:   %[[UNPROMOTED:.*]] = cir.cast floating %[[RESULT]] : !cir.float -> !cir.f16
+// CHECK-NOT: cir.unary
+// CHECK:   %[[UNPROMOTED:.*]] = cir.cast floating %[[PROMOTED]] : !cir.float -> !cir.f16
 
 // LLVM: define{{.*}} half @_Z9fp16UPlusDF16_({{.*}})
 // LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
@@ -567,9 +567,8 @@ void f16NestedUPlus() {
 // CHECK:  %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
 // CHECK:  %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
 // CHECK:  %[[A_F32:.*]] = cir.cast floating %[[TMP_A]] : !cir.f16 -> !cir.float
-// CHECK:  %[[A_PLUS:.*]] = cir.unary(plus, %[[A_F32]]) : !cir.float, !cir.float
-// CHECK:  %[[RESULT_F32:.*]] = cir.unary(plus, %[[A_PLUS]]) : !cir.float, !cir.float
-// CHECK:  %[[RESULT:.*]] = cir.cast floating %[[RESULT_F32]] : !cir.float -> !cir.f16
+// CHECK-NOT: cir.unary
+// CHECK:  %[[RESULT:.*]] = cir.cast floating %[[A_F32]] : !cir.float -> !cir.f16
 // CHECK:  cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.f16, !cir.ptr<!cir.f16>
 
 // LLVM: define{{.*}} void @_Z14f16NestedUPlusv()
