@@ -50,7 +50,7 @@ private:
 
 static void BM_EmitInfoFunction(benchmark::State &State) {
   std::string Code = "void f() {}";
-  std::unique_ptr<clang::ASTUnit> AST = clang::tooling::buildASTFromCode(Code);
+  OwnedPtr<clang::ASTUnit> AST = clang::tooling::buildASTFromCode(Code);
   const FunctionDecl *Func = nullptr;
   BenchmarkVisitor Visitor(Func);
   Visitor.TraverseDecl(AST->getASTContext().getTranslationUnitDecl());
@@ -60,7 +60,8 @@ static void BM_EmitInfoFunction(benchmark::State &State) {
   Location Loc;
 
   for (auto _ : State) {
-    auto Result = serialize::emitInfo(Func, FC, Loc, /*PublicOnly=*/false);
+    serialize::ClangDocSerializer Serializer;
+    auto Result = Serializer.emitInfo(Func, FC, Loc, /*PublicOnly=*/false);
     benchmark::DoNotOptimize(Result);
   }
 }
@@ -82,7 +83,7 @@ static void BM_Mapper_Scale(benchmark::State &State) {
     ClangDocContext CDCtx(&ECtx, "test-project", false, "", "", "", "", "", {},
                           Diags, OutputFormatTy::json, false);
     auto ActionFactory = doc::newMapperActionFactory(CDCtx);
-    std::unique_ptr<FrontendAction> Action = ActionFactory->create();
+    OwnedPtr<FrontendAction> Action = ActionFactory->create();
     tooling::runToolOnCode(std::move(Action), Code, "test.cpp");
   }
 }
@@ -91,7 +92,7 @@ BENCHMARK(BM_Mapper_Scale)->Range(10, 10000);
 // --- Reducer Benchmarks ---
 
 static void BM_SerializeFunctionInfo(benchmark::State &State) {
-  auto I = std::make_unique<FunctionInfo>();
+  auto I = allocatePtr<FunctionInfo>();
   I->Name = "f";
   I->DefLoc = Location(0, 0, "test.cpp");
   I->ReturnType = TypeInfo("void");
@@ -101,7 +102,7 @@ static void BM_SerializeFunctionInfo(benchmark::State &State) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
 
-  std::unique_ptr<Info> InfoPtr = std::move(I);
+  OwnedPtr<Info> InfoPtr = std::move(I);
 
   for (auto _ : State) {
     auto Result = serialize::serialize(InfoPtr, Diags);
@@ -116,10 +117,10 @@ static void BM_MergeInfos_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     State.PauseTiming();
-    std::vector<std::unique_ptr<Info>> Input;
+    OwningPtrArray<Info> Input;
     Input.reserve(State.range(0));
     for (int i = 0; i < State.range(0); ++i) {
-      auto I = std::make_unique<FunctionInfo>();
+      auto I = allocatePtr<FunctionInfo>();
       I->Name = "f";
       I->USR = USR;
       I->DefLoc = Location(10, i, "test.cpp");
@@ -181,7 +182,7 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
   }
 
   int NumRecords = State.range(0);
-  auto NI = std::make_unique<NamespaceInfo>();
+  auto NI = allocatePtr<NamespaceInfo>();
   NI->Name = "GlobalNamespace";
   for (int i = 0; i < NumRecords; ++i) {
     NI->Children.Records.emplace_back(SymbolID{(uint8_t)(i & 0xFF)},
@@ -200,7 +201,7 @@ static void BM_JSONGenerator_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     Output.clear();
-    auto Err = (*G)->generateDocForInfo(NI.get(), OS, CDCtx);
+    auto Err = (*G)->generateDocForInfo(getPtr(NI), OS, CDCtx);
     if (Err) {
       State.SkipWithError("generateDocForInfo failed");
       llvm::consumeError(std::move(Err));
