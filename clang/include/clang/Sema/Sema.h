@@ -5024,6 +5024,9 @@ public:
                                             StringRef ImplName,
                                             MutableArrayRef<StringRef> Aspects);
 
+  PersonalityAttr *mergePersonalityAttr(Decl *D, FunctionDecl *Routine,
+                                        const AttributeCommonInfo &CI);
+
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
                       bool IsPackExpansion);

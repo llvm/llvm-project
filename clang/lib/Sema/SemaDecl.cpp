@@ -2970,6 +2970,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.OpenACC().mergeRoutineDeclAttr(*RD);
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
+  else if (const auto *PA = dyn_cast<PersonalityAttr>(Attr))
+    NewAttr = S.mergePersonalityAttr(D, PA->getRoutine(), *PA);
 
   if (NewAttr) {
     NewAttr->setInherited(true);
