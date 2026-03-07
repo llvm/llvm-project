@@ -228,7 +228,7 @@ extern "C" void acc_combined(int N, int cond) {
   for(unsigned I = 0; I < N; ++I);
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp(eq, %[[N_LOAD]], %[[ONE_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp eq %[[N_LOAD]], %[[ONE_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES]] : !cir.bool to i1
   // CHECK-NEXT: acc.kernels combined(loop) if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.loop combined(kernels) {
@@ -241,11 +241,11 @@ extern "C" void acc_combined(int N, int cond) {
   for(unsigned I = 0; I < N; ++I);
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[EQ_RES_IF:.*]] = cir.cmp(eq, %[[N_LOAD]], %[[ONE_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES_IF:.*]] = cir.cmp eq %[[N_LOAD]], %[[ONE_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST_IF:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES_IF]] : !cir.bool to i1
   // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[EQ_RES_SELF:.*]] = cir.cmp(eq, %[[N_LOAD]], %[[TWO_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES_SELF:.*]] = cir.cmp eq %[[N_LOAD]], %[[TWO_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST_SELF:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES_SELF]] : !cir.bool to i1
   // CHECK-NEXT: acc.parallel combined(loop) self(%[[CONV_CAST_SELF]]) if(%[[CONV_CAST_IF]]) {
   // CHECK-NEXT: acc.loop combined(parallel) {
