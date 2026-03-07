@@ -50,6 +50,9 @@ public:
   /// Emit an error to the reader.
   virtual InFlightDiagnostic emitError(const Twine &msg = {}) const = 0;
 
+  /// Emit a warning to the reader.
+  virtual InFlightDiagnostic emitWarning(const Twine &msg = {}) const = 0;
+
   /// Retrieve the dialect version by name if available.
   virtual FailureOr<const DialectVersion *>
   getDialectVersion(StringRef dialectName) const = 0;

@@ -41,6 +41,7 @@ cc_test(
         "//llvm:Remarks",
         "//llvm:Support",
         "//mlir:BytecodeReader",
+        "//mlir:BytecodeWriter",
         "//mlir:CallOpInterfaces",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
