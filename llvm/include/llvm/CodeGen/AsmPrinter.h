@@ -488,6 +488,15 @@ public:
   void emitCallGraphSection(const MachineFunction &MF,
                             FunctionCallGraphInfo &FuncCGInfo);
 
+  /// Helper to emit a symbol for the prefetch target associated with the given
+  /// BBID and callsite index. The symbol is emitted as a label and its linkage
+  /// is set based on the function's linkage.
+  void emitPrefetchTargetSymbol(unsigned BaseID, unsigned CallsiteIndex);
+
+  /// Emit prefetch targets that were not mapped to any basic block. These
+  /// targets are emitted at the beginning of the function body.
+  void emitDanglingPrefetchTargets();
+
   void emitPseudoProbe(const MachineInstr &MI);
 
   void emitRemarksSection(remarks::RemarkStreamer &RS);
