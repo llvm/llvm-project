@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -std=c++14
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -std=c++14 -fexperimental-new-constant-interpreter
 
 #define __wrap __attribute__((overflow_behavior(wrap)))
 #define __no_trap __attribute__((overflow_behavior(trap)))

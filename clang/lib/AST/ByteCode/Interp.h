@@ -292,6 +292,11 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   // If for some reason evaluation continues, use the truncated results.
   S.Stk.push<T>(Result);
 
+  // If wrapping is enabled, the new value is fine.
+  // FIXME: Pass this to the add/sub/mul op instead?
+  if (S.Current->getExpr(OpPC)->getType().isWrapType())
+    return true;
+
   // Short-circuit fixed-points here since the error handling is easier.
   if constexpr (std::is_same_v<T, FixedPoint>)
     return handleFixedPointOverflow(S, OpPC, Result);
@@ -775,6 +780,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     }
   }
   assert(CanOverflow);
+
+  if (S.Current->getExpr(OpPC)->getType().isWrapType()) {
+    Ptr.deref<T>() = Result;
+    return true;
+  }
 
   // Something went wrong with the previous operation. Compute the
   // result with another bit of precision.

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -Wimplicit-overflow-behavior-conversion
+// RUN: %clang_cc1 %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -Wimplicit-overflow-behavior-conversion -fexperimental-new-constant-interpreter
 
 template<typename T>
 constexpr int template_overload_test(T) {

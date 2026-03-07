@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Wconstant-conversion -Woverflow-behavior-conversion -verify -fsyntax-only
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Wconstant-conversion -Woverflow-behavior-conversion -verify -fsyntax-only -fexperimental-new-constant-interpreter
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
