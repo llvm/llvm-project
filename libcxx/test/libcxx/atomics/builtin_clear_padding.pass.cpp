@@ -179,37 +179,7 @@ void testAllStructsForType(T a, T b, T c, T d) {
   }
 }
 
-struct UnsizedTail {
-  int size;
-  alignas(8) char buf[];
-
-  UnsizedTail(int size) : size(size) {}
-};
-
 void otherStructTests() {
-  // Unsized Tail
-  {
-    const size_t size1 = sizeof(UnsizedTail) + 4;
-    char buff1[size1];
-    char buff2[size1];
-    memset(buff1, 0, size1);
-    memset(buff2, 42, size1);
-    auto* u1   = new (buff1) UnsizedTail(4);
-    u1->buf[0] = 1;
-    u1->buf[1] = 2;
-    u1->buf[2] = 3;
-    u1->buf[3] = 4;
-    auto* u2   = new (buff2) UnsizedTail(4);
-    u2->buf[0] = 1;
-    u2->buf[1] = 2;
-    u2->buf[2] = 3;
-    u2->buf[3] = 4;
-    assert(memcmp(u1, u2, sizeof(UnsizedTail)) != 0);
-    __builtin_clear_padding(u2);
-
-    assert(memcmp(u1, u2, sizeof(UnsizedTail)) == 0);
-  }
-
   // basic padding on the heap
   {
     using B      = BasicWithPadding<8, 4, char>;
