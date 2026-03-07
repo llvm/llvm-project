@@ -148,14 +148,14 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s96), 64
-    ; CHECK-NEXT: [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY1]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY1]](s96), 64
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[EXTRACT]], [[EXTRACT2]]
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[EXTRACT1]], [[EXTRACT3]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR]](s64)
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[OR1]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[COPY]](s96)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[COPY1]](s96)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s96)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[UV2]], [[UV5]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR]](s64)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV6]](s32), [[UV7]](s32), [[OR1]](s32)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
     %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(s96) = COPY $vgpr3_vgpr4_vgpr5
