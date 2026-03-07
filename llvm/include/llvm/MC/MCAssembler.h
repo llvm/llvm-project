@@ -89,18 +89,9 @@ private:
   mutable SmallPtrSet<const MCSymbol *, 32> ThumbFuncs;
 
   /// Evaluate a fixup to a relocatable expression and the value which should be
-  /// placed into the fixup.
-  ///
-  /// \param F The fragment the fixup is inside.
-  /// \param Fixup The fixup to evaluate.
-  /// \param Target [out] On return, the relocatable expression the fixup
-  /// evaluates to.
-  /// \param Value [out] On return, the value of the fixup as currently laid
-  /// out.
-  /// \param RecordReloc Record relocation if needed.
-  /// relocation.
-  bool evaluateFixup(const MCFragment &F, MCFixup &Fixup, MCValue &Target,
-                     uint64_t &Value, bool RecordReloc, uint8_t *Data) const;
+  /// placed into the fixup. Returns {IsResolved, Value}.
+  std::pair<bool, uint64_t> evaluateFixup(const MCFragment &F, MCFixup &Fixup,
+                                          MCValue &Target) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
