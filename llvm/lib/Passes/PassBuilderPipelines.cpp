@@ -150,6 +150,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/Transforms/Utils/CollapseIdenticalNodes.h"
 
 using namespace llvm;
 
@@ -553,6 +554,9 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Delete small array after loop unroll.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+
+  FPM.addPass(
+    SimplifyCFGPass());
 
   // Specially optimize memory movement as it doesn't look like dataflow in SSA.
   FPM.addPass(MemCpyOptPass());
@@ -1147,7 +1151,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     EarlyFPM.addPass(LowerExpectIntrinsicPass());
     EarlyFPM.addPass(SimplifyCFGPass());
     EarlyFPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+    EarlyFPM.addPass(CollapseIdenticalNodesPass());
+    EarlyFPM.addPass(SimplifyCFGPass());
     EarlyFPM.addPass(EarlyCSEPass());
+    EarlyFPM.addPass(InstCombinePass());
+    EarlyFPM.addPass(SimplifyCFGPass());
+
     if (Level == OptimizationLevel::O3)
       EarlyFPM.addPass(CallSiteSplittingPass());
     MPM.addPass(createModuleToFunctionPassAdaptor(
@@ -1200,6 +1209,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                             Level != OptimizationLevel::Os &&
                             Level != OptimizationLevel::Oz &&
                             !isLTOPreLink(Phase))));
+
+  FunctionPassManager TestFPM;
+  TestFPM.addPass(CollapseIdenticalNodesPass());
+  MPM.addPass(createModuleToFunctionPassAdaptor(
+    std::move(TestFPM)));
 
   // Attach metadata to indirect call sites indicating the set of functions
   // they may target at run-time. This should follow IPSCCP.
