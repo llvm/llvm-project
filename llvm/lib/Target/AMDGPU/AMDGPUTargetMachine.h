@@ -62,6 +62,8 @@ public:
 
   unsigned getAssumedAddrSpace(const Value *V) const override;
 
+  unsigned getAssumedLiveOnEntryDefAddrSpace(const Value *V) const override;
+
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override;
 

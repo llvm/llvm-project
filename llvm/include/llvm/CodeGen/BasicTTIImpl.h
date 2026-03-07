@@ -436,6 +436,10 @@ public:
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
   }
 
+  unsigned getAssumedLiveOnEntryDefAddrSpace(const Value *V) const override {
+    return getTLI()->getTargetMachine().getAssumedLiveOnEntryDefAddrSpace(V);
+  }
+
   bool isSingleThreaded() const override {
     return getTLI()->getTargetMachine().Options.ThreadModel ==
            ThreadModel::Single;
@@ -450,6 +454,8 @@ public:
                                           Value *NewV) const override {
     return nullptr;
   }
+
+  bool isArtificialClobber(Intrinsic::ID IID) const override { return false; }
 
   bool isLegalAddImmediate(int64_t imm) const override {
     return getTLI()->isLegalAddImmediate(imm);

@@ -34,8 +34,6 @@ class AMDGPUPromoteKernelArguments : public FunctionPass {
 
   AliasAnalysis *AA;
 
-  Instruction *ArgCastInsertPt;
-
   SmallVector<Value *> Ptrs;
 
   void enqueueUsers(Value *Ptr);
@@ -107,24 +105,7 @@ bool AMDGPUPromoteKernelArguments::promotePointer(Value *Ptr) {
       PT->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS)
     enqueueUsers(Ptr);
 
-  if (PT->getAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
-    return Changed;
-
-  IRBuilder<> B(LI ? &*std::next(cast<Instruction>(Ptr)->getIterator())
-                   : ArgCastInsertPt);
-
-  // Cast pointer to global address space and back to flat and let
-  // Infer Address Spaces pass to do all necessary rewriting.
-  PointerType *NewPT =
-      PointerType::get(PT->getContext(), AMDGPUAS::GLOBAL_ADDRESS);
-  Value *Cast =
-      B.CreateAddrSpaceCast(Ptr, NewPT, Twine(Ptr->getName(), ".global"));
-  Value *CastBack =
-      B.CreateAddrSpaceCast(Cast, PT, Twine(Ptr->getName(), ".flat"));
-  Ptr->replaceUsesWithIf(CastBack,
-                         [Cast](Use &U) { return U.getUser() != Cast; });
-
-  return true;
+  return Changed;
 }
 
 bool AMDGPUPromoteKernelArguments::promoteLoad(LoadInst *LI) {
@@ -133,21 +114,6 @@ bool AMDGPUPromoteKernelArguments::promoteLoad(LoadInst *LI) {
 
   LI->setMetadata("amdgpu.noclobber", MDNode::get(LI->getContext(), {}));
   return true;
-}
-
-// skip allocas
-static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
-  BasicBlock::iterator InsPt = BB.getFirstInsertionPt();
-  for (BasicBlock::iterator E = BB.end(); InsPt != E; ++InsPt) {
-    AllocaInst *AI = dyn_cast<AllocaInst>(&*InsPt);
-
-    // If this is a dynamic alloca, the value may depend on the loaded kernargs,
-    // so loads will need to be inserted before it.
-    if (!AI || !AI->isStaticAlloca())
-      break;
-  }
-
-  return InsPt;
 }
 
 bool AMDGPUPromoteKernelArguments::run(Function &F, MemorySSA &MSSA,
@@ -159,7 +125,6 @@ bool AMDGPUPromoteKernelArguments::run(Function &F, MemorySSA &MSSA,
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
     return false;
 
-  ArgCastInsertPt = &*getInsertPt(*F.begin());
   this->MSSA = &MSSA;
   this->AA = &AA;
 
