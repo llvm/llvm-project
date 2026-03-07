@@ -440,3 +440,21 @@ namespace call_with_adopt_ref {
     adoptRef(new Obj)->method();
   }
 }
+
+namespace call_with_weak_ptr {
+
+  class RefCountableWithWeakPtr : public RefCountable, public CanMakeWeakPtr<RefCountableWithWeakPtr> {
+  };
+
+  RefCountableWithWeakPtr* provide();
+  void consume(RefCountableWithWeakPtr*);
+
+  void foo() {
+    WeakPtr weakPtr = provide();
+    consume(weakPtr);
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+    weakPtr->method();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+  }
+
+}
