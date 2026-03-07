@@ -51,8 +51,8 @@ static std::string writeInfo(Info *I, DiagnosticsEngine &Diags) {
   }
 }
 
-static std::vector<OwnedPtr<Info>>
-readInfo(StringRef Bitcode, size_t NumInfos, DiagnosticsEngine &Diags) {
+static std::vector<OwnedPtr<Info>> readInfo(StringRef Bitcode, size_t NumInfos,
+                                            DiagnosticsEngine &Diags) {
   llvm::BitstreamCursor Stream(Bitcode);
   doc::ClangDocBitcodeReader Reader(Stream, Diags);
   auto Infos = Reader.readBitcode();

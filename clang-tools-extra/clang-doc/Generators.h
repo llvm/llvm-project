@@ -48,7 +48,8 @@ public:
 
 typedef llvm::Registry<Generator> GeneratorRegistry;
 
-llvm::Expected<std::unique_ptr<Generator>> findGeneratorByName(llvm::StringRef Format);
+llvm::Expected<std::unique_ptr<Generator>>
+findGeneratorByName(llvm::StringRef Format);
 
 llvm::StringRef getTagType(TagTypeKind AS);
 
