@@ -2111,6 +2111,40 @@ public:
     return Code;
   }
 
+  // This helper function creates the snippet of code that compares a register
+  // Reg1 with a register Reg2, and jumps to Target if they are equal.
+  InstructionListType createCmpJEWithReg(MCPhysReg Reg1, MCPhysReg Reg2,
+                                         const MCSymbol *Target,
+                                         MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(AArch64::SUBSXrs)
+                          .addReg(AArch64::XZR)
+                          .addReg(Reg1)
+                          .addReg(Reg2)
+                          .addImm(0));
+    Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::EQ)
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
+    return Code;
+  }
+
+  // This helper function creates the snippet of code that compares a register
+  // Reg1 with a register Reg2, and jumps to Target if they are not equal.
+  InstructionListType createCmpJNEWithReg(MCPhysReg Reg1, MCPhysReg Reg2,
+                                          const MCSymbol *Target,
+                                          MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(AArch64::SUBSXrs)
+                          .addReg(AArch64::XZR)
+                          .addReg(Reg1)
+                          .addReg(Reg2)
+                          .addImm(0));
+    Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::NE)
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
+    return Code;
+  }
+
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
     return createDirectCall(Inst, Target, Ctx, /*IsTailCall*/ true);
@@ -3133,6 +3167,191 @@ public:
     std::vector<MCInst> Insts;
     createShortJmp(Insts, TgtSym, Ctx, /*IsTailCall*/ true);
     return Insts;
+  }
+
+  BlocksVectorTy indirectCallPromotion(
+      const MCInst &CallInst, MCPhysReg Reg,
+      const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
+      const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
+      const std::vector<MCInst *> &MethodFetchInsns,
+      const bool MinimizeCodeSize, MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(CallInst);
+    const bool IsJumpTable = getJumpTable(CallInst) != 0;
+    BlocksVectorTy Results;
+    if (!Reg)
+      return Results;
+
+    // Label for the current code block.
+    MCSymbol *NextTarget = nullptr;
+
+    // The join block which contains all the instructions following CallInst.
+    // MergeBlock remains null if CallInst is a tail call.
+    MCSymbol *MergeBlock = nullptr;
+
+    MCPhysReg FuncAddrReg = Reg;
+
+    const bool LoadElim = !VtableSyms.empty();
+    assert((!LoadElim || VtableSyms.size() == Targets.size()) &&
+           "There must be a vtable entry for every method "
+           "in the targets vector.");
+
+    // TODO: No real-world case was found for MinimizeCodeSize, so there is
+    // no implementation like x86.
+    if (MinimizeCodeSize && !LoadElim)
+      return Results;
+
+    const auto jumpToMergeBlock = [&](InstructionListType &NewCall) {
+      assert(MergeBlock);
+      NewCall.push_back(CallInst);
+      MCInst &Merge = NewCall.back();
+      Merge.clear();
+      createUncondBranch(Merge, MergeBlock, Ctx);
+    };
+
+    for (unsigned int i = 0; i < Targets.size(); ++i) {
+      Results.emplace_back(NextTarget, InstructionListType());
+      InstructionListType *NewCall = &Results.back().second;
+
+      // Compare current call target to a specific address.
+      assert(Targets[i].first && "All ICP targets must be to known symbols");
+      const MCSymbol *Sym = LoadElim ? VtableSyms[i].first : Targets[i].first;
+      const uint64_t Addend = LoadElim ? VtableSyms[i].second : 0;
+
+      // Adr target
+      InstructionListType Adr =
+          materializeAddress(Sym, Ctx, FuncAddrReg, Addend);
+      NewCall->insert(NewCall->end(), Adr.begin(), Adr.end());
+
+      // Original call address.
+      assert(CallInst.getOperand(0).isReg() &&
+             "No register was found for indirect-call.");
+      MCPhysReg TargetReg = CallInst.getOperand(0).getReg();
+
+      // Generate label for the next block
+      NextTarget = Ctx->createNamedTempSymbol();
+
+      if (IsJumpTable) {
+        // Jump to target if target address match.
+        InstructionListType CmpJmp =
+            createCmpJEWithReg(TargetReg, FuncAddrReg, Targets[i].first, Ctx);
+        NewCall->insert(NewCall->end(), CmpJmp.begin(), CmpJmp.end());
+      } else {
+        // Jump to next compare if target address don't match.
+        InstructionListType CmpJmp =
+            createCmpJNEWithReg(TargetReg, FuncAddrReg, NextTarget, Ctx);
+        NewCall->insert(NewCall->end(), CmpJmp.begin(), CmpJmp.end());
+
+        // Call specific target directly
+        Results.emplace_back(Ctx->createNamedTempSymbol(),
+                             InstructionListType());
+        NewCall = &Results.back().second;
+        NewCall->push_back(CallInst);
+        MCInst &CallOrJmp = NewCall->back();
+
+        CallOrJmp.clear();
+        CallOrJmp.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
+        CallOrJmp.addOperand(MCOperand::createExpr(getTargetExprFor(
+            CallOrJmp, MCSymbolRefExpr::create(Targets[i].first, *Ctx), *Ctx,
+            0)));
+
+        if (IsTailCall) {
+          setTailCall(CallOrJmp);
+        } else {
+          if (std::optional<uint32_t> Offset = getOffset(CallInst))
+            // Annotated as duplicated call
+            setOffset(CallOrJmp, *Offset);
+        }
+
+        if (isInvoke(CallInst) && !isInvoke(CallOrJmp)) {
+          // Copy over any EH or GNU args size information from the original
+          // call.
+          std::optional<MCPlus::MCLandingPad> EHInfo = getEHInfo(CallInst);
+          if (EHInfo)
+            addEHInfo(CallOrJmp, *EHInfo);
+          int64_t GnuArgsSize = getGnuArgsSize(CallInst);
+          if (GnuArgsSize >= 0)
+            addGnuArgsSize(CallOrJmp, GnuArgsSize);
+        }
+
+        if (!IsTailCall) {
+          // The fallthrough block for the most common target should be the
+          // merge block.
+          if (i == 0) {
+            // Fallthrough to merge block. The CFG will be fixed in the ICP
+            // pass.
+            MergeBlock = Ctx->createNamedTempSymbol();
+          } else {
+            // Insert jump to the merge block if we are not doing a fallthrough.
+            jumpToMergeBlock(*NewCall);
+          }
+        }
+      }
+    }
+
+    // Cold call block
+    Results.emplace_back(NextTarget, InstructionListType());
+    InstructionListType &NewCall = Results.back().second;
+    for (const MCInst *Inst : MethodFetchInsns)
+      if (Inst != &CallInst)
+        NewCall.push_back(*Inst);
+    NewCall.push_back(CallInst);
+
+    // Jump to merge block from cold call block
+    if (!IsTailCall && !IsJumpTable) {
+      jumpToMergeBlock(NewCall);
+
+      // Record merge block
+      Results.emplace_back(MergeBlock, InstructionListType());
+    }
+
+    return Results;
+  }
+
+  // Note: now, JTIndexReg is always NoRegister on the aarch64. This function
+  // can work only when the aarch64 supports parsing JTIndexReg in the future.
+  BlocksVectorTy jumpTablePromotion(
+      const MCInst &IJmpInst,
+      const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
+      const std::vector<MCInst *> &TargetFetchInsns,
+      MCContext *Ctx) const override {
+    assert(getJumpTable(IJmpInst) != 0);
+    uint16_t IndexReg = getAnnotationAs<uint16_t>(IJmpInst, "JTIndexReg");
+    if (IndexReg == 0)
+      return BlocksVectorTy();
+
+    BlocksVectorTy Results;
+
+    // Label for the current code block.
+    MCSymbol *NextTarget = nullptr;
+
+    for (unsigned int i = 0; i < Targets.size(); ++i) {
+      Results.emplace_back(NextTarget, InstructionListType());
+      InstructionListType *CurBB = &Results.back().second;
+
+      // Compare current index to a specific index
+      const uint64_t CaseIdx = Targets[i].second;
+      // Immediate indice is out of 12b bit range
+      if (!isUInt<12>(CaseIdx))
+        return BlocksVectorTy();
+
+      InstructionListType CmpJmp =
+          createCmpJE(IndexReg, CaseIdx, Targets[i].first, Ctx);
+      CurBB->insert(CurBB->end(), CmpJmp.begin(), CmpJmp.end());
+
+      // Jump to next target compare
+      NextTarget = Ctx->createNamedTempSymbol();
+    }
+
+    // Cold call block.
+    Results.emplace_back(NextTarget, InstructionListType());
+    InstructionListType &CurBB = Results.back().second;
+    for (const MCInst *Inst : TargetFetchInsns)
+      if (Inst != &IJmpInst)
+        CurBB.push_back(*Inst);
+
+    CurBB.push_back(IJmpInst);
+
+    return Results;
   }
 
   void createBTI(MCInst &Inst, BTIKind BTI) const override {

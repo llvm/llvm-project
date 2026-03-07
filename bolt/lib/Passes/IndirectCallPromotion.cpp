@@ -1151,7 +1151,7 @@ Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
 
   std::unique_ptr<RegAnalysis> RA;
   std::unique_ptr<BinaryFunctionCallGraph> CG;
-  if (OptimizeJumpTables) {
+  if (OptimizeJumpTables || BC.isAArch64()) {
     CG.reset(new BinaryFunctionCallGraph(buildCallGraph(BC)));
     RA.reset(new RegAnalysis(BC, &BFs, &*CG));
   }
@@ -1365,14 +1365,25 @@ Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
           MethodInfo.second.push_back(TargetFetchInst);
         }
 
+        MCPhysReg Reg = 0;
+        if (BC.isAArch64()) {
+          Reg = Info.getLivenessAnalysis().scavengeRegAfter(&Inst);
+          LLVM_DEBUG(dbgs()
+                     << "BOLT-DEBUG: ICP "
+                     << (Reg ? "found the free register "
+                             : "could not find a free register")
+                     << BC.MRI->getName(Reg) << " to save function address.\n");
+        }
+
         // Generate new promoted call code for this callsite.
         MCPlusBuilder::BlocksVectorTy ICPcode =
             (IsJumpTable && !opts::ICPJumpTablesByTarget)
                 ? BC.MIB->jumpTablePromotion(Inst, SymTargets,
                                              MethodInfo.second, BC.Ctx.get())
                 : BC.MIB->indirectCallPromotion(
-                      Inst, SymTargets, MethodInfo.first, MethodInfo.second,
-                      opts::ICPOldCodeSequence, BC.Ctx.get());
+                      Inst, Reg, SymTargets, MethodInfo.first,
+                      MethodInfo.second, opts::ICPOldCodeSequence,
+                      BC.Ctx.get());
 
         if (ICPcode.empty()) {
           if (opts::Verbosity >= 1)
