@@ -58,6 +58,7 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
+                   DefaultValuedOptionalAttr<DenseI32ArrayAttr, "{}">:$order,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims
                    );
 
@@ -67,6 +68,7 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedSgData,
                    "ArrayRef<OpFoldResult>":$mixedInstData,
+                   "ArrayRef<int32_t>":$order,
                    "ArrayRef<int64_t>":$sliceDims
                    )>,
   ];
@@ -76,6 +78,7 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    (`order` `=` $order^)?
     (`slice_dims` `=` $slice_dims^)?
     attr-dict `:` functional-type(operands, results)
   }];
@@ -127,6 +130,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
+                   DefaultValuedOptionalAttr<DenseI32ArrayAttr, "{}">:$order,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims,
                    DefaultValuedAttr<UnitAttr, "false">:$result,
                    DefaultValuedAttr<UnitAttr, "false">:$operand
@@ -139,6 +143,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    "ArrayRef<OpFoldResult>":$mixedSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedSgData,
                    "ArrayRef<OpFoldResult>":$mixedInstData,
+                   "ArrayRef<int32_t>":$order,
                    "ArrayRef<int64_t>":$sliceDims,
                    CArg<"bool", "false">:$result,
                    CArg<"bool", "false">:$operand
@@ -150,6 +155,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
+    (`order` `=` $order^)?
     (`slice_dims` `=` $slice_dims^)?
     attr-dict `:` qualified(type(operands))
   }];
@@ -281,12 +287,14 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$target_sg_layout,
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$target_sg_data,
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$target_inst_data,
+                   DefaultValuedOptionalAttr<DenseI32ArrayAttr, "{}">:$input_order,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_input_inst_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_sg_layout,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_sg_data,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_inst_data
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_target_inst_data,
+                   DefaultValuedOptionalAttr<DenseI32ArrayAttr, "{}">:$target_order
                    );
 
   let results = (outs TransformHandleTypeInterface:$newConvertOp);
@@ -295,9 +303,11 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
                    "ArrayRef<OpFoldResult>":$mixedInputSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedInputSgData,
                    "ArrayRef<OpFoldResult>":$mixedInputInstData,
+                   "ArrayRef<int32_t>":$inputOrder,
                    "ArrayRef<OpFoldResult>":$mixedTargetSgLayout,
                    "ArrayRef<OpFoldResult>":$mixedTargetSgData,
-                   "ArrayRef<OpFoldResult>":$mixedTargetInstData
+                   "ArrayRef<OpFoldResult>":$mixedTargetInstData,
+                   "ArrayRef<int32_t>":$targetOrder
                    )>,
   ];
 
@@ -306,9 +316,11 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
     `input_sg_layout` `=` custom<DynamicIndexList>($input_sg_layout, $static_input_sg_layout)
     `input_sg_data` `=` custom<DynamicIndexList>($input_sg_data, $static_input_sg_data)
     (`input_inst_data` `=` custom<DynamicIndexList>($input_inst_data, $static_input_inst_data)^)?
+    (`input_order` `=` $input_order^)?
     `target_sg_layout` `=` custom<DynamicIndexList>($target_sg_layout, $static_target_sg_layout)
     `target_sg_data` `=` custom<DynamicIndexList>($target_sg_data, $static_target_sg_data)
     (`target_inst_data` `=` custom<DynamicIndexList>($target_inst_data, $static_target_inst_data)^)?
+    (`target_order` `=` $target_order^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
