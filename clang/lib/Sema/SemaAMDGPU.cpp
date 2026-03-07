@@ -331,6 +331,42 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     }
     return false;
   }
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_add:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_and:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_max:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_min:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_or:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_sub:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor: {
+    Expr *Val = TheCall->getArg(0);
+    if (Val->isTypeDependent())
+      return true;
+
+    QualType ValTy = Val->getType();
+
+    if (!ValTy->isIntegerType() && !ValTy->isFloatingType())
+      return Diag(Val->getExprLoc(), diag::err_builtin_invalid_arg_type)
+             << Val << /*scalar=*/1 << /*'int'=*/1 << /*floating point=*/1
+             << ValTy;
+
+    Expr *Strategy = TheCall->getArg(1);
+    if (Strategy->isTypeDependent() || Strategy->isValueDependent())
+      return true;
+
+    llvm::APSInt SVal;
+    if (!SemaRef.VerifyIntegerConstantExpression(Strategy, &SVal).isUsable())
+      return true;
+
+    if (SVal.getZExtValue() > 2)
+      return Diag(Strategy->getExprLoc(), diag::err_argument_invalid_range)
+             << SVal.getZExtValue() << 0 << 2;
+
+    // Resolve the overload here, now that we know that the invocation is
+    // correct: the intrinsic returns the type of the value argument.
+    TheCall->setType(ValTy);
+
+    return false;
+  }
   default:
     return false;
   }
