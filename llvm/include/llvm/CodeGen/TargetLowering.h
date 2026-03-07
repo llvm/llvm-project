@@ -5899,6 +5899,15 @@ public:
     return true;
   }
 
+  // Return ture if should transform:
+  //    `t0:vXiY = select i1, t1, t2`
+  // To:
+  //    `t3:vPiQ = bitcast t1`
+  //    `t4:vPiQ = bitcast t2`
+  //    `t5:vPiQ = select i1, t3, t4`
+  //    `t0:vXiY = bitcast t5`
+  virtual bool shouldCastIntVectorSelect(EVT VT) const { return false; }
+
   // Expand vector operation by dividing it into smaller length operations and
   // joining their results. SDValue() is returned when expansion did not happen.
   SDValue expandVectorNaryOpBySplitting(SDNode *Node, SelectionDAG &DAG) const;
