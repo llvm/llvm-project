@@ -431,23 +431,10 @@ define <16 x i8> @_mm_packss_epi16_manual(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: _mm_packss_epi16_manual:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX2-LABEL: _mm_packss_epi16_manual:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: _mm_packss_epi16_manual:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpmovswb %ymm0, %xmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: _mm_packss_epi16_manual:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
   %sh   = shufflevector <8 x i16> %a, <8 x i16> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %minv = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %sh, <16 x i16> splat (i16 -128))
   %sat  = tail call <16 x i16> @llvm.smin.v16i16(<16 x i16> %minv, <16 x i16> splat (i16 127))
@@ -484,10 +471,7 @@ define <32 x i8> @_mm256_packss_epi16_manual(<16 x i16> %a, <16 x i16> %b) nounw
 ;
 ; AVX512-LABEL: _mm256_packss_epi16_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovswb %zmm0, %ymm0
+; AVX512-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    ret{{[l|q]}}
 ;
 ; X64-SSE-LABEL: _mm256_packss_epi16_manual:
@@ -600,23 +584,10 @@ define <8 x i16> @_mm_packss_epi32_manual(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: _mm_packss_epi32_manual:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX2-LABEL: _mm_packss_epi32_manual:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: _mm_packss_epi32_manual:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpmovsdw %ymm0, %xmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: _mm_packss_epi32_manual:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
   %sh   = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %minv = tail call <8 x i32> @llvm.smax.v8i32(<8 x i32> %sh, <8 x i32> splat (i32 -32768))
   %sat  = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> %minv, <8 x i32> splat (i32 32767))
@@ -653,10 +624,7 @@ define <16 x i16> @_mm256_packss_epi32_manual(<8 x i32> %a, <8 x i32> %b) nounwi
 ;
 ; AVX512-LABEL: _mm256_packss_epi32_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovsdw %zmm0, %ymm0
+; AVX512-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    ret{{[l|q]}}
 ;
 ; X64-SSE-LABEL: _mm256_packss_epi32_manual:
