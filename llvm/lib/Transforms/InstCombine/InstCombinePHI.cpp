@@ -1112,32 +1112,6 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
   for (unsigned PHIId = 0; PHIId != PHIsToSlice.size(); ++PHIId) {
     PHINode *PN = PHIsToSlice[PHIId];
 
-    // Scan the input list of the PHI.  If any input is an invoke, and if the
-    // input is defined in the predecessor, then we won't be split the critical
-    // edge which is required to insert a truncate.  Because of this, we have to
-    // bail out.
-    for (auto Incoming : zip(PN->blocks(), PN->incoming_values())) {
-      BasicBlock *BB = std::get<0>(Incoming);
-      Value *V = std::get<1>(Incoming);
-      InvokeInst *II = dyn_cast<InvokeInst>(V);
-      if (!II)
-        continue;
-      if (II->getParent() != BB)
-        continue;
-
-      // If we have a phi, and if it's directly in the predecessor, then we have
-      // a critical edge where we need to put the truncate.  Since we can't
-      // split the edge in instcombine, we have to bail out.
-      return nullptr;
-    }
-
-    // If the incoming value is a PHI node before a catchswitch, we cannot
-    // extract the value within that BB because we cannot insert any non-PHI
-    // instructions in the BB.
-    for (auto *Pred : PN->blocks())
-      if (!Pred->hasInsertionPt())
-        return nullptr;
-
     for (User *U : PN->users()) {
       Instruction *UserI = cast<Instruction>(U);
 
@@ -1168,6 +1142,34 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
       unsigned Shift = cast<ConstantInt>(UserI->getOperand(1))->getZExtValue();
       PHIUsers.push_back(PHIUsageRecord(PHIId, Shift, UserI->user_back()));
     }
+  }
+
+  for (const auto &PN : PHIsToSlice) {
+    // Scan the input list of the PHI.  If any input is an invoke, and if the
+    // input is defined in the predecessor, then we won't be split the critical
+    // edge which is required to insert a truncate.  Because of this, we have to
+    // bail out.
+    for (auto Incoming : zip(PN->blocks(), PN->incoming_values())) {
+      BasicBlock *BB = std::get<0>(Incoming);
+      Value *V = std::get<1>(Incoming);
+      InvokeInst *II = dyn_cast<InvokeInst>(V);
+      if (!II)
+        continue;
+      if (II->getParent() != BB)
+        continue;
+
+      // If we have a phi, and if it's directly in the predecessor, then we have
+      // a critical edge where we need to put the truncate.  Since we can't
+      // split the edge in instcombine, we have to bail out.
+      return nullptr;
+    }
+
+    // If the incoming value is a PHI node before a catchswitch, we cannot
+    // extract the value within that BB because we cannot insert any non-PHI
+    // instructions in the BB.
+    for (auto *Pred : PN->blocks())
+      if (!Pred->hasInsertionPt())
+        return nullptr;
   }
 
   // If we have no users, they must be all self uses, just nuke the PHI.
