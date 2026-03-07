@@ -1362,6 +1362,8 @@ def int_ppc_altivec_vmulhsw : PowerPC_Vec_WWW_Intrinsic<"vmulhsw">;
 def int_ppc_altivec_vmulhuw : PowerPC_Vec_WWW_Intrinsic<"vmulhuw">;
 def int_ppc_altivec_vmulhsd : PowerPC_Vec_DDD_Intrinsic<"vmulhsd">;
 def int_ppc_altivec_vmulhud : PowerPC_Vec_DDD_Intrinsic<"vmulhud">;
+def int_ppc_altivec_vmulhsh : PowerPC_Vec_HHH_Intrinsic<"vmulhsh">;
+def int_ppc_altivec_vmulhuh : PowerPC_Vec_HHH_Intrinsic<"vmulhuh">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC VSX Intrinsic Definitions.
