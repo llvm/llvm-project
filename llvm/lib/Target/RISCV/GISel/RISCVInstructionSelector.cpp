@@ -100,7 +100,7 @@ private:
   bool selectIntrinsicWithSideEffects(MachineInstr &I) const;
   bool selectIntrinsic(MachineInstr &I) const;
   bool selectExtractSubvector(MachineInstr &MI) const;
-
+  bool selectInsertSubVector(MachineInstr &I) const;
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
   ComplexRendererFns selectShiftMaskXLen(MachineOperand &Root) const {
@@ -1102,6 +1102,64 @@ bool RISCVInstructionSelector::selectExtractSubvector(MachineInstr &MI) const {
   return true;
 }
 
+bool RISCVInstructionSelector::selectInsertSubVector(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register VecReg = MI.getOperand(1).getReg();
+  Register SubVecReg = MI.getOperand(2).getReg();
+
+  LLT VecTy = MRI->getType(VecReg);
+  LLT SubVecTy = MRI->getType(SubVecReg);
+
+  MVT VecMVT = getMVTForLLT(VecTy);
+  MVT SubVecMVT = getMVTForLLT(SubVecTy);
+
+  unsigned Idx = static_cast<unsigned>(MI.getOperand(3).getImm());
+
+  unsigned SubRegIdx;
+  std::tie(SubRegIdx, Idx) =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          VecMVT, SubVecMVT, Idx, &TRI);
+
+  // If the Idx hasn't been completely eliminated then this is a subvector
+  // insert which doesn't naturally align to a vector register. These must
+  // be handled using instructions to manipulate the vector registers.
+  if (Idx != 0)
+    return false;
+
+  // Constrain dst
+  unsigned DstRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VecMVT);
+  const TargetRegisterClass *DstRC = TRI.getRegClass(DstRegClassID);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+
+  // If we haven't set a SubRegIdx, then we must be going between
+  // equally-sized LMUL groups (e.g. VR -> VR). This can be done as a copy.
+  if (SubRegIdx == RISCV::NoSubRegister) {
+    assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecMVT) ==
+               DstRegClassID &&
+           "Unexpected subvector insert");
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(SubVecReg);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Use INSERT_SUBREG to insert the subvector into the vector at the
+  // appropriate subregister index.
+  MachineInstr *Ins = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                              TII.get(TargetOpcode::INSERT_SUBREG), DstReg)
+                          .addReg(VecReg)
+                          .addReg(SubVecReg)
+                          .addImm(SubRegIdx);
+
+  MI.eraseFromParent();
+  constrainSelectedInstRegOperands(*Ins, TII, TRI, RBI);
+  return true;
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   preISelLower(MI);
   const unsigned Opc = MI.getOpcode();
@@ -1389,6 +1447,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectIntrinsic(MI);
   case TargetOpcode::G_EXTRACT_SUBVECTOR:
     return selectExtractSubvector(MI);
+  case TargetOpcode::G_INSERT_SUBVECTOR:
+    return selectInsertSubVector(MI);
   default:
     return false;
   }
