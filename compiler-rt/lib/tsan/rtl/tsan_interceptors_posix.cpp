@@ -2943,7 +2943,9 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 
 #if SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(void, thr_exit, ThreadID *state) {
-  SCOPED_TSAN_INTERCEPTOR(thr_exit, state);
+  {
+    SCOPED_TSAN_INTERCEPTOR(thr_exit, state);
+  }
   DestroyThreadState();
   REAL(thr_exit(state));
 }
