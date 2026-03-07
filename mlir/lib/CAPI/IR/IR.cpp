@@ -552,11 +552,11 @@ static LogicalResult inferOperationTypes(OperationState &state) {
   }
 
   DictionaryAttr attributes = state.attributes.getDictionary(context);
-  OpaqueProperties properties = state.getRawProperties();
+  PropertyRef properties = state.getRawProperties();
 
   if (!properties && info->getOpPropertyByteSize() > 0 && !attributes.empty()) {
-    auto prop = std::make_unique<char[]>(info->getOpPropertyByteSize());
-    properties = OpaqueProperties(prop.get());
+    auto propAlloc = std::make_unique<char[]>(info->getOpPropertyByteSize());
+    properties = PropertyRef(info->getOpPropertiesTypeID(), propAlloc.get());
     if (properties) {
       auto emitError = [&]() {
         return mlir::emitError(state.location)

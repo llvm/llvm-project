@@ -22,7 +22,7 @@ using namespace mlir;
 LogicalResult BVConstantOp::inferReturnTypes(
     mlir::MLIRContext *context, std::optional<mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-    ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+    ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
   inferredReturnTypes.push_back(
       properties.as<Properties *>()->getValue().getType());
@@ -173,7 +173,7 @@ LogicalResult ExtractOp::verify() {
 
 LogicalResult ConcatOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   inferredReturnTypes.push_back(BitVectorType::get(
       context, cast<BitVectorType>(operands[0].getType()).getWidth() +
