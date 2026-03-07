@@ -3443,3 +3443,16 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   return Result;
 }
+
+bool llvm::inlineHistoryIncludes(
+    Function *F, int InlineHistoryID,
+    ArrayRef<std::pair<Function *, int>> InlineHistory) {
+  while (InlineHistoryID != -1) {
+    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
+           "Invalid inline history ID");
+    if (InlineHistory[InlineHistoryID].first == F)
+      return true;
+    InlineHistoryID = InlineHistory[InlineHistoryID].second;
+  }
+  return false;
+}
