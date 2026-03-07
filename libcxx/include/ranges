@@ -396,6 +396,13 @@ namespace std::ranges {
   class chunk_by_view;                                                      // C++23
 
   namespace views { inline constexpr unspecified chunk_by = unspecified; }  // C++23
+
+  // [range.slide]
+  template <forward_range V>
+    requires view<V>
+  class slide_view<V>;                                                  // C++23
+
+  namespace views { inline constexpr unspecified slide = unspecified; } // C++23
 }
 
 namespace std {
@@ -485,6 +492,7 @@ namespace std {
 #    include <__ranges/from_range.h>
 #    include <__ranges/join_with_view.h>
 #    include <__ranges/repeat_view.h>
+#    include <__ranges/slide_view.h>
 #    include <__ranges/to.h>
 #    include <__ranges/zip_transform_view.h>
 #    include <__ranges/zip_view.h>

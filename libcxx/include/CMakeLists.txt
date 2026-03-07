@@ -746,6 +746,7 @@ set(files
   __ranges/reverse_view.h
   __ranges/single_view.h
   __ranges/size.h
+  __ranges/slide_view.h
   __ranges/split_view.h
   __ranges/subrange.h
   __ranges/take_view.h

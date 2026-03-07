@@ -5745,17 +5745,11 @@
 #    error "__cpp_lib_ranges_repeat should have the value 202207L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_slide
-#      error "__cpp_lib_ranges_slide should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_slide != 202202L
-#      error "__cpp_lib_ranges_slide should have the value 202202L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_slide
-#      error "__cpp_lib_ranges_slide should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_slide
+#    error "__cpp_lib_ranges_slide should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_slide != 202202L
+#    error "__cpp_lib_ranges_slide should have the value 202202L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_starts_ends_with
@@ -7670,17 +7664,11 @@
 #    error "__cpp_lib_ranges_repeat should have the value 202207L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_slide
-#      error "__cpp_lib_ranges_slide should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_slide != 202202L
-#      error "__cpp_lib_ranges_slide should have the value 202202L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_slide
-#      error "__cpp_lib_ranges_slide should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_slide
+#    error "__cpp_lib_ranges_slide should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_slide != 202202L
+#    error "__cpp_lib_ranges_slide should have the value 202202L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_starts_ends_with

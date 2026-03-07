@@ -1927,6 +1927,10 @@ module std [system] {
     module reverse_view                   { header "__ranges/reverse_view.h" }
     module single_view                    { header "__ranges/single_view.h" }
     module size                           { header "__ranges/size.h" }
+    module slide_view {
+      header "__ranges/slide_view.h"
+      export std.functional.bind_back
+    }
     module split_view {
       header "__ranges/split_view.h"
       export std.functional.bind_back
