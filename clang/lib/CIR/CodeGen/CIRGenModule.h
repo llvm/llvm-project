@@ -364,6 +364,16 @@ public:
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
 
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *d);
+
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
   /// expectations of the AST, rather than using the target's allocation address
