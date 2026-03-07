@@ -35,6 +35,18 @@ static cl::opt<bool> LineInfoWithInlinedAt(
 
 NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {}
 
+MCSymbol *NVPTXDwarfDebug::getOrCreateFuncNameSymbol(StringRef LinkageName) {
+  return InfoHolder.getStringPool().getEntry(*Asm, LinkageName).getSymbol();
+}
+
+bool NVPTXDwarfDebug::isEnhancedLineinfo(const MachineFunction &MF) const {
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
+  return LineInfoWithInlinedAt && (STI.getPTXVersion() >= 72) && SP &&
+         (SP->getUnit()->isDebugDirectivesOnly() ||
+          SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly);
+}
+
 /// NVPTX-specific source line recording with inlined_at support.
 ///
 /// Why this exists:
@@ -94,12 +106,7 @@ void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
   if (!MF)
     return;
 
-  const DISubprogram *SP = MF->getFunction().getSubprogram();
-  const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
-  const bool EnhancedLineinfo =
-      LineInfoWithInlinedAt && (STI.getPTXVersion() >= 72) && SP &&
-      (SP->getUnit()->isDebugDirectivesOnly() ||
-       SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly);
+  const bool EnhancedLineinfo = isEnhancedLineinfo(*MF);
 
   while (EmitLoc) {
     // Get the scope for the current location.
