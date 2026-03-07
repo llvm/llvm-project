@@ -13263,6 +13263,15 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
   const APInt ImmInt = Imm.bitcastToAPInt();
 
+  // If NEON is available, some f16 bit patterns can be materialized using
+  // integer MOVI into a vector register and then extracted.
+  if (!IsLegal && VT == MVT::f16 && Subtarget->hasNEON()) {
+    uint64_t Enc = ImmInt.getZExtValue() & 0xffff;
+    if (Enc != 0) {
+      IsLegal = AArch64_AM::isFpImm16FittedAdvSIMDModImmType5(Enc);
+    }
+  }
+
   // If we can not materialize in immediate field for fmov, check if the
   // value can be encoded as the immediate operand of a logical instruction.
   // The immediate value will be created with either MOVZ, MOVN, or ORR.
