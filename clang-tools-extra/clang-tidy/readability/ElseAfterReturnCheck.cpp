@@ -39,7 +39,7 @@ private:
   const SourceManager &SM;
 };
 
-bool isNoReturnStmt(const Stmt &Stmt) {
+bool isNoReturnStmt(const Stmt &Stmt) { // NOLINT
   const auto *Call = dyn_cast<CallExpr>(&Stmt);
   if (!Call)
     return false;
