@@ -31,6 +31,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   ShrinkToFitCheck.cpp
   TypeTraitsCheck.cpp
   UnaryStaticAssertCheck.cpp
+  UseAggregateCheck.cpp
   UseAutoCheck.cpp
   UseBoolLiteralsCheck.cpp
   UseConstraintsCheck.cpp
