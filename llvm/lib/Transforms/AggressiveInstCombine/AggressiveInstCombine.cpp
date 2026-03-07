@@ -482,6 +482,48 @@ static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
   return true;
 }
 
+struct CtlzConstants {
+  uint64_t Mul;
+  uint64_t ShiftConst1;
+  uint64_t ShiftConst2;
+  uint64_t ShiftConst3;
+  uint64_t ShiftConst4;
+  uint64_t ShiftConst5;
+  uint64_t ShiftConst6;
+};
+
+// Check if this array of constants represents a ctlz table.
+// Iterate over the elements from \p Table by trying to find/match all
+// the numbers from 0 to \p InputBits that should represent ctlz results.
+static bool isCTLZTable(const ConstantDataArray &Table,
+                        CtlzConstants &TableConstant, uint64_t InputBits) {
+  static const uint32_t DeBruijnClz[32] = {
+      0, 9,  1,  10, 13, 21, 2,  29, 11, 14, 16, 18, 22, 25, 3, 30,
+      8, 12, 20, 28, 15, 17, 24, 7,  19, 27, 23, 6,  26, 5,  4, 31};
+
+  if (TableConstant.Mul != 130329821 || TableConstant.ShiftConst5 != 16 ||
+      TableConstant.ShiftConst4 != 8 || TableConstant.ShiftConst3 != 4 ||
+      TableConstant.ShiftConst2 != 2 || TableConstant.ShiftConst1 != 1)
+    return false;
+
+  unsigned Length = Table.getNumElements();
+  if (Length < InputBits || Length > InputBits * 2)
+    return false;
+
+  APInt Mask = APInt::getBitsSetFrom(InputBits, TableConstant.ShiftConst6);
+  unsigned Matched = 0;
+
+  for (unsigned i = 0; i < Length; i++) {
+    uint64_t Element = Table.getElementAsInteger(i);
+    if (Element >= InputBits)
+      continue;
+
+    if (DeBruijnClz[i] == Element)
+      Matched++;
+  }
+  return Matched == InputBits;
+}
+
 // Try to recognize table-based ctz implementation.
 // E.g., an example in C (for more cases please see the llvm/tests):
 // int f(unsigned x) {
@@ -622,6 +664,122 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
   }
 
   LI->replaceAllUsesWith(ZExtOrTrunc);
+
+  return true;
+}
+
+// Try to recognize table-based ctlz implementation.
+// E.g., an example in C (for more cases please see the llvm/tests):
+// int f(unsigned val) {
+// assert(val != 0);
+// {
+//     static const U32 DeBruijnClz[32] = {0, 9, 1, 10, 13, 21, 2, 29,
+//                                         11, 14, 16, 18, 22, 25, 3, 30,
+//                                         8, 12, 20, 28, 15, 17, 24, 7,
+//                                         19, 27, 23, 6, 26, 5, 4, 31};
+//     val |= val >> 1;
+//     val |= val >> 2;
+//     val |= val >> 4;
+//     val |= val >> 8;
+//     val |= val >> 16;
+//     return 31 - DeBruijnClz[(val * 0x07C4ACDDU) >> 27];
+// }
+// }
+// this can be lowered to `ctlz` instruction.
+// There is also a special case when the element is 0.
+//
+// All this can be lowered to @llvm.ctlz.i32/64 intrinsic.
+static bool tryToRecognizeTableBasedCtlz(Instruction &I) {
+  uint64_t SubConst;
+  Value *LV;
+  if (!match(&I, m_Sub(m_ConstantInt(SubConst), m_Value(LV)))) {
+    return false;
+  }
+  LoadInst *LI = dyn_cast<LoadInst>(LV);
+  if (!LI)
+    return false;
+
+  Type *AccessType = LI->getType();
+  if (!AccessType->isIntegerTy())
+    return false;
+
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
+    return false;
+
+  if (!GEP->getSourceElementType()->isArrayTy())
+    return false;
+
+  uint64_t ArraySize = GEP->getSourceElementType()->getArrayNumElements();
+  if (ArraySize != 32)
+    return false;
+
+  GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
+  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
+    return false;
+
+  ConstantDataArray *ConstData =
+      dyn_cast<ConstantDataArray>(GVTable->getInitializer());
+  if (!ConstData)
+    return false;
+
+  if (!match(GEP->idx_begin()->get(), m_ZeroInt()))
+    return false;
+
+  Value *Idx2 = std::next(GEP->idx_begin())->get();
+  uint64_t MulConst, ShiftConst6, ShiftConst5, ShiftConst4, ShiftConst3,
+      ShiftConst2, ShiftConst1;
+  Value *V1, *V2, *V3, *V4, *V5, *V6, *V7, *V8, *V9, *V10;
+  if (!(match(Idx2, m_ZExtOrSelf(m_LShr(m_Mul(m_Or(m_Value(V1), m_Value(V2)),
+                                              m_ConstantInt(MulConst)),
+                                        m_ConstantInt(ShiftConst6)))) &&
+        match(V1, m_LShr(m_Specific(V2), m_ConstantInt(ShiftConst5))) &&
+        match(V2, m_Or(m_Value(V3), m_Value(V4))) &&
+        match(V3, m_LShr(m_Specific(V4), m_ConstantInt(ShiftConst4))) &&
+        match(V4, m_Or(m_Value(V5), m_Value(V6))) &&
+        match(V5, m_LShr(m_Specific(V6), m_ConstantInt(ShiftConst3))) &&
+        match(V6, m_Or(m_Value(V7), m_Value(V8))) &&
+        match(V7, m_LShr(m_Specific(V8), m_ConstantInt(ShiftConst2))) &&
+        match(V8, m_Or(m_Value(V9), m_Value(V10))) &&
+        match(V9, m_LShr(m_Specific(V10), m_ConstantInt(ShiftConst1)))))
+    return false;
+
+  unsigned InputBits = V10->getType()->getScalarSizeInBits();
+  if (InputBits != 32)
+    return false;
+
+  // Shift should extract top 5..7 bits.
+  if (InputBits - Log2_32(InputBits) != ShiftConst6 &&
+      InputBits - Log2_32(InputBits) - 1 != ShiftConst6)
+    return false;
+
+  CtlzConstants TableConstants = {MulConst,    ShiftConst1, ShiftConst2,
+                                  ShiftConst3, ShiftConst4, ShiftConst5,
+                                  ShiftConst6};
+  if (!isCTLZTable(*ConstData, TableConstants, InputBits))
+    return false;
+
+  auto ZeroTableElem = ConstData->getElementAsInteger(0);
+  bool DefinedForZero = ZeroTableElem == InputBits;
+
+  IRBuilder<> B(LI);
+  ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
+  Type *XType = V10->getType();
+  auto *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {V10, BoolConst});
+  Value *ZExtOrTrunc = nullptr;
+
+  if (DefinedForZero) {
+    ZExtOrTrunc = B.CreateZExtOrTrunc(Ctlz, AccessType);
+  } else {
+    // If the value in elem 0 isn't the same as InputBits, we still want to
+    // produce the value from the table.
+    auto *Cmp = B.CreateICmpEQ(V10, ConstantInt::get(XType, 0));
+    auto *Select = B.CreateSelect(Cmp, ConstantInt::get(XType, 31), Ctlz);
+
+    ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
+  }
+
+  I.replaceAllUsesWith(ZExtOrTrunc);
 
   return true;
 }
@@ -1828,6 +1986,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
+      MadeChange |= tryToRecognizeTableBasedCtlz(I);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
