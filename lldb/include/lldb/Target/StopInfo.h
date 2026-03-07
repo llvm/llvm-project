@@ -21,6 +21,7 @@ class StopInfo : public std::enable_shared_from_this<StopInfo> {
   friend class Process::ProcessEventData;
   friend class ThreadPlanBase;
   friend class ThreadPlanReverseContinue;
+  friend class ThreadPlanCallFunction;
 
 public:
   // Constructors and Destructors

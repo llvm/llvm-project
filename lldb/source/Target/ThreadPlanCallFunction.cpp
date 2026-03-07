@@ -284,6 +284,21 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
   if (stop_reason == eStopReasonBreakpoint && BreakpointsExplainStop())
     return true;
 
+  if ((stop_reason == eStopReasonFork) ||
+      (stop_reason == eStopReasonVFork) ||
+      (stop_reason == eStopReasonVForkDone)) {
+    if (stop_reason == eStopReasonFork)
+      LLDB_LOGF(log, "ThreadPlanCallFunction::PlanExplainsStop hit a fork not stopping.");
+    else if (stop_reason == eStopReasonVFork)
+      LLDB_LOGF(log, "ThreadPlanCallFunction::PlanExplainsStop hit a vfork not stopping.");
+    else if (stop_reason == eStopReasonVForkDone)
+      LLDB_LOGF(log, "ThreadPlanCallFunction::PlanExplainsStop hit a vforkdone not stopping.");
+
+    m_real_stop_info_sp->PerformAction(event_ptr);
+    m_real_stop_info_sp->OverrideShouldStop(false);
+    return true;
+  }
+
   // One more quirk here.  If this event was from Halt interrupting the target,
   // then we should not consider ourselves complete.  Return true to
   // acknowledge the stop.
