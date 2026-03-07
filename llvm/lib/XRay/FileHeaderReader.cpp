@@ -61,6 +61,14 @@ xray::readBinaryFormatHeader(DataExtractor &HeaderExtractor,
         ".",
         OffsetPtr);
 
+  // Check if there are enough bytes remaining for the 16-byte FreeFormData field.
+  if (!HeaderExtractor.isValidOffsetForDataOfSize(OffsetPtr, 16))
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading free form data from file header at offset %" PRId64
+        ": insufficient data remaining.",
+        OffsetPtr);
+
   std::memcpy(&FileHeader.FreeFormData,
               HeaderExtractor.getData().bytes_begin() + OffsetPtr, 16);
 
