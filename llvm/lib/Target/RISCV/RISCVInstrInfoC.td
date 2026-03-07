@@ -108,7 +108,14 @@ class RISCVUImmLsbZeroOp<int width, int zeros>
 }
 
 // A 7-bit unsigned immediate where the least significant two bits are zero.
-def uimm7_lsb00 : RISCVUImmLsbZeroOp<7, 2>;
+def uimm7_lsb00 : RISCVUImmLsbZeroOp<7, 2> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<5, 2>(Imm);
+  }];
+}
 
 // A 8-bit unsigned immediate where the least significant two bits are zero.
 def uimm8_lsb00 : RISCVUImmLsbZeroOp<8, 2>;

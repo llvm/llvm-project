@@ -78,6 +78,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM10_UNSIGNED,
   OPERAND_SIMM11,
+  OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
@@ -471,6 +472,7 @@ enum {
   MO_TLSDESC_LOAD_LO = 14,
   MO_TLSDESC_ADD_LO = 15,
   MO_TLSDESC_CALL = 16,
+  MO_QC_ACCESS = 17,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have

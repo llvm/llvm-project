@@ -1020,6 +1020,9 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case RISCVII::MO_TLSDESC_CALL:
     Kind = ELF::R_RISCV_TLSDESC_CALL;
     break;
+  case RISCVII::MO_QC_ACCESS:
+    Kind = RISCV::S_QC_ACCESS;
+    break;
   }
 
   const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
