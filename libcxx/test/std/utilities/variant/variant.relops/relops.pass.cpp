@@ -373,6 +373,7 @@ struct Array {
   }
 };
 
+// See https://llvm.org/PR182232
 void test_recursive() {
   (void)(Var2{} == Var2{});
   (void)(Var2{} != Var2{});
