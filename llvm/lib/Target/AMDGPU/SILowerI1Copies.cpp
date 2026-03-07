@@ -25,6 +25,7 @@
 #include "AMDGPU.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/InitializePasses.h"
+#include <optional>
 
 #define DEBUG_TYPE "si-i1-copies"
 
@@ -442,30 +443,149 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
 PhiLoweringHelper::PhiLoweringHelper(MachineFunction *MF,
                                      MachineDominatorTree *DT,
                                      MachinePostDominatorTree *PDT)
-    : MF(MF), DT(DT), PDT(PDT) {
+    : MF(MF), DT(DT), PDT(PDT),
+      LMC(AMDGPU::LaneMaskConstants::get(MF->getSubtarget<GCNSubtarget>())) {
   MRI = &MF->getRegInfo();
 
   ST = &MF->getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
-  IsWave32 = ST->isWave32();
+}
 
-  if (IsWave32) {
-    ExecReg = AMDGPU::EXEC_LO;
-    MovOp = AMDGPU::S_MOV_B32;
-    AndOp = AMDGPU::S_AND_B32;
-    OrOp = AMDGPU::S_OR_B32;
-    XorOp = AMDGPU::S_XOR_B32;
-    AndN2Op = AMDGPU::S_ANDN2_B32;
-    OrN2Op = AMDGPU::S_ORN2_B32;
-  } else {
-    ExecReg = AMDGPU::EXEC;
-    MovOp = AMDGPU::S_MOV_B64;
-    AndOp = AMDGPU::S_AND_B64;
-    OrOp = AMDGPU::S_OR_B64;
-    XorOp = AMDGPU::S_XOR_B64;
-    AndN2Op = AMDGPU::S_ANDN2_B64;
-    OrN2Op = AMDGPU::S_ORN2_B64;
+static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
+  Def = false;
+  Use = false;
+
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.getReg() == AMDGPU::SCC) {
+      if (MO.isUse())
+        Use = true;
+      else
+        Def = true;
+    }
   }
+}
+
+/// Move instruction to a new position inside the same MBB, if there is no
+/// operand's dependencies. Change the InstrToMovePos after the moved
+/// instruction. returns true if instruction moved, false if not.
+static bool
+moveIfPossible(MachineBasicBlock &MBB,
+               llvm::MachineBasicBlock::iterator &InstrToMovePos,
+               const llvm::MachineBasicBlock::iterator &MoveAfterPos) {
+  MachineInstr &MI = *InstrToMovePos;
+
+  for (const MachineOperand &MO : MI.operands()) {
+    // Check if any operands are defined between current position and target
+    if (!MO.isReg())
+      continue;
+    if (MO.isUse()) {
+      for (auto I = std::next(MI.getIterator()); I != MoveAfterPos; ++I) {
+        for (const MachineOperand &MOI : I->operands()) {
+          if (MOI.isReg() && MOI.isDef() && MOI.getReg() == MO.getReg())
+            return false;
+        }
+      }
+    }
+
+    // Check if MI defines any register used before InsertPos
+    if (MO.isDef()) {
+      for (auto I = MoveAfterPos; I != MI.getIterator(); --I) {
+        for (const MachineOperand &MOI : I->operands()) {
+          if (MOI.isReg() && MOI.isUse() && MOI.getReg() == MO.getReg())
+            return false;
+        }
+      }
+    }
+  }
+
+  MI.removeFromParent();
+  MBB.insertAfter(MoveAfterPos, &MI);
+  InstrToMovePos = MoveAfterPos;
+  InstrToMovePos++;
+  return true;
+}
+
+/// Insert mask calculation procedure.
+/// Finds a place for insertion, reorganize instruction if needed,
+/// store/restore SCC register if needed.
+void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
+  MachineBasicBlock &MBB = *Incoming.Block;
+  auto FirstTerminator = MBB.getFirstTerminator();
+
+  bool TerminatorsUseSCC = false;
+  for (auto I = FirstTerminator, E = MBB.end(); I != E; ++I) {
+    bool DefsSCC;
+    instrDefsUsesSCC(*I, DefsSCC, TerminatorsUseSCC);
+    if (TerminatorsUseSCC || DefsSCC)
+      break;
+  }
+
+  if (!TerminatorsUseSCC) {
+    buildMergeLaneMasks(MBB, FirstTerminator, {}, Incoming.UpdatedReg, DstReg,
+                        Incoming.Reg);
+    return;
+  }
+
+  std::optional<llvm::MachineBasicBlock::iterator> sccDefPos, curRegDefPos;
+  for (auto I = FirstTerminator; I != MBB.begin(); --I) {
+    const llvm::iterator_range<llvm::MachineOperand *> IMO = I->operands();
+
+    for (const auto &MO : IMO) {
+      if (!MO.isReg() || !MO.isDef())
+        continue;
+
+      Register R = MO.getReg();
+
+      if (R == Incoming.Reg)
+        curRegDefPos = I;
+
+      if (R == AMDGPU::SCC) {
+        sccDefPos = I;
+        break;
+      }
+    }
+
+    if (sccDefPos)
+      break;
+  }
+
+  assert(sccDefPos);
+
+  if (!curRegDefPos) {
+    /// SCC define is after any of operator defines
+    buildMergeLaneMasks(MBB, sccDefPos.value(), {}, Incoming.UpdatedReg, DstReg,
+                        Incoming.Reg);
+    return;
+  }
+
+  assert(curRegDefPos && std::distance(MBB.begin(), curRegDefPos.value()) >
+                             std::distance(MBB.begin(), sccDefPos.value()));
+
+  /// Try to move the SCC def operator after the latest operator
+  if (moveIfPossible(MBB, sccDefPos.value(), curRegDefPos.value())) {
+    buildMergeLaneMasks(MBB, sccDefPos.value(), {}, Incoming.UpdatedReg, DstReg,
+                        Incoming.Reg);
+    return;
+  }
+
+  /// if not possible: store/restore SCC register
+  curRegDefPos.value()++;
+
+  /// store SCC
+  Register SavedSCC = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(AMDGPU::S_CSELECT_B32),
+          SavedSCC)
+      .addImm(1)
+      .addImm(0);
+
+  buildMergeLaneMasks(MBB, curRegDefPos.value(), {}, Incoming.UpdatedReg,
+                      DstReg, Incoming.Reg);
+
+  /// restore SCC
+  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(AMDGPU::S_CMP_LG_U32))
+      .addReg(SavedSCC)
+      .addImm(0)
+      .addReg(AMDGPU::SCC, RegState::ImplicitDefine);
 }
 
 bool PhiLoweringHelper::lowerPhis() {
@@ -537,9 +657,7 @@ bool PhiLoweringHelper::lowerPhis() {
 
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
-        buildMergeLaneMasks(
-            IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.GetValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+        insertMask(Incoming, SSAUpdater.GetValueInMiddleOfBlock(&IMBB));
       }
     } else {
       // The phi is not observed from outside a loop. Use a more accurate
@@ -566,9 +684,7 @@ bool PhiLoweringHelper::lowerPhis() {
           continue;
 
         MachineBasicBlock &IMBB = *Incoming.Block;
-        buildMergeLaneMasks(
-            IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.GetValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+        insertMask(Incoming, SSAUpdater.GetValueInMiddleOfBlock(&IMBB));
       }
     }
 
@@ -677,7 +793,7 @@ bool PhiLoweringHelper::isConstantLaneMask(Register Reg, bool &Val) const {
       return false;
   }
 
-  if (MI->getOpcode() != MovOp)
+  if (MI->getOpcode() != LMC.MovOpc)
     return false;
 
   if (!MI->getOperand(1).isImm())
@@ -694,20 +810,6 @@ bool PhiLoweringHelper::isConstantLaneMask(Register Reg, bool &Val) const {
   }
 
   return false;
-}
-
-static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
-  Def = false;
-  Use = false;
-
-  for (const MachineOperand &MO : MI.operands()) {
-    if (MO.isReg() && MO.getReg() == AMDGPU::SCC) {
-      if (MO.isUse())
-        Use = true;
-      else
-        Def = true;
-    }
-  }
 }
 
 /// Return a point at the end of the given \p MBB to insert SALU instructions
@@ -795,10 +897,10 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     if (PrevVal == CurVal) {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(CurReg);
     } else if (CurVal) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(ExecReg);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(LMC.ExecReg);
     } else {
-      BuildMI(MBB, I, DL, TII->get(XorOp), DstReg)
-          .addReg(ExecReg)
+      BuildMI(MBB, I, DL, TII->get(LMC.XorOpc), DstReg)
+          .addReg(LMC.ExecReg)
           .addImm(-1);
     }
     return;
@@ -811,9 +913,9 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       PrevMaskedReg = PrevReg;
     } else {
       PrevMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-      BuildMI(MBB, I, DL, TII->get(AndN2Op), PrevMaskedReg)
+      BuildMI(MBB, I, DL, TII->get(LMC.AndN2Opc), PrevMaskedReg)
           .addReg(PrevReg)
-          .addReg(ExecReg);
+          .addReg(LMC.ExecReg);
     }
   }
   if (!CurConstant) {
@@ -822,9 +924,9 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       CurMaskedReg = CurReg;
     } else {
       CurMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-      BuildMI(MBB, I, DL, TII->get(AndOp), CurMaskedReg)
+      BuildMI(MBB, I, DL, TII->get(LMC.AndOpc), CurMaskedReg)
           .addReg(CurReg)
-          .addReg(ExecReg);
+          .addReg(LMC.ExecReg);
     }
   }
 
@@ -835,13 +937,13 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg)
         .addReg(PrevMaskedReg);
   } else if (PrevConstant && PrevVal) {
-    BuildMI(MBB, I, DL, TII->get(OrN2Op), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC.OrN2Opc), DstReg)
         .addReg(CurMaskedReg)
-        .addReg(ExecReg);
+        .addReg(LMC.ExecReg);
   } else {
-    BuildMI(MBB, I, DL, TII->get(OrOp), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC.OrOpc), DstReg)
         .addReg(PrevMaskedReg)
-        .addReg(CurMaskedReg ? CurMaskedReg : ExecReg);
+        .addReg(CurMaskedReg ? CurMaskedReg : LMC.ExecReg);
   }
 }
 
