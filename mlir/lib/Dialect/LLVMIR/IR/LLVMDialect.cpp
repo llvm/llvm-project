@@ -3860,10 +3860,11 @@ LogicalResult LLVM::PtrToAddrOp::verify() {
   auto integerType = cast<IntegerType>(extractVectorElementType(getType()));
 
   auto dataLayout = DataLayout::closest(*this);
-  unsigned width = dataLayout.getTypeSizeInBits(pointerType);
+  std::optional<unsigned> width = dataLayout.getTypeIndexBitwidth(pointerType);
+  assert(width && "pointers always return an index bitwidth");
   if (width != integerType.getWidth())
     return emitOpError("bit-width of integer result type ")
-           << integerType << " must match the pointer bitwidth (" << width
+           << integerType << " must match the pointer bitwidth (" << *width
            << ") specified in the datalayout";
 
   return success();
