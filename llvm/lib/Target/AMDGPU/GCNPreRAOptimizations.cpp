@@ -35,6 +35,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -245,6 +246,57 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
 
   bool Changed = false;
+  if (ST.hasMAIInsts()) {
+    EquivalenceClasses<Register> MFMAHints;
+    for (const MachineBasicBlock &MBB : MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (!SIInstrInfo::isMFMA(MI))
+          continue;
+        const MachineOperand *DstMO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+        const MachineOperand *Src2MO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+        if (!DstMO || !Src2MO || !DstMO->isReg() || !Src2MO->isReg())
+          continue;
+        Register Dst = DstMO->getReg();
+        Register Src2 = Src2MO->getReg();
+        if (!Dst.isVirtual() || !Src2.isVirtual())
+          continue;
+        LLVM_DEBUG(dbgs() << "Setting hint for "; MI.dump());
+        LLVM_DEBUG(dbgs() << " Dst: "; DstMO->dump(); dbgs() << " Src2: ";
+                   Src2MO->dump());
+        MFMAHints.unionSets(Dst, Src2);
+      }
+    }
+
+    auto addHints = [&](const SmallVectorImpl<Register> &Members) {
+      for (Register A : Members) {
+        assert(A.isVirtual());
+        for (Register B : Members) {
+          assert(B.isVirtual());
+          if (A == B)
+            continue;
+
+          const TargetRegisterClass *ARC = MRI->getRegClass(A);
+          const TargetRegisterClass *BRC = MRI->getRegClass(B);
+
+          bool CompatibleRC = TRI->getCommonSubClass(ARC, BRC);
+          if (CompatibleRC)
+            MRI->setRegAllocationHint(A, AMDGPURI::VRegToVReg, B);
+        }
+      }
+    };
+
+    for (auto EC = MFMAHints.begin(); EC != MFMAHints.end(); ++EC) {
+      SmallVector<Register, 8> Members;
+
+      for (auto MI = MFMAHints.member_begin(**EC); MI != MFMAHints.member_end();
+           ++MI) {
+        Members.push_back(*MI);
+      }
+      addHints(Members);
+    }
+  }
 
   for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);

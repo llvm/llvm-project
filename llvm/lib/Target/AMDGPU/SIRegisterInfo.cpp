@@ -3890,6 +3890,15 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     return false;
   }
+  case AMDGPURI::VRegToVReg: {
+    Register Paired = Hint.second;
+    assert(Paired);
+    if (VRM && VRM->hasPhys(Paired)) {
+      auto PairedPhys = VRM->getPhys(Paired);
+      Hints.push_back(PairedPhys);
+    }
+    return false;
+  }
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);
