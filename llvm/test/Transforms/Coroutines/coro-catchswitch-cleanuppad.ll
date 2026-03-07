@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg<switch-range-to-icmp>,early-cse' -S | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
-define ptr @f2(i1 %val) presplitcoroutine personality ptr @__CxxFrameHandler3 {
+define ptr @f2(i1 %val) presplitcoroutine personality ptr @__CxxFrameHandler3 !prof !0 {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %valueA = call i32 @f();
@@ -81,7 +81,7 @@ cleanup2:
 ; CHECK:   %1 = phi i8 [ 0, %handler2 ], [ 1, %catch.dispatch.2 ]
 ; CHECK:   %2 = cleanuppad within %h1 []
 ; CHECK:   %3 = icmp eq i8 %1, 0
-; CHECK:   br i1 %3, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
+; CHECK:   br i1 %3, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2, !prof [[PROF1:![0-9]+]]
 
 ; CHECK: cleanup2.from.handler2:
 ; CHECK:   %valueB.reload = load i32, ptr %valueB.spill.addr, align 4
@@ -113,3 +113,6 @@ declare void @print(i32)
 declare void @free(ptr)
 
 declare i32 @f()
+
+!0 = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1}
