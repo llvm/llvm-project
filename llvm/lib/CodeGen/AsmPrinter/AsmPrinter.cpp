@@ -37,6 +37,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/BTFDebug.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
@@ -645,6 +646,13 @@ bool AsmPrinter::doInitialization(Module &M) {
         Handlers.push_back(std::unique_ptr<DwarfDebug>(DD));
       }
     }
+    // Emit BTF debug info if requested (via -gbtf). BTF can coexist with
+    // DWARF — both consume the same IR debug metadata independently.
+    // Only for ELF targets (BTF uses ELF sections). BPF target handles
+    // BTF emission through its own AsmPrinter with BPFBTFDebug.
+    if (M.getBTFFlag() && Target.isOSBinFormatELF() &&
+        !Target.isBPF() && hasDebugInfo())
+      Handlers.push_back(std::make_unique<BTFDebug>(this));
   }
 
   if (M.getNamedMetadata(PseudoProbeDescMetadataName))

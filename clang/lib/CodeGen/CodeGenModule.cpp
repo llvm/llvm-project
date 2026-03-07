@@ -1138,6 +1138,10 @@ void CodeGenModule::Release() {
     // Indicate that we want CodeView in the metadata.
     getModule().addModuleFlag(llvm::Module::Warning, "CodeView", 1);
   }
+  if (CodeGenOpts.EmitBTF) {
+    // Indicate that we want BTF debug info in the metadata.
+    getModule().addModuleFlag(llvm::Module::Warning, "BTF", 1);
+  }
   if (CodeGenOpts.CodeViewGHash) {
     getModule().addModuleFlag(llvm::Module::Warning, "CodeViewGHash", 1);
   }

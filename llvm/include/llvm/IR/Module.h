@@ -908,6 +908,9 @@ public:
   /// Returns zero if not present in module.
   unsigned getCodeViewFlag() const;
 
+  /// Returns true if BTF debug info emission is requested via module flags.
+  bool getBTFFlag() const;
+
 /// @}
 /// @name Utility functions for querying and setting PIC level
 /// @{
