@@ -18,7 +18,8 @@ using namespace clang::tooling;
 TEST(IncludeTree, IncludeTreeScan) {
   StringRef PathSep = llvm::sys::path::get_separator();
   CASOptions CASOpts;
-  auto [DB, Cache] = llvm::cantFail(CASOpts.getOrCreateDatabases());
+  auto [DB, Cache] =
+      llvm::cantFail(CASOpts.CASConfiguration::createDatabases());
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FS->setCurrentWorkingDirectory("/root");
   auto add = [&](StringRef Path, StringRef Contents) {

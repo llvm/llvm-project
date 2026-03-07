@@ -544,7 +544,6 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
                        llvm::function_ref<const char *(const Twine &)> SaveArg,
                        const CASOptions &CASOpts, DiagnosticsEngine &Diag,
                        std::optional<llvm::cas::CASID> &RootID) {
-  assert(!CASOpts.hasCachedDatabase() && "expected CAS to not be opened yet");
   auto [DB, Cache] = CASOpts.createDatabases(Diag);
   if (!DB || !Cache)
     return 1;
@@ -633,7 +632,6 @@ static int scanAndUpdateCC1UsingDaemon(
 
   // Create CAS after daemon returns the result so daemon can perform corrupted
   // CAS recovery.
-  assert(!CASOpts.hasCachedDatabase() && "expected CAS to not be opened yet");
   auto [CAS, _] = CASOpts.createDatabases(Diag);
   if (!CAS)
     return 1;
@@ -993,7 +991,6 @@ int ScanServer::listen() {
   DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
-  assert(!CASOpts.hasCachedDatabase() && "expected CAS to not be opened yet");
   std::tie(CAS, Cache) = CASOpts.createDatabases(Diags);
   if (!CAS)
     reportError("cannot create CAS");
