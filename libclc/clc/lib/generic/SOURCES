@@ -14,6 +14,7 @@ atomic/clc_atomic_flag_test_and_set.cl
 atomic/clc_atomic_inc.cl
 atomic/clc_atomic_load.cl
 atomic/clc_atomic_store.cl
+collective/clc_work_group_any_all.cl
 common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
