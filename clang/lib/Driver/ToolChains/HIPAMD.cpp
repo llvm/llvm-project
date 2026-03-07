@@ -261,8 +261,10 @@ void HIPAMDToolChain::addClangTargetOptions(
 
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
+  // Make an exception for SPIR-V as it doesn't have hidden visibility anyway.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
-                         options::OPT_fvisibility_ms_compat)) {
+                         options::OPT_fvisibility_ms_compat) &&
+      !getEffectiveTriple().isSPIRV()) {
     CC1Args.append({"-fvisibility=hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }

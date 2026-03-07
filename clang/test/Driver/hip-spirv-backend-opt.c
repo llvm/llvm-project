@@ -52,7 +52,10 @@
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-TRANSLATOR,CHECK-SPIRV-BACKEND-BC,CHECK-SPIRV-BACKEND-BINARY-EQ-TRIPLE
 
 // CHECK-SPIRV-TRANSLATOR-NOT: "{{.*llvm-spirv.*}}"
-// CHECK-SPIRV-BACKEND-TEXTUAL: "{{.*clang(\.exe)?}}" "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}} "-S"
+// CHECK-SPIRV-BACKEND-TEXTUAL: "{{.*clang(\.exe)?}}" "-cc1" "-triple" "spirv64-amd-amdhsa"
+// CHECK-SPIRV-BACKEND-TEXTUAL-NOT: -fvisibility=hidden
+// CHECK-SPIRV-BACKEND-TEXTUAL-NOT: -fapply-global-visibility-to-externs
+// CHECK-SPIRV-BACKEND-TEXTUAL: "-S"
 // CHECK-SPIRV-BACKEND-BINARY: "{{.*clang(\.exe)?}}" "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}} "-emit-obj"
 // CHECK-SPIRV-BACKEND-BC: "{{.*clang(\.exe)?}}" "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}} "-emit-llvm-bc"
 // CHECK-SPIRV-BACKEND-LL: "{{.*clang(\.exe)?}}" "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}} "-emit-llvm"
