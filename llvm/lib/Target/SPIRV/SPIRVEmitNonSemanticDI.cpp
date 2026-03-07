@@ -5,8 +5,11 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -29,17 +32,47 @@
 using namespace llvm;
 
 namespace {
+enum SourceLanguage {
+  Unknown = 0,
+  ESSL = 1,
+  GLSL = 2,
+  OpenCL_C = 3,
+  OpenCL_CPP = 4,
+  HLSL = 5,
+  CPP_for_OpenCL = 6,
+  SYCL = 7,
+  HERO_C = 8,
+  NZSL = 9,
+  WGSL = 10,
+  Slang = 11,
+  Zig = 12
+};
+
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
+  DenseMap<const DICompileUnit *, Register> CompileUnitRegMap;
+  const SPIRV::InstructionSet::InstructionSet DebugInfoInstSet;
   SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM = nullptr)
-      : MachineFunctionPass(ID), TM(TM) {}
+      : MachineFunctionPass(ID), TM(TM),
+        DebugInfoInstSet(
+            SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
+  static SourceLanguage
+  convertDWARFToSPIRVSourceLanguage(int64_t LLVMSourceLanguage);
+  static Register emitOpString(MachineRegisterInfo &MRI,
+                               MachineIRBuilder &MIRBuilder, StringRef SR);
+  Register
+  emitDIInstruction(MachineRegisterInfo &MRI, MachineIRBuilder &MIRBuilder,
+                    SPIRVGlobalRegistry *GR, const SPIRVTypeInst &VoidTy,
+                    const SPIRVInstrInfo *TII, const SPIRVRegisterInfo *TRI,
+                    const RegisterBankInfo *RBI, MachineFunction &MF,
+                    SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
+                    ArrayRef<Register> Registers);
 };
 } // anonymous namespace
 
@@ -64,34 +97,75 @@ enum BaseTypeAttributeEncoding {
   UnsignedChar = 7
 };
 
-enum SourceLanguage {
-  Unknown = 0,
-  ESSL = 1,
-  GLSL = 2,
-  OpenCL_C = 3,
-  OpenCL_CPP = 4,
-  HLSL = 5,
-  CPP_for_OpenCL = 6,
-  SYCL = 7,
-  HERO_C = 8,
-  NZSL = 9,
-  WGSL = 10,
-  Slang = 11,
-  Zig = 12
-};
+SourceLanguage SPIRVEmitNonSemanticDI::convertDWARFToSPIRVSourceLanguage(
+    int64_t LLVMSourceLanguage) {
+  switch (LLVMSourceLanguage) {
+  case dwarf::DW_LANG_OpenCL:
+    return SourceLanguage::OpenCL_C;
+  case dwarf::DW_LANG_OpenCL_CPP:
+    return SourceLanguage::OpenCL_CPP;
+  case dwarf::DW_LANG_CPP_for_OpenCL:
+    return SourceLanguage::CPP_for_OpenCL;
+  case dwarf::DW_LANG_GLSL:
+    return SourceLanguage::GLSL;
+  case dwarf::DW_LANG_HLSL:
+    return SourceLanguage::HLSL;
+  case dwarf::DW_LANG_SYCL:
+    return SourceLanguage::SYCL;
+  case dwarf::DW_LANG_Zig:
+    return SourceLanguage::Zig;
+  default:
+    return SourceLanguage::Unknown;
+  }
+}
+
+static const Module *getModule(MachineFunction &MF) {
+  return MF.getFunction().getParent();
+}
+
+Register SPIRVEmitNonSemanticDI::emitOpString(MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &MIRBuilder,
+                                              StringRef SR) {
+  const Register StrReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  MRI.setType(StrReg, LLT::scalar(64));
+  MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
+  MIB.addDef(StrReg);
+  addStringImm(SR, MIB);
+  return StrReg;
+}
+
+Register SPIRVEmitNonSemanticDI::emitDIInstruction(
+    MachineRegisterInfo &MRI, MachineIRBuilder &MIRBuilder,
+    SPIRVGlobalRegistry *GR, const SPIRVTypeInst &VoidTy,
+    const SPIRVInstrInfo *TII, const SPIRVRegisterInfo *TRI,
+    const RegisterBankInfo *RBI, MachineFunction &MF,
+    SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
+    ArrayRef<Register> Registers) {
+  const Register InstReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  MRI.setType(InstReg, LLT::scalar(64));
+  MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpExtInst)
+                                .addDef(InstReg)
+                                .addUse(GR->getSPIRVTypeID(VoidTy))
+                                .addImm(static_cast<int64_t>(DebugInfoInstSet))
+                                .addImm(Inst);
+  for (auto Reg : Registers) {
+    MIB.addUse(Reg);
+  }
+  MIB.constrainAllUses(*TII, *TRI, *RBI);
+  GR->assignSPIRVTypeToVReg(VoidTy, InstReg, MF);
+  return InstReg;
+}
 
 bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   // If this MachineFunction doesn't have any BB repeat procedure
   // for the next
   if (MF.begin() == MF.end()) {
-    IsGlobalDIEmitted = false;
     return false;
   }
 
   // Required variables to get from metadata search
   LLVMContext *Context;
-  SmallVector<SmallString<128>> FilePaths;
-  SmallVector<int64_t> LLVMSourceLanguages;
+  SmallVector<const DICompileUnit *> CompileUnits;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
   SetVector<DIBasicType *> BasicTypes;
@@ -99,23 +173,14 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   // Searching through the Module metadata to find nescessary
   // information like DwarfVersion or SourceLanguage
   {
-    const MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-    const Module *M = MMI.getModule();
+    const Module *M = getModule(MF);
     Context = &M->getContext();
     const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
     if (!DbgCu)
       return false;
-    for (const auto *Op : DbgCu->operands()) {
-      if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
-        DIFile *File = CompileUnit->getFile();
-        FilePaths.emplace_back();
-        sys::path::append(FilePaths.back(), File->getDirectory(),
-                          File->getFilename());
-        LLVMSourceLanguages.push_back(
-            CompileUnit->getSourceLanguage().getUnversionedName());
-      }
-    }
+    CompileUnits = map_to_vector(
+        make_filter_range(DbgCu->operands(), llvm::IsaPred<DICompileUnit>),
+        llvm::CastTo<DICompileUnit>);
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
     assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
@@ -175,39 +240,9 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     // and before first terminator
     MachineIRBuilder MIRBuilder(MBB, MBB.getFirstTerminator());
 
-    const auto EmitOpString = [&](StringRef SR) {
-      const Register StrReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
-      MRI.setType(StrReg, LLT::scalar(32));
-      MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::OpString);
-      MIB.addDef(StrReg);
-      addStringImm(SR, MIB);
-      return StrReg;
-    };
-
     const SPIRVTypeInst VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
-
-    const auto EmitDIInstruction =
-        [&](SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
-            std::initializer_list<Register> Registers) {
-          const Register InstReg =
-              MRI.createVirtualRegister(&SPIRV::IDRegClass);
-          MRI.setType(InstReg, LLT::scalar(32));
-          MachineInstrBuilder MIB =
-              MIRBuilder.buildInstr(SPIRV::OpExtInst)
-                  .addDef(InstReg)
-                  .addUse(GR->getSPIRVTypeID(VoidTy))
-                  .addImm(static_cast<int64_t>(
-                      SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100))
-                  .addImm(Inst);
-          for (auto Reg : Registers) {
-            MIB.addUse(Reg);
-          }
-          MIB.constrainAllUses(*TII, *TRI, *RBI);
-          GR->assignSPIRVTypeToVReg(VoidTy, InstReg, MF);
-          return InstReg;
-        };
 
     const SPIRVTypeInst I32Ty =
         GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
@@ -219,44 +254,30 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const Register DebugInfoVersionReg =
         GR->buildConstantInt(DebugInfoVersion, MIRBuilder, I32Ty, false);
 
-    for (unsigned Idx = 0; Idx < LLVMSourceLanguages.size(); ++Idx) {
-      const Register FilePathStrReg = EmitOpString(FilePaths[Idx]);
+    for (const DICompileUnit *CompileUnit : CompileUnits) {
+      const DIFile *File = CompileUnit->getFile();
+      SmallString<128> FilePath;
+      sys::path::append(FilePath, File->getDirectory(), File->getFilename());
+      const Register FilePathStrReg = emitOpString(MRI, MIRBuilder, FilePath);
 
-      const Register DebugSourceResIdReg = EmitDIInstruction(
+      const Register DebugSourceResIdReg = emitDIInstruction(
+          MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
           SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
 
-      SourceLanguage SpirvSourceLanguage = SourceLanguage::Unknown;
-      switch (LLVMSourceLanguages[Idx]) {
-      case dwarf::DW_LANG_OpenCL:
-        SpirvSourceLanguage = SourceLanguage::OpenCL_C;
-        break;
-      case dwarf::DW_LANG_OpenCL_CPP:
-        SpirvSourceLanguage = SourceLanguage::OpenCL_CPP;
-        break;
-      case dwarf::DW_LANG_CPP_for_OpenCL:
-        SpirvSourceLanguage = SourceLanguage::CPP_for_OpenCL;
-        break;
-      case dwarf::DW_LANG_GLSL:
-        SpirvSourceLanguage = SourceLanguage::GLSL;
-        break;
-      case dwarf::DW_LANG_HLSL:
-        SpirvSourceLanguage = SourceLanguage::HLSL;
-        break;
-      case dwarf::DW_LANG_SYCL:
-        SpirvSourceLanguage = SourceLanguage::SYCL;
-        break;
-      case dwarf::DW_LANG_Zig:
-        SpirvSourceLanguage = SourceLanguage::Zig;
-      }
+      SourceLanguage SpirvSourceLanguage = convertDWARFToSPIRVSourceLanguage(
+          CompileUnit->getSourceLanguage().getUnversionedName());
 
       const Register SourceLanguageReg =
           GR->buildConstantInt(SpirvSourceLanguage, MIRBuilder, I32Ty, false);
 
-      [[maybe_unused]]
       const Register DebugCompUnitResIdReg =
-          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
+          emitDIInstruction(MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+                            SPIRV::NonSemanticExtInst::DebugCompilationUnit,
                             {DebugInfoVersionReg, DwarfVersionReg,
                              DebugSourceResIdReg, SourceLanguageReg});
+
+      // Store the register for this compile unit.
+      CompileUnitRegMap[CompileUnit] = DebugCompUnitResIdReg;
     }
 
     // We aren't extracting any DebugInfoFlags now so we
@@ -270,7 +291,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     SmallVector<std::pair<const DIBasicType *const, const Register>, 12>
         BasicTypeRegPairs;
     for (auto *BasicType : BasicTypes) {
-      const Register BasicTypeStrReg = EmitOpString(BasicType->getName());
+      const Register BasicTypeStrReg =
+          emitOpString(MRI, MIRBuilder, BasicType->getName());
 
       const Register ConstIntBitwidthReg = GR->buildConstantInt(
           BasicType->getSizeInBits(), MIRBuilder, I32Ty, false);
@@ -303,7 +325,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           GR->buildConstantInt(AttributeEncoding, MIRBuilder, I32Ty, false);
 
       const Register BasicTypeReg =
-          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeBasic,
+          emitDIInstruction(MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+                            SPIRV::NonSemanticExtInst::DebugTypeBasic,
                             {BasicTypeStrReg, ConstIntBitwidthReg,
                              AttributeEncodingReg, I32ZeroReg});
       BasicTypeRegPairs.emplace_back(BasicType, BasicTypeReg);
@@ -327,19 +350,22 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           for (const auto &BasicTypeRegPair : BasicTypeRegPairs) {
             const auto &[DefinedBasicType, BasicTypeReg] = BasicTypeRegPair;
             if (DefinedBasicType == MaybeNestedBasicType) {
-              [[maybe_unused]]
-              const Register DebugPointerTypeReg = EmitDIInstruction(
-                  SPIRV::NonSemanticExtInst::DebugTypePointer,
-                  {BasicTypeReg, StorageClassReg, I32ZeroReg});
+              [[maybe_unused]] const Register DebugPointerTypeReg =
+                  emitDIInstruction(
+                      MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+                      SPIRV::NonSemanticExtInst::DebugTypePointer,
+                      {BasicTypeReg, StorageClassReg, I32ZeroReg});
             }
           }
         } else {
           const Register DebugInfoNoneReg =
-              EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {});
-          [[maybe_unused]]
-          const Register DebugPointerTypeReg = EmitDIInstruction(
-              SPIRV::NonSemanticExtInst::DebugTypePointer,
-              {DebugInfoNoneReg, StorageClassReg, I32ZeroReg});
+              emitDIInstruction(MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+                                SPIRV::NonSemanticExtInst::DebugInfoNone, {});
+          [[maybe_unused]] const Register DebugPointerTypeReg =
+              emitDIInstruction(
+                  MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+                  SPIRV::NonSemanticExtInst::DebugTypePointer,
+                  {DebugInfoNoneReg, StorageClassReg, I32ZeroReg});
         }
       }
     }
@@ -348,12 +374,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
 }
 
 bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
-  bool Res = false;
-  // emitGlobalDI needs to be executed only once to avoid
-  // emitting duplicates
-  if (!IsGlobalDIEmitted) {
-    IsGlobalDIEmitted = true;
-    Res = emitGlobalDI(MF);
-  }
+  CompileUnitRegMap.clear();
+  bool Res = emitGlobalDI(MF);
   return Res;
 }
