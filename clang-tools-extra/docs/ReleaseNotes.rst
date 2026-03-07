@@ -325,6 +325,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improved :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability/use-anyofallof>` check by adding support for
+  ``std::none_of`` suggestions when the loop condition is not negated.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

@@ -84,6 +84,26 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
   });
 }
 
+/// For the all_of_loop pattern (returns false inside, true after), check
+/// whether the if-condition is negated. If it is, the loop is an all_of;
+/// otherwise it is a none_of.
+static bool isNoneOfPattern(const CXXForRangeStmt &Loop) {
+  const Stmt *Body = Loop.getBody();
+  const IfStmt *If = nullptr;
+  if (const auto *Compound = dyn_cast<CompoundStmt>(Body)) {
+    if (Compound->size() == 1)
+      If = dyn_cast<IfStmt>(Compound->body_front());
+  } else {
+    If = dyn_cast<IfStmt>(Body);
+  }
+  if (!If)
+    return false;
+  // If the condition is not negated (no leading !), it's a none_of pattern.
+  const Expr *Cond = If->getCond()->IgnoreParenImpCasts();
+  const auto *UO = dyn_cast<UnaryOperator>(Cond);
+  return !UO || UO->getOpcode() != UO_LNot;
+}
+
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
@@ -96,8 +116,13 @@ void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
     if (!isViableLoop(*S, *Result.Context))
       return;
 
-    diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::all_of()'")
-        << getLangOpts().CPlusPlus20;
+    if (isNoneOfPattern(*S))
+      diag(S->getForLoc(),
+           "replace loop by 'std%select{|::ranges}0::none_of()'")
+          << getLangOpts().CPlusPlus20;
+    else
+      diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::all_of()'")
+          << getLangOpts().CPlusPlus20;
   }
 }
 
