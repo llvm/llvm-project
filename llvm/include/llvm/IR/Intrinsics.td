@@ -1980,6 +1980,20 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
 def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 [IntrNoMem, IntrConvergent]>;
 
+// Late-resolved intrinsic to query whether the enclosing function's resolved
+// target features include a named feature. The argument is a metadata string
+// naming the feature. Resolved against the TargetMachine's subtarget for the
+// function. Must be lowered before ISel.
+def int_target_has_feature : DefaultAttrsIntrinsic<[llvm_i1_ty],
+                                    [llvm_metadata_ty],
+                                    [IntrNoMem, IntrWillReturn]>;
+
+// Intrinsic to query whether the enclosing function's target CPU exactly
+// matches a named CPU. Same contract as llvm.target.has.feature.
+def int_target_is_cpu : DefaultAttrsIntrinsic<[llvm_i1_ty],
+                                    [llvm_metadata_ty],
+                                    [IntrNoMem, IntrWillReturn]>;
+
 // Introduce a use of the argument without generating any code.
 def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
   [IntrHasSideEffects, IntrInaccessibleMemOnly]>;

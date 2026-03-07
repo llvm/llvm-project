@@ -2534,6 +2534,9 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
       return true;
     case Intrinsic::is_constant:
       return simplifyIntrinsicCallIsConstant(Call);
+    case Intrinsic::target_has_feature:
+    case Intrinsic::target_is_cpu:
+      return true;
     case Intrinsic::objectsize:
       return simplifyIntrinsicCallObjectSize(Call);
     }

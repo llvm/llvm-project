@@ -2865,6 +2865,20 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                    Context.getAuxTargetInfo(), BuiltinID))
       return ExprError();
     break;
+  case Builtin::BI__builtin_is_invocable:
+    if (checkArgCount(TheCall, 1))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_target_is_cpu: {
+    if (checkArgCount(TheCall, 1))
+      return ExprError();
+    Expr *Arg = TheCall->getArg(0)->IgnoreImpCasts();
+    if (!isa<StringLiteral>(Arg))
+      return ExprError(
+          Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+          << Arg->getSourceRange());
+    break;
+  }
   case Builtin::BI__builtin_cpu_init:
     if (!Context.getTargetInfo().supportsCpuInit()) {
       Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)

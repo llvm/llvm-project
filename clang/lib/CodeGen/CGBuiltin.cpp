@@ -3764,6 +3764,39 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/false);
     return RValue::get(Result);
   }
+  case Builtin::BI__builtin_target_is_cpu: {
+    StringRef Str =
+        cast<clang::StringLiteral>(E->getArg(0)->IgnoreImpCasts())->getString();
+    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Value *MDArg =
+        llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Str));
+    Function *F = CGM.getIntrinsic(Intrinsic::target_is_cpu);
+    Value *Result = Builder.CreateCall(F, MDArg);
+    llvm::Type *ResultType = ConvertType(E->getType());
+    return RValue::get(
+        Builder.CreateIntCast(Result, ResultType, /*isSigned=*/false));
+  }
+  case Builtin::BI__builtin_is_invocable: {
+    unsigned BID =
+        E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    StringRef Features(getContext().BuiltinInfo.getRequiredFeatures(BID));
+    for (StringRef Feat : llvm::split(Features, ','))
+      CheckedTargetFeatures.insert(Feat);
+    llvm::Type *ResultType = ConvertType(E->getType());
+    if (Features.empty())
+      return RValue::get(llvm::ConstantInt::getTrue(ResultType));
+    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+    Function *F = CGM.getIntrinsic(Intrinsic::target_has_feature);
+    Value *Result = nullptr;
+    for (StringRef Feat : llvm::split(Features, ',')) {
+      llvm::Value *MDArg =
+          llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Feat));
+      Value *Has = Builder.CreateCall(F, MDArg);
+      Result = Result ? Builder.CreateAnd(Result, Has) : Has;
+    }
+    return RValue::get(Builder.CreateIntCast(Result, ResultType,
+                                             /*isSigned=*/false));
+  }
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
     unsigned Type =

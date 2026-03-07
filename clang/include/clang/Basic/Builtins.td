@@ -821,6 +821,18 @@ def BuiltinCPUInit : Builtin {
   let Prototype = "void()";
 }
 
+def BuiltinTargetIsCPU : Builtin {
+  let Spellings = ["__builtin_target_is_cpu"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(char const*)";
+}
+
+def BuiltinIsInvocable : Builtin {
+  let Spellings = ["__builtin_is_invocable"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, UnevaluatedArguments];
+  let Prototype = "bool(...)";
+}
+
 def BuiltinCalloc : Builtin {
   let Spellings = ["__builtin_calloc"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
