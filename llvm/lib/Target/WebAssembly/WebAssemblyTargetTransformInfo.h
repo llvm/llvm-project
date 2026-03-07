@@ -109,6 +109,7 @@ public:
   std::optional<Instruction *>
   instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
   /// @}
 };
 
