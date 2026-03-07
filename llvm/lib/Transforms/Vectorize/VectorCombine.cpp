@@ -1105,13 +1105,15 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   if (DestEltSize <= SrcEltSize) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
     // always be expanded to the equivalent form choosing narrower elements.
-    assert(SrcEltSize % DestEltSize == 0 && "Unexpected shuffle mask");
+    if (SrcEltSize % DestEltSize != 0)
+      return false;
     unsigned ScaleFactor = SrcEltSize / DestEltSize;
     narrowShuffleMaskElts(ScaleFactor, Mask, NewMask);
   } else {
     // The bitcast is from narrow elements to wide elements. The shuffle mask
     // must choose consecutive elements to allow casting first.
-    assert(DestEltSize % SrcEltSize == 0 && "Unexpected shuffle mask");
+    if (DestEltSize % SrcEltSize != 0)
+      return false;
     unsigned ScaleFactor = DestEltSize / SrcEltSize;
     if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
       return false;
