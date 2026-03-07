@@ -466,6 +466,26 @@ func.func @isfinite_0dvector(%arg0 : vector<f32>) {
 
 // -----
 
+// CHECK-LABEL: func @isnormal_double(
+// CHECK-SAME: f64
+func.func @isnormal_double(%arg0 : f64) {
+  // CHECK: "llvm.intr.is.fpclass"(%arg0) <{bit = 264 : i32}> : (f64) -> i1
+  %0 = math.isnormal %arg0 : f64
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @isinf_double(
+// CHECK-SAME: f64
+func.func @isinf_double(%arg0 : f64) {
+  // CHECK: "llvm.intr.is.fpclass"(%arg0) <{bit = 516 : i32}> : (f64) -> i1
+  %0 = math.isinf %arg0 : f64
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt_double(
 // CHECK-SAME: f64
 func.func @rsqrt_double(%arg0 : f64) {
