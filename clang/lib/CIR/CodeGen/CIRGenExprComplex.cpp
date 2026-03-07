@@ -328,9 +328,7 @@ public:
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitPackIndexingExpr");
-    return {};
+    return Visit(e->getSelectedExpr());
   }
 };
 } // namespace
@@ -593,9 +591,8 @@ mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e) {
 mlir::Value ComplexExprEmitter::VisitPlusMinus(const UnaryOperator *e,
                                                cir::UnaryOpKind kind,
                                                QualType promotionType) {
-  assert(kind == cir::UnaryOpKind::Plus ||
-         kind == cir::UnaryOpKind::Minus &&
-             "Invalid UnaryOp kind for ComplexType Plus or Minus");
+  assert((kind == cir::UnaryOpKind::Plus || kind == cir::UnaryOpKind::Minus) &&
+         "Invalid UnaryOp kind for ComplexType Plus or Minus");
 
   mlir::Value op;
   if (!promotionType.isNull())
@@ -1099,8 +1096,8 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
                                                      LValue lv,
                                                      cir::UnaryOpKind op,
                                                      bool isPre) {
-  assert(op == cir::UnaryOpKind::Inc ||
-         op == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind for ComplexType");
+  assert((op == cir::UnaryOpKind::Inc || op == cir::UnaryOpKind::Dec) &&
+         "Invalid UnaryOp kind for ComplexType");
 
   mlir::Value inVal = emitLoadOfComplex(lv, e->getExprLoc());
   mlir::Location loc = getLoc(e->getExprLoc());

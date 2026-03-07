@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/opencl-base.h>
+#include "clc/workitem/clc_get_num_groups.h"
+#include <amdhsa_abi.h>
 
-_CLC_DEF _CLC_OVERLOAD size_t get_num_groups(uint dim) {
-  size_t global_size = get_global_size(dim);
-  size_t local_size = get_local_size(dim);
-  size_t num_groups = global_size / local_size;
-  if (global_size % local_size != 0) {
-    num_groups++;
-  }
-  return num_groups;
+_CLC_OVERLOAD _CLC_DEF size_t __clc_get_num_groups(uint dim) {
+  if (dim > 2)
+    return 1;
+
+  __constant amdhsa_implicit_kernarg_v5 *args =
+      (__constant amdhsa_implicit_kernarg_v5 *)
+          __builtin_amdgcn_implicitarg_ptr();
+  return args->block_count[dim] + (args->remainder[dim] > 0);
 }

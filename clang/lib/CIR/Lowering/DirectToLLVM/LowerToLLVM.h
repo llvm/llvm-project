@@ -33,7 +33,7 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               cir::SideEffect sideEffect,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn);
+                              bool &noUnwind, bool &willReturn, bool &noReturn);
 
 struct LLVMBlockAddressInfo {
   // Get the next tag index

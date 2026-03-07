@@ -1794,7 +1794,7 @@ void cir::GlobalOp::getSuccessorRegions(
     ctorRegion = nullptr;
 
   // Don't consider the dtor region if it is empty.
-  Region *dtorRegion = &this->getCtorRegion();
+  Region *dtorRegion = &this->getDtorRegion();
   if (dtorRegion->empty())
     dtorRegion = nullptr;
 
