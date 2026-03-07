@@ -619,17 +619,10 @@ public:
   // Build the ternary functions defined by OpDSL.
   Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1, Value arg2,
                        function_ref<InFlightDiagnostic()> emitError = {}) {
-    bool headBool =
-        isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
-    bool tailFloatingPoint =
-        isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
-    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg2);
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (ternaryFn) {
     case TernaryFn::select:
-      if (!headBool && !(tailFloatingPoint || tailInteger))
-        llvm_unreachable("unsupported non numeric type");
       return arith::SelectOp::create(builder, arg0.getLoc(), arg0, arg1, arg2);
     }
     if (emitError) {
