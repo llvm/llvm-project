@@ -33,6 +33,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerparallel"
       transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerparallel"
       transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_lowering lowering_strategy = "innerparallel"
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
       transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
       transform.apply_patterns.vector.lower_transfer max_transfer_rank = 1

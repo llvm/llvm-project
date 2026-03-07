@@ -153,6 +153,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerreduction"
       transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerreduction"
       transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_lowering lowering_strategy = "innerreduction"
     } : !transform.op<"func.func">
 
     transform.yield
