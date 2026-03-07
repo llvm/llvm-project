@@ -851,7 +851,7 @@ Instruction *ModuleSanitizerCoverage::CreateGateBranch(Function &F,
   // Set the branch weights in order to minimize the price paid when the
   // gate is turned off, allowing the default enablement of this
   // instrumentation with as little of a performance cost as possible
-  auto Weights = MDBuilder(*C).createBranchWeights(1, 100000);
+  auto Weights = MDBuilder(*C).createUnlikelyBranchWeights();
   return SplitBlockAndInsertIfThen(FunctionGateCmp, IP, false, Weights);
 }
 
