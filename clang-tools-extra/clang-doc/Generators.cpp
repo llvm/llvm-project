@@ -19,7 +19,7 @@ using namespace llvm::mustache;
 namespace clang {
 namespace doc {
 
-llvm::Expected<OwnedPtr<Generator>>
+llvm::Expected<std::unique_ptr<Generator>>
 findGeneratorByName(llvm::StringRef Format) {
   for (const auto &Generator : GeneratorRegistry::entries()) {
     if (Generator.getName() != Format)
