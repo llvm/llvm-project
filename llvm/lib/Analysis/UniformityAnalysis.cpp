@@ -13,9 +13,45 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
+
+namespace {
+
+/// CallbackVH that removes the value from UniformValues on deletion.
+/// Prevents stale pointers when a deleted value's address is reused.
+class UniformValueHandle : public CallbackVH {
+  DenseSet<const Value *> &UniformSet;
+
+public:
+  UniformValueHandle(Value *V, DenseSet<const Value *> &S)
+      : CallbackVH(V), UniformSet(S) {}
+  virtual ~UniformValueHandle() = default;
+
+  void deleted() override {
+    UniformSet.erase(getValPtr());
+    CallbackVH::deleted();
+  }
+};
+
+/// IR implementation: registers CallbackVH for each uniform value.
+class IRUniformValueCallbackManager : public UniformValueCallbackManager {
+  DenseSet<const Value *> &UniformSet;
+  std::vector<std::unique_ptr<UniformValueHandle>> Handles;
+
+public:
+  explicit IRUniformValueCallbackManager(DenseSet<const Value *> &S)
+      : UniformSet(S) {}
+
+  void registerValue(const Value *V) {
+    Handles.push_back(std::make_unique<UniformValueHandle>(
+        const_cast<Value *>(V), UniformSet));
+  }
+};
+
+} // namespace
 
 template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::hasDivergentDefs(
@@ -48,6 +84,32 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
         InstructionUniformity::NeverUniform)
       markDivergent(&Arg);
   }
+}
+
+template <>
+void llvm::GenericUniformityAnalysisImpl<SSAContext>::finalizeUniformValues() {
+  // Populate UniformValues with all values that were NOT marked divergent.
+  // This enables safe uniformity queries where unknown values (e.g., newly
+  // created instructions) are conservatively treated as divergent.
+  for (const Argument &Arg : F.args()) {
+    if (!DivergentValues.count(&Arg))
+      UniformValues.insert(&Arg);
+  }
+  for (const BasicBlock &BB : F) {
+    for (const Instruction &I : BB) {
+      if (!DivergentValues.count(&I))
+        UniformValues.insert(&I);
+    }
+  }
+
+  // Register CallbackVH for each uniform value so we remove them on deletion.
+  // Prevents stale pointers when addresses are reused.
+  auto Manager = std::make_unique<IRUniformValueCallbackManager>(UniformValues);
+  for (const Value *V : UniformValues)
+    Manager->registerValue(V);
+  UniformValueCallbacks = std::move(Manager);
+
+  DivergentValues.clear();
 }
 
 template <>
