@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -33,7 +32,6 @@ STATISTIC(NumDeadDefsReplaced, "Number of dead definitions replaced");
 namespace {
 class AArch64DeadRegisterDefinitions : public MachineFunctionPass {
 private:
-  const TargetRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
   const TargetInstrInfo *TII;
   bool Changed;
@@ -187,7 +185,6 @@ bool AArch64DeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
   LLVM_DEBUG(dbgs() << "***** AArch64DeadRegisterDefinitions *****\n");
