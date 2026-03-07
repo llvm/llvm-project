@@ -280,7 +280,9 @@ template <class Rep, class Period>
     constexpr duration<Rep, Period> abs(duration<Rep, Period> d);  // C++17
 
 // Clocks
-
+/// The system_clock represents wall-clock time based on the system-wide realtime clock.
+/// The representation for it is a signed representation, so it can express times before and after the epoch
+/// like: (1970-01-01 00:00:00 UTC).
 class system_clock
 {
 public:
@@ -309,6 +311,8 @@ template<class charT, class traits>                    // C++20
     operator<<(basic_ostream<charT, traits>& os, const sys_days& dp);
 
 // [time.clock.utc], class utc_clock
+/// The utc_clock represents Coordinated Universal Time (UTC)
+/// It uses a signed representation just like system_clock and represents time before and after its epoch
 class utc_clock {                                      // C++20
 public:
     using rep                       = a signed arithmetic type;
@@ -345,6 +349,8 @@ template<class Duration>                                // C++20
 
 
 // [time.clock.tai], class tai_clock
+/// The tai_clock uses Coordinated Universal Time (UTC).
+/// It uses a signed representation and can express time both before and after its epoch.
 class tai_clock {                                      // C++20
 public:
     using rep                       = a signed arithmetic type;
@@ -372,6 +378,8 @@ template<class charT, class traits, class Duration>     // C++20
     operator<<(basic_ostream<charT, traits>& os, const tai_time<Duration>& t);
 
 // [time.clock.gps], class gps_clock
+/// The gps_clock represents International Atomic Time (TAI). It uses a signed
+/// representation and can express time both before and after its epoch.    
 class gps_clock {                                      // C++20
 public:
     using rep                       = a signed arithmetic type;
@@ -398,6 +406,8 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const gps_time<Duration>& t);
 
+/// The class file_clock is used for file timestamps. It uses a signed representation
+/// and can express time both before and after its epoch.
 class file_clock                                        // C++20
 {
 public:
@@ -423,6 +433,8 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const file_time<Duration>& tp);
 
+/// The class steady_clock is monotonic and it does not support negative time points.
+/// Wheter it supports time before its epoch is unspecified.
 class steady_clock
 {
 public:
@@ -434,7 +446,7 @@ public:
 
     static time_point now() noexcept;
 };
-
+// high_resolution_clock is an alias for the steady_clock and has the same behavior.
 typedef steady_clock high_resolution_clock;
 
 // [time.clock.local] local time           // C++20
