@@ -559,13 +559,16 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
           if (!platform_working_dir.empty())
             shell_command.SetWorkingDirectory(platform_working_dir.c_str());
         }
-        return platform_sp->RunShellCommand(
+        std::string stderr_output;
+        Status error = platform_sp->RunShellCommand(
             shell_command.m_opaque_ptr->m_shell, command,
             FileSpec(shell_command.GetWorkingDirectory()),
             &shell_command.m_opaque_ptr->m_status,
             &shell_command.m_opaque_ptr->m_signo,
-            &shell_command.m_opaque_ptr->m_output,
+            &shell_command.m_opaque_ptr->m_output, &stderr_output,
             shell_command.m_opaque_ptr->m_timeout);
+        shell_command.m_opaque_ptr->m_output += stderr_output;
+        return error;
       });
 }
 

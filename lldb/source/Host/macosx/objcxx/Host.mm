@@ -1530,10 +1530,8 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       }
     }
     bool run_in_shell = true;
-    bool hide_stderr = true;
-    Status e =
-        RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        std::chrono::seconds(10), run_in_shell, hide_stderr);
+    Status e = RunShellCommand(expand_command, cwd, &status, nullptr, &output,
+                               nullptr, std::chrono::seconds(10), run_in_shell);
 
     if (e.Fail())
       return e;

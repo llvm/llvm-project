@@ -142,6 +142,8 @@ public:
                        // process to exit
       std::string
           *command_output, // Pass NULL if you don't want the command output
+      std::string
+          *error_output, // Pass NULL if you don't want the command error output
       const lldb_private::Timeout<std::micro> &timeout) override;
 
   void CalculateTrapHandlerSymbolNames() override;

@@ -230,10 +230,11 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 
     int status;
     std::string output;
+    std::string error;
     std::string command = expand_command.GetString().str();
-    Status e =
-        RunShellCommand(command.c_str(), launch_info.GetWorkingDirectory(),
-                        &status, nullptr, &output, std::chrono::seconds(10));
+    Status e = RunShellCommand(
+        command.c_str(), launch_info.GetWorkingDirectory(), &status, nullptr,
+        &output, &error, std::chrono::seconds(10));
 
     if (e.Fail())
       return e;

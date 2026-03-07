@@ -1705,13 +1705,16 @@ public:
     if (platform_sp) {
       FileSpec working_dir{};
       std::string output;
+      std::string error_output;
       int status = -1;
       int signo = -1;
-      error = (platform_sp->RunShellCommand(m_options.m_shell_interpreter, cmd,
-                                            working_dir, &status, &signo,
-                                            &output, m_options.m_timeout));
+      error = (platform_sp->RunShellCommand(
+          m_options.m_shell_interpreter, cmd, working_dir, &status, &signo,
+          &output, &error_output, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
+      if (!error_output.empty())
+        result.GetOutputStream().PutCString(error_output);
       if (status > 0) {
         if (signo > 0) {
           const char *signo_cstr = Host::GetSignalAsCString(signo);
