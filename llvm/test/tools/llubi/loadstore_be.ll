@@ -147,7 +147,7 @@ define void @main() {
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %alloc_lifetime)
 ; CHECK-NEXT:   %val16 = load i32, ptr %alloc_lifetime, align 4 => poison
 ; CHECK-NEXT:   store i32 -524288, ptr %alloc, align 4
-; CHECK-NEXT:   %val17 = load float, ptr %alloc, align 4 => 0xFFF80000
+; CHECK-NEXT:   %val17 = load float, ptr %alloc, align 4 => float 0xFFF80000
 ; CHECK-NEXT:   %alloc_vscale = alloca <vscale x 2 x i32>, align 8 => ptr 0x10 [alloc_vscale]
 ; CHECK-NEXT:   %insert = insertelement <vscale x 1 x i32> poison, i32 1, i32 0 => { i32 1, poison, poison, poison }
 ; CHECK-NEXT:   %ones = shufflevector <vscale x 1 x i32> %insert, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer => { i32 1, i32 1, i32 1, i32 1 }
