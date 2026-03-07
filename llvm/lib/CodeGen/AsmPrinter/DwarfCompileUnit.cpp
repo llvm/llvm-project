@@ -275,7 +275,7 @@ void DwarfCompileUnit::addLocationAttribute(
       continue;
 
     if (Global && Global->isThreadLocal()) {
-      // Do not emit TLS location for interposable TLS variables
+      // Do not emit TLS location for preemptible TLS variables
       // (e.g. TLS in shared libraries). The TLS offset cannot be
       // represented safely in DWARF. In that case let Debugger use
       // Runtime TLS lookup via DTV (Dynmic thread vector).
