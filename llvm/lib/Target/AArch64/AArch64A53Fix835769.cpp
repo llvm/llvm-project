@@ -78,7 +78,7 @@ static bool isSecondInstructionInSequence(MachineInstr *MI) {
 namespace {
 class AArch64A53Fix835769Impl {
 public:
-  bool run(MachineFunction &F);
+  bool run(MachineFunction &MF);
 
 private:
   const TargetInstrInfo *TII;
@@ -129,9 +129,9 @@ bool AArch64A53Fix835769Legacy::runOnMachineFunction(MachineFunction &F) {
   return AArch64A53Fix835769Impl().run(F);
 }
 
-bool AArch64A53Fix835769Impl::run(MachineFunction &F) {
+bool AArch64A53Fix835769Impl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "***** AArch64A53Fix835769 *****\n");
-  auto &STI = F.getSubtarget<AArch64Subtarget>();
+  auto &STI = MF.getSubtarget<AArch64Subtarget>();
   // Fix not requested, skip pass.
   if (!STI.fixCortexA53_835769())
     return false;
@@ -139,7 +139,7 @@ bool AArch64A53Fix835769Impl::run(MachineFunction &F) {
   bool Changed = false;
   TII = STI.getInstrInfo();
 
-  for (auto &MBB : F) {
+  for (auto &MBB : MF) {
     Changed |= runOnBasicBlock(MBB);
   }
   return Changed;
