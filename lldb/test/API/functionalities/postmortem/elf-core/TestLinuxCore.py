@@ -23,6 +23,7 @@ class LinuxCoreTestCase(TestBase):
     _ppc64le_pid = 28147
     _riscv64_gpr_fpr_pid = 1089
     _riscv64_gpr_only_pid = 97
+    _riscv32_gpr_csr_pid = 0
     _loongarch64_pid = 456735
 
     _aarch64_regions = 4
@@ -31,6 +32,7 @@ class LinuxCoreTestCase(TestBase):
     _s390x_regions = 2
     _ppc64le_regions = 2
     _riscv64_regions = 4
+    _riscv32_regions = 1
     _loongarch64_regions = 4
 
     @skipIfLLVMTargetMissing("AArch64")
@@ -82,6 +84,21 @@ class LinuxCoreTestCase(TestBase):
             self._riscv64_gpr_only_pid,
             self._riscv64_regions,
             "a.out",
+        )
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv32_gpr_csr(self):
+        """Test that lldb can read the process information from a riscv32 bare-
+        metal core file made for a RV32IMCXQCIXQCCMP target having GP and CS
+        registers."""
+        # NB: The value of 'elf_prstatus.pr_pid' in 'NT_PRSTATUS' within
+        # 'riscv32-imcxqcixqccmp.gpr_csr.core' has been updated from '1' to '0'
+        # to ensure consistency between the process and thread IDs.
+        self.do_test(
+            "riscv32-imcxqcixqccmp.gpr_csr",
+            self._riscv32_gpr_csr_pid,
+            self._riscv32_regions,
+            None,
         )
 
     @skipIfLLVMTargetMissing("LoongArch")
@@ -895,6 +912,132 @@ class LinuxCoreTestCase(TestBase):
             matching=False,
             substrs=["registers were unavailable"],
         )
+
+    @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv32_regs_gpr_csr(self):
+        # check basic registers using 32 bit RISC-V core file
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("riscv32-imcxqcixqccmp.gpr_csr.core")
+
+        gpr_values = {
+            "pc": ("0x0000052e", None),
+            "ra": ("0x00000514", "x1"),
+            "sp": ("0x0001efa0", "x2"),
+            "gp": ("0x00000d70", "x3"),
+            "tp": ("0x0002f000", "x4"),
+            "t0": ("0xffffffff", "x5"),
+            "t1": ("0x00000000", "x6"),
+            "t2": ("0x00000000", "x7"),
+            "fp": ("0x0001efc0", "x8"),
+            "s1": ("0x00000000", "x9"),
+            "a0": ("0x0000002f", "x10"),
+            "a1": ("0x00000000", "x11"),
+            "a2": ("0x00000000", "x12"),
+            "a3": ("0x00000000", "x13"),
+            "a4": ("0x00000000", "x14"),
+            "a5": ("0x00000000", "x15"),
+            "a6": ("0x00000000", "x16"),
+            "a7": ("0x00000000", "x17"),
+            "s2": ("0x00000000", "x18"),
+            "s3": ("0x00000000", "x19"),
+            "s4": ("0x00000000", "x20"),
+            "s5": ("0x00000000", "x21"),
+            "s6": ("0x00000000", "x22"),
+            "s7": ("0x00000000", "x23"),
+            "s8": ("0x00000000", "x24"),
+            "s9": ("0x00000000", "x25"),
+            "s10": ("0x00000000", "x26"),
+            "s11": ("0x00000000", "x27"),
+            "t3": ("0x00000000", "x28"),
+            "t4": ("0x00000000", "x29"),
+            "t5": ("0x00000000", "x30"),
+            "t6": ("0x00000000", "x31"),
+            "zero": ("0x00000000", "x0"),
+        }
+
+        csr_values = {
+            "mstatus": ("0x00001800", "0x300"),
+            "mie": ("0x00000000", "0x304"),
+            "mtvec": ("0x00000004", "0x305"),
+            "mepc": ("0x00000000", "0x341"),
+            "mcause": ("0x00000000", "0x342"),
+            "mip": ("0x00000000", "0x344"),
+            "1984": ("0x00081000", "0x7c0"),
+            "mnepc": ("0x00000000", "0x741"),
+            "mncause": ("0x00000000", "0x742"),
+            "1987": ("0x00000004", "0x7c3"),
+            "2000": ("0x00000000", "0x7d0"),
+            "2004": ("0x00000000", "0x7d4"),
+            "mscratch": ("0x00000000", "0x340"),
+            "mnscratch": ("0x00000000", "0x740"),
+            "1992": ("0x00000000", "0x7c8"),
+            "mcycle": ("0x00000000", "0xb00"),
+            "mimpid": ("0x00000100", "0xf13"),
+            "mhartid": ("0x00000000", "0xf14"),
+            "2032": ("0x00000000", "0x7f0"),
+            "2033": ("0x00000000", "0x7f1"),
+            "2034": ("0x00000000", "0x7f2"),
+            "2035": ("0x00000000", "0x7f3"),
+            "2036": ("0x00000000", "0x7f4"),
+            "2037": ("0x00000000", "0x7f5"),
+            "2038": ("0x00000000", "0x7f6"),
+            "2039": ("0x00000000", "0x7f7"),
+            "2040": ("0xfffffffe", "0x7f8"),
+            "2041": ("0x00000000", "0x7f9"),
+            "2042": ("0x00000000", "0x7fa"),
+            "2043": ("0x00000000", "0x7fb"),
+            "2044": ("0x00000000", "0x7fc"),
+            "2045": ("0x00000000", "0x7fd"),
+            "2046": ("0x00000000", "0x7fe"),
+            "2047": ("0x00000000", "0x7ff"),
+            "3008": ("0x00000000", "0xbc0"),
+            "3009": ("0x00000000", "0xbc1"),
+            "3010": ("0x00000000", "0xbc2"),
+            "3011": ("0x00000000", "0xbc3"),
+            "3012": ("0x00000000", "0xbc4"),
+            "3013": ("0x00000000", "0xbc5"),
+            "3014": ("0x00000000", "0xbc6"),
+            "3015": ("0x00000000", "0xbc7"),
+            "3016": ("0x00000000", "0xbc8"),
+            "3017": ("0x00000000", "0xbc9"),
+            "3018": ("0x00000000", "0xbca"),
+            "3019": ("0x00000000", "0xbcb"),
+            "3020": ("0x00000000", "0xbcc"),
+            "3021": ("0x00000000", "0xbcd"),
+            "3022": ("0x00000000", "0xbce"),
+            "3023": ("0x00000000", "0xbcf"),
+            "3024": ("0x00000000", "0xbd0"),
+            "3025": ("0x00000000", "0xbd1"),
+            "3026": ("0x00000000", "0xbd2"),
+            "3027": ("0x00000000", "0xbd3"),
+            "3028": ("0x00000000", "0xbd4"),
+            "3029": ("0x00000000", "0xbd5"),
+            "3030": ("0x00000000", "0xbd6"),
+            "3031": ("0x00000000", "0xbd7"),
+            "3032": ("0x00000000", "0xbd8"),
+            "3033": ("0x00000000", "0xbd9"),
+            "3034": ("0x00000000", "0xbda"),
+            "3035": ("0x00000000", "0xbdb"),
+            "3036": ("0x00000000", "0xbdc"),
+            "3037": ("0x00000000", "0xbdd"),
+            "3038": ("0x00000000", "0xbde"),
+            "3039": ("0x00000000", "0xbdf"),
+        }
+
+        for regname, values in {**gpr_values, **csr_values}.items():
+            value, alias = values
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+            if alias:
+                self.expect(
+                    "register read {}".format(alias),
+                    substrs=["{} = {}".format(regname, value)],
+                )
+
+        self.expect("register read --all")
 
     @skipIfLLVMTargetMissing("LoongArch")
     def test_loongarch64_regs(self):
