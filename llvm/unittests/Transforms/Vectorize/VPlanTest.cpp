@@ -1745,5 +1745,206 @@ TEST_F(VPRecipeTest, CastToVPSingleDefRecipe) {
   // TODO: check other VPSingleDefRecipes.
 }
 
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+using PoisoningVPValueHandleTest = VPlanTestBase;
+
+TEST_F(PoisoningVPValueHandleTest, BasicOperation) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  Entry->appendRecipe(I1);
+  const VPValue *VPV = I1->getVPSingleValue();
+  PoisoningVPValueHandle H(VPV);
+
+  // Dereferencing a live handle returns the VPValue.
+  EXPECT_EQ(VPV, static_cast<const VPValue *>(H));
+  EXPECT_EQ(VPV, H.operator->());
+}
+
+TEST_F(PoisoningVPValueHandleTest, NullHandle) {
+  PoisoningVPValueHandle H;
+  EXPECT_EQ(nullptr, static_cast<const VPValue *>(H));
+
+  PoisoningVPValueHandle H2(nullptr);
+  EXPECT_EQ(nullptr, static_cast<const VPValue *>(H2));
+}
+
+TEST_F(PoisoningVPValueHandleTest, DenseMapKey) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  Entry->appendRecipe(I1);
+  Entry->appendRecipe(I2);
+  const VPValue *VPV1 = I1->getVPSingleValue();
+  const VPValue *VPV2 = I2->getVPSingleValue();
+
+  DenseMap<PoisoningVPValueHandle, int> Map;
+  Map[VPV1] = 1;
+  Map[VPV2] = 2;
+
+  EXPECT_EQ(1, Map.find_as(VPV1)->second);
+  EXPECT_EQ(2, Map.find_as(VPV2)->second);
+  EXPECT_EQ(Map.end(), Map.find_as(nullptr));
+}
+
+TEST_F(PoisoningVPValueHandleTest, MultipleHandlesAllPoisoned) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  Entry->appendRecipe(I1);
+  const VPValue *VPV = I1->getVPSingleValue();
+
+  PoisoningVPValueHandle H1(VPV);
+  PoisoningVPValueHandle H2(VPV);
+  PoisoningVPValueHandle H3(VPV);
+
+  EXPECT_EQ(VPV, static_cast<const VPValue *>(H1));
+  EXPECT_EQ(VPV, static_cast<const VPValue *>(H2));
+  EXPECT_EQ(VPV, static_cast<const VPValue *>(H3));
+
+  // Erasing from parent deletes the instruction, poisoning all handles.
+  I1->eraseFromParent();
+
+  // Verify all three handles are poisoned.
+  EXPECT_DEATH(
+      { (void)static_cast<const VPValue *>(H1); },
+      "Accessed a poisoned VPValue handle!");
+  EXPECT_DEATH(
+      { (void)static_cast<const VPValue *>(H2); },
+      "Accessed a poisoned VPValue handle!");
+  EXPECT_DEATH(
+      { (void)static_cast<const VPValue *>(H3); },
+      "Accessed a poisoned VPValue handle!");
+}
+
+TEST_F(PoisoningVPValueHandleTest, DenseMapEntryPoisoned) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  Entry->appendRecipe(I1);
+  Entry->appendRecipe(I2);
+  const VPValue *VPV1 = I1->getVPSingleValue();
+  const VPValue *VPV2 = I2->getVPSingleValue();
+
+  DenseMap<PoisoningVPValueHandle, int> Map;
+  Map[VPV1] = 1;
+  Map[VPV2] = 2;
+
+  // Delete I1; the map entry keyed by VPV1 is now poisoned.
+  I1->eraseFromParent();
+
+  // The entry for VPV2 is still live.
+  EXPECT_EQ(2, Map.find_as(VPV2)->second);
+
+  // Accessing the poisoned key triggers the assert.
+  EXPECT_DEATH(
+      { (void)Map.find_as(VPV1)->second; },
+      "Accessed a poisoned VPValue handle!");
+}
+
+TEST_F(PoisoningVPValueHandleTest, DenseMapContainsAndFind) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  Entry->appendRecipe(I1);
+  Entry->appendRecipe(I2);
+  const VPValue *VPV1 = I1->getVPSingleValue();
+  const VPValue *VPV2 = I2->getVPSingleValue();
+
+  DenseMap<PoisoningVPValueHandle, int> Map;
+  Map[VPV1] = 1;
+
+  // contains and count use isEqual(handle, handle), not find_as.
+  EXPECT_TRUE(Map.contains(VPV1));
+  EXPECT_EQ(1u, Map.count(VPV1));
+  EXPECT_FALSE(Map.contains(VPV2));
+  EXPECT_EQ(0u, Map.count(VPV2));
+
+  // Direct find with a handle key.
+  EXPECT_NE(Map.end(), Map.find(VPV1));
+  EXPECT_EQ(1, Map.find(VPV1)->second);
+  EXPECT_EQ(Map.end(), Map.find(VPV2));
+}
+
+TEST_F(PoisoningVPValueHandleTest, DenseMapContainsPoisoned) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  Entry->appendRecipe(I1);
+  const VPValue *VPV = I1->getVPSingleValue();
+
+  DenseMap<PoisoningVPValueHandle, int> Map;
+  Map[VPV] = 1;
+  PoisoningVPValueHandle H(VPV);
+
+  I1->eraseFromParent();
+
+  // Probing with a poisoned handle triggers the assert in isEqual.
+  EXPECT_DEATH(
+      { (void)Map.contains(H); }, "Accessed a poisoned VPValue handle!");
+}
+
+TEST_F(PoisoningVPValueHandleTest, ReassignHandle) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  VPInstruction *I2 = new VPInstruction(VPInstruction::VScale, {});
+  Entry->appendRecipe(I1);
+  Entry->appendRecipe(I2);
+  const VPValue *VPV1 = I1->getVPSingleValue();
+  const VPValue *VPV2 = I2->getVPSingleValue();
+
+  PoisoningVPValueHandle H(VPV1);
+  EXPECT_EQ(VPV1, static_cast<const VPValue *>(H));
+
+  // Reassign H to track VPV2 instead.
+  H = PoisoningVPValueHandle(VPV2);
+  EXPECT_EQ(VPV2, static_cast<const VPValue *>(H));
+
+  // Deleting I1 no longer affects H.
+  I1->eraseFromParent();
+  EXPECT_EQ(VPV2, static_cast<const VPValue *>(H));
+
+  // Deleting I2 poisons H.
+  I2->eraseFromParent();
+  EXPECT_DEATH(
+      { (void)static_cast<const VPValue *>(H); },
+      "Accessed a poisoned VPValue handle!");
+}
+
+TEST_F(PoisoningVPValueHandleTest, CopyAndAssignment) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  Entry->appendRecipe(I1);
+  const VPValue *VPV = I1->getVPSingleValue();
+
+  PoisoningVPValueHandle H1(VPV);
+  PoisoningVPValueHandle H2(H1); // copy construct
+  EXPECT_EQ(VPV, static_cast<const VPValue *>(H2));
+
+  PoisoningVPValueHandle H3;
+  H3 = H1; // copy assign
+  EXPECT_EQ(VPV, static_cast<const VPValue *>(H3));
+}
+
+TEST_F(PoisoningVPValueHandleTest, DeathOnAccessAfterDelete) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
+  Entry->appendRecipe(I1);
+  const VPValue *VPV = I1->getVPSingleValue();
+  PoisoningVPValueHandle H(VPV);
+
+  I1->eraseFromParent();
+  EXPECT_DEATH(
+      { (void)static_cast<const VPValue *>(H); },
+      "Accessed a poisoned VPValue handle!");
+}
+#endif
+
 } // namespace
 } // namespace llvm

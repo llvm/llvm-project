@@ -4604,6 +4604,13 @@ class VPlan {
   /// from IR Values to VPIRValues.
   SmallMapVector<Value *, VPIRValue *, 16> LiveIns;
 
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+  /// Map from VPValues to PoisoningVPValueHandle lists for dangling pointer
+  /// detection.
+  mutable DenseMap<const VPValue *, PoisoningVPValueHandle *> PoisoningHandles;
+  friend class PoisoningVPValueHandle;
+#endif
+
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;

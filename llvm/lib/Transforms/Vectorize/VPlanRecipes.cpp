@@ -253,6 +253,11 @@ void VPRecipeBase::removeFromParent() {
 
 iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+  if (const VPlan *Plan = getParent()->getPlan())
+    for (auto *Def : definedValues())
+      PoisoningVPValueHandle::poisonAll(Plan, Def);
+#endif
   return getParent()->getRecipeList().erase(getIterator());
 }
 
