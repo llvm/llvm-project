@@ -1,3 +1,8 @@
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 lldb_tablegen(TargetProperties.inc -gen-lldb-property-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesGen)
@@ -103,3 +108,5 @@ add_lldb_library(lldbTarget
 add_dependencies(lldbTarget
   LLDBTargetPropertiesGen
   LLDBTargetPropertiesEnumGen)
+
+target_compile_definitions(lldbTarget PRIVATE "-D_ALL_SOURCE")

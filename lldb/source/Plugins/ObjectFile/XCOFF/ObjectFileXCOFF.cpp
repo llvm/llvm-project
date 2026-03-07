@@ -14,7 +14,10 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/LZMA.h"
+#include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -26,9 +29,16 @@
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/Timer.h"
+#include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Object/Decompressor.h"
+#include "llvm/Support/CRC.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
 #include <cassert>
@@ -180,6 +190,80 @@ bool ObjectFileXCOFF::ParseHeader() {
     return m_binary->fileHeader64()->Magic == XCOFF::XCOFF64;
   return m_binary->fileHeader32()->Magic == XCOFF::XCOFF32;
 }
+
+bool ObjectFileXCOFF::SetLoadAddress(Target &target, lldb::addr_t value,
+                                   bool value_is_offset) {
+  bool changed = false;
+  ModuleSP module_sp = GetModule();
+  if (module_sp) {
+    size_t num_loaded_sections = 0;
+    SectionList *section_list = GetSectionList();
+
+    if (section_list) {
+      const size_t num_sections = section_list->GetSize();
+      size_t sect_idx = 0;
+
+      for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
+        // Iterate through the object file sections to find all of the sections
+        // that have SHF_ALLOC in their flag bits.
+        SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
+
+        if (section_sp && !section_sp->IsThreadSpecific()) {
+          addr_t load_addr = 0;
+          if (!value_is_offset)
+            load_addr = section_sp->GetFileAddress();
+          else {
+            if (strcmp(section_sp->GetName().AsCString(), ".text") == 0)
+              load_addr = section_sp->GetFileOffset() + value;
+            else /* Other sections: data, bss, loader, dwline, dwinfo, dwabrev */
+              load_addr = section_sp->GetFileAddress() + value;
+          }
+          if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
+                section_sp, load_addr))
+            ++num_loaded_sections;
+        }
+      }
+      changed = num_loaded_sections > 0;
+    }
+  }
+  return changed;
+}
+
+bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
+                                   bool value_is_offset, int type_id) {
+  bool changed = false;
+  ModuleSP module_sp = GetModule();
+  if (module_sp) {
+    size_t num_loaded_sections = 0;
+    SectionList *section_list = GetSectionList();
+    if (section_list) {
+      const size_t num_sections = section_list->GetSize();
+      size_t sect_idx = 0;
+
+      for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
+        // Iterate through the object file sections to find all of the sections
+        // that have SHF_ALLOC in their flag bits.
+        SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
+        if (type_id == 1 && section_sp && strcmp(section_sp->GetName().AsCString(), ".text") == 0) {
+          if (!section_sp->IsThreadSpecific()) {
+            if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
+                    section_sp, section_sp->GetFileOffset() + value))
+              ++num_loaded_sections;
+          }
+        } else if (type_id == 2 && section_sp && strcmp(section_sp->GetName().AsCString(), ".data") == 0) {
+          if (!section_sp->IsThreadSpecific()) {
+            if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
+                    section_sp, section_sp->GetFileAddress() + value))
+              ++num_loaded_sections;
+          }
+        }
+      }
+      changed = num_loaded_sections > 0;
+    }
+  }
+  return changed;
+}
+
 
 ByteOrder ObjectFileXCOFF::GetByteOrder() const { return eByteOrderBig; }
 
@@ -377,7 +461,85 @@ ArchSpec ObjectFileXCOFF::GetArchitecture() {
 
 UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 
-uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
+std::optional<FileSpec> ObjectFileXCOFF::GetDebugLink() {
+  return std::nullopt;
+}
+
+uint32_t ObjectFileXCOFF::ParseDependentModules() {
+  ModuleSP module_sp(GetModule());
+  if (!module_sp)
+    return 0;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  if (m_deps_filespec)
+    return m_deps_filespec->GetSize();
+
+  // Cache coff binary if it is not done yet.
+  if (!CreateBinary())
+    return 0;
+
+  Log *log = GetLog(LLDBLog::Object);
+  LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
+           this, GetModule().get(), GetModule()->GetSpecificationDescription(),
+           m_file.GetPath(), m_binary.get());
+
+  m_deps_filespec = FileSpecList();
+
+  auto ImportFilesOrError = m_binary->getImportFileTable();
+  if (!ImportFilesOrError) {
+    consumeError(ImportFilesOrError.takeError());
+    return 0;
+  }
+  return m_deps_filespec->GetSize();
+}
+
+uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) {
+  auto num_modules = ParseDependentModules();
+  auto original_size = files.GetSize();
+
+  for (unsigned i = 0; i < num_modules; ++i)
+    files.AppendIfUnique(m_deps_filespec->GetFileSpecAtIndex(i));
+
+  return files.GetSize() - original_size;
+}
+
+Address ObjectFileXCOFF::GetImageInfoAddress(Target *target) {
+  return Address();
+}
+
+lldb_private::Address ObjectFileXCOFF::GetEntryPointAddress() {
+  if (m_entry_point_address.IsValid())
+    return m_entry_point_address;
+
+  if (!ParseHeader() || !IsExecutable())
+    return m_entry_point_address;
+
+  SectionList *section_list = GetSectionList();
+  addr_t vm_addr = m_binary->is64Bit() ? m_binary->auxiliaryHeader64()->EntryPointAddr :
+                            m_binary->auxiliaryHeader32()->EntryPointAddr;
+  SectionSP section_sp(
+      section_list->FindSectionContainingFileAddress(vm_addr));
+  if (section_sp) {
+    lldb::offset_t offset_ptr = section_sp->GetFileOffset() + (vm_addr - section_sp->GetFileAddress());
+    if(m_binary->is64Bit())
+        vm_addr = m_data_nsp->GetU64(&offset_ptr);
+    else
+        vm_addr = m_data_nsp->GetU32(&offset_ptr);
+  }
+
+  if (!section_list)
+    m_entry_point_address.SetOffset(vm_addr);
+  else
+    m_entry_point_address.ResolveAddressUsingFileSections(vm_addr,
+                                                          section_list);
+
+  return m_entry_point_address;
+}
+
+lldb_private::Address ObjectFileXCOFF::GetBaseAddress() {
+  // Get base address of the section
+  return Address(GetSectionList()->GetSectionAtIndex(0), 0);
+}
 
 ObjectFile::Type ObjectFileXCOFF::CalculateType() {
 
@@ -392,6 +554,21 @@ ObjectFile::Type ObjectFileXCOFF::CalculateType() {
 }
 
 ObjectFile::Strata ObjectFileXCOFF::CalculateStrata() { return eStrataUnknown; }
+
+llvm::StringRef
+ObjectFileXCOFF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
+  return llvm::StringRef();
+}
+
+void ObjectFileXCOFF::RelocateSection(lldb_private::Section *section)
+{
+}
+
+std::vector<ObjectFile::LoadableData>
+ObjectFileXCOFF::GetLoadableData(Target &target) {
+  std::vector<LoadableData> loadables;
+  return loadables;
+}
 
 lldb::WritableDataBufferSP
 ObjectFileXCOFF::MapFileDataWritable(const FileSpec &file, uint64_t Size,

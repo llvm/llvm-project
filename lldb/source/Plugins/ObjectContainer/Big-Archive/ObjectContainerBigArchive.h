@@ -9,14 +9,19 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_BIG_ARCHIVE_OBJECTCONTAINERBIGARCHIVE_H
 #define LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_BIG_ARCHIVE_OBJECTCONTAINERBIGARCHIVE_H
 
+#include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ObjectContainer.h"
-#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/NonNullSharedPtr.h"
 
-// This file represents an AIX Big Archive and combines several files into one.
-// It is the default library archive format for the AIX operating system.
-// Ref: https://www.ibm.com/docs/en/aix/7.3.0?topic=formats-ar-file-format-big
+#include "llvm/Support/Chrono.h"
+
+#include <map>
+#include <memory>
+#include <mutex>
 
 class ObjectContainerBigArchive : public lldb_private::ObjectContainer {
 public:
@@ -50,6 +55,8 @@ public:
                                         lldb::offset_t file_offset,
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
+
+  static bool MagicBytesMatch(const lldb_private::DataExtractor &extractor);
 
   // Member Functions
   bool ParseHeader() override;
@@ -94,10 +101,10 @@ protected:
     /// File offset in bytes from the beginning of the file of the object data.
     lldb::offset_t file_offset = 0;
 
-    /// Length of the object data in bytes.
+    /// Length of the object data.
     lldb::offset_t file_size = 0;
-
-    void Dump(lldb_private::Stream *s) const;
+  
+	void Dump(lldb_private::Stream *s) const;
   };
 
   class Archive {
@@ -111,26 +118,58 @@ protected:
 
     ~Archive();
 
+    static Map &GetArchiveCache();
+
+    static std::recursive_mutex &GetArchiveCacheMutex();
+
+    static Archive::shared_ptr FindCachedArchive(
+        const lldb_private::FileSpec &file, const lldb_private::ArchSpec &arch,
+        const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset);
+
+    static Archive::shared_ptr ParseAndCacheArchiveForFile(
+        const lldb_private::FileSpec &file, const lldb_private::ArchSpec &arch,
+        const llvm::sys::TimePoint<> &mod_time, lldb::offset_t file_offset,
+        lldb::DataExtractorSP extractor_sp);
+
     size_t GetNumObjects() const { return m_objects.size(); }
 
+    const Object *GetObjectAtIndex(size_t idx) {
+      if (idx < m_objects.size())
+        return &m_objects[idx];
+      return nullptr;
+    }
+
+    size_t ParseObjects();
+
+    Object *FindObject(lldb_private::ConstString object_name,
+                       const llvm::sys::TimePoint<> &object_mod_time);
+
     lldb::offset_t GetFileOffset() const { return m_file_offset; }
+
+    const llvm::sys::TimePoint<> &GetModificationTime() {
+      return m_modification_time;
+    }
 
     const lldb_private::ArchSpec &GetArchitecture() const { return m_arch; }
 
     void SetArchitecture(const lldb_private::ArchSpec &arch) { m_arch = arch; }
 
+    bool HasNoExternalReferences() const;
+
     lldb_private::DataExtractor &GetData() { return *m_extractor_sp.get(); }
     lldb::DataExtractorSP &GetDataSP() { return m_extractor_sp; }
 
   protected:
+    typedef lldb_private::UniqueCStringMap<uint32_t> ObjectNameToIndexMap;
     // Member Variables
     lldb_private::ArchSpec m_arch;
     llvm::sys::TimePoint<> m_modification_time;
     lldb::offset_t m_file_offset;
     std::vector<Object> m_objects;
-    ///< The data extractor for this object container
-    /// so we don't lose data if the .a files
-    /// gets modified
+    ObjectNameToIndexMap m_object_name_to_index_map;
+    ///< The data for this object container
+    ///so we don't lose data if the .a files
+    ///gets modified
     lldb::DataExtractorSP m_extractor_sp;
   };
 

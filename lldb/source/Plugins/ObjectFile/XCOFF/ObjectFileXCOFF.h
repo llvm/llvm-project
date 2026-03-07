@@ -63,6 +63,12 @@ public:
   // ObjectFile Protocol.
   bool ParseHeader() override;
 
+  bool SetLoadAddress(lldb_private::Target &target, lldb::addr_t value,
+                      bool value_is_offset) override;
+
+  bool SetLoadAddressByType(lldb_private::Target &target, lldb::addr_t value,
+                              bool value_is_offset, int type_id) override;
+
   lldb::ByteOrder GetByteOrder() const override;
 
   bool IsExecutable() const override;
@@ -83,11 +89,27 @@ public:
 
   lldb_private::UUID GetUUID() override;
 
+  /// Return the contents of the .gnu_debuglink section, if the object file
+  /// contains it.
+  std::optional<lldb_private::FileSpec> GetDebugLink();
+
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
+
+  lldb_private::Address
+  GetImageInfoAddress(lldb_private::Target *target) override;
+
+  lldb_private::Address GetEntryPointAddress() override;
+
+  lldb_private::Address GetBaseAddress() override;
 
   ObjectFile::Type CalculateType() override;
 
   ObjectFile::Strata CalculateStrata() override;
+  
+  llvm::StringRef
+  StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const override;
+
+  void RelocateSection(lldb_private::Section *section) override;
 
   ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
                   lldb::DataExtractorSP extractor_sp,
@@ -103,6 +125,10 @@ protected:
   static lldb::WritableDataBufferSP
   MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
                       uint64_t Offset);
+  std::vector<LoadableData>
+  GetLoadableData(lldb_private::Target &target) override;
+  uint32_t ParseDependentModules();
+
 
 private:
   bool CreateBinary();
@@ -120,6 +146,9 @@ private:
   };
 
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
+  lldb_private::Address m_entry_point_address;
+  std::optional<lldb_private::FileSpecList> m_deps_filespec;
+  std::map<std::string, std::vector<std::string>> m_deps_base_members;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
