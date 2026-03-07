@@ -91,6 +91,10 @@ void [[clang::annotate_type("webkit.nodelete")]] destroysIntPoint(IntPoint* poin
   delete[] point; // expected-warning{{A function 'destroysIntPoint' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
 }
 
+void [[clang::annotate_type("webkit.nodelete")]] callOperatorDelete(int* number) {
+  ::operator delete(number); // expected-warning{{A function 'callOperatorDelete' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
 void [[clang::annotate_type("webkit.nodelete")]] callsUnsafeWithSuppress();
 
 [[clang::suppress]] void callsUnsafeWithSuppress() {
