@@ -198,6 +198,23 @@ features = [
           """,
         ),
     ),
+    # Check for Glibc < 2.36, where there was no support for char8_t functions
+    Feature(
+        name="glibc-no-char8_t-support",
+        when=lambda cfg: "__GLIBC__" in compilerMacros(cfg)
+        and not sourceBuilds(
+            cfg,
+            """
+            #include <uchar.h>
+            #include <wchar.h>
+            mbstate_t s;
+            int main(void) {
+                char8_t c;
+                return mbrtoc8(&c, "", 0, &s);
+            }
+            """,
+        ),
+    ),
     # Whether Bash can run on the executor.
     # This is not always the case, for example when running on embedded systems.
     #
