@@ -630,6 +630,27 @@ static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
+static int getZMemtagMode(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ELF::NT_MEMTAG_LEVEL_NONE;
+
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "memtag-mode") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = ELF::NT_MEMTAG_LEVEL_NONE;
+      else if (kv.second == "sync")
+        ret = ELF::NT_MEMTAG_LEVEL_SYNC;
+      else if (kv.second == "async")
+        ret = ELF::NT_MEMTAG_LEVEL_ASYNC;
+      else
+        ErrAlways(ctx) << "unknown -z memtag-mode= value: " << kv.second;
+    }
+  }
+
+  return ret;
+}
+
 // Report a warning for an unknown -z option.
 static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
@@ -846,27 +867,20 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
 }
 
 static int getMemtagMode(Ctx &ctx, opt::InputArgList &args) {
-  StringRef memtagModeArg = args.getLastArgValue(OPT_android_memtag_mode);
-  if (memtagModeArg.empty()) {
-    if (ctx.arg.androidMemtagStack)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-stack a no-op";
-    else if (ctx.arg.androidMemtagHeap)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-heap a no-op";
-    return ELF::NT_MEMTAG_LEVEL_NONE;
+  auto memtagMode = getZMemtagMode(ctx, args);
+  if (memtagMode == ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (ctx.arg.memtagStack)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-stack a no-op";
+    if (ctx.arg.memtagHeap)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-heap a no-op";
+    if (ctx.arg.memtagAndroidNote)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "--android-memtag-note a no-op";
   }
 
-  if (memtagModeArg == "sync")
-    return ELF::NT_MEMTAG_LEVEL_SYNC;
-  if (memtagModeArg == "async")
-    return ELF::NT_MEMTAG_LEVEL_ASYNC;
-  if (memtagModeArg == "none")
-    return ELF::NT_MEMTAG_LEVEL_NONE;
-
-  ErrAlways(ctx) << "unknown --android-memtag-mode value: \"" << memtagModeArg
-                 << "\", should be one of {async, sync, none}";
-  return ELF::NT_MEMTAG_LEVEL_NONE;
+  return memtagMode;
 }
 
 static ICFLevel getICF(opt::InputArgList &args) {
@@ -1358,13 +1372,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false);
-  ctx.arg.androidMemtagHeap =
-      args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
-  ctx.arg.androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
-                                            OPT_no_android_memtag_stack, false);
+  ctx.arg.memtagHeap = hasZOption(args, "memtag-heap");
+  ctx.arg.memtagStack = hasZOption(args, "memtag-stack");
+  ctx.arg.memtagAndroidNote = args.hasArg(OPT_android_memtag_note);
   ctx.arg.fatLTOObjects =
       args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
-  ctx.arg.androidMemtagMode = getMemtagMode(ctx, args);
+  ctx.arg.memtagMode = getMemtagMode(ctx, args);
   ctx.arg.auxiliaryList = args::getStrings(args, OPT_auxiliary);
   ctx.arg.armBe8 = args.hasArg(OPT_be8);
   if (opt::Arg *arg = args.getLastArg(
