@@ -12,7 +12,16 @@
 #include "mlir/IR/Attributes.h"
 
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprCXX.h"
+
+namespace cir {
+
+mlir::Attribute makeFuncDeclAttr(const clang::FunctionDecl *decl,
+                                 mlir::MLIRContext *ctx);
+
+} // namespace cir
 
 /// Include the generated interface declarations.
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h.inc"

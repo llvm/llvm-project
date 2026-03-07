@@ -19,6 +19,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace mlir;
@@ -58,7 +59,7 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
     if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::BaseMethodOp,
-                  cir::CastOp, cir::CmpOp, cir::ConstantOp,
+                  cir::CastOp, cir::CmpOp, cir::ConstantOp, cir::DeleteArrayOp,
                   cir::DerivedDataMemberOp, cir::DerivedMethodOp, cir::FuncOp,
                   cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
@@ -320,6 +321,50 @@ mlir::LogicalResult CIRBaseMethodOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
+    cir::DeleteArrayOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  std::optional<cir::ASTCXXDeleteExprInterface> ast = op.getAst();
+  if (!ast)
+    return rewriter.notifyMatchFailure(
+        op, "Unable to lower cir.delete_array  without an AST attribute");
+
+  mlir::FlatSymbolRefAttr callee = op.getCalleeAttr();
+  if (!callee)
+    return rewriter.notifyMatchFailure(op, "requires callee attribute");
+
+  mlir::Location loc = op->getLoc();
+  mlir::Value loweredAddress = adaptor.getAddress();
+  auto voidPtrTy =
+      cir::PointerType::get(cir::VoidType::get(rewriter.getContext()));
+  mlir::Value deletePtr = cir::CastOp::create(
+      rewriter, loc, voidPtrTy, cir::CastKind::bitcast, loweredAddress);
+
+  llvm::SmallVector<mlir::Value> callArgs{deletePtr};
+
+  if (cir::ASTFunctionDeclInterface opDelete = ast->getOperatorDelete()) {
+    if (opDelete.hasSizeParameter()) {
+      auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
+      mlir::Type eltTy = ptrTy.getPointee();
+      mlir::DataLayout dataLayout(op->getParentOfType<mlir::ModuleOp>());
+      uint64_t sizeBytes = dataLayout.getTypeSizeInBits(eltTy) / 8;
+      mlir::Type sizeTy =
+          cir::IntType::get(rewriter.getContext(), 64, /*isSigned=*/false);
+      mlir::Value sizeConst = cir::ConstantOp::create(
+          rewriter, loc, cir::IntAttr::get(sizeTy, sizeBytes));
+      callArgs.push_back(sizeConst);
+    }
+    if (opDelete.hasTypeAwareDelete() || opDelete.hasDestroyingDelete() ||
+        opDelete.hasAlignmentParameter())
+      return rewriter.notifyMatchFailure(
+          op, "type-aware, destroying, or aligned delete not yet supported");
+  }
+
+  cir::CallOp::create(rewriter, loc, callee, cir::VoidType(), callArgs);
+  rewriter.eraseOp(op);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
     cir::DerivedDataMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -454,6 +499,9 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
       [&typeConverter](cir::GlobalOp op) {
         return typeConverter.isLegal(op.getSymType());
       });
+  // Operations that do not use any special types must be explicitly marked as
+  // illegal to trigger processing here.
+  target.addIllegalOp<cir::DeleteArrayOp>();
   target.addIllegalOp<cir::DynamicCastOp>();
   target.addIllegalOp<cir::VTableGetTypeInfoOp>();
 }

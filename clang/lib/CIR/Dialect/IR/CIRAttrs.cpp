@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+#include "clang/AST/Decl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -74,6 +76,21 @@ static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
 
 using namespace mlir;
 using namespace cir;
+
+//===----------------------------------------------------------------------===//
+// CIR AST Attr helpers
+//===----------------------------------------------------------------------===//
+
+namespace cir {
+
+mlir::Attribute makeFuncDeclAttr(const clang::FunctionDecl *decl,
+                                 mlir::MLIRContext *ctx) {
+  if (!decl)
+    return {};
+  return cir::ASTFunctionDeclAttr::get(ctx, decl);
+}
+
+} // namespace cir
 
 //===----------------------------------------------------------------------===//
 // MemorySpaceAttrInterface implementations for Lang and Target address space

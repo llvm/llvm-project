@@ -34,6 +34,61 @@ let cppNamespace = "::cir" in {
       }]>
     ];
   }
+
+  def ASTFunctionDeclInterface : AttrInterface<"ASTFunctionDeclInterface"> {
+    let methods = [
+      InterfaceMethod<"", "bool", "hasSizeParameter", (ins), [{}],
+                      /*defaultImplementation=*/[{
+        const clang::FunctionDecl *FD = $_attr.getAst();
+        return FD && FD->getUsualDeleteParams().Size;
+      }]>,
+      InterfaceMethod<"", "bool", "hasTypeAwareDelete", (ins), [{}],
+                      /*defaultImplementation=*/[{
+        const clang::FunctionDecl *FD = $_attr.getAst();
+        return FD && ::clang::isTypeAwareAllocation(
+            FD->getUsualDeleteParams().TypeAwareDelete);
+      }]>,
+      InterfaceMethod<"", "bool", "hasDestroyingDelete", (ins), [{}],
+                      /*defaultImplementation=*/[{
+        const clang::FunctionDecl *FD = $_attr.getAst();
+        return FD && FD->getUsualDeleteParams().DestroyingDelete;
+      }]>,
+      InterfaceMethod<"", "bool", "hasAlignmentParameter", (ins), [{}],
+                      /*defaultImplementation=*/[{
+        const clang::FunctionDecl *FD = $_attr.getAst();
+        return FD && ::clang::isAlignedAllocation(
+            FD->getUsualDeleteParams().Alignment);
+      }]>,
+    ];
+  }
+
+  def ASTCXXDeleteExprInterface : AttrInterface<"ASTCXXDeleteExprInterface"> {
+    let methods = [
+      InterfaceMethod<"", "cir::ASTFunctionDeclInterface", "getOperatorDelete",
+                      (ins), [{}],
+                      /*defaultImplementation=*/[{
+        const clang::CXXDeleteExpr *E = $_attr.getAst();
+        if (!E || !E->getOperatorDelete())
+          return {};
+        return mlir::cast<cir::ASTFunctionDeclInterface>(
+            makeFuncDeclAttr(E->getOperatorDelete(), $_attr.getContext()));
+      }]>,
+      InterfaceMethod<"", "bool", "doesUsualArrayDeleteWantSize", (ins), [{}],
+                      /*defaultImplementation=*/[{
+        const clang::CXXDeleteExpr *E = $_attr.getAst();
+        return E && E->doesUsualArrayDeleteWantSize();
+      }]>,
+      InterfaceMethod<"", "bool", "isElementDestructedType", (ins), [{}],
+                      /*defaultImplementation=*/[{
+        const clang::CXXDeleteExpr *E = $_attr.getAst();
+        if (!E) return false;
+        clang::QualType eltTy = E->getOperatorDelete()->getASTContext()
+            .getBaseElementType(E->getDestroyedType());
+        return eltTy.isDestructedType();
+      }]>,
+    ];
+  }
+
 } // namespace cir
 
 #endif // MLIR_CIR_INTERFACES_ASTATTRINTERFACES_TD
