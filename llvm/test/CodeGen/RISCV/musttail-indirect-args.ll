@@ -141,3 +141,212 @@ define i64 @caller_musttail_i128_and_i32(i128 %a, i32 %x) nounwind {
   %call = musttail call i64 @callee_musttail_i128_and_i32(i128 %a, i32 %x)
   ret i64 %call
 }
+
+; Test musttail with two indirect args SWAPPED. The pointers must be exchanged
+; before the tail call. This exercises the OrigArgIndex -> Argument::getArgNo()
+; resolution in LowerCall.
+define i32 @caller_musttail_two_indirect_swapped(fp128 %a, fp128 %b) nounwind {
+; RV32-LABEL: caller_musttail_two_indirect_swapped:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a2, a0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    tail callee_musttail_two_indirect
+;
+; RV64-LABEL: caller_musttail_two_indirect_swapped:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mv a4, a1
+; RV64-NEXT:    mv a5, a0
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    mv a1, a3
+; RV64-NEXT:    mv a2, a5
+; RV64-NEXT:    mv a3, a4
+; RV64-NEXT:    tail callee_musttail_two_indirect
+  %call = musttail call i32 @callee_musttail_two_indirect(fp128 %b, fp128 %a)
+  ret i32 %call
+}
+
+; Test musttail with three indirect args rotated: call @f(%c, %a, %b).
+; All three pointers need to be shuffled.
+declare i32 @callee_musttail_three_indirect(fp128 %a, fp128 %b, fp128 %c)
+
+define i32 @caller_musttail_three_indirect_rotated(fp128 %a, fp128 %b, fp128 %c) nounwind {
+; RV32-LABEL: caller_musttail_three_indirect_rotated:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a3, a1
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    mv a2, a3
+; RV32-NEXT:    tail callee_musttail_three_indirect
+;
+; RV64-LABEL: caller_musttail_three_indirect_rotated:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mv a6, a3
+; RV64-NEXT:    mv a7, a2
+; RV64-NEXT:    mv a3, a1
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    mv a0, a4
+; RV64-NEXT:    mv a1, a5
+; RV64-NEXT:    mv a4, a7
+; RV64-NEXT:    mv a5, a6
+; RV64-NEXT:    tail callee_musttail_three_indirect
+  %call = musttail call i32 @callee_musttail_three_indirect(fp128 %c, fp128 %a, fp128 %b)
+  ret i32 %call
+}
+
+; Test musttail with mixed direct + indirect args where the indirect args
+; are swapped but the direct arg stays in place.
+declare i32 @callee_musttail_mixed_two_indirect(i32 %x, fp128 %a, fp128 %b)
+
+define i32 @caller_musttail_mixed_swap_indirect(i32 %x, fp128 %a, fp128 %b) nounwind {
+; RV32-LABEL: caller_musttail_mixed_swap_indirect:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a3, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    mv a2, a3
+; RV32-NEXT:    tail callee_musttail_mixed_two_indirect
+;
+; RV64-LABEL: caller_musttail_mixed_swap_indirect:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mv a5, a2
+; RV64-NEXT:    mv a6, a1
+; RV64-NEXT:    mv a1, a3
+; RV64-NEXT:    mv a2, a4
+; RV64-NEXT:    mv a3, a6
+; RV64-NEXT:    mv a4, a5
+; RV64-NEXT:    tail callee_musttail_mixed_two_indirect
+  %call = musttail call i32 @callee_musttail_mixed_two_indirect(i32 %x, fp128 %b, fp128 %a)
+  ret i32 %call
+}
+
+; Test musttail with swapped i128 on RV32 (split indirect args).
+declare i64 @callee_musttail_two_i128(i128 %a, i128 %b)
+
+define i64 @caller_musttail_two_i128_swapped(i128 %a, i128 %b) nounwind {
+; RV32-LABEL: caller_musttail_two_i128_swapped:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a2, a0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    tail callee_musttail_two_i128
+;
+; RV64-LABEL: caller_musttail_two_i128_swapped:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mv a4, a1
+; RV64-NEXT:    mv a5, a0
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    mv a1, a3
+; RV64-NEXT:    mv a2, a5
+; RV64-NEXT:    mv a3, a4
+; RV64-NEXT:    tail callee_musttail_two_i128
+  %call = musttail call i64 @callee_musttail_two_i128(i128 %b, i128 %a)
+  ret i64 %call
+}
+
+; Test musttail passing the same indirect arg to both positions.
+define i32 @caller_musttail_two_indirect_dup(fp128 %a, fp128 %b) nounwind {
+; RV32-LABEL: caller_musttail_two_indirect_dup:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    tail callee_musttail_two_indirect
+;
+; RV64-LABEL: caller_musttail_two_indirect_dup:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    mv a3, a1
+; RV64-NEXT:    tail callee_musttail_two_indirect
+  %call = musttail call i32 @callee_musttail_two_indirect(fp128 %a, fp128 %a)
+  ret i32 %call
+}
+
+; Test musttail with enough indirect args to spill to the stack (9 fp128 on
+; RV32 uses a0-a7 for the first 8 pointers, 9th goes on the stack).
+declare void @callee_musttail_nine_indirect(fp128, fp128, fp128, fp128, fp128, fp128, fp128, fp128, fp128)
+
+define void @caller_musttail_nine_indirect(fp128 %a, fp128 %b, fp128 %c, fp128 %d, fp128 %e, fp128 %f, fp128 %g, fp128 %h, fp128 %i) nounwind {
+; RV32-LABEL: caller_musttail_nine_indirect:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw t0, 0(sp)
+; RV32-NEXT:    sw t0, 0(sp)
+; RV32-NEXT:    tail callee_musttail_nine_indirect
+;
+; RV64-LABEL: caller_musttail_nine_indirect:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    ld t0, 104(sp)
+; RV64-NEXT:    ld t1, 96(sp)
+; RV64-NEXT:    ld t2, 88(sp)
+; RV64-NEXT:    ld t3, 80(sp)
+; RV64-NEXT:    ld t4, 72(sp)
+; RV64-NEXT:    ld t5, 64(sp)
+; RV64-NEXT:    ld t6, 32(sp)
+; RV64-NEXT:    ld s0, 40(sp)
+; RV64-NEXT:    ld s1, 48(sp)
+; RV64-NEXT:    ld s2, 56(sp)
+; RV64-NEXT:    sd t6, 32(sp)
+; RV64-NEXT:    sd s0, 40(sp)
+; RV64-NEXT:    sd s1, 48(sp)
+; RV64-NEXT:    sd s2, 56(sp)
+; RV64-NEXT:    sd t5, 64(sp)
+; RV64-NEXT:    sd t4, 72(sp)
+; RV64-NEXT:    sd t3, 80(sp)
+; RV64-NEXT:    sd t2, 88(sp)
+; RV64-NEXT:    sd t1, 96(sp)
+; RV64-NEXT:    sd t0, 104(sp)
+; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    tail callee_musttail_nine_indirect
+  musttail call void @callee_musttail_nine_indirect(fp128 %a, fp128 %b, fp128 %c, fp128 %d, fp128 %e, fp128 %f, fp128 %g, fp128 %h, fp128 %i)
+  ret void
+}
+
+; Test musttail swapping the first (register) and last (stack-spilled) args.
+define void @caller_musttail_nine_indirect_swap_first_last(fp128 %a, fp128 %b, fp128 %c, fp128 %d, fp128 %e, fp128 %f, fp128 %g, fp128 %h, fp128 %i) nounwind {
+; RV32-LABEL: caller_musttail_nine_indirect_swap_first_last:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw t0, 0(sp)
+; RV32-NEXT:    sw a0, 0(sp)
+; RV32-NEXT:    mv a0, t0
+; RV32-NEXT:    tail callee_musttail_nine_indirect
+;
+; RV64-LABEL: caller_musttail_nine_indirect_swap_first_last:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    ld t0, 96(sp)
+; RV64-NEXT:    ld t1, 104(sp)
+; RV64-NEXT:    ld t2, 88(sp)
+; RV64-NEXT:    ld t3, 80(sp)
+; RV64-NEXT:    ld t4, 72(sp)
+; RV64-NEXT:    ld t5, 64(sp)
+; RV64-NEXT:    ld t6, 32(sp)
+; RV64-NEXT:    ld s0, 40(sp)
+; RV64-NEXT:    ld s1, 48(sp)
+; RV64-NEXT:    ld s2, 56(sp)
+; RV64-NEXT:    sd t6, 32(sp)
+; RV64-NEXT:    sd s0, 40(sp)
+; RV64-NEXT:    sd s1, 48(sp)
+; RV64-NEXT:    sd s2, 56(sp)
+; RV64-NEXT:    sd t5, 64(sp)
+; RV64-NEXT:    sd t4, 72(sp)
+; RV64-NEXT:    sd t3, 80(sp)
+; RV64-NEXT:    sd t2, 88(sp)
+; RV64-NEXT:    sd a0, 96(sp)
+; RV64-NEXT:    sd a1, 104(sp)
+; RV64-NEXT:    mv a0, t0
+; RV64-NEXT:    mv a1, t1
+; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    tail callee_musttail_nine_indirect
+  musttail call void @callee_musttail_nine_indirect(fp128 %i, fp128 %b, fp128 %c, fp128 %d, fp128 %e, fp128 %f, fp128 %g, fp128 %h, fp128 %a)
+  ret void
+}

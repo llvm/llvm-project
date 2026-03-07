@@ -24784,11 +24784,28 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       // of creating a new stack temporary. The incoming pointer points to
       // the caller's caller's frame, which remains valid after a tail call.
       if (IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
-        unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
-        ArgValue = RVFI->getIncomingIndirectArg(ArgIndex);
+        // Outs[OutIdx].OrigArgIndex is the position in the call's argument
+        // list (callee perspective), but the incoming indirect arg map is
+        // keyed by the caller's formal parameter index. When musttail
+        // reorders arguments, these differ. Resolve via the IR: find which
+        // formal parameter is being passed at this call position.
+        unsigned CallArgIdx = Outs[OutIdx].OrigArgIndex;
+        unsigned FormalIdx = CallArgIdx; // default if lookup fails
+        unsigned Idx = 0;
+        for (const auto &CallArg : CLI.CB->args()) {
+          if (CallArg->getType()->isEmptyTy())
+            continue;
+          if (Idx == CallArgIdx) {
+            if (const auto *FormalArg = dyn_cast<Argument>(CallArg))
+              FormalIdx = FormalArg->getArgNo();
+            break;
+          }
+          ++Idx;
+        }
+        ArgValue = RVFI->getIncomingIndirectArg(FormalIdx);
         // Skip any split parts of this argument (they are covered by the
         // forwarded pointer).
-        while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == ArgIndex) {
+        while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
           ++i;
           ++OutIdx;
         }
