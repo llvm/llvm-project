@@ -121,7 +121,6 @@ int g3() {
 
 // 1. Use `operator int (*)(int const&)()` to retrieve the fnptr to `__invoke()`.
 // CIR:   %[[OPERATOR_RESULT:.*]] = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[LAM_ALLOCA]]){{.*}}
-
 // 2. Load ptr to `__invoke()`.
 // CIR:   cir.store{{.*}} %[[OPERATOR_RESULT]], %[[FN_ADDR]]
 // CIR:   %[[FN:.*]] = cir.load{{.*}} %[[FN_ADDR]]
