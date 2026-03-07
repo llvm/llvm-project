@@ -3073,7 +3073,71 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinIsWithinLifetime(*this, TheCall);
   case Builtin::BI__builtin_trivially_relocate:
     return BuiltinTriviallyRelocate(*this, TheCall);
+  case Builtin::BI__builtin_clear_padding: {
+    if (checkArgCount(TheCall, 1))
+      return ExprError();
 
+    const Expr *PtrArg = TheCall->getArg(0);
+    const QualType PtrArgType = PtrArg->getType();
+    if (!PtrArgType->isPointerType()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+          << PtrArgType << "pointer" << 1 << 0 << 3 << 1 << PtrArgType
+          << "pointer";
+      return ExprError();
+    }
+    QualType PointeeType = PtrArgType->getPointeeType();
+    if (PointeeType.isConstQualified()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_typecheck_assign_const)
+          << TheCall->getSourceRange() << 4 /*ConstUnknown*/;
+      return ExprError();
+    }
+    if (RequireCompleteType(PtrArg->getBeginLoc(), PointeeType,
+                            diag::err_typecheck_decl_incomplete_type))
+      return ExprError();
+
+    // For non trivially copyable types, we try to match gcc's behaviour.
+    // i.e. __builtin_clear_padding(&var) is OK as long as var is a complete
+    // object, either a local variable or a function parameter passed by value
+    auto IsAddrOfDeclExpr = [&]() {
+      const Expr *IgnoreCastsAndParens = PtrArg->IgnoreCasts();
+      IgnoreCastsAndParens = IgnoreCastsAndParens->IgnoreParens();
+      const auto *UnaryOp = dyn_cast<UnaryOperator>(IgnoreCastsAndParens);
+      if (!UnaryOp || UnaryOp->getOpcode() != UO_AddrOf)
+        return false;
+
+      const Expr *Operand = UnaryOp->getSubExpr()->IgnoreParens();
+      const auto *DeclRef = dyn_cast<DeclRefExpr>(Operand);
+      if (!DeclRef)
+        return false;
+
+      const auto *VarDecl = dyn_cast<::clang::VarDecl>(DeclRef->getDecl());
+      if (!VarDecl || VarDecl->getType()->isReferenceType())
+        return false;
+
+      // matching GCC behaviour
+      // __builtin_clear_padding((X*)&var) is fine as long X is the type of var
+      QualType VarQType = VarDecl->getType();
+      return PointeeType.getTypePtr() == VarQType.getTypePtr() ||
+             Context.hasSameUnqualifiedType(PointeeType, VarQType);
+    };
+
+    if (!PointeeType.isTriviallyCopyableType(Context) &&
+        !PointeeType->isAtomicType() // _Atomic is not copyable
+        && !IsAddrOfDeclExpr()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_clear_padding_needs_trivial_copy)
+          << PtrArg->getType() << PtrArg->getSourceRange();
+      return ExprError();
+    }
+
+    if (auto *Record = PointeeType->getAsRecordDecl();
+        Record && Record->hasFlexibleArrayMember()) {
+      Diag(PtrArg->getBeginLoc(), diag::err_clear_padding_no_flexible_array)
+          << PointeeType << PtrArg->getSourceRange();
+      return ExprError();
+    }
+
+    break;
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
