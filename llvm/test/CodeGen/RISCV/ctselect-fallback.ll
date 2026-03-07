@@ -101,8 +101,6 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) {
 ;
 ; RV32-LABEL: test_ctselect_const_true:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
@@ -208,7 +206,7 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) {
 define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ; RV64-LABEL: test_ctselect_nested_and_i1_to_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    xor a2, a2, a3
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
@@ -218,7 +216,7 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 ;
 ; RV32-LABEL: test_ctselect_nested_and_i1_to_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    xor a2, a2, a3
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
@@ -265,8 +263,8 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) {
 define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y) {
 ; RV64-LABEL: test_ctselect_double_nested_and_i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    and a1, a2, a1
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    xor a3, a3, a4
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
@@ -276,8 +274,8 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
 ;
 ; RV32-LABEL: test_ctselect_double_nested_and_i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    and a0, a0, a2
 ; RV32-NEXT:    xor a3, a3, a4
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
@@ -295,7 +293,7 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
 define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y, i32 %z) {
 ; RV64-LABEL: test_ctselect_double_nested_mixed_i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    xor a3, a3, a4
 ; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    slli a0, a0, 63
@@ -309,7 +307,7 @@ define i32 @test_ctselect_double_nested_mixed_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x,
 ;
 ; RV32-LABEL: test_ctselect_double_nested_mixed_i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    xor a3, a3, a4
 ; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    slli a0, a0, 31
@@ -382,7 +380,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) {
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    lui a1, 522240
-; RV32-NEXT:    xor a0, a0, a1
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
   %result = call float @llvm.ct.select.f32(i1 %cond, float 0x7FF8000000000000, float 0x7FF0000000000000)
   ret float %result
@@ -398,7 +396,7 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) {
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    li a1, 2047
 ; RV64-NEXT:    slli a1, a1, 52
-; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_ctselect_f64_nan_inf:
