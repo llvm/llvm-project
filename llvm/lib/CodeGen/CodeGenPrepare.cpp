@@ -1451,6 +1451,43 @@ static bool SinkCast(CastInst *CI) {
   return MadeChange;
 }
 
+/// Check if this bitcast converts a large illegal integer to a legal vector.
+/// If so, hoist it to the source block to avoid register splitting across
+/// basic block boundaries, which improves code generation.
+///
+/// Return true if the bitcast was hoisted.
+static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
+                            const DataLayout &DL) {
+  Value *Src = BCI->getOperand(0);
+
+  // 1. Only hoist if the source is an instruction in a different basic block.
+  auto *SrcInst = dyn_cast<Instruction>(Src);
+  if (!SrcInst || BCI->getParent() == SrcInst->getParent())
+    return false;
+
+  Type *SrcTy = Src->getType();
+  Type *DestTy = BCI->getType();
+
+  // 2. Convert to EVT to check target-specific type legality.
+  EVT SrcVT = TLI.getValueType(DL, SrcTy);
+  EVT DestVT = TLI.getValueType(DL, DestTy);
+
+  // 3. Criterion: Hoist if bitcasting an illegal integer to a legal vector.
+  // This prevents the large integer from being split across block boundaries.
+  if (SrcTy->isIntegerTy() && !TLI.isTypeLegal(SrcVT) && DestTy->isVectorTy() &&
+      TLI.isTypeLegal(DestVT)) {
+
+    // 4. Ensure bitwidths match and perform hoisting.
+    if (DL.getTypeSizeInBits(SrcTy) == DL.getTypeSizeInBits(DestTy)) {
+      if (isa<LoadInst>(SrcInst)) {
+        BCI->moveAfter(SrcInst);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// If the specified cast instruction is a noop copy (e.g. it's casting from
 /// one pointer type to another, i32->i8 on PPC), sink it into user blocks to
 /// reduce the number of virtual registers that must be created and coalesced.
@@ -8907,6 +8944,15 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // evaluation in a block other than then one that uses it (e.g. to hoist
     // the address of globals out of a loop).  If this is the case, we don't
     // want to forward-subst the cast.
+
+    if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
+      // If this is a bitcast from an illegal integer type to a legal vector
+      // type, try to hoist it to the source's basic block to avoid register
+      // splitting.
+      if (optimizeBitCast(BCI, *TLI, *DL))
+        return true;
+    }
+
     if (isa<Constant>(CI->getOperand(0)))
       return AnyChange;
 
