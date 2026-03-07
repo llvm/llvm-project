@@ -3053,16 +3053,11 @@ define i1 @isnegative_f16(half %x) {
 ; GFX7SELDAG-LABEL: isnegative_f16:
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7SELDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX7SELDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX7SELDAG-NEXT:    s_movk_i32 s4, 0x7c00
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v2
-; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], s4, v0
-; GFX7SELDAG-NEXT:    s_mov_b32 s6, 0xfc00
+; GFX7SELDAG-NEXT:    v_cvt_f32_f16_e32 v1, v0
+; GFX7SELDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX7SELDAG-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v0
+; GFX7SELDAG-NEXT:    v_cmp_o_f32_e64 s[4:5], v1, v1
 ; GFX7SELDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX7SELDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v1
-; GFX7SELDAG-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GFX7SELDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
