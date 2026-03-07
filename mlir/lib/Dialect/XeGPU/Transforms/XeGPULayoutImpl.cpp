@@ -146,14 +146,18 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 
   // Handling broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
   size_t dimDiff = resShape.size() - srcShape.size();
-  for (size_t i = 0; i < dimDiff; i++)
-    bcastDims.push_back(i);
+  // for (size_t i = 0; i < dimDiff; i++)
+  //   bcastDims.push_back(i);
 
-  for (size_t i = 0; i < resShape.size(); i++)
-    if ((i < dimDiff) || ((srcShape[i - dimDiff] == 1) && (resShape[i] != 1)))
+  auto returnLayout = resLayout;
+  for (size_t i = dimDiff; i < resShape.size(); i++) {
+    if ((srcShape[i - dimDiff] == 1) && (resShape[i] != 1))
       bcastDims.push_back(i);
+  }
 
-  auto returnLayout = resLayout.setUnitDimData(bcastDims);
+  if (!bcastDims.empty())
+    returnLayout = returnLayout.setUnitDimData(bcastDims);
+
   if (dimDiff > 0) {
     SmallVector<int64_t> sliceDims;
     for (size_t i = 0; i < dimDiff; i++)

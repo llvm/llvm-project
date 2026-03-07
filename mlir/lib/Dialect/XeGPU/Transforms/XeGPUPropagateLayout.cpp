@@ -676,11 +676,13 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   auto srcShape = sourceTy.getShape();
   auto resShape = resultTy.getShape();
 
-  size_t dimDiff = resultTy.getRank() - sourceTy.getRank();
-  for (size_t i = 0; i < srcShape.size(); i++)
-    if ((srcShape[i] == 1) && (resShape[i + dimDiff] != 1))
-      broadcast.emitWarning("broadcast must either from low-rank or same-rank "
-                            "with unit-dim, mixed scenario is not supported!");
+  // size_t dimDiff = resultTy.getRank() - sourceTy.getRank();
+  // for (size_t i = 0; i < srcShape.size(); i++)
+  //   if ((srcShape[i] == 1) && (resShape[i + dimDiff] != 1))
+  //     broadcast.emitWarning("broadcast must either from low-rank or same-rank
+  //     "
+  //                           "with unit-dim, mixed scenario is not
+  //                           supported!");
 
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
