@@ -9,6 +9,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.acos
+    libc.src.__support.math.acosbf16
     libc.src.__support.math.acosf
     libc.src.__support.math.acosf16
     libc.src.__support.math.acoshf
