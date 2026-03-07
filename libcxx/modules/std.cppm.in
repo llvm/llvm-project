@@ -93,6 +93,7 @@ module;
 #include <random>
 #include <ranges>
 #include <ratio>
+#include <rcu>
 #include <regex>
 #include <scoped_allocator>
 #include <semaphore>

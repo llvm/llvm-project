@@ -224,6 +224,7 @@ Design Documents
    DesignDocs/HeaderRemovalPolicy
    DesignDocs/NoexceptPolicy
    DesignDocs/PSTLIntegration
+   DesignDocs/RCU
    DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
    DesignDocs/UnspecifiedBehaviorRandomization
