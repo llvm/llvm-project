@@ -1308,6 +1308,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixScratchBaseForwardingHazard(MI);
   if (ST.setRegModeNeedsVNOPs())
     fixSetRegMode(MI);
+  if (ST.has1024AddressableVGPRs())
+    fixSetRegModeToVGPRMSBHazard(MI);
 }
 
 static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
@@ -3863,5 +3865,27 @@ bool GCNHazardRecognizer::fixSetRegMode(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+  return true;
+}
+
+bool GCNHazardRecognizer::fixSetRegModeToVGPRMSBHazard(MachineInstr *MI) {
+  if (MI->getOpcode() != AMDGPU::S_SETREG_IMM32_B32)
+    return false;
+
+  auto [Id, Offset, Width] =
+      AMDGPU::Hwreg::HwregEncoding::decode(MI->getOperand(1).getImm());
+  (void)Offset;
+  (void)Width;
+  if (Id != AMDGPU::Hwreg::ID_MODE)
+    return false;
+
+  MachineBasicBlock *MBB = MI->getParent();
+  auto Next = std::next(MI->getIterator());
+  while (Next != MBB->instr_end() && Next->isMetaInstruction())
+    ++Next;
+  if (Next == MBB->instr_end() || Next->getOpcode() != AMDGPU::S_SET_VGPR_MSB)
+    return false;
+
+  BuildMI(*MBB, Next, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP)).addImm(0);
   return true;
 }

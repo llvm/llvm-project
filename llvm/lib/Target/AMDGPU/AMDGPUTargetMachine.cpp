@@ -1859,6 +1859,9 @@ void GCNPassConfig::addPreEmitPass() {
     addPass(createAMDGPUSetWavePriorityPass());
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIPreEmitPeepholeID);
+
+  addPass(&AMDGPULowerVGPREncodingLegacyID);
+
   // The hazard recognizer that runs as part of the post-ra scheduler does not
   // guarantee to be able handle all hazards correctly. This is because if there
   // are multiple scheduling regions in a basic block, the regions are scheduled
@@ -1870,8 +1873,6 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(&AMDGPUWaitSGPRHazardsLegacyID);
-
-  addPass(&AMDGPULowerVGPREncodingLegacyID);
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);
@@ -2575,6 +2576,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIPreEmitPeepholePass(), PMW);
 
+  addMachineFunctionPass(AMDGPULowerVGPREncodingPass(), PMW);
+
   // The hazard recognizer that runs as part of the post-ra scheduler does not
   // guarantee to be able handle all hazards correctly. This is because if there
   // are multiple scheduling regions in a basic block, the regions are scheduled
@@ -2585,7 +2588,6 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   // cases.
   addMachineFunctionPass(PostRAHazardRecognizerPass(), PMW);
   addMachineFunctionPass(AMDGPUWaitSGPRHazardsPass(), PMW);
-  addMachineFunctionPass(AMDGPULowerVGPREncodingPass(), PMW);
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less)) {
     addMachineFunctionPass(AMDGPUInsertDelayAluPass(), PMW);

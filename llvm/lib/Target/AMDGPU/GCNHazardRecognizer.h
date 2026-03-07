@@ -137,6 +137,7 @@ private:
   bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
   bool fixScratchBaseForwardingHazard(MachineInstr *MI);
   bool fixSetRegMode(MachineInstr *MI);
+  bool fixSetRegModeToVGPRMSBHazard(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);
