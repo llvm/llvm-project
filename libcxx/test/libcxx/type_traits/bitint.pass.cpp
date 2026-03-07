@@ -7,54 +7,102 @@
 //===----------------------------------------------------------------------===//
 
 // Test that _BitInt(N) is recognized as a signed/unsigned integer type by
-// libc++ internal traits, and that <bit> operations work for all valid widths.
+// libc++ internal type traits (__is_signed_integer_v / __is_unsigned_integer_v),
+// and that downstream <bit> operations work for various widths.
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: gcc
 // UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
+#include <__type_traits/integer_traits.h>
 #include <bit>
 #include <cassert>
 #include <limits>
 #include <type_traits>
 
-// ===== Type traits =====
-// _BitInt(N) must satisfy is_integral, is_signed/is_unsigned, is_arithmetic
-
+// Verify the internal traits directly for _BitInt(N).
 template <int N>
 void test_signed_traits() {
   using T = _BitInt(N);
+  static_assert(std::__is_signed_integer_v<T>);
+  static_assert(!std::__is_unsigned_integer_v<T>);
   static_assert(std::is_integral_v<T>);
   static_assert(std::is_signed_v<T>);
   static_assert(!std::is_unsigned_v<T>);
   static_assert(std::is_arithmetic_v<T>);
   static_assert(std::numeric_limits<T>::is_specialized);
+
+  // CV-qualified _BitInt must NOT satisfy the integer traits (matching the
+  // behavior of explicit specializations which don't match cv-qualified types).
+  static_assert(!std::__is_signed_integer_v<const T>);
+  static_assert(!std::__is_signed_integer_v<volatile T>);
+  static_assert(!std::__is_signed_integer_v<const volatile T>);
+
+  // C++20 concepts.
+  static_assert(std::__signed_integer<T>);
+  static_assert(!std::__unsigned_integer<T>);
+  static_assert(std::__signed_or_unsigned_integer<T>);
 }
 
 template <int N>
 void test_unsigned_traits() {
   using T = unsigned _BitInt(N);
+  static_assert(std::__is_unsigned_integer_v<T>);
+  static_assert(!std::__is_signed_integer_v<T>);
   static_assert(std::is_integral_v<T>);
   static_assert(!std::is_signed_v<T>);
   static_assert(std::is_unsigned_v<T>);
   static_assert(std::is_arithmetic_v<T>);
   static_assert(std::numeric_limits<T>::is_specialized);
+
+  static_assert(!std::__is_unsigned_integer_v<const T>);
+  static_assert(!std::__is_unsigned_integer_v<volatile T>);
+  static_assert(!std::__is_unsigned_integer_v<const volatile T>);
+
+  static_assert(std::__unsigned_integer<T>);
+  static_assert(!std::__signed_integer<T>);
+  static_assert(std::__signed_or_unsigned_integer<T>);
 }
 
-// ===== Negative tests =====
-// Character types and bool must NOT satisfy __signed_integer/__unsigned_integer
-// (they are integral but not "integer types" per [basic.fundamental])
+// Character types and bool are integral but NOT integer types per
+// [basic.fundamental]. Verify the internal traits reject them.
+static_assert(!std::__is_signed_integer_v<bool>);
+static_assert(!std::__is_unsigned_integer_v<bool>);
+static_assert(!std::__is_signed_integer_v<char>);
+static_assert(!std::__is_unsigned_integer_v<char>);
+static_assert(!std::__is_signed_integer_v<wchar_t>);
+static_assert(!std::__is_unsigned_integer_v<wchar_t>);
+static_assert(!std::__is_signed_integer_v<char16_t>);
+static_assert(!std::__is_unsigned_integer_v<char16_t>);
+static_assert(!std::__is_signed_integer_v<char32_t>);
+static_assert(!std::__is_unsigned_integer_v<char32_t>);
+#if _LIBCPP_HAS_CHAR8_T
+static_assert(!std::__is_signed_integer_v<char8_t>);
+static_assert(!std::__is_unsigned_integer_v<char8_t>);
+#endif
 
-static_assert(std::is_integral_v<bool>);
-static_assert(std::is_integral_v<char>);
-static_assert(std::is_integral_v<wchar_t>);
-static_assert(std::is_integral_v<char16_t>);
-static_assert(std::is_integral_v<char32_t>);
-// These types are integral but we cannot directly test the internal
-// __is_signed_integer_v trait here. Instead we verify that the <bit>
-// operations correctly reject them (they require __unsigned_integer).
+// Standard integer types must still be recognized.
+static_assert(std::__is_signed_integer_v<signed char>);
+static_assert(std::__is_signed_integer_v<short>);
+static_assert(std::__is_signed_integer_v<int>);
+static_assert(std::__is_signed_integer_v<long>);
+static_assert(std::__is_signed_integer_v<long long>);
+static_assert(std::__is_unsigned_integer_v<unsigned char>);
+static_assert(std::__is_unsigned_integer_v<unsigned short>);
+static_assert(std::__is_unsigned_integer_v<unsigned int>);
+static_assert(std::__is_unsigned_integer_v<unsigned long>);
+static_assert(std::__is_unsigned_integer_v<unsigned long long>);
+#if _LIBCPP_HAS_INT128
+static_assert(std::__is_signed_integer_v<__int128_t>);
+static_assert(std::__is_unsigned_integer_v<__uint128_t>);
+#endif
 
-// ===== Bit operations =====
+// CV-qualified standard types must also be rejected.
+static_assert(!std::__is_signed_integer_v<const int>);
+static_assert(!std::__is_signed_integer_v<volatile int>);
+static_assert(!std::__is_unsigned_integer_v<const unsigned>);
+
+// Bit operations (downstream integration test).
 
 template <int N>
 void test_popcount() {
