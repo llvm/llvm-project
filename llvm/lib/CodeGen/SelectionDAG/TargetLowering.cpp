@@ -9339,6 +9339,67 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // Tests that involve more than one class should be processed first.
   SDValue PartialRes;
 
+  // Handle sign bit tests first (fcPositive/fcNegative).
+  // These test only the sign bit, if not NaN.
+  // On 32-bit platforms with 64-bit floats, we need to be careful about
+  // integer comparisons. We use FP_ROUND to convert to a smaller float type
+  // that matches ResultVT's size, then compare with 0.
+  if (Test == fcPositive || Test == fcNegative) {
+    SDValue SignBitResult;
+    unsigned MaxLegalIntBits = 32;
+    if (isTypeLegal(MVT::i64))
+      MaxLegalIntBits = 64;
+
+    unsigned IntVTBits = IntVT.getScalarSizeInBits();
+    bool NeedFPCompare = IntVTBits > MaxLegalIntBits;
+
+    if (NeedFPCompare) {
+      // Truncate to the largest legal float type.
+      EVT TruncFloatEltVT = EVT::getFloatingPointVT(MaxLegalIntBits);
+
+      EVT TruncFloatVT = TruncFloatEltVT;
+      if (ResultVT.isVector() && TruncFloatEltVT != MVT::Other) {
+        TruncFloatVT = EVT::getVectorVT(*DAG.getContext(), TruncFloatEltVT,
+                                        ResultVT.getVectorElementCount());
+      }
+      if (TruncFloatVT != MVT::Other &&
+          isOperationLegalOrCustom(ISD::FP_ROUND, TruncFloatVT)) {
+        // Round to smaller float type, then bitcast to integer for sign check.
+        // Use TargetConstant for the truncation flag.
+        EVT PointerVT = getPointerTy(DAG.getDataLayout());
+        SDValue OpTrunc = DAG.getNode(ISD::FP_ROUND, DL, TruncFloatVT, Op,
+                                      DAG.getTargetConstant(0, DL, PointerVT));
+        EVT TruncIntVT = TruncFloatVT.changeTypeToInteger();
+        SDValue OpTruncInt = DAG.getBitcast(TruncIntVT, OpTrunc);
+        SignBitResult =
+            DAG.getSetCC(DL, ResultVT, OpTruncInt,
+                         DAG.getConstant(0, DL, TruncIntVT), ISD::SETLT);
+      } else {
+        // Fall back to original integer comparison.
+        SignBitResult = SignV;
+      }
+    } else {
+      SignBitResult = SignV;
+    }
+
+    if (!DAG.isKnownNeverNaN(Op)) {
+      SDValue NotNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETO);
+      SignBitResult =
+          DAG.getNode(ISD::AND, DL, ResultVT, NotNaN, SignBitResult);
+    }
+
+    bool IsICmpImmLegal =
+        isLegalICmpImmediate(APInt::getAllOnes(IntVTBits).getZExtValue());
+    if (!NeedFPCompare && (!DAG.isKnownNeverNaN(Op) || IsICmpImmLegal) &&
+        Test == fcPositive) {
+      ; // (fcPosInf | fcFinite) has better performance.
+    } else if (Test == fcNegative)
+      return SignBitResult;
+    else
+      return DAG.getNode(ISD::XOR, DL, ResultVT, SignBitResult,
+                         ResultInversionMask);
+  }
+
   if (IsF80)
     ; // Detect finite numbers of f80 by checking individual classes because
       // they have different settings of the explicit integer bit.
