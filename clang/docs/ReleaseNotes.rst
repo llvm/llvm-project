@@ -463,6 +463,7 @@ clang-format
   constructor initializers after commas, keeping the colon on the same line.
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with
   per-operator break rules and minimum chain length gating via ``PerOperator``.
+- Fix ``Macros`` configuration not working with ``try``/``catch`` expansions.
 
 libclang
 --------
