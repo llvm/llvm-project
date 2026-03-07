@@ -2303,6 +2303,19 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   if (Opcode == Instruction::Select && ValTy->isVectorTy()) {
+    // If the target lacks native support for the floating-point vector type,
+    // fall back to BaseT model. This calculates a scalarized cost for fixed
+    // vectors, and correctly returns an Invalid cost for scalable vectors.
+    if (ValTy->isVectorTy() && ValTy->getScalarType()->isFloatingPointTy() &&
+        ((ValTy->getScalarType()->isHalfTy() &&
+          !ST->hasVInstructionsF16Minimal()) ||
+         (ValTy->getScalarType()->isBFloatTy() &&
+          !ST->hasVInstructionsBF16()) ||
+         (ValTy->getScalarSizeInBits() == 32 && !ST->hasVInstructionsF32()) ||
+         (ValTy->getScalarSizeInBits() == 64 && !ST->hasVInstructionsF64()))) {
+      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                       Op1Info, Op2Info, I);
+    }
     if (CondTy->isVectorTy()) {
       if (ValTy->getScalarSizeInBits() == 1) {
         // vmandn.mm v8, v8, v9
