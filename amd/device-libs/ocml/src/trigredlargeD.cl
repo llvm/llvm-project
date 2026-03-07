@@ -73,7 +73,7 @@ MATH_PRIVATE(trigredlarge)(double x)
     double f2, f1, f0;
     EVALUATE(x, p2, p1, p0, f2, f1, f0);
 
-    f2 = BUILTIN_FLDEXP_F64(BUILTIN_FRACTION_F64(BUILTIN_FLDEXP_F64(f2, -2)), 2);
+    f2 = BUILTIN_FLDEXP_F64(BUILTIN_FRACTION_F64_FIXUP(BUILTIN_FRACTION_F64_IMPL(BUILTIN_FLDEXP_F64(f2, -2)), x), 2);
     f2 += f2+f1 < 0.0 ? 4.0 : 0.0;
 
     int i = (int)(f2 + f1);
