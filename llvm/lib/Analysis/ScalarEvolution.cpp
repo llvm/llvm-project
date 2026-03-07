@@ -1879,8 +1879,8 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
           getTypeSizeInBits(SM->getOperand(1)->getType()) - C->logBase2();
       Type *NewTruncTy = IntegerType::get(getContext(), NewTruncBits);
       return getMulExpr(
-          getZeroExtendExpr(SM->getOperand(0), Ty),
-          getZeroExtendExpr(getTruncateExpr(TruncRHS, NewTruncTy), Ty),
+          getZeroExtendExpr(SM->getOperand(0), Ty, Depth + 1),
+          getZeroExtendExpr(getTruncateExpr(TruncRHS, NewTruncTy), Ty, Depth + 1),
           SCEV::FlagNUW, Depth + 1);
     }
   }
@@ -1891,7 +1891,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
     auto *MinMax = cast<SCEVMinMaxExpr>(Op);
     SmallVector<const SCEV *, 4> Operands;
     for (auto *Operand : MinMax->operands())
-      Operands.push_back(getZeroExtendExpr(Operand, Ty));
+      Operands.push_back(getZeroExtendExpr(Operand, Ty, Depth + 1));
     if (isa<SCEVUMinExpr>(MinMax))
       return getUMinExpr(Operands);
     return getUMaxExpr(Operands);
@@ -1902,7 +1902,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
     assert(isa<SCEVSequentialUMinExpr>(MinMax) && "Not supported!");
     SmallVector<const SCEV *, 4> Operands;
     for (auto *Operand : MinMax->operands())
-      Operands.push_back(getZeroExtendExpr(Operand, Ty));
+      Operands.push_back(getZeroExtendExpr(Operand, Ty, Depth + 1));
     return getUMinExpr(Operands, /*Sequential*/ true);
   }
 
@@ -2719,11 +2719,11 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
       const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
       if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
-          getZeroExtendExpr(NarrowA, B->getType()) == A &&
+          getZeroExtendExpr(NarrowA, B->getType(), Depth + 1) == A &&
           hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
                                          SCEV::FlagAnyWrap),
                    SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
+        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd, SCEV::FlagAnyWrap, Depth + 1), B->getType(), Depth + 1);
       }
     }
   }
