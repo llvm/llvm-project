@@ -341,6 +341,9 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
                                 vector::ContractionOp pairContOp,
                                 bool rhsHasMultipleNonUnitDims,
                                 int64_t nonUnitDimValue) {
+  if (contractOp == pairContOp)
+    return false;
+
   if (rhsHasMultipleNonUnitDims &&
       !(contractOp.getLhs() == pairContOp.getLhs()))
     return false;
@@ -394,14 +397,15 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
     return false;
 
   for (size_t i = 0; i < indexVals.size(); i++) {
+
+    if (indexVals[i] == indexValsPairContOp[i])
+      continue;
+
     auto v0 = getConstantIntValue(indexVals[i]);
     auto v1 = getConstantIntValue(indexValsPairContOp[i]);
 
     if (!v0 || !v1)
       return false;
-
-    if (*v1 == *v0)
-      continue;
 
     if ((*v1 - *v0) != nonUnitDimValue)
       return false;
