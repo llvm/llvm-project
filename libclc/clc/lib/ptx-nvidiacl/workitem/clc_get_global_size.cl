@@ -6,14 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/opencl-base.h>
+#include "clc/workitem/clc_get_global_size.h"
+#include "clc/workitem/clc_get_local_size.h"
+#include "clc/workitem/clc_get_num_groups.h"
 
-_CLC_DEF _CLC_OVERLOAD size_t get_num_groups(uint dim) {
-  size_t global_size = get_global_size(dim);
-  size_t local_size = get_local_size(dim);
-  size_t num_groups = global_size / local_size;
-  if (global_size % local_size != 0) {
-    num_groups++;
-  }
-  return num_groups;
+_CLC_DEF _CLC_OVERLOAD size_t __clc_get_global_size(uint dim) {
+  return __clc_get_num_groups(dim) * __clc_get_local_size(dim);
 }

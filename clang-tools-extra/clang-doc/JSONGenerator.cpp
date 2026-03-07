@@ -813,9 +813,9 @@ SmallString<16> JSONGenerator::determineFileName(Info *I,
 
 /// \param CDCtxIndex Passed by copy since clang-doc's context is passed to the
 /// generator as `const`
-static std::vector<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
+static OwningVec<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   CDCtxIndex.sort();
-  std::vector<Index> Processed;
+  OwningVec<Index> Processed;
   Processed.reserve(CDCtxIndex.Children.size());
   for (const auto *Idx : CDCtxIndex.getSortedChildren()) {
     Index NewIdx = *Idx;
@@ -835,7 +835,7 @@ Error JSONGenerator::serializeAllFiles(const ClangDocContext &CDCtx,
                                        StringRef RootDir) {
   json::Value ObjVal = Object();
   Object &Obj = *ObjVal.getAsObject();
-  std::vector<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
+  OwningVec<Index> IndexCopy = preprocessCDCtxIndex(CDCtx.Idx);
   serializeArray(IndexCopy, Obj, "Index", serializeReferenceLambda());
   SmallString<128> Path;
   sys::path::append(Path, RootDir, "json", "all_files.json");
@@ -927,7 +927,7 @@ Error JSONGenerator::generateDocumentation(
   StringSet<> CreatedDirs;
   StringMap<std::vector<doc::Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    Info *Info = Group.getValue().get();
+    Info *Info = getPtr(Group.getValue());
 
     SmallString<128> Path;
     auto RootDirStr = RootDir.str() + "/json";
