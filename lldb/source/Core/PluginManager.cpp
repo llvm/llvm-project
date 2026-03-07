@@ -493,6 +493,10 @@ template <typename Callback> struct PluginInstance {
 
 template <typename Instance> class PluginInstances {
 public:
+  ~PluginInstances() {
+    assert(m_instances.empty() && "forgot to unregister plugin?");
+  }
+
   template <typename... Args>
   bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                       typename Instance::CallbackType callback,

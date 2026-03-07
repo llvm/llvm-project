@@ -224,6 +224,9 @@ public:
     // Create MockProcess.
     PluginManager::RegisterPlugin(k_process_plugin, "",
                                   MockProcessCreateInstance);
+    auto unregister_plugin = llvm::scope_exit(
+        [&]() { PluginManager::UnregisterPlugin(MockProcessCreateInstance); });
+
     m_process_sp =
         m_target_sp->CreateProcess(Listener::MakeListener("test-listener"),
                                    k_process_plugin, /*crash_file=*/nullptr,

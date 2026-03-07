@@ -77,7 +77,9 @@ void DynamicLoaderHexagonDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void DynamicLoaderHexagonDYLD::Terminate() {}
+void DynamicLoaderHexagonDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef DynamicLoaderHexagonDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "

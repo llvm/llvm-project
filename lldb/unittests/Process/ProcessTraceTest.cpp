@@ -26,7 +26,7 @@ public:
     PlatformLinux::Initialize();
   }
   void TearDown() override {
-    PlatformLinux::Initialize();
+    PlatformLinux::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
     ProcessTrace::Terminate();

@@ -84,7 +84,7 @@ void PlatformMacOSX::Terminate() {
   PlatformDarwinKernel::Terminate();
   PlatformAppleSimulator::Terminate();
 #endif
-  PlatformRemoteMacOSX::Initialize();
+  PlatformRemoteMacOSX::Terminate();
   PlatformRemoteiOS::Terminate();
   PlatformDarwin::Terminate();
 }
