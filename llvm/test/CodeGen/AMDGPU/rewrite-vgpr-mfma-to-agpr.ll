@@ -384,15 +384,15 @@ define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[26:27], v[26:27], v[0:3]
 ; CHECK-NEXT:    v_mov_b64_e32 v[28:29], s[0:1]
 ; CHECK-NEXT:    s_mov_b32 s0, 0x7e007e00
-; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[26:27], v[26:27], v[4:7]
+; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[0:1]
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[26:27], v[28:29], v[0:3]
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[26:27], v[26:27], v[6:9]
-; CHECK-NEXT:    s_nop 3
+; CHECK-NEXT:    s_nop 2
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v24, v4
 ; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[12:15], v[26:27], v[30:31], v[0:3]
-; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 0x7fc00000
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v10, v8
@@ -715,9 +715,10 @@ define void @test_rewrite_mfma_copy_from_agpr_class_f64_4x4x4f64_chain(double %a
 ; CHECK-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_lshl_add_u64 v[2:3], v[8:9], 0, v[2:3]
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[4:5], v[6:7], a[0:1]
-; CHECK-NEXT:    s_nop 8
+; CHECK-NEXT:    v_lshl_add_u64 v[2:3], v[8:9], 0, v[2:3]
+; CHECK-NEXT:    s_nop 7
 ; CHECK-NEXT:    global_store_dwordx2 v[2:3], a[0:1], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

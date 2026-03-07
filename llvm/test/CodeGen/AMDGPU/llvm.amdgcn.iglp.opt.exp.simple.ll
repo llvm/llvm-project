@@ -21,8 +21,8 @@ define amdgpu_kernel void @MFMAExpInterleave(ptr addrspace(1) %out0, ptr addrspa
 ; GCN-NEXT:    v_add_f32_e32 v5, v8, v5
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v6, v7
 ; GCN-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v4, v4, v[0:3]
-; GCN-NEXT:    v_exp_f32_e32 v5, v5
 ; GCN-NEXT:    s_mov_b32 s0, 0x3fb8aa3b
+; GCN-NEXT:    v_exp_f32_e32 v5, v5
 ; GCN-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v4, v4, v[0:3]
 ; GCN-NEXT:    ; iglp_opt mask(0x00000003)
 ; GCN-NEXT:    v_ldexp_f32 v5, v5, v6

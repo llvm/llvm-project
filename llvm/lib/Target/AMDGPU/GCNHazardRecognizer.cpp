@@ -234,6 +234,10 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
       checkMAIVALUHazards(MI) > 0)
     return HazardType;
 
+  if (SIInstrInfo::isVALU(*MI) && !SIInstrInfo::isMFMA(*MI) &&
+      checkVALUImmediatelyAfterMFMAHazard(*MI) > 0)
+    return NoopHazard;
+
   if (isSGetReg(MI->getOpcode()) && checkGetRegHazards(MI) > 0)
     return HazardType;
 
@@ -2462,6 +2466,22 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
   assert(SIInstrInfo::isMAI(*MI));
 
   return ST.hasGFX90AInsts() ? checkMAIHazards90A(MI) : checkMAIHazards908(MI);
+}
+
+int GCNHazardRecognizer::checkVALUImmediatelyAfterMFMAHazard(
+    const MachineInstr &MI) {
+  assert(SIInstrInfo::isVALU(MI) && !SIInstrInfo::isMFMA(MI));
+
+  // The hazard exists only when a VALU is immediately after an MFMA with
+  // no intervening stall cycle (nullptr entry). Therefore, only the first
+  // entry in EmittedInstrs matters.
+  if (EmittedInstrs.empty() || !EmittedInstrs.front())
+    return 0;
+
+  if (SIInstrInfo::isMFMA(*EmittedInstrs.front()))
+    return 1; // MFMA is most recent with no intervening cycle, block VALU.
+
+  return 0;
 }
 
 int GCNHazardRecognizer::checkMFMAPadding(MachineInstr *MI) {
