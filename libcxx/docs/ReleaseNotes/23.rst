@@ -39,6 +39,8 @@ Implemented Papers
 ------------------
 
 - P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
+- P2322R6 (partial): ``ranges::fold_left_first`` and ``ranges::fold_left_first_with_iter`` are supported
+  (`Github <https://llvm.org/PR105208>`__)
 
 Improvements and New Features
 -----------------------------
