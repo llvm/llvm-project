@@ -49,7 +49,7 @@ public:
                                   lldb::eScriptLanguagePython, CreateInstance);
   }
 
-  static void Terminate() {}
+  static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
 
   static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger) {
     return std::make_shared<MockScriptInterpreterPython>(debugger);

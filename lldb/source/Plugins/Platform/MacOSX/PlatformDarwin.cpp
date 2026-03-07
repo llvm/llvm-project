@@ -90,8 +90,6 @@ PlatformDarwin::~PlatformDarwin() = default;
 static uint32_t g_initialize_count = 0;
 
 void PlatformDarwin::Initialize() {
-  Platform::Initialize();
-
   if (g_initialize_count++ == 0) {
     PluginManager::RegisterPlugin(PlatformDarwin::GetPluginNameStatic(),
                                   PlatformDarwin::GetDescriptionStatic(),
@@ -106,8 +104,6 @@ void PlatformDarwin::Terminate() {
       PluginManager::UnregisterPlugin(PlatformDarwin::CreateInstance);
     }
   }
-
-  Platform::Terminate();
 }
 
 llvm::StringRef PlatformDarwin::GetDescriptionStatic() {
