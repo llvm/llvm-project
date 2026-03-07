@@ -831,6 +831,7 @@ set(files
   __type_traits/is_aggregate.h
   __type_traits/is_allocator.h
   __type_traits/is_always_bitcastable.h
+  __type_traits/is_applicable.h
   __type_traits/is_arithmetic.h
   __type_traits/is_array.h
   __type_traits/is_assignable.h
