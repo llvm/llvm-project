@@ -1414,6 +1414,11 @@ def OMP_Stripe : Directive<[Spelling<"stripe">]> {
   let association = AS_LoopNest;
   let category = CA_Executable;
 }
+def OMP_Split : Directive<[Spelling<"split">]> {
+  // TODO: Add counts clause support (OMPC_Counts)
+  let association = AS_LoopNest;
+  let category = CA_Executable;
+}
 def OMP_Unknown : Directive<[Spelling<"unknown">]> {
   let isDefault = true;
   let association = AS_None;
