@@ -38,18 +38,16 @@ TEST(CASOptionsTest, getKind) {
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 }
 
-TEST(CASOptionsTest, getOrCreateDatabases) {
+TEST(CASOptionsTest, createDatabases) {
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
 
   // Create an in-memory CAS.
   CASOptions Opts;
-  auto [InMemoryCAS, InMemoryAC] = Opts.getOrCreateDatabases(Diags);
+  auto [InMemoryCAS, InMemoryAC] = Opts.createDatabases(Diags);
   ASSERT_TRUE(InMemoryCAS);
   ASSERT_TRUE(InMemoryAC);
-  EXPECT_EQ(InMemoryCAS, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(InMemoryAC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 
   if (!llvm::cas::isOnDiskCASEnabled())
@@ -58,39 +56,33 @@ TEST(CASOptionsTest, getOrCreateDatabases) {
   // Create an on-disk CAS.
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   Opts.CASPath = Dir.path("cas").str().str();
-  auto [OnDiskCAS, OnDiskAC] = Opts.getOrCreateDatabases(Diags);
+  auto [OnDiskCAS, OnDiskAC] = Opts.createDatabases(Diags);
   EXPECT_NE(InMemoryCAS, OnDiskCAS);
   EXPECT_NE(InMemoryAC, OnDiskAC);
-  EXPECT_EQ(OnDiskCAS, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(OnDiskAC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   // Create an on-disk CAS at an automatic location.
   Opts.CASPath = "auto";
-  auto [AutoCAS, AutoAC] = Opts.getOrCreateDatabases(Diags);
+  auto [AutoCAS, AutoAC] = Opts.createDatabases(Diags);
   EXPECT_NE(InMemoryCAS, AutoCAS);
   EXPECT_NE(InMemoryAC, AutoAC);
   EXPECT_NE(OnDiskCAS, AutoCAS);
   EXPECT_NE(OnDiskAC, AutoAC);
-  EXPECT_EQ(AutoCAS, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(AutoAC, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   // Create another in-memory CAS. It won't be the same one.
   Opts.CASPath = "";
-  auto [InMemoryCAS2, InMemoryAC2] = Opts.getOrCreateDatabases(Diags);
+  auto [InMemoryCAS2, InMemoryAC2] = Opts.createDatabases(Diags);
   EXPECT_NE(InMemoryCAS, InMemoryCAS2);
   EXPECT_NE(InMemoryAC, InMemoryAC2);
   EXPECT_NE(OnDiskCAS, InMemoryCAS2);
   EXPECT_NE(OnDiskAC, InMemoryAC2);
   EXPECT_NE(AutoCAS, InMemoryCAS2);
   EXPECT_NE(AutoAC, InMemoryAC2);
-  EXPECT_EQ(InMemoryCAS2, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(InMemoryAC2, Opts.getOrCreateDatabases(Diags).second);
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 }
 
-TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
+TEST(CASOptionsTest, createObjectStoreInvalid) {
   if (!llvm::cas::isOnDiskCASEnabled())
     return;
 
@@ -106,13 +98,13 @@ TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
 
   CASOptions Opts;
   Opts.CASPath = File.path().str();
-  EXPECT_EQ(nullptr, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(nullptr, Opts.getOrCreateDatabases(Diags).second);
+  EXPECT_EQ(nullptr, Opts.createDatabases(Diags).first);
+  EXPECT_EQ(nullptr, Opts.createDatabases(Diags).second);
 
   auto [EmptyCAS, EmptyAC] =
-      Opts.getOrCreateDatabases(Diags, /*CreateEmptyCASOnFailure=*/true);
-  EXPECT_EQ(EmptyCAS, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(EmptyAC, Opts.getOrCreateDatabases(Diags).second);
+      Opts.createDatabases(Diags, /*CreateEmptyCASOnFailure=*/true);
+  EXPECT_NE(nullptr, EmptyCAS);
+  EXPECT_NE(nullptr, EmptyAC);
 
   // Ensure the file wasn't clobbered.
   std::unique_ptr<MemoryBuffer> MemBuffer;
@@ -120,40 +112,6 @@ TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
       errorOrToExpected(MemoryBuffer::getFile(File.path())).moveInto(MemBuffer),
       Succeeded());
   ASSERT_EQ(Contents, MemBuffer->getBuffer());
-}
-
-TEST(CASOptionsTest, freezeConfig) {
-  if (!llvm::cas::isOnDiskCASEnabled())
-    return;
-
-  DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
-                          new IgnoringDiagConsumer());
-
-  // Hide the CAS configuration when creating it.
-  unittest::TempDir Dir("cas-options", /*Unique=*/true);
-  CASOptions Opts;
-  Opts.CASPath = Dir.path("cas").str().str();
-  Opts.freezeConfig(Diags);
-  auto [CAS, AC] = Opts.getOrCreateDatabases(Diags);
-  ASSERT_TRUE(CAS);
-  ASSERT_TRUE(AC);
-  EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
-
-  // Check that the configuration is hidden, but calls to
-  // getOrCreateObjectStore() still return the original CAS.
-  EXPECT_EQ(CAS->getContext().getHashSchemaIdentifier(), Opts.CASPath);
-
-  // Check that new paths are ignored.
-  Opts.CASPath = "";
-  EXPECT_EQ(CAS, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(AC, Opts.getOrCreateDatabases(Diags).second);
-  EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
-
-  Opts.CASPath = Dir.path("ignored-cas").str().str();
-  EXPECT_EQ(CAS, Opts.getOrCreateDatabases(Diags).first);
-  EXPECT_EQ(AC, Opts.getOrCreateDatabases(Diags).second);
-  EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 }
 
 TEST(CASOptionsTest, equal) {
