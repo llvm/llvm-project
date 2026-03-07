@@ -75,10 +75,11 @@ struct a {
 a aa(fdupe<int>((f<int>(7))));
 
 template <typename T>
-constexpr int foo(T t);     // expected-note {{declared here}}
+constexpr int foo(T t);     // expected-note {{explicit instantiation refers here}}
 
 a bb(f<int>(foo<int>(7))); // expected-error{{call to immediate function 'f<int>' is not a constant expression}} \
-                           // expected-note{{undefined function 'foo<int>' cannot be used in a constant expression}}
+                           // expected-error{{explicit instantiation of undefined function template 'foo'}} \
+                           // expected-note{{subexpression not valid in a constant expression}}
 
 }
 

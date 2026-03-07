@@ -45,6 +45,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/TypeSize.h"
+#include <memory>
 #include <optional>
 
 namespace llvm {
@@ -216,6 +217,15 @@ struct TypeInfoChars {
   }
 };
 
+/// Interface that allows constant evaluator to call Sema
+/// and mutate the AST.
+struct SemaProxy {
+  virtual ~SemaProxy() = default;
+
+  virtual void
+  instantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                FunctionDecl *Function) = 0;
+};
 struct PFPField {
   CharUnits Offset;
   FieldDecl *Field;
@@ -792,6 +802,8 @@ private:
 
   /// Keeps track of the deallocated DeclListNodes for future reuse.
   DeclListNode *ListNodeFreeList = nullptr;
+
+  std::unique_ptr<SemaProxy> SemaProxyPtr;
 
 public:
   IdentifierTable &Idents;
@@ -1426,6 +1438,16 @@ public:
   /// Retrieve a pointer to the AST mutation listener associated
   /// with this AST context, if any.
   ASTMutationListener *getASTMutationListener() const { return Listener; }
+
+  /// Returns a SemaProxy*, i.e an object through which interact with Sema.
+  /// This will return null, unless setSemaProxy has been called.
+  /// As Sema is only available during parsing, getSemaProxy will return null
+  /// during CodeGen and when using the AST from tooling.
+  SemaProxy *getSemaProxy() { return SemaProxyPtr.get(); }
+
+  /// Set the SemaProxy instance
+  /// This function is called from Sema during the initial parsing of a TU.
+  void setSemaProxy(std::unique_ptr<SemaProxy> Proxy);
 
   void PrintStats() const;
   const SmallVectorImpl<Type *>& getTypes() const { return Types; }

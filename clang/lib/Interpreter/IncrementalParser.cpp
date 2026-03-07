@@ -44,9 +44,13 @@ IncrementalParser::IncrementalParser(CompilerInstance &Instance,
     External->StartTranslationUnit(Consumer);
 
   P->Initialize();
+  S.registerSemaProxy();
 }
 
-IncrementalParser::~IncrementalParser() { P.reset(); }
+IncrementalParser::~IncrementalParser() {
+  S.unregisterSemaProxy();
+  P.reset();
+}
 
 llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
