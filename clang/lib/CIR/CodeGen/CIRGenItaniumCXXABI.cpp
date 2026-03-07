@@ -586,6 +586,11 @@ class CIRGenItaniumRTTIBuilder {
   /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
   void buildVMIClassTypeInfo(mlir::Location loc, const CXXRecordDecl *rd);
 
+  /// BuildPointerToMemberTypeInfo - Build an abi::__pointer_to_member_type_info
+  /// struct, used for member pointer types.
+  void buildPointerToMemberTypeInfo(mlir::Location loc,
+                                    const MemberPointerType *ty);
+
 public:
   CIRGenItaniumRTTIBuilder(const CIRGenItaniumCXXABI &abi, CIRGenModule &cgm)
       : cgm(cgm), cxxABI(abi) {}
@@ -1471,7 +1476,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::MemberPointer:
-    cgm.errorNYI("buildTypeInfo: MemberPointer");
+    buildPointerToMemberTypeInfo(loc, cast<MemberPointerType>(ty));
     break;
 
   case Type::Atomic:
@@ -1595,6 +1600,70 @@ mlir::Value CIRGenItaniumCXXABI::emitTypeid(CIRGenFunction &cgf, QualType srcTy,
 
   return cgf.getBuilder().createAlignedLoad(loc, typeInfoPtrTy, vtbl,
                                             cgf.getPointerAlign());
+}
+
+/// Compute the flags for a __pbase_type_info, and remove the corresponding
+/// pieces from \p Type.
+static unsigned extractPBaseFlags(ASTContext &ctx, QualType &type) {
+  unsigned flags = 0;
+
+  if (type.isConstQualified())
+    flags |= PTI_Const;
+  if (type.isVolatileQualified())
+    flags |= PTI_Volatile;
+  if (type.isRestrictQualified())
+    flags |= PTI_Restrict;
+  type = type.getUnqualifiedType();
+
+  // Itanium C++ ABI 2.9.5p7:
+  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
+  //   incomplete class type, the incomplete target type flag is set.
+  if (containsIncompleteClassType(type))
+    flags |= PTI_Incomplete;
+
+  if (auto *proto = type->getAs<FunctionProtoType>()) {
+    if (proto->isNothrow()) {
+      flags |= PTI_Noexcept;
+      type = ctx.getFunctionTypeWithExceptionSpec(type, EST_None);
+    }
+  }
+
+  return flags;
+}
+
+/// BuildPointerToMemberTypeInfo - Build an abi::__pointer_to_member_type_info
+/// struct, used for member pointer types.
+void CIRGenItaniumRTTIBuilder::buildPointerToMemberTypeInfo(
+    mlir::Location loc, const MemberPointerType *ty) {
+  QualType pointeeTy = ty->getPointeeType();
+
+  // Itanium C++ ABI 2.9.5p7:
+  //   __flags is a flag word describing the cv-qualification and other
+  //   attributes of the type pointed to.
+  unsigned flags = extractPBaseFlags(cgm.getASTContext(), pointeeTy);
+
+  const auto *rd = ty->getMostRecentCXXRecordDecl();
+  if (!rd->hasDefinition())
+    flags |= PTI_ContainingClassIncomplete;
+
+  mlir::Type unsignedIntLTy =
+      cgm.getTypes().convertType(cgm.getASTContext().UnsignedIntTy);
+  fields.push_back(cir::IntAttr::get(unsignedIntLTy, flags));
+
+  // // Itanium C++ ABI 2.9.5p7:
+  // //   __pointee is a pointer to the std::type_info derivation for the
+  // //   unqualified type being pointed to.
+  mlir::Attribute pointeeTypeInfo =
+      CIRGenItaniumRTTIBuilder(cxxABI, cgm).buildTypeInfo(loc, pointeeTy);
+  fields.push_back(pointeeTypeInfo);
+
+  // // Itanium C++ ABI 2.9.5p9:
+  // //   __context is a pointer to an abi::__class_type_info corresponding to
+  // the
+  // //   class type containing the member pointed to
+  // //   (e.g., the "A" in "int A::*").
+  CanQualType t = cgm.getASTContext().getCanonicalTagType(rd);
+  fields.push_back(CIRGenItaniumRTTIBuilder(cxxABI, cgm).buildTypeInfo(loc, t));
 }
 
 mlir::Attribute CIRGenItaniumCXXABI::getAddrOfRTTIDescriptor(mlir::Location loc,
