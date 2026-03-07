@@ -3967,7 +3967,35 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
   }];
 }
 
-// TODO: MemMoveOp
+def CIR_MemMoveOp : CIR_MemOp<"libc.memmove"> {
+  let summary = "Equivalent to libc's `memmove`";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.libc.memmove` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
+
+    similiar to `cir.libc.memcpy` but accounts for overlapping memory.
+
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a record:
+      %2 = cir.const #cir.int<2> : !u32i
+      cir.libc.memmove %2 bytes from %arr to %record : !cir.ptr<!void>, !u64i
+    ```
+  }];
+
+  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` qualified(type($dst)) `,` type($len)
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    cir::IntType getLenTy() { return getLen().getType(); }
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // MemSetOp
