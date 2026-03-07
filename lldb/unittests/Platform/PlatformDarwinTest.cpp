@@ -128,6 +128,7 @@ TEST_F(PlatformDarwinTest, LocateExecutableScriptingResourcesFromDSYM) {
   TargetSP target_sp;
   ArchSpec arch("x86_64-apple-macosx-");
   auto platform_sp = PlatformRemoteMacOSX::CreateInstance(true, &arch);
+  Platform::SetHostPlatform(platform_sp);
 
   m_debugger_sp = Debugger::CreateInstance();
 
