@@ -4136,15 +4136,15 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
-  const Expr *Arg = E->getArgument();
-
+  if (E->containsErrors())
+    return false;
   const FunctionDecl *OperatorDelete = E->getOperatorDelete();
 
   if (!OperatorDelete->isUsableAsGlobalAllocationFunctionInConstantEvaluation())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   // Arg must be an lvalue.
-  if (!this->visit(Arg))
+  if (!this->visit(E->getArgument()))
     return false;
 
   return this->emitFree(E->isArrayForm(), E->isGlobalDelete(), E);
