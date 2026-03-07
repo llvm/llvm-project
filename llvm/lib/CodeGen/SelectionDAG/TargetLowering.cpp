@@ -1513,6 +1513,18 @@ bool TargetLowering::SimplifyDemandedBits(
                              Known2, TLO, Depth + 1))
       return true;
 
+    // FIXME: Pretty much all these extra conditions are to avoid regressions in
+    // x86 and AMDGPU.
+    unsigned Op1Opc = Op1.getOpcode();
+    if (!VT.isVector() &&
+        (Op1Opc == ISD::ZERO_EXTEND || Op1Opc == ISD::SIGN_EXTEND ||
+         Op1Opc == ISD::ANY_EXTEND || Op1Opc == ISD::TRUNCATE) &&
+        Op1.getOperand(0).getScalarValueSizeInBits() != 1 &&
+        (~Known2.Zero & DemandedBits) != DemandedBits &&
+        SimplifyDemandedBits(Op1, ~Known2.Zero & DemandedBits, DemandedElts,
+                             Known, TLO, Depth + 1))
+      return true;
+
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
     if (DemandedBits.isSubsetOf(Known2.Zero | Known.One))
