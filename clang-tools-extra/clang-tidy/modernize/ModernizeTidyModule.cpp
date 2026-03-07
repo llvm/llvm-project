@@ -22,6 +22,7 @@
 #include "MakeUniqueCheck.h"
 #include "MinMaxUseInitializerListCheck.h"
 #include "PassByValueCheck.h"
+#include "PointerToSpanCheck.h"
 #include "RawStringLiteralCheck.h"
 #include "RedundantVoidArgCheck.h"
 #include "ReplaceAutoPtrCheck.h"
@@ -100,6 +101,8 @@ public:
     CheckFactories.registerCheck<UseStdNumbersCheck>(
         "modernize-use-std-numbers");
     CheckFactories.registerCheck<UseStdPrintCheck>("modernize-use-std-print");
+    CheckFactories.registerCheck<PointerToSpanCheck>(
+        "modernize-pointer-to-span");
     CheckFactories.registerCheck<RawStringLiteralCheck>(
         "modernize-raw-string-literal");
     CheckFactories.registerCheck<RedundantVoidArgCheck>(
