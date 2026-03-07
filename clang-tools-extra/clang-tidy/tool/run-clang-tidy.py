@@ -665,7 +665,7 @@ async def main() -> None:
         invocation.append("-")
         # Even with -quiet we still want to check if we can call clang-tidy.
         subprocess.check_call(
-            invocation, stdout=subprocess.DEVNULL if args.quiet else None
+            invocation, stdout=subprocess.DEVNULL
         )
     except Exception:
         print("Unable to run clang-tidy.", file=sys.stderr)
