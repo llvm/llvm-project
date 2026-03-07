@@ -38,6 +38,8 @@
 // When availability annotations are disabled, we take for granted that features introduced
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
 
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
@@ -70,8 +72,10 @@
 
 // clang-format off
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
+
 // LLVM 22
-// TODO: Fill this in
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
 
@@ -294,6 +298,10 @@
 #else
 #  define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #endif
+
+// Controls whether the internal implementation for text_encoding::environment() -> te_impl::__environment() is available
+#define _LIBCPP_AVAILABILITY_HAS_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
+#define _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
 
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
