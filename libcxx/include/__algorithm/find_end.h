@@ -43,7 +43,7 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> 
     forward_iterator_tag,
     forward_iterator_tag) {
   // modeled after search algorithm
-  _Iter1 __match_first = _IterOps<_AlgPolicy>::next(__first1, __last1); // __last1 is the "default" answer
+  _Iter1 __match_first = _IterOps<_AlgPolicy>::__next_until(__first1, __last1); // __last1 is the "default" answer
   _Iter1 __match_last  = __match_first;
   if (__first2 == __last2)
     return pair<_Iter1, _Iter1>(__match_last, __match_last);
@@ -94,8 +94,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter1, _Iter1> __find_
     _Proj2& __proj2,
     bidirectional_iterator_tag,
     bidirectional_iterator_tag) {
-  auto __last1 = _IterOps<_AlgPolicy>::next(__first1, __sent1);
-  auto __last2 = _IterOps<_AlgPolicy>::next(__first2, __sent2);
+  auto __last1 = _IterOps<_AlgPolicy>::__next_until(__first1, __sent1);
+  auto __last2 = _IterOps<_AlgPolicy>::__next_until(__first2, __sent2);
   // modeled after search algorithm (in reverse)
   if (__first2 == __last2)
     return std::make_pair(__last1, __last1); // Everything matches an empty sequence
@@ -147,8 +147,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __find_
     random_access_iterator_tag,
     random_access_iterator_tag) {
   typedef typename iterator_traits<_Iter1>::difference_type _D1;
-  auto __last1 = _IterOps<_AlgPolicy>::next(__first1, __sent1);
-  auto __last2 = _IterOps<_AlgPolicy>::next(__first2, __sent2);
+  auto __last1 = _IterOps<_AlgPolicy>::__next_until(__first1, __sent1);
+  auto __last2 = _IterOps<_AlgPolicy>::__next_until(__first2, __sent2);
   // Take advantage of knowing source and pattern lengths.  Stop short when source is smaller than pattern
   auto __len2 = __last2 - __first2;
   if (__len2 == 0)

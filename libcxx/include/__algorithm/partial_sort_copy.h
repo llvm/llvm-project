@@ -66,7 +66,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_InputIterator, _Random
   }
 
   return pair<_InputIterator, _RandomAccessIterator>(
-      _IterOps<_AlgPolicy>::next(std::move(__first), std::move(__last)), std::move(__r));
+      _IterOps<_AlgPolicy>::__next_until(std::move(__first), std::move(__last)), std::move(__r));
 }
 
 template <class _InputIterator, class _RandomAccessIterator, class _Compare>

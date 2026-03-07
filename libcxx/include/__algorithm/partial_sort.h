@@ -35,7 +35,7 @@ template <class _AlgPolicy, class _Compare, class _RandomAccessIterator, class _
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator __partial_sort_impl(
     _RandomAccessIterator __first, _RandomAccessIterator __middle, _Sentinel __last, _Compare&& __comp) {
   if (__first == __middle) {
-    return _IterOps<_AlgPolicy>::next(__middle, __last);
+    return _IterOps<_AlgPolicy>::__next_until(__middle, __last);
   }
 
   std::__make_heap<_AlgPolicy>(__first, __middle, __comp);
@@ -57,7 +57,7 @@ template <class _AlgPolicy, class _Compare, class _RandomAccessIterator, class _
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
 __partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Sentinel __last, _Compare& __comp) {
   if (__first == __middle)
-    return _IterOps<_AlgPolicy>::next(__middle, __last);
+    return _IterOps<_AlgPolicy>::__next_until(__middle, __last);
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 

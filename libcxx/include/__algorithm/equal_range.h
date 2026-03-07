@@ -36,10 +36,10 @@ template <class _AlgPolicy, class _Compare, class _Iter, class _Sent, class _Tp,
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter, _Iter>
 __equal_range(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp, _Proj&& __proj) {
   auto __len  = _IterOps<_AlgPolicy>::distance(__first, __last);
-  _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
+  _Iter __end = _IterOps<_AlgPolicy>::__next_until(__first, __last);
   while (__len != 0) {
     auto __half_len = std::__half_positive(__len);
-    _Iter __mid     = _IterOps<_AlgPolicy>::next(__first, __half_len);
+    _Iter __mid     = _IterOps<_AlgPolicy>::__next_n(__first, __half_len);
     if (std::__invoke(__comp, std::__invoke(__proj, *__mid), __value)) {
       __first = ++__mid;
       __len -= __half_len + 1;

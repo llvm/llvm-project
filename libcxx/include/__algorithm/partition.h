@@ -49,7 +49,7 @@ __partition_impl(_ForwardIterator __first, _Sentinel __last, _Predicate __pred, 
 template <class _Predicate, class _AlgPolicy, class _BidirectionalIterator, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_BidirectionalIterator, _BidirectionalIterator>
 __partition_impl(_BidirectionalIterator __first, _Sentinel __sentinel, _Predicate __pred, bidirectional_iterator_tag) {
-  _BidirectionalIterator __original_last = _IterOps<_AlgPolicy>::next(__first, __sentinel);
+  _BidirectionalIterator __original_last = _IterOps<_AlgPolicy>::__next_until(__first, __sentinel);
   _BidirectionalIterator __last          = __original_last;
 
   while (true) {
