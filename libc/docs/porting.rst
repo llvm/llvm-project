@@ -4,10 +4,6 @@
 Bringup on a New OS or Architecture
 =======================================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Building the libc
 =================
 
