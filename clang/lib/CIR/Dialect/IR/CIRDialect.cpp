@@ -2671,7 +2671,6 @@ LogicalResult cir::UnaryOp::verify() {
   switch (getKind()) {
   case cir::UnaryOpKind::Inc:
   case cir::UnaryOpKind::Dec:
-  case cir::UnaryOpKind::Plus:
   case cir::UnaryOpKind::Minus:
   case cir::UnaryOpKind::Not:
     // Nothing to verify.
@@ -2712,9 +2711,8 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
   // input attribute from the adapter, a new constant is materialized, but
   // if we return the input value directly, it avoids that.
   if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>()) {
-    if (getKind() == cir::UnaryOpKind::Plus ||
-        (mlir::isa<cir::BoolType>(srcConst.getType()) &&
-         getKind() == cir::UnaryOpKind::Minus))
+    if (mlir::isa<cir::BoolType>(srcConst.getType()) &&
+        getKind() == cir::UnaryOpKind::Minus)
       return srcConst.getResult();
   }
 
@@ -2733,8 +2731,6 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
                 val.flipAllBits();
                 return cir::IntAttr::get(getType(), val);
               }
-              case cir::UnaryOpKind::Plus:
-                return attrT;
               case cir::UnaryOpKind::Minus: {
                 APInt val = attrT.getValue();
                 val.negate();
@@ -2746,8 +2742,6 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
             })
             .Case<cir::FPAttr>([&](cir::FPAttr attrT) {
               switch (getKind()) {
-              case cir::UnaryOpKind::Plus:
-                return attrT;
               case cir::UnaryOpKind::Minus: {
                 APFloat val = attrT.getValue();
                 val.changeSign();
@@ -2761,7 +2755,6 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
               switch (getKind()) {
               case cir::UnaryOpKind::Not:
                 return cir::BoolAttr::get(getContext(), !attrT.getValue());
-              case cir::UnaryOpKind::Plus:
               case cir::UnaryOpKind::Minus:
                 return attrT;
               default:
