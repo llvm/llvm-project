@@ -92,6 +92,10 @@ def FeatureTailCall :
       SubtargetFeature<"tail-call", "HasTailCall", "true",
                        "Enable tail call instructions">;
 
+def FeatureMemtag :
+      SubtargetFeature<"memtag", "HasMemtag", "true",
+                       "Enable memory tagging">;
+
 def FeatureWideArithmetic :
       SubtargetFeature<"wide-arithmetic", "HasWideArithmetic", "true",
                        "Enable wide-arithmetic instructions">;
