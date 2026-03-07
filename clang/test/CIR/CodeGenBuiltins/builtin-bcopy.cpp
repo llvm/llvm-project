@@ -43,7 +43,9 @@ void foo(void) {
 void test_conditional_bcopy(void) {
   // CIR-LABEL: cir.func {{.*}} @_Z22test_conditional_bcopyv()
   // CIR: cir.ternary
+  // CIR: cir.ternary
   // CIR: cir.libc.memmove {{.*}} bytes from {{.*}} to {{.*}} : !cir.ptr<!void>, !u64i
+  // CIR: false
   // CIR: false
   // CIR: cir.libc.memmove {{.*}} bytes from {{.*}} to {{.*}} : !cir.ptr<!void>, !u64i
 
