@@ -16,6 +16,7 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__fwd/array.h>
+#include <__fwd/complex.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_like_no_subrange.h>
@@ -34,6 +35,7 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
+#include <__type_traits/reference_constructs_from_temporary.h>
 #include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
@@ -66,8 +68,22 @@ struct __check_pair_construction {
 
   template <class _U1, class _U2>
   static _LIBCPP_HIDE_FROM_ABI constexpr bool __is_pair_constructible() {
+#  if _LIBCPP_STD_VER >= 23
+    return is_constructible_v<_T1, _U1> && is_constructible_v<_T2, _U2> &&
+           !reference_constructs_from_temporary_v<_T1, _U1&&> && !reference_constructs_from_temporary_v<_T2, _U2&&>;
+#  else
+    return is_constructible<_T1, _U1>::value && is_constructible<_T2, _U2>::value;
+#  endif
+  }
+
+#  if _LIBCPP_STD_VER >= 23
+  template <class _U1, class _U2>
+  static _LIBCPP_HIDE_FROM_ABI constexpr bool __is_pair_constructor_deleted() {
+    return is_constructible_v<_T1, _U1> && is_constructible_v<_T2, _U2> &&
+           (reference_constructs_from_temporary_v<_T1, _U1&&> || reference_constructs_from_temporary_v<_T2, _U2&&>);
     return is_constructible<_T1, _U1>::value && is_constructible<_T2, _U2>::value;
   }
+#  endif
 
   template <class _U1, class _U2>
   static _LIBCPP_HIDE_FROM_ABI constexpr bool __is_implicit() {
@@ -154,13 +170,19 @@ struct pair
       class _U1,
       class _U2,
 #  endif
-      __enable_if_t<__check_pair_construction<_T1, _T2>::template __is_pair_constructible<_U1, _U2>(), int> = 0 >
+      __enable_if_t<__check_pair_construction<_T1, _T2>::template __is_pair_constructible<_U1&&, _U2&&>(), int> = 0 >
   _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<_U1, _U2>())
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<_U1&&, _U2&&>())
       pair(_U1&& __u1, _U2&& __u2) noexcept(is_nothrow_constructible<first_type, _U1>::value &&
                                             is_nothrow_constructible<second_type, _U2>::value)
       : first(std::forward<_U1>(__u1)), second(std::forward<_U2>(__u2)) {
   }
+
+#  if _LIBCPP_STD_VER >= 23
+  template <class _U1 = _T1, class _U2 = _T2>
+    requires(__check_pair_construction<_T1, _T2>::template __is_pair_constructor_deleted<_U1 &&, _U2 &&>())
+  explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<_U1&&, _U2&&>()) pair(_U1&&, _U2&&) = delete;
+#  endif
 
 #  if _LIBCPP_STD_VER >= 23
   template <class _U1,
@@ -170,6 +192,10 @@ struct pair
       pair(pair<_U1, _U2>& __p) noexcept((is_nothrow_constructible<first_type, _U1&>::value &&
                                           is_nothrow_constructible<second_type, _U2&>::value))
       : first(__p.first), second(__p.second) {}
+
+  template <class _U1, class _U2>
+    requires(__check_pair_construction<_T1, _T2>::template __is_pair_constructor_deleted<_U1&, _U2&>())
+  explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<_U1&, _U2&>()) pair(pair<_U1, _U2>&) = delete;
 #  endif
 
   template <
@@ -183,14 +209,29 @@ struct pair
                                                is_nothrow_constructible<second_type, _U2 const&>::value)
       : first(__p.first), second(__p.second) {}
 
-  template <class _U1,
-            class _U2,
-            __enable_if_t<__check_pair_construction<_T1, _T2>::template __is_pair_constructible<_U1, _U2>(), int> = 0>
+#  if _LIBCPP_STD_VER >= 23
+  template <class _U1, class _U2>
+    requires(__check_pair_construction<_T1, _T2>::template __is_pair_constructor_deleted<const _U1&, const _U2&>())
+  explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<const _U1&, const _U2&>())
+      pair(const pair<_U1, _U2>&) = delete;
+#  endif
+
+  template <
+      class _U1,
+      class _U2,
+      __enable_if_t<__check_pair_construction<_T1, _T2>::template __is_pair_constructible<_U1&&, _U2&&>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<_U1, _U2>())
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<_U1&&, _U2&&>())
       pair(pair<_U1, _U2>&& __p) noexcept(is_nothrow_constructible<first_type, _U1&&>::value &&
                                           is_nothrow_constructible<second_type, _U2&&>::value)
       : first(std::forward<_U1>(__p.first)), second(std::forward<_U2>(__p.second)) {}
+
+#  if _LIBCPP_STD_VER >= 23
+  template <class _U1, class _U2>
+    requires(__check_pair_construction<_T1, _T2>::template __is_pair_constructor_deleted<_U1 &&, _U2 &&>())
+  explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<_U1&&, _U2&&>())
+      pair(pair<_U1, _U2>&&) = delete;
+#  endif
 
 #  if _LIBCPP_STD_VER >= 23
   template <
@@ -203,16 +244,30 @@ struct pair
       pair(const pair<_U1, _U2>&& __p) noexcept(is_nothrow_constructible<first_type, const _U1&&>::value &&
                                                 is_nothrow_constructible<second_type, const _U2&&>::value)
       : first(std::move(__p.first)), second(std::move(__p.second)) {}
+
+  template <class _U1, class _U2>
+    requires(__check_pair_construction<_T1, _T2>::template __is_pair_constructor_deleted<const _U1 &&, const _U2 &&>())
+  explicit(!__check_pair_construction<_T1, _T2>::template __is_implicit<const _U1&&, const _U2&&>())
+      pair(const pair<_U1, _U2>&&) = delete;
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
   template <__pair_like_no_subrange _PairLike>
-    requires(is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike &&>()))> &&
-             is_constructible_v<second_type, decltype(std::get<1>(std::declval<_PairLike &&>()))>)
+    requires(__check_pair_construction<_T1, _T2>::template __is_pair_constructible<
+                decltype(std::get<0>(std::declval<_PairLike &&>())),
+                decltype(std::get<1>(std::declval<_PairLike &&>()))>())
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(
       !is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
       !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>) pair(_PairLike&& __p)
       : first(std::get<0>(std::forward<_PairLike>(__p))), second(std::get<1>(std::forward<_PairLike>(__p))) {}
+
+  template <__pair_like_no_subrange _PairLike>
+    requires(__check_pair_construction<_T1, _T2>::template __is_pair_constructor_deleted<
+                decltype(std::get<0>(std::declval<_PairLike &&>())),
+                decltype(std::get<1>(std::declval<_PairLike &&>()))>())
+  explicit(!is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
+           !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>)
+      pair(_PairLike&&) = delete;
 #  endif
 
   template <class... _Args1, class... _Args2>
