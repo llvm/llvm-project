@@ -24,3 +24,15 @@ COMBINE-NEXT: fn1 1 u test.c:4 1
 COMBINE-NEXT: fn1 1 v test.c:13 0
 COMBINE-NEXT: fn1 1 x test.c:3 7
 COMBINE-NEXT: fn1 1 y test.c:3 7
+
+RUN: llvm-dwarfdump --show-variable-coverage --coverage-baseline=%t.o %t-opt.o | FileCheck %s --check-prefix=BASELINE
+
+BASELINE:      Variable coverage statistics:
+BASELINE-NEXT: Function InlChain Variable Decl LinesCovered Baseline CoveredRatio LT LTRatio
+BASELINE-NEXT: f k test.c:20 5 5 1 5 1
+BASELINE-NEXT: f l test.c:20 5 5 1 5 1
+BASELINE-NEXT: fn1 a test.c:11 5 14 0.357 7 0.5
+BASELINE-NEXT: fn1 u test.c:4 1 14 0.0714 7 0.5
+BASELINE-NEXT: fn1 v test.c:13 0 14 0 7 0.5
+BASELINE-NEXT: fn1 x test.c:3 7 14 0.5 7 0.5
+BASELINE-NEXT: fn1 y test.c:3 7 14 0.5 7 0.5

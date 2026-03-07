@@ -198,6 +198,11 @@ OPTIONS
             Show per-variable coverage metrics. The output format is described
             in the section below (:ref:`variable-coverage-format`).
 
+.. option:: --coverage-baseline
+
+            File to use as the baseline for variable coverage statistics
+            (implies :option:`--show-variable-coverage`)
+
 .. option:: --combine-inline-variable-instances
 
             Use with :option:`--show-variable-coverage` to average variable
@@ -280,7 +285,18 @@ a tab-separated table containing the following columns:
         declaration
       - `LinesCovered` ==> Number of source lines covered by the variable's
         debug information in the input file
-
+      - `Baseline` (empty if :option:`--coverage-baseline` is not specified)
+        ==> Number of source lines covered by the variable's debug information
+        in the baseline
+      - `CoveredRatio` (empty if :option:`--coverage-baseline` is not
+        specified) ==> Ratio of the coverage compared to the baseline
+        (calculated as `LinesCovered/Baseline`)
+      - `LT` (empty if :option:`--coverage-baseline` is not specified) ==>
+        Number of source lines covered in the variable's baseline debug
+        information that are also present in the input file's line table
+      - `LTRatio` (empty if :option:`--coverage-baseline` is not specified) ==>
+        Ratio of the line table coverage compared to the baseline (calculated
+        as `LT/Baseline`)
 
 EXIT STATUS
 -----------

@@ -25,6 +25,7 @@
 
 using namespace llvm;
 using namespace llvm::dwarf;
+using namespace llvm::dwarfdump;
 using namespace llvm::object;
 
 /// Pair of file index and line number representing a source location.
@@ -35,7 +36,8 @@ typedef std::pair<uint16_t, size_t> SourceLocation;
 /// scope's address ranges.
 static DenseSet<SourceLocation>
 computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
-                        const DWARFDebugLine::LineTable *const LineTable) {
+                        const DWARFDebugLine::LineTable *const LineTable,
+                        bool LTCov) {
   /// Adds source locations to the set that correspond to an address range.
   auto addLines = [](const DWARFDebugLine::LineTable *LineTable,
                      DenseSet<SourceLocation> &Lines, DWARFAddressRange Range) {
@@ -71,15 +73,17 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
       }
     }
   } else {
+    consumeError(Locations.takeError());
     // If the variable is optimized out and has no DW_AT_location, return an
     // empty set instead of falling back to the parent scope's address ranges.
-    consumeError(Locations.takeError());
-    return {};
+    if (!LTCov)
+      return {};
   }
 
   // DW_AT_location attribute may contain overly broad address ranges, or none
   // at all, so we also consider the parent scope's address ranges if present.
-  auto ParentRanges = VariableDIE.getParent().getAddressRanges();
+  auto ParentRanges = LTCov ? VariableDIE.getAddressRanges()
+                            : VariableDIE.getParent().getAddressRanges();
   std::optional<DenseSet<SourceLocation>> ParentLines;
   if (ParentRanges) {
     ParentLines = DenseSet<SourceLocation>();
@@ -140,10 +144,15 @@ struct VarKey {
 struct VarCoverage {
   SmallVector<DWARFDie> Parents;
   size_t Cov;
+  size_t BaselineCov;
+  size_t LTCov;
+  size_t Missing;
   size_t Instances;
+  bool MissingBaseline;
 };
 
 typedef std::multimap<VarKey, VarCoverage, std::less<>> VarMap;
+typedef std::map<VarKey, DenseSet<SourceLocation>, std::less<>> BaselineVarMap;
 
 static std::optional<const VarKey> getVarKey(DWARFDie Die, DWARFDie Parent) {
   const auto *const DieName = Die.getName(DINameKind::LinkageName);
@@ -184,11 +193,52 @@ static void displayVariableCoverage(const VarKey &Key, const VarCoverage &Var,
   WithColor(OS, HighlightColor::String) << Key.Name;
   OS << "\t" << Key.DeclFile << ":" << Key.DeclLine;
   OS << "\t" << format("%.3g", ((float)Var.Cov / Var.Instances));
+  if (Var.BaselineCov)
+    OS << "\t" << format("%.3g", ((float)Var.BaselineCov / Var.Instances))
+       << "\t" << format("%.3g", ((float)Var.Cov / Var.BaselineCov)) << "\t"
+       << format("%.3g", ((float)Var.LTCov / Var.Instances)) << "\t"
+       << format("%.3g", ((float)Var.LTCov / Var.BaselineCov));
   OS << "\n";
+  if (Var.MissingBaseline)
+    WithColor(errs(), HighlightColor::Warning).warning()
+        << "DIE not found in baseline\n";
+  if (Var.Missing)
+    WithColor(errs(), HighlightColor::Warning).warning()
+        << Var.Missing << " lines not found in baseline\n";
 }
 
 bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
+                                     ObjectFile *BaselineObj,
+                                     DWARFContext *BaselineCtx,
                                      bool CombineInstances, raw_ostream &OS) {
+  BaselineVarMap BaselineVars;
+
+  if (BaselineCtx) {
+    for (const auto &U : BaselineCtx->info_section_units()) {
+      const auto *const LT = BaselineCtx->getLineTableForUnit(U.get());
+      for (const auto &Entry : U->dies()) {
+        DWARFDie Die = {U.get(), &Entry};
+        if (Die.getTag() != DW_TAG_variable &&
+            Die.getTag() != DW_TAG_formal_parameter)
+          continue;
+
+        const auto Parents = getParentSubroutines(Die);
+        if (!Parents.size())
+          continue;
+        const auto Parent = Parents.front();
+        auto Key = getVarKey(Die, Parent);
+        if (!Key)
+          continue;
+
+        const auto Cov = computeVariableCoverage(*BaselineCtx, Die, LT, false);
+
+        auto Result = BaselineVars.insert({*Key, Cov});
+        if (!Result.second)
+          Result.first->second.insert_range(Cov);
+      }
+    }
+  }
+
   VarMap Vars;
 
   for (const auto &U : DICtx.info_section_units()) {
@@ -207,9 +257,28 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
       if (!Key)
         continue;
 
-      const auto Cov = computeVariableCoverage(DICtx, Die, LT);
+      const auto Cov = computeVariableCoverage(DICtx, Die, LT, false);
 
-      VarCoverage VarCov = {Parents, Cov.size(), 1};
+      VarCoverage VarCov = {Parents, Cov.size(), 0, 0, 0, 1, false};
+
+      if (BaselineCtx) {
+        BaselineVarMap::iterator Var = BaselineVars.find(*Key);
+
+        if (Var != BaselineVars.end()) {
+          const auto BCov = Var->second;
+          VarCov.BaselineCov = BCov.size();
+
+          for (const auto &L : Cov)
+            VarCov.Missing += (1 - BCov.count(L));
+
+          const auto LTCov = computeVariableCoverage(DICtx, Parent, LT, true);
+
+          for (const auto &L : BCov)
+            VarCov.LTCov += LTCov.count(L);
+        } else {
+          VarCov.MissingBaseline = true;
+        }
+      }
 
       Vars.insert({*Key, VarCov});
     }
@@ -219,16 +288,23 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
 
   OS << "\nVariable coverage statistics:\nFunction\t"
      << (CombineInstances ? "InstanceCount" : "InlChain")
-     << "\tVariable\tDecl\tLinesCovered\n";
+     << "\tVariable\tDecl\tLinesCovered";
+  if (BaselineCtx)
+    OS << "\tBaseline\tCoveredRatio\tLT\tLTRatio";
+  OS << "\n";
 
   if (CombineInstances) {
     for (auto FirstVar = Vars.begin(); FirstVar != Vars.end();
          FirstVar = Range.second) {
       Range = Vars.equal_range(FirstVar->first);
-      VarCoverage CombinedCov = {{}, 0, 0};
+      VarCoverage CombinedCov = {{}, 0, 0, 0, 0, 0, false};
       for (auto Var = Range.first; Var != Range.second; ++Var) {
         ++CombinedCov.Instances;
         CombinedCov.Cov += Var->second.Cov;
+        CombinedCov.BaselineCov += Var->second.BaselineCov;
+        CombinedCov.LTCov += Var->second.LTCov;
+        CombinedCov.Missing += Var->second.Missing;
+        CombinedCov.MissingBaseline |= Var->second.MissingBaseline;
       }
       displayVariableCoverage(FirstVar->first, CombinedCov, true, OS);
     }
