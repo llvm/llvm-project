@@ -1796,8 +1796,8 @@ public:
   ///
   /// FIXME: We will need these to be uniqued, or at least comparable, at some
   /// point.
-  QualType getDependentSizedExtVectorType(QualType VectorType,
-                                          Expr *SizeExpr,
+  QualType getDependentSizedExtVectorType(QualType VectorType, Expr *SizeExpr,
+                                          Expr *ScalableExpr,
                                           SourceLocation AttrLoc) const;
 
   /// Return the unique reference to the matrix type of the specified element

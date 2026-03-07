@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s --check-prefix=X86-64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s --check-prefix=ARM64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64-apple-ios9 -target-feature +sve -emit-llvm -o - %s | FileCheck %s --check-prefixes=ARM64,ARM64-SVE
 
 // REQUIRES: aarch64-registered-target,x86-registered-target
 
@@ -1059,3 +1060,130 @@ TEST(vector_union)
 
 // CHECK-LABEL: define swiftcc { float, float, float, float } @return_vector_union()
 // CHECK-LABEL: define swiftcc void @take_vector_union(float %0, float %1, float %2, float %3)
+
+#if defined(__ARM_FEATURE_SVE)
+
+#define SCALABLE_SIZE(N) (N), 1
+
+typedef float svfloat1 __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+typedef float svfloat4 __attribute__((ext_vector_type(SCALABLE_SIZE(4))));
+typedef double svdouble1 __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+typedef double svdouble4 __attribute__((ext_vector_type(SCALABLE_SIZE(4))));
+typedef int svint1 __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+typedef int svint4 __attribute__((ext_vector_type(SCALABLE_SIZE(4))));
+typedef signed char svchar1 __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+typedef signed char svchar4 __attribute__((ext_vector_type(SCALABLE_SIZE(4))));
+typedef short svshort1 __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+typedef short svshort4 __attribute__((ext_vector_type(SCALABLE_SIZE(4))));
+typedef long long svlong1 __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+typedef long long svlong4 __attribute__((ext_vector_type(SCALABLE_SIZE(4))));
+
+TEST(__SVFloat32_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___SVFloat32_t()
+// ARM64-SVE: ret [[SVFLOAT1_T:.+]] %0
+
+TEST(svfloat1)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svfloat1()
+// ARM64-SVE: ret [[SVFLOAT1_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svfloat1(<vscale x 4 x float> %v)
+
+TEST(__clang_svfloat32x4_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___clang_svfloat32x4_t()
+// ARM64-SVE: ret [[SVFLOAT4_T:.+]] %0
+
+TEST(svfloat4)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svfloat4()
+// ARM64-SVE: ret [[SVFLOAT4_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svfloat4(<vscale x 4 x float> %v.coerce0, <vscale x 4 x float> %v.coerce1, <vscale x 4 x float> %v.coerce2, <vscale x 4 x float> %v.coerce3)
+
+TEST(__SVFloat64_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___SVFloat64_t()
+// ARM64-SVE: ret [[SVDOUBLE1_T:.+]] %0
+
+TEST(svdouble1)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svdouble1()
+// ARM64-SVE: ret [[SVDOUBLE1_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svdouble1(<vscale x 2 x double> %v)
+
+TEST(__clang_svfloat64x4_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___clang_svfloat64x4_t()
+// ARM64-SVE: ret [[SVDOUBLE4_T:.+]] %0
+
+TEST(svdouble4)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svdouble4()
+// ARM64-SVE: ret [[SVDOUBLE4_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svdouble4(<vscale x 2 x double> %v.coerce0, <vscale x 2 x double> %v.coerce1, <vscale x 2 x double> %v.coerce2, <vscale x 2 x double> %v.coerce3)
+
+TEST(__SVInt32_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___SVInt32_t()
+// ARM64-SVE: ret [[SVINT1_T:.+]] %0
+
+TEST(svint1)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svint1()
+// ARM64-SVE: ret [[SVINT1_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svint1(<vscale x 4 x i32> %v)
+
+TEST(__clang_svint32x4_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___clang_svint32x4_t()
+// ARM64-SVE: ret [[SVINT4_T:.+]] %0
+
+TEST(svint4)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svint4()
+// ARM64-SVE: ret [[SVINT4_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svint4(<vscale x 4 x i32> %v.coerce0, <vscale x 4 x i32> %v.coerce1, <vscale x 4 x i32> %v.coerce2, <vscale x 4 x i32> %v.coerce3)
+
+TEST(__SVInt8_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___SVInt8_t()
+// ARM64-SVE: ret [[SVCHAR1_T:.+]] %0
+
+TEST(svchar1)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svchar1()
+// ARM64-SVE: ret [[SVCHAR1_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svchar1(<vscale x 16 x i8> %v)
+
+TEST(__clang_svint8x4_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___clang_svint8x4_t()
+// ARM64-SVE: ret [[SVCHAR4_T:.+]] %0
+
+TEST(svchar4)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svchar4()
+// ARM64-SVE: ret [[SVCHAR4_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svchar4(<vscale x 16 x i8> %v.coerce0, <vscale x 16 x i8> %v.coerce1, <vscale x 16 x i8> %v.coerce2, <vscale x 16 x i8> %v.coerce3)
+
+TEST(__SVInt16_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___SVInt16_t()
+// ARM64-SVE: ret [[SVSHORT1_T:.+]] %0
+
+TEST(svshort1)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svshort1()
+// ARM64-SVE: ret [[SVSHORT1_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svshort1(<vscale x 8 x i16> %v)
+
+TEST(__clang_svint16x4_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___clang_svint16x4_t()
+// ARM64-SVE: ret [[SVSHORT4_T:.+]] %0
+
+TEST(svshort4)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svshort4()
+// ARM64-SVE: ret [[SVSHORT4_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svshort4(<vscale x 8 x i16> %v.coerce0, <vscale x 8 x i16> %v.coerce1, <vscale x 8 x i16> %v.coerce2, <vscale x 8 x i16> %v.coerce3)
+
+TEST(__SVInt64_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___SVInt64_t()
+// ARM64-SVE: ret [[SVLONG1_T:.+]] %0
+
+TEST(svlong1)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svlong1()
+// ARM64-SVE: ret [[SVLONG1_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svlong1(<vscale x 2 x i64> %v)
+
+TEST(__clang_svint64x4_t)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return___clang_svint64x4_t()
+// ARM64-SVE: ret [[SVLONG4_T:.+]] %0
+
+TEST(svlong4)
+// ARM64-SVE-LABEL: define{{.*}} swiftcc {{.+}} @return_svlong4()
+// ARM64-SVE: ret [[SVLONG4_T]] %0
+// ARM64-SVE-LABEL: define{{.*}} swiftcc void @take_svlong4(<vscale x 2 x i64> %v.coerce0, <vscale x 2 x i64> %v.coerce1, <vscale x 2 x i64> %v.coerce2, <vscale x 2 x i64> %v.coerce3)
+
+#endif /* defined(__ARM_FEATURE_SVE) */

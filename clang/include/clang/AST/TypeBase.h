@@ -4110,6 +4110,7 @@ class DependentSizedExtVectorType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
 
   Expr *SizeExpr;
+  Expr *ScalableExpr;
 
   /// The element type of the array.
   QualType ElementType;
@@ -4117,10 +4118,12 @@ class DependentSizedExtVectorType : public Type, public llvm::FoldingSetNode {
   SourceLocation loc;
 
   DependentSizedExtVectorType(QualType ElementType, QualType can,
-                              Expr *SizeExpr, SourceLocation loc);
+                              Expr *SizeExpr, Expr *ScalableExpr,
+                              SourceLocation loc);
 
 public:
   Expr *getSizeExpr() const { return SizeExpr; }
+  Expr *getScalableExpr() const { return ScalableExpr; }
   QualType getElementType() const { return ElementType; }
   SourceLocation getAttributeLoc() const { return loc; }
 
@@ -4132,11 +4135,11 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getElementType(), getSizeExpr());
+    Profile(ID, Context, getElementType(), getSizeExpr(), getScalableExpr());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType ElementType, Expr *SizeExpr);
+                      QualType ElementType, Expr *SizeExpr, Expr *ScalableExpr);
 };
 
 enum class VectorKind {

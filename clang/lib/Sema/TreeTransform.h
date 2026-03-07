@@ -1026,7 +1026,7 @@ public:
   /// By default, performs semantic analysis when building the vector type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildExtVectorType(QualType ElementType, unsigned NumElements,
-                                SourceLocation AttributeLoc);
+                                bool Scalable, SourceLocation AttributeLoc);
 
   /// Build a new potentially dependently-sized extended vector type
   /// given the element type and number of elements.
@@ -1035,6 +1035,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildDependentSizedExtVectorType(QualType ElementType,
                                               Expr *SizeExpr,
+                                              Expr *ScalableExpr,
                                               SourceLocation AttributeLoc);
 
   /// Build a new matrix type given the element type and dimensions.
@@ -5446,6 +5447,9 @@ TypeSourceInfo *TreeTransform<Derived>::TransformType(TypeSourceInfo *TSI) {
   QualType Result = getDerived().TransformType(TLB, TL);
   if (Result.isNull())
     return nullptr;
+  if (isa<DependentSizedExtVectorType>(TL.getType()) &&
+      isa<BuiltinType>(Result))
+    return SemaRef.Context.CreateTypeSourceInfo(Result);
 
   return TLB.getTypeSourceInfo(SemaRef.Context, Result);
 }
@@ -6117,13 +6121,21 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
   if (Size.isInvalid())
     return QualType();
 
+  ExprResult Scalable;
+  if (T->getScalableExpr()) {
+    Scalable = getDerived().TransformExpr(T->getScalableExpr());
+    Scalable = SemaRef.ActOnConstantExpression(Scalable);
+    if (Scalable.isInvalid())
+      return QualType();
+  }
+
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() ||
       ElementType != T->getElementType() ||
       Size.get() != T->getSizeExpr()) {
-    Result = getDerived().RebuildDependentSizedExtVectorType(ElementType,
-                                                             Size.get(),
-                                                         T->getAttributeLoc());
+    Result = getDerived().RebuildDependentSizedExtVectorType(
+        ElementType, Size.get(),
+        T->getScalableExpr() ? Scalable.get() : nullptr, T->getAttributeLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -6133,7 +6145,7 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
     DependentSizedExtVectorTypeLoc NewTL
       = TLB.push<DependentSizedExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
-  } else {
+  } else if (!isa<BuiltinType>(Result)) {
     ExtVectorTypeLoc NewTL = TLB.push<ExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
   }
@@ -6300,8 +6312,8 @@ QualType TreeTransform<Derived>::TransformExtVectorType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() ||
       ElementType != T->getElementType()) {
-    Result = getDerived().RebuildExtVectorType(ElementType,
-                                               T->getNumElements(),
+    Result = getDerived().RebuildExtVectorType(ElementType, T->getNumElements(),
+                                               false,
                                                /*FIXME*/ SourceLocation());
     if (Result.isNull())
       return QualType();
@@ -17612,24 +17624,29 @@ QualType TreeTransform<Derived>::RebuildDependentVectorType(
   return SemaRef.BuildVectorType(ElementType, SizeExpr, AttributeLoc);
 }
 
-template<typename Derived>
-QualType TreeTransform<Derived>::RebuildExtVectorType(QualType ElementType,
-                                                      unsigned NumElements,
-                                                 SourceLocation AttributeLoc) {
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildExtVectorType(
+    QualType ElementType, unsigned NumElements, bool Scalable,
+    SourceLocation AttributeLoc) {
   llvm::APInt numElements(SemaRef.Context.getIntWidth(SemaRef.Context.IntTy),
                           NumElements, true);
+  llvm::APInt isScalable(SemaRef.Context.getIntWidth(SemaRef.Context.IntTy),
+                         Scalable);
   IntegerLiteral *VectorSize
     = IntegerLiteral::Create(SemaRef.Context, numElements, SemaRef.Context.IntTy,
                              AttributeLoc);
-  return SemaRef.BuildExtVectorType(ElementType, VectorSize, AttributeLoc);
+  IntegerLiteral *IsScalable = IntegerLiteral::Create(
+      SemaRef.Context, isScalable, SemaRef.Context.IntTy, AttributeLoc);
+  return SemaRef.BuildExtVectorType(ElementType, VectorSize, IsScalable,
+                                    AttributeLoc);
 }
 
-template<typename Derived>
-QualType
-TreeTransform<Derived>::RebuildDependentSizedExtVectorType(QualType ElementType,
-                                                           Expr *SizeExpr,
-                                                  SourceLocation AttributeLoc) {
-  return SemaRef.BuildExtVectorType(ElementType, SizeExpr, AttributeLoc);
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildDependentSizedExtVectorType(
+    QualType ElementType, Expr *SizeExpr, Expr *ScalableExpr,
+    SourceLocation AttributeLoc) {
+  return SemaRef.BuildExtVectorType(ElementType, SizeExpr, ScalableExpr,
+                                    AttributeLoc);
 }
 
 template <typename Derived>

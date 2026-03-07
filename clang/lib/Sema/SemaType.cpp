@@ -2437,7 +2437,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
 }
 
 QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
-                                  SourceLocation AttrLoc) {
+                                  Expr *ScalableExpr, SourceLocation AttrLoc) {
   // Unlike gcc's vector_size attribute, we do not allow vectors to be defined
   // in conjunction with complex types (pointers, arrays, functions, etc.).
   //
@@ -2489,10 +2489,29 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
       return QualType();
     }
 
+    if (ScalableExpr) {
+      std::optional<llvm::APSInt> VecScalable =
+          ScalableExpr->getIntegerConstantExpr(Context);
+      if (VecScalable && static_cast<bool>(VecScalable->getZExtValue())) {
+        if (Context.getTargetInfo().hasFeature("sve")) {
+          // The length of an SVE vector type is only known at runtime, but it
+          // is always a multiple of 128bits.
+          unsigned NumEls = 128U / Context.getTypeSize(T);
+          return Context.getScalableVectorType(T, NumEls * VectorSize);
+        } else {
+          Diag(AttrLoc, diag::err_attribute_argument_type)
+              << "ext_vector_type" << AANT_ArgumentIntegerConstant
+              << ScalableExpr->getSourceRange();
+          return QualType();
+        }
+      }
+    }
+
     return Context.getExtVectorType(T, VectorSize);
   }
 
-  return Context.getDependentSizedExtVectorType(T, SizeExpr, AttrLoc);
+  return Context.getDependentSizedExtVectorType(T, SizeExpr, ScalableExpr,
+                                                AttrLoc);
 }
 
 QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
@@ -8492,14 +8511,16 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
 static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                     Sema &S) {
   // check the attribute arguments.
-  if (Attr.getNumArgs() != 1) {
+  if ((Attr.getNumArgs() < 1) || (Attr.getNumArgs() > 2)) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
                                                                       << 1;
     return;
   }
 
   Expr *SizeExpr = Attr.getArgAsExpr(0);
-  QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
+  Expr *ScalableExpr = (Attr.getNumArgs() > 1) ? Attr.getArgAsExpr(1) : nullptr;
+  QualType T =
+      S.BuildExtVectorType(CurType, SizeExpr, ScalableExpr, Attr.getLoc());
   if (!T.isNull())
     CurType = T;
 }

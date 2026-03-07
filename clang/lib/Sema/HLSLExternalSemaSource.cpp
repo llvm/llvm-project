@@ -106,7 +106,7 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
           AST, NestedNameSpecifierLoc(), SourceLocation(), SizeParam, false,
           DeclarationNameInfo(SizeParam->getDeclName(), SourceLocation()),
           AST.IntTy, VK_LValue),
-      SourceLocation());
+      nullptr, SourceLocation());
 
   auto *Record = TypeAliasDecl::Create(AST, HLSLNamespace, SourceLocation(),
                                        SourceLocation(), &II,

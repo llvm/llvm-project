@@ -1879,7 +1879,7 @@ def EnableIf : InheritableAttr {
 
 def ExtVectorType : TypeAttr {
   let Spellings = [Clang<"ext_vector_type">];
-  let Args = [ExprArgument<"NumElements">];
+  let Args = [ExprArgument<"NumElements">, ExprArgument<"Scalable", 1>];
   let Documentation = [ExtVectorTypeDocs];
 }
 
