@@ -143,8 +143,11 @@
 ; CHECK-O3-NEXT: Running pass: SLPVectorizerPass on foo
 ; CHECK-OS-NEXT: Running pass: SLPVectorizerPass on foo
 ; CHECK-O23SZ-NEXT: Running pass: VectorCombinePass on foo
-; CHECK-O23SZ-NEXT: Running pass: InferAlignmentPass on foo
-; CHECK-O23SZ-NEXT: Running pass: InstCombinePass on foo
+; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
+; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
+; CHECK-O23SZ-NEXT: Running pass: LoopReduceMotionPass
+; CHECK-O23SZ-NEXT: Running pass: InferAlignmentPass
+; CHECK-O23SZ-NEXT: Running pass: InstCombinePass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass

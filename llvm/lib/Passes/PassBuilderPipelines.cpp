@@ -147,6 +147,7 @@
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Vectorize/LoopReduceMotion.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
@@ -1428,6 +1429,11 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   }
   // Enhance/cleanup vector code.
   FPM.addPass(VectorCombinePass());
+
+  LoopPassManager LPM;
+  // Try to sink ReduceCall out of loop
+  LPM.addPass(LoopReduceMotionPass());
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
 
   if (!IsFullLTO) {
     FPM.addPass(InstCombinePass());
