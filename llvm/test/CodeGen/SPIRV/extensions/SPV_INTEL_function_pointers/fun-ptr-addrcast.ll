@@ -3,7 +3,7 @@
 ; work also for function pointers.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - --spirv-ext=+SPV_INTEL_function_pointers | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-COUNT-3: %[[#]] = OpSpecConstantOp %[[#]] PtrCastToGeneric %[[#]]
 ; CHECK-COUNT-3: OpPtrCastToGeneric

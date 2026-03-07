@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
 ; CHECK: OpExtension "SPV_INTEL_function_pointers"
