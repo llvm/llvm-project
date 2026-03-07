@@ -56,8 +56,7 @@ public:
   using ClassDefId = std::pair<SourceLocation, std::string>;
 
   using ClassDefiningSpecialMembersMap =
-      llvm::DenseMap<ClassDefId,
-                     llvm::SmallVector<SpecialMemberFunctionData, 5>>;
+      llvm::DenseMap<ClassDefId, SmallVector<SpecialMemberFunctionData, 5>>;
 
 private:
   void checkForMissingMembers(

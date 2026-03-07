@@ -17,14 +17,16 @@
 #include <string>
 
 using namespace clang::ast_matchers;
-namespace {
-
-AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
-  return Node.getLanguage() == clang::LinkageSpecLanguageIDs::C;
-}
-} // namespace
 
 namespace clang::tidy::modernize {
+
+namespace {
+
+AST_MATCHER(LinkageSpecDecl, isExternCLinkage) {
+  return Node.getLanguage() == LinkageSpecLanguageIDs::C;
+}
+
+} // namespace
 
 static constexpr StringRef ExternCDeclName = "extern-c-decl";
 static constexpr StringRef ParentDeclName = "parent-decl";

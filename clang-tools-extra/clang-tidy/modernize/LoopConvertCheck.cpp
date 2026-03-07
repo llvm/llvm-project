@@ -1074,7 +1074,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
                Finder.aliasFromForInit(), Loop, Descriptor);
 }
 
-llvm::StringRef LoopConvertCheck::getReverseFunction() const {
+StringRef LoopConvertCheck::getReverseFunction() const {
   if (!ReverseFunction.empty())
     return ReverseFunction;
   if (UseReverseRanges)
@@ -1082,7 +1082,7 @@ llvm::StringRef LoopConvertCheck::getReverseFunction() const {
   return "";
 }
 
-llvm::StringRef LoopConvertCheck::getReverseHeader() const {
+StringRef LoopConvertCheck::getReverseHeader() const {
   if (!ReverseHeader.empty())
     return ReverseHeader;
   if (UseReverseRanges && ReverseFunction.empty())

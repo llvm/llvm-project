@@ -20,14 +20,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 static bool isNegativeComparison(const Expr *ComparisonExpr) {
-  if (const auto *Op = llvm::dyn_cast<BinaryOperator>(ComparisonExpr))
+  if (const auto *Op = dyn_cast<BinaryOperator>(ComparisonExpr))
     return Op->getOpcode() == BO_NE;
 
-  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr))
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(ComparisonExpr))
     return Op->getOperator() == OO_ExclaimEqual;
 
-  if (const auto *Op =
-          llvm::dyn_cast<CXXRewrittenBinaryOperator>(ComparisonExpr))
+  if (const auto *Op = dyn_cast<CXXRewrittenBinaryOperator>(ComparisonExpr))
     return Op->getOperator() == BO_NE;
 
   return false;

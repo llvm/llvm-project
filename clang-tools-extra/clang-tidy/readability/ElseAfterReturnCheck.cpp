@@ -93,7 +93,7 @@ static const DeclRefExpr *checkInitDeclUsageInElse(const IfStmt *If) {
     assert(isa<VarDecl>(InitDecl) && "SingleDecl must be a VarDecl");
     return findUsage(If->getElse(), InitDecl->getID());
   }
-  llvm::SmallVector<int64_t, 4> DeclIdentifiers;
+  SmallVector<int64_t, 4> DeclIdentifiers;
   for (const Decl *ChildDecl : InitDeclStmt->decls()) {
     assert(isa<VarDecl>(ChildDecl) && "Init Decls must be a VarDecl");
     DeclIdentifiers.push_back(ChildDecl->getID());
@@ -135,7 +135,7 @@ static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
         Remap(LBrace).getLocWithOffset(TokLen(LBrace) + 1);
     const SourceLocation RangeEnd = Remap(RBrace).getLocWithOffset(-1);
 
-    const llvm::StringRef Repl = Lexer::getSourceText(
+    const StringRef Repl = Lexer::getSourceText(
         CharSourceRange::getTokenRange(RangeStart, RangeEnd),
         Context.getSourceManager(), Context.getLangOpts());
     Diag << tooling::fixit::createReplacement(CS->getSourceRange(), Repl);
@@ -143,7 +143,7 @@ static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
     const SourceLocation ElseExpandedLoc = Remap(ElseLoc);
     const SourceLocation EndLoc = Remap(Else->getEndLoc());
 
-    const llvm::StringRef Repl = Lexer::getSourceText(
+    const StringRef Repl = Lexer::getSourceText(
         CharSourceRange::getTokenRange(
             ElseExpandedLoc.getLocWithOffset(TokLen(ElseLoc) + 1), EndLoc),
         Context.getSourceManager(), Context.getLangOpts());
@@ -276,7 +276,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
         Diag << tooling::fixit::createReplacement(
                     SourceRange(If->getIfLoc()),
                     (tooling::fixit::getText(*If->getInit(), *Result.Context) +
-                     llvm::StringRef("\n"))
+                     StringRef("\n"))
                         .str())
              << tooling::fixit::createRemoval(If->getInit()->getSourceRange());
       }
@@ -284,7 +284,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       const VarDecl *VDecl = If->getConditionVariable();
       const std::string Repl =
           (tooling::fixit::getText(*VDeclStmt, *Result.Context) +
-           llvm::StringRef(";\n") +
+           StringRef(";\n") +
            tooling::fixit::getText(If->getIfLoc(), *Result.Context))
               .str();
       Diag << tooling::fixit::createReplacement(SourceRange(If->getIfLoc()),
