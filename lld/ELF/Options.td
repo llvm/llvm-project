@@ -423,6 +423,11 @@ defm relax_gp: BB<"relax-gp",
   "Enable global pointer relaxation",
   "Disable global pointer relaxation (default)">;
 
+def relax_tbljal : FF<"relax-tbljal">,
+                   HelpText<"Enable conversion of call instructions to table "
+                            "jump instruction from the Zcmt extension for "
+                            "frequently called functions (RISC-V only)">;
+
 defm remap_inputs: EEq<"remap-inputs",
   "Remap input files matching <from-glob> to <to-file>">,
   MetaVarName<"<from-glob>=<to-file>">;
