@@ -10,11 +10,13 @@
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
 #include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
+#include <optional>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
 
@@ -188,6 +190,40 @@ void collectTileSizesFromOpenMPConstruct(
     const parser::OpenMPConstruct *ompCons,
     llvm::SmallVectorImpl<int64_t> &tileSizes,
     Fortran::semantics::SemanticsContext &semaCtx);
+
+mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
+                                  mlir::Location loc,
+                                  const mlir::DataLayout &dl,
+                                  hlfir::Entity entity);
+
+mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+                            const omp::Object &object,
+                            Fortran::lower::StatementContext &stmtCtx,
+                            mlir::Location loc);
+
+mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const mlir::DataLayout &dl, hlfir::Entity entity,
+                           llvm::ArrayRef<mlir::Value> bounds);
+
+struct IteratorRange {
+  mlir::Value lb;
+  mlir::Value ub;
+  mlir::Value step;
+  Fortran::semantics::Symbol *ivSym = nullptr;
+};
+
+bool hasIteratorIVReference(
+    const omp::Object &object,
+    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
+
+mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
+                                  hlfir::Entity entity,
+                                  llvm::ArrayRef<mlir::Value> ivs,
+                                  mlir::Location loc);
+
+std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
 } // namespace omp
 } // namespace lower
