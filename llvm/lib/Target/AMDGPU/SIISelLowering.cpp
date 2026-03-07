@@ -17443,6 +17443,14 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   if (Cond.getOpcode() != ISD::SETCC)
     return SDValue();
 
+  if (DCI.isAfterLegalizeDAG()) {
+      // in generic combini, (uint_to_fp (setcc x, y, cc)) -> (select (setcc x, y,
+      // cc), 1.0, 0.0)
+      if (N->getValueType(0).isVector()) {
+          DCI.DAG.updateDivergence(N);
+      }
+  }
+
   SDValue LHS = Cond.getOperand(0);
   SDValue RHS = Cond.getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();

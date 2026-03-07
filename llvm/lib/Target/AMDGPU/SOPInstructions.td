@@ -2057,7 +2057,7 @@ let AddedComplexity = 20 in {
 
   // TODO: The predicate should not be necessary, but enabling this pattern for
   // all subtargets generates worse code in some cases.
-  let OtherPredicates = [HasPseudoScalarTrans] in
+  // let OtherPredicates = [HasPseudoScalarTrans] in
   def : GCNPat<
     (f32 (UniformSelect f32:$src0, f32:$src1)),
     (S_CSELECT_B32 SSrc_b32:$src0, SSrc_b32:$src1)
