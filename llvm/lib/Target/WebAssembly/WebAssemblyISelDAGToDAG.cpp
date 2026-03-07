@@ -186,7 +186,6 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
                                         : WebAssembly::GLOBAL_GET_I32;
 
-  // Few custom selection stuff.
   SDLoc DL(Node);
   MachineFunction &MF = CurDAG->getMachineFunction();
   switch (Node->getOpcode()) {
@@ -207,17 +206,33 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
                                      Node->getOperand(0) // inchain
       );
       break;
-    case SyncScope::System:
-      // Currently wasm only supports sequentially consistent atomics, so we
-      // always set the order to 0 (sequentially consistent).
+    case SyncScope::System: {
+      unsigned Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+      if (MF.getSubtarget<WebAssemblySubtarget>().hasRelaxedAtomics()) {
+        auto Ordering =
+            static_cast<AtomicOrdering>(Node->getConstantOperandVal(1));
+        switch (Ordering) {
+        case AtomicOrdering::Acquire:
+        case AtomicOrdering::Release:
+        case AtomicOrdering::AcquireRelease:
+          Order = wasm::WASM_MEM_ORDER_ACQ_REL;
+          break;
+        case AtomicOrdering::SequentiallyConsistent:
+          Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+          break;
+        default:
+          llvm_unreachable("Invalid ordering for atomic fence");
+        }
+      }
       Fence = CurDAG->getMachineNode(
           WebAssembly::ATOMIC_FENCE,
-          DL,                                         // debug loc
-          MVT::Other,                                 // outchain type
-          CurDAG->getTargetConstant(0, DL, MVT::i32), // order
-          Node->getOperand(0)                         // inchain
+          DL,                                             // debug loc
+          MVT::Other,                                     // outchain type
+          CurDAG->getTargetConstant(Order, DL, MVT::i32), // order
+          Node->getOperand(0)                             // inchain
       );
       break;
+    }
     default:
       llvm_unreachable("Unknown scope!");
     }
