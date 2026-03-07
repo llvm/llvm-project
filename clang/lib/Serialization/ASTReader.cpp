@@ -7610,6 +7610,10 @@ void TypeLocReader::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
 }
 
+void TypeLocReader::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  // Nothing to do
+}
+
 void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }

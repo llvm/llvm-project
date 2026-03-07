@@ -7750,6 +7750,26 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
 }
 
 template <typename Derived>
+QualType
+TreeTransform<Derived>::TransformLateParsedAttrType(TypeLocBuilder &TLB,
+                                                    LateParsedAttrTypeLoc TL) {
+  const LateParsedAttrType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->getWrappedType()) {
+    Result = SemaRef.Context.getLateParsedAttrType(
+        InnerTy, OldTy->getLateParsedAttribute());
+  }
+
+  LateParsedAttrTypeLoc newTL = TLB.push<LateParsedAttrTypeLoc>(Result);
+  newTL.setAttrNameLoc(TL.getAttrNameLoc());
+  return Result;
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
     TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
   // The BTFTagAttributedType is available for C only.

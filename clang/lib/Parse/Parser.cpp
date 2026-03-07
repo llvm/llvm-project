@@ -574,6 +574,12 @@ void Parser::Initialize() {
   }
 
   Actions.Initialize();
+  // Register callbacks so Sema can call back into the Parser to handle
+  // late-parsed type attributes (e.g. counted_by on struct fields), which
+  // may be processed at any point during parsing via ActOnFields.
+  Actions.SetLateParsedAttributeCallbacks(
+      GetLateParsedAttributeLocationCallback,
+      ProcessLateParsedTypeAttrCallback);
 
   // Prime the lexer look-ahead.
   ConsumeToken();

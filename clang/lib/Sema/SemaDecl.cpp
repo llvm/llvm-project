@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TreeTransform.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -17060,7 +17061,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-  ProcessDeclAttributeList(S, D, Attrs);
+  ProcessDeclAttributeList(S, D, Attrs, ProcessDeclAttributeOptions());
   ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
@@ -19778,6 +19779,328 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
   return llvm::all_of(Record->decls(), IsFunctionPointerOrForwardDecl);
 }
 
+static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D,
+                                         const ParsedAttr &AL) {
+  if (!AL.diagnoseLangOpts(S))
+    return QualType();
+
+  assert(isa<FieldDecl>(D));
+
+  auto *CountExpr = AL.getArgAsExpr(0);
+  if (!CountExpr)
+    return QualType();
+
+  bool CountInBytes;
+  bool OrNull;
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_CountedBy:
+    CountInBytes = false;
+    OrNull = false;
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    CountInBytes = false;
+    OrNull = true;
+    break;
+  case ParsedAttr::AT_SizedBy:
+    CountInBytes = true;
+    OrNull = false;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    CountInBytes = true;
+    OrNull = true;
+    break;
+  default:
+    llvm_unreachable("unexpected counted_by family attribute");
+  }
+
+  return S.BuildCountAttributedArrayOrPointerType(T, CountExpr, CountInBytes,
+                                                  OrNull);
+}
+struct RebuildTypeWithLateParsedAttr
+    : TreeTransform<RebuildTypeWithLateParsedAttr> {
+  FieldDecl *FD;
+  Sema::ParseLateParsedTypeAttributeCB *ParseCallback;
+
+  RebuildTypeWithLateParsedAttr(Sema &SemaRef, FieldDecl *FD,
+                                Sema::ParseLateParsedTypeAttributeCB *ParseCB)
+      : TreeTransform(SemaRef), FD(FD), ParseCallback(ParseCB) {}
+
+  // Helper to check and diagnose if a type is CountAttributedType
+  bool diagnoseCountAttributedType(QualType Ty, SourceLocation Loc) {
+    if (const auto *CAT = Ty->getAs<CountAttributedType>()) {
+      SemaRef.Diag(Loc, diag::err_counted_by_on_nested_pointer)
+          << CAT->getKind();
+      FD->setInvalidDecl();
+      return true;
+    }
+    return false;
+  }
+
+  QualType TransformLateParsedAttrType(TypeLocBuilder &TLB,
+                                       LateParsedAttrTypeLoc TL) {
+    const LateParsedAttrType *LPA = TL.getTypePtr();
+    auto *LTA = LPA->getLateParsedAttribute();
+
+    assert(LTA && "LateParsedAttrType must have a LateParsedTypeAttribute");
+
+    AttributeFactory AF{};
+    ParsedAttributes Attrs(AF);
+
+    // Invoke the parser callback to parse and consume the cached tokens.
+    // ParseCallback is also responsible for deleting LTA.
+    assert(!!ParseCallback);
+    ParseCallback(LTA, &Attrs);
+
+    // Invalid argument
+    if (Attrs.empty())
+      return QualType();
+
+    assert(Attrs.size() == 1);
+    auto &AL = Attrs[0];
+
+    QualType InnerType = TransformType(TLB, TL.getInnerLoc());
+    if (InnerType.isNull()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    QualType T = handleCountedByAttrField(SemaRef, InnerType, FD, AL);
+    if (T.isNull()) {
+      AL.setInvalid();
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    AL.setUsedAsTypeAttr();
+
+    TLB.push<CountAttributedTypeLoc>(T);
+    return T;
+  }
+
+  QualType TransformPointerType(TypeLocBuilder &TLB, PointerTypeLoc TL) {
+    QualType PointeeType = getDerived().TransformType(TLB, TL.getPointeeLoc());
+    if (PointeeType.isNull()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    // Diagnose nested pointer with counted_by attribute
+    // e.g., int * __counted_by(n) *ptr;
+    if (diagnoseCountAttributedType(PointeeType, TL.getSigilLoc()))
+      return QualType();
+
+    QualType Result = TL.getType();
+    if (getDerived().AlwaysRebuild() ||
+        PointeeType != TL.getPointeeLoc().getType()) {
+      Result = getDerived().RebuildPointerType(PointeeType, TL.getSigilLoc());
+      if (Result.isNull()) {
+        FD->setInvalidDecl();
+        return QualType();
+      }
+    }
+
+    PointerTypeLoc NewTL = TLB.push<PointerTypeLoc>(Result);
+    NewTL.setSigilLoc(TL.getSigilLoc());
+    return Result;
+  }
+
+  QualType TransformConstantArrayType(TypeLocBuilder &TLB,
+                                      ConstantArrayTypeLoc TL) {
+    const ConstantArrayType *T = TL.getTypePtr();
+    QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
+    if (ElementType.isNull()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    // Diagnose array with element type having counted_by attribute
+    // e.g., int * __counted_by(n) arr[10];
+    if (diagnoseCountAttributedType(ElementType, TL.getLBracketLoc()))
+      return QualType();
+
+    // Continue with normal array transformation
+    Expr *OldSize = TL.getSizeExpr();
+    if (!OldSize)
+      OldSize = const_cast<Expr *>(T->getSizeExpr());
+    Expr *NewSize = nullptr;
+    if (OldSize) {
+      EnterExpressionEvaluationContext Unevaluated(
+          SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+      NewSize = getDerived().TransformExpr(OldSize).template getAs<Expr>();
+      NewSize = SemaRef.ActOnConstantExpression(NewSize).get();
+    }
+
+    QualType Result = TL.getType();
+    if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
+        (T->getSizeExpr() && NewSize != OldSize)) {
+      Result = getDerived().RebuildConstantArrayType(
+          ElementType, T->getSizeModifier(), T->getSize(), NewSize,
+          T->getIndexTypeCVRQualifiers(), TL.getBracketsRange());
+      if (Result.isNull()) {
+        FD->setInvalidDecl();
+        return QualType();
+      }
+    }
+
+    ArrayTypeLoc NewTL = TLB.push<ArrayTypeLoc>(Result);
+    NewTL.setLBracketLoc(TL.getLBracketLoc());
+    NewTL.setRBracketLoc(TL.getRBracketLoc());
+    NewTL.setSizeExpr(NewSize);
+
+    return Result;
+  }
+
+  QualType TransformIncompleteArrayType(TypeLocBuilder &TLB,
+                                        IncompleteArrayTypeLoc TL) {
+    const IncompleteArrayType *T = TL.getTypePtr();
+    QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
+    if (ElementType.isNull()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    // Diagnose flexible array member with element type having counted_by
+    // attribute e.g., int * __counted_by(n) arr[];
+    if (diagnoseCountAttributedType(ElementType, TL.getLBracketLoc()))
+      return QualType();
+
+    QualType Result = TL.getType();
+    if (getDerived().AlwaysRebuild() || ElementType != T->getElementType()) {
+      Result = getDerived().RebuildIncompleteArrayType(
+          ElementType, T->getSizeModifier(), T->getIndexTypeCVRQualifiers(),
+          TL.getBracketsRange());
+      if (Result.isNull()) {
+        FD->setInvalidDecl();
+        return QualType();
+      }
+    }
+
+    IncompleteArrayTypeLoc NewTL = TLB.push<IncompleteArrayTypeLoc>(Result);
+    NewTL.setLBracketLoc(TL.getLBracketLoc());
+    NewTL.setRBracketLoc(TL.getRBracketLoc());
+    NewTL.setSizeExpr(nullptr);
+
+    return Result;
+  }
+
+  QualType TransformVariableArrayType(TypeLocBuilder &TLB,
+                                      VariableArrayTypeLoc TL) {
+    const VariableArrayType *T = TL.getTypePtr();
+    QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
+    if (ElementType.isNull()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    // Diagnose VLA with element type having counted_by attribute
+    // e.g., int * __counted_by(n) arr[m];
+    if (diagnoseCountAttributedType(ElementType, TL.getLBracketLoc()))
+      return QualType();
+
+    // Transform the size expression
+    ExprResult SizeResult = getDerived().TransformExpr(T->getSizeExpr());
+    if (SizeResult.isInvalid()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+    Expr *Size = SizeResult.get();
+
+    QualType Result = TL.getType();
+    if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
+        Size != T->getSizeExpr()) {
+      Result = getDerived().RebuildVariableArrayType(
+          ElementType, T->getSizeModifier(), Size,
+          T->getIndexTypeCVRQualifiers(), TL.getBracketsRange());
+      if (Result.isNull()) {
+        FD->setInvalidDecl();
+        return QualType();
+      }
+    }
+
+    VariableArrayTypeLoc NewTL = TLB.push<VariableArrayTypeLoc>(Result);
+    NewTL.setLBracketLoc(TL.getLBracketLoc());
+    NewTL.setRBracketLoc(TL.getRBracketLoc());
+    NewTL.setSizeExpr(Size);
+
+    return Result;
+  }
+
+  QualType TransformDependentSizedArrayType(TypeLocBuilder &TLB,
+                                            DependentSizedArrayTypeLoc TL) {
+    const DependentSizedArrayType *T = TL.getTypePtr();
+    QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
+    if (ElementType.isNull()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+
+    // Diagnose dependent-sized array with element type having counted_by
+    // attribute e.g., template<int N> struct S { int * __counted_by(n) arr[N];
+    // };
+    if (diagnoseCountAttributedType(ElementType, TL.getLBracketLoc()))
+      return QualType();
+
+    // Transform the size expression
+    EnterExpressionEvaluationContext Unevaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+    ExprResult SizeResult = getDerived().TransformExpr(T->getSizeExpr());
+    if (SizeResult.isInvalid()) {
+      FD->setInvalidDecl();
+      return QualType();
+    }
+    Expr *Size = SizeResult.get();
+
+    QualType Result = TL.getType();
+    if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
+        Size != T->getSizeExpr()) {
+      Result = getDerived().RebuildDependentSizedArrayType(
+          ElementType, T->getSizeModifier(), Size,
+          T->getIndexTypeCVRQualifiers(), TL.getBracketsRange());
+      if (Result.isNull()) {
+        FD->setInvalidDecl();
+        return QualType();
+      }
+    }
+
+    DependentSizedArrayTypeLoc NewTL =
+        TLB.push<DependentSizedArrayTypeLoc>(Result);
+    NewTL.setLBracketLoc(TL.getLBracketLoc());
+    NewTL.setRBracketLoc(TL.getRBracketLoc());
+    NewTL.setSizeExpr(Size);
+
+    return Result;
+  }
+};
+
+void Sema::ProcessLateParsedTypeAttributes(
+    RecordDecl *EnclosingDecl, ParseLateParsedTypeAttributeCB *ParseCB) {
+  for (auto *I : EnclosingDecl->decls()) {
+    FieldDecl *FD = dyn_cast<FieldDecl>(I);
+    IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(I);
+    if (!FD && IFD) {
+      FD = IFD->getAnonField();
+    }
+    if (!FD || FD->getType()->isRecordType())
+      continue;
+
+    RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD, ParseCB);
+    auto *OldTSI = FD->getTypeSourceInfo();
+    auto *TSI = RebuildFieldType.TransformType(FD->getTypeSourceInfo());
+    if (TSI && TSI != OldTSI) {
+      FD->setTypeSourceInfo(TSI);
+      FD->setType(TSI->getType());
+      if (IFD) {
+        IFD->setType(TSI->getType());
+      }
+    }
+
+    if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+      CheckCountedByAttrOnFieldDecl(FD, CAT->getCountExpr(),
+                                    CAT->isCountInBytes(), CAT->isOrNull());
+    }
+  }
+}
+
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                        ArrayRef<Decl *> Fields, SourceLocation LBrac,
                        SourceLocation RBrac,
@@ -19812,6 +20135,17 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       if (const auto *IFD = dyn_cast<IndirectFieldDecl>(I))
         if (IFD->getDeclName())
           ++NumNamedMembers;
+    }
+  }
+
+  if (!getLangOpts().ExperimentalLateParseAttributes) {
+    // Perform FieldDecl-dependent validation for counted_by family attributes
+    for (auto *D : Fields) {
+      FieldDecl *FD = cast<FieldDecl>(D);
+      if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+        CheckCountedByAttrOnFieldDecl(FD, CAT->getCountExpr(),
+                                      CAT->isCountInBytes(), CAT->isOrNull());
+      }
     }
   }
 

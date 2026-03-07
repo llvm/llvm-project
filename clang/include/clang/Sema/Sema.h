@@ -143,6 +143,8 @@ class InitializationKind;
 class InitializationSequence;
 class InitializedEntity;
 enum class LangAS : unsigned int;
+struct LateParsedAttribute;
+struct LateParsedTypeAttribute;
 class LocalInstantiationScope;
 class LookupResult;
 class MangleNumberingContext;
@@ -1348,6 +1350,45 @@ public:
     OpaqueParser = P;
   }
 
+  /// Callbacks to the parser to interact with late-parsed type attributes.
+  /// These allow Sema to call back into Parser without including Parser.h.
+
+  /// Callback type to parse and consume a LateParsedTypeAttribute. Used as an
+  /// argument to ProcessLateParsedTypeAttributes.
+  typedef void ParseLateParsedTypeAttributeCB(LateParsedTypeAttribute *LTA,
+                                              ParsedAttributes *OutAttrs);
+
+  /// Callback to get the attribute name location from a
+  /// LateParsedTypeAttribute.
+  typedef SourceLocation
+  GetLateParsedAttributeLocationCB(const LateParsedTypeAttribute *LTA);
+  GetLateParsedAttributeLocationCB *GetLateParsedAttributeLocationCallback =
+      nullptr;
+
+  /// Callback to process a single late-parsed type attribute: validates the
+  /// attribute kind/type and wraps \p type in a LateParsedAttrType node if
+  /// appropriate. Returns false if the attribute is invalid.
+  typedef bool ProcessLateParsedTypeAttrCB(LateParsedAttribute *LA,
+                                           QualType &type,
+                                           unsigned pointerNestLevel);
+  ProcessLateParsedTypeAttrCB *ProcessLateParsedTypeAttrCallback = nullptr;
+
+  void
+  SetLateParsedAttributeCallbacks(GetLateParsedAttributeLocationCB *GetLocCB,
+                                  ProcessLateParsedTypeAttrCB *ProcessCB) {
+    GetLateParsedAttributeLocationCallback = GetLocCB;
+    ProcessLateParsedTypeAttrCallback = ProcessCB;
+  }
+
+  /// Called from the Parser's ProcessLateParsedTypeAttrCallback to validate
+  /// a counted_by-family attribute type and, if valid, wrap \p type in a
+  /// LateParsedAttrType node. Returns false if the attribute should be
+  /// dropped.
+  bool ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                               SourceLocation AttrNameLoc, QualType &type,
+                               unsigned pointerNestLevel,
+                               LateParsedTypeAttribute *LTA);
+
   /// Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
       ParseTypeFromStringCallback;
@@ -2483,26 +2524,37 @@ public:
   /// Implementations are in SemaBoundsSafety.cpp
   ///@{
 public:
-  /// Check if applying the specified attribute variant from the "counted by"
-  /// family of attributes to FieldDecl \p FD is semantically valid. If
-  /// semantically invalid diagnostics will be emitted explaining the problems.
+  /// Perform semantic validation on a FieldDecl with a "counted_by" family
+  /// attribute. This is called after the attribute has been attached to the
+  /// field's type (as a CountAttributedType) to validate the attribute is
+  /// correctly applied.
   ///
-  /// \param FD The FieldDecl to apply the attribute to
-  /// \param E The count expression on the attribute
-  /// \param CountInBytes If true the attribute is from the "sized_by" family of
-  ///                     attributes. If the false the attribute is from
-  ///                     "counted_by" family of attributes.
-  /// \param OrNull If true the attribute is from the "_or_null" suffixed family
-  ///               of attributes. If false the attribute does not have the
-  ///               suffix.
+  /// This performs declaration-level checks that require the FieldDecl to
+  /// exist, complementing the type-level checks performed in
+  /// HandleCountedByAttrOnType during type processing. Specifically, this
+  /// validates:
+  /// - Field is not in a union
+  /// - For array fields, the field is a flexible array member
+  /// - Count expression is an integer type (not bool)
+  /// - Count expression references a field in the same struct
+  /// - Count field is not in a union
   ///
-  /// Together \p CountInBytes and \p OrNull decide the attribute variant. E.g.
-  /// \p CountInBytes and \p OrNull both being true indicates the
-  /// `counted_by_or_null` attribute.
+  /// \param FD The FieldDecl with the attribute
+  /// \param E The count expression from the attribute
+  /// \param CountInBytes If true the attribute is from the "sized_by" family.
+  ///                     If false the attribute is from the "counted_by"
+  ///                     family.
+  /// \param OrNull If true the attribute has the "_or_null" suffix.
   ///
-  /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
-                                 bool OrNull);
+  /// Together \p CountInBytes and \p OrNull determine the attribute variant:
+  /// - (false, false) = counted_by
+  /// - (false, true)  = counted_by_or_null
+  /// - (true, false)  = sized_by
+  /// - (true, true)   = sized_by_or_null
+  ///
+  /// \returns true if invalid (diagnostics emitted), false if valid.
+  bool CheckCountedByAttrOnFieldDecl(FieldDecl *FD, Expr *E, bool CountInBytes,
+                                     bool OrNull);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
@@ -4401,6 +4453,13 @@ public:
   void ActOnFields(Scope *S, SourceLocation RecLoc, Decl *TagDecl,
                    ArrayRef<Decl *> Fields, SourceLocation LBrac,
                    SourceLocation RBrac, const ParsedAttributesView &AttrList);
+
+  /// Transform field types that contain late-parsed type attributes.
+  /// Called from two sites: once immediately after parsing a nested
+  /// non-anonymous record body, and once after ActOnFields for the outermost
+  /// record.
+  void ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl,
+                                       ParseLateParsedTypeAttributeCB *ParseCB);
 
   /// ActOnTagStartDefinition - Invoked when we have entered the
   /// scope of a tag's definition (e.g., for an enumeration, class,
