@@ -453,6 +453,31 @@ struct SysAliasOptionalReg : SysAlias {
       : SysAlias(N, E, F), NeedsReg(R), OptionalReg(O) {}
 };
 
+struct TLBIPSysAlias : SysAliasOptionalReg {
+  bool d128orTLBID;
+  inline static const FeatureBitset D128OrTLBIDMask =
+      FeatureBitset({llvm::AArch64::FeatureD128, llvm::AArch64::FeatureTLBID});
+
+  constexpr TLBIPSysAlias(const char *N, uint16_t E, bool R, bool O,
+                          FeatureBitset F, bool D128OrTLBID)
+      : SysAliasOptionalReg(N, E, R, O, F), d128orTLBID(D128OrTLBID) {}
+
+  bool allowTLBID() const { return d128orTLBID; }
+
+  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+    if (ActiveFeatures[llvm::AArch64::FeatureAll])
+      return true;
+
+    FeatureBitset Required = FeaturesRequired;
+    if (d128orTLBID)
+      Required &= ~D128OrTLBIDMask;
+
+    return (Required & ActiveFeatures) == Required &&
+           (!d128orTLBID || ActiveFeatures[llvm::AArch64::FeatureD128] ||
+            ActiveFeatures[llvm::AArch64::FeatureTLBID]);
+  }
+};
+
 struct SysAliasImm : SysAlias {
   uint16_t ImmValue;
   constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I)
@@ -856,8 +881,8 @@ struct TLBI : SysAliasOptionalReg {
 }
 
 namespace AArch64TLBIP {
-struct TLBIP : SysAliasOptionalReg {
-  using SysAliasOptionalReg::SysAliasOptionalReg;
+struct TLBIP : TLBIPSysAlias {
+  using TLBIPSysAlias::TLBIPSysAlias;
 };
 #define GET_TLBIPTable_DECL
 #include "AArch64GenSystemOperands.inc"
