@@ -2031,6 +2031,31 @@ module std [system] {
     export *
   }
 
+  module stacktrace {
+    module basic_stacktrace       { header "__stacktrace/basic_stacktrace.h" }
+    module stacktrace_entry       { header "__stacktrace/stacktrace_entry.h" }
+
+    header "stacktrace"
+    export *
+    // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+    export std.cstddef.byte
+    export std.cstddef.size_t
+    export std.format.escaped_output_table
+    export std.format.formatter
+    export std.format.width_estimation_table
+    export std.functional.function
+    export std.functional.hash
+    export std.iterator.iterator
+    export std.iterator.reverse_iterator
+    export std.memory.allocator
+    export std.memory.allocator_traits
+    export std.memory_resource.polymorphic_allocator
+    export std.new.allocate
+    export std.ostream.basic_ostream
+    export std.type_traits.is_nothrow_constructible
+    export std.vector.vector
+  }
+
   module stdexcept {
     header "stdexcept"
     export *

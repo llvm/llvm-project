@@ -1332,7 +1332,8 @@ feature_test_macros = [
             "name": "__cpp_lib_stacktrace",
             "values": {"c++23": 202011},
             "headers": ["stacktrace"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_STACKTRACE",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_STACKTRACE",
         },
         {
             "name": "__cpp_lib_starts_ends_with",
