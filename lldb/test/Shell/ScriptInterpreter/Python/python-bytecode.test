@@ -1,6 +1,6 @@
 # RUN: mkdir -p %t
-# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format c --type-name RigidArray --output %t/RigidArrayLLDBFormatter.c
-# RUN: diff -u %S/Inputs/FormatterBytecode/RigidArrayLLDBFormatter.c %t/RigidArrayLLDBFormatter.c
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile %s --format c --type-name RigidArray --output %t/output.txt
+# RUN: diff -u %S/Inputs/FormatterBytecode/RigidArrayLLDBFormatter.txt %t/output.txt
 import lldb
 
 
