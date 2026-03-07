@@ -425,7 +425,6 @@ add_entrypoint_object(
     libc.src.__support.math.tanbf16
 )
 
-
 add_entrypoint_object(
   tanf
   SRCS
