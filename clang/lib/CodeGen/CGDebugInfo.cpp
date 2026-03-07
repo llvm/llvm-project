@@ -433,6 +433,11 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
+  // If we have lambdas as template parameters, two debug entries from different
+  // CUs will get merged in LTO, but their human-readable DW_AT_name will be
+  // different. Disable printing of location of an anonymous tag name to prevent
+  // that from happening.
+  PP.AnonymousTagLocations = false;
   return PP;
 }
 
