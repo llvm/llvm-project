@@ -366,11 +366,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalForCartesianProduct(allPtrs, allIntScalars)
       .legalIf(
-          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)))
+      .scalarize(0);
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct(allIntScalars, allPtrs)
       .legalIf(
-          all(typeOfExtendedScalars(0, IsExtendedInts), typeInSet(1, allPtrs)));
+          all(typeOfExtendedScalars(0, IsExtendedInts), typeInSet(1, allPtrs)))
+      .scalarize(0);
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalForCartesianProduct(allPtrs, allIntScalars)
       .legalIf(
