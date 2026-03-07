@@ -44,7 +44,7 @@ class generator
   struct Promise
   {
     auto get_return_object() { return generator{*this}; }
-    auto initial_suspend() { return suspend_never{}; }
+    auto initial_suspend() noexcept { return suspend_never{}; }
     auto final_suspend() noexcept { return suspend_always{}; }
     void unhandled_exception() {}
     void return_void() {}

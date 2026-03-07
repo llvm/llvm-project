@@ -12,7 +12,7 @@ public:
         promise_type(const promise_type&) = delete; // #copy-ctr
         promise_type(T);  // #candidate
         coro_test get_return_object();
-        std::suspend_never initial_suspend();
+        std::suspend_never initial_suspend() noexcept;
 	    std::suspend_never final_suspend() noexcept;
 	    void return_void();
         void unhandled_exception();

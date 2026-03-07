@@ -38,7 +38,7 @@ template <>
 struct std::coroutine_traits<int, promise_on_alloc_failure_tag> {
   struct promise_type {
     int get_return_object() { return 0; }
-    std::suspend_always initial_suspend() { return {}; }
+    std::suspend_always initial_suspend() noexcept { return {}; }
     std::suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception() {}

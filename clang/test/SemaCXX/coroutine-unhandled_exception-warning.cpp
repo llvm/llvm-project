@@ -22,7 +22,7 @@ struct promise_void { // expected-note {{defined here}}
 struct promise_void {
 #endif
   void get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
 };

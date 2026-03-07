@@ -28,7 +28,7 @@ struct MyCoro {
   struct promise_type {
     void unhandled_exception() {}
     void return_void() {}
-    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_never initial_suspend() noexcept { return {}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     MyCoro get_return_object() {
       do_runtime_test();

@@ -10,7 +10,7 @@ namespace std {
 
 struct task {
   struct promise_type {
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() noexcept { return std::suspend_always{}; }
     auto final_suspend() noexcept { return std::suspend_always{}; }
     auto get_return_object() { return task{}; }
     void unhandled_exception() {}
@@ -25,7 +25,7 @@ task f() {
 
 struct task2 {
   struct promise_type {
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() noexcept { return std::suspend_always{}; }
     auto final_suspend() noexcept { return std::suspend_always{}; }
     auto get_return_object() { return task2{}; }
     void unhandled_exception() {}
@@ -41,7 +41,7 @@ task2 f1() {
 
 struct task3 {
   struct promise_type {
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() noexcept { return std::suspend_always{}; }
     auto final_suspend() noexcept { return std::suspend_always{}; }
     auto get_return_object() { return task3{}; }
     void unhandled_exception() {}
@@ -59,7 +59,7 @@ task3 f2() {
 
 struct task4 {
   struct promise_type {
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() noexcept { return std::suspend_always{}; }
     auto final_suspend() noexcept { return std::suspend_always{}; }
     auto get_return_object() { return task4{}; }
     void unhandled_exception() {}
@@ -75,7 +75,7 @@ task4 f3(int, double, int) {
 
 struct task5 {
   struct promise_type {
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() noexcept { return std::suspend_always{}; }
     auto final_suspend() noexcept { return std::suspend_always{}; }
     auto get_return_object() { return task5{}; }
     void unhandled_exception() {}
@@ -96,7 +96,7 @@ namespace std {
 
 struct task6 {
   struct promise_type {
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() noexcept { return std::suspend_always{}; }
     auto final_suspend() noexcept { return std::suspend_always{}; }
     auto get_return_object() { return task6{}; }
     void unhandled_exception() {}

@@ -3223,6 +3223,7 @@ public:
   /// Check that the expression co_await promise.final_suspend() shall not be
   /// potentially-throwing.
   bool checkFinalSuspendNoThrow(const Stmt *FinalSuspend);
+  void warnInitialSuspendThrow(const Stmt *InitialSuspend);
 
   ///@}
 
