@@ -635,6 +635,35 @@ def LLVM_PtrToAddrOp : LLVM_CastOp<"ptrtoaddr", "PtrToAddr",
                                   LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
   let llvmBuilder = "$res = builder.CreatePtrToAddr($arg);";
   let hasVerifier = 1;
+
+  let description = [{
+    Operation mirroring LLVM's `ptrtoaddr` operation.
+
+    This operation casts a pointer (or a vector of pointers) to an integer
+    (or a vector of integers).
+    The integer type used as the result type is required to be equal in width
+    to the pointer type as specified in the data layout.
+
+    Use the `llvm-target-to-data-layout` pass to derive an MLIR datalayout from
+    an LLVM datalayout.
+
+    Examples:
+    ```
+    llvm.func @default_64_bit_ptrtoaddr(%arg0 : !llvm.ptr) -> i64 {
+      %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+      llvm.return i64
+    }
+
+    module attributes { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<!llvm.ptr, dense<[/*size=*/32, 32, 64]> : vector<3xi64>>
+    >} {
+      llvm.func @datalayout_32_bit(%arg0 : !llvm.ptr) -> i32 {
+        %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i32
+        llvm.return %0 : i32
+      }
+    }
+    ```
+  }];
 }
 
 def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
