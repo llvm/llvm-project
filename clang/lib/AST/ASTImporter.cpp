@@ -9749,12 +9749,30 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   }
   case attr::GuardedBy: {
     const auto *From = cast<GuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::PtGuardedBy: {
     const auto *From = cast<PtGuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::GuardedByAny: {
+    const auto *From = cast<GuardedByAnyAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
+    break;
+  }
+  case attr::PtGuardedByAny: {
+    const auto *From = cast<PtGuardedByAnyAttr>(FromAttr);
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::AcquiredAfter: {

@@ -2141,6 +2141,33 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
+  void handleGuardedByAnyReadNotHeld(const NamedDecl *D,
+                                     ProtectedOperationKind POK,
+                                     StringRef LockNames,
+                                     SourceLocation Loc) override {
+    unsigned DiagID = 0;
+    switch (POK) {
+    case POK_VarAccess:
+    case POK_PassByRef:
+    case POK_ReturnByRef:
+    case POK_PassPointer:
+    case POK_ReturnPointer:
+      DiagID = diag::warn_variable_requires_any_of_locks;
+      break;
+    case POK_VarDereference:
+    case POK_PtPassByRef:
+    case POK_PtReturnByRef:
+    case POK_PtPassPointer:
+    case POK_PtReturnPointer:
+      DiagID = diag::warn_var_deref_requires_any_of_locks;
+      break;
+    case POK_FunctionCall:
+      llvm_unreachable("POK_FunctionCall not applicable here");
+    }
+    PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << D << LockNames);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+  }
+
   void handleMutexNotHeld(StringRef Kind, const NamedDecl *D,
                           ProtectedOperationKind POK, Name LockName,
                           LockKind LK, SourceLocation Loc,

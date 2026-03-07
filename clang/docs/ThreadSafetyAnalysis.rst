@@ -153,16 +153,18 @@ general capability model.  The prior names are still in use, and will be
 mentioned under the tag *previously* where appropriate.
 
 
-GUARDED_BY(c) and PT_GUARDED_BY(c)
-----------------------------------
+GUARDED_BY(...) and PT_GUARDED_BY(...)
+--------------------------------------
 
 ``GUARDED_BY`` is an attribute on data members, which declares that the data
 member is protected by the given capability.  Read operations on the data
 require shared access, while write operations require exclusive access.
+Multiple capabilities may be specified; all of them must be held to access
+the data member.
 
 ``PT_GUARDED_BY`` is similar, but is intended for use on pointers and smart
 pointers. There is no constraint on the data member itself, but the *data that
-it points to* is protected by the given capability.
+it points to* is protected by the given capabilities.
 
 .. code-block:: c++
 
@@ -179,6 +181,63 @@ it points to* is protected by the given capability.
 
     *p3 = 42;           // Warning!
     p3.reset(new int);  // OK.
+  }
+
+When multiple capabilities are listed, all of them must be held:
+
+.. code-block:: c++
+
+  Mutex mu1, mu2;
+  int a    GUARDED_BY(mu1, mu2);   // Requires both mu1 and mu2.
+  int *p   PT_GUARDED_BY(mu1, mu2);
+
+  void test() {
+    mu1.Lock();
+    a = 0;       // Warning!  mu2 is not held.
+    *p = 0;      // Warning!  mu2 is not held.
+    mu1.Unlock();
+
+    mu1.Lock();
+    mu2.Lock();
+    a = 0;       // OK.
+    *p = 0;      // OK.
+    mu2.Unlock();
+    mu1.Unlock();
+  }
+
+
+GUARDED_BY_ANY(...) and PT_GUARDED_BY_ANY(...)
+----------------------------------------------
+
+``GUARDED_BY_ANY`` is an attribute on data members that declares the data
+member is protected by a set of capabilities, exploiting the following
+invariant: a writer must hold *all* listed capabilities exclusively, so
+holding *any one* of them is sufficient to guarantee at least shared (read)
+access. Concretely:
+
+* **Write** access requires *all* listed capabilities to be held exclusively.
+* **Read** access requires *at least one* of the listed capabilities to be held
+  (shared or exclusive).
+
+``PT_GUARDED_BY_ANY`` is the pointer counterpart: the data member itself is
+unconstrained, but the *data it points to* follows the same rules.
+
+.. code-block:: c++
+
+  Mutex mu1, mu2;
+  int a GUARDED_BY_ANY(mu1, mu2);
+
+  void reader() REQUIRES_SHARED(mu1) {
+    int x = a;   // OK: mu1 is held (shared read access).
+    a = 1;       // Warning! Writing requires both mu1 and mu2.
+  }
+
+  void writer() REQUIRES(mu1, mu2) {
+    a = 1;       // OK: both mu1 and mu2 are held exclusively.
+  }
+
+  void unprotected() {
+    int x = a;   // Warning! No capability held at all.
   }
 
 
@@ -860,11 +919,17 @@ implementation.
   #define SCOPED_CAPABILITY \
     THREAD_ANNOTATION_ATTRIBUTE__(scoped_lockable)
 
-  #define GUARDED_BY(x) \
-    THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
+  #define GUARDED_BY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(__VA_ARGS__))
 
-  #define PT_GUARDED_BY(x) \
-    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
+  #define PT_GUARDED_BY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(__VA_ARGS__))
+
+  #define GUARDED_BY_ANY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(guarded_by_any(__VA_ARGS__))
+
+  #define PT_GUARDED_BY_ANY(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by_any(__VA_ARGS__))
 
   #define ACQUIRED_BEFORE(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(acquired_before(__VA_ARGS__))

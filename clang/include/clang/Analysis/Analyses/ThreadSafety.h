@@ -193,6 +193,17 @@ public:
   virtual void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
                                  AccessKind AK, SourceLocation Loc) {}
 
+  /// Warn when a read of a guarded_by_any variable occurs while none of the
+  /// listed capabilities are held.
+  /// \param D -- The decl for the protected variable
+  /// \param POK -- The kind of protected operation (e.g. variable access)
+  /// \param LockNames -- Comma-separated list of capability names, quoted
+  /// \param Loc -- The location of the read
+  virtual void handleGuardedByAnyReadNotHeld(const NamedDecl *D,
+                                             ProtectedOperationKind POK,
+                                             StringRef LockNames,
+                                             SourceLocation Loc) {}
+
   /// Warn when a protected operation occurs while the specific mutex protecting
   /// the operation is not locked.
   /// \param Kind -- the capability's name parameter (role, mutex, etc).

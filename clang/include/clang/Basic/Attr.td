@@ -4155,7 +4155,7 @@ def NoThreadSafetyAnalysis : InheritableAttr {
 
 def GuardedBy : InheritableAttr {
   let Spellings = [GNU<"guarded_by">];
-  let Args = [ExprArgument<"Arg">];
+  let Args = [VariadicExprArgument<"Args">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -4166,7 +4166,29 @@ def GuardedBy : InheritableAttr {
 
 def PtGuardedBy : InheritableAttr {
   let Spellings = [GNU<"pt_guarded_by">];
-  let Args = [ExprArgument<"Arg">];
+  let Args = [VariadicExprArgument<"Args">];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let TemplateDependent = 1;
+  let ParseArgumentsAsUnevaluated = 1;
+  let InheritEvenIfAlreadyPresent = 1;
+  let Subjects = SubjectList<[Field, SharedVar]>;
+  let Documentation = [Undocumented];
+}
+
+def GuardedByAny : InheritableAttr {
+  let Spellings = [GNU<"guarded_by_any">];
+  let Args = [VariadicExprArgument<"Args">];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let TemplateDependent = 1;
+  let ParseArgumentsAsUnevaluated = 1;
+  let InheritEvenIfAlreadyPresent = 1;
+  let Subjects = SubjectList<[Field, SharedVar]>;
+  let Documentation = [Undocumented];
+}
+
+def PtGuardedByAny : InheritableAttr {
+  let Spellings = [GNU<"pt_guarded_by_any">];
+  let Args = [VariadicExprArgument<"Args">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;

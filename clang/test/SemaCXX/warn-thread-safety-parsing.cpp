@@ -5,9 +5,11 @@
 #define LOCKABLE            __attribute__ ((lockable))
 #define REENTRANT_CAPABILITY __attribute__ ((reentrant_capability))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
-#define GUARDED_BY(x)       __attribute__ ((guarded_by(x)))
-#define GUARDED_VAR         __attribute__ ((guarded_var))
-#define PT_GUARDED_BY(x)    __attribute__ ((pt_guarded_by(x)))
+#define GUARDED_BY(...)         __attribute__ ((guarded_by(__VA_ARGS__)))
+#define GUARDED_BY_ANY(...)     __attribute__ ((guarded_by_any(__VA_ARGS__)))
+#define GUARDED_VAR             __attribute__ ((guarded_var))
+#define PT_GUARDED_BY(...)      __attribute__ ((pt_guarded_by(__VA_ARGS__)))
+#define PT_GUARDED_BY_ANY(...)  __attribute__ ((pt_guarded_by_any(__VA_ARGS__)))
 #define PT_GUARDED_VAR      __attribute__ ((pt_guarded_var))
 #define ACQUIRED_AFTER(...) __attribute__ ((acquired_after(__VA_ARGS__)))
 #define ACQUIRED_BEFORE(...) __attribute__ ((acquired_before(__VA_ARGS__)))
@@ -317,8 +319,6 @@ void sl_function_params(int lvar SCOPED_LOCKABLE); // \
 //  Guarded By Attribute (gb)
 //-----------------------------------------//
 
-// FIXME: Eventually, would we like this attribute to take more than 1 arg?
-
 #if !__has_attribute(guarded_by)
 #error "Should support guarded_by attribute"
 #endif
@@ -329,17 +329,18 @@ int gb_var_arg GUARDED_BY(mu1);
 
 int gb_non_ascii GUARDED_BY(L"wide"); // expected-warning {{ignoring 'guarded_by' attribute because its argument is invalid}}
 
-int gb_var_args __attribute__((guarded_by(mu1, mu2))); // \
-  // expected-error {{'guarded_by' attribute takes one argument}}
+// Multi-arg form: all listed mutexes must be held.
+int gb_var_args __attribute__((guarded_by(mu1, mu2)));
 
 int gb_var_noargs __attribute__((guarded_by)); // \
-  // expected-error {{'guarded_by' attribute takes one argument}}
+  // expected-error {{'guarded_by' attribute takes at least 1 argument}}
 
 class GBFoo {
  private:
   int gb_field_noargs __attribute__((guarded_by)); // \
-    // expected-error {{'guarded_by' attribute takes one argument}}
+    // expected-error {{'guarded_by' attribute takes at least 1 argument}}
   int gb_field_args GUARDED_BY(mu1);
+  int gb_field_multi GUARDED_BY(mu1, mu2);
 };
 
 class GUARDED_BY(mu1) GB { // \
@@ -397,12 +398,12 @@ int gb_var_arg_bad_4 GUARDED_BY(umu); // \
 //1. Check applied to the right types & argument number
 
 int *pgb_var_noargs __attribute__((pt_guarded_by)); // \
-  // expected-error {{'pt_guarded_by' attribute takes one argument}}
+  // expected-error {{'pt_guarded_by' attribute takes at least 1 argument}}
 
 int *pgb_ptr_var_arg PT_GUARDED_BY(mu1);
 
-int *pgb_ptr_var_args __attribute__((pt_guarded_by(mu1, mu2))); // \
-  // expected-error {{'pt_guarded_by' attribute takes one argument}}
+// Multi-arg form: all listed mutexes must be held.
+int *pgb_ptr_var_args __attribute__((pt_guarded_by(mu1, mu2)));
 
 int pgb_var_args PT_GUARDED_BY(mu1); // \
   // expected-warning {{'pt_guarded_by' only applies to pointer types; type here is 'int'}}
@@ -410,8 +411,9 @@ int pgb_var_args PT_GUARDED_BY(mu1); // \
 class PGBFoo {
  private:
   int *pgb_field_noargs __attribute__((pt_guarded_by)); // \
-    // expected-error {{'pt_guarded_by' attribute takes one argument}}
+    // expected-error {{'pt_guarded_by' attribute takes at least 1 argument}}
   int *pgb_field_args PT_GUARDED_BY(mu1);
+  int *pgb_field_multi PT_GUARDED_BY(mu1, mu2);
 };
 
 class PT_GUARDED_BY(mu1) PGB { // \
@@ -453,6 +455,63 @@ int * pgb_var_arg_bad_3 PT_GUARDED_BY(muDoublePointer); // \
 int * pgb_var_arg_bad_4 PT_GUARDED_BY(umu); // \
   // expected-warning {{'pt_guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
+
+//-----------------------------------------//
+//  Guarded By Any Attribute (gba)
+//-----------------------------------------//
+
+#if !__has_attribute(guarded_by_any)
+#error "Should support guarded_by_any attribute"
+#endif
+
+int gba_var_arg GUARDED_BY_ANY(mu1);
+int gba_var_args GUARDED_BY_ANY(mu1, mu2);
+
+int gba_var_noargs __attribute__((guarded_by_any)); // \
+  // expected-error {{'guarded_by_any' attribute takes at least 1 argument}}
+
+class GBAFoo {
+ private:
+  int gba_field_noargs __attribute__((guarded_by_any)); // \
+    // expected-error {{'guarded_by_any' attribute takes at least 1 argument}}
+  int gba_field_args GUARDED_BY_ANY(mu1);
+  int gba_field_multi GUARDED_BY_ANY(mu1, mu2);
+};
+
+class GUARDED_BY_ANY(mu1) GBA { // \
+  // expected-warning {{'guarded_by_any' attribute only applies to non-static data members and global variables}}
+};
+
+int gba_var_arg_bad GUARDED_BY_ANY(1); // \
+  // expected-warning {{'guarded_by_any' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
+
+//-----------------------------------------//
+//  Pt Guarded By Any Attribute (pgba)
+//-----------------------------------------//
+
+#if !__has_attribute(pt_guarded_by_any)
+#error "Should support pt_guarded_by_any attribute"
+#endif
+
+int *pgba_ptr_var_arg PT_GUARDED_BY_ANY(mu1);
+int *pgba_ptr_var_args PT_GUARDED_BY_ANY(mu1, mu2);
+
+int *pgba_var_noargs __attribute__((pt_guarded_by_any)); // \
+  // expected-error {{'pt_guarded_by_any' attribute takes at least 1 argument}}
+
+int pgba_var_nonptr PT_GUARDED_BY_ANY(mu1); // \
+  // expected-warning {{'pt_guarded_by_any' only applies to pointer types; type here is 'int'}}
+
+class PGBAFoo {
+ private:
+  int *pgba_field_noargs __attribute__((pt_guarded_by_any)); // \
+    // expected-error {{'pt_guarded_by_any' attribute takes at least 1 argument}}
+  int *pgba_field_args PT_GUARDED_BY_ANY(mu1);
+  int *pgba_field_multi PT_GUARDED_BY_ANY(mu1, mu2);
+};
+
+int *pgba_var_arg_bad PT_GUARDED_BY_ANY(1); // \
+  // expected-warning {{'pt_guarded_by_any' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
 
 //-----------------------------------------//
 //  Acquired After (aa)
