@@ -7700,6 +7700,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(A->getValue()));
   }
 
+  // Create additional diagnostic logs
+  for (Arg *A : Args.filtered(options::OPT_fdiagnostics_add_output_EQ)) {
+    A->render(Args, CmdArgs);
+    A->claim();
+  }
+
   if (Args.hasArg(options::OPT_fretain_comments_from_system_headers))
     CmdArgs.push_back("-fretain-comments-from-system-headers");
 

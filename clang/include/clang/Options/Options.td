@@ -6729,6 +6729,12 @@ def _profile : Flag<["--"], "profile">, Alias<p>;
 def _resource_EQ : Joined<["--"], "resource=">, Alias<fcompile_resource_EQ>;
 def _resource : Separate<["--"], "resource">, Alias<fcompile_resource_EQ>;
 def _rtlib : Separate<["--"], "rtlib">, Alias<rtlib_EQ>;
+def fdiagnostics_add_output_EQ
+    : Joined<["-"], "fdiagnostics-add-output=">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Generate additional diagnostics log file">,
+      MarshallingInfoStringVector<DiagnosticOpts<"AdditionalOutputConfigs">>;
 def _serialize_diags : Separate<["-", "--"], "serialize-diagnostics">,
   Flags<[NoXarchOption]>,
   HelpText<"Serialize compiler diagnostics to a file">;

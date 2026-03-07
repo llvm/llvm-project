@@ -107,6 +107,9 @@ public:
   /// The file to serialize diagnostics to (non-appending).
   std::string DiagnosticSerializationFile;
 
+  /// List of arguments to `-fdiagnostics-add-output=`
+  std::vector<std::string> AdditionalOutputConfigs;
+
   /// Path for the file that defines diagnostic suppression mappings.
   std::string DiagnosticSuppressionMappingsFile;
 
