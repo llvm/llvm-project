@@ -1,4 +1,4 @@
-//===-- Definition of the global stderr object ----------------------------===//
+//===--- Definition of baremetal stdout -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/stdin.h"
+#include "src/stdio/stdout.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/OSUtil/baremetal/io.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-static struct {
-} stub;
+extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stdout_cookie;
 
-LLVM_LIBC_VARIABLE(FILE *, stderr) = reinterpret_cast<FILE *>(&stub);
+LLVM_LIBC_VARIABLE(FILE *, stdout) =
+    reinterpret_cast<FILE *>(&__llvm_libc_stdout_cookie);
 
 } // namespace LIBC_NAMESPACE_DECL
