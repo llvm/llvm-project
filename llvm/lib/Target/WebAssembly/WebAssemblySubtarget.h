@@ -123,7 +123,6 @@ public:
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasReferenceTypes() const { return HasReferenceTypes; }
   bool hasMemtag() const { return HasMemtag; }
-  bool hasGC() const { return HasGC; }
   bool hasRelaxedAtomics() const { return HasRelaxedAtomics; }
   bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
   bool hasSignExt() const { return HasSignExt; }
