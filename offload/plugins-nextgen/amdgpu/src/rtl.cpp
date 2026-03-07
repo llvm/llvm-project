@@ -278,6 +278,7 @@ struct AMDGPUMemoryPoolTy {
 
     if (auto Err = getAttr(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, GlobalFlags))
       return Err;
+
     return Plugin::success();
   }
 
@@ -548,6 +549,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         return Err;
     }
 
+    // Set the static block memory size required by the kernel.
     StaticBlockMemSize = GroupSize;
 
     // Make sure it is a kernel symbol.

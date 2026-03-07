@@ -3,6 +3,7 @@
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-version=61
 // RUN: %libomptarget-run-generic | %fcheck-generic
 // REQUIRES: gpu
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

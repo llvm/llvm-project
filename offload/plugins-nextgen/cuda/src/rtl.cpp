@@ -156,7 +156,7 @@ struct CUDAKernelTy : public GenericKernelTy {
     if (auto Err = Plugin::check(Res, "Error in cuFuncGetAttribute: %s"))
       return Err;
 
-    // Set the static block memory size.
+    // Set the static block memory size required by the kernel.
     StaticBlockMemSize = SharedMemSize;
 
     // Retrieve the size of the arguments.
