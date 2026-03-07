@@ -18,11 +18,16 @@
 // This should emit an error with -pedantic-errors.
 // RUN: not %clang_cc1 %s -pedantic-errors 2>&1 | grep "error:"
 
-// This should emit a warning, because -Wfoo overrides -pedantic*.
-// RUN: %clang_cc1 %s -pedantic-errors -Wextra-tokens 2>&1 | grep "warning:"
+// RUN: %clang_cc1 %s -pedantic -Wno-error=extra-tokens 2>&1 | grep "warning:"
+
+// -Wfoo does not override -pedantic-errors; the diagnostic stays an error.
+// RUN: not %clang_cc1 %s -pedantic-errors -Wextra-tokens 2>&1 | grep "error:"
 
 // This should emit nothing, because -Wno-extra-tokens overrides -pedantic*
 // RUN: %clang_cc1 %s -pedantic-errors -Wno-extra-tokens 2>&1 | not grep diagnostic
+
+// -Wno-error=extra-tokens should downgrade -pedantic-errors to warning.
+// RUN: %clang_cc1 %s -pedantic-errors -Wno-error=extra-tokens 2>&1 | grep "warning:"
 
 #ifdef foo
 #endif bad // extension!
