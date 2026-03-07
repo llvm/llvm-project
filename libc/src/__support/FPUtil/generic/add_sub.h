@@ -27,10 +27,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil::generic {
 
 template <bool IsSub, typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 add_or_sub(InType x, InType y) {
   using OutFPBits = FPBits<OutType>;
   using OutStorageType = typename OutFPBits::StorageType;
@@ -175,7 +175,7 @@ add_or_sub(InType x, InType y) {
 
     InStorageType aligned_min_mant = static_cast<InStorageType>(
         min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN));
-    bool aligned_min_mant_sticky;
+    bool aligned_min_mant_sticky{};
 
     if (alignment <= GUARD_BITS_LEN)
       aligned_min_mant_sticky = false;
@@ -201,19 +201,19 @@ add_or_sub(InType x, InType y) {
 }
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 add(InType x, InType y) {
   return add_or_sub</*IsSub=*/false, OutType>(x, y);
 }
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 sub(InType x, InType y) {
   return add_or_sub</*IsSub=*/true, OutType>(x, y);
 }
