@@ -181,8 +181,26 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 ///}
 
 #if defined(__SPIRV__)
-void namedBarrierInit() { __builtin_trap(); } // TODO
-void namedBarrier() { __builtin_trap(); }     // TODO
+
+[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
+
+void namedBarrierInit() {
+  atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst);
+}
+
+void namedBarrier() {
+  uint32_t NumThreads = omp_get_num_threads();
+  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst);
+
+  if (load == NumThreads - 1) {
+    atomic::store(&namedBarrierTracker, 0, atomic::seq_cst);
+  } else {
+    do {
+      load = atomic::load(&namedBarrierTracker, atomic::seq_cst);
+    } while (load != 0);
+  }
+  __gpu_sync_threads();
+}
 
 void unsetLock(omp_lock_t *Lock) {
   atomic::store((int32_t *)Lock, 0, atomic::seq_cst);
