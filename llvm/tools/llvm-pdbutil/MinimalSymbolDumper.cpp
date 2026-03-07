@@ -921,6 +921,17 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  P.format(" `{0}`", RegRelIndir.Name);
+  AutoIndent Indent(P, 7);
+  P.formatLine("type = {0}, register = {1}, offset = {2}, offset-in-udt = {3}",
+               typeIndex(RegRelIndir.Type),
+               formatRegisterId(RegRelIndir.Register, CompilationCPU),
+               RegRelIndir.Offset, RegRelIndir.OffsetInUdt);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             ThreadLocalDataSym &Data) {
   P.format(" `{0}`", Data.Name);
   AutoIndent Indent(P, 7);

@@ -445,6 +445,17 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  error(IO.mapInteger(RegRelIndir.Offset));
+  error(IO.mapInteger(RegRelIndir.Type));
+  error(IO.mapInteger(RegRelIndir.OffsetInUdt));
+  error(IO.mapEnum(RegRelIndir.Register));
+  error(IO.mapStringZ(RegRelIndir.Name));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
                                             ThreadLocalDataSym &Data) {
 
   error(IO.mapInteger(Data.Type));

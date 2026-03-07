@@ -402,6 +402,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
     break;
   case SymbolKind::S_BPREL32:
   case SymbolKind::S_REGREL32:
+  case SymbolKind::S_REGREL32_INDIR:
     Refs.push_back({TiRefKind::TypeRef, 4, 1}); // Type
     break;
   case SymbolKind::S_CALLSITEINFO:
