@@ -96,7 +96,7 @@ __mmask8 test_kandn_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kandn_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.not {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
@@ -163,7 +163,7 @@ __mmask8 test_kxnor_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kxnor_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.not {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
@@ -187,7 +187,7 @@ __mmask8 test_kxnor_mask8(__mmask8 A, __mmask8 B) {
 __mmask8 test_knot_mask8(__mmask8 A) {
  // CIR-LABEL: _knot_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.not {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _knot_mask8

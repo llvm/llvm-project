@@ -209,7 +209,7 @@ __mmask32 test_kandn_mask32(__mmask32 A, __mmask32 B) {
   // CIR-LABEL: _kandn_mask32
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
@@ -233,7 +233,7 @@ __mmask64 test_kandn_mask64(__mmask64 A, __mmask64 B) {
   // CIR-LABEL: _kandn_mask64
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
@@ -341,7 +341,7 @@ __mmask32 test_kxnor_mask32(__mmask32 A, __mmask32 B) {
   // CIR-LABEL: _kxnor_mask32
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
@@ -366,7 +366,7 @@ __mmask64 test_kxnor_mask64(__mmask64 A, __mmask64 B) {
   // CIR-LABEL: _kxnor_mask64
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
@@ -391,7 +391,7 @@ __mmask64 test_kxnor_mask64(__mmask64 A, __mmask64 B) {
 __mmask32 test_knot_mask32(__mmask32 A) {
   // CIR-LABEL: _knot_mask32
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<32 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
   // LLVM-LABEL: _knot_mask32
@@ -409,7 +409,7 @@ __mmask32 test_knot_mask32(__mmask32 A) {
 __mmask64 test_knot_mask64(__mmask64 A) {
   // CIR-LABEL: _knot_mask64
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<s, 1>>
-  // CIR: cir.unary(not, {{.*}}) : !cir.vector<64 x !cir.int<s, 1>>
+  // CIR: cir.not {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
   // LLVM-LABEL: _knot_mask64
