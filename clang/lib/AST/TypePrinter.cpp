@@ -1534,20 +1534,26 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     }
   }
 
+  const IdentifierInfo *II = D->getIdentifier();
+  const bool PrintingCanonicalAnonName =
+      !II &&
+      Policy.AnonymousTagNameStyle ==
+          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::CanonicalName);
+
   if (!Policy.FullyQualifiedName && !T->isCanonicalUnqualified()) {
     T->getQualifier().print(OS, Policy);
   } else if (!Policy.SuppressScope) {
     // Compute the full nested-name-specifier for this type.
     // In C, this will always be empty except when the type
     // being printed is anonymous within other Record.
-    D->printNestedNameSpecifier(OS, Policy);
+    D->printNestedNameSpecifier(
+        OS, Policy, /*AllowFunctionContext=*/PrintingCanonicalAnonName);
   }
 
-  if (const IdentifierInfo *II = D->getIdentifier())
+  if (II)
     OS << II->getName();
   else {
     clang::PrintingPolicy Copy(Policy);
-
     // Suppress the redundant tag keyword if we just printed one.
     if (PrintedKindDecoration) {
       Copy.SuppressTagKeywordInAnonNames = true;

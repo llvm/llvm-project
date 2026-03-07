@@ -1711,12 +1711,14 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
   }
 }
 
-void NamedDecl::printNestedNameSpecifier(raw_ostream &OS) const {
+void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
+                                         bool AllowFunctionContext) const {
   printNestedNameSpecifier(OS, getASTContext().getPrintingPolicy());
 }
 
 void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
-                                         const PrintingPolicy &P) const {
+                                         const PrintingPolicy &P,
+                                         bool AllowFunctionContext) const {
   const DeclContext *Ctx = getDeclContext();
 
   // For ObjC methods and properties, look through categories and use the
@@ -1733,7 +1735,7 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       Ctx = CI;
   }
 
-  if (Ctx->isFunctionOrMethod())
+  if (Ctx->isFunctionOrMethod() && !AllowFunctionContext)
     return;
 
   using ContextsTy = SmallVector<const DeclContext *, 8>;
@@ -5006,7 +5008,10 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
   //   (anonymous enum at /usr/include/string.h:120:9)
   OS << (Policy.MSVCFormatting ? '`' : '(');
 
-  if (isa<CXXRecordDecl>(this) && cast<CXXRecordDecl>(this)->isLambda()) {
+  const CXXRecordDecl *CXX = dyn_cast<CXXRecordDecl>(this);
+  const bool IsLambda = CXX && CXX->isLambda();
+
+  if (IsLambda) {
     OS << "lambda";
     SuppressTagKeywordInName = true;
   } else if ((isa<RecordDecl>(this) &&
@@ -5014,6 +5019,20 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
     OS << "anonymous";
   } else {
     OS << "unnamed";
+  }
+
+  if (Policy.AnonymousTagNameStyle ==
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::CanonicalName)) {
+    if (IsLambda) {
+      OS << CXX->getLambdaManglingNumber();
+      OS << '(';
+      if (const auto *Op = CXX->getLambdaCallOperator())
+        for (const auto &Param : Op->parameters())
+          Param->print(OS, Policy);
+      OS << ')';
+    } else {
+      OS << getASTContext().getManglingNumber(this);
+    }
   }
 
   if (!SuppressTagKeywordInName)
