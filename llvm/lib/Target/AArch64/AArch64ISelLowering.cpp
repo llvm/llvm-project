@@ -1754,13 +1754,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT, VT, Custom);
       setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::FADD, VT, Custom);
+      setOperationAction(ISD::FCANONICALIZE, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FDIV, VT, Custom);
       setOperationAction(ISD::FMA, VT, Custom);
       setOperationAction(ISD::FMAXIMUM, VT, Custom);
       setOperationAction(ISD::FMAXNUM, VT, Custom);
+      setOperationAction(ISD::FMAXNUM_IEEE, VT, Custom);
       setOperationAction(ISD::FMINIMUM, VT, Custom);
       setOperationAction(ISD::FMINNUM, VT, Custom);
+      setOperationAction(ISD::FMINNUM_IEEE, VT, Custom);
       setOperationAction(ISD::FMUL, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Custom);
       setOperationAction(ISD::FSUB, VT, Custom);
@@ -2448,6 +2451,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Default);
   setOperationAction(ISD::FABS, VT, Default);
   setOperationAction(ISD::FADD, VT, Default);
+  setOperationAction(ISD::FCANONICALIZE, VT, Default);
   setOperationAction(ISD::FCEIL, VT, Default);
   setOperationAction(ISD::FCOPYSIGN, VT, Default);
   setOperationAction(ISD::FDIV, VT, Default);
@@ -2455,8 +2459,10 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FMA, VT, Default);
   setOperationAction(ISD::FMAXIMUM, VT, Default);
   setOperationAction(ISD::FMAXNUM, VT, Default);
+  setOperationAction(ISD::FMAXNUM_IEEE, VT, Default);
   setOperationAction(ISD::FMINIMUM, VT, Default);
   setOperationAction(ISD::FMINNUM, VT, Default);
+  setOperationAction(ISD::FMINNUM_IEEE, VT, Default);
   setOperationAction(ISD::FMUL, VT, Default);
   setOperationAction(ISD::FNEARBYINT, VT, Default);
   setOperationAction(ISD::FNEG, VT, Default);
@@ -8383,10 +8389,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FMAXIMUM:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMAX_PRED);
   case ISD::FMAXNUM:
+  case ISD::FMAXNUM_IEEE:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMAXNM_PRED);
   case ISD::FMINIMUM:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMIN_PRED);
   case ISD::FMINNUM:
+  case ISD::FMINNUM_IEEE:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMINNM_PRED);
   case ISD::VSELECT:
     return LowerFixedLengthVectorSelectToSVE(Op, DAG);
@@ -8478,6 +8486,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   case ISD::CLMUL:
     return LowerCLMUL(Op, DAG);
+  case ISD::FCANONICALIZE:
+    return LowerFCANONICALIZE(Op, DAG);
   }
 }
 
@@ -33491,4 +33501,26 @@ bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 bool AArch64TargetLowering::shouldPreservePtrArith(const Function &F,
                                                    EVT VT) const {
   return Subtarget->hasCPA() && UseFEATCPACodegen;
+}
+
+SDValue AArch64TargetLowering::LowerFCANONICALIZE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  assert(VT.isVector() && "Expected vector type!");
+
+  SDValue In = Op.getOperand(0);
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+
+  // FMINNM follows IEEE754-2008 and will canonicalize a floating-point number.
+
+  if (VT.isScalableVector())
+    return DAG.getNode(AArch64ISD::FMINNM_PRED, DL, VT, Pg, In, In);
+
+  assert(useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) &&
+         "Expected to lower to SVE!");
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  In = convertToScalableVector(DAG, ContainerVT, In);
+  In = DAG.getNode(AArch64ISD::FMINNM_PRED, DL, ContainerVT, Pg, In, In);
+  return convertFromScalableVector(DAG, VT, In);
 }

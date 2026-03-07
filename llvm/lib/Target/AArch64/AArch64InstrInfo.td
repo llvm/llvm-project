@@ -6135,6 +6135,8 @@ def : Pat<(v2f64 (fmaxnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
           (v2f64 (FMAXNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
 def : Pat<(v2f64 (fcanonicalize (v2f64 V128:$Rn))),
           (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rn)))>;
+def : Pat<(v1f64 (fcanonicalize (v1f64 V64:$Rn))),
+          (v1f64 (FMINNMDrr (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rn)))>;
 def : Pat<(v4f32 (fminnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
           (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
 def : Pat<(v4f32 (fmaxnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
