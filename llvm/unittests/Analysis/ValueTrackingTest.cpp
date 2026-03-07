@@ -967,7 +967,7 @@ TEST_F(ValueTrackingTest, impliesPoison_Select_CondLogic) {
   // These should be true ideally, but the recursion limit doesn't let us go
   // deep enough.
   EXPECT_FALSE(impliesPoison(A2, A4));
-  EXPECT_FALSE(impliesPoison(A3, A4));
+  EXPECT_TRUE(impliesPoison(A3, A4));
 }
 
 TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
