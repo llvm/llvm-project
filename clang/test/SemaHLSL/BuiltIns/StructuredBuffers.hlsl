@@ -33,3 +33,17 @@ void main() {
   // expected-note@* {{function 'operator[]' which returns const-qualified type 'vector<float const hlsl_device &, 3>' declared here}}
   Buff[0] = 0.0;
 }
+
+// expected-error@+2 {{class template 'StructuredBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
+void f1(StructuredBuffer B) {}
+
+// expected-error@+2 {{class template 'StructuredBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
+StructuredBuffer f2();
+
+struct S {
+// expected-error@+2 {{class template 'StructuredBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
+  StructuredBuffer B;
+};
