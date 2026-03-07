@@ -13,9 +13,14 @@
 #ifndef CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H
 
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Registry.h"
+
+#include <set>
 
 namespace clang::ssaf {
 
@@ -49,6 +54,23 @@ public:
   llvm::Error writeTUSummary(const TUSummary &Summary,
                              llvm::StringRef Path) override;
 
+  llvm::Expected<TUSummaryEncoding>
+  readTUSummaryEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
+                                     llvm::StringRef Path) override;
+
+  llvm::Expected<LUSummary> readLUSummary(llvm::StringRef Path) override;
+
+  llvm::Error writeLUSummary(const LUSummary &Summary,
+                             llvm::StringRef Path) override;
+
+  llvm::Expected<LUSummaryEncoding>
+  readLUSummaryEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
+                                     llvm::StringRef Path) override;
+
   using SerializerFn = llvm::function_ref<Object(const EntitySummary &,
                                                  const EntityIdConverter &)>;
   using DeserializerFn =
@@ -64,9 +86,6 @@ private:
   EntityId entityIdFromJSON(const uint64_t EntityIdIndex) const;
   uint64_t entityIdToJSON(EntityId EI) const;
 
-  llvm::Expected<BuildNamespaceKind>
-  buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) const;
-
   llvm::Expected<BuildNamespace>
   buildNamespaceFromJSON(const Object &BuildNamespaceObject) const;
   Object buildNamespaceToJSON(const BuildNamespace &BN) const;
@@ -79,12 +98,26 @@ private:
   entityNameFromJSON(const Object &EntityNameObject) const;
   Object entityNameToJSON(const EntityName &EN) const;
 
+  llvm::Expected<EntityLinkage>
+  entityLinkageFromJSON(const Object &EntityLinkageObject) const;
+  Object entityLinkageToJSON(const EntityLinkage &EL) const;
+
   llvm::Expected<std::pair<EntityName, EntityId>>
   entityIdTableEntryFromJSON(const Object &EntityIdTableEntryObject) const;
   llvm::Expected<EntityIdTable>
   entityIdTableFromJSON(const Array &EntityIdTableArray) const;
   Object entityIdTableEntryToJSON(const EntityName &EN, EntityId EI) const;
   Array entityIdTableToJSON(const EntityIdTable &IdTable) const;
+
+  llvm::Expected<std::pair<EntityId, EntityLinkage>>
+  linkageTableEntryFromJSON(const Object &LinkageTableEntryObject) const;
+  Object linkageTableEntryToJSON(EntityId EI, const EntityLinkage &EL) const;
+
+  llvm::Expected<std::map<EntityId, EntityLinkage>>
+  linkageTableFromJSON(const Array &LinkageTableArray,
+                       std::set<EntityId> ExpectedIds) const;
+  Array linkageTableToJSON(
+      const std::map<EntityId, EntityLinkage> &LinkageTable) const;
 
   llvm::Expected<std::unique_ptr<EntitySummary>>
   entitySummaryFromJSON(const SummaryName &SN,
@@ -97,6 +130,10 @@ private:
   entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
                              const SummaryName &SN,
                              EntityIdTable &IdTable) const;
+  llvm::Expected<Object>
+  entityDataMapEntryToJSON(const EntityId EI,
+                           const std::unique_ptr<EntitySummary> &EntitySummary,
+                           const SummaryName &SN) const;
   llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummary>>>
   entityDataMapFromJSON(const SummaryName &SN, const Array &EntityDataArray,
                         EntityIdTable &IdTable) const;
@@ -121,8 +158,42 @@ private:
       const std::map<SummaryName,
                      std::map<EntityId, std::unique_ptr<EntitySummary>>>
           &SummaryDataMap) const;
+
+  llvm::Expected<std::pair<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
+  encodingDataMapEntryFromJSON(const Object &EntityDataMapEntryObject) const;
+  Object encodingDataMapEntryToJSON(
+      EntityId EI,
+      const std::unique_ptr<EntitySummaryEncoding> &Encoding) const;
+
+  llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
+  encodingDataMapFromJSON(const Array &EntityDataArray) const;
+  Array encodingDataMapToJSON(
+      const std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>
+          &EncodingDataMap) const;
+
+  llvm::Expected<std::pair<
+      SummaryName, std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>>
+  encodingSummaryDataMapEntryFromJSON(
+      const Object &SummaryDataMapEntryObject) const;
+  Object encodingSummaryDataMapEntryToJSON(
+      const SummaryName &SN,
+      const std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>
+          &EncodingMap) const;
+
+  llvm::Expected<std::map<
+      SummaryName, std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>>
+  encodingSummaryDataMapFromJSON(const Array &SummaryDataArray) const;
+  Array encodingSummaryDataMapToJSON(
+      const std::map<SummaryName,
+                     std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
+          &EncodingSummaryDataMap) const;
 };
 
 } // namespace clang::ssaf
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI
+    Registry<clang::ssaf::JSONFormat::FormatInfo>;
+} // namespace llvm
 
 #endif // CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H

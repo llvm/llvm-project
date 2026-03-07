@@ -39,7 +39,7 @@ static void test_noop(uint8_t data) {
   });
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   test_add_simple();
 
   if (gpu::get_thread_id() % 2)

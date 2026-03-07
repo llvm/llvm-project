@@ -9,6 +9,13 @@
 //
 // Tests for unconstrained intrinsics that require the fullfp16 extension.
 //
+// This file contains tests that were originally located in
+//  *  clang/test/CodeGen/AArch64/v8.2a-fp16-intrinsics.c
+// The main difference is the use of RUN lines that enable ClangIR lowering;
+// therefore only builtins currently supported by ClangIR are tested here.
+// Once ClangIR support is complete, this file is intended to replace the
+// original test file.
+//
 // These intrinsics expand to code containing multiple compound and declaration
 // statements rather than just plain function calls, which leads to:
 //  * "scopes" at the CIR level, and then
@@ -17,16 +24,8 @@
 // hence for CIR we use `opt -passes=simplifycfg` to reduce the control flow
 // and to make LLVM IR match for all paths.
 //
-// Minor differences between RUN lines (e.g., the presence of `noundef` on
-// arguments or the `align` attribute on pointers) are matched using
-// catch-alls such as `{{.*}}`.
-//
 // TODO: Remove `-simplifycfg` once CIR lowering includes the relevant
 //       optimizations to reduce the CFG.
-//
-// TODO: Merge this file with
-//        * clang/test/CodeGen/AArch64/v8.2a-fp16-intrinsics.c
-//       (the source of these tests).
 //=============================================================================
 
 #include <arm_fp16.h>
@@ -49,4 +48,26 @@ float16_t test_vnegh_f16(float16_t a) {
 // LLVM: [[NEG:%.*]] = fneg half [[A:%.*]]
 // LLVM: ret half [[NEG]]
   return vnegh_f16(a);
+}
+
+// ALL-LABEL: test_vfmah_f16
+float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
+// CIR: cir.call_llvm_intrinsic "fma" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+
+// LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
+// LLVM:  [[FMA:%.*]] = call half @llvm.fma.f16(half [[B]], half [[C]], half [[A]])
+// LLVM:  ret half [[FMA]]
+  return vfmah_f16(a, b, c);
+}
+
+// ALL-LABEL: test_vfmsh_f16
+float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
+// CIR: [[SUB:%.*]] = cir.unary(minus, %{{.*}}) : !cir.f16, !cir.f16
+// CIR: cir.call_llvm_intrinsic "fma" [[SUB]], {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
+
+// LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
+// LLVM:  [[SUB:%.*]] = fneg half [[B]]
+// LLVM:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half [[C]], half [[A]])
+// LLVM:  ret half [[ADD]]
+  return vfmsh_f16(a, b, c);
 }

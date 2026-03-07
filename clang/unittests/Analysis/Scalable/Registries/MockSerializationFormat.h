@@ -11,7 +11,9 @@
 
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Registry.h"
 #include <string>
 
 namespace clang::ssaf {
@@ -24,6 +26,23 @@ public:
 
   llvm::Error writeTUSummary(const TUSummary &Summary,
                              llvm::StringRef Path) override;
+
+  llvm::Expected<TUSummaryEncoding>
+  readTUSummaryEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
+                                     llvm::StringRef Path) override;
+
+  llvm::Expected<LUSummary> readLUSummary(llvm::StringRef Path) override;
+
+  llvm::Error writeLUSummary(const LUSummary &Summary,
+                             llvm::StringRef Path) override;
+
+  llvm::Expected<LUSummaryEncoding>
+  readLUSummaryEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
+                                     llvm::StringRef Path) override;
 
   struct SpecialFileRepresentation {
     std::string MockRepresentation;
@@ -41,5 +60,10 @@ public:
 };
 
 } // namespace clang::ssaf
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI
+    Registry<clang::ssaf::MockSerializationFormat::FormatInfo>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_REGISTRIES_MOCKSERIALIZATIONFORMAT_H

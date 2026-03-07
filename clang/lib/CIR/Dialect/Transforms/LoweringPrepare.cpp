@@ -78,6 +78,7 @@ struct LoweringPreparePass
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
+  void lowerStoreOfConstAggregate(cir::StoreOp op);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -482,23 +483,18 @@ buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   mlir::Value &c = rhsReal;
   mlir::Value &d = rhsImag;
 
-  mlir::Value ac = builder.createBinop(loc, a, cir::BinOpKind::Mul, c); // a*c
-  mlir::Value bd = builder.createBinop(loc, b, cir::BinOpKind::Mul, d); // b*d
-  mlir::Value cc = builder.createBinop(loc, c, cir::BinOpKind::Mul, c); // c*c
-  mlir::Value dd = builder.createBinop(loc, d, cir::BinOpKind::Mul, d); // d*d
-  mlir::Value acbd =
-      builder.createBinop(loc, ac, cir::BinOpKind::Add, bd); // ac+bd
-  mlir::Value ccdd =
-      builder.createBinop(loc, cc, cir::BinOpKind::Add, dd); // cc+dd
-  mlir::Value resultReal =
-      builder.createBinop(loc, acbd, cir::BinOpKind::Div, ccdd);
+  mlir::Value ac = builder.createMul(loc, a, c);     // a*c
+  mlir::Value bd = builder.createMul(loc, b, d);     // b*d
+  mlir::Value cc = builder.createMul(loc, c, c);     // c*c
+  mlir::Value dd = builder.createMul(loc, d, d);     // d*d
+  mlir::Value acbd = builder.createAdd(loc, ac, bd); // ac+bd
+  mlir::Value ccdd = builder.createAdd(loc, cc, dd); // cc+dd
+  mlir::Value resultReal = builder.createDiv(loc, acbd, ccdd);
 
-  mlir::Value bc = builder.createBinop(loc, b, cir::BinOpKind::Mul, c); // b*c
-  mlir::Value ad = builder.createBinop(loc, a, cir::BinOpKind::Mul, d); // a*d
-  mlir::Value bcad =
-      builder.createBinop(loc, bc, cir::BinOpKind::Sub, ad); // bc-ad
-  mlir::Value resultImag =
-      builder.createBinop(loc, bcad, cir::BinOpKind::Div, ccdd);
+  mlir::Value bc = builder.createMul(loc, b, c);     // b*c
+  mlir::Value ad = builder.createMul(loc, a, d);     // a*d
+  mlir::Value bcad = builder.createSub(loc, bc, ad); // bc-ad
+  mlir::Value resultImag = builder.createDiv(loc, bcad, ccdd);
   return builder.createComplexCreate(loc, resultReal, resultImag);
 }
 
@@ -532,42 +528,34 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   mlir::Value &d = rhsImag;
 
   auto trueBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createBinop(loc, d, cir::BinOpKind::Div,
-                                        c); // r := d / c
-    mlir::Value rd = builder.createBinop(loc, r, cir::BinOpKind::Mul, d); // r*d
-    mlir::Value tmp = builder.createBinop(loc, c, cir::BinOpKind::Add,
-                                          rd); // tmp := c + r*d
+    mlir::Value r = builder.createDiv(loc, d, c);    // r := d / c
+    mlir::Value rd = builder.createMul(loc, r, d);   // r*d
+    mlir::Value tmp = builder.createAdd(loc, c, rd); // tmp := c + r*d
 
-    mlir::Value br = builder.createBinop(loc, b, cir::BinOpKind::Mul, r); // b*r
-    mlir::Value abr =
-        builder.createBinop(loc, a, cir::BinOpKind::Add, br); // a + b*r
-    mlir::Value e = builder.createBinop(loc, abr, cir::BinOpKind::Div, tmp);
+    mlir::Value br = builder.createMul(loc, b, r);   // b*r
+    mlir::Value abr = builder.createAdd(loc, a, br); // a + b*r
+    mlir::Value e = builder.createDiv(loc, abr, tmp);
 
-    mlir::Value ar = builder.createBinop(loc, a, cir::BinOpKind::Mul, r); // a*r
-    mlir::Value bar =
-        builder.createBinop(loc, b, cir::BinOpKind::Sub, ar); // b - a*r
-    mlir::Value f = builder.createBinop(loc, bar, cir::BinOpKind::Div, tmp);
+    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
+    mlir::Value bar = builder.createSub(loc, b, ar); // b - a*r
+    mlir::Value f = builder.createDiv(loc, bar, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
   auto falseBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createBinop(loc, c, cir::BinOpKind::Div,
-                                        d); // r := c / d
-    mlir::Value rc = builder.createBinop(loc, r, cir::BinOpKind::Mul, c); // r*c
-    mlir::Value tmp = builder.createBinop(loc, d, cir::BinOpKind::Add,
-                                          rc); // tmp := d + r*c
+    mlir::Value r = builder.createDiv(loc, c, d);    // r := c / d
+    mlir::Value rc = builder.createMul(loc, r, c);   // r*c
+    mlir::Value tmp = builder.createAdd(loc, d, rc); // tmp := d + r*c
 
-    mlir::Value ar = builder.createBinop(loc, a, cir::BinOpKind::Mul, r); // a*r
-    mlir::Value arb =
-        builder.createBinop(loc, ar, cir::BinOpKind::Add, b); // a*r + b
-    mlir::Value e = builder.createBinop(loc, arb, cir::BinOpKind::Div, tmp);
+    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
+    mlir::Value arb = builder.createAdd(loc, ar, b); // a*r + b
+    mlir::Value e = builder.createDiv(loc, arb, tmp);
 
-    mlir::Value br = builder.createBinop(loc, b, cir::BinOpKind::Mul, r); // b*r
-    mlir::Value bra =
-        builder.createBinop(loc, br, cir::BinOpKind::Sub, a); // b*r - a
-    mlir::Value f = builder.createBinop(loc, bra, cir::BinOpKind::Div, tmp);
+    mlir::Value br = builder.createMul(loc, b, r);   // b*r
+    mlir::Value bra = builder.createSub(loc, br, a); // b*r - a
+    mlir::Value f = builder.createDiv(loc, bra, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
@@ -752,18 +740,12 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
                                    mlir::Value lhsReal, mlir::Value lhsImag,
                                    mlir::Value rhsReal, mlir::Value rhsImag) {
   // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
-  mlir::Value resultRealLhs =
-      builder.createBinop(loc, lhsReal, cir::BinOpKind::Mul, rhsReal);
-  mlir::Value resultRealRhs =
-      builder.createBinop(loc, lhsImag, cir::BinOpKind::Mul, rhsImag);
-  mlir::Value resultImagLhs =
-      builder.createBinop(loc, lhsReal, cir::BinOpKind::Mul, rhsImag);
-  mlir::Value resultImagRhs =
-      builder.createBinop(loc, lhsImag, cir::BinOpKind::Mul, rhsReal);
-  mlir::Value resultReal = builder.createBinop(
-      loc, resultRealLhs, cir::BinOpKind::Sub, resultRealRhs);
-  mlir::Value resultImag = builder.createBinop(
-      loc, resultImagLhs, cir::BinOpKind::Add, resultImagRhs);
+  mlir::Value resultRealLhs = builder.createMul(loc, lhsReal, rhsReal); // ac
+  mlir::Value resultRealRhs = builder.createMul(loc, lhsImag, rhsImag); // bd
+  mlir::Value resultImagLhs = builder.createMul(loc, lhsReal, rhsImag); // ad
+  mlir::Value resultImagRhs = builder.createMul(loc, lhsImag, rhsReal); // bc
+  mlir::Value resultReal = builder.createSub(loc, resultRealLhs, resultRealRhs);
+  mlir::Value resultImag = builder.createAdd(loc, resultImagLhs, resultImagRhs);
   mlir::Value algebraicResult =
       builder.createComplexCreate(loc, resultReal, resultImag);
 
@@ -1461,6 +1443,81 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
   }
 }
 
+void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
+  // Check if the value operand is a cir.const with aggregate type.
+  auto constOp = op.getValue().getDefiningOp<cir::ConstantOp>();
+  if (!constOp)
+    return;
+
+  mlir::Type ty = constOp.getType();
+  if (!mlir::isa<cir::ArrayType, cir::RecordType>(ty))
+    return;
+
+  // Only transform stores to local variables (backed by cir.alloca).
+  // Stores to other addresses (e.g. base_class_addr) should not be
+  // transformed as they may be partial initializations.
+  auto alloca = op.getAddr().getDefiningOp<cir::AllocaOp>();
+  if (!alloca)
+    return;
+
+  mlir::TypedAttr constant = constOp.getValue();
+
+  // OG implements several optimization tiers for constant aggregate
+  // initialization. For now we always create a global constant + memcpy
+  // (shouldCreateMemCpyFromGlobal). Future work can add the intermediate
+  // tiers.
+  assert(!cir::MissingFeatures::shouldUseBZeroPlusStoresToInitialize());
+  assert(!cir::MissingFeatures::shouldUseMemSetToInitialize());
+  assert(!cir::MissingFeatures::shouldSplitConstantStore());
+
+  // Get function name from parent cir.func.
+  auto func = op->getParentOfType<cir::FuncOp>();
+  if (!func)
+    return;
+  llvm::StringRef funcName = func.getSymName();
+
+  // Get variable name from the alloca.
+  llvm::StringRef varName = alloca.getName();
+
+  // Build name: __const.<func>.<var>
+  std::string name = ("__const." + funcName + "." + varName).str();
+
+  // Create the global constant.
+  CIRBaseBuilderTy builder(getContext());
+
+  // Use InsertionGuard to create the global at module level.
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // If a global with this name already exists (e.g. CIRGen materializes
+  // constexpr locals as globals when their address is taken), reuse it.
+  if (!mlir::SymbolTable::lookupSymbolIn(
+          mlirModule, mlir::StringAttr::get(&getContext(), name))) {
+    auto gv = cir::GlobalOp::create(builder, op.getLoc(), name, ty,
+                                    /*isConstant=*/true,
+                                    cir::GlobalLinkageKind::PrivateLinkage);
+    mlir::SymbolTable::setSymbolVisibility(
+        gv, mlir::SymbolTable::Visibility::Private);
+    gv.setInitialValueAttr(constant);
+  }
+
+  // Now replace the store with get_global + copy.
+  builder.setInsertionPoint(op);
+
+  auto ptrTy = cir::PointerType::get(ty);
+  mlir::Value globalPtr =
+      cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, name);
+
+  // Replace store with copy.
+  builder.createCopy(op.getAddr(), globalPtr);
+
+  // Erase the original store.
+  op.erase();
+
+  // Erase the cir.const if it has no remaining users.
+  if (constOp.use_empty())
+    constOp.erase();
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -1495,6 +1552,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerUnaryOp(unary);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
+  } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
+    lowerStoreOfConstAggregate(storeOp);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorPriority())
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
@@ -1514,7 +1573,7 @@ void LoweringPreparePass::runOnOperation() {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::UnaryOp>(op))
+                  cir::StoreOp, cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 

@@ -339,6 +339,12 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
+MutableOperandRange
+cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  // The eh_token operand is not forwarded to the parent region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
 LogicalResult cir::ConditionOp::verify() {
   if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
@@ -822,7 +828,6 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> ops;
   llvm::SMLoc opsLoc;
   mlir::FlatSymbolRefAttr calleeAttr;
-  llvm::ArrayRef<mlir::Type> allResultTypes;
 
   // If we cannot parse a string callee, it means this is an indirect call.
   if (!parser
@@ -872,15 +877,51 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseColon())
     return ::mlir::failure();
 
-  mlir::FunctionType opsFnTy;
-  if (parser.parseType(opsFnTy))
+  SmallVector<Type> argTypes;
+  SmallVector<DictionaryAttr> argAttrs;
+  SmallVector<Type> resultTypes;
+  SmallVector<DictionaryAttr> resultAttrs;
+  if (call_interface_impl::parseFunctionSignature(parser, argTypes, argAttrs,
+                                                  resultTypes, resultAttrs))
     return mlir::failure();
 
-  allResultTypes = opsFnTy.getResults();
-  result.addTypes(allResultTypes);
+  if (resultTypes.size() > 1 || resultAttrs.size() > 1)
+    return parser.emitError(
+        parser.getCurrentLocation(),
+        "functions with multiple return types are not supported");
 
-  if (parser.resolveOperands(ops, opsFnTy.getInputs(), opsLoc, result.operands))
+  result.addTypes(resultTypes);
+
+  if (parser.resolveOperands(ops, argTypes, opsLoc, result.operands))
     return mlir::failure();
+
+  if (!resultAttrs.empty() && resultAttrs[0])
+    result.addAttribute(
+        CIRDialect::getResAttrsAttrName(),
+        mlir::ArrayAttr::get(parser.getContext(), {resultAttrs[0]}));
+
+  // ArrayAttr requires a vector of 'Attribute', so we have to do the conversion
+  // here into a separate collection.
+  llvm::SmallVector<Attribute> convertedArgAttrs;
+  bool argAttrsEmpty = true;
+
+  llvm::transform(argAttrs, std::back_inserter(convertedArgAttrs),
+                  [&](DictionaryAttr da) -> mlir::Attribute {
+                    if (da)
+                      argAttrsEmpty = false;
+                    return da;
+                  });
+
+  if (!argAttrsEmpty) {
+    llvm::ArrayRef argAttrsRef = convertedArgAttrs;
+    if (!calleeAttr) {
+      // Fixup for indirect calls, which get an extra entry in the 'args' for
+      // the indirect type, which doesn't get attributes.
+      argAttrsRef = argAttrsRef.drop_front();
+    }
+    result.addAttribute(CIRDialect::getArgAttrsAttrName(),
+                        mlir::ArrayAttr::get(parser.getContext(), argAttrsRef));
+  }
 
   return mlir::success();
 }
@@ -934,9 +975,24 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
       llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
-  call_interface_impl::printFunctionSignature(
-      printer, op->getOperands().getTypes(), argAttrs,
-      /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  if (calleeSym || !argAttrs) {
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(), argAttrs,
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  } else {
+    // indirect function calls use an 'arg' type for the type of its indirect
+    // argument.  However, we don't store a similar attribute collection.  In
+    // order to make `printFunctionSignature` have the attributes line up, we
+    // have to make a 'shimmed' copy of the attributes that have a blank set of
+    // attributes for the indirect argument.
+    llvm::SmallVector<Attribute> shimmedArgAttrs;
+    shimmedArgAttrs.push_back(mlir::DictionaryAttr::get(op->getContext(), {}));
+    shimmedArgAttrs.append(argAttrs.begin(), argAttrs.end());
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(),
+        mlir::ArrayAttr::get(op->getContext(), shimmedArgAttrs),
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  }
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -1738,7 +1794,7 @@ void cir::GlobalOp::getSuccessorRegions(
     ctorRegion = nullptr;
 
   // Don't consider the dtor region if it is empty.
-  Region *dtorRegion = &this->getCtorRegion();
+  Region *dtorRegion = &this->getDtorRegion();
   if (dtorRegion->empty())
     dtorRegion = nullptr;
 
@@ -1985,6 +2041,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
+  mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
@@ -2007,6 +2064,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(lambdaNameAttr, parser.getBuilder().getUnitAttr());
   if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
     state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
+    state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -2042,13 +2102,22 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
           resultAttrs))
     return failure();
   llvm::SmallVector<mlir::Type> argTypes;
-  for (OpAsmParser::Argument &arg : arguments)
+  llvm::SmallVector<mlir::Attribute> argAttrs;
+  bool argAttrsEmpty = true;
+  for (OpAsmParser::Argument &arg : arguments) {
     argTypes.push_back(arg.type);
+    // Add the 'empty' attribute anyway to make sure the arity matches, but we
+    // only want to 'set' the attribute at the top level if there is SOME data
+    // along the way.
+    argAttrs.push_back(arg.attrs);
+    if (arg.attrs)
+      argAttrsEmpty = false;
+  }
 
-  if (resultTypes.size() > 1) {
+  // These should be in sync anyway, but test both of them anyway.
+  if (resultTypes.size() > 1 || resultAttrs.size() > 1)
     return parser.emitError(
         loc, "functions with multiple return types are not supported");
-  }
 
   mlir::Type returnType =
       (resultTypes.empty() ? cir::VoidType::get(builder.getContext())
@@ -2057,8 +2126,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   cir::FuncType fnType = cir::FuncType::get(argTypes, returnType, isVariadic);
   if (!fnType)
     return failure();
+
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
+
+  if (!resultAttrs.empty() && resultAttrs[0])
+    state.addAttribute(
+        getResAttrsAttrName(state.name),
+        mlir::ArrayAttr::get(parser.getContext(), {resultAttrs[0]}));
+
+  if (!argAttrsEmpty)
+    state.addAttribute(getArgAttrsAttrName(state.name),
+                       mlir::ArrayAttr::get(parser.getContext(), argAttrs));
 
   bool hasAlias = false;
   mlir::StringAttr aliaseeNameAttr = getAliaseeAttrName(state.name);
@@ -2403,34 +2482,42 @@ mlir::LogicalResult cir::FuncOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// BinOp
+// AddOp / SubOp / MulOp
 //===----------------------------------------------------------------------===//
-LogicalResult cir::BinOp::verify() {
-  bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
-  bool saturated = getSaturated();
 
-  if (!isa<cir::IntType>(getType()) && noWrap)
-    return emitError()
+static LogicalResult verifyBinaryOverflowOp(mlir::Operation *op,
+                                            bool noSignedWrap,
+                                            bool noUnsignedWrap, bool saturated,
+                                            bool hasSat) {
+  bool noWrap = noSignedWrap || noUnsignedWrap;
+  if (!isa<cir::IntType>(op->getResultTypes()[0]) && noWrap)
+    return op->emitError()
            << "only operations on integer values may have nsw/nuw flags";
-
-  bool noWrapOps = getKind() == cir::BinOpKind::Add ||
-                   getKind() == cir::BinOpKind::Sub ||
-                   getKind() == cir::BinOpKind::Mul;
-
-  bool saturatedOps =
-      getKind() == cir::BinOpKind::Add || getKind() == cir::BinOpKind::Sub;
-
-  if (noWrap && !noWrapOps)
-    return emitError() << "The nsw/nuw flags are applicable to opcodes: 'add', "
-                          "'sub' and 'mul'";
-  if (saturated && !saturatedOps)
-    return emitError() << "The saturated flag is applicable to opcodes: 'add' "
-                          "and 'sub'";
-  if (noWrap && saturated)
-    return emitError() << "The nsw/nuw flags and the saturated flag are "
-                          "mutually exclusive";
-
+  if (hasSat && saturated && !isa<cir::IntType>(op->getResultTypes()[0]))
+    return op->emitError()
+           << "only operations on integer values may have sat flag";
+  if (hasSat && noWrap && saturated)
+    return op->emitError()
+           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
   return mlir::success();
+}
+
+LogicalResult cir::AddOp::verify() {
+  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
+                                getNoUnsignedWrap(), getSaturated(),
+                                /*hasSat=*/true);
+}
+
+LogicalResult cir::SubOp::verify() {
+  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
+                                getNoUnsignedWrap(), getSaturated(),
+                                /*hasSat=*/true);
+}
+
+LogicalResult cir::MulOp::verify() {
+  return verifyBinaryOverflowOp(getOperation(), getNoSignedWrap(),
+                                getNoUnsignedWrap(), /*saturated=*/false,
+                                /*hasSat=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2476,14 +2563,15 @@ void cir::TernaryOp::build(
 
   // Get result type from whichever branch has a yield (the other may have
   // unreachable from a throw expression)
-  auto yield =
-      dyn_cast_or_null<cir::YieldOp>(trueRegion->back().getTerminator());
-  if (!yield)
+  cir::YieldOp yield;
+  if (trueRegion->back().mightHaveTerminator())
+    yield = dyn_cast_or_null<cir::YieldOp>(trueRegion->back().getTerminator());
+  if (!yield && falseRegion->back().mightHaveTerminator())
     yield = dyn_cast_or_null<cir::YieldOp>(falseRegion->back().getTerminator());
 
-  assert((yield && yield.getNumOperands() <= 1) &&
+  assert((!yield || yield.getNumOperands() <= 1) &&
          "expected zero or one result type");
-  if (yield.getNumOperands() == 1)
+  if (yield && yield.getNumOperands() == 1)
     result.addTypes(TypeRange{yield.getOperandTypes().front()});
 }
 
@@ -3774,6 +3862,44 @@ mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
+LogicalResult cir::TryOp::verify() {
+  mlir::ArrayAttr handlerTypes = getHandlerTypes();
+  if (!handlerTypes) {
+    if (!getHandlerRegions().empty())
+      return emitOpError(
+          "handler regions must be empty when no handler types are present");
+    return success();
+  }
+
+  mlir::MutableArrayRef<mlir::Region> handlerRegions = getHandlerRegions();
+
+  // The parser and builder won't allow this to happen, but the loop below
+  // relies on the sizes being the same, so we check it here.
+  if (handlerRegions.size() != handlerTypes.size())
+    return emitOpError(
+        "number of handler regions and handler types must match");
+
+  for (const auto &[typeAttr, handlerRegion] :
+       llvm::zip(handlerTypes, handlerRegions)) {
+    // Verify that handler regions have a !cir.eh_token block argument.
+    mlir::Block &entryBlock = handlerRegion.front();
+    if (entryBlock.getNumArguments() != 1 ||
+        !mlir::isa<cir::EhTokenType>(entryBlock.getArgument(0).getType()))
+      return emitOpError(
+          "handler region must have a single '!cir.eh_token' argument");
+
+    // The unwind region does not require a cir.begin_catch.
+    if (mlir::isa<cir::UnwindAttr>(typeAttr))
+      continue;
+
+    if (entryBlock.empty() || !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
+      return emitOpError(
+          "catch handler region must start with 'cir.begin_catch'");
+  }
+
+  return success();
+}
+
 static void
 printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
                        mlir::MutableArrayRef<mlir::Region> handlerRegions,
@@ -3795,7 +3921,15 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
       printer << "] ";
     }
 
-    printer.printRegion(handlerRegions[typeIdx],
+    // Print the handler region's !cir.eh_token block argument.
+    mlir::Region &region = handlerRegions[typeIdx];
+    if (!region.empty() && region.front().getNumArguments() > 0) {
+      printer << "(";
+      printer.printRegionArgument(region.front().getArgument(0));
+      printer << ") ";
+    }
+
+    printer.printRegion(region,
                         /*printEntryBLockArgs=*/false,
                         /*printBlockTerminators=*/true);
   }
@@ -3810,8 +3944,20 @@ static mlir::ParseResult parseTryHandlerRegions(
     handlerRegions.emplace_back(new mlir::Region);
 
     mlir::Region &currRegion = *handlerRegions.back();
+
+    // Parse the required region argument: (%eh_token : !cir.eh_token)
+    llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
+    if (parser.parseLParen())
+      return failure();
+    mlir::OpAsmParser::Argument arg;
+    if (parser.parseArgument(arg, /*allowType=*/true))
+      return failure();
+    regionArgs.push_back(arg);
+    if (parser.parseRParen())
+      return failure();
+
     mlir::SMLoc regionLoc = parser.getCurrentLocation();
-    if (parser.parseRegion(currRegion)) {
+    if (parser.parseRegion(currRegion, regionArgs)) {
       handlerRegions.clear();
       return failure();
     }

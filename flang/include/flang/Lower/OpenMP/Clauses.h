@@ -221,6 +221,7 @@ using Counts = tomp::clause::CountsT<TypeTy, IdTy, ExprTy>;
 using Default = tomp::clause::DefaultT<TypeTy, IdTy, ExprTy>;
 using Defaultmap = tomp::clause::DefaultmapT<TypeTy, IdTy, ExprTy>;
 using Depend = tomp::clause::DependT<TypeTy, IdTy, ExprTy>;
+using Depth = tomp::clause::DepthT<TypeTy, IdTy, ExprTy>;
 using Destroy = tomp::clause::DestroyT<TypeTy, IdTy, ExprTy>;
 using Detach = tomp::clause::DetachT<TypeTy, IdTy, ExprTy>;
 using Device = tomp::clause::DeviceT<TypeTy, IdTy, ExprTy>;

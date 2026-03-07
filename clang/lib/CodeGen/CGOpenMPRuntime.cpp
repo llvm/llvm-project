@@ -815,6 +815,7 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
     Size = CGF.Builder.CreatePtrDiff(ElemType,
                                      OrigAddresses[N].second.getPointer(CGF),
                                      OrigAddresses[N].first.getPointer(CGF));
+    Size = CGF.Builder.CreateZExtOrTrunc(Size, ElemSizeOf->getType());
     Size = CGF.Builder.CreateNUWAdd(
         Size, llvm::ConstantInt::get(Size->getType(), /*V=*/1));
     SizeInChars = CGF.Builder.CreateNUWMul(Size, ElemSizeOf);
@@ -3728,9 +3729,7 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
     llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
         UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
         /*Idx0=*/1);
-    llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGF.SizeTy);
-    llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGF.SizeTy);
-    SizeVal = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
+    SizeVal = CGF.Builder.CreatePtrDiff(UpAddr, Addr, "", /*IsNUW=*/true);
   } else {
     SizeVal = CGF.getTypeSize(Ty);
   }
@@ -7656,8 +7655,7 @@ private:
     void copyUntilField(const FieldDecl *FD, Address ComponentLB) {
       llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
       llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-      llvm::Value *Size =
-          CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr, LBPtr);
+      llvm::Value *Size = CGF.Builder.CreatePtrDiff(ComponentLBPtr, LBPtr);
       copySizedChunk(LBPtr, Size);
     }
 
@@ -7670,8 +7668,7 @@ private:
       }
       llvm::Value *LBPtr = LB.emitRawPointer(CGF);
       llvm::Value *Size = CGF.Builder.CreatePtrDiff(
-          CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
-          LBPtr);
+          CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF), LBPtr);
       copySizedChunk(LBPtr, Size);
     }
 
@@ -7682,7 +7679,7 @@ private:
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
       CombinedInfo.Pointers.push_back(Base);
       CombinedInfo.Sizes.push_back(
-          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
+          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/false));
       CombinedInfo.Types.push_back(Flags);
       CombinedInfo.Mappers.push_back(nullptr);
       CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
@@ -9434,7 +9431,7 @@ public:
           HBAddr.getElementType(), HB, /*Idx0=*/1);
       llvm::Value *CLAddr = CGF.Builder.CreatePointerCast(LB, CGF.VoidPtrTy);
       llvm::Value *CHAddr = CGF.Builder.CreatePointerCast(HAddr, CGF.VoidPtrTy);
-      llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, CHAddr, CLAddr);
+      llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CHAddr, CLAddr);
       llvm::Value *Size = CGF.Builder.CreateIntCast(Diff, CGF.Int64Ty,
                                                     /*isSigned=*/false);
       CombinedInfo.Sizes.push_back(Size);
