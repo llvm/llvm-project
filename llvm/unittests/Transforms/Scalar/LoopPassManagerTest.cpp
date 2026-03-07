@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/SourceMgr.h"
 
 #include "gmock/gmock.h"
@@ -328,6 +329,17 @@ public:
   }
 };
 
+template <size_t Tag, typename MemberPtrT> struct PrivateVisitor {
+  inline static MemberPtrT Ptr;
+};
+template <size_t Tag, auto MemberPtrV> struct PrivateVisitorHelper {
+  struct Assigner {
+    Assigner() { PrivateVisitor<Tag, decltype(MemberPtrV)>::Ptr = MemberPtrV; }
+  };
+  inline static Assigner A;
+};
+template struct PrivateVisitorHelper<0, &LoopPassManager::IsLoopNestPass>;
+
 TEST_F(LoopPassManagerTest, Basic) {
   ModulePassManager MPM;
   ::testing::InSequence MakeExpectationsSequenced;
@@ -385,6 +397,21 @@ TEST_F(LoopPassManagerTest, Basic) {
 
   // And now run the pipeline across the module.
   MPM.run(*M, MAM);
+
+  // Test pass managers can be merged.
+  {
+    LoopPassManager LPM1, LPM2;
+    LPM1.addPass(NoOpLoopPass());
+    LPM2.addPass(NoOpLoopNestPass());
+    LPM2.addPass(NoOpLoopNestPass());
+    LPM1.addPass(std::move(LPM2));
+    auto &IsLoopNestPass =
+        LPM1.*PrivateVisitor<0, BitVector LoopPassManager::*>::Ptr;
+    EXPECT_EQ(IsLoopNestPass.size(), 3u);
+    BitVector FTT(3, true);
+    FTT[0] = false;
+    EXPECT_EQ(IsLoopNestPass, FTT);
+  }
 }
 
 TEST_F(LoopPassManagerTest, FunctionPassInvalidationOfLoopAnalyses) {
