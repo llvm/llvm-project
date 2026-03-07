@@ -207,6 +207,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   HasJmpExt = STI.getHasJmpExt();
   HasMovsx = STI.hasMovsx();
 
+  Hasi128DirectReturn = STI.getHasi128DirectReturn();
+
   AllowsMisalignedMemAccess = STI.getAllowsMisalignedMemAccess();
 }
 
@@ -633,9 +635,18 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
-  if (MF.getFunction().getReturnType()->isAggregateType()) {
-    fail(DL, DAG, "aggregate returns are not supported");
-    return DAG.getNode(Opc, DL, MVT::Other, Chain);
+  const Function &F = MF.getFunction();
+  Type *retTy = F.getReturnType();
+
+  if (retTy->isAggregateType() || retTy->isVectorTy()) {
+    // BPF calling convention
+    // 1. in any case, does not allow returning more than 2 registers
+    // 2. when target doesn't supports i128 direct return through R0/R1,
+    // return size has to be <= 1
+    if (Outs.size() > 2 || (!Hasi128DirectReturn && Outs.size() > 1)) {
+      fail(DL, DAG, "aggregate returns are not supported");
+      return DAG.getNode(Opc, DL, MVT::Other, Chain);
+    }
   }
 
   // Analize return values.
@@ -677,7 +688,8 @@ SDValue BPFTargetLowering::LowerCallResult(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
-  if (Ins.size() > 1) {
+  // BPF calling convention does not allow large return
+  if (Ins.size() > 2 || (!Hasi128DirectReturn && Ins.size() > 1)) {
     fail(DL, DAG, "only small returns supported");
     for (auto &In : Ins)
       InVals.push_back(DAG.getConstant(0, DL, In.VT));

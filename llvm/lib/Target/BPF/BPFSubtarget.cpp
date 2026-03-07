@@ -69,6 +69,7 @@ void BPFSubtarget::initializeEnvironment() {
   HasStoreImm = false;
   HasLoadAcqStoreRel = false;
   HasGotox = false;
+  Hasi128DirectReturn = false;
   AllowsMisalignedMemAccess = false;
 }
 

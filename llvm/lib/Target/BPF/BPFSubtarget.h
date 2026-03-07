@@ -60,6 +60,9 @@ protected:
   // whether the cpu supports alu32 instructions.
   bool HasAlu32;
 
+  // whether target supports i128 direct return.
+  bool Hasi128DirectReturn;
+
   // whether we should enable MCAsmInfo DwarfUsesRelocationsAcrossSections
   bool UseDwarfRIS;
 
@@ -89,6 +92,7 @@ public:
   bool getHasJmpExt() const { return HasJmpExt; }
   bool getHasJmp32() const { return HasJmp32; }
   bool getHasAlu32() const { return HasAlu32; }
+  bool getHasi128DirectReturn() const { return Hasi128DirectReturn; }
   bool getUseDwarfRIS() const { return UseDwarfRIS; }
   bool getAllowsMisalignedMemAccess() const {
     return AllowsMisalignedMemAccess;

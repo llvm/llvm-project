@@ -65,6 +65,9 @@ private:
   bool HasJmpExt;
   bool HasMovsx;
 
+  // Supports i128 Direct Return
+  bool Hasi128DirectReturn;
+
   // Allows Misalignment
   bool AllowsMisalignedMemAccess;
 
