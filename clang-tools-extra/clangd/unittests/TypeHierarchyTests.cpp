@@ -54,6 +54,12 @@ MATCHER_P(withResolveParents, M, "") {
   return testing::ExplainMatchResult(M, arg.data.parents, result_listener);
 }
 
+template <typename... Tags>
+::testing::Matcher<TypeHierarchyItem> withSymbolTags(Tags... tags) {
+  // Matches the tags vector ignoring element order.
+  return Field(&TypeHierarchyItem::tags, UnorderedElementsAre(tags...));
+}
+
 TEST(FindRecordTypeAt, TypeOrVariable) {
   Annotations Source(R"cpp(
 struct Ch^ild2 {
@@ -756,7 +762,7 @@ struct Child2b : Child1 {};
                            parentsNotResolved(), childrenNotResolved()))));
 
   resolveTypeHierarchy((*Result.front().children)[0], /*ResolveLevels=*/1,
-                       TypeHierarchyDirection::Children, Index.get());
+                       TypeHierarchyDirection::Children, Index.get(), AST);
 
   EXPECT_THAT(
       (*Result.front().children)[0],
@@ -770,10 +776,10 @@ struct Child2b : Child1 {};
 
 TEST(Standard, SubTypes) {
   Annotations Source(R"cpp(
-struct Pare^nt1 {};
-struct Parent2 {};
-struct Child : Parent1, Parent2 {};
-)cpp");
+    struct Pare^nt1 {};
+    struct Parent2 {};
+    struct Child final : Parent1, Parent2 {};
+  )cpp");
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
@@ -783,7 +789,7 @@ struct Child : Parent1, Parent2 {};
                                  TypeHierarchyDirection::Children, Index.get(),
                                  testPath(TU.Filename));
   ASSERT_THAT(Result, SizeIs(1));
-  auto Children = subTypes(Result.front(), Index.get());
+  auto Children = subTypes(Result.front(), Index.get(), AST);
 
   // Make sure parents are populated when getting children.
   // FIXME: This is partial.
@@ -791,15 +797,17 @@ struct Child : Parent1, Parent2 {};
       Children,
       UnorderedElementsAre(
           AllOf(withName("Child"),
+                withSymbolTags(SymbolTag::Declaration, SymbolTag::Definition,
+                               SymbolTag::Final),
                 withResolveParents(Optional(UnorderedElementsAre(withResolveID(
                     getSymbolID(&findDecl(AST, "Parent1")).str())))))));
 }
 
 TEST(Standard, SuperTypes) {
   Annotations Source(R"cpp(
-struct Parent {};
-struct Chil^d : Parent {};
-)cpp");
+    struct Parent {};
+    struct Chil^d : Parent {};
+  )cpp");
 
   TestTU TU = TestTU::withCode(Source.code());
   auto AST = TU.build();
@@ -809,11 +817,13 @@ struct Chil^d : Parent {};
                                  TypeHierarchyDirection::Children, Index.get(),
                                  testPath(TU.Filename));
   ASSERT_THAT(Result, SizeIs(1));
-  auto Parents = superTypes(Result.front(), Index.get());
+  auto Parents = superTypes(Result.front(), Index.get(), AST);
 
-  EXPECT_THAT(Parents, Optional(UnorderedElementsAre(
-                           AllOf(withName("Parent"),
-                                 withResolveParents(Optional(IsEmpty()))))));
+  EXPECT_THAT(Parents,
+              Optional(UnorderedElementsAre(AllOf(
+                  withName("Parent"),
+                  withSymbolTags(SymbolTag::Declaration, SymbolTag::Definition),
+                  withResolveParents(Optional(IsEmpty()))))));
 }
 } // namespace
 } // namespace clangd

@@ -13,7 +13,10 @@
 #include "Quality.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
+#include "index/SymbolLocation.h"
 #include "support/Logger.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Index/IndexSymbol.h"
@@ -118,6 +121,16 @@ bool isAbstract(const Decl *D) {
 
 // Indicates whether declaration D is virtual in cases where D is a method.
 bool isVirtual(const Decl *D) {
+  // We want to treat a method as virtual if it is declared virtual, even if it
+  // is not implemented in this class, or if it overrides/implements a
+  // base-class method. This is because the "virtual" modifier is still relevant
+  // to the method's behavior and how it should be highlighted, even if it is
+  // not itself a virtual method in the strictest sense. For example, a method
+  // that overrides a virtual method from a base class is still considered
+  // virtual, even if it is not declared as such in the derived class.
+  // Similarly, a method that implements a pure virtual method from a base class
+  // is also considered virtual, even if it is not declared as such in the
+  // derived class.
   if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
     return CMD->isVirtual();
   return false;
@@ -159,6 +172,45 @@ SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
   return (1 << static_cast<unsigned>(ST));
 }
 
+bool isOverrides(const NamedDecl *ND) {
+  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+    // A method "overrides" if:
+    // 1. It overrides at least one method
+    // 2. At least one of the overridden methods is virtual (but NOT pure
+    // virtual)
+
+    if (MD->size_overridden_methods() == 0)
+      return false;
+
+    for (const auto Overridden : MD->overridden_methods()) {
+      // Check if the overridden method is virtual but not pure virtual
+      if (Overridden->isVirtual() && !Overridden->isPureVirtual())
+        return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+bool isImplements(const NamedDecl *ND) {
+  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+    // A method "implements" pure virtual methods from base classes if:
+    // 1. It overrides at least one method
+    // 2. It is NOT itself pure virtual (i.e., it has a concrete implementation)
+    // 3. ALL overridden methods are pure virtual
+
+    if (MD->size_overridden_methods() == 0 || MD->isPureVirtual())
+      return false;
+
+    for (const auto Overridden : MD->overridden_methods()) {
+      if (!Overridden->isPureVirtual())
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 SymbolTags computeSymbolTags(const NamedDecl &ND) {
   SymbolTags Result = 0;
   const auto IsDef = isUniqueDefinition(&ND);
@@ -180,6 +232,12 @@ SymbolTags computeSymbolTags(const NamedDecl &ND) {
 
   if (isFinal(&ND))
     Result |= toSymbolTagBitmask(SymbolTag::Final);
+
+  if (isOverrides(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Overrides);
+
+  if (isImplements(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Implements);
 
   if (not isa<UnresolvedUsingValueDecl>(ND)) {
     // Do not treat an UnresolvedUsingValueDecl as a declaration.
@@ -208,12 +266,71 @@ SymbolTags computeSymbolTags(const NamedDecl &ND) {
   return Result;
 }
 
-std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
-  const auto symbolTags = computeSymbolTags(ND);
+// Filter symbol tags based on the presence of other tags and the kind of
+// symbol. This is needed to avoid redundant tags.
+SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
+  SymbolTags Result = ST;
+
+  if (not isa<CXXMethodDecl>(ND))
+    return Result;
+
+  if (ST & toSymbolTagBitmask(SymbolTag::Overrides)) {
+    // Overrides means that ND overrides an existing implementation of a virtual
+    // method in a base class. If a symbol is marked as Overrides, the tags
+    // Virtual, Declaration and Definition should be removed, as the Overrides
+    // tag implies that the symbol has/is virtual/declaration/definition.
+    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Declaration);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
+  }
+  if (ST & toSymbolTagBitmask(SymbolTag::Implements)) {
+    // Implements means that ND implements an existing pure virtual method in a
+    // base class. If a symbol is marked as Implements, the tags Virtual,
+    // Declaration, Definition and Overrides should be removed, as the
+    // Implements tag implies that the symbol is virtual, is a declaration, is a
+    // definition, and overrides a method.
+    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Declaration);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Overrides);
+  }
+  if (ST & toSymbolTagBitmask(SymbolTag::Virtual)) {
+    // Virtual means that ND is a virtual method that does not override any
+    // method in a base class. If a symbol is marked as Virtual, the tags
+    // Declaration and Definition should be removed, as the Virtual tag implies
+    // that the symbol is a declaration/definition.
+    Result &= ~toSymbolTagBitmask(SymbolTag::Declaration);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
+  }
+  if (ST & toSymbolTagBitmask(SymbolTag::Abstract)) {
+    // Abstract means that ND is a pure virtual method. If a symbol is marked as
+    // Abstract, the tags Virtual, Declaration and Definition should be removed,
+    // as the Abstract tag implies that the symbol is virtual and a
+    // declaration/definition.
+    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Declaration);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
+  }
+  if (ST & toSymbolTagBitmask(SymbolTag::Final)) {
+    // Final means that ND is a method that cannot be overridden by any method
+    // in a derived class. If a symbol is marked as Final, the tags Virtual and
+    // Overrides should be removed, as the Final tag implies that the symbol is
+    // virtual.
+    Result &= ~toSymbolTagBitmask(SymbolTag::Virtual);
+    Result &= ~toSymbolTagBitmask(SymbolTag::Overrides);
+  }
+  return Result;
+}
+
+std::vector<SymbolTag> expandTagBitmask(const SymbolTags symbolTags) {
   std::vector<SymbolTag> Tags;
 
   if (symbolTags == 0)
     return Tags;
+
+  // No filtering required since this function is only used for Symbols from the
+  // index, which have already been filtered in getSymbolTags(const NamedDecl
+  // &ND).
 
   // Iterate through SymbolTag enum values and collect any that are present in
   // the bitmask. SymbolTag values are in the numeric range
@@ -223,6 +340,29 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   for (unsigned I = MinTag; I <= MaxTag; ++I) {
     auto ST = static_cast<SymbolTag>(I);
     if (symbolTags & toSymbolTagBitmask(ST))
+      Tags.push_back(ST);
+  }
+  return Tags;
+}
+
+std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
+  const auto symbolTags = computeSymbolTags(ND);
+  std::vector<SymbolTag> Tags;
+
+  if (symbolTags == 0)
+    return Tags;
+
+  // Apply specific filter to the symbol tags.
+  const auto filteredTags = filterSymbolTags(ND, symbolTags);
+
+  // Iterate through SymbolTag enum values and collect any that are present in
+  // the bitmask. SymbolTag values are in the numeric range
+  // [FirstTag .. LastTag].
+  constexpr unsigned MinTag = static_cast<unsigned>(SymbolTag::FirstTag);
+  constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::LastTag);
+  for (unsigned I = MinTag; I <= MaxTag; ++I) {
+    auto ST = static_cast<SymbolTag>(I);
+    if (filteredTags & toSymbolTagBitmask(ST))
       Tags.push_back(ST);
   }
   return Tags;
@@ -359,6 +499,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     Info.score = Relevance.NameMatch > std::numeric_limits<float>::epsilon()
                      ? Score / Relevance.NameMatch
                      : QualScore;
+    Info.tags = expandTagBitmask(Sym.Tags);
     Top.push({Score, std::move(Info)});
   });
   for (auto &R : std::move(Top).items())

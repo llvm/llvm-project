@@ -132,26 +132,31 @@ std::vector<TypeHierarchyItem> getTypeHierarchy(
     const SymbolIndex *Index = nullptr, PathRef TUPath = PathRef{});
 
 /// Returns direct parents of a TypeHierarchyItem using SymbolIDs stored inside
-/// the item.
+/// the item or using the AST.
 std::optional<std::vector<TypeHierarchyItem>>
-superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index);
+superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index,
+           const ParsedAST &AST);
+
 /// Returns direct children of a TypeHierarchyItem.
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
-                                        const SymbolIndex *Index);
+                                        const SymbolIndex *Index,
+                                        const ParsedAST &AST);
 
 void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                           TypeHierarchyDirection Direction,
-                          const SymbolIndex *Index);
+                          const SymbolIndex *Index, const ParsedAST &AST);
 
 /// Get call hierarchy information at \p Pos.
 std::vector<CallHierarchyItem>
 prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath);
 
 std::vector<CallHierarchyIncomingCall>
-incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              const ParsedAST &AST);
 
 std::vector<CallHierarchyOutgoingCall>
-outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);
+outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              const ParsedAST &AST);
 
 /// Returns all decls that are referenced in the \p FD except local symbols.
 llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,

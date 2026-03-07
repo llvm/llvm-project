@@ -11,6 +11,7 @@
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
 #include "ExpectedTypes.h"
+#include "FindSymbols.h"
 #include "SourceCode.h"
 #include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
@@ -428,8 +429,7 @@ private:
       CachePathToFrameworkSpelling.erase(Res.first);
       return std::nullopt;
     }
-    if (auto UmbrellaSpelling =
-            getFrameworkUmbrellaSpelling(HS, *HeaderPath)) {
+    if (auto UmbrellaSpelling = getFrameworkUmbrellaSpelling(HS, *HeaderPath)) {
       *CachedHeaderSpelling = *UmbrellaSpelling;
       return llvm::StringRef(*CachedHeaderSpelling);
     }
@@ -926,7 +926,7 @@ llvm::StringRef getStdHeader(const Symbol *S, const LangOptions &LangOpts) {
   tooling::stdlib::Lang Lang = tooling::stdlib::Lang::CXX;
   if (LangOpts.C11)
     Lang = tooling::stdlib::Lang::C;
-  else if(!LangOpts.CPlusPlus)
+  else if (!LangOpts.CPlusPlus)
     return "";
 
   if (S->Scope == "std::" && S->Name == "move") {
@@ -1046,8 +1046,7 @@ void SymbolCollector::finish() {
         // depending on the translation unit.
         else if (tooling::isSelfContainedHeader(H.physical(), SM,
                                                 PP->getHeaderSearchInfo()))
-          SpellingIt->second =
-              HeaderFileURIs->toURI(H.physical());
+          SpellingIt->second = HeaderFileURIs->toURI(H.physical());
       } else {
         SpellingIt->second = include_cleaner::spellHeader(
             {H, PP->getHeaderSearchInfo(),
@@ -1126,6 +1125,9 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
       S.Documentation = Documentation;
     }
   };
+
+  S.Tags = computeSymbolTags(ND);
+
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
     if (Opts.StoreAllDocumentation)
       UpdateDoc();
@@ -1192,7 +1194,7 @@ void SymbolCollector::addDefinition(const NamedDecl &ND, const Symbol &DeclSym,
       S.Flags |= Symbol::HasDocComment;
     S.Documentation = Documentation;
   }
-
+  S.Tags |= computeSymbolTags(ND);
   Symbols.insert(S);
 }
 
