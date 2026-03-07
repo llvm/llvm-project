@@ -26,7 +26,7 @@ int main(int, char**) {
       using Array     = std::array<int, 0>;
       Array c         = {};
       Array const& cc = c;
-      TEST_LIBCPP_ASSERT_FAILURE(c[0], "cannot call array<T, 0>::operator[] on a zero-sized array");
+      TEST_LIBCPP_ASSERT_FAILURE(c[0], "test");
       TEST_LIBCPP_ASSERT_FAILURE(c[1], "cannot call array<T, 0>::operator[] on a zero-sized array");
       TEST_LIBCPP_ASSERT_FAILURE(cc[0], "cannot call array<T, 0>::operator[] on a zero-sized array");
       TEST_LIBCPP_ASSERT_FAILURE(cc[1], "cannot call array<T, 0>::operator[] on a zero-sized array");

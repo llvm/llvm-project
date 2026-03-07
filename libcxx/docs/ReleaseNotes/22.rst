@@ -38,6 +38,7 @@ What's New in Libc++ 22.0.0?
 Implemented Papers
 ------------------
 
+- P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
 - P2592R3: Hashing support for ``std::chrono`` value classes (`Github <https://llvm.org/PR105358>`__)
 - P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__)
 - P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)

@@ -201,6 +201,16 @@ namespace std::ranges {
     inline constexpr unspecified filter = unspecified;
   }
 
+  // [range.concat], concat view
+  template <input_range... Views>
+      requires (view<Views> && ...) && (sizeof...(Views) > 0) &&
+                concatable<Views...>
+  class concat_view;
+
+  namespace views {
+    inline constexpr unspecified concat = unspecified;
+  }
+
   // [range.drop], drop view
   template<view V>
     class drop_view;
@@ -488,6 +498,10 @@ namespace std {
 #    include <__ranges/to.h>
 #    include <__ranges/zip_transform_view.h>
 #    include <__ranges/zip_view.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    include <__ranges/concat_view.h>
 #  endif
 
 #  include <version>

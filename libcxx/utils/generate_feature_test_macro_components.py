@@ -1117,7 +1117,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_concat",
             "values": {"c++26": 202403}, # P2542R8: views::concat
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_contains",

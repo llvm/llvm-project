@@ -7615,17 +7615,11 @@
 #    error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_concat != 202403L
-#      error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_concat
+#    error "__cpp_lib_ranges_concat should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_concat != 202403L
+#    error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_contains
