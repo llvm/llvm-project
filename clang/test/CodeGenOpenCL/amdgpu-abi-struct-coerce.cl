@@ -288,16 +288,16 @@ void func_struct_arg(struct_arg_t arg1) { }
 // CHECK: void @func_struct_padding_arg(i8 %arg1.coerce0, i64 %arg1.coerce1)
 void func_struct_padding_arg(struct_padding_arg arg1) { }
 
-// CHECK: define{{.*}} void @func_struct_char_x8([2 x i32] %arg.coerce)
+// CHECK: define{{.*}} void @func_struct_char_x8(i8 %arg.coerce0, i8 %arg.coerce1, i8 %arg.coerce2, i8 %arg.coerce3, i8 %arg.coerce4, i8 %arg.coerce5, i8 %arg.coerce6, i8 %arg.coerce7)
 void func_struct_char_x8(struct_char_x8 arg) { }
 
-// CHECK: define{{.*}} void @func_struct_char_x4(i32 %arg.coerce)
+// CHECK: define{{.*}} void @func_struct_char_x4(i8 %arg.coerce0, i8 %arg.coerce1, i8 %arg.coerce2, i8 %arg.coerce3)
 void func_struct_char_x4(struct_char_x4 arg) { }
 
-// CHECK: define{{.*}} void @func_struct_char_x3(i32 %arg.coerce)
+// CHECK: define{{.*}} void @func_struct_char_x3(i8 %arg.coerce0, i8 %arg.coerce1, i8 %arg.coerce2)
 void func_struct_char_x3(struct_char_x3 arg) { }
 
-// CHECK: define{{.*}} void @func_struct_char_x2(i16 %arg.coerce)
+// CHECK: define{{.*}} void @func_struct_char_x2(i8 %arg.coerce0, i8 %arg.coerce1)
 void func_struct_char_x2(struct_char_x2 arg) { }
 
 // CHECK: define{{.*}} void @func_struct_char_x1(i8 %arg.coerce)
@@ -363,8 +363,8 @@ struct_padding_arg func_struct_padding_ret()
   return s;
 }
 
-// CHECK: define{{.*}} [2 x i32] @func_struct_char_x8_ret()
-// CHECK: ret [2 x i32] zeroinitializer
+// CHECK: define{{.*}} %struct.struct_char_x8 @func_struct_char_x8_ret()
+// CHECK: ret %struct.struct_char_x8 zeroinitializer
 struct_char_x8 func_struct_char_x8_ret()
 {
   struct_char_x8 s = { 0 };
@@ -525,5 +525,5 @@ void v2i8_reg_count(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
 void v2i8_reg_count_over(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
                          char2 arg4, char2 arg5, int arg6, struct_4regs arg7) { }
 
-// CHECK: define{{.*}} void @num_regs_left_64bit_aggregate(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, <3 x i32> noundef %arg3, [2 x i32] %arg4.coerce, i32 noundef %arg5)
+// CHECK: define{{.*}} void @num_regs_left_64bit_aggregate(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, <3 x i32> noundef %arg3, ptr addrspace(5) noundef readnone byref(%struct.struct_char_x8) align 1 captures(none) %{{.*}}, i32 noundef %arg5)
 void num_regs_left_64bit_aggregate(int4 arg0, int4 arg1, int4 arg2, int3 arg3, struct_char_x8 arg4, int arg5) { }

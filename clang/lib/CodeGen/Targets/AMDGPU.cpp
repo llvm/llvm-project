@@ -163,11 +163,6 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
       if (Size <= 32)
         return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
 
-      if (Size <= 64) {
-        llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-        return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
-      }
-
       if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
         return ABIArgInfo::getDirect();
     }
@@ -245,23 +240,6 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     if (const auto *RD = Ty->getAsRecordDecl();
         RD && RD->hasFlexibleArrayMember())
       return DefaultABIInfo::classifyArgumentType(Ty);
-
-    // Pack aggregates <= 8 bytes into single VGPR or pair.
-    uint64_t Size = getContext().getTypeSize(Ty);
-    if (Size <= 64) {
-      unsigned NumRegs = (Size + 31) / 32;
-      NumRegsLeft -= std::min(NumRegsLeft, NumRegs);
-
-      if (Size <= 16)
-        return ABIArgInfo::getDirect(llvm::Type::getInt16Ty(getVMContext()));
-
-      if (Size <= 32)
-        return ABIArgInfo::getDirect(llvm::Type::getInt32Ty(getVMContext()));
-
-      // XXX: Should this be i64 instead, and should the limit increase?
-      llvm::Type *I32Ty = llvm::Type::getInt32Ty(getVMContext());
-      return ABIArgInfo::getDirect(llvm::ArrayType::get(I32Ty, 2));
-    }
 
     if (NumRegsLeft > 0) {
       uint64_t NumRegs = numRegsForType(Ty);
