@@ -87,7 +87,7 @@ define void @test_complex_add_double(ptr %res, ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -314,7 +314,7 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK11:%.*]] = icmp ult i64 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK11]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -369,8 +369,6 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF22:%.*]] = urem i64 [[TMP0]], 2
-; CHECK-NEXT:    [[N_VEC23:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF22]]
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX24:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT25:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
@@ -384,13 +382,12 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr { double, double }, ptr [[C]], i64 [[INDEX24]]
 ; CHECK-NEXT:    store <2 x double> [[TMP48]], ptr [[TMP50]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT25]] = add nuw i64 [[INDEX24]], 1
-; CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT25]], [[N_VEC23]]
+; CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT25]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP51]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N26:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC23]]
-; CHECK-NEXT:    br i1 [[CMP_N26]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC23]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -497,6 +494,129 @@ loop:
   %iv.next = add nuw nsw i64 %iv, 4
   %ec = icmp samesign ult i64 %iv, 1020
   br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Test that loop-vectorize does not crash when connecting the epilogue vector
+; loop for a loop with an interleave group and a preheader phi.
+define void @test_interleave_group_epilogue_with_preheader_phi(ptr %src, ptr %dst) #0 {
+; CHECK-LABEL: define void @test_interleave_group_epilogue_with_preheader_phi(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SRC1:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    br label %[[ITER_CHECK:.*]]
+; CHECK:       [[ITER_CHECK]]:
+; CHECK-NEXT:    [[DST_PRE:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[SRC1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[SRC1]] to i4
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i4 0, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i4 [[TMP4]] to i64
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 0, [[SRC1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP6]], 4
+; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP7]])
+; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult ptr [[TMP8]], [[DST]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP7]])
+; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult ptr [[TMP11]], [[SCEVGEP]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[IDENT_CHECK]], [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK5:%.*]] = icmp ult i64 [[TMP2]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK5]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], 16
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP16]], 32
+; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP16]], 48
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST_PRE]], i64 [[TMP16]]
+; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[DST_PRE]], i64 [[TMP17]]
+; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[DST_PRE]], i64 [[TMP18]]
+; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[DST_PRE]], i64 [[TMP19]]
+; CHECK-NEXT:    store <2 x double> splat (double 1.000000e+00), ptr [[NEXT_GEP]], align 8
+; CHECK-NEXT:    store <2 x double> splat (double 1.000000e+00), ptr [[NEXT_GEP6]], align 8
+; CHECK-NEXT:    store <2 x double> splat (double 1.000000e+00), ptr [[NEXT_GEP7]], align 8
+; CHECK-NEXT:    store <2 x double> splat (double 1.000000e+00), ptr [[NEXT_GEP8]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 [[N_VEC]], 16
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST_PRE]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[N_VEC]], 16
+; CHECK-NEXT:    [[IND_END16:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP22]]
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7]]
+; CHECK:       [[VEC_EPILOG_PH]]:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT13:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX11]], 16
+; CHECK-NEXT:    [[NEXT_GEP12:%.*]] = getelementptr i8, ptr [[DST_PRE]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    store <2 x double> splat (double 1.000000e+00), ptr [[NEXT_GEP12]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX11]], 1
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT13]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[SRC]], %[[VECTOR_SCEVCHECK]] ], [ [[SRC]], %[[ITER_CHECK]] ], [ [[IND_END16]], %[[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[DST_PHI:%.*]] = phi ptr [ [[DST_NEXT:%.*]], %[[LOOP]] ], [ [[DST_PRE]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[SRC_PHI:%.*]] = phi ptr [ [[SRC_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    store double 1.000000e+00, ptr [[DST_PHI]], align 8
+; CHECK-NEXT:    [[DST_IM:%.*]] = getelementptr i8, ptr [[DST_PHI]], i64 8
+; CHECK-NEXT:    store double 1.000000e+00, ptr [[DST_IM]], align 8
+; CHECK-NEXT:    [[SRC_NEXT]] = getelementptr i8, ptr [[SRC_PHI]], i64 16
+; CHECK-NEXT:    [[DST_NEXT]] = getelementptr i8, ptr [[DST_PHI]], i64 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[SRC_PHI]], null
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %preheader
+
+preheader:
+  %dst.pre = phi ptr [ %dst, %entry ]
+  br label %loop
+
+loop:
+  %dst.phi = phi ptr [ %dst.next, %loop ], [ %dst.pre, %preheader ]
+  %src.phi = phi ptr [ %src.next, %loop ], [ %src, %preheader ]
+  store double 1.0, ptr %dst.phi, align 8
+  %dst.im = getelementptr i8, ptr %dst.phi, i64 8
+  store double 1.0, ptr %dst.im, align 8
+  %src.next = getelementptr i8, ptr %src.phi, i64 16
+  %dst.next = getelementptr i8, ptr %dst.phi, i64 16
+  %cmp = icmp eq ptr %src.phi, null
+  br i1 %cmp, label %exit, label %loop
 
 exit:
   ret void
