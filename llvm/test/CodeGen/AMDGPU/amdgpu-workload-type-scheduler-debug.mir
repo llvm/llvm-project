@@ -1,0 +1,114 @@
+# REQUIRES: asserts
+#
+# Test that the module-level amdgpu-workload-type flag selects the AMDGPU
+# scheduler policy defaults. The ML workload type enables coexec preRA
+# scheduling and nop postRA scheduling. Unknown values should fall back to the
+# default schedulers.
+#
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %t/ml-pre.mir 2>&1 | FileCheck --check-prefix=ML-PRE %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -verify-misched -misched-prera-direction=bottomup -o - %t/ml-pre.mir 2>&1 | FileCheck --check-prefix=ML-ASSERT %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler -o - %t/typo-pre.mir 2>&1 | FileCheck --check-prefix=TYPO-PRE %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=postmisched -verify-misched -debug-only=machine-scheduler -o - %t/ml-post.mir 2>&1 | FileCheck --check-prefix=ML-POST %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=postmisched -verify-misched -debug-only=machine-scheduler -o - %t/typo-post.mir 2>&1 | FileCheck --check-prefix=TYPO-POST %s
+
+#--- ml-pre.mir
+--- |
+  ; ML-PRE: AMDGPU coexec preRA scheduler selected for ml_pre_sched
+  ; ML-ASSERT: coexec scheduler only supports top-down scheduling
+  define amdgpu_kernel void @ml_pre_sched() {
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"amdgpu-workload-type", !"ml"}
+...
+
+---
+name: ml_pre_sched
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %3:vgpr_32_lo256 = IMPLICIT_DEF
+    %4:vgpr_32_lo256 = IMPLICIT_DEF
+    %5:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %0, %1, 0, %2, %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %5
+...
+
+#--- typo-pre.mir
+--- |
+  ; TYPO-PRE-NOT: AMDGPU coexec preRA scheduler selected
+  ; TYPO-PRE: name: typo_pre_sched
+  define amdgpu_kernel void @typo_pre_sched() {
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"amdgpu-workload-type", !"m1"}
+...
+
+---
+name: typo_pre_sched
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_256_align2 = IMPLICIT_DEF
+    %3:vgpr_32_lo256 = IMPLICIT_DEF
+    %4:vgpr_32_lo256 = IMPLICIT_DEF
+    %5:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %0, %1, 0, %2, %3, %4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %5
+...
+
+#--- ml-post.mir
+--- |
+  ; ML-POST: AMDGPU coexec postRA scheduler selected (nop) for ml_post_sched
+  define amdgpu_kernel void @ml_post_sched() {
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"amdgpu-workload-type", !"ml"}
+...
+
+---
+name: ml_post_sched
+tracksRegLiveness: true
+body: |
+  bb.0:
+    renamable $vgpr0 = IMPLICIT_DEF
+    renamable $vgpr1 = IMPLICIT_DEF
+    renamable $vgpr2 = nsw V_MUL_LO_U32_e64 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr3 = nsw V_MUL_LO_U32_e64 $vgpr2, $vgpr2, implicit $exec
+    renamable $vgpr4 = nsw V_ADD_U32_e32 killed $vgpr2, killed $vgpr3, implicit $exec
+    S_ENDPGM 0, implicit $vgpr4
+...
+
+#--- typo-post.mir
+--- |
+  ; TYPO-POST-NOT: AMDGPU coexec postRA scheduler selected (nop)
+  ; TYPO-POST: name: typo_post_sched
+  define amdgpu_kernel void @typo_post_sched() {
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"amdgpu-workload-type", !"machine-learning"}
+...
+
+---
+name: typo_post_sched
+tracksRegLiveness: true
+body: |
+  bb.0:
+    renamable $vgpr0 = IMPLICIT_DEF
+    renamable $vgpr1 = IMPLICIT_DEF
+    renamable $vgpr2 = nsw V_MUL_LO_U32_e64 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr3 = nsw V_MUL_LO_U32_e64 $vgpr2, $vgpr2, implicit $exec
+    renamable $vgpr4 = nsw V_ADD_U32_e32 killed $vgpr2, killed $vgpr3, implicit $exec
+    S_ENDPGM 0, implicit $vgpr4
+...

@@ -52,6 +52,20 @@ static cl::opt<unsigned>
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
 
+static StringRef getSchedStrategyForPolicy(const Function &F) {
+  Attribute SchedStrategyAttr = F.getFnAttribute("amdgpu-sched-strategy");
+  if (SchedStrategyAttr.isValid())
+    return SchedStrategyAttr.getValueAsString();
+
+  const Module *M = F.getParent();
+  auto *WorkloadType = dyn_cast_or_null<MDString>(
+      M ? M->getModuleFlag("amdgpu-workload-type") : nullptr);
+  if (WorkloadType && WorkloadType->getString().equals_insensitive("ml"))
+    return "coexec";
+
+  return "";
+}
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
@@ -328,6 +342,14 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // pressure once register usage is above the threshold defined by
   // SIRegisterInfo::getRegPressureSetLimit()
   Policy.ShouldTrackPressure = true;
+
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  // Always schedule top-down for better balancing of HW resource usage.
+  if (getSchedStrategyForPolicy(F) == "coexec") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+    return;
+  }
 
   // Enabling both top down and bottom up scheduling seems to give us less
   // register spills than just using one of these approaches on its own.
