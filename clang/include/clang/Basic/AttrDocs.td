@@ -9876,3 +9876,14 @@ of the same size, while the GCC/Itanium variant packs all fields in a bitfield
 tightly.
   }];
 }
+
+def PersonalityDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((personality(<routine>)))`` is used to specify a personality
+routine that is different from the language that is being used to implement the
+function. This is a targeted, low-level feature aimed at language runtime
+implementors who write runtime support code in C/C++ but need that code to
+participate in a foreign language’s exception-handling or unwinding model.
+  }];
+}

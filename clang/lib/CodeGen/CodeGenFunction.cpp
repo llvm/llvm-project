@@ -1655,6 +1655,15 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   PGO->verifyCounterMap();
 
+  if (CurCodeDecl->hasAttr<PersonalityAttr>()) {
+    StringRef Identifier =
+        CurCodeDecl->getAttr<PersonalityAttr>()->getRoutine()->getName();
+    llvm::FunctionCallee PersonalityRoutine =
+        CGM.CreateRuntimeFunction(llvm::FunctionType::get(CGM.Int32Ty, true),
+                                  Identifier, {}, /*local=*/true);
+    Fn->setPersonalityFn(cast<llvm::Constant>(PersonalityRoutine.getCallee()));
+  }
+
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
   if (!CurFn->doesNotThrow())
