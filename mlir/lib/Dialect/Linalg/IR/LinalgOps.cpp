@@ -193,14 +193,17 @@ static void buildMatmulOp(OpBuilder &b, OperationState &state,
                           ValueRange inputs, ValueRange outputs,
                           ArrayRef<NamedAttribute> attributes,
                           RegionBuilderFn regionBuilder,
-                          ArrayRef<AffineMap> indexingMaps) {
-  // Initialize indexingMaps attribute, for MatmulOp.
-  SmallVector<Attribute, 3> indexingMapsAttrVal;
-  indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+                          ArrayRef<AffineMap> defaultIndexingMaps) {
+  // If indexing maps are not provided, apply the default ones.
+  if (none_of(attributes, [](NamedAttribute attr) {
+        return attr.getName() == "indexing_maps";
+      })) {
+    SmallVector<Attribute, 3> indexingMapsAttrVal;
+    indexingMapsAttrVal = llvm::map_to_vector(
+        defaultIndexingMaps,
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  }
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -210,14 +213,17 @@ static void buildBatchMatmulOp(OpBuilder &b, OperationState &state,
                                ValueRange inputs, ValueRange outputs,
                                ArrayRef<NamedAttribute> attributes,
                                RegionBuilderFn regionBuilder,
-                               ArrayRef<AffineMap> indexingMaps) {
-  // Initialize indexingMaps attribute, for BatchMatmulOp.
-  SmallVector<Attribute, 4> indexingMapsAttrVal;
-  indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+                               ArrayRef<AffineMap> defaultIndexingMaps) {
+  // If indexing maps are not provided, apply the default ones.
+  if (none_of(attributes, [](NamedAttribute attr) {
+        return attr.getName() == "indexing_maps";
+      })) {
+    SmallVector<Attribute, 4> indexingMapsAttrVal;
+    indexingMapsAttrVal = llvm::map_to_vector(
+        defaultIndexingMaps,
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+    state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  }
   return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
                            attributes, regionBuilder);
 }
@@ -5041,8 +5047,9 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
-  reifiedReturnShapes[0] =
-      tensor::getMixedSizes(builder, op.getLoc(), op.getDest());
+  for (auto dim : llvm::seq<int64_t>(0, destRank))
+    reifiedReturnShapes[0][dim] =
+        createFoldedDimOp(builder, op.getLoc(), op.getDest(), dim);
   return success();
 }
 
@@ -5440,8 +5447,6 @@ void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
 LogicalResult
 PackOp::reifyResultShapes(OpBuilder &builder,
                           ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  if (!hasPureTensorSemantics())
-    return failure();
   return reifyResultShapesImpl(*this, builder, reifiedReturnShapes);
 }
 
@@ -6164,8 +6169,6 @@ void UnPackOp::print(OpAsmPrinter &p) {
 LogicalResult
 UnPackOp::reifyResultShapes(OpBuilder &builder,
                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  if (!hasPureTensorSemantics())
-    return failure();
   return reifyResultShapesImpl(*this, builder, reifiedReturnShapes);
 }
 
@@ -6399,8 +6402,10 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
   RankedTensorType unpackedTypeAfterFold = sliceOp.getResultType();
   SmallVector<int64_t> outerShapeWithoutTranspose =
       getPackedOuterShapeWithoutTransposition(*this);
+  SmallVector<bool> areOuterDimsTiled(outerShapeWithoutTranspose.size(), false);
   for (auto [pos, tileSize] :
        llvm::zip_equal(this->getInnerDimsPos(), this->getStaticInnerTiles())) {
+    areOuterDimsTiled[pos] = true;
     if (unpackedTypeAfterFold.isDynamicDim(pos))
       return false;
     if (ShapedType::isDynamic(outerShapeWithoutTranspose[pos]))
@@ -6410,6 +6415,16 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
     int64_t paddingSize = outerShapeWithoutTranspose[pos] * tileSize -
                           unpackedTypeAfterFold.getDimSize(pos);
     if (paddingSize >= tileSize)
+      return false;
+  }
+  // extract_slice must not affect dimensions that are not being unpacked
+  for (int64_t pos = 0, e = outerShapeWithoutTranspose.size(); pos < e; ++pos) {
+    if (areOuterDimsTiled[pos])
+      continue;
+    int64_t dim = outerShapeWithoutTranspose[pos];
+    if (ShapedType::isDynamic(dim))
+      return false;
+    if (dim != unpackedTypeAfterFold.getDimSize(pos))
       return false;
   }
   return true;
