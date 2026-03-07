@@ -1239,6 +1239,13 @@ SDValue LoongArchTargetLowering::lowerBRCOND(SDValue Op,
   SDLoc DL(Op);
   MVT GRLenVT = Subtarget.getGRLenVT();
 
+  if (auto *Cond = dyn_cast<ConstantSDNode>(CondV)) {
+    if (Cond->isZero())
+      return Op.getOperand(0);
+    return DAG.getNode(ISD::BR, DL, Op.getValueType(), Op.getOperand(0),
+                       Op.getOperand(2));
+  }
+
   if (CondV.getOpcode() == ISD::SETCC) {
     if (CondV.getOperand(0).getValueType() == GRLenVT) {
       SDValue LHS = CondV.getOperand(0);
