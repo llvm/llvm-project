@@ -400,6 +400,42 @@ define i1 @nonnull5(ptr %a) {
   ret i1 %rval
 }
 
+declare ptr @get_ptr()
+
+define void @nonnull_on_call() {
+; CHECK-LABEL: @nonnull_on_call(
+; CHECK-NEXT:    [[PTR:%.*]] = call nonnull ptr @get_ptr()
+; CHECK-NEXT:    ret void
+;
+  %ptr = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+}
+
+declare i32 @__gxx_personality_v0(...)
+
+define void @nonnull_on_invoke() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: @nonnull_on_invoke(
+; CHECK-NEXT:    [[PTR:%.*]] = invoke ptr @get_ptr()
+; CHECK-NEXT:            to label [[PROCEED:%.*]] unwind label [[PAD:%.*]]
+; CHECK:       proceed:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR]]) ]
+; CHECK-NEXT:    ret void
+; CHECK:       pad:
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret void
+;
+  %ptr = invoke ptr @get_ptr() to label %proceed unwind label %pad
+proceed:
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+
+pad:
+  landingpad { ptr, i32 } cleanup
+  ret void
+}
+
 define void @redundant_nonnull1(ptr nonnull %ptr) {
 ; CHECK-LABEL: @redundant_nonnull1(
 ; CHECK-NEXT:    ret void

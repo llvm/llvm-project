@@ -131,7 +131,7 @@ define void @caller6(ptr %arg) {
 declare ptr @buz()
 define nonnull ptr @callee7() {
 ; CHECK-LABEL: define nonnull ptr @callee7() {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @buz() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call ptr @buz() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = call ptr @buz() willreturn nounwind
@@ -140,7 +140,8 @@ define nonnull ptr @callee7() {
 
 define ptr @caller7() {
 ; CHECK-LABEL: define ptr @caller7() {
-; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @buz() #[[ATTR0]]
+; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @buz() #[[ATTR1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call ptr @callee7()
@@ -159,6 +160,7 @@ define nonnull ptr @callee8() {
 define ptr @caller8() {
 ; CHECK-LABEL: define ptr @caller8() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @buz()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee8()
@@ -168,7 +170,7 @@ define ptr @caller8() {
 define ptr @callee9() {
 ; CHECK-LABEL: define ptr @callee9() {
 ; CHECK-NEXT:    [[R:%.*]] = call ptr @buz()
-; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @foo() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = call ptr @buz()
@@ -179,9 +181,42 @@ define ptr @callee9() {
 define ptr @caller9() {
 ; CHECK-LABEL: define ptr @caller9() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call ptr @buz()
-; CHECK-NEXT:    call void @foo() #[[ATTR1]]
+; CHECK-NEXT:    call void @foo() #[[ATTR2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee9()
+  ret ptr %r
+}
+
+declare i32 @__gxx_personality_v0(...)
+
+define ptr @simple_func(ptr %ptr) {
+; CHECK-LABEL: define ptr @simple_func
+; CHECK-SAME: (ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  ret ptr %ptr
+}
+
+define ptr @on_invoke() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define ptr @on_invoke() personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @buz()
+; CHECK-NEXT:    br label [[PROCEED:%.*]]
+; CHECK:       proceed:
+; CHECK-NEXT:    ret ptr [[R]]
+; CHECK:       pad:
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @buz()
+  invoke nonnull ptr @simple_func(ptr %r) to label %proceed unwind label %pad
+
+proceed:
+  ret ptr %r
+
+pad:
+  landingpad { ptr, i32 } cleanup
   ret ptr %r
 }

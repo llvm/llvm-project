@@ -17,6 +17,7 @@ define ptr @caller(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[X:%.*]]
 ; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @foo(ptr noalias [[GEP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %gep = getelementptr inbounds i8, ptr %ptr, i64 %x
@@ -54,6 +55,7 @@ define ptr @caller2(ptr %ptr, i64 %x, i1 %cond) {
 ; CHECK-NEXT:    [[R_I:%.*]] = call ptr @foo(ptr [[GEP]])
 ; CHECK-NEXT:    [[COND_I:%.*]] = icmp ne ptr [[R_I]], null
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND_I]]) [ "deopt"() ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    [[R_I1:%.*]] = call ptr @bar(ptr [[GEP]])
 ; CHECK-NEXT:    [[COND_I2:%.*]] = icmp ne ptr [[R_I1]], null
 ; CHECK-NEXT:    br i1 [[COND_I2]], label [[RET_I:%.*]], label [[ORIG_I:%.*]]
@@ -63,6 +65,7 @@ define ptr @caller2(ptr %ptr, i64 %x, i1 %cond) {
 ; CHECK-NEXT:    br label [[CALLEE_WITH_EXPLICIT_CONTROL_FLOW_EXIT]]
 ; CHECK:       callee_with_explicit_control_flow.exit:
 ; CHECK-NEXT:    [[Q3:%.*]] = phi ptr [ [[R_I1]], [[RET_I]] ], [ [[GEP]], [[ORIG_I]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[Q3]]) ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[PRET:%.*]], label [[QRET:%.*]]
 ; CHECK:       pret:
 ; CHECK-NEXT:    ret ptr [[R_I]]
@@ -187,6 +190,7 @@ define void @test7(ptr %ptr, i64 %x, i1 %cond) {
 ; CHECK-NEXT:    br label [[CALLEE7_EXIT]]
 ; CHECK:       callee7.exit:
 ; CHECK-NEXT:    [[T1:%.*]] = phi ptr [ [[R_I]], [[PASS_I]] ], [ [[S_I]], [[FAIL_I]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[T1]]) ]
 ; CHECK-NEXT:    call void @snort(ptr [[T1]])
 ; CHECK-NEXT:    ret void
 ;

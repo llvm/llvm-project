@@ -148,6 +148,7 @@ define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP1]], i64 [[I_010]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I]]) ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8
@@ -287,6 +288,7 @@ define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferencea
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[TMP1]], i64 [[I_010]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I]]) ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6:![0-9]+]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA6]]

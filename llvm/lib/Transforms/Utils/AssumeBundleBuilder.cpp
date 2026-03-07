@@ -305,6 +305,33 @@ bool llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
   return Changed;
 }
 
+void llvm::salvageKnowledgeBeforeInlining(CallBase *CB, AssumptionCache *AC) {
+  if (EnableKnowledgeRetention) {
+    salvageKnowledge(CB, AC);
+    return;
+  }
+
+  // TODO: Salvage knowledge from invokes
+  if (CB->isTerminator())
+    return;
+
+  SmallVector<OperandBundleDef, 1> AfterAttrs;
+  if (CB->hasRetAttr(Attribute::NonNull))
+    AfterAttrs.emplace_back("nonnull", CB);
+
+  if (AfterAttrs.empty())
+    return;
+
+  Module *M = CB->getModule();
+  Function *AssumeDecl =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::assume);
+  AssumeInst *Assume = cast<AssumeInst>(CallInst::Create(
+      AssumeDecl, ConstantInt::getTrue(M->getContext()), AfterAttrs));
+  Assume->insertAfter(CB->getIterator());
+  if (AC)
+    AC->registerAssumption(Assume);
+}
+
 AssumeInst *
 llvm::buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
                                Instruction *CtxI, AssumptionCache *AC,

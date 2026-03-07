@@ -47,6 +47,8 @@ LLVM_ABI AssumeInst *buildAssumeFromInst(Instruction *I);
 LLVM_ABI bool salvageKnowledge(Instruction *I, AssumptionCache *AC = nullptr,
                                DominatorTree *DT = nullptr);
 
+LLVM_ABI void salvageKnowledgeBeforeInlining(CallBase *CB, AssumptionCache *AC);
+
 /// Build and return a new assume created from the provided knowledge
 /// if the knowledge in the assume is fully redundant this will return nullptr
 LLVM_ABI AssumeInst *
