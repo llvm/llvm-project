@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/amdgpu/amdgpu_utils.h"
-#include "clc/shared/clc_min.h"
-#include "clc/workitem/clc_get_max_sub_group_size.h"
+#include "clc/subgroup/clc_subgroup.h"
 
-_CLC_OVERLOAD _CLC_DEF uint __clc_get_max_sub_group_size() {
-  return __clc_min(__builtin_amdgcn_wavefrontsize(),
-                   __clc_amdgpu_enqueued_workgroup_size());
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint __clc_get_num_sub_groups(void) {
+  uint group_size = __clc_amdgpu_workgroup_size();
+  return (group_size + __builtin_amdgcn_wavefrontsize() - 1) >>
+         __clc_amdgpu_wavesize_log2();
 }
