@@ -862,7 +862,19 @@ SourceLocation Lexer::getLocForEndOfToken(SourceLocation Loc, unsigned Offset,
     return {};
 
   if (Loc.isMacroID()) {
-    if (Offset > 0 || !isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
+    if (Offset > 0)
+      return {};
+
+    // Token-split expansions (e.g., '>>' split into '>') use a char range
+    // whose end is already the correct insertion point; skip
+    // MeasureTokenLength.
+    CharSourceRange ExpRange = SM.getImmediateExpansionRange(Loc);
+    if (!ExpRange.isTokenRange()) {
+      SourceLocation End = ExpRange.getEnd();
+      return End.isFileID() ? End : SourceLocation{};
+    }
+
+    if (!isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
       return {}; // Points inside the macro expansion.
   }
 
