@@ -441,12 +441,10 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   ParamOut->Explicit = true;
   ParamOut->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamOut->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamOut->Children.back()->Children.emplace_back(
-      allocatePtr<CommentInfo>());
+  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamOut->Children.back()->Children.back()->Kind =
       CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.emplace_back(
-      allocatePtr<CommentInfo>());
+  ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamOut->Children.back()->Children.back()->Kind =
       CommentKind::CK_TextComment;
   ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
@@ -458,12 +456,10 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   ParamIn->ParamName = "J";
   ParamIn->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamIn->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamIn->Children.back()->Children.emplace_back(
-      allocatePtr<CommentInfo>());
+  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
   ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
-  ParamIn->Children.back()->Children.emplace_back(
-      allocatePtr<CommentInfo>());
+  ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
 
   Top.Children.emplace_back(allocatePtr<CommentInfo>());
@@ -473,8 +469,7 @@ TEST_F(YAMLGeneratorTest, emitCommentYAML) {
   Return->Explicit = true;
   Return->Children.emplace_back(allocatePtr<CommentInfo>());
   Return->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  Return->Children.back()->Children.emplace_back(
-      allocatePtr<CommentInfo>());
+  Return->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   Return->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
   Return->Children.back()->Children.back()->Text = "void";
 
