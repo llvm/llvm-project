@@ -357,6 +357,7 @@ public:
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
+  Instruction *visitPtrToAddrInst(PtrToAddrInst &I);
 
   StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
 
@@ -1812,6 +1813,16 @@ Instruction *SPIRVEmitIntrinsics::visitBitCastInst(BitCastInst &I) {
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_bitcast, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
+}
+
+Instruction *SPIRVEmitIntrinsics::visitPtrToAddrInst(PtrToAddrInst &I) {
+  // Replace PtrToAddr with PtrToInt.
+  auto *PtrToInt =
+      CastInst::Create(Instruction::PtrToInt, I.getOperand(0), I.getType());
+  PtrToInt->insertBefore(I.getIterator());
+  replaceAllUsesWith(&I, PtrToInt);
+  I.eraseFromParent();
+  return PtrToInt;
 }
 
 void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
