@@ -150,8 +150,8 @@ bool InstCombinerImpl::SimplifyDemandedInstructionBits(Instruction &Inst) {
 bool InstCombinerImpl::SimplifyDemandedInstructionFPClass(Instruction &Inst) {
   KnownFPClass Known;
 
-  Value *V =
-      SimplifyDemandedUseFPClass(&Inst, fcAllFlags, Known, /*CtxI=*/&Inst);
+  Value *V = SimplifyDemandedUseFPClass(&Inst, fcAllFlags, Known,
+                                        SQ.getWithInstruction(&Inst));
   if (!V)
     return false;
   if (V == &Inst)
@@ -2318,7 +2318,7 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
 Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                                     FPClassTest DemandedMask,
                                                     KnownFPClass &Known,
-                                                    Instruction *CxtI,
+                                                    const SimplifyQuery &SQ,
                                                     unsigned Depth) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   assert(Known == KnownFPClass() && "expected uninitialized state");
@@ -2384,7 +2384,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // fadd x, x can be handled more aggressively.
     if (I->getOperand(0) == I->getOperand(1) &&
         I->getOpcode() == Instruction::FAdd &&
-        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, CxtI, SQ.DT,
+        isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, SQ.CxtI, SQ.DT,
                                  Depth + 1)) {
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
@@ -2506,7 +2506,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (DemandedMask & fcZero)
       SrcDemandedMask |= fcNormal | fcSubnormal;
 
-    if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
+    if (X == Y &&
+        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1)) {
       if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, Depth + 1))
         return I;
       Type *EltTy = VTy->getScalarType();
@@ -2648,7 +2649,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   case Instruction::FDiv: {
     Value *X = I->getOperand(0);
     Value *Y = I->getOperand(1);
-    if (X == Y && isGuaranteedNotToBeUndef(X, SQ.AC, CxtI, SQ.DT, Depth + 1)) {
+    if (X == Y &&
+        isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CxtI, SQ.DT, Depth + 1)) {
       // If the source is 0, inf or nan, the result is a nan
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
@@ -2851,8 +2853,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
               FMF.noSignedZeros()))
         return Simplified;
 
-      KnownFPClass KnownSign = computeKnownFPClass(CI->getArgOperand(1),
-                                                   fcAllFlags, CxtI, Depth + 1);
+      KnownFPClass KnownSign =
+          computeKnownFPClass(CI->getArgOperand(1), fcAllFlags, SQ, Depth + 1);
       if (KnownMag.SignBit && KnownSign.SignBit &&
           *KnownMag.SignBit == *KnownSign.SignBit)
         return CI->getOperand(0);
@@ -2890,7 +2892,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       Type *EltTy = VTy->getScalarType();
       if (CI->getArgOperand(0) == CI->getArgOperand(1) &&
-          isGuaranteedNotToBeUndef(CI->getArgOperand(0), SQ.AC, CxtI, SQ.DT,
+          isGuaranteedNotToBeUndef(CI->getArgOperand(0), SQ.AC, SQ.CxtI, SQ.DT,
                                    Depth + 1)) {
         if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc[0],
                                     Depth + 1) ||
@@ -3169,6 +3171,43 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
                                            {KnownSrc});
     }
+    case Intrinsic::ldexp: {
+      FPClassTest SrcDemandedMask = DemandedMask & fcInf;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
+
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & fcNegInf)
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & fcPosZero)
+        SrcDemandedMask |= fcPosFinite;
+      if (DemandedMask & fcNegZero)
+        SrcDemandedMask |= fcNegFinite;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+        return CI;
+
+      Type *EltTy = VTy->getScalarType();
+      const fltSemantics &FltSem = EltTy->getFltSemantics();
+      DenormalMode Mode = F.getDenormalMode(FltSem);
+
+      KnownBits KnownExpBits =
+          ::computeKnownBits(CI->getArgOperand(1), SQ, Depth + 1);
+
+      Known = KnownFPClass::ldexp(KnownSrc, KnownExpBits, FltSem, Mode);
+      Known.knownNot(~DemandedMask);
+
+      return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
+                                           {KnownSrc});
+    }
     case Intrinsic::trunc:
     case Intrinsic::floor:
     case Intrinsic::ceil:
@@ -3318,7 +3357,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       [[fallthrough]];
     }
     default:
-      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+      Known = computeKnownFPClass(I, DemandedMask, SQ, Depth + 1);
       Known.knownNot(~DemandedMask);
       break;
     }
@@ -3374,6 +3413,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Known.knownNot(~DemandedMask);
     break;
   }
+  case Instruction::InsertValue: {
+    KnownFPClass KnownAgg, KnownElt;
+    if (SimplifyDemandedFPClass(I, 0, DemandedMask, KnownAgg, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 1, DemandedMask, KnownElt, Depth + 1))
+      return I;
+
+    Known = KnownAgg | KnownElt;
+    break;
+  }
   case Instruction::ExtractValue: {
     Value *ExtractSrc;
     if (match(I, m_ExtractValue<0>(m_OneUse(m_Value(ExtractSrc))))) {
@@ -3419,10 +3467,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         }
       }
     }
-    [[fallthrough]];
+
+    KnownFPClass KnownSrc;
+    if (SimplifyDemandedFPClass(I, 0, DemandedMask, KnownSrc, Depth + 1))
+      return I;
+    Known = KnownSrc;
+    break;
   }
   default:
-    Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+    Known = computeKnownFPClass(I, DemandedMask, SQ, Depth + 1);
     Known.knownNot(~DemandedMask);
     break;
   }
@@ -3435,7 +3488,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 /// done based on DemandedMask, but without modifying the Instruction.
 Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     Instruction *I, FPClassTest DemandedMask, KnownFPClass &Known,
-    Instruction *CxtI, unsigned Depth) {
+    const SimplifyQuery &SQ, unsigned Depth) {
   FastMathFlags FMF;
   if (auto *FPOp = dyn_cast<FPMathOperator>(I)) {
     FMF = FPOp->getFastMathFlags();
@@ -3447,12 +3500,12 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     // TODO: Can we infer which side it came from based on adjusted result
     // class?
     KnownFPClass KnownRHS =
-        computeKnownFPClass(I->getOperand(2), DemandedMask, CxtI, Depth + 1);
+        computeKnownFPClass(I->getOperand(2), DemandedMask, SQ, Depth + 1);
     if (KnownRHS.isKnownNever(DemandedMask))
       return I->getOperand(1);
 
     KnownFPClass KnownLHS =
-        computeKnownFPClass(I->getOperand(1), DemandedMask, CxtI, Depth + 1);
+        computeKnownFPClass(I->getOperand(1), DemandedMask, SQ, Depth + 1);
     if (KnownLHS.isKnownNever(DemandedMask))
       return I->getOperand(2);
 
@@ -3470,12 +3523,11 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
 
     Value *FNegSrc = I->getOperand(0);
     if (!match(FNegSrc, m_FAbs(m_Value(Src)))) {
-      Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+      Known = computeKnownFPClass(I, DemandedMask, SQ, Depth + 1);
       break;
     }
 
-    KnownFPClass KnownSrc =
-        computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+    KnownFPClass KnownSrc = computeKnownFPClass(Src, fcAllFlags, SQ, Depth + 1);
 
     FastMathFlags FabsFMF = cast<FPMathOperator>(FNegSrc)->getFastMathFlags();
     FPClassTest ThisDemandedMask =
@@ -3495,7 +3547,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     case Intrinsic::fabs: {
       Value *Src = CI->getArgOperand(0);
       KnownFPClass KnownSrc =
-          computeKnownFPClass(Src, fcAllFlags, CxtI, Depth + 1);
+          computeKnownFPClass(Src, fcAllFlags, SQ, Depth + 1);
 
       // NSZ cannot be applied in multiple use case (maybe it could if all uses
       // were known nsz)
@@ -3509,7 +3561,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       Value *Mag = CI->getArgOperand(0);
       Value *Sign = CI->getArgOperand(1);
       KnownFPClass KnownMag =
-          computeKnownFPClass(Mag, fcAllFlags, CxtI, Depth + 1);
+          computeKnownFPClass(Mag, fcAllFlags, SQ, Depth + 1);
 
       // Rule out some cases by magnitude, which may help prove the sign bit is
       // one direction or the other.
@@ -3521,7 +3573,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
         return Simplified;
 
       KnownFPClass KnownSign =
-          computeKnownFPClass(Sign, fcAllFlags, CxtI, Depth + 1);
+          computeKnownFPClass(Sign, fcAllFlags, SQ, Depth + 1);
 
       if (FMF.noInfs())
         KnownSign.knownNot(fcInf);
@@ -3541,13 +3593,13 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
     case Intrinsic::minimumnum: {
-      KnownFPClass KnownRHS = computeKnownFPClass(
-          CI->getArgOperand(1), DemandedMask, CxtI, Depth + 1);
+      KnownFPClass KnownRHS = computeKnownFPClass(CI->getArgOperand(1),
+                                                  DemandedMask, SQ, Depth + 1);
       if (KnownRHS.isUnknown())
         return nullptr;
 
-      KnownFPClass KnownLHS = computeKnownFPClass(
-          CI->getArgOperand(0), DemandedMask, CxtI, Depth + 1);
+      KnownFPClass KnownLHS = computeKnownFPClass(CI->getArgOperand(0),
+                                                  DemandedMask, SQ, Depth + 1);
 
       // Cannot use NSZ in the multiple use case.
       return simplifyDemandedFPClassMinMax(Known, IID, CI, DemandedMask,
@@ -3561,7 +3613,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
     [[fallthrough]];
   }
   default:
-    Known = computeKnownFPClass(I, DemandedMask, CxtI, Depth + 1);
+    Known = computeKnownFPClass(I, DemandedMask, SQ, Depth + 1);
     Known.knownNot(~DemandedMask);
     break;
   }
@@ -3588,7 +3640,7 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
   Instruction *VInst = dyn_cast<Instruction>(V);
   if (!VInst) {
     // Handle constants and arguments
-    Known = computeKnownFPClass(V, fcAllFlags, I, Depth);
+    Known = computeKnownFPClass(V, fcAllFlags, SQ.getWithInstruction(I), Depth);
     Known.knownNot(~DemandedMask);
 
     if (Known.KnownFPClasses == fcNone) {
@@ -3612,11 +3664,6 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
     return true;
   }
 
-  if (const CallBase *CB = dyn_cast<CallBase>(VInst)) {
-    FPClassTest NoFPClass = CB->getParamNoFPClass(U.getOperandNo());
-    DemandedMask &= ~NoFPClass;
-  }
-
   if (Depth == MaxAnalysisRecursionDepth) {
     Known.knownNot(~DemandedMask);
     return false;
@@ -3626,12 +3673,13 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
 
   if (VInst->hasOneUse()) {
     // If the instruction has one use, we can directly simplify it.
-    NewVal = SimplifyDemandedUseFPClass(VInst, DemandedMask, Known, I, Depth);
+    NewVal = SimplifyDemandedUseFPClass(VInst, DemandedMask, Known,
+                                        SQ.getWithInstruction(I), Depth);
   } else {
     // If there are multiple uses of this instruction, then we can simplify
     // VInst to some other value, but not modify the instruction.
-    NewVal = SimplifyMultipleUseDemandedFPClass(VInst, DemandedMask, Known, I,
-                                                Depth);
+    NewVal = SimplifyMultipleUseDemandedFPClass(
+        VInst, DemandedMask, Known, SQ.getWithInstruction(I), Depth);
   }
 
   if (!NewVal)

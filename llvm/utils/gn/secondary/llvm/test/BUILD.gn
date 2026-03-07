@@ -263,7 +263,6 @@ group("test") {
     # lit tests run.
     "//llvm/lib/LineEditor",
     "//llvm/lib/Testing/Support",
-    "//llvm/tools/bugpoint",
     "//llvm/tools/dsymutil",
     "//llvm/tools/llc",
     "//llvm/tools/lli",
@@ -355,12 +354,6 @@ group("test") {
     # its tests, but nothing in the tree depends on them.
     "//third-party/unittest/UnitTestMain:gtest_main",
   ]
-  if (host_os != "win") {
-    # loadable_modules don't work on Windows.
-    # FIXME: In the CMake build, ENABLE_SHARED makes them work somehow
-    # (but they're off by default there too).
-    deps += [ "//llvm/tools/bugpoint-passes" ]
-  }
 
   # FIXME: llvm_build_examples
   testonly = true

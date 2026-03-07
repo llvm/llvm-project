@@ -337,7 +337,7 @@ define double @test_fabs_select_fmf1(i1 %cond, double %a) {
 define double @test_fabs_select_fmf2(i1 %cond, double %a) {
 ; CHECK-LABEL: @test_fabs_select_fmf2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[SEL1:%.*]] = select nnan ninf nsz i1 [[COND:%.*]], double 0.000000e+00, double [[TMP1]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select nnan ninf i1 [[COND:%.*]], double 0.000000e+00, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[SEL1]]
 ;
   %sel1 = select i1 %cond, double 0.0, double %a

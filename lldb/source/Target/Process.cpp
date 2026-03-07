@@ -402,10 +402,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
       }
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetProcessCreateCallbackAtIndex(idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback : PluginManager::GetProcessCreateCallbacks()) {
       process_sp = create_callback(target_sp, listener_sp, crash_file_path,
                                    can_connect);
       if (process_sp) {
@@ -525,6 +522,8 @@ Process::~Process() {
   // explicitly clear the thread list here to ensure that the mutex is not
   // destroyed before the thread list.
   m_thread_list.Clear();
+  delete m_current_private_state_thread;
+  m_current_private_state_thread = nullptr;
 }
 
 ProcessProperties &Process::GetGlobalProperties() {
@@ -1096,36 +1095,6 @@ bool Process::IsAlive() {
   default:
     return false;
   }
-}
-
-// This static callback can be used to watch for local child processes on the
-// current host. The child process exits, the process will be found in the
-// global target list (we want to be completely sure that the
-// lldb_private::Process doesn't go away before we can deliver the signal.
-bool Process::SetProcessExitStatus(
-    lldb::pid_t pid, bool exited,
-    int signo,      // Zero for no signal
-    int exit_status // Exit value of process if signal is zero
-    ) {
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::SetProcessExitStatus (pid=%" PRIu64
-            ", exited=%i, signal=%i, exit_status=%i)\n",
-            pid, exited, signo, exit_status);
-
-  if (exited) {
-    TargetSP target_sp(Debugger::FindTargetWithProcessID(pid));
-    if (target_sp) {
-      ProcessSP process_sp(target_sp->GetProcessSP());
-      if (process_sp) {
-        llvm::StringRef signal_str =
-            process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
-        process_sp->SetExitStatus(exit_status, signal_str);
-      }
-    }
-    return true;
-  }
-  return false;
 }
 
 bool Process::UpdateThreadList(ThreadList &old_thread_list,
@@ -4006,8 +3975,6 @@ void Process::StopPrivateStateThread() {
         log,
         "Went to stop the private state thread, but it was already invalid.");
   }
-  delete m_current_private_state_thread;
-  m_current_private_state_thread = nullptr;
 }
 
 void Process::ControlPrivateStateThread(uint32_t signal) {
@@ -6478,15 +6445,12 @@ void Process::MapSupportedStructuredDataPlugins(
   // we've consumed all the type names.
   // FIXME: should we return an error if there are type names nobody
   // supports?
-  for (uint32_t plugin_index = 0; !type_names.empty(); plugin_index++) {
-    auto create_instance =
-        PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(
-            plugin_index);
-    if (!create_instance)
+  for (auto &cbs : PluginManager::GetStructuredDataPluginCallbacks()) {
+    if (type_names.empty())
       break;
 
     // Create the plugin.
-    StructuredDataPluginSP plugin_sp = (*create_instance)(*this);
+    StructuredDataPluginSP plugin_sp = (*cbs.create_callback)(*this);
     if (!plugin_sp) {
       // This plugin doesn't think it can work with the process. Move on to the
       // next.

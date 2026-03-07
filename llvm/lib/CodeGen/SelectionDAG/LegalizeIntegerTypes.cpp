@@ -2080,6 +2080,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP16_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    Res = PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(N);
+    break;
   case ISD::STRICT_FP16_TO_FP:
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
@@ -2702,6 +2705,12 @@ SDValue DAGTypeLegalizer::PromoteIntOp_UINT_TO_FP(SDNode *N) {
                                 ZExtPromotedInteger(N->getOperand(0))), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(SDNode *N) {
+  return SDValue(DAG.UpdateNodeOperands(N, GetPromotedInteger(N->getOperand(0)),
+                                        N->getOperand(1)),
+                 0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N) {
   return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0),
                                 ZExtPromotedInteger(N->getOperand(1))), 0);
@@ -3086,6 +3095,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ABDU:        ExpandIntRes_ABD(N, Lo, Hi); break;
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTLZ:        ExpandIntRes_CTLZ(N, Lo, Hi); break;
+  case ISD::CTLS:        ExpandIntRes_CTLS(N, Lo, Hi); break;
   case ISD::CTPOP:       ExpandIntRes_CTPOP(N, Lo, Hi); break;
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTTZ:        ExpandIntRes_CTTZ(N, Lo, Hi); break;
@@ -4167,6 +4177,32 @@ void DAGTypeLegalizer::ExpandIntRes_CTLZ(SDNode *N,
                      DAG.getNode(ISD::ADD, dl, NVT, LoLZ,
                                  DAG.getConstant(NVT.getSizeInBits(), dl,
                                                  NVT)));
+  Hi = DAG.getConstant(0, dl, NVT);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_CTLS(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDLoc dl(N);
+  // ctls(HiLo) -> if (IsAllSignBits = (ctls(Hi) == BW-1)) then
+  //                 BW-1 + clz(IsNegative = (Hi < 0) ? ~Lo : Lo)
+  //               else ctls(Hi)
+  GetExpandedInteger(N->getOperand(0), Lo, Hi);
+  EVT NVT = Lo.getValueType();
+  unsigned NVTBits = NVT.getScalarSizeInBits();
+
+  SDValue Constant0 = DAG.getConstant(0, dl, NVT);
+  SDValue ConstantBWM1 = DAG.getConstant(NVTBits - 1, dl, NVT);
+
+  SDValue HiCTLS = DAG.getNode(ISD::CTLS, dl, NVT, Hi);
+  SDValue IsAllSignBits = DAG.getSetCC(dl, getSetCCResultType(NVT), HiCTLS,
+                                       ConstantBWM1, ISD::SETEQ);
+  SDValue IsNegative =
+      DAG.getSetCC(dl, getSetCCResultType(NVT), Hi, Constant0, ISD::SETLT);
+  SDValue AdjustedLo =
+      DAG.getSelect(dl, NVT, IsNegative, DAG.getNOT(dl, Lo, NVT), Lo);
+  SDValue LoCLZ = DAG.getNode(ISD::CTLZ, dl, NVT, AdjustedLo);
+  Lo = DAG.getSelect(dl, NVT, IsAllSignBits,
+                     DAG.getNode(ISD::ADD, dl, NVT, LoCLZ, ConstantBWM1),
+                     HiCTLS);
   Hi = DAG.getConstant(0, dl, NVT);
 }
 

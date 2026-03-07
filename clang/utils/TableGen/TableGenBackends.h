@@ -93,6 +93,8 @@ void EmitClangAttrDocTable(const llvm::RecordKeeper &Records,
 
 void EmitClangBuiltins(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
+void EmitClangBuiltinDocs(const llvm::RecordKeeper &Records,
+                          llvm::raw_ostream &OS);
 void EmitClangBuiltinTemplates(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 
@@ -106,6 +108,8 @@ void EmitClangDiagsEnums(const llvm::RecordKeeper &Records,
 void EmitClangDiagGroups(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
 void EmitClangDiagsIndexName(const llvm::RecordKeeper &Records,
+                             llvm::raw_ostream &OS);
+void EmitClangDiagsStableIDs(const llvm::RecordKeeper &Records,
                              llvm::raw_ostream &OS);
 void EmitClangDiagsInterface(llvm::raw_ostream &OS,
                              const std::string &Component);

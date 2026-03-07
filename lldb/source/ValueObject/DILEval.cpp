@@ -13,6 +13,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -41,22 +42,6 @@ GetDynamicOrSyntheticValue(lldb::ValueObjectSP value_sp,
   }
 
   return value_sp;
-}
-
-static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<ExecutionContextScope> ctx) {
-  auto stack_frame = ctx->CalculateStackFrame();
-  if (!stack_frame)
-    return llvm::createStringError("no stack frame in this context");
-  SymbolContext symbol_context =
-      stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
-
-  if (!symbol_context.comp_unit)
-    return llvm::createStringError("no compile unit in this context");
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = stack_frame->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
 static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
@@ -140,6 +125,151 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
   }
 
   return valobj;
+}
+
+/// Basic types with a lower rank are converted to the basic type
+/// with a higher rank.
+static size_t ConversionRank(CompilerType type) {
+  switch (type.GetCanonicalType().GetBasicTypeEnumeration()) {
+  case lldb::eBasicTypeBool:
+    return 1;
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+  case lldb::eBasicTypeUnsignedChar:
+    return 2;
+  case lldb::eBasicTypeShort:
+  case lldb::eBasicTypeUnsignedShort:
+    return 3;
+  case lldb::eBasicTypeInt:
+  case lldb::eBasicTypeUnsignedInt:
+    return 4;
+  case lldb::eBasicTypeLong:
+  case lldb::eBasicTypeUnsignedLong:
+    return 5;
+  case lldb::eBasicTypeLongLong:
+  case lldb::eBasicTypeUnsignedLongLong:
+    return 6;
+  case lldb::eBasicTypeInt128:
+  case lldb::eBasicTypeUnsignedInt128:
+    return 7;
+  case lldb::eBasicTypeHalf:
+    return 8;
+  case lldb::eBasicTypeFloat:
+    return 9;
+  case lldb::eBasicTypeDouble:
+    return 10;
+  case lldb::eBasicTypeLongDouble:
+    return 11;
+  default:
+    break;
+  }
+  return 0;
+}
+
+static lldb::BasicType BasicTypeToUnsigned(lldb::BasicType basic_type) {
+  switch (basic_type) {
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+    return lldb::eBasicTypeUnsignedChar;
+  case lldb::eBasicTypeShort:
+    return lldb::eBasicTypeUnsignedShort;
+  case lldb::eBasicTypeInt:
+    return lldb::eBasicTypeUnsignedInt;
+  case lldb::eBasicTypeLong:
+    return lldb::eBasicTypeUnsignedLong;
+  case lldb::eBasicTypeLongLong:
+    return lldb::eBasicTypeUnsignedLongLong;
+  case lldb::eBasicTypeInt128:
+    return lldb::eBasicTypeUnsignedInt128;
+  default:
+    return basic_type;
+  }
+}
+
+llvm::Expected<CompilerType>
+Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
+                                  CompilerType &rhs_type) {
+  assert(lhs_type.IsInteger() && rhs_type.IsInteger());
+  if (!lhs_type.IsSigned() && rhs_type.IsSigned()) {
+    llvm::Expected<uint64_t> lhs_size =
+        lhs_type.GetBitSize(m_exe_ctx_scope.get());
+    if (!lhs_size)
+      return lhs_size.takeError();
+    llvm::Expected<uint64_t> rhs_size =
+        rhs_type.GetBitSize(m_exe_ctx_scope.get());
+    if (!rhs_size)
+      return rhs_size.takeError();
+
+    if (*rhs_size == *lhs_size) {
+      llvm::Expected<lldb::TypeSystemSP> type_system =
+          GetTypeSystemFromCU(m_exe_ctx_scope);
+      if (!type_system)
+        return type_system.takeError();
+      CompilerType r_type_unsigned = GetBasicType(
+          *type_system,
+          BasicTypeToUnsigned(
+              rhs_type.GetCanonicalType().GetBasicTypeEnumeration()));
+      return r_type_unsigned;
+    }
+  }
+  return rhs_type;
+}
+
+llvm::Expected<CompilerType>
+Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
+                                  lldb::ValueObjectSP &rhs, uint32_t location) {
+  // Apply unary conversion for both operands.
+  auto lhs_or_err = UnaryConversion(lhs, location);
+  if (!lhs_or_err)
+    return lhs_or_err.takeError();
+  lhs = *lhs_or_err;
+  auto rhs_or_err = UnaryConversion(rhs, location);
+  if (!rhs_or_err)
+    return rhs_or_err.takeError();
+  rhs = *rhs_or_err;
+
+  CompilerType lhs_type = lhs->GetCompilerType();
+  CompilerType rhs_type = rhs->GetCompilerType();
+
+  // If types already match, no need for further conversions.
+  if (lhs_type.CompareTypes(rhs_type))
+    return lhs_type;
+
+  // If either of the operands is not arithmetic (e.g. pointer), we're done.
+  if (!lhs_type.IsScalarType() || !rhs_type.IsScalarType())
+    return CompilerType();
+
+  size_t l_rank = ConversionRank(lhs_type);
+  size_t r_rank = ConversionRank(rhs_type);
+  if (l_rank == 0 || r_rank == 0)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unexpected basic type in arithmetic operation", location);
+
+  // If both operands are integer, check if we need to promote
+  // the higher ranked signed type.
+  if (lhs_type.IsInteger() && rhs_type.IsInteger()) {
+    using Rank = std::tuple<size_t, bool>;
+    Rank int_l_rank = {l_rank, !lhs_type.IsSigned()};
+    Rank int_r_rank = {r_rank, !rhs_type.IsSigned()};
+    if (int_l_rank < int_r_rank) {
+      auto type_or_err = PromoteSignedInteger(lhs_type, rhs_type);
+      if (!type_or_err)
+        return type_or_err.takeError();
+      return *type_or_err;
+    }
+    if (int_l_rank > int_r_rank) {
+      auto type_or_err = PromoteSignedInteger(rhs_type, lhs_type);
+      if (!type_or_err)
+        return type_or_err.takeError();
+      return *type_or_err;
+    }
+    return lhs_type;
+  }
+
+  // Handle other combinations of integer and floating point operands.
+  if (l_rank < r_rank)
+    return rhs_type;
+  return lhs_type;
 }
 
 static lldb::VariableSP DILFindVariable(ConstString name,
@@ -406,6 +536,109 @@ Interpreter::Visit(const UnaryOpNode &node) {
   }
   return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
                                               node.GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                              lldb::ValueObjectSP rhs, CompilerType result_type,
+                              uint32_t location) {
+  Scalar l, r;
+  bool l_resolved = lhs->ResolveValue(l);
+  bool r_resolved = rhs->ResolveValue(r);
+
+  if (!l_resolved || !r_resolved)
+    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid scalar value",
+                                                location);
+
+  auto value_object = [this, result_type](Scalar scalar) {
+    return ValueObject::CreateValueObjectFromScalar(m_target, scalar,
+                                                    result_type, "result");
+  };
+
+  switch (kind) {
+  case BinaryOpKind::Add:
+    return value_object(l + r);
+  case BinaryOpKind::Sub:
+    return value_object(l - r);
+  }
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "invalid arithmetic operation", location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '+' works for:
+  //   {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  // TODO: Pointer arithmetics
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (result_type.IsScalarType())
+    return EvaluateScalarOp(BinaryOpKind::Add, lhs, rhs, result_type, location);
+
+  std::string errMsg =
+      llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                    orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '-' works for:
+  //   {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  // TODO: Pointer arithmetics
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (result_type.IsScalarType())
+    return EvaluateScalarOp(BinaryOpKind::Sub, lhs, rhs, result_type, location);
+
+  std::string errMsg =
+      llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                    orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BinaryOpNode &node) {
+  auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP lhs = *lhs_or_err;
+  auto rhs_or_err = EvaluateAndDereference(node.GetRHS());
+  if (!rhs_or_err)
+    return rhs_or_err;
+  lldb::ValueObjectSP rhs = *rhs_or_err;
+
+  lldb::TypeSystemSP lhs_system =
+      lhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  lldb::TypeSystemSP rhs_system =
+      rhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  if (lhs_system->GetPluginName() != rhs_system->GetPluginName()) {
+    // TODO: Attempt to convert values to current CU's type system
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "operands have different type systems", node.GetLocation());
+  }
+
+  switch (node.GetKind()) {
+  case BinaryOpKind::Add:
+    return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Sub:
+    return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+  }
+
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "unimplemented binary operation", node.GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>

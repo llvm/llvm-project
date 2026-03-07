@@ -97,6 +97,18 @@ class AMDGPULowerVGPREncoding {
         V |= Op.MSBits.value_or(0) << (I * 2);
       return V;
     }
+
+    // Check if this mode is compatible with required \p NewMode without
+    // modification.
+    bool isCompatible(const ModeTy NewMode) const {
+      for (unsigned I : seq(OpNum)) {
+        if (!NewMode.Ops[I].MSBits.has_value())
+          continue;
+        if (Ops[I].MSBits.value_or(0) != NewMode.Ops[I].MSBits.value_or(0))
+          return false;
+      }
+      return true;
+    }
   };
 
 public:
@@ -148,7 +160,7 @@ private:
   /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
-  void computeMode(ModeTy &NewMode, MachineInstr &MI,
+  void computeMode(ModeTy &NewMode, const MachineInstr &MI,
                    const AMDGPU::OpName Ops[OpNum],
                    const AMDGPU::OpName *Ops2 = nullptr);
 
@@ -224,13 +236,14 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
   return Idx >> 8;
 }
 
-void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, MachineInstr &MI,
+void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode,
+                                          const MachineInstr &MI,
                                           const AMDGPU::OpName Ops[OpNum],
                                           const AMDGPU::OpName *Ops2) {
   NewMode = {};
 
   for (unsigned I = 0; I < OpNum; ++I) {
-    MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
+    const MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
     std::optional<unsigned> MSBits;
     if (Op)
@@ -238,7 +251,7 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, MachineInstr &MI,
 
 #if !defined(NDEBUG)
     if (MSBits.has_value() && Ops2) {
-      auto Op2 = TII->getNamedOperand(MI, Ops2[I]);
+      const MachineOperand *Op2 = TII->getNamedOperand(MI, Ops2[I]);
       if (Op2) {
         std::optional<unsigned> MSBits2;
         MSBits2 = getMSBs(*Op2);
@@ -275,6 +288,23 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   if (Ops.first) {
     ModeTy NewMode;
     computeMode(NewMode, MI, Ops.first, Ops.second);
+    if (!CurrentMode.isCompatible(NewMode) && MI.isCommutable() &&
+        TII->commuteInstruction(MI)) {
+      ModeTy NewModeCommuted;
+      computeMode(NewModeCommuted, MI, Ops.first, Ops.second);
+      if (CurrentMode.isCompatible(NewModeCommuted)) {
+        // Update CurrentMode with mode bits the commuted instruction relies on.
+        // This prevents later instructions from piggybacking and corrupting
+        // those bits (e.g., a nullopt src treated as 0 could be overwritten).
+        bool Unused = false;
+        CurrentMode.update(NewModeCommuted, Unused);
+        // MI was modified by the commute above.
+        return true;
+      }
+      // Commute back.
+      if (!TII->commuteInstruction(MI))
+        llvm_unreachable("Failed to restore commuted instruction.");
+    }
     return setMode(NewMode, MI.getIterator());
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
@@ -383,10 +413,12 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR
   // MSBs.
   if (Size <= VGPRMSBShift) {
-    // This instruction now acts as MostRecentModeSet so it can be updated if
-    // CurrentMode changes via piggybacking.
+    // This instruction is at the boundary of the old mode's control range.
+    // Reset CurrentMode so that the next setMode call can freely piggyback
+    // the required mode into bits[12:19] without triggering Rewritten.
     MostRecentModeSet = &MI;
-    return updateSetregModeImm(MI, ModeValue);
+    CurrentMode = {};
+    return updateSetregModeImm(MI, 0);
   }
 
   // Case 2: Size > 12 - the original instruction uses bits beyond 11, so we

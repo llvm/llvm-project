@@ -166,14 +166,17 @@ relational/clc_isnan.cl
 relational/clc_isnormal.cl
 relational/clc_isnotequal.cl
 relational/clc_isordered.cl
+relational/clc_issubnormal.cl
 relational/clc_isunordered.cl
 relational/clc_select.cl
 relational/clc_signbit.cl
 shared/clc_clamp.cl
 shared/clc_max.cl
 shared/clc_min.cl
+shared/clc_qualifier.cl
 shared/clc_vload.cl
 shared/clc_vstore.cl
+workitem/clc_get_global_linear_id.cl
 workitem/clc_get_local_linear_id.cl
 workitem/clc_get_num_sub_groups.cl
 workitem/clc_get_sub_group_id.cl
