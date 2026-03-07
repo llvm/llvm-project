@@ -4362,25 +4362,25 @@ TEST(Hover, ParseDocumentation) {
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {{
                    " \n foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
                {
                    "foo\nbar \n  ",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
                {
                    "foo  \nbar",
-                   "foo  \nbar",
+                   "foo\nbar",
                    "foo  \nbar",
                    "foo\nbar",
                },
                {
                    "foo    \nbar",
-                   "foo    \nbar",
+                   "foo\nbar",
                    "foo    \nbar",
                    "foo\nbar",
                },
@@ -4392,25 +4392,25 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -4422,49 +4422,49 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
                {
                    "foo.\nbar",
-                   "foo.  \nbar",
+                   "foo.\nbar",
                    "foo.  \nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo.   \nbar",
+                   "foo.\nbar",
                    "foo.   \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo  \n\\*bar",
+                   "foo\n\\*bar",
                    "foo\n*bar",
                    "foo\n*bar",
                },
                {
                    "foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
@@ -4482,7 +4482,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "`not\nparsed`",
-                   "\\`not\nparsed\\`",
+                   "\\`not parsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
                },
@@ -4491,9 +4491,9 @@ TEST(Hover, ParseDocumentation) {
 @param x this is x
 \param y this is y
 @return something)",
-                   R"(@brief this is a typical use case  
-@param x this is x  
-\\param y this is y  
+                   R"(@brief this is a typical use case
+@param x this is x
+\\param y this is y
 @return something)",
                    R"(@brief this is a typical use case  
 @param x this is x  

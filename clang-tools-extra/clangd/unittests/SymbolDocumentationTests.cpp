@@ -33,7 +33,7 @@ TEST(SymbolDocumentation, DetailedDocToMarkup) {
       },
       {
           "brief\n\nfoo\nbar\n",
-          "foo\nbar",
+          "foo bar",
           "foo\nbar",
           "foo bar",
       },
@@ -174,8 +174,7 @@ documentation)",
 
 these are details
 
-More description
-documentation)",
+More description documentation)",
           R"(**\brief** another brief?
 
 these are details
@@ -194,8 +193,7 @@ More description documentation)",
 <b>this is a bold text</b>
 normal text<i>this is an italic text</i>
 <code>this is a code block</code>)",
-          R"(\<b>this is a bold text\</b>
-normal text\<i>this is an italic text\</i>  
+          R"(\<b>this is a bold text\</b> normal text\<i>this is an italic text\</i>
 \<code>this is a code block\</code>)",
           R"(\<b>this is a bold text\</b>
 normal text\<i>this is an italic text\</i>  
@@ -204,7 +202,7 @@ normal text\<i>this is an italic text\</i>
           "<code>this is a code block</code>",
       },
       {"brief\n\n@note This is a note",
-       R"(\*\*Note:\*\*  
+       R"(\*\*Note:\*\*
 This is a note)",
        R"(**Note:**  
 This is a note)",
@@ -218,7 +216,7 @@ Paragraph 1
 Paragraph 2)",
        R"(Paragraph 1
 
-\*\*Note:\*\*  
+\*\*Note:\*\*
 This is a note
 
 Paragraph 2)",
@@ -235,7 +233,7 @@ This is a note
 
 Paragraph 2)"},
       {"brief\n\n@warning This is a warning",
-       R"(\*\*Warning:\*\*  
+       R"(\*\*Warning:\*\*
 This is a warning)",
        R"(**Warning:**  
 This is a warning)",
@@ -249,7 +247,7 @@ Paragraph 1
 Paragraph 2)",
        R"(Paragraph 1
 
-\*\*Warning:\*\*  
+\*\*Warning:\*\*
 This is a warning
 
 Paragraph 2)",
@@ -270,7 +268,7 @@ Paragraph 2)"},
 @brief this is the brief
 
 Another paragraph)",
-       R"(\*\*Note:\*\*  
+       R"(\*\*Note:\*\*
 this is not treated as brief
 
 Another paragraph)",
@@ -612,7 +610,7 @@ TEST(SymbolDocumentation, MarkdownCodeBlocksSeparation) {
 /// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
 int function() { return 0; }
 ```)",
-       R"(\*\*Note:\*\*  
+       R"(\*\*Note:\*\*
 Show that code blocks are correctly separated
 
 ```
@@ -648,7 +646,7 @@ int function() { return 0; })"},
 /// Also note that without preprocessing, all doxygen commands inside code blocks, like @p would be incorrectly interpreted.
 int function() { return 0; }
 ~~~~~~~~~)",
-       R"(\*\*Note:\*\*  
+       R"(\*\*Note:\*\*
 Show that code blocks are correctly separated
 
 ```
@@ -711,8 +709,7 @@ TEST(SymbolDocumentation, MarkdownCodeSpans) {
       {R"(`multi
 line
 \c span`)",
-       R"(\`multi
-line  
+       R"(\`multi line
 \\c span\`)",
        R"(`multi
 line  
