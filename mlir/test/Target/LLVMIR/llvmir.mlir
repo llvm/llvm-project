@@ -1283,13 +1283,22 @@ llvm.func @intpointerconversion(%arg0 : i32) -> i32 {
   llvm.return %2 : i32
 }
 
-// CHECK-LABEL: @addrpointerconversion
+// CHECK-LABEL: @addrpointerconversion_scalar
 // CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
-llvm.func @addrpointerconversion(%arg0 : !llvm.ptr) -> i64 {
+llvm.func @addrpointerconversion_scalar(%arg0 : !llvm.ptr) -> i64 {
   // CHECK: %[[PTR:.*]] = ptrtoaddr ptr %[[ARG0]] to i64
   // CHECK-NEXT: ret i64 %[[PTR]]
   %1 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
   llvm.return %1 : i64
+}
+
+// CHECK-LABEL: @addrpointerconversion_vector
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_vector(%arg0 : vector<3x!llvm.ptr>) -> vector<3x i64> {
+  // CHECK: %[[PTR:.*]] = ptrtoaddr <3 x ptr> %[[ARG0]] to <3 x i64>
+  // CHECK-NEXT: ret <3 x i64> %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : vector<3x!llvm.ptr> to vector<3x i64>
+  llvm.return %1 : vector<3x i64>
 }
 
 llvm.func @fpconversion(%arg0 : i32) -> i32 {
