@@ -663,7 +663,7 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 
 
 ################################################################################
-# Python Compiler
+# Python -> Bytecode Compiler
 ################################################################################
 
 _BUILTINS = {
@@ -706,6 +706,67 @@ class CompilerError(Exception):
 
 
 class Compiler(ast.NodeVisitor):
+    """
+    Compile Python LLDB data formatters to LLDB formatter bytecode.
+
+    This compiler is supports a limited subset of Python.
+
+    # Supported Features
+
+    * Top level functions implementing LLDB summary formatters
+    * Top level classes implementing LLDB synthetic formatters
+    * Partial support for the following, see below for more details:
+      - Object attributes (properties)
+      - Local variables
+      - Function calls
+    * Python language support
+    [x] If statements (including else, elif and nested if)
+    [x] Return statements
+    [x] String, integer, float, boolean, and None literals
+    [x] Binary comparisons
+    [ ] Boolean operators
+    [ ] Math operations
+
+    # Unsupported Features
+
+        Note: that this is not exhaustive, refer to the list of supported
+        features above.
+
+    * For and while loops
+    * Exceptions
+    * User defined general purpose functions and classes
+    * Lists, dicts, sets, and other container data types
+    * Iterators, comprehensions, yield, etc
+    * With statements
+    * Imports of any modules
+
+    # Variables
+
+    The compiler supports two kinds of variables, local variables and attribute
+    variables (properties), but there are limitations on both.
+
+    In __init__ and update, local variables are currently *not* supported, but
+    attributes can be assigned to. This matches the common case for these
+    functions.
+
+    In all other function bodies, local variables _are_ supported, but
+    attributes can only be read from, *not* assigned to. This also matches the
+    common case for these functions.
+
+    Variables (local and attributes) are tracked, allowing the compiler to know
+    their position in the stack. Variable reads can then be lowered to `pick`
+    instructions. See the compiler's `locals` and `attrs` attributes.
+
+    # Functions
+
+    Known functions are supported, a design that customizes the scope of what
+    formatters can and can't do. The functions known to the compiler are called
+    "selectors". The selectors are primarily SBValue API, although there are
+    also general purpose selectors. Formatters can only call selectors, not user
+    defined functions, and not SB methods that have not been defined as a
+    selector.
+    """
+
     # Names of locals in bottom-to-top stack order. locals[0] is the
     # oldest/deepest; locals[-1] is the most recently pushed.
     locals: list[str]
@@ -1026,7 +1087,7 @@ def _main():
         "-c",
         "--compile",
         action="store_true",
-        help="compile Python into bytecode",
+        help="compile a Python LLDB data formatter into LLDB formatter bytecode",
     )
     mode.add_argument(
         "-a",
