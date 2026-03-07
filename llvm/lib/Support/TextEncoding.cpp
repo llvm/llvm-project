@@ -54,6 +54,16 @@ static std::optional<TextEncoding> getKnownEncoding(StringRef Name) {
   return std::nullopt;
 }
 
+bool TextEncodingConverter::isEncodingSupported(StringRef Name) {
+  if (getKnownEncoding(Name))
+    return true;
+  llvm::ErrorOr<llvm::TextEncodingConverter> ErrorOrConverter =
+      llvm::TextEncodingConverter::create("UTF-8", Name.data());
+  if (ErrorOrConverter)
+    return true;
+  return false;
+}
+
 [[maybe_unused]] static void HandleOverflow(size_t &Capacity, char *&Output,
                                             size_t &OutputLength,
                                             SmallVectorImpl<char> &Result) {
