@@ -38,26 +38,24 @@ define i32 @test_constant_fold() {
 define i32 @test_protected_no_branch(i1 %cond, i32 %a, i32 %b) {
 ; M32-LABEL: test_protected_no_branch:
 ; M32:       # %bb.0:
-; M32-NEXT:    andi $1, $4, 1
-; M32-NEXT:    negu $2, $1
-; M32-NEXT:    addiu $1, $1, -1
-; M32-NEXT:    and $2, $2, $5
-; M32-NEXT:    and $1, $1, $6
+; M32-NEXT:    andi $2, $4, 1
+; M32-NEXT:    xor $1, $5, $6
+; M32-NEXT:    negu $2, $2
+; M32-NEXT:    and $1, $1, $2
 ; M32-NEXT:    jr $ra
-; M32-NEXT:    or $2, $2, $1
+; M32-NEXT:    xor $2, $6, $1
 ;
 ; M64-LABEL: test_protected_no_branch:
 ; M64:       # %bb.0:
 ; M64-NEXT:    sll $1, $4, 0
-; M64-NEXT:    sll $3, $5, 0
+; M64-NEXT:    xor $2, $5, $6
 ; M64-NEXT:    andi $1, $1, 1
-; M64-NEXT:    negu $2, $1
-; M64-NEXT:    addiu $1, $1, -1
-; M64-NEXT:    and $2, $2, $3
-; M64-NEXT:    sll $3, $6, 0
-; M64-NEXT:    and $1, $1, $3
+; M64-NEXT:    sll $2, $2, 0
+; M64-NEXT:    negu $1, $1
+; M64-NEXT:    and $1, $2, $1
+; M64-NEXT:    sll $2, $6, 0
 ; M64-NEXT:    jr $ra
-; M64-NEXT:    or $2, $2, $1
+; M64-NEXT:    xor $2, $2, $1
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
   ret i32 %result
 }
