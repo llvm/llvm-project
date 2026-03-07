@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 
 
 class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
+    @skipIfNoIntelPT
     def testErrorMessages(self):
         # We first check the output when there are no targets
         self.expect(
@@ -37,7 +38,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
             substrs=["error: Process is not being traced"],
             error=True,
         )
-
+    @skipIfNoIntelPT
     def testDumpRawTraceSize(self):
         self.expect(
             "trace load -v "
@@ -66,7 +67,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
             ],
             patterns=[r"Decoding instructions: \d.\d\ds"],
         )
-
+    @skipIfNoIntelPT
     def testDumpRawTraceSizeJSON(self):
         self.expect(
             "trace load -v "

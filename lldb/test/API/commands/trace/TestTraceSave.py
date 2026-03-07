@@ -11,7 +11,6 @@ def find(predicate, seq):
         if predicate(item):
             return item
 
-
 class TestTraceSave(TraceIntelPTTestCaseBase):
     def testErrorMessages(self):
         # We first check the output when there are no targets
@@ -68,6 +67,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
             "trace save /", substrs=["error: couldn't write to the file"], error=True
         )
 
+    @skipIfNoIntelPT
     def testSaveWhenNotLiveTrace(self):
         self.expect(
             "trace load -v "
@@ -212,6 +212,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         self.assertTrue(res.Succeeded())
         self.assertEqual(res.GetOutput(), last_ten_instructions)
 
+    @skipIfNoIntelPT
     def testSaveKernelTrace(self):
         original_trace_file = os.path.join(
             self.getSourceDir(), "intelpt-kernel-trace", "trace.json"
