@@ -31,10 +31,10 @@
 // Input summary does not exist.
 // RUN: not ssaf-linker %S/Inputs/tu-nonexistent.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-INPUT-FILE
-// NO-INPUT-FILE: ssaf-linker: error: failed to validate summary '{{.*}}tu-nonexistent.json': No such file or directory
+// NO-INPUT-FILE: ssaf-linker: error: failed to validate summary '{{.*}}tu-nonexistent.json': {{[Nn]}}o such file or directory
 
 // Input summary is a broken symlink.
 // RUN: ln -sf %t/tu-nonexistent %t/tu-dangling.json
 // RUN: not ssaf-linker %t/tu-dangling.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=BROKEN-SYMLINK
-// BROKEN-SYMLINK: ssaf-linker: error: failed to validate summary '{{.*}}tu-dangling.json': No such file or directory
+// BROKEN-SYMLINK: ssaf-linker: error: failed to validate summary '{{.*}}tu-dangling.json': {{[Nn]}}o such file or directory
