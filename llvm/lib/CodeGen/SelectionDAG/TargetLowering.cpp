@@ -8184,8 +8184,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   // If (1 << HBitWidth) % divisor == 1, we can add the two halves together and
   // then add in the carry.
-  // TODO: If we can't split it in half, we might be able to split into 3 or
-  // more pieces using a smaller bit width.
   if (HalfMaxPlus1.urem(Divisor).isOne()) {
     assert(!LL == !LH && "Expected both input halves or no input halves!");
     if (!LL)
@@ -8233,6 +8231,95 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                               DAG.getConstant(0, dl, HiLoVT));
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
     }
+
+  } else {
+    // If we cannot split in two halves. Let's look for a smaller chunk
+    // width where (1 << ChunkWidth) mod Divisor == 1.
+    // This ensures that the sum of all such chunks modulo Divisor
+    // is equivalent to the original value modulo Divisor.
+    const APInt &Divisor = CN->getAPIntValue();
+    unsigned BitWidth = VT.getScalarSizeInBits();
+    unsigned BestChunkWidth = 0;
+
+    // Determine the largest legal scalar integer type we can safely use
+    // for chunk operations.
+    EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
+
+    // Clamp to the original bit width.
+    unsigned MaxChunk =
+        std::min<unsigned>(LegalVT.getScalarSizeInBits(), BitWidth);
+
+    // Find the largest W in (MaxChunk/2, MaxChunk] such that
+    // 2^W ≡ 1 (mod Divisor).  If this holds, the value can be
+    // reduced modulo Divisor by summing W-bit chunks.
+    //
+    // Instead of constructing 2^W for each candidate, compute
+    // 2^MaxChunk mod Divisor once and walk downward, maintaining:
+    //
+    //   Mod == 2^i mod Divisor
+    //
+    // For each decrement of i, update Mod by multiplying with
+    // the modular inverse of 2 (Divisor is known to be odd here).
+    // Compute 2^MaxChunk mod Divisor
+    APInt Mod(Divisor.getBitWidth(), 1);
+    for (unsigned k = 0; k < MaxChunk; ++k)
+      Mod = (Mod.shl(1)).urem(Divisor);
+
+    // Since Divisor is odd, inverse of 2 mod D is (D+1)/2
+    APInt Inv2 = (Divisor + 1).lshr(1);
+
+    // Walk downward to find largest valid W
+    for (unsigned i = MaxChunk; i > MaxChunk / 2; --i) {
+      if (Mod.isOne()) {
+        BestChunkWidth = i;
+        break;
+      }
+
+      // Move from 2^i to 2^(i-1)
+      Mod = (Mod * Inv2).urem(Divisor);
+    }
+
+    // If we found a good chunk width, slice the number and sum the pieces.
+    if (!BestChunkWidth)
+      return false;
+
+    EVT ChunkVT = EVT::getIntegerVT(*DAG.getContext(), BestChunkWidth);
+
+    SDValue In =
+        LL ? DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH) : N->getOperand(0);
+
+    SmallVector<SDValue, 8> Parts;
+    // Split into fixed-size chunks
+    for (unsigned i = 0; i < BitWidth; i += BestChunkWidth) {
+      SDValue Shift = DAG.getShiftAmountConstant(i, VT, dl);
+      SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
+      Chunk = DAG.getNode(ISD::TRUNCATE, dl, ChunkVT, Chunk);
+      Parts.push_back(Chunk);
+    }
+    assert(!Parts.empty() && "Failed to split divisor into chunks");
+    Sum = Parts[0];
+
+    // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
+    // same logic as used in above if condition.
+    SDValue Carry = DAG.getConstant(0, dl, ChunkVT);
+    EVT SetCCType =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ChunkVT);
+    for (unsigned i = 1; i < Parts.size(); ++i) {
+      if (isOperationLegalOrCustom(ISD::UADDO_CARRY, ChunkVT)) {
+        SDVTList VTList = DAG.getVTList(ChunkVT, SetCCType);
+        SDValue UAdd = DAG.getNode(ISD::UADDO, dl, VTList, Sum, Parts[i]);
+        Sum = DAG.getNode(ISD::UADDO_CARRY, dl, VTList, UAdd, Carry,
+                          UAdd.getValue(1));
+      } else {
+        SDValue Add = DAG.getNode(ISD::ADD, dl, ChunkVT, Sum, Parts[i]);
+        SDValue NewCarry = DAG.getSetCC(dl, SetCCType, Add, Sum, ISD::SETULT);
+        NewCarry = DAG.getZExtOrTrunc(NewCarry, dl, ChunkVT);
+        Sum = DAG.getNode(ISD::ADD, dl, ChunkVT, Add, Carry);
+        Carry = NewCarry;
+      }
+    }
+
+    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, Sum);
   }
 
   // If we didn't find a sum, we can't do the expansion.

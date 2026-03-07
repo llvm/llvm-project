@@ -67,25 +67,46 @@ define i64 @div128(i128 %x) nounwind {
 define i64 @umod128(i128 %x) nounwind {
 ; X86-64-LABEL: umod128:
 ; X86-64:       # %bb.0:
-; X86-64-NEXT:    pushq %rax
-; X86-64-NEXT:    movl $11, %edx
-; X86-64-NEXT:    xorl %ecx, %ecx
-; X86-64-NEXT:    callq __umodti3@PLT
-; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; X86-64-NEXT:    movq %rsi, %rcx
+; X86-64-NEXT:    shldq $4, %rdi, %rcx
+; X86-64-NEXT:    addq %rdi, %rcx
+; X86-64-NEXT:    andq %rax, %rdi
+; X86-64-NEXT:    movq %rcx, %rdx
+; X86-64-NEXT:    andq %rax, %rdx
+; X86-64-NEXT:    shrq $56, %rsi
+; X86-64-NEXT:    cmpq %rdi, %rdx
+; X86-64-NEXT:    adcq %rsi, %rcx
+; X86-64-NEXT:    andq %rax, %rcx
+; X86-64-NEXT:    movabsq $1676976733973595602, %rdx # imm = 0x1745D1745D1745D2
+; X86-64-NEXT:    movq %rcx, %rax
+; X86-64-NEXT:    mulq %rdx
+; X86-64-NEXT:    leaq (%rdx,%rdx,4), %rax
+; X86-64-NEXT:    leaq (%rdx,%rax,2), %rax
+; X86-64-NEXT:    subq %rax, %rcx
+; X86-64-NEXT:    movq %rcx, %rax
 ; X86-64-NEXT:    retq
 ;
 ; WIN64-LABEL: umod128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    subq $72, %rsp
-; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq $11, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN64-NEXT:    callq __umodti3
-; WIN64-NEXT:    movq %xmm0, %rax
-; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; WIN64-NEXT:    movq %rdx, %r8
+; WIN64-NEXT:    shldq $4, %rcx, %r8
+; WIN64-NEXT:    addq %rcx, %r8
+; WIN64-NEXT:    andq %rax, %rcx
+; WIN64-NEXT:    movq %r8, %r9
+; WIN64-NEXT:    andq %rax, %r9
+; WIN64-NEXT:    shrq $56, %rdx
+; WIN64-NEXT:    cmpq %rcx, %r9
+; WIN64-NEXT:    adcq %rdx, %r8
+; WIN64-NEXT:    andq %rax, %r8
+; WIN64-NEXT:    movabsq $1676976733973595602, %rcx # imm = 0x1745D1745D1745D2
+; WIN64-NEXT:    movq %r8, %rax
+; WIN64-NEXT:    mulq %rcx
+; WIN64-NEXT:    leaq (%rdx,%rdx,4), %rax
+; WIN64-NEXT:    leaq (%rdx,%rax,2), %rax
+; WIN64-NEXT:    subq %rax, %r8
+; WIN64-NEXT:    movq %r8, %rax
 ; WIN64-NEXT:    retq
 
 
