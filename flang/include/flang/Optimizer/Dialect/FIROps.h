@@ -51,12 +51,26 @@ static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
 struct DebuggingResource
     : public mlir::SideEffects::Resource::Base<DebuggingResource> {
   mlir::StringRef getName() final { return "DebuggingResource"; }
+  /// DebuggingResource is a unit resource allowing to keep order
+  /// of operations that affect debug information generation.
+  bool isUnitResource() const final { return true; }
+  /// This is a synthetic resource that is parallel-safe,
+  /// i.e. a presence of an operation that reads/writes this resource
+  /// does not prevent parallelization.
+  mlir::SideEffects::Resource::UnitProperties getUnitProperties() const final {
+    return mlir::SideEffects::Resource::UnitProperties::ParallelSafe;
+  }
 };
 
 /// Model operations which read from/write to volatile memory
 struct VolatileMemoryResource
     : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {
   mlir::StringRef getName() final { return "VolatileMemoryResource"; }
+  /// VolatileMemoryResource is a unit resource allowing to keep order
+  /// of volatile memory accesses relative to each other.
+  /// Note that it is not parallel-safe, i.e. it is not allowed
+  /// to parallelize code with volatile memory accesses.
+  bool isUnitResource() const final { return true; }
 };
 
 class CoordinateIndicesAdaptor;

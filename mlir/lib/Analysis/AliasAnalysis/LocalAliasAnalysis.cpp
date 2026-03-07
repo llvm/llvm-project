@@ -513,6 +513,13 @@ ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
       continue;
     }
 
+    // A unit resource cannot be addressed through any location,
+    // so we can ignore the unit resources.
+    if (effect.getResource() && effect.getResource()->isUnitResource()) {
+      LDBG() << "   Skipping a unit resource effect";
+      continue;
+    }
+
     // Check for an alias between the effect and our memory location.
     // TODO: Add support for checking an alias with a symbol reference.
     AliasResult aliasResult = AliasResult::MayAlias;

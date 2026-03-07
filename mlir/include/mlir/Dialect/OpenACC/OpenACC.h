@@ -213,16 +213,38 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
   mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+  /// RuntimeCounters is a unit resource implemented by OpenACC
+  /// runtime library. It allows keeping order of OpenACC data operations
+  /// relative to each other (because they cannot be reordered
+  /// without specific analysis taking OpenACC semantics into account).
+  bool isUnitResource() const final { return true; }
+  /// The runtime implementation of the runtime counters is parallel-safe.
+  mlir::SideEffects::Resource::UnitProperties getUnitProperties() const final {
+    return mlir::SideEffects::Resource::UnitProperties::ParallelSafe;
+  }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
   mlir::StringRef getName() final { return "AccConstructResource"; }
+  /// ConstructResource is a synthetic unit resource that allows
+  /// keeping order of OpenACC constructs relative to each other.
+  /// The OpenACC dialect's construct operations usually read
+  /// and write this resource so that a construct is not deleted
+  /// if it is postdominated by another construct (and has no other
+  /// side effects otherwise).
+  bool isUnitResource() const final { return true; }
+  // TBD: define if this resource is parallel-safe.
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
   mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
+  /// CurrentDeviceIdResource is a unit resource implemented by OpenACC
+  /// runtime library. It allows keeping order of OpenACC operations
+  /// that may read and write the current device id.
+  bool isUnitResource() const final { return true; }
+  // TBD: define if this resource is parallel-safe.
 };
 
 } // namespace acc

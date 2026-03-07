@@ -622,6 +622,11 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
     if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
       continue;
 
+    // A unit resource cannot be addressed through any location,
+    // so we can ignore the unit resources.
+    if (effect.getResource() && effect.getResource()->isUnitResource())
+      continue;
+
     // Check for an alias between the effect and our memory location.
     AliasResult aliasResult = AliasResult::MayAlias;
     if (Value effectValue = effect.getValue())

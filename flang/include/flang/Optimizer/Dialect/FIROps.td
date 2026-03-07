@@ -3163,7 +3163,8 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
 }
 
 def fir_UseStmtOp
-    : fir_Op<"use_stmt", [MemoryEffects<[MemWrite<DebuggingResource>]>]> {
+    : fir_Op<"use_stmt", [MemoryEffects<[MemRead<DebuggingResource>,
+                                         MemWrite<DebuggingResource>]>]> {
   let summary = "Represents a Fortran USE statement";
   let description = [{
     This operation records a Fortran USE statement with its associated only/rename
@@ -3396,7 +3397,8 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // is not used.
 def fir_DeclareOp
     : fir_Op<"declare", [AttrSizedOperandSegments,
-                         MemoryEffects<[MemAlloc<DebuggingResource>]>,
+                         MemoryEffects<[MemAlloc<DebuggingResource>,
+                                        MemRead<DebuggingResource>]>,
                          DeclareOpInterfaceMethods<
                              fir_FortranVariableStorageOpInterface>,
                          DeclareOpInterfaceMethods<PromotableOpInterface,
@@ -3429,6 +3431,14 @@ def fir_DeclareOp
     for FortranVariableStorageOpInterface, where they are documented.
     If these operands are absent, then the storage of the declared variable
     is only known to start where the memref operand points to.
+
+    A read from a synthetic DebuggingResource allows reordering
+    fir.declare operations relative to each other, but prevents
+    their reordering relative to the fir.dummy_scope operations
+    which define the procedure scope the variables are declared in.
+    The allocation effect on the DebuggingResource is used to prevent
+    classifying the operation as trivially dead when its result
+    is unused (we still need fir.declare to generate debug information).
 
     Example:
 
@@ -3557,8 +3567,9 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
   ];
 }
 
-def fir_DummyScopeOp : fir_Op<"dummy_scope",
-    [MemoryEffects<[MemWrite<DebuggingResource>]>]> {
+def fir_DummyScopeOp
+    : fir_Op<"dummy_scope", [MemoryEffects<[MemRead<DebuggingResource>,
+                                            MemWrite<DebuggingResource>]>]> {
   let summary = "Define a scope for dummy arguments";
 
   let description = [{
@@ -3630,7 +3641,7 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
     `test`, the two inlined instances of `inner` must use two different
     fir.dummy_scope operations for their fir.declare ops. This
     two distinct fir.dummy_scope must remain distinct during the optimizations.
-    This is guaranteed by the write memory effect on the DebuggingResource.
+    This is guaranteed by the read/write memory effect on the DebuggingResource.
   }];
 
   let results = (outs fir_DummyScopeType);
