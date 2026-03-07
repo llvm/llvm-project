@@ -159,7 +159,28 @@ private:
   SValBuilder &svalBuilder;
 
   unsigned int currStmtIdx = 0;
+
+  /// Pointer to a so-called NodeBuilderContext object which has three
+  /// independent roles:
+  /// - It holds a pointer to the CFGBlock that is currently under analysis.
+  ///   (This is the primary way to get the current block.)
+  /// - It holds a pointer to the current LocationContext. (This is rarely used
+  ///   and may be 'stale', the location context is usually queried from an
+  ///   ExplodedNode or a ProgramPoint.)
+  /// - It can be used for constructing `NodeBuilder`s. Practically all
+  ///   `NodeBuilder` objects are useless complications in the code, so I
+  ///   intend to replace them with direct use of `ExprEngine::makeNode`.
+  /// TODO: Eventually `currBldrCtx` should be replaced by two separate fields:
+  /// `const CFGBlock *CurrBlock` & `const LocationContext *CurrLocationContext`
+  /// that are kept up-to-date and are almost always non-null during the
+  /// analysis. I will switch to this more natural representation when
+  /// `NodeBuilder`s are eliminated from the code.
   const NodeBuilderContext *currBldrCtx = nullptr;
+  /// Historically `currBldrCtx` pointed to a local variable in some stack
+  /// frame. This field is introduced as a temporary measure to allow a gradual
+  /// transition. Do not reference this outside of setLocationContextAndBlock!
+  /// TODO: Remove this temporary hack.
+  std::optional<NodeBuilderContext> OwnedCurrBldrCtx;
 
   /// Helper object to determine if an Objective-C message expression
   /// implicitly never returns.
@@ -216,7 +237,19 @@ public:
     return &CTU;
   }
 
-  const NodeBuilderContext &getBuilderContext() {
+  // FIXME: Ideally the body of this method should look like
+  //   CurrLocationContext = LC;
+  //   CurrBlock = B;
+  // where CurrLocationContext and CurrBlock are new member variables that
+  // fulfill the roles of `currBldrCtx` in a more natural way.
+  // This implementation is a temporary measure to allow a gradual transition.
+  void setCurrLocationContextAndBlock(const LocationContext *LC,
+                                      const CFGBlock *B) {
+    OwnedCurrBldrCtx.emplace(Engine, B, LC);
+    currBldrCtx = &*OwnedCurrBldrCtx;
+  }
+
+  const NodeBuilderContext &getBuilderContext() const {
     assert(currBldrCtx);
     return *currBldrCtx;
   }
@@ -226,9 +259,26 @@ public:
     return G.getRoot()->getLocation().getLocationContext();
   }
 
+  const LocationContext *getCurrentLocationContext() const {
+    return currBldrCtx ? currBldrCtx->getLocationContext() : nullptr;
+  }
+
+  const CFGBlock *getCurrentBlock() const {
+    return currBldrCtx ? currBldrCtx->getBlock() : nullptr;
+  }
+
   ConstCFGElementRef getCFGElementRef() const {
-    const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
-    return {blockPtr, currStmtIdx};
+    return {getCurrentBlock(), currStmtIdx};
+  }
+
+  unsigned getNumVisited(const LocationContext *LC,
+                         const CFGBlock *Block) const {
+    return Engine.WList->getBlockCounter().getNumVisited(LC->getStackFrame(),
+                                                         Block->getBlockID());
+  }
+
+  unsigned getNumVisitedCurrent() const {
+    return getNumVisited(getCurrentLocationContext(), getCurrentBlock());
   }
 
   /// Dump graph to the specified filename.
@@ -328,27 +378,23 @@ public:
   /// processing the 'effects' of a branch condition. If the branch condition
   /// is a loop condition, IterationsCompletedInLoop is the number of completed
   /// iterations (otherwise it's std::nullopt).
-  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
-                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT, const CFGBlock *DstF,
+  void processBranch(const Stmt *Condition, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst, const CFGBlock *DstT,
+                     const CFGBlock *DstF,
                      std::optional<unsigned> IterationsCompletedInLoop);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
   /// on whether the corresponding constructor was visited.
   void processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
-                                     NodeBuilderContext &BldCtx,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst,
                                      const CFGBlock *DstT,
                                      const CFGBlock *DstF);
 
   /// Called by CoreEngine.  Used to processing branching behavior
   /// at static initializers.
-  void processStaticInitializer(const DeclStmt *DS,
-                                NodeBuilderContext& BuilderCtx,
-                                ExplodedNode *Pred,
-                                ExplodedNodeSet &Dst,
-                                const CFGBlock *DstT,
+  void processStaticInitializer(const DeclStmt *DS, ExplodedNode *Pred,
+                                ExplodedNodeSet &Dst, const CFGBlock *DstT,
                                 const CFGBlock *DstF);
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
@@ -358,8 +404,8 @@ public:
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
-                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
+  void processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and top-level functions.
@@ -707,7 +753,7 @@ public:
   /// Return the CFG element corresponding to the worklist element
   /// that is currently being processed by ExprEngine.
   CFGElement getCurrentCFGElement() {
-    return (*currBldrCtx->getBlock())[currStmtIdx];
+    return (*getCurrentBlock())[currStmtIdx];
   }
 
   /// Create a new state in which the call return value is binded to the

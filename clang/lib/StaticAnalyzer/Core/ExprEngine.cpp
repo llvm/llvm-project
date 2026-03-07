@@ -422,7 +422,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
     case SubobjectAdjustment::MemberPointerAdjustment:
       // FIXME: Unimplemented.
       State = State->invalidateRegions(Reg, getCFGElementRef(),
-                                       currBldrCtx->blockCount(), LC, true,
+                                       getNumVisitedCurrent(), LC, true,
                                        nullptr, nullptr, nullptr);
       return State;
     }
@@ -439,7 +439,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   SVal InitVal = State->getSVal(Init, LC);
   if (InitVal.isUnknown()) {
     InitVal = getSValBuilder().conjureSymbolVal(
-        getCFGElementRef(), LC, Init->getType(), currBldrCtx->blockCount());
+        getCFGElementRef(), LC, Init->getType(), getNumVisitedCurrent());
     State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
 
     // Then we'd need to take the value that certainly exists and bind it
@@ -449,7 +449,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       // compute the value.
       InitValWithAdjustments = getSValBuilder().conjureSymbolVal(
           getCFGElementRef(), LC, InitWithAdjustments->getType(),
-          currBldrCtx->blockCount());
+          getNumVisitedCurrent());
     }
     State =
         State->bindLoc(Reg.castAs<Loc>(), InitValWithAdjustments, LC, false);
@@ -1144,7 +1144,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
@@ -1159,7 +1159,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   LoopExit PP(S, Pred->getLocationContext());
   ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
   if (N && !N->isSink())
-    Engine.enqueueStmtNode(N, currBldrCtx->getBlock(), currStmtIdx);
+    Engine.enqueueStmtNode(N, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1217,7 +1217,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
           SValBuilder &SVB = getSValBuilder();
           InitVal =
               SVB.conjureSymbolVal(getCFGElementRef(), stackFrame,
-                                   Field->getType(), currBldrCtx->blockCount());
+                                   Field->getType(), getNumVisitedCurrent());
         }
       } else {
         InitVal = State->getSVal(BMI->getInit(), stackFrame);
@@ -1248,7 +1248,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   for (ExplodedNode *Pred : Tmp)
     Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 std::pair<ProgramStateRef, uint64_t>
@@ -1312,7 +1312,7 @@ void ExprEngine::ProcessImplicitDtor(const CFGImplicitDtor D,
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
@@ -1331,7 +1331,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
                         getCFGElementRef());
     Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
   }
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrentBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
@@ -1638,12 +1638,11 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
 }
 
 void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
-                                               NodeBuilderContext &BldCtx,
                                                ExplodedNode *Pred,
                                                ExplodedNodeSet &Dst,
                                                const CFGBlock *DstT,
                                                const CFGBlock *DstF) {
-  BranchNodeBuilder TempDtorBuilder(Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder TempDtorBuilder(Dst, *currBldrCtx, DstT, DstF);
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
   if (getObjectUnderConstruction(State, BTE, LC)) {
@@ -1844,7 +1843,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPMetaDirectiveClass:
     case Stmt::HLSLOutArgExprClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
-      Engine.addAbortedBlock(node, currBldrCtx->getBlock());
+      Engine.addAbortedBlock(node, getCurrentBlock());
       break;
     }
 
@@ -2052,7 +2051,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         const LocationContext *LCtx = N->getLocationContext();
         SVal result = svalBuilder.conjureSymbolVal(
             /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
-            currBldrCtx->blockCount());
+            getNumVisitedCurrent());
         ProgramStateRef State = N->getState()->BindExpr(Ex, LCtx, result);
 
         // Escape pointers passed into the list, unless it's an ObjC boxed
@@ -2120,7 +2119,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         Bldr.addNodes(Dst);
       } else {
         const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
-        Engine.addAbortedBlock(node, currBldrCtx->getBlock());
+        Engine.addAbortedBlock(node, getCurrentBlock());
       }
       break;
 
@@ -2835,16 +2834,15 @@ assumeCondition(const Stmt *Condition, ExplodedNode *N) {
 }
 
 void ExprEngine::processBranch(
-    const Stmt *Condition, NodeBuilderContext &BldCtx, ExplodedNode *Pred,
-    ExplodedNodeSet &Dst, const CFGBlock *DstT, const CFGBlock *DstF,
+    const Stmt *Condition, ExplodedNode *Pred, ExplodedNodeSet &Dst,
+    const CFGBlock *DstT, const CFGBlock *DstF,
     std::optional<unsigned> IterationsCompletedInLoop) {
   assert((!Condition || !isa<CXXBindTemporaryExpr>(Condition)) &&
          "CXXBindTemporaryExprs are handled by processBindTemporary.");
-  currBldrCtx = &BldCtx;
 
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
-    BranchNodeBuilder NullCondBldr(Dst, BldCtx, DstT, DstF);
+    BranchNodeBuilder NullCondBldr(Dst, *currBldrCtx, DstT, DstF);
     NullCondBldr.generateNode(Pred->getState(), true, Pred);
     return;
   }
@@ -2852,7 +2850,7 @@ void ExprEngine::processBranch(
   if (const auto *Ex = dyn_cast<Expr>(Condition))
     Condition = Ex->IgnoreParens();
 
-  Condition = ResolveCondition(Condition, BldCtx.getBlock());
+  Condition = ResolveCondition(Condition, currBldrCtx->getBlock());
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 Condition->getBeginLoc(),
                                 "Error evaluating branch");
@@ -2864,7 +2862,7 @@ void ExprEngine::processBranch(
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     ProgramStateRef PrevState = PredN->getState();
 
@@ -2962,15 +2960,15 @@ void ExprEngine::processBranch(
 REGISTER_TRAIT_WITH_PROGRAMSTATE(InitializedGlobalsSet,
                                  llvm::ImmutableSet<const VarDecl *>)
 
-void ExprEngine::processStaticInitializer(
-    const DeclStmt *DS, NodeBuilderContext &BuilderCtx, ExplodedNode *Pred,
-    ExplodedNodeSet &Dst, const CFGBlock *DstT, const CFGBlock *DstF) {
-  currBldrCtx = &BuilderCtx;
-
+void ExprEngine::processStaticInitializer(const DeclStmt *DS,
+                                          ExplodedNode *Pred,
+                                          ExplodedNodeSet &Dst,
+                                          const CFGBlock *DstT,
+                                          const CFGBlock *DstF) {
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Dst, BuilderCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, *currBldrCtx, DstT, DstF);
 
   if (!initHasRun) {
     state = state->add<InitializedGlobalsSet>(VD);
@@ -3095,12 +3093,11 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a switch statement.
-void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
-                               ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-  currBldrCtx = &BC;
+void ExprEngine::processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
+                               ExplodedNodeSet &Dst) {
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Dst, BC);
+  SwitchNodeBuilder Builder(Dst, *currBldrCtx);
   ExplodedNodeSet CheckersOutSet;
 
   getCheckerManager().runCheckersForBranchCondition(
@@ -3601,7 +3598,7 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
     }
 
     State = State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                     currBldrCtx->blockCount(), LCtx,
+                                     getNumVisitedCurrent(), LCtx,
                                      /*CausedByPointerEscape*/ true,
                                      /*Symbols=*/nullptr);
 
@@ -3950,7 +3947,7 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
       state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       currBldrCtx->blockCount(),
+                                       getNumVisitedCurrent(),
                                        Pred->getLocationContext(),
                                        /*CausedByPointerEscape=*/true);
   }
@@ -3961,7 +3958,7 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
       state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       currBldrCtx->blockCount(),
+                                       getNumVisitedCurrent(),
                                        Pred->getLocationContext(),
                                        /*CausedByPointerEscape=*/true);
   }
