@@ -161,7 +161,7 @@ def TuneSHXADDLoadFusion
 //   and/or/xor rd, rd, rs3
 let IsCommutable = 1 in
 def TuneFusionLogicRegReg
-  : SimpleFusion<"fusion-logic-reg-reg", "HasFusionLogicRegReg",
+  : SimpleFusion<"logic-reg-reg", "HasFusionLogicRegReg",
                  "Enable AND/OR/XOR+AND/OR/XOR macrofusion",
                  CheckOpcode<LogicOp>,
                  CheckOpcode<LogicOp>>;
@@ -170,7 +170,7 @@ def TuneFusionLogicRegReg
 //   and/or/xor rd, rs1, rs2
 //   andi/ori/xori rd, rd, imm
 def TuneFusionLogicRegImm
-  : SimpleFusion<"fusion-logic-reg-imm", "HasFusionLogicRegImm",
+  : SimpleFusion<"logic-reg-imm", "HasFusionLogicRegImm",
                  "Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion",
                  CheckOpcode<LogicOp>,
                  CheckOpcode<LogicImmOp>>;
@@ -180,7 +180,7 @@ def TuneFusionLogicRegImm
 //   and/or/xor rd, rd, rs2
 let IsCommutable = 1 in
 def TuneFusionLogicImmReg
-  : SimpleFusion<"fusion-logic-imm-reg", "HasFusionLogicImmReg",
+  : SimpleFusion<"logic-imm-reg", "HasFusionLogicImmReg",
                  "Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion",
                  CheckOpcode<LogicImmOp>,
                  CheckOpcode<LogicOp>>;
@@ -189,7 +189,7 @@ def TuneFusionLogicImmReg
 //   mul(w) rd, rs1, rs2
 //   add(w) rd, rd, rs3
 def TuneFusionMulAdd
-  : SimpleFusion<"fusion-mul-add", "HasFusionMulAdd",
+  : SimpleFusion<"mul-add", "HasFusionMulAdd",
                  "Enable MUL+ADD macrofusion",
                  CheckOpcode<[MUL, MULW]>,
                  CheckOpcode<[ADD, ADDW]>,
@@ -209,7 +209,7 @@ def TuneFusionMulAdd
 //   add rd, rs1, rs2
 //   load/store rt, 0(rd)
 def TuneFusionAddMem
-  : Fusion<"fusion-add-mem", "HasFusionAddMem",
+  : Fusion<"add-mem", "HasFusionAddMem",
            "Enable ADD+LOAD/STORE macrofusion",
            [
              SecondFusionPredicateWithMCInstPredicate<
@@ -235,7 +235,7 @@ def TuneFusionAddMem
 //   srli(w)/srai(w) rd, rd, imm2
 //   where imm1 <= imm2
 def TuneFusionShiftBitExtract
-  : SimpleFusion<"fusion-shift-bit-extract", "HasFusionShiftBitExtract",
+  : SimpleFusion<"shift-bit-extract", "HasFusionShiftBitExtract",
                  "Enable SLLI+SRLI/SRAI macrofusion",
                  CheckOpcode<ShiftLeft>,
                  CheckOpcode<ShiftRight>,

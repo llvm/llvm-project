@@ -65,7 +65,6 @@
 ; CHECK-NEXT:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.
-; CHECK-NEXT:   mipsexectl                       - 'XMIPSEXECTL' (MIPS execution control).
 ; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference..
 ; CHECK-NEXT:   no-sink-splat-operands           - Disable sink splat operands to enable .vx, .vf,.wx, and .wf instructions.
 ; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store..
@@ -203,6 +202,7 @@
 ; CHECK-NEXT:   xcvsimd                          - 'XCVsimd' (CORE-V SIMD ALU).
 ; CHECK-NEXT:   xmipscbop                        - 'XMIPSCBOP' (MIPS Software Prefetch).
 ; CHECK-NEXT:   xmipscmov                        - 'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov)).
+; CHECK-NEXT:   xmipsexectl                      - 'XMIPSEXECTL' (MIPS execution control).
 ; CHECK-NEXT:   xmipslsp                         - 'XMIPSLSP' (MIPS optimization for hardware load-store bonding).
 ; CHECK-NEXT:   xqccmp                           - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
 ; CHECK-NEXT:   xqci                             - 'Xqci' (Qualcomm uC Extension).
