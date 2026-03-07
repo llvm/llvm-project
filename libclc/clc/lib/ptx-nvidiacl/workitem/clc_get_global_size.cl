@@ -6,17 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/opencl-base.h>
+#include "clc/workitem/clc_get_global_size.h"
+#include "clc/workitem/clc_get_local_size.h"
+#include "clc/workitem/clc_get_num_groups.h"
 
-_CLC_DEF _CLC_OVERLOAD size_t get_local_size(uint dim) {
-  switch (dim) {
-  case 0:
-    return __builtin_amdgcn_workgroup_size_x();
-  case 1:
-    return __builtin_amdgcn_workgroup_size_y();
-  case 2:
-    return __builtin_amdgcn_workgroup_size_z();
-  default:
-    return 1;
-  }
+_CLC_DEF _CLC_OVERLOAD size_t __clc_get_global_size(uint dim) {
+  return __clc_get_num_groups(dim) * __clc_get_local_size(dim);
 }
