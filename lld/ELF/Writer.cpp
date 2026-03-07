@@ -1546,7 +1546,12 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   while (!ctx.arg.relocatable) {
     bool changed = ctx.target->needsThunks
                        ? tc.createThunks(pass, ctx.outputSections)
-                       : ctx.target->relaxOnce(pass);
+                       : false;
+    // x86-64 needs both thunks (for range extension) and relaxOnce (for
+    // reverting GOT relaxations when addresses overflow 32 bits). Other
+    // architectures either use thunks only or relaxOnce only, and the
+    // default relaxOnce returns false.
+    changed |= ctx.target->relaxOnce(pass);
     bool spilled = ctx.script->spillSections();
     changed |= spilled;
     ++pass;

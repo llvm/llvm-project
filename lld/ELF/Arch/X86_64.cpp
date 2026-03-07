@@ -55,6 +55,11 @@ public:
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
   void scanSection(InputSectionBase &sec) override;
+  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
+  bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
+  uint32_t getThunkSectionSpacing() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -96,6 +101,10 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   ipltEntrySize = 16;
   trapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
   nopInstrs = nopInstructions;
+
+  // Enable thunks for x86-64 to support binaries where .text exceeds 2GiB.
+  // This is needed when RIP-relative branches (R_X86_64_PLT32) overflow.
+  needsThunks = true;
 
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
@@ -381,8 +390,15 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
     return R_DTPREL;
   case R_X86_64_PC8:
   case R_X86_64_PC16:
-  case R_X86_64_PC32:
   case R_X86_64_PC64:
+    return R_PC;
+  case R_X86_64_PC32:
+    // Old compilers (pre-2017 binutils) may use R_X86_64_PC32 for call/jmp
+    // instructions. Check the opcode byte to promote branches to R_PLT_PC
+    // so they are eligible for thunking and PLT optimization, while keeping
+    // data references (lea, mov) as plain R_PC.
+    if (loc[-1] == 0xe8 || loc[-1] == 0xe9)
+      return R_PLT_PC;
     return R_PC;
   case R_X86_64_GOTOFF64:
     return R_GOTPLTREL;
@@ -1499,6 +1515,50 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
 
   write32le(buf + 3, sym.getGotPltVA(ctx) - pltEntryAddr - 7);
   write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
+}
+
+// For x86-64, thunks are needed when the displacement between the branch
+// instruction and its target exceeds the 32-bit signed range (2GiB).
+// This can happen in very large binaries where .text exceeds 2GiB.
+bool X86_64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                        uint64_t branchAddr, const Symbol &s, int64_t a) const {
+  // Only branch relocations need thunks.
+  // R_X86_64_PLT32 is used for call/jmp instructions and always needs thunks.
+  // R_X86_64_PC32 is more general and can be used for both branches and data
+  // accesses (lea, mov). We only create thunks for function symbols which we handle
+  // in getRelExpr by disassembling the instruction.
+  if (type != R_X86_64_PLT32)
+    return false;
+
+  // If the target requires a PLT entry, check if we can reach the PLT
+  if (s.isInPlt(ctx)) {
+    uint64_t dst = s.getPltVA(ctx) + a;
+    return !inBranchRange(type, branchAddr, dst);
+  }
+
+  // For direct calls/jumps, check if we can reach the destination
+  uint64_t dst = s.getVA(ctx, a);
+  return !inBranchRange(type, branchAddr, dst);
+}
+
+// Check if a branch from src to dst is within the 32-bit signed range.
+bool X86_64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
+  // x86-64 RIP-relative branches use a 32-bit signed displacement.
+  // The displacement is relative to the address after the instruction,
+  // which is typically 4-5 bytes after the relocation location.
+  // We use a conservative range check here.
+  int64_t offset = dst - src;
+  return llvm::isInt<32>(offset);
+}
+
+// Return the spacing for thunk sections. We want thunks to be placed
+// at intervals such that all branches can reach either the target or
+// a thunk. With a 2GiB range, we place thunks every ~1GiB to allow
+// branches to reach in either direction.
+uint32_t X86_64::getThunkSectionSpacing() const {
+  // 1GiB spacing - gives us 1GiB forward and 1GiB backward range
+  // from any point, which covers the 2GiB total range.
+  return 0x40000000;
 }
 
 void elf::setX86_64TargetInfo(Ctx &ctx) {
