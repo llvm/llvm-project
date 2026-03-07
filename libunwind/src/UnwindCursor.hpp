@@ -2901,7 +2901,13 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   //  - The PC is invalid and happens to point to unreadable or unmapped memory.
   //
   // [1] https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/vdso/sigreturn.S
-  const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
+  typename R::link_reg_t pc;
+  _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
   if (!isReadableAddr(pc))
@@ -2944,8 +2950,14 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
                                          static_cast<pint_t>(i * 8));
     _registers.setRegister(UNW_AARCH64_X0 + i, value);
   }
-  _registers.setSP(_addressSpace.get64(sigctx + kOffsetSp));
-  _registers.setIP(_addressSpace.get64(sigctx + kOffsetPc));
+  uint64_t sp = _addressSpace.get64(sigctx + kOffsetSp);
+  uint64_t ip = _addressSpace.get64(sigctx + kOffsetPc);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  ip = (uint64_t)ptrauth_sign_unauthenticated((void *)ip,
+                                              ptrauth_key_return_address, sp);
+#endif
+  _registers.setSP(sp);
+  _registers.setIP(ip);
   _isSignalFrame = true;
   return UNW_STEP_SUCCESS;
 }
