@@ -105,11 +105,8 @@ public:
     };
     unsigned char Direction : 3; // Init to ALL, then refine.
     bool Scalar : 1;             // Init to true.
-    bool PeelFirst : 1; // Peeling the first iteration will break dependence.
-    bool PeelLast : 1;  // Peeling the last iteration will break the dependence.
     const SCEV *Distance = nullptr; // NULL implies no distance available.
-    DVEntry()
-        : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false) {}
+    DVEntry() : Direction(ALL), Scalar(true) {}
   };
 
   /// getSrc - Returns the source instruction for this dependence.
@@ -177,18 +174,6 @@ public:
   /// Src and Dst, plus reversing the dependence directions and distances
   /// in the vector.
   virtual bool normalize(ScalarEvolution *SE) { return false; }
-
-  /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  virtual bool isPeelFirst(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
-
-  /// isPeelLast - Returns true if peeling the last iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  virtual bool isPeelLast(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
@@ -295,14 +280,6 @@ public:
   /// Src and Dst, plus reversing the dependence directions and distances
   /// in the vector.
   bool normalize(ScalarEvolution *SE) override;
-
-  /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  bool isPeelFirst(unsigned Level, bool SameSD = false) const override;
-
-  /// isPeelLast - Returns true if peeling the last iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  bool isPeelLast(unsigned Level, bool SameSD = false) const override;
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and

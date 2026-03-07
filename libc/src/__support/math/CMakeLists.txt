@@ -1164,6 +1164,17 @@ add_header_library(
 )
 
 add_header_library(
+  ffmaf128
+  HDRS
+    ffmaf128.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
   ffmal
   HDRS
     ffmal.h

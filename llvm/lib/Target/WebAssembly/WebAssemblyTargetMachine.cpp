@@ -51,12 +51,6 @@ static cl::opt<bool> WasmDisableExplicitLocals(
              " instruction output for test purposes only."),
     cl::init(false));
 
-static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
-    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
-    cl::desc("webassembly: disables the fix "
-             " irreducible control flow optimization pass"),
-    cl::init(false));
-
 // Exception handling & setjmp-longjmp handling related options.
 
 // Emscripten's asm.js-style exception handling
@@ -609,8 +603,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(&UnreachableMachineBlockElimID);
 
   // Eliminate multiple-entry loops.
-  if (!WasmDisableFixIrreducibleControlFlowPass)
-    addPass(createWebAssemblyFixIrreducibleControlFlow());
+  addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.

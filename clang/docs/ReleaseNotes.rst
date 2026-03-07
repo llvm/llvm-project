@@ -285,6 +285,12 @@ Improvements to Clang's diagnostics
 - ``-Wunsafe-buffer-usage`` now warns about unsafe two-parameter constructors of
   ``std::string_view`` (pointer and size), consistent with the existing warning for ``std::span``.
 
+- Added ``-Wmodule-map-path-outside-directory`` (off by default) to warn on
+  header and umbrella directory paths that use ``..`` to refer outside the module
+  directory in module maps found via implicit search
+  (``-fimplicit-module-maps``). This does not affect module maps specified
+  explicitly via ``-fmodule-map-file=``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -340,6 +346,7 @@ Bug Fixes to C++ Support
   and produce a warning. (#GH162640)
 
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
+- Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

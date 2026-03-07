@@ -4323,10 +4323,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::TaskReduction>(clause.u) &&
         !std::holds_alternative<clause::Detach>(clause.u) &&
         !std::holds_alternative<clause::Device>(clause.u)) {
-      std::string name =
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
-      if (!semaCtx.langOptions().OpenMPSimd)
+      const common::LangOptions &options = semaCtx.langOptions();
+      if (!options.OpenMPSimd) {
+        std::string name =
+            parser::omp::GetUpperName(clause.id, options.OpenMPVersion);
         TODO(clauseLocation, name + " clause is not implemented yet");
+      }
     }
   }
 
