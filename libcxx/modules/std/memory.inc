@@ -194,6 +194,15 @@ export namespace std {
   using std::inout_ptr;
 #endif // _LIBCPP_STD_VER >= 23
 
+#if _LIBCPP_STD_VER >= 26
+  // [indirect], class template indirect
+  using std::indirect;
+
+  namespace pmr {
+    using std::pmr::indirect;
+  }
+#endif // _LIBCPP_STD_VER >= 26
+
 #if _LIBCPP_HAS_THREADS
   // [depr.util.smartptr.shared.atomic]
   using std::atomic_is_lock_free;

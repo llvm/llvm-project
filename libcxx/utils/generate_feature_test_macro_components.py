@@ -745,6 +745,13 @@ feature_test_macros = [
             "headers": ["forward_list", "list", "vector"],
         },
         {
+            "name": "__cpp_lib_indirect",
+            "values": {
+                "c++26": 202502
+            },  # P3019R14 indirect and polymorphic: Vocabulary Types for Composite Class Design
+            "headers": ["memory"],
+        },
+        {
             "name": "__cpp_lib_inplace_vector",
             "values": {"c++26": 202406},  # P0843R14 inplace_vector
             "headers": ["inplace_vector"],

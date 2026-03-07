@@ -1661,6 +1661,13 @@ module std [system] {
     module destroy                            { header "__memory/destroy.h" }
     module destruct_n                         { header "__memory/destruct_n.h" }
     module fwd                                { header "__fwd/memory.h" }
+    module indirect {
+      header "__memory/indirect.h"
+      export std.memory.allocator
+      export std.compare.ordering
+      export std.utility.in_place
+      export std.functional.hash
+    }
     module inout_ptr                          { header "__memory/inout_ptr.h" }
     module is_sufficiently_aligned            { header "__memory/is_sufficiently_aligned.h" }
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
