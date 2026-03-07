@@ -201,6 +201,16 @@ wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
   return exeRegionOp;
 }
 
+/// Return true if \p v is a constant index with a negative value.
+static bool isNegativeConstantIndex(Value v) {
+  if (auto cst = v.getDefiningOp<arith::ConstantIndexOp>())
+    return cst.value() < 0;
+  if (auto cst = v.getDefiningOp<arith::ConstantOp>())
+    if (auto intAttr = dyn_cast<IntegerAttr>(cst.getValue()))
+      return intAttr.getInt() < 0;
+  return false;
+}
+
 scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
                                   bool enableCollapse) {
   assert(!loopOp.getUnstructured() &&
@@ -218,20 +228,44 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(loopOp);
 
-  // First, compute ALL loop bounds at the current insertion point (before
-  // any ForOp). This ensures all bounds are defined in the outer scope,
-  // which is required for coalesceLoops to work correctly.
+  // Determine which loops need normalization (negative constant step).
+  // scf.for requires a positive step, so loops with a negative step must be
+  // normalized to lb=0, step=1, ub=tripCount with IV denormalization.
+  SmallVector<bool> needsNormalize;
+  for (BlockArgument iv : loopOp.getBody().getArguments()) {
+    size_t idx = iv.getArgNumber();
+    needsNormalize.push_back(isNegativeConstantIndex(loopOp.getStep()[idx]));
+  }
+
+  // Pre-compute all loop bounds before creating any ForOp.
   SmallVector<Value> lowerBounds, upperBounds, steps;
   for (BlockArgument iv : loopOp.getBody().getArguments()) {
     size_t idx = iv.getArgNumber();
-    Value newLowerBound = getValueOrCreateCastToIndexLike(
-        rewriter, loc, indexType, loopOp.getLowerbound()[idx]);
-    Value newUpperBound = getExclusiveUpperBoundAsIndex(loopOp, idx, rewriter);
-    Value newStep = getValueOrCreateCastToIndexLike(rewriter, loc, indexType,
-                                                    loopOp.getStep()[idx]);
-    lowerBounds.push_back(newLowerBound);
-    upperBounds.push_back(newUpperBound);
-    steps.push_back(newStep);
+
+    if (needsNormalize[idx]) {
+      bool inclusiveUpperbound = false;
+      if (loopOp.getInclusiveUpperbound().has_value())
+        inclusiveUpperbound =
+            loopOp.getInclusiveUpperboundAttr().asArrayRef()[idx];
+
+      Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+      Value tc = calculateTripCount(rewriter, loc, loopOp.getLowerbound()[idx],
+                                    loopOp.getUpperbound()[idx],
+                                    loopOp.getStep()[idx], inclusiveUpperbound);
+      lowerBounds.push_back(zero);
+      upperBounds.push_back(tc);
+      steps.push_back(one);
+    } else {
+      Value newLB = getValueOrCreateCastToIndexLike(
+          rewriter, loc, indexType, loopOp.getLowerbound()[idx]);
+      Value newUB = getExclusiveUpperBoundAsIndex(loopOp, idx, rewriter);
+      Value newStep = getValueOrCreateCastToIndexLike(rewriter, loc, indexType,
+                                                      loopOp.getStep()[idx]);
+      lowerBounds.push_back(newLB);
+      upperBounds.push_back(newUB);
+      steps.push_back(newStep);
+    }
   }
 
   // Now create the nested ForOps using the pre-computed bounds
@@ -260,6 +294,18 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   // Clone the loop body into the innermost scf.for
   cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
                             rewriter.getInsertionPoint(), mapping, rewriter);
+
+  // Denormalize IV uses for normalized loops only
+  for (size_t idx = 0; idx < forOps.size(); ++idx) {
+    if (!needsNormalize[idx])
+      continue;
+    Value iv = forOps[idx].getInductionVar();
+    if (!iv.use_empty()) {
+      rewriter.setInsertionPointToStart(forOps[idx].getBody());
+      normalizeIVUses(rewriter, loc, iv, loopOp.getLowerbound()[idx],
+                      loopOp.getStep()[idx]);
+    }
+  }
 
   // Optionally collapse nested loops
   if (enableCollapse && forOps.size() > 1)

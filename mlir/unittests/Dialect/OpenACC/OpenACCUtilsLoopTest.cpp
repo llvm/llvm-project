@@ -231,10 +231,9 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithI32Bounds) {
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
   auto [module, funcOp] =
       createModuleWithFuncArgs({b.getIndexType(), b.getIndexType()});
-  Block &entryBlock = funcOp.getBody().front();
 
-  Value lb = entryBlock.getArgument(0);
-  Value ub = entryBlock.getArgument(1);
+  Value lb = funcOp.getArgument(0);
+  Value ub = funcOp.getArgument(1);
   Value step = createIndexConstant(1);
 
   acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
@@ -243,11 +242,10 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
 
   ASSERT_TRUE(forOp);
 
-  // Lower bound should be the function argument (no cast needed for index)
+  // Positive step: bounds passed through directly (no normalization)
   EXPECT_EQ(forOp.getLowerBound(), lb);
 
   // Upper bound should be ub + 1 (for inclusive -> exclusive conversion)
-  // Check it's an addi of ub and 1
   auto ubAddOp = forOp.getUpperBound().getDefiningOp<arith::AddIOp>();
   ASSERT_TRUE(ubAddOp);
   EXPECT_EQ(ubAddOp.getLhs(), ub);
@@ -255,7 +253,6 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
   ASSERT_TRUE(oneConst.has_value());
   EXPECT_EQ(*oneConst, 1);
 
-  // Step should be the constant 1
   EXPECT_EQ(forOp.getStep(), step);
 }
 
@@ -353,10 +350,42 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForExclusiveUpperBound) {
 
   ASSERT_TRUE(forOp);
 
-  // With exclusive upper bound, ub should remain 10 (no +1 adjustment)
+  // Positive step: bounds passed through directly (no normalization)
   EXPECT_EQ(forOp.getLowerBound(), c0);
   EXPECT_EQ(forOp.getUpperBound(), c10);
   EXPECT_EQ(forOp.getStep(), c1);
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNegativeStep) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  Value cNeg1 = createIndexConstant(-1);
+
+  // acc.loop from 10 to 1 step -1 (inclusive), like Fortran DO k = 10, 1, -1
+  acc::LoopOp loopOp = createLoopOp({c10}, {c1}, {cNeg1});
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  // Normalized: lb=0, step=1, ub=tripCount
+  // tripCount = (1 - 10 + (-1)) / (-1) = (-10) / (-1) = 10
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto ubConst = getConstantIndex(forOp.getUpperBound());
+  ASSERT_TRUE(ubConst.has_value());
+  EXPECT_EQ(*ubConst, 10);
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+
+  EXPECT_TRUE(isa<scf::YieldOp>(forOp.getBody()->getTerminator()));
+  EXPECT_TRUE(module->verify().succeeded());
 }
 
 //===----------------------------------------------------------------------===//
