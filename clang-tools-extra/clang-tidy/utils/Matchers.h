@@ -10,7 +10,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 
 #include "TypeTraits.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/ExprConcepts.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <optional>
 
@@ -71,6 +73,61 @@ AST_MATCHER(Expr, hasUnevaluatedContext) {
   }
   if (const auto *TypeIDExpr = dyn_cast<CXXTypeidExpr>(&Node))
     return !TypeIDExpr->isPotentiallyEvaluated();
+  return false;
+}
+
+AST_MATCHER(Expr, isDiscarded) {
+  const DynTypedNodeList Parents = [&] {
+    const TraversalKindScope _(Finder->getASTContext(),
+                               TK_IgnoreUnlessSpelledInSource);
+    return Finder->getASTContext().getParents(Node);
+  }();
+  if (Parents.size() != 1)
+    return false;
+  const DynTypedNode Parent = Parents[0];
+
+  const Expr *const DesiredNode = Node.IgnoreUnlessSpelledInSource();
+  const auto IsCurrentNode = [&](const Stmt *S) {
+    const auto *const AsExpr = dyn_cast_if_present<Expr>(S);
+    return AsExpr && AsExpr->IgnoreUnlessSpelledInSource() == DesiredNode;
+  };
+
+  if (const auto *While = Parent.get<WhileStmt>())
+    return IsCurrentNode(While->getBody());
+
+  if (const auto *For = Parent.get<ForStmt>())
+    return IsCurrentNode(For->getBody()) || IsCurrentNode(For->getInit()) ||
+           IsCurrentNode(For->getInc());
+
+  if (const auto *Do = Parent.get<DoStmt>())
+    return IsCurrentNode(Do->getBody());
+
+  if (const auto *If = Parent.get<IfStmt>())
+    return IsCurrentNode(If->getThen()) || IsCurrentNode(If->getElse());
+
+  if (const auto *ForRange = Parent.get<CXXForRangeStmt>())
+    return IsCurrentNode(ForRange->getBody());
+
+  if (const auto *Switch = Parent.get<SwitchStmt>())
+    return IsCurrentNode(Switch->getBody());
+
+  if (Parent.get<SwitchCase>())
+    return true;
+
+  if (Parent.get<LabelStmt>())
+    return true;
+
+  if (Parent.get<AttributedStmt>())
+    return true;
+
+  if (const auto *Compound = Parent.get<CompoundStmt>()) {
+    // Is this statement the return value of a GNU statement expression?
+    const DynTypedNodeList Grandparents =
+        Finder->getASTContext().getParents(Parent);
+    return !(Grandparents.size() == 1 && Grandparents[0].get<StmtExpr>() &&
+             IsCurrentNode(Compound->body_back()));
+  }
+
   return false;
 }
 

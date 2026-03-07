@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnusedRaiiCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Lexer.h"
 
@@ -26,12 +27,13 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
   // destroyed.
   Finder->addMatcher(
       mapAnyOf(cxxConstructExpr, cxxUnresolvedConstructExpr)
-          .with(hasParent(compoundStmt().bind("compound")),
-                anyOf(hasType(hasCanonicalType(recordType(hasDeclaration(
+          .with(anyOf(hasType(hasCanonicalType(recordType(hasDeclaration(
                           cxxRecordDecl(hasNonTrivialDestructor()))))),
                       hasType(hasCanonicalType(templateSpecializationType(
                           hasDeclaration(classTemplateDecl(has(
-                              cxxRecordDecl(hasNonTrivialDestructor())))))))))
+                              cxxRecordDecl(hasNonTrivialDestructor())))))))),
+                matchers::isDiscarded(),
+                optionally(hasParent(compoundStmt().bind("compound"))))
           .bind("expr"),
       this);
 }
@@ -39,7 +41,7 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
 template <typename T>
 static void reportDiagnostic(const DiagnosticBuilder &D, const T *Node,
                              SourceRange SR, bool DefaultConstruction) {
-  const char *Replacement = " give_me_a_name";
+  static constexpr StringRef Replacement = " give_me_a_name";
 
   // If this is a default ctor we have to remove the parens or we'll introduce a
   // most vexing parse.
@@ -63,13 +65,12 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
   if (E->getBeginLoc().isMacroID())
     return;
 
-  // Don't emit a warning for the last statement in the surrounding compound
-  // statement.
-  const auto *CS = Result.Nodes.getNodeAs<CompoundStmt>("compound");
-  const auto *LastExpr = dyn_cast<Expr>(CS->body_back());
-
-  if (LastExpr && E == LastExpr->IgnoreUnlessSpelledInSource())
-    return;
+  // Don't emit a warning if this is the last statement in a surrounding
+  // compound statement.
+  if (const auto *CS = Result.Nodes.getNodeAs<CompoundStmt>("compound"))
+    if (const auto *LastExpr = dyn_cast<Expr>(CS->body_back()))
+      if (E == LastExpr->IgnoreUnlessSpelledInSource())
+        return;
 
   // Emit a warning.
   auto D = diag(E->getBeginLoc(), "object destroyed immediately after "

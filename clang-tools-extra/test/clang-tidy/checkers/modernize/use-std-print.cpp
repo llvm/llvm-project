@@ -178,11 +178,23 @@ int printf_uses_return_value(int choice) {
   const int x = ({ printf("GCC statement expression using return value immediately %d\n", i); });
   const int y = ({ const int y = printf("GCC statement expression using return value immediately %d\n", i); y; });
 
+  ({
+    printf("Inside GCC statement expression %d\n", i);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+    // CHECK-FIXES: std::println("Inside GCC statement expression {}", i);
+    10;
+  });
+
   // Ideally we would convert this one, but the current check doesn't cope with
   // that.
   ({ printf("GCC statement expression with unused result %d\n", i); });
   // CHECK-MESSAGES-NOT: [[@LINE-1]]:6: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
   // CHECK-FIXES-NOT: std::println("GCC statement expression with unused result {}", i);
+
+label:
+  printf("Label target %d\n", i);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("Label target {}", i);
 
   return printf("Return value used in return\n");
 }
