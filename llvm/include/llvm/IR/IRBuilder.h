@@ -2300,6 +2300,18 @@ public:
   LLVM_ABI Value *CreateBitPreservingCastChain(const DataLayout &DL, Value *V,
                                                Type *NewTy);
 
+  /// Reinterpret the bits of \p Src (starting at \p SrcBitOffset) into \p
+  /// DestTy (starting at \p DstBitOffset). Operate on arbitrary aggregate types
+  /// using DataLayout for field offsets. Destination bits not covered by \p Src
+  /// are poison. Bit manipulation is performed leaf-by-leaf at most one leaf's
+  /// width at a time, so no unnecessary ptr casts will be inserted.
+  /// Does not support SVE, since it needs the layout to interpret offsets and
+  /// sizes. Use CreateBitPreservingCastChain internally to generate casts.
+  LLVM_ABI Value *CreateLayoutReinterpretCast(Value *Src, Type *DestTy,
+                                              uint64_t SrcBitOffset = 0,
+                                              uint64_t DstBitOffset = 0,
+                                              const Twine &Name = "");
+
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions
   //===--------------------------------------------------------------------===//

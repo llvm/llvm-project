@@ -139,7 +139,7 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   };
 
   // See if we need inttoptr for this type pair. May require additional bitcast.
-  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+  if (!OldTy->isPtrOrPtrVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
     // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
     // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
@@ -148,7 +148,7 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   }
 
   // See if we need ptrtoint for this type pair. May require additional bitcast.
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
+  if (OldTy->isPtrOrPtrVectorTy() && !NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
     // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
@@ -174,6 +174,550 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   }
 
   return CreateBitCastLike(V, NewTy);
+}
+
+//===----------------------------------------------------------------------===//
+// CreateLayoutReinterpretCast helpers
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+// Lazy DFS iterator over the leaves of a type tree.
+struct TypeLeafIterator {
+  // A fully structured GEP representation over a specific type
+  struct PathGEP {
+    // Type of parent
+    Type *ParentTy;
+    // Index of leaf element in Parent
+    unsigned CurrentIdx;
+    // Count of elements in Parent
+    unsigned EndIdx;
+    // Absolute byte offset, from start of outermost type.
+    uint64_t ParentOffset;
+  };
+
+  struct Leaf {
+    // Absolute byte offset, from start of outermost type.
+    uint64_t Offset;
+    // Size of Ty
+    uint64_t BitWidth;
+    // `advance` sets this to an integer, float, pointer, or vector thereof.
+    // `pop` sets it to the parent of that.
+    Type *Ty;
+  };
+
+  const DataLayout &DL;
+  SmallVector<PathGEP, 8> Path;
+  Leaf Element;
+  bool Done;
+
+  static unsigned numChildren(Type *Ty) {
+    if (auto *STy = dyn_cast<StructType>(Ty))
+      return STy->getNumElements();
+    if (auto *ATy = dyn_cast<ArrayType>(Ty))
+      return ATy->getNumElements();
+    return 0;
+  }
+
+  TypeLeafIterator(Type *RootTy, const DataLayout &DL) : DL(DL), Done(false) {
+    unsigned N = numChildren(RootTy);
+    if (N) {
+      Path.push_back({RootTy, -1U, N, 0});
+      advance();
+    } else
+      Element = Leaf{0, DL.getTypeStoreSizeInBits(RootTy), RootTy};
+  }
+
+  bool done() { return Done; }
+
+  void advance() {
+    while (!Path.empty()) {
+      PathGEP &W = Path.back();
+
+      unsigned Idx = ++W.CurrentIdx;
+      if (Idx == W.EndIdx) {
+        Path.pop_back();
+        continue;
+      }
+
+      Type *ChildTy;
+      uint64_t ChildBitOffset;
+      if (auto *STy = dyn_cast<StructType>(W.ParentTy)) {
+        ChildTy = STy->getElementType(Idx);
+        ChildBitOffset =
+            W.ParentOffset + DL.getStructLayout(STy)->getElementOffset(Idx);
+      } else if (auto *ATy = dyn_cast<ArrayType>(W.ParentTy)) {
+        // Arrays: stride is alloc size (includes tail padding on element)
+        ChildTy = ATy->getElementType();
+        ChildBitOffset = W.ParentOffset + Idx * DL.getTypeAllocSize(ChildTy);
+      }
+
+      unsigned N = numChildren(ChildTy);
+      if (N)
+        Path.push_back({ChildTy, -1U, N, ChildBitOffset});
+      else {
+        Element = {ChildBitOffset, DL.getTypeStoreSizeInBits(ChildTy), ChildTy};
+        return;
+      }
+    }
+    Done = true;
+  }
+
+  bool parent_equal(const TypeLeafIterator &O) const {
+    if (Path.empty() || O.Path.empty())
+      return false;
+    const PathGEP &PT = Path.back();
+    const PathGEP &PO = O.Path.back();
+    return PT.ParentTy == PO.ParentTy && PT.CurrentIdx == 0 &&
+           PO.CurrentIdx == 0;
+  }
+
+  void pop() {
+    PathGEP &W = Path.back();
+    assert(W.CurrentIdx == 0);
+    Element = {W.ParentOffset, DL.getTypeStoreSizeInBits(W.ParentTy),
+               W.ParentTy};
+    Path.pop_back();
+  }
+};
+
+// Build parameter for testing nested vs flat FCA: use incremental
+// insert/extract or full
+static const bool USE_FULL_IDX = false;
+struct AggChild {
+  Value *V = nullptr;
+  unsigned AtIdx = 0;
+};
+using IncompleteAgg = SmallVector<AggChild>;
+
+// Given a GEP path in SrcIt, extract Src, caching in Srcs.
+static Value *buildExtractSrc(IRBuilderBase &B, Value *Src,
+                              TypeLeafIterator SrcIt, IncompleteAgg &Srcs) {
+  auto &Path = SrcIt.Path;
+  size_t NumElem = Path.size();
+  if (NumElem == 0)
+    return Src;
+  if (USE_FULL_IDX) {
+    // TODO: implement caching in Srcs
+    SmallVector<unsigned> ChildIdxs;
+    ChildIdxs.reserve(NumElem);
+    for (auto Child : Path)
+      ChildIdxs.push_back(Child.CurrentIdx);
+    return B.CreateExtractValue(Src, ChildIdxs);
+  }
+  // Truncate old Srcs at first mismatching index
+  size_t Idx = 0;
+  for (; Idx < Srcs.size(); ++Idx) {
+    if (Idx >= NumElem || Srcs[Idx].AtIdx != Path[Idx].CurrentIdx) {
+      Srcs.truncate(Idx);
+      break;
+    }
+  }
+  // Then extract new index until completed
+  for (; Idx < NumElem; ++Idx) {
+    unsigned ChildIdx = Path[Idx].CurrentIdx;
+    Value *Base = Idx == 0 ? Src : Srcs[Idx - 1].V;
+    Base = B.CreateExtractValue(Base, ChildIdx);
+    Srcs.push_back({Base, ChildIdx});
+  }
+  return Srcs.back().V;
+}
+
+// Given a GEP path in DstIt, insert Fragment, caching in Dsts.
+static void buildInsertDst(IRBuilderBase &B, const TypeLeafIterator &DstIt,
+                           Value *Fragment, IncompleteAgg &Dsts) {
+  auto &Path = DstIt.Path;
+  size_t NumElem = Path.size();
+  if (NumElem == 0 && Fragment) {
+    assert(Dsts.empty());
+    Dsts.push_back({Fragment, -1U});
+    return;
+  }
+  if (USE_FULL_IDX) {
+    if (Dsts.empty())
+      Dsts.push_back({PoisonValue::get(Path[0].ParentTy), -1U});
+    if (!Fragment)
+      return;
+    SmallVector<unsigned> ChildIdxs;
+    ChildIdxs.reserve(NumElem);
+    for (auto Child : Path)
+      ChildIdxs.push_back(Child.CurrentIdx);
+    Dsts[0].V = B.CreateInsertValue(Dsts[0].V, Fragment, ChildIdxs);
+    return;
+  }
+  volatile size_t Idx = 0;
+  if (!Dsts.empty()) {
+    // Find first mismatching index in Dsts
+    for (; Idx < NumElem && Idx < Dsts.size(); ++Idx) {
+      unsigned ChildIdx = Path[Idx].CurrentIdx;
+      if (Dsts[Idx].AtIdx != ChildIdx)
+        break;
+    }
+    // Truncate until that is the last item
+    while (Idx + 1 < Dsts.size()) {
+      volatile AggChild Last = Dsts.pop_back_val();
+      AggChild &Parent = Dsts.back();
+      assert(Parent.AtIdx != -1U);
+      Parent.V = B.CreateInsertValue(Parent.V, Last.V, Parent.AtIdx);
+      Parent.AtIdx = -1;
+    }
+    if (NumElem == 0)
+      return;
+    // Update just child index of last item
+    Dsts[Idx].AtIdx = Path[Idx].CurrentIdx;
+    ++Idx;
+  }
+  assert(NumElem);
+  // Now initialize new elements in this path with poison
+  for (; Idx < NumElem; ++Idx) {
+    unsigned ChildIdx = Path[Idx].CurrentIdx;
+    Value *Base = PoisonValue::get(Path[Idx].ParentTy);
+    Dsts.push_back({Base, ChildIdx});
+  }
+  AggChild &Tail = Dsts.back();
+  assert(Tail.AtIdx == Path.back().CurrentIdx);
+  Tail.AtIdx = -1U; // Unused.
+  Tail.V = B.CreateInsertValue(Tail.V, Fragment, Path.back().CurrentIdx);
+}
+
+// Build the IR value for one destination leaf, given its source contributions.
+static Value *
+buildDstLeaf(IRBuilderBase &B, const DataLayout &DL,
+             Value *Fragment,      // Current parts of Dst, or nullptr
+             Type *Ty,             // Target Type
+             Value *SrcVal,        // Source Value
+             uint64_t SrcBitWidth, // Size of Src
+             uint64_t DstBitWidth, // Size of Dst
+             uint64_t SrcShift,    // Bytes to shift within src leaf before use.
+             uint64_t DstShift,    // Bytes to shift before placing in dst leaf.
+             uint64_t BitWidth) {  // Bits to be transferred.
+
+  // Type-preserving path: single full-width, zero-shift contribution where the
+  // source leaf is exactly the same width as the destination leaf.
+  if (Fragment == nullptr && SrcShift == 0 && DstShift == 0 &&
+      BitWidth == DstBitWidth && BitWidth == SrcBitWidth) {
+    return B.CreateBitPreservingCastChain(DL, SrcVal, Ty);
+  }
+
+  // Try to keep vectors as vectors, instead of using large integers.
+  // This is required, at minimum, when both types contain ptrs,
+  // since those need to get moved without inttoptr / ptrtoint pairs whenever
+  // applicable and possible.
+  if (BitWidth > 0 && BitWidth % 8 == 0) {
+    // If the source is a vector, try to extract the relevant element directly
+    // with extractelement, rather than converting the whole vector to an
+    // integer.
+    if ((SrcShift * 8) % BitWidth == 0) {
+      if (auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcVal->getType())) {
+        Type *EltTy = SrcVecTy->getElementType();
+        bool SameWidthAsSrc = BitWidth == DL.getTypeSizeInBits(EltTy);
+        if (!SameWidthAsSrc && BitWidth == DstBitWidth && !Ty->isVectorTy() &&
+            SrcBitWidth % BitWidth == 0) {
+          // Bitcast SrcVal to a vector of Ty so that extractelement below can
+          // be used
+          unsigned NewNumElts = SrcBitWidth / BitWidth;
+          SrcVecTy = FixedVectorType::get(Ty, NewNumElts);
+          SrcVal = B.CreateBitPreservingCastChain(DL, SrcVal, SrcVecTy);
+          SameWidthAsSrc = true;
+        }
+        if (SameWidthAsSrc) {
+          // SrcShift is the byte offset from the start (LE) or end (BE) of the
+          // source vector register to the overlap region. Convert to element
+          // index.
+          uint64_t EltIdx = SrcShift * 8 / BitWidth;
+          if (DL.isBigEndian())
+            EltIdx = SrcVecTy->getNumElements() - 1 - EltIdx;
+          SrcVal = B.CreateExtractElement(SrcVal, EltIdx);
+          SrcBitWidth = BitWidth;
+          SrcShift = 0;
+          // After extractelement the type-preserving conditions may now hold;
+          // short-circuit to avoid the integer round-trip in the general path.
+          if (Fragment == nullptr && DstShift == 0 && BitWidth == DstBitWidth)
+            return B.CreateBitPreservingCastChain(DL, SrcVal, Ty);
+        }
+      }
+    }
+
+    // If the destination is a vector, try to place the
+    // value with insertelement rather than building a large integer and
+    // bitcasting at the end.
+    if ((DstShift * 8) % BitWidth == 0) {
+      if (auto *DstVecTy = dyn_cast<FixedVectorType>(Ty)) {
+        Type *EltTy = DstVecTy->getElementType();
+        bool SameWidthAsDst = BitWidth == DL.getTypeSizeInBits(EltTy);
+        if (!SameWidthAsDst && BitWidth == SrcBitWidth &&
+            !SrcVal->getType()->isVectorTy() && DstBitWidth % BitWidth == 0) {
+          // If possible, replace DstVecTy with a vector of SrcVal's type so
+          // that insertelement below can be used.
+          Type *SrcTy = SrcVal->getType();
+          unsigned NewNumElts = DstBitWidth / BitWidth;
+          DstVecTy = FixedVectorType::get(SrcTy, NewNumElts);
+          EltTy = SrcTy;
+          SameWidthAsDst = true;
+        }
+        if (SameWidthAsDst) {
+          // DstShift is the byte offset from the start (LE) or end (BE) of the
+          // destination vector register to the overlap region.
+          uint64_t EltIdx = DstShift * 8 / BitWidth;
+          if (DL.isBigEndian())
+            EltIdx = DstVecTy->getNumElements() - 1 - EltIdx;
+          Value *EltVal;
+          if (SrcShift == 0 && SrcBitWidth == BitWidth) {
+            // Source is already the right size; just bitcast to the element
+            // type.
+            EltVal = B.CreateBitPreservingCastChain(DL, SrcVal, EltTy);
+          } else {
+            // Extract the relevant bits from a larger source via integer ops.
+            if (!isa<IntegerType>(SrcVal->getType()))
+              SrcVal = B.CreateBitPreservingCastChain(DL, SrcVal,
+                                                      B.getIntNTy(SrcBitWidth));
+            if (SrcShift)
+              SrcVal = B.CreateLShr(SrcVal, SrcShift * 8);
+            SrcVal = B.CreateZExtOrTrunc(SrcVal, B.getIntNTy(BitWidth));
+            EltVal = B.CreateBitPreservingCastChain(DL, SrcVal, EltTy);
+          }
+          if (Fragment)
+            Fragment = B.CreateBitPreservingCastChain(DL, Fragment, DstVecTy);
+          else
+            Fragment = PoisonValue::get(DstVecTy);
+          return B.CreateInsertElement(Fragment, EltVal, EltIdx);
+        }
+      }
+    }
+
+    // If both source and destination are vectors, use shufflevector to transfer
+    // multiple elements at once, avoiding integer intermediates.
+    // Requires element-aligned shifts and transfer size.
+    if (isa<FixedVectorType>(SrcVal->getType())) {
+      if (auto *DVTy = dyn_cast<FixedVectorType>(Ty)) {
+        auto *SVTy = cast<FixedVectorType>(SrcVal->getType());
+        uint64_t DstEltBitSize = DL.getTypeSizeInBits(DVTy->getElementType());
+        uint64_t SrcEltBitSize = DL.getTypeSizeInBits(SVTy->getElementType());
+        // Prefer DstEltTy as the common element type (SrcVal gets
+        // reinterpreted). Fall back to SrcEltTy (result gets reinterpreted)
+        // when SrcBitWidth is not divisible by DstEltBitSize but DstBitWidth is
+        // by SrcEltBitSize.
+        Type *EltTy = nullptr;
+        uint64_t EltBitSize = 0;
+        if (DstEltBitSize > 0 && SrcBitWidth % DstEltBitSize == 0 &&
+            BitWidth % DstEltBitSize == 0 &&
+            (DstShift * 8) % DstEltBitSize == 0) {
+          EltTy = DVTy->getElementType();
+          EltBitSize = DstEltBitSize;
+        } else if (SrcEltBitSize > 0 && DstBitWidth % SrcEltBitSize == 0 &&
+                   BitWidth % SrcEltBitSize == 0 &&
+                   (DstShift * 8) % SrcEltBitSize == 0) {
+          EltTy = SVTy->getElementType();
+          EltBitSize = SrcEltBitSize;
+        }
+        if (EltTy) {
+          // Check whether the source extraction can be done directly in
+          // EltBitSize units, or whether we need to shuffle in SrcEltBitSize
+          // units first (when SrcShift is only aligned to SrcEltBitSize, not
+          // EltBitSize).
+          bool SrcShiftAligned = (SrcShift * 8) % EltBitSize == 0;
+          // Shuffle-before-cast: SrcShift aligns to SrcEltBitSize (not
+          // EltBitSize). A single shufflevector in SrcEltTy space directly into
+          // a NumResultElts_src-sized result, then bitcast to ResultVecTy.
+          // Requires both Src/DstShift aligned to SrcEltBitSize.
+          bool ShuffleBeforeCast = !SrcShiftAligned && SrcEltBitSize > 0 &&
+                                   BitWidth % SrcEltBitSize == 0 &&
+                                   (SrcShift * 8) % SrcEltBitSize == 0 &&
+                                   DstBitWidth % SrcEltBitSize == 0 &&
+                                   (DstShift * 8) % SrcEltBitSize == 0;
+          if (SrcShiftAligned || ShuffleBeforeCast) {
+
+            uint64_t NumResultElts = DstBitWidth / EltBitSize;
+            uint64_t NumTransferElts = BitWidth / EltBitSize;
+            uint64_t DstStartElt = (DstShift * 8) / EltBitSize;
+            if (DL.isBigEndian())
+              DstStartElt = NumResultElts - DstStartElt - NumTransferElts;
+
+            auto *ResultVecTy = FixedVectorType::get(EltTy, NumResultElts);
+            // Step 1: scatter the transferred elements into a ResultVecTy-sized
+            // vector at their destination positions (poison elsewhere).
+            // SrcShiftAligned: cast SrcVal to EltTy view, then shufflevector.
+            // ShuffleBeforeCast: shufflevector in SrcEltTy space, then bitcast.
+            Value *SrcExtracted;
+            if (SrcShiftAligned) {
+              uint64_t NumCommonElts = SrcBitWidth / EltBitSize;
+              uint64_t SrcStartElt = (SrcShift * 8) / EltBitSize;
+              if (DL.isBigEndian())
+                SrcStartElt = NumCommonElts - SrcStartElt - NumTransferElts;
+              auto *CommonVecTy = FixedVectorType::get(EltTy, NumCommonElts);
+              Value *SrcAsCommon =
+                  B.CreateBitPreservingCastChain(DL, SrcVal, CommonVecTy);
+              SmallVector<int, 16> ScatterMask(NumResultElts, -1);
+              for (unsigned k = 0; k < NumTransferElts; ++k)
+                ScatterMask[DstStartElt + k] = SrcStartElt + k;
+              Value *FragAsCommon = Fragment && NumCommonElts == NumResultElts
+                                        ? B.CreateBitPreservingCastChain(
+                                              DL, Fragment, CommonVecTy)
+                                        : PoisonValue::get(CommonVecTy);
+              if (Fragment && NumCommonElts == NumResultElts) {
+                for (unsigned i = 0; i < NumResultElts; ++i)
+                  if (ScatterMask[i] == -1)
+                    ScatterMask[i] = NumCommonElts + i;
+                Fragment = nullptr;
+              }
+              SrcExtracted =
+                  B.CreateShuffleVector(SrcAsCommon, FragAsCommon, ScatterMask);
+            } else {
+              // SrcShift aligns to SrcEltBitSize but not EltBitSize: scatter in
+              // SrcEltTy space directly to the result-sized vector, then
+              // bitcast.
+              uint64_t NumResultElts_src = DstBitWidth / SrcEltBitSize;
+              uint64_t NumTransferElts_src = BitWidth / SrcEltBitSize;
+              uint64_t NumSrcElts = SrcBitWidth / SrcEltBitSize;
+              uint64_t SrcStartElt_src = (SrcShift * 8) / SrcEltBitSize;
+              uint64_t DstStartElt_src = (DstShift * 8) / SrcEltBitSize;
+              if (DL.isBigEndian()) {
+                SrcStartElt_src =
+                    NumSrcElts - SrcStartElt_src - NumTransferElts_src;
+                DstStartElt_src =
+                    NumResultElts_src - DstStartElt_src - NumTransferElts_src;
+              }
+              SmallVector<int, 16> ScatterMask(NumResultElts_src, -1);
+              for (unsigned k = 0; k < NumTransferElts_src; ++k)
+                ScatterMask[DstStartElt_src + k] = SrcStartElt_src + k;
+              Value *Shuffled = B.CreateShuffleVector(
+                  SrcVal, PoisonValue::get(SVTy), ScatterMask);
+              SrcExtracted =
+                  B.CreateBitPreservingCastChain(DL, Shuffled, ResultVecTy);
+            }
+
+            // Step 2: blend SrcExtracted with Fragment if needed.
+            if (!Fragment)
+              return SrcExtracted;
+            Value *FragAsDst =
+                Fragment
+                    ? B.CreateBitPreservingCastChain(DL, Fragment, ResultVecTy)
+                    : PoisonValue::get(ResultVecTy);
+            SmallVector<int, 16> Mask(NumResultElts);
+            for (unsigned i = 0; i < NumResultElts; ++i)
+              Mask[i] = (i >= DstStartElt && i < DstStartElt + NumTransferElts)
+                            ? (int)(NumResultElts + i)
+                            : (Fragment ? (int)i : -1);
+            return B.CreateShuffleVector(FragAsDst, SrcExtracted, Mask);
+          } // SrcShiftAligned || ShuffleBeforeCast
+        }
+      }
+    }
+  }
+
+  // General path: accumulate into an integer of DstLeaf.BitWidth
+  // for integers, floats, and pointers.
+  if (!isa<IntegerType>(SrcVal->getType()))
+    SrcVal =
+        B.CreateBitPreservingCastChain(DL, SrcVal, B.getIntNTy(SrcBitWidth));
+  if (SrcShift)
+    SrcVal = B.CreateLShr(SrcVal, SrcShift * 8);
+  if (BitWidth < DstBitWidth && BitWidth + SrcShift * 8 < SrcBitWidth)
+    SrcVal = B.CreateAnd(SrcVal, APInt::getLowBitsSet(SrcBitWidth, BitWidth));
+  SrcVal = B.CreateZExtOrTrunc(SrcVal, B.getIntNTy(DstBitWidth));
+  if (DstShift)
+    SrcVal = B.CreateShl(SrcVal, DstShift * 8);
+  if (Fragment) {
+    if (Fragment->getType() != SrcVal->getType()) {
+      assert(isa<FixedVectorType>(Ty));
+      Fragment = B.CreateBitPreservingCastChain(DL, Fragment,
+                                                B.getIntNTy(DstBitWidth));
+    }
+    SrcVal = B.CreateOr(Fragment, SrcVal);
+  }
+  return SrcVal;
+}
+
+} // anonymous namespace
+
+Value *IRBuilderBase::CreateLayoutReinterpretCast(Value *Src, Type *DestTy,
+                                                  uint64_t SrcOffset,
+                                                  uint64_t DstOffset,
+                                                  const Twine &Name) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeLeafIterator SrcIt(Src->getType(), DL);
+  TypeLeafIterator DstIt(DestTy, DL);
+  IncompleteAgg ExtractedSrc;
+  IncompleteAgg InsertedDst;
+
+  // Build destination aggregate leaf by leaf.
+  for (; !DstIt.done(); DstIt.advance()) {
+    TypeLeafIterator::Leaf &DstLeaf = DstIt.Element;
+    if (DstLeaf.BitWidth == 0)
+      continue;
+    uint64_t DStart = DstLeaf.Offset + DstOffset;
+    uint64_t DBitEnd = DStart * 8 + DstLeaf.BitWidth;
+    Value *Fragment = nullptr;
+    for (; !SrcIt.done(); SrcIt.advance()) {
+      TypeLeafIterator::Leaf &SrcLeaf = SrcIt.Element;
+      if (SrcLeaf.BitWidth == 0)
+        continue;
+      uint64_t SStart = SrcLeaf.Offset + SrcOffset;
+      uint64_t SBitEnd = SStart * 8 + SrcLeaf.BitWidth;
+      if (SBitEnd <= DStart * 8)
+        continue;
+      if (SStart * 8 >= DBitEnd)
+        break;
+      // Have the first element with any overlap.
+      if (SStart == DStart && SrcLeaf.Ty == DstLeaf.Ty) {
+        // In this case, all the math and casts below are zeros and no-ops.
+        // But that also means we might be able to extract more at once.
+        while (DstIt.parent_equal(SrcIt)) {
+          DstIt.pop();
+          SrcIt.pop();
+        }
+        Fragment = buildExtractSrc(*this, Src, SrcIt, ExtractedSrc);
+        assert(Fragment->getType() == DstLeaf.Ty);
+        break;
+      }
+      // Compute the range of bits that overlap in memory.
+      Value *Extract = buildExtractSrc(*this, Src, SrcIt, ExtractedSrc);
+      uint64_t OvStart = std::max(SStart, DStart);
+      uint64_t OvBitEnd = std::min(SBitEnd, DBitEnd);
+      uint64_t OvBitWidth = OvBitEnd - OvStart * 8;
+      // Convert that byte index to a register bit shift, from either the start
+      // (LE) or the end (BE).
+      //
+      // LangRef: a non-byte-sized store behaves like a zext followed by a
+      // byte-sized store.
+      bool LE = DL.isLittleEndian();
+      uint64_t SrcShift =
+          LE ? OvStart - SStart
+             : (alignToPowerOf2(SBitEnd, 8) - alignToPowerOf2(OvBitEnd, 8)) / 8;
+      uint64_t DstShift =
+          LE ? OvStart - DStart
+             : (alignToPowerOf2(DBitEnd, 8) - alignToPowerOf2(OvBitEnd, 8)) / 8;
+      Fragment = buildDstLeaf(*this, DL, Fragment, DstLeaf.Ty, Extract,
+                              SrcLeaf.BitWidth, DstLeaf.BitWidth, SrcShift,
+                              DstShift, OvBitWidth);
+      if (SBitEnd >= DBitEnd)
+        break;
+    }
+    if (Fragment) {
+      Fragment = CreateBitPreservingCastChain(DL, Fragment, DstLeaf.Ty);
+      buildInsertDst(*this, DstIt, Fragment, InsertedDst);
+    }
+    if (SrcIt.done()) {
+      DstIt.Path.clear();
+      break;
+    }
+  }
+
+  assert(DstIt.Path.empty());
+  Value *Result;
+  if (InsertedDst.empty()) {
+    // No overlapping bits got extracted.
+    Result = PoisonValue::get(DestTy);
+  } else {
+    // Create final CreateInsertValue chain.
+    buildInsertDst(*this, DstIt, nullptr, InsertedDst);
+    assert(InsertedDst.size() == 1);
+    Result = InsertedDst.back().V;
+  }
+
+  if (auto *I = dyn_cast<Instruction>(Result))
+    I->setName(Name);
+  return Result;
 }
 
 CallInst *
