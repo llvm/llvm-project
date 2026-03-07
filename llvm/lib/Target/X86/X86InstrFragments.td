@@ -155,7 +155,7 @@ def X86cmp     : SDNode<"X86ISD::CMP" ,     SDTX86CmpTest>;
 def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
 
 let IsStrictFP = true in {
-  /// X86 strict FP compare instructions.
+  // X86 strict FP compare instructions.
   def X86strict_fcmp
       : SDNode<"X86ISD::STRICT_FCMP",  SDTX86FCmp, [SDNPHasChain]>;
   def X86strict_fcmps
@@ -285,7 +285,7 @@ def X86call_rvmarker  : SDNode<"X86ISD::CALL_RVMARKER",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
-// Psuedo for a call to a global address that must be called via a memory
+// Pseudo for a call to a global address that must be called via a memory
 // address (i.e., not loaded into a register then called).
 def X86call_globaladdr  : SDNode<"X86ISD::CALL_GLOBALADDR",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
@@ -368,7 +368,7 @@ def X86eh_sjlj_setup_dispatch : SDNode<"X86ISD::EH_SJLJ_SETUP_DISPATCH",
 def X86tcret : SDNode<"X86ISD::TC_RETURN", SDT_X86TCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
-// Psuedo for a tail call return to a global address that must be called via
+// Pseudo for a tail call return to a global address that must be called via
 // a memory address (i.e., not loaded into a register then called).
 def X86tcret_globaladdr : SDNode<"X86ISD::TC_RETURN_GLOBALADDR", SDT_X86TCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
@@ -391,8 +391,8 @@ def X86xor_flag  : SDNode<"X86ISD::XOR",  SDTBinaryArithWithFlags,
 def X86and_flag  : SDNode<"X86ISD::AND",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 
-/// LOCK-prefixed arithmetic read-modify-write instructions.
-/// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
+// LOCK-prefixed arithmetic read-modify-write instructions.
+// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
 def X86lock_add  : SDNode<"X86ISD::LADD",  SDTLockBinaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;

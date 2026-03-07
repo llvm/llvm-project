@@ -38,7 +38,7 @@ def SDTX86VFCMP : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisVec<0>,
                                        SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                        SDTCisVT<3, i8>]>;
 
-/// Floating point max and min.
+// Floating point max and min.
 def X86fmin    : SDNode<"X86ISD::FMIN",      SDTFPBinOp>;
 def X86fmax    : SDNode<"X86ISD::FMAX",      SDTFPBinOp>;
 
@@ -53,7 +53,7 @@ def X86fmaxc    : SDNode<"X86ISD::FMAXC", SDTFPBinOp,
     [SDNPCommutative, SDNPAssociative]>;
 
 let IsStrictFP = true in {
-  /// Floating point max and min.
+  // Floating point max and min.
   def X86strict_fmin : SDNode<"X86ISD::STRICT_FMIN", SDTFPBinOp,
                               [SDNPHasChain]>;
   def X86strict_fmax : SDNode<"X86ISD::STRICT_FMAX", SDTFPBinOp,
@@ -472,7 +472,7 @@ def X86pmuldq  : SDNode<"X86ISD::PMULDQ",
                                              SDTCisSameAs<1,2>]>,
                                              [SDNPCommutative]>;
 
-/// SSE4A Extraction and Insertion.
+// SSE4A Extraction and Insertion.
 def X86extrqi : SDNode<"X86ISD::EXTRQI",
                   SDTypeProfile<1, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0,1>,
                                        SDTCisVT<2, i8>, SDTCisVT<3, i8>]>>;
