@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/workitem/clc_get_enqueued_local_size.h"
-#include <amdhsa_abi.h>
+#include "clc/workitem/clc_get_local_linear_id.h"
 
-_CLC_OVERLOAD _CLC_DEF size_t __clc_get_enqueued_local_size(uint dim) {
-  __constant amdhsa_implicit_kernarg_v5 *args =
-      (__constant amdhsa_implicit_kernarg_v5 *)
-          __builtin_amdgcn_implicitarg_ptr();
-  return dim < 3 ? args->group_size[dim] : 1;
+_CLC_OVERLOAD _CLC_DEF _CLC_CONST size_t get_local_linear_id() {
+  return __clc_get_local_linear_id();
 }
