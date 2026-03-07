@@ -24,7 +24,6 @@ func.func @test_lookup_without_converter() {
   // Make sure that the second "replace_with_valid_consumer" lowering does not
   // lookup the materialization that was created for the above op.
   "test.replace_with_valid_consumer"(%0) : (i64) -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -43,7 +42,6 @@ func.func @remap_moved_region_args() {
     ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
       "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
   }) : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }
 
@@ -62,6 +60,5 @@ func.func @remap_cloned_region_args() {
     ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
       "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
   }) {legalizer.should_clone} : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return
 }

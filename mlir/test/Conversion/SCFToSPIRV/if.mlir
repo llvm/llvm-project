@@ -158,7 +158,7 @@ func.func @simple_if_yield_type_change(%arg2 : memref<10xf32, #spirv.storage_cla
 func.func @unsupported_yield_type(%arg0 : memref<8xi32>, %arg1 : memref<8xi32>, %c : i1) {
 // CHECK-LABEL: @unsupported_yield_type
 // CHECK-NEXT:    scf.if
-// CHECK:         spirv.Return
+// CHECK:         return
   %r = scf.if %c -> (memref<8xi32>) {
     scf.yield %arg0 : memref<8xi32>
   } else {

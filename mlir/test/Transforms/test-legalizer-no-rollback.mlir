@@ -19,5 +19,5 @@ func.func @conditional_replacement(%arg0: i42) {
   "test.dummy_user_2"(%arg0) {} : (i42) -> ()
   // Perform a conditional 1:N replacement.
   "test.value_replace"(%arg0, %repl) {conditional} : (i42, i42) -> ()
-  "test.return"() : () -> ()
+  func.return
 }

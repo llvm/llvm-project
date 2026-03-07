@@ -8,7 +8,7 @@
 // CHECK-NEXT:      spirv.Constant
 // CHECK-NEXT:      memref.store
 // CHECK-NEXT:      scf.reduce
-// CHECK:         spirv.Return
+// CHECK:         return
 func.func @func(%arg0: i64) {
   %0 = arith.index_cast %arg0 : i64 to index
   %alloc = memref.alloc() : memref<16xf32>

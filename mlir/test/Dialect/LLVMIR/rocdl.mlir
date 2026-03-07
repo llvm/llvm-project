@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
-func.func @rocdl_special_regs() -> i32 {
+llvm.func @rocdl_special_regs() -> i32 {
   // CHECK-LABEL: rocdl_special_regs
   // CHECK: rocdl.workitem.id.x : i32
   %0 = rocdl.workitem.id.x : i32
@@ -43,21 +43,21 @@ func.func @rocdl_special_regs() -> i32 {
   llvm.return %0 : i32
 }
 
-func.func @rocdl.fmed3.scalar(%a: f32, %b: f32, %c: f32) -> f32 {
+llvm.func @rocdl.fmed3.scalar(%a: f32, %b: f32, %c: f32) -> f32 {
   // CHECK-LABEL: rocdl.fmed3.scalar
   // CHECK: %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : f32
   %0 = rocdl.fmed3 %a, %b, %c : f32
   llvm.return %0 : f32
 }
 
-func.func @rocdl.fmed3.vector(%a: vector<4xf16>, %b: vector<4xf16>, %c: vector<4xf16>) -> vector<4xf16> {
+llvm.func @rocdl.fmed3.vector(%a: vector<4xf16>, %b: vector<4xf16>, %c: vector<4xf16>) -> vector<4xf16> {
   // CHECK-LABEL: rocdl.fmed3.vector
   // CHECK: %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : vector<4xf16>
   %0 = rocdl.fmed3 %a, %b, %c : vector<4xf16>
   llvm.return %0 : vector<4xf16>
 }
 
-func.func @rocdl.math.ops(%a: f32, %b: f16, %c: bf16) {
+llvm.func @rocdl.math.ops(%a: f32, %b: f16, %c: bf16) {
   // CHECK-LABEL: rocdl.math.ops
   // CHECK: %{{.*}} = rocdl.tanh %{{.*}} f32 -> f32
   // CHECK: %{{.*}} = rocdl.tanh %{{.*}} f16 -> f16
@@ -117,37 +117,37 @@ func.func @rocdl.math.ops(%a: f32, %b: f16, %c: bf16) {
   llvm.return
 }
 
-func.func @rocdl.barrier() {
+llvm.func @rocdl.barrier() {
   // CHECK: rocdl.barrier
   rocdl.barrier
   llvm.return
 }
 
-func.func @rocdl.sched_barrier() {
+llvm.func @rocdl.sched_barrier() {
   // CHECK: rocdl.sched.barrier
   rocdl.sched.barrier 0
   llvm.return
 }
 
-func.func @rocdl_sched_group_barrier() {
+llvm.func @rocdl_sched_group_barrier() {
   // CHECK: rocdl.sched.group.barrier
   rocdl.sched.group.barrier 8, 1, 0
   llvm.return
 }
 
-func.func @rocdl_iglp_opt() {
+llvm.func @rocdl_iglp_opt() {
   // CHECK: rocdl.iglp.opt
   rocdl.iglp.opt 0
   llvm.return
 }
 
-func.func @rocdl.setprio() {
+llvm.func @rocdl.setprio() {
   // CHECK: rocdl.s.setprio
   rocdl.s.setprio 0
   llvm.return
 }
 
-func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
+llvm.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32xf32>, %arg3 : i32,
                    %arg4 : vector<16xf32>, %arg5 : vector<4xf32>,
                    %arg6 : vector<4xf16>, %arg7 : vector<32xi32>,

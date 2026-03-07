@@ -5,14 +5,14 @@ func.func @merge_blocks(%arg0: i32, %arg1 : i32) -> (i32, i32) {
   //      CHECK: "test.merge_blocks"() ({
   // CHECK-NEXT:   "test.return"
   // CHECK-NEXT: })
-  // CHECK-NEXT: "test.return"
+  // CHECK-NEXT: return
   %0:2 = "test.merge_blocks"() ({
   ^bb0:
      "test.br"(%arg0, %arg1)[^bb1] : (i32, i32) -> ()
   ^bb1(%arg3 : i32, %arg4 : i32):
      "test.return"(%arg3, %arg4) : (i32, i32) -> ()
   }) : () -> (i32, i32)
-  "test.return"(%0#0, %0#1) : (i32, i32) -> ()
+  func.return %0#0, %0#1 : i32, i32
 }
 
 // -----
@@ -55,5 +55,5 @@ func.func @inline_regions() -> ()
     }) : () -> ()
     "test.finish"() : () -> ()
   }) : () -> ()
-  "test.return"() : () -> ()
+  func.return
 }

@@ -295,21 +295,27 @@ LogicalResult FuncOp::verifyRegions() {
       continue;
     // Check func.return or other return-like terminators ops (e.g.
     // llvm.return, test.return).
-    auto returnOp = dyn_cast<RegionBranchTerminatorOpInterface>(&block.back());
-    if (!returnOp)
+    auto regionTerminatorOp =
+        dyn_cast<RegionBranchTerminatorOpInterface>(&block.back());
+    if (!regionTerminatorOp)
       continue;
-    auto operands =
-        returnOp.getMutableSuccessorOperands(RegionSuccessor::parent());
-    if (operands.size() != resultTypes.size())
+    auto returnOp = dyn_cast<ReturnOp>(&block.back());
+    if (!returnOp)
+      return regionTerminatorOp->emitOpError(
+          "is not a func.return op: func.func op is expected to have a "
+          "func.return op as the only region terminator");
+
+    if (returnOp->getNumOperands() != resultTypes.size())
       return returnOp->emitOpError("has ")
-             << operands.size() << " operands, but enclosing function (@"
+             << returnOp->getNumOperands() << " operands, but enclosing function (@"
              << getName() << ") returns " << resultTypes.size();
 
-    for (auto [i, opType] : llvm::enumerate(llvm::zip(operands, resultTypes))) {
+    for (auto [i, opType] :
+         llvm::enumerate(llvm::zip(returnOp->getOperands(), resultTypes))) {
       auto [operand, resTy] = opType;
-      if (operand.get().getType() != resTy)
+      if (operand.getType() != resTy)
         return returnOp->emitError() << "type of return operand " << i << " ("
-                                     << operand.get().getType()
+                                     << operand.getType()
                                      << ") doesn't match function result type ("
                                      << resTy << ") in function @" << getName();
     }

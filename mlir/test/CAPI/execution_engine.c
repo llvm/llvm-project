@@ -110,7 +110,7 @@ void testOmpCreation(void) {
 "      }                                                                        \n"
 "      omp.terminator                                                           \n"
 "    }                                                                          \n"
-"    llvm.return                                                                \n"
+"    return                                                                     \n"
 "  }                                                                            \n"
 "}                                                                              \n"
       ));

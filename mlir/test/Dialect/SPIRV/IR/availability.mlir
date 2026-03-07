@@ -290,7 +290,7 @@ func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
   // CHECK: extensions: [ [SPV_EXT_mesh_shader] ]
   // CHECK: capabilities: [ [MeshShadingEXT] ]
   spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
-  spirv.Return
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -304,7 +304,7 @@ func.func @constant_composite_replicate() -> () {
   // CHECK: extensions: [ [SPV_EXT_replicated_composites] ]
   // CHECK: capabilities: [ [ReplicatedCompositesEXT] ]
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
-  spirv.Return
+  return
 }
 
 //===----------------------------------------------------------------------===//

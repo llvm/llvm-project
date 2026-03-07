@@ -8,7 +8,7 @@ func.func @branch() -> () {
   // CHECK: spirv.Branch ^bb1
   spirv.Branch ^next
 ^next:
-  spirv.Return
+  return
 }
 
 // -----
@@ -18,7 +18,7 @@ func.func @branch_argument() -> () {
   // CHECK: spirv.Branch ^bb1(%{{.*}}, %{{.*}} : i32, i32)
   spirv.Branch ^next(%zero, %zero: i32, i32)
 ^next(%arg0: i32, %arg1: i32):
-  spirv.Return
+  return
 }
 
 // -----
@@ -35,9 +35,9 @@ func.func @wrong_accessor_count() -> () {
   // expected-error @+1 {{requires 1 successor but found 2}}
   "spirv.Branch"()[^one, ^two] : () -> ()
 ^one:
-  spirv.Return
+  return
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -52,10 +52,10 @@ func.func @cond_branch() -> () {
   spirv.BranchConditional %true, ^one, ^two
 // CHECK: ^bb1
 ^one:
-  spirv.Return
+  return
 // CHECK: ^bb2
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -69,11 +69,11 @@ func.func @cond_branch_argument() -> () {
   // CHECK: spirv.BranchConditional %{{.*}}, ^bb3, ^bb4(%{{.*}}, %{{.*}} : i32, i32)
   spirv.BranchConditional %true, ^true2, ^false2(%zero, %zero: i32, i32)
 ^false1:
-  spirv.Return
+  return
 ^true2:
-  spirv.Return
+  return
 ^false2(%arg3: i32, %arg4: i32):
-  spirv.Return
+  return
 }
 
 // -----
@@ -83,9 +83,9 @@ func.func @cond_branch_with_weights() -> () {
   // CHECK: spirv.BranchConditional %{{.*}} [5, 10]
   spirv.BranchConditional %true [5, 10], ^one, ^two
 ^one:
-  spirv.Return
+  return
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -94,9 +94,9 @@ func.func @missing_condition() -> () {
   // expected-error @+1 {{expected SSA operand}}
   spirv.BranchConditional ^one, ^two
 ^one:
-  spirv.Return
+  return
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -107,9 +107,9 @@ func.func @wrong_condition_type() -> () {
   // expected-error @+1 {{use of value '%zero' expects different type than prior uses: 'i1' vs 'i32'}}
   spirv.BranchConditional %zero, ^one, ^two
 ^one:
-  spirv.Return
+  return
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -119,9 +119,9 @@ func.func @wrong_accessor_count() -> () {
   // expected-error @+1 {{requires 2 successors but found 1}}
   "spirv.BranchConditional"(%true)[^one] {operandSegmentSizes = array<i32: 1, 0, 0>} : (i1) -> ()
 ^one:
-  spirv.Return
+  return
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -132,9 +132,9 @@ func.func @wrong_number_of_weights() -> () {
   "spirv.BranchConditional"(%true)[^one, ^two] {branch_weights = [1 : i32, 2 : i32, 3 : i32],
                                               operandSegmentSizes = array<i32: 1, 0, 0>} : (i1) -> ()
 ^one:
-  spirv.Return
+  return
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -144,9 +144,9 @@ func.func @weights_cannot_both_be_zero() -> () {
   // expected-error @+1 {{branch weights cannot both be zero}}
   spirv.BranchConditional %true [0, 0], ^one, ^two
 ^one:
-  spirv.Return
+  return
 ^two:
-  spirv.Return
+  return
 }
 
 // -----
@@ -195,7 +195,7 @@ spirv.func @callee() "None" {
 func.func @caller() {
   // CHECK: spirv.FunctionCall
   spirv.FunctionCall @callee() : () -> ()
-  spirv.Return
+  return
 }
 
 // -----
@@ -557,7 +557,7 @@ func.func @loop_yield_result_count_mismatch(%count : i32) -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @merge() -> () {
-  // expected-error @+1 {{expects parent op to be one of 'spirv.mlir.selection, spirv.mlir.loop'}}
+  // expected-error @+1 {{op expects parent op to be one of 'spirv.mlir.selection, spirv.mlir.loop'}}
   spirv.mlir.merge
 }
 
@@ -572,7 +572,7 @@ func.func @only_allowed_in_last_block(%cond : i1) -> () {
   ^merge:
     spirv.mlir.merge
   }
-  spirv.Return
+  return
 }
 
 // -----
@@ -587,7 +587,7 @@ func.func @last_block_no_terminator(%cond : i1) -> () {
     spirv.mlir.merge
   ^merge:
   }
-  spirv.Return
+  return
 }
 
 // -----
@@ -625,7 +625,7 @@ func.func @in_selection(%cond : i1) -> () {
   ^merge:
     spirv.mlir.merge
   }
-  spirv.Return
+  return
 }
 
 // CHECK-LABEL: func @in_loop
@@ -642,13 +642,12 @@ func.func @in_loop(%cond : i1) -> () {
   ^merge:
     spirv.mlir.merge
   }
-  spirv.Return
+  return
 }
 
 // CHECK-LABEL: in_other_func_like_op
 func.func @in_other_func_like_op() {
-  // CHECK: spirv.Return
-  spirv.Return
+  return
 }
 
 // -----
@@ -694,8 +693,7 @@ spirv.module Logical GLSL450 {
 
 func.func @ret_val() -> (i32) {
   %0 = spirv.Constant 42 : i32
-  // CHECK: spirv.ReturnValue %{{.*}} : i32
-  spirv.ReturnValue %0 : i32
+  return %0 : i32
 }
 
 // CHECK-LABEL: func @in_selection
@@ -710,7 +708,7 @@ func.func @in_selection(%cond : i1) -> (i32) {
     spirv.mlir.merge
   }
   %one = spirv.Constant 1 : i32
-  spirv.ReturnValue %one : i32
+  return %one : i32
 }
 
 // CHECK-LABEL: func @in_loop
@@ -729,13 +727,12 @@ func.func @in_loop(%cond : i1) -> (i32) {
     spirv.mlir.merge
   }
   %one = spirv.Constant 1 : i32
-  spirv.ReturnValue %one : i32
+  return %one : i32
 }
 
 // CHECK-LABEL: in_other_func_like_op
 func.func @in_other_func_like_op(%arg: i32) -> i32 {
-  // CHECK: spirv.ReturnValue
-  spirv.ReturnValue %arg: i32
+  return %arg: i32
 }
 
 // -----
@@ -812,7 +809,7 @@ func.func @selection(%cond: i1) -> () {
     spirv.mlir.merge
   }
 
-  spirv.Return
+  return
 }
 
 // -----
@@ -846,7 +843,7 @@ func.func @selection(%cond: i1) -> () {
     spirv.mlir.merge
   }
 
-  spirv.Return
+  return
 }
 
 // -----
@@ -893,7 +890,7 @@ func.func @selection_switch(%selector: i32) -> () {
     spirv.mlir.merge
   }
 
-  spirv.Return
+  return
 }
 
 // -----
@@ -973,7 +970,7 @@ func.func @selection_yield(%cond: i1) -> () {
   // CHECK: spirv.Store "Function" {{%.*}}, {{%.*}}#1 : i32
   spirv.Store "Function" %var2, %yield#1 : i32
 
-  spirv.Return
+  return
 }
 
 // -----
@@ -999,7 +996,7 @@ func.func @selection_yield_result_type_mismatch(%cond: i1) -> () {
     spirv.mlir.merge %merged_1_2, %merged_3_4 : i32, i32
   }
 
-  spirv.Return
+  return
 }
 
 // -----
@@ -1023,7 +1020,7 @@ func.func @selection_yield_result_count_mismatch(%cond: i1) -> () {
     spirv.mlir.merge %merged_1_2 : i32
   }
 
-  spirv.Return
+  return
 }
 
 // -----
@@ -1035,7 +1032,7 @@ func.func @selection_yield_result_count_mismatch(%cond: i1) -> () {
 
 // CHECK-LABEL: func @unreachable_no_pred
 func.func @unreachable_no_pred() {
-    spirv.Return
+    return
 
   ^next:
     // CHECK: spirv.Unreachable
@@ -1044,7 +1041,7 @@ func.func @unreachable_no_pred() {
 
 // CHECK-LABEL: func @unreachable_with_pred
 func.func @unreachable_with_pred() {
-    spirv.Return
+    return
 
   ^parent:
     spirv.Branch ^unreachable
@@ -1104,7 +1101,7 @@ func.func @switch(%selector: i32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 func.func @switch_only_default(%selector: i32) -> () {
@@ -1117,7 +1114,7 @@ func.func @switch_only_default(%selector: i32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 func.func @switch_operands(%selector : i32, %operand : i32) {
@@ -1140,7 +1137,7 @@ func.func @switch_operands(%selector : i32, %operand : i32) {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 // -----
@@ -1154,7 +1151,7 @@ func.func @switch_float_selector(%selector: f32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 // -----
@@ -1172,7 +1169,7 @@ func.func @switch_float_selector(%selector: i32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 // -----
@@ -1186,7 +1183,7 @@ func.func @switch_missing_default(%selector: i32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 // -----
@@ -1200,7 +1197,7 @@ func.func @switch_default_no_target(%selector: i32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 // -----
@@ -1218,7 +1215,7 @@ func.func @switch_case_no_target(%selector: i32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 
 // -----
@@ -1237,6 +1234,6 @@ func.func @switch_missing_operand_type(%selector: i32) -> () {
   spirv.Branch ^merge
 
 ^merge:
-  spirv.Return
+  return
 }
 

@@ -9,8 +9,8 @@ func.func @clamp_fordlessthan(%input: f32, %min: f32, %max: f32) -> f32 {
   %1 = spirv.FOrdLessThan %mid, %max : f32
   %2 = spirv.Select %1, %mid, %max : i1, f32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : f32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : f32
 }
 
 // -----
@@ -24,8 +24,8 @@ func.func @clamp_fordlessthan(%input: f32, %min: f32, %max: f32) -> f32 {
   %1 = spirv.FOrdLessThan %max, %input : f32
   %2 = spirv.Select %1, %max, %mid : i1, f32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : f32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : f32
 }
 
 // -----
@@ -39,8 +39,8 @@ func.func @clamp_fordlessthanequal(%input: f32, %min: f32, %max: f32) -> f32 {
   %1 = spirv.FOrdLessThanEqual %mid, %max : f32
   %2 = spirv.Select %1, %mid, %max : i1, f32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : f32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : f32
 }
 
 // -----
@@ -54,8 +54,8 @@ func.func @clamp_fordlessthanequal(%input: f32, %min: f32, %max: f32) -> f32 {
   %1 = spirv.FOrdLessThanEqual %max, %input : f32
   %2 = spirv.Select %1, %max, %mid : i1, f32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : f32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : f32
 }
 
 // -----
@@ -69,8 +69,8 @@ func.func @clamp_slessthan(%input: si32, %min: si32, %max: si32) -> si32 {
   %1 = spirv.SLessThan %mid, %max : si32
   %2 = spirv.Select %1, %mid, %max : i1, si32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : si32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : si32
 }
 
 // -----
@@ -84,8 +84,8 @@ func.func @clamp_slessthan(%input: si32, %min: si32, %max: si32) -> si32 {
   %1 = spirv.SLessThan %max, %input : si32
   %2 = spirv.Select %1, %max, %mid : i1, si32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : si32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : si32
 }
 
 // -----
@@ -99,8 +99,8 @@ func.func @clamp_slessthanequal(%input: si32, %min: si32, %max: si32) -> si32 {
   %1 = spirv.SLessThanEqual %mid, %max : si32
   %2 = spirv.Select %1, %mid, %max : i1, si32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : si32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : si32
 }
 
 // -----
@@ -114,8 +114,8 @@ func.func @clamp_slessthanequal(%input: si32, %min: si32, %max: si32) -> si32 {
   %1 = spirv.SLessThanEqual %max, %input : si32
   %2 = spirv.Select %1, %max, %mid : i1, si32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : si32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : si32
 }
 
 // -----
@@ -129,8 +129,8 @@ func.func @clamp_ulessthan(%input: i32, %min: i32, %max: i32) -> i32 {
   %1 = spirv.ULessThan %mid, %max : i32
   %2 = spirv.Select %1, %mid, %max : i1, i32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : i32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : i32
 }
 
 // -----
@@ -144,8 +144,8 @@ func.func @clamp_ulessthan(%input: i32, %min: i32, %max: i32) -> i32 {
   %1 = spirv.ULessThan %max, %input : i32
   %2 = spirv.Select %1, %max, %mid : i1, i32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : i32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : i32
 }
 
 // -----
@@ -159,8 +159,8 @@ func.func @clamp_ulessthanequal(%input: i32, %min: i32, %max: i32) -> i32 {
   %1 = spirv.ULessThanEqual %mid, %max : i32
   %2 = spirv.Select %1, %mid, %max : i1, i32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : i32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : i32
 }
 
 // -----
@@ -174,6 +174,6 @@ func.func @clamp_ulessthanequal(%input: i32, %min: i32, %max: i32) -> i32 {
   %1 = spirv.ULessThanEqual %max, %input : i32
   %2 = spirv.Select %1, %max, %mid : i1, i32
 
-  // CHECK-NEXT: spirv.ReturnValue [[RES]]
-  spirv.ReturnValue %2 : i32
+  // CHECK-NEXT: return [[RES]]
+  return %2 : i32
 }

@@ -428,7 +428,7 @@ emitc.func @return_type_array(%arg : !emitc.array<4xi32>) -> !emitc.array<4xi32>
 // -----
 
 func.func @return_inside_func.func(%0: i32) -> (i32) {
-  // expected-error@+1 {{'emitc.return' op expects parent op 'emitc.func'}}
+  // expected-error@+1 {{expects parent op 'emitc.func'}}
   emitc.return %0 : i32
 }
 // -----

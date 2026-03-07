@@ -1145,7 +1145,7 @@ struct TestDropAndReplaceInvalidOp : public ConversionPattern {
     return success();
   }
 };
-/// This pattern handles the case of a split return value.
+/// This pattern handles the case of a split return value (test.return variant).
 struct TestSplitReturnType : public ConversionPattern {
   TestSplitReturnType(MLIRContext *ctx)
       : ConversionPattern("test.return", 1, ctx) {}
@@ -1156,6 +1156,25 @@ struct TestSplitReturnType : public ConversionPattern {
     if (op->getNumOperands() != 1 || !op->getOperand(0).getType().isF32())
       return failure();
     rewriter.replaceOpWithNewOp<TestReturnOp>(op, operands[0]);
+    return success();
+  }
+};
+
+/// This pattern handles func.return when the operand type is split (1:N
+/// mapping). E.g., func.return %f32 -> func.return %f16_a, %f16_b.
+struct TestSplitFuncReturnType : public OpConversionPattern<func::ReturnOp> {
+  using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(func::ReturnOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    // Only handle the case where a single F32 operand has been split.
+    if (op->getNumOperands() != 1 || !op->getOperand(0).getType().isF32())
+      return failure();
+    // adaptor.getOperands()[0] is the 1:N split of the original F32 value.
+    ValueRange splitOperands = adaptor.getOperands()[0];
+    if (splitOperands.size() != 2)
+      return failure();
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(op, splitOperands);
     return success();
   }
 };
@@ -1583,6 +1602,7 @@ struct TestLegalizePatternDriver
         TestUndoPropertiesModification, TestUndoMoveDetachedBlock, TestEraseOp,
         TestReplaceWithValidProducer, TestReplaceWithValidConsumer,
         TestRepetitive1ToNConsumer>(&getContext());
+    patterns.add<TestSplitFuncReturnType>(converter, &getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
                  TestValueReplace, TestReplaceWithValidConsumer,
@@ -1604,6 +1624,11 @@ struct TestLegalizePatternDriver
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
     target.addDynamicallyLegalOp<TestReturnOp>([](TestReturnOp op) {
       // Don't allow F32 operands.
+      return llvm::none_of(op.getOperandTypes(),
+                           [](Type type) { return type.isF32(); });
+    });
+    target.addDynamicallyLegalOp<func::ReturnOp>([](func::ReturnOp op) {
+      // Don't allow F32 operands (mirroring TestReturnOp rule).
       return llvm::none_of(op.getOperandTypes(),
                            [](Type type) { return type.isF32(); });
     });
@@ -1835,7 +1860,7 @@ struct TestRemappedValue
     patterns.add<TestRemapValueInRegion>(typeConverter, &getContext());
 
     mlir::ConversionTarget target(getContext());
-    target.addLegalOp<ModuleOp, func::FuncOp, TestReturnOp>();
+    target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp, TestReturnOp>();
 
     // Expect the type_producer/type_consumer operations to only operate on f64.
     target.addDynamicallyLegalOp<TestTypeProducerOp>(
@@ -2389,8 +2414,9 @@ struct TestMergeBlocksPatternDriver
     patterns.add<TestMergeBlock, TestUndoBlocksMerge, TestMergeSingleBlockOps>(
         context);
     ConversionTarget target(*context);
-    target.addLegalOp<func::FuncOp, ModuleOp, TerminatorOp, TestBranchOp,
-                      TestTypeConsumerOp, TestTypeProducerOp, TestReturnOp>();
+    target.addLegalOp<func::FuncOp, func::ReturnOp, ModuleOp, TerminatorOp,
+                      TestBranchOp, TestTypeConsumerOp, TestTypeProducerOp,
+                      TestReturnOp>();
     target.addIllegalOp<ILLegalOpF>();
 
     /// Expect the op to have a single block after legalization.

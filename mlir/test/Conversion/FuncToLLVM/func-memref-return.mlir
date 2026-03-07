@@ -97,7 +97,7 @@ func.func @unconvertible_multiresult(%arg0: memref<?xf32> , %arg1: memref<?xf32>
 // BAREPTR-SAME: %{{.*}}: memref<*xi32>)
 func.func @unranked_memref(%arg0:memref<*xi32>) {
   // BAREPTR:      call @printMemrefI32(%arg{{.*}}) : (memref<*xi32>) -> ()
-  // BAREPTR-NEXT: llvm.return
+  // BAREPTR-NEXT: return
   call @printMemrefI32(%arg0) : (memref<*xi32>) -> ()
   return
 }

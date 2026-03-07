@@ -7,7 +7,7 @@ llvm.func @baz()
 
 // CHECK-LABEL: func @ops
 // CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: vector<2x!llvm.ptr>)
-func.func @ops(%arg0: i32, %arg1: f32,
+llvm.func @ops(%arg0: i32, %arg1: f32,
           %arg2: !llvm.ptr, %arg3: !llvm.ptr,
           %arg4: i1, %arg5 : vector<2x!llvm.ptr>) {
 // Integer arithmetic binary operations.
@@ -369,7 +369,7 @@ llvm.func @foo(%arg0: i32) -> !llvm.struct<(i32, f64, i32)> {
 
 // CHECK-LABEL: @casts
 // CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
-func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+llvm.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
             %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
 // CHECK:  = llvm.sext %[[I32]] : i32 to i56
   %0 = llvm.sext %arg0 : i32 to i56
@@ -400,7 +400,7 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
 
 // CHECK-LABEL: @nneg_casts
 // CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
-func.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+llvm.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
                 %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
 // CHECK:  = llvm.zext nneg %[[I32]] : i32 to i64
   %0 = llvm.zext nneg %arg0 : i32 to i64
@@ -413,7 +413,7 @@ func.func @nneg_casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
 
 // CHECK-LABEL: @casts_overflow
 // CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[PTR:.*]]: !llvm.ptr)
-func.func @casts_overflow(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+llvm.func @casts_overflow(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
             %arg3: vector<4xi64>, %arg4: !llvm.ptr) {
 // CHECK:  = llvm.trunc %[[I64]] overflow<nsw> : i64 to i56
   %0 = llvm.trunc %arg1 overflow<nsw> : i64 to i56
@@ -488,7 +488,7 @@ func.func @vector_deinterleave2(%vec: vector<[8]xf16>) {
 }
 
 // CHECK-LABEL: @alloca
-func.func @alloca(%size : i64) {
+llvm.func @alloca(%size : i64) {
   // CHECK: llvm.alloca %{{.*}} x i32 : (i64) -> !llvm.ptr
   llvm.alloca %size x i32 {alignment = 0} : (i64) -> (!llvm.ptr)
   // CHECK: llvm.alloca inalloca %{{.*}} x i32 {alignment = 8 : i64} : (i64) -> !llvm.ptr
@@ -497,21 +497,21 @@ func.func @alloca(%size : i64) {
 }
 
 // CHECK-LABEL: @null
-func.func @null() {
+llvm.func @null() {
   // CHECK: llvm.mlir.zero : !llvm.ptr
   %0 = llvm.mlir.zero : !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @zero
-func.func @zero() {
+llvm.func @zero() {
   // CHECK: llvm.mlir.zero : i8
   %0 = llvm.mlir.zero : i8
   llvm.return
 }
 
 // CHECK-LABEL: @atomic_load
-func.func @atomic_load(%ptr : !llvm.ptr) {
+llvm.func @atomic_load(%ptr : !llvm.ptr) {
   // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
   %0 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
   // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
@@ -522,7 +522,7 @@ func.func @atomic_load(%ptr : !llvm.ptr) {
 }
 
 // CHECK-LABEL: @atomic_store
-func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
+llvm.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
   // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
   llvm.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
   // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
@@ -533,7 +533,7 @@ func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
 }
 
 // CHECK-LABEL: @atomicrmw
-func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
+llvm.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
   %0 = llvm.atomicrmw fadd %ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
@@ -544,7 +544,7 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
 }
 
 // CHECK-LABEL: @cmpxchg
-func.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
+llvm.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
   // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
   %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.ptr, i32
   // CHECK: llvm.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32

@@ -30,5 +30,5 @@ func.func @emit_mesh_tasks_wrong_payload(%0 : i32, %1 : !spirv.ptr<i32, Image>) 
 func.func @set_mesh_outputs(%0 : i32, %1 : i32) {
   // CHECK: spirv.EXT.SetMeshOutputs {{%.*}}, {{%.*}} : i32, i32
   spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
-  spirv.Return
+  return
 }

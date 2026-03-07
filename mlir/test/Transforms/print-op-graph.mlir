@@ -17,7 +17,7 @@
 //       DFG:           subgraph {{.*}} {
 //       DFG:           }
 //       DFG:         }
-//       DFG:         v[[TEST_RET:.*]] [{{.*}}label = "{{.*}}test.return
+//       DFG:         v[[TEST_RET:.*]] [{{.*}}label = "{{.*}}return
 //       DFG:   v[[ARG0]]:res_arg0:s -> v[[TEST_BR]]:arg_arg0:n
 //       DFG:   v[[CONST10]]:res_c10_i32:s -> v[[TEST_BR]]
 //       DFG:   v[[ANCHOR]] -> v[[TEST_RET]]:arg_1_0:n[ltail = [[CLUSTER_MERGE_BLOCKS]], style = solid];
@@ -42,7 +42,7 @@
 //       CFG:           subgraph {{.*}} {
 //       CFG:           }
 //       CFG:         }
-//       CFG:         v[[TEST_RET:.*]] [{{.*}}label = "{{.*}}test.return
+//       CFG:         v[[TEST_RET:.*]] [{{.*}}label = "{{.*}}return
 //       CFG:   v[[C1]] -> v[[C2]]
 //       CFG:   v[[C2]] -> v[[C3]]
 //       CFG:   v[[C3]] -> v[[C4]]
@@ -62,5 +62,5 @@ func.func @merge_blocks(%arg0: i32, %arg1 : i32) -> (i32, i32) {
   ^bb1(%arg3 : i32, %arg4 : i32, %arg5: i32):
      "test.return"(%arg3, %arg4) : (i32, i32) -> ()
   }) : () -> (i32, i32)
-  "test.return"(%3#0, %3#1) : (i32, i32) -> ()
+  func.return %3#0, %3#1 : i32, i32
 }
