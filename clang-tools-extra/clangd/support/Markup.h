@@ -152,8 +152,9 @@ private:
   /// Newlines are added if:
   /// - the line ends with 2 spaces and a newline follows
   /// - the line ends with punctuation that indicates a line break (.:,;!?)
-  /// - the next line starts with a hard line break indicator (-@>#`\\ or a
+  /// - the next line starts with a hard line break indicator (-@>#\\ or a
   ///   digit followed by '.' or ')'), ignoring leading whitespace.
+  /// - the next line starts with a Markdown code block (```).
   ///
   /// Otherwise, newlines in the input are replaced with a single space.
   ///

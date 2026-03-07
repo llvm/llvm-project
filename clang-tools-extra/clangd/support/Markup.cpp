@@ -528,7 +528,9 @@ void Paragraph::renderEscapedMarkdown(llvm::raw_ostream &OS) const {
     NeedsSpace = C.SpaceAfter;
   }
 
-  renderNewlinesMarkdown(OS, ParagraphText);
+  // We use the same newline handling as for plaintext to "escape" markdown
+  // whitespace rendering.
+  renderNewlinesPlaintext(OS, ParagraphText);
 
   // A paragraph in markdown is separated by a blank line.
   OS << "\n\n";
