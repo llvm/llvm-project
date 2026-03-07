@@ -44,8 +44,19 @@ struct PluginInfo {
   PluginInfo(const PluginInfo &) = delete;
   PluginInfo &operator=(const PluginInfo &) = delete;
 
-  PluginInfo(PluginInfo &&) = default;
-  PluginInfo &operator=(PluginInfo &&) = default;
+  PluginInfo(PluginInfo &&other)
+      : library(std::move(other.library)),
+        plugin_init_callback(
+            std::exchange(other.plugin_init_callback, nullptr)),
+        plugin_term_callback(
+            std::exchange(other.plugin_term_callback, nullptr)) {}
+
+  PluginInfo &operator=(PluginInfo &&other) {
+    library = std::move(other.library);
+    plugin_init_callback = std::exchange(other.plugin_init_callback, nullptr);
+    plugin_term_callback = std::exchange(other.plugin_term_callback, nullptr);
+    return *this;
+  }
 
   ~PluginInfo() {
     if (!library.isValid())
