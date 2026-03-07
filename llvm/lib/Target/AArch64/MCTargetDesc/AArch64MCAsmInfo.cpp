@@ -38,6 +38,9 @@ const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
 
 const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
     {AArch64::S_GOT, "GOT"},
+    {AArch64::S_GOTPCREL, "GOTPCREL"},
+    {AArch64::S_PLT, "PLT"},
+    {AArch64::S_FUNCINIT, "FUNCINIT"},
 };
 
 const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {
@@ -114,6 +117,7 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
 
   case AArch64::S_GOTPCREL:            return "%gotpcrel";
   case AArch64::S_PLT:                 return "%pltpcrel";
+  case AArch64::S_DTPREL:              return "%dtprel";
   case AArch64::S_FUNCINIT:            return "%funcinit";
   default:
     llvm_unreachable("Invalid relocation specifier");
@@ -125,6 +129,7 @@ AArch64::Specifier AArch64::parsePercentSpecifierName(StringRef name) {
   return StringSwitch<AArch64::Specifier>(name)
       .Case("pltpcrel", AArch64::S_PLT)
       .Case("gotpcrel", AArch64::S_GOTPCREL)
+      .Case("dtprel", AArch64::S_DTPREL)
       .Case("funcinit", AArch64::S_FUNCINIT)
       .Default(0);
 }
