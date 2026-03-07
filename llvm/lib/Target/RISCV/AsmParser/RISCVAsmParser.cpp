@@ -3802,6 +3802,76 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgLegacyOp() const {
                                     llvm::SMLoc());
 }
 
+static unsigned getNFforLXSEG(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return 1;
+  case RISCV::VLOXSEG2EI8_V:
+  case RISCV::VLOXSEG2EI16_V:
+  case RISCV::VLOXSEG2EI32_V:
+  case RISCV::VLOXSEG2EI64_V:
+  case RISCV::VLUXSEG2EI8_V:
+  case RISCV::VLUXSEG2EI16_V:
+  case RISCV::VLUXSEG2EI32_V:
+  case RISCV::VLUXSEG2EI64_V:
+    return 2;
+  case RISCV::VLOXSEG3EI8_V:
+  case RISCV::VLOXSEG3EI16_V:
+  case RISCV::VLOXSEG3EI32_V:
+  case RISCV::VLOXSEG3EI64_V:
+  case RISCV::VLUXSEG3EI8_V:
+  case RISCV::VLUXSEG3EI16_V:
+  case RISCV::VLUXSEG3EI32_V:
+  case RISCV::VLUXSEG3EI64_V:
+    return 3;
+  case RISCV::VLOXSEG4EI8_V:
+  case RISCV::VLOXSEG4EI16_V:
+  case RISCV::VLOXSEG4EI32_V:
+  case RISCV::VLOXSEG4EI64_V:
+  case RISCV::VLUXSEG4EI8_V:
+  case RISCV::VLUXSEG4EI16_V:
+  case RISCV::VLUXSEG4EI32_V:
+  case RISCV::VLUXSEG4EI64_V:
+    return 4;
+  case RISCV::VLOXSEG5EI8_V:
+  case RISCV::VLOXSEG5EI16_V:
+  case RISCV::VLOXSEG5EI32_V:
+  case RISCV::VLOXSEG5EI64_V:
+  case RISCV::VLUXSEG5EI8_V:
+  case RISCV::VLUXSEG5EI16_V:
+  case RISCV::VLUXSEG5EI32_V:
+  case RISCV::VLUXSEG5EI64_V:
+    return 5;
+  case RISCV::VLOXSEG6EI8_V:
+  case RISCV::VLOXSEG6EI16_V:
+  case RISCV::VLOXSEG6EI32_V:
+  case RISCV::VLOXSEG6EI64_V:
+  case RISCV::VLUXSEG6EI8_V:
+  case RISCV::VLUXSEG6EI16_V:
+  case RISCV::VLUXSEG6EI32_V:
+  case RISCV::VLUXSEG6EI64_V:
+    return 6;
+  case RISCV::VLOXSEG7EI8_V:
+  case RISCV::VLOXSEG7EI16_V:
+  case RISCV::VLOXSEG7EI32_V:
+  case RISCV::VLOXSEG7EI64_V:
+  case RISCV::VLUXSEG7EI8_V:
+  case RISCV::VLUXSEG7EI16_V:
+  case RISCV::VLUXSEG7EI32_V:
+  case RISCV::VLUXSEG7EI64_V:
+    return 7;
+  case RISCV::VLOXSEG8EI8_V:
+  case RISCV::VLOXSEG8EI16_V:
+  case RISCV::VLOXSEG8EI32_V:
+  case RISCV::VLOXSEG8EI64_V:
+  case RISCV::VLUXSEG8EI8_V:
+  case RISCV::VLUXSEG8EI16_V:
+  case RISCV::VLUXSEG8EI32_V:
+  case RISCV::VLUXSEG8EI64_V:
+    return 8;
+  }
+}
+
 unsigned getLMULFromVectorRegister(MCRegister Reg) {
   if (RISCVMCRegisterClasses[RISCV::VRM2RegClassID].contains(Reg))
     return 2;
@@ -3874,10 +3944,16 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     assert(VS2Idx >= 0 && "No vs2 operand?");
     unsigned CheckEncoding =
         RI->getEncodingValue(Inst.getOperand(VS2Idx).getReg());
+    unsigned NF = getNFforLXSEG(Opcode);
     for (unsigned i = 0; i < Lmul; i++) {
-      if ((DestEncoding + i) == CheckEncoding)
-        return Error(Loc, "the destination vector register group cannot overlap"
-                          " the source vector register group");
+      if (NF == 1 && (DestEncoding + i) == CheckEncoding)
+        return Error(Loc, "the destination vector register group cannot"
+                          " overlap the source vector register group");
+    }
+    for (unsigned i = 0; i < getNFforLXSEG(Opcode); i++) {
+      if (DestEncoding + i == CheckEncoding)
+        return Error(Loc, "the destination vector register group cannot"
+                          " overlap the source vector register group");
     }
   }
   if (MCID.TSFlags & RISCVII::VS1Constraint) {
