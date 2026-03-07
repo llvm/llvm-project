@@ -1,4 +1,4 @@
-//===-- Implementation of printf for baremetal ------------------*- C++ -*-===//
+//===-- Implementation of printf_modular for baremetal ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
+LLVM_LIBC_FUNCTION(int, __printf_modular,
+                   (const char *__restrict format, ...)) {
   va_list vlist;
   va_start(vlist, format);
   internal::ArgList args(vlist); // This holder class allows for easier copying
@@ -26,12 +27,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
                                  // destruction automatically.
   va_end(vlist);
 
-#ifdef LIBC_COPT_PRINTF_MODULAR
-  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
   return vfprintf_internal<true>(stdout, format, args);
-#else
-  return vfprintf_internal(stdout, format, args);
-#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

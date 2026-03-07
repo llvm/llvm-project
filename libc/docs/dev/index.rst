@@ -20,3 +20,4 @@ Navigate to the links below for information on the respective topics:
    implementation_standard
    undefined_behavior
    printf_behavior
+   modular_format
