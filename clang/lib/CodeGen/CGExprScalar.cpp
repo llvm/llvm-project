@@ -1036,6 +1036,10 @@ Value *ScalarExprEmitter::EmitConversionToBool(Value *Src, QualType SrcType) {
   if (const MemberPointerType *MPT = dyn_cast<MemberPointerType>(SrcType))
     return CGF.CGM.getCXXABI().EmitMemberPointerIsNotNull(CGF, Src, MPT);
 
+  // The conversion is a NOP, and will be done when CodeGening the builtin.
+  if (SrcType == CGF.getContext().AMDGPUFeaturePredicateTy)
+    return Src;
+
   assert((SrcType->isIntegerType() || isa<llvm::PointerType>(Src->getType())) &&
          "Unknown scalar type to convert");
 

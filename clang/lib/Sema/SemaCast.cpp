@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -1589,6 +1590,14 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    return TC_Success;
+  }
+
+  if (SrcType == Self.Context.AMDGPUFeaturePredicateTy &&
+      DestType == Self.Context.getLogicalOperationType()) {
+    SrcExpr = Self.AMDGPU().ExpandAMDGPUPredicateBI(
+        dyn_cast<CallExpr>(SrcExpr.get()));
+    Kind = CK_NoOp;
     return TC_Success;
   }
 

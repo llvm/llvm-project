@@ -1207,31 +1207,36 @@ kernel void test_ds_consume_lds(__attribute__((address_space(1))) int* out, __at
 // CHECK-LABEL: @test_gws_init(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.init(i32 %value, i32 %id)
 kernel void test_gws_init(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_init(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_init))
+    __builtin_amdgcn_ds_gws_init(value, id);
 }
 
 // CHECK-LABEL: @test_gws_barrier(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.barrier(i32 %value, i32 %id)
 kernel void test_gws_barrier(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_barrier(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_barrier))
+    __builtin_amdgcn_ds_gws_barrier(value, id);
 }
 
 // CHECK-LABEL: @test_gws_sema_v(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.v(i32 %id)
 kernel void test_gws_sema_v(uint id) {
-  __builtin_amdgcn_ds_gws_sema_v(id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_v))
+    __builtin_amdgcn_ds_gws_sema_v(id);
 }
 
 // CHECK-LABEL: @test_gws_sema_br(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.br(i32 %value, i32 %id)
 kernel void test_gws_sema_br(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_sema_br(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_br))
+    __builtin_amdgcn_ds_gws_sema_br(value, id);
 }
 
 // CHECK-LABEL: @test_gws_sema_p(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.p(i32 %id)
 kernel void test_gws_sema_p(uint id) {
-  __builtin_amdgcn_ds_gws_sema_p(id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_p))
+    __builtin_amdgcn_ds_gws_sema_p(id);
 }
 
 // CHECK-LABEL: @test_mbcnt_lo(
