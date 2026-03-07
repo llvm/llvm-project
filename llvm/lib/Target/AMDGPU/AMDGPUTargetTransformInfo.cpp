@@ -849,15 +849,13 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
       (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency);
   const int CBrCost = SCost ? 5 : 7;
   switch (Opcode) {
-  case Instruction::Br: {
+  case Instruction::UncondBr:
     // Branch instruction takes about 4 slots on gfx900.
-    const auto *BI = dyn_cast_or_null<BranchInst>(I);
-    if (BI && BI->isUnconditional())
-      return SCost ? 1 : 4;
+    return SCost ? 1 : 4;
+  case Instruction::CondBr:
     // Suppose conditional branch takes additional 3 exec manipulations
     // instructions in average.
     return CBrCost;
-  }
   case Instruction::Switch: {
     const auto *SI = dyn_cast_or_null<SwitchInst>(I);
     // Each case (including default) takes 1 cmp + 1 cbr instructions in

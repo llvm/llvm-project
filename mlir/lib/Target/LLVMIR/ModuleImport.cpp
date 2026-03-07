@@ -2254,9 +2254,17 @@ ModuleImport::convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall) {
 LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   // Convert all instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
-  if (inst->getOpcode() == llvm::Instruction::Br) {
-    auto *brInst = cast<llvm::BranchInst>(inst);
+  if (auto *brInst = dyn_cast<llvm::UncondBrInst>(inst)) {
+    llvm::BasicBlock *succ = brInst->getSuccessor();
+    SmallVector<Value> blockArgs;
+    if (failed(convertBranchArgs(brInst, succ, blockArgs)))
+      return failure();
 
+    auto brOp = LLVM::BrOp::create(builder, loc, blockArgs, lookupBlock(succ));
+    mapNoResultOp(inst, brOp);
+    return success();
+  }
+  if (auto *brInst = dyn_cast<llvm::CondBrInst>(inst)) {
     SmallVector<Block *> succBlocks;
     SmallVector<SmallVector<Value>> succBlockArgs;
     for (auto i : llvm::seq<unsigned>(0, brInst->getNumSuccessors())) {
@@ -2268,12 +2276,6 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       succBlockArgs.push_back(blockArgs);
     }
 
-    if (!brInst->isConditional()) {
-      auto brOp = LLVM::BrOp::create(builder, loc, succBlockArgs.front(),
-                                     succBlocks.front());
-      mapNoResultOp(inst, brOp);
-      return success();
-    }
     FailureOr<Value> condition = convertValue(brInst->getCondition());
     if (failed(condition))
       return failure();

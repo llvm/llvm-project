@@ -8807,7 +8807,7 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   return true;
 }
 
-static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
+static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
                            SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                            bool IsHugeFunc) {
   // Try and convert
@@ -8820,7 +8820,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
   //  br %c, bla, blb
   // Creating the cmp to zero can be better for the backend, especially if the
   // lshr produces flags that can be used automatically.
-  if (!TLI.preferZeroCompareBranch() || !Branch->isConditional())
+  if (!TLI.preferZeroCompareBranch())
     return false;
 
   ICmpInst *Cmp = dyn_cast<ICmpInst>(Branch->getCondition());
@@ -9055,8 +9055,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     return optimizeSwitchInst(cast<SwitchInst>(I));
   case Instruction::ExtractElement:
     return optimizeExtractElementInst(cast<ExtractElementInst>(I));
-  case Instruction::Br:
-    return optimizeBranch(cast<BranchInst>(I), *TLI, FreshBBs, IsHugeFunc);
+  case Instruction::CondBr:
+    return optimizeBranch(cast<CondBrInst>(I), *TLI, FreshBBs, IsHugeFunc);
   }
 
   return AnyChange;

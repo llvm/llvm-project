@@ -3645,7 +3645,7 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
     return X86SelectZExt(I);
   case Instruction::SExt:
     return X86SelectSExt(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return X86SelectBranch(I);
   case Instruction::LShr:
   case Instruction::AShr:

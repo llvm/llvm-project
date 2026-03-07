@@ -6825,11 +6825,10 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     Ops.push_back(&I->getOperandUse(0));
     return true;
   }
-  case Instruction::Br: {
-    if (cast<BranchInst>(I)->isUnconditional())
-      return false;
-
-    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition(), Ops))
+  case Instruction::UncondBr:
+    return false;
+  case Instruction::CondBr: {
+    if (!ShouldSinkCondition(cast<CondBrInst>(I)->getCondition(), Ops))
       return false;
 
     Ops.push_back(&I->getOperandUse(0));

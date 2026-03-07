@@ -1985,7 +1985,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
 
@@ -2004,7 +2004,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
     }

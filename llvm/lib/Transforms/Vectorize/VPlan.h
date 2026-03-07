@@ -1391,7 +1391,8 @@ public:
     // Conservatively return calls have results for now.
     switch (getOpcode()) {
     case Instruction::Ret:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Store:
     case Instruction::Switch:
     case Instruction::IndirectBr:

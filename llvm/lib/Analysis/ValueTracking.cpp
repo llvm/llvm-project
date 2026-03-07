@@ -7256,7 +7256,8 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
   case Instruction::PHI:
   case Instruction::Store:
   case Instruction::Ret:
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::IndirectBr:
   case Instruction::Switch:
   case Instruction::Unreachable:
@@ -8211,12 +8212,10 @@ static bool handleGuaranteedWellDefinedOps(const Instruction *I,
       if (Handle(cast<SwitchInst>(I)->getCondition()))
         return true;
       break;
-    case Instruction::Br: {
-      auto *BR = cast<BranchInst>(I);
-      if (BR->isConditional() && Handle(BR->getCondition()))
+    case Instruction::CondBr:
+      if (Handle(cast<CondBrInst>(I)->getCondition()))
         return true;
       break;
-    }
     default:
       break;
   }
