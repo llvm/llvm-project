@@ -78,6 +78,8 @@ public:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printU12ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printS16ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printS32ImmOperand(const MCInst *MI, unsigned OpNo,
