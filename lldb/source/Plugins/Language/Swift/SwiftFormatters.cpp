@@ -435,7 +435,10 @@ bool lldb_private::formatters::swift::String_SummaryProvider(
     const TypeSummaryOptions &summary_options,
     StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
   static ConstString g_guts("_guts");
-  ValueObjectSP guts_sp = valobj.GetChildMemberWithName(g_guts, true);
+  ValueObjectSP non_synth = valobj.GetNonSyntheticValue();
+  if (!non_synth)
+    return false;
+  ValueObjectSP guts_sp = non_synth->GetChildMemberWithName(g_guts, true);
   if (guts_sp)
     return StringGuts_SummaryProvider(*guts_sp, stream, summary_options,
                                       read_options);

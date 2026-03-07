@@ -473,6 +473,11 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                 lldb_private::formatters::swift::Character_SummaryProvider,
                 "Swift.Character summary provider",
                 ConstString("Swift.Character"), summary_flags);
+  // Hide children.
+  AddCXXSynthetic(
+      swift_category_sp,
+      lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator,
+      "Swift.String", ConstString("Swift.String"), basic_synth_flags);
   bool (*string_summary_provider)(ValueObject &, Stream &,
                                   const TypeSummaryOptions &) =
       lldb_private::formatters::swift::String_SummaryProvider;
