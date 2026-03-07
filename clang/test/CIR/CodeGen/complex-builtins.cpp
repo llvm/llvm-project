@@ -94,7 +94,7 @@ void foo4() {
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPLEX]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
-// CIR: %[[IMAG_MINUS:.*]] = cir.unary(minus, %[[IMAG]]) : !cir.float, !cir.float
+// CIR: %[[IMAG_MINUS:.*]] = cir.minus %[[IMAG]] : !cir.float
 // CIR: %[[RESULT_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG_MINUS]] : !cir.float -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT_VAL]], %[[RESULT]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 

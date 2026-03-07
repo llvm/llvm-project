@@ -2664,106 +2664,74 @@ LogicalResult cir::LabelOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// UnaryOp
+// IncOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult cir::UnaryOp::verify() {
-  switch (getKind()) {
-  case cir::UnaryOpKind::Inc:
-  case cir::UnaryOpKind::Dec:
-  case cir::UnaryOpKind::Minus:
-  case cir::UnaryOpKind::Not:
-    // Nothing to verify.
-    return success();
-  }
-
-  llvm_unreachable("Unknown UnaryOp kind?");
+OpFoldResult cir::IncOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
+  return {};
 }
 
-static bool isBoolNot(cir::UnaryOp op) {
-  return isa<cir::BoolType>(op.getInput().getType()) &&
-         op.getKind() == cir::UnaryOpKind::Not;
+//===----------------------------------------------------------------------===//
+// DecOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::DecOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
+  return {};
 }
 
-// This folder simplifies the sequential boolean not operations.
-// For instance, the next two unary operations will be eliminated:
-//
-// ```mlir
-// %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
-// %2 = cir.unary(not, %1) : !cir.bool, !cir.bool
-// ```
-//
-// and the argument of the first one (%0) will be used instead.
-OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
-  if (auto poison =
-          mlir::dyn_cast_if_present<cir::PoisonAttr>(adaptor.getInput())) {
-    // Propagate poison values
-    return poison;
-  }
+//===----------------------------------------------------------------------===//
+// MinusOp
+//===----------------------------------------------------------------------===//
 
-  if (isBoolNot(*this))
-    if (auto previous = getInput().getDefiningOp<cir::UnaryOp>())
-      if (isBoolNot(previous))
-        return previous.getInput();
+OpFoldResult cir::MinusOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
 
-  // Avoid introducing unnecessary duplicate constants in cases where we are
-  // just folding the operation to its input value. If we return the
-  // input attribute from the adapter, a new constant is materialized, but
-  // if we return the input value directly, it avoids that.
-  if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>()) {
-    if (mlir::isa<cir::BoolType>(srcConst.getType()) &&
-        getKind() == cir::UnaryOpKind::Minus)
+  // Avoid materializing a duplicate constant for bool minus (identity).
+  if (auto srcConst = getInput().getDefiningOp<cir::ConstantOp>())
+    if (mlir::isa<cir::BoolType>(srcConst.getType()))
       return srcConst.getResult();
+
+  // Fold with constant inputs.
+  if (mlir::Attribute attr = adaptor.getInput()) {
+    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr)) {
+      APInt val = intAttr.getValue();
+      val.negate();
+      return cir::IntAttr::get(getType(), val);
+    }
+    if (auto fpAttr = mlir::dyn_cast<cir::FPAttr>(attr)) {
+      APFloat val = fpAttr.getValue();
+      val.changeSign();
+      return cir::FPAttr::get(getType(), val);
+    }
   }
 
-  // Fold unary operations with constant inputs. If the input is a ConstantOp,
-  // it "folds" to its value attribute. If it was some other operation that
-  // was folded, it will be an mlir::Attribute that hasn't yet been
-  // materialized. If it was a value that couldn't be folded, it will be null.
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// NotOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::NotOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getInput()))
+    return adaptor.getInput();
+
+  // not(not(x)) -> x is handled by the Involution trait.
+
+  // Fold with constant inputs.
   if (mlir::Attribute attr = adaptor.getInput()) {
-    // For now, we only attempt to fold simple scalar values.
-    OpFoldResult result =
-        llvm::TypeSwitch<mlir::Attribute, OpFoldResult>(attr)
-            .Case<cir::IntAttr>([&](cir::IntAttr attrT) {
-              switch (getKind()) {
-              case cir::UnaryOpKind::Not: {
-                APInt val = attrT.getValue();
-                val.flipAllBits();
-                return cir::IntAttr::get(getType(), val);
-              }
-              case cir::UnaryOpKind::Minus: {
-                APInt val = attrT.getValue();
-                val.negate();
-                return cir::IntAttr::get(getType(), val);
-              }
-              default:
-                return cir::IntAttr{};
-              }
-            })
-            .Case<cir::FPAttr>([&](cir::FPAttr attrT) {
-              switch (getKind()) {
-              case cir::UnaryOpKind::Minus: {
-                APFloat val = attrT.getValue();
-                val.changeSign();
-                return cir::FPAttr::get(getType(), val);
-              }
-              default:
-                return cir::FPAttr{};
-              }
-            })
-            .Case<cir::BoolAttr>([&](cir::BoolAttr attrT) {
-              switch (getKind()) {
-              case cir::UnaryOpKind::Not:
-                return cir::BoolAttr::get(getContext(), !attrT.getValue());
-              case cir::UnaryOpKind::Minus:
-                return attrT;
-              default:
-                return cir::BoolAttr{};
-              }
-            })
-            .Default([&](auto attrT) { return mlir::Attribute{}; });
-    if (result)
-      return result;
+    if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr)) {
+      APInt val = intAttr.getValue();
+      val.flipAllBits();
+      return cir::IntAttr::get(getType(), val);
+    }
+    if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
+      return cir::BoolAttr::get(getContext(), !boolAttr.getValue());
   }
 
   return {};

@@ -429,8 +429,7 @@ public:
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
-                                  cir::UnaryOpKind::Minus, value);
+      return createMinus(value.getLoc(), value);
     }
 
     llvm_unreachable("negation for the given type is NYI");
@@ -444,8 +443,7 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
-                                cir::UnaryOpKind::Minus, value);
+    return createMinus(value.getLoc(), value);
   }
 
   //===--------------------------------------------------------------------===//
