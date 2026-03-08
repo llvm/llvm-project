@@ -1321,6 +1321,20 @@ cc_library(
 )
 
 cc_library(
+    name = "ABI",
+    srcs = glob(
+        ["lib/ABI/*.cpp"],
+    ),
+    hdrs = glob(
+        ["include/llvm/ABI/*.h"],
+    ),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "Analysis",
     srcs = glob(
         ["lib/Analysis/*.cpp"],
