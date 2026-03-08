@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_group_id.h>
+#include "clc/synchronization/clc_sub_group_barrier.h"
 
-_CLC_OVERLOAD _CLC_DEF size_t get_group_id(uint dim) {
-  return __clc_get_group_id(dim);
+_CLC_DEF _CLC_OVERLOAD void
+__clc_sub_group_barrier(__CLC_MemorySemantics memory_semantics) {
+  __clc_sub_group_barrier(memory_semantics, __MEMORY_SCOPE_WVFRNT);
 }
