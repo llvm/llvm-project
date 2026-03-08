@@ -157,7 +157,7 @@ protected:
   /// For internal use by compiler and assembler, not meant to be visible
   /// externally. They are usually not emitted to the symbol table in the
   /// object file.
-  StringRef PrivateGlobalPrefix = "L";
+  StringRef InternalSymbolPrefix = "L";
 
   /// This prefix is used for labels for basic blocks. Defaults to "L"
   StringRef PrivateLabelPrefix = "L";
@@ -544,7 +544,7 @@ public:
   bool usesSetToEquateSymbol() const { return UsesSetToEquateSymbol; }
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
   bool needsLocalForSize() const { return NeedsLocalForSize; }
-  StringRef getInternalSymbolPrefix() const { return PrivateGlobalPrefix; }
+  StringRef getInternalSymbolPrefix() const { return InternalSymbolPrefix; }
   StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
