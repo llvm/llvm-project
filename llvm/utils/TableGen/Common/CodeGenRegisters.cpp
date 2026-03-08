@@ -2554,27 +2554,9 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       //
       // The name of the inferred register class follows the template
       // "<RC>_with_<SubIdx>_in_<SubRC>".
-      //
-      // When SubRC is already an inferred class, prefer a name of the form
-      // "<RC>_with_<CompositeSubIdx>_in_<SubSubRC>" over a chain of the form
-      // "<RC>_with_<SubIdx>_in_<OtherRc>_with_<SubSubIdx>_in_<SubSubRC>".
-      CodeGenSubRegIndex *CompositeSubIdx = SubIdx;
-      CodeGenRegisterClass *CompositeSubRC = &SubRC;
-      if (CodeGenSubRegIndex *SubSubIdx = SubRC.getInferredFromSubRegIdx()) {
-        auto It = SubIdx->getComposites().find(SubSubIdx);
-        if (It != SubIdx->getComposites().end()) {
-          CompositeSubIdx = It->second;
-          CompositeSubRC = SubRC.getInferredFromRC();
-        }
-      }
-
-      auto [SubSetRC, Inserted] = getOrCreateSubClass(
-          RC, &SubSetVec,
-          RC->getName() + "_with_" + CompositeSubIdx->getName() + "_in_" +
-              CompositeSubRC->getName());
-
-      if (Inserted)
-        SubSetRC->setInferredFrom(CompositeSubIdx, CompositeSubRC);
+      getOrCreateSubClass(RC, &SubSetVec,
+                          RC->getName() + "_with_" + SubIdx->getName() +
+                              "_in_" + SubRC.getName());
     }
   }
 }

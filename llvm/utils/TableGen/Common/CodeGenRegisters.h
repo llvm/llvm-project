@@ -353,12 +353,6 @@ class CodeGenRegisterClass {
   // class. This will be very sparse on regular architectures.
   BitVector RegsWithSuperRegsTopoSigs;
 
-  // If the register class was inferred for getMatchingSuperRegClass, this
-  // holds the subregister index and subregister class for which the register
-  // class was created.
-  CodeGenSubRegIndex *InferredFromSubRegIdx = nullptr;
-  CodeGenRegisterClass *InferredFromRC = nullptr;
-
 public:
   unsigned EnumValue;
   StringRef Namespace;
@@ -534,20 +528,6 @@ public:
       return TheDef->getValueAsInt("BaseClassOrder");
     return {};
   }
-
-  void setInferredFrom(CodeGenSubRegIndex *Idx, CodeGenRegisterClass *RC) {
-    assert(Idx && RC);
-    assert(!InferredFromSubRegIdx);
-
-    InferredFromSubRegIdx = Idx;
-    InferredFromRC = RC;
-  }
-
-  CodeGenSubRegIndex *getInferredFromSubRegIdx() const {
-    return InferredFromSubRegIdx;
-  }
-
-  CodeGenRegisterClass *getInferredFromRC() const { return InferredFromRC; }
 };
 
 // Register categories are used when we need to deterine the category a
