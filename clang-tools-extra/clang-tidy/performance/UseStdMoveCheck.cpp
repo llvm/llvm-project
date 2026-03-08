@@ -107,8 +107,7 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   // Starting from the exit node, we walk the CFG backward. Whenever
   // we meet a new block, we check if it either:
   // 1. touches the `AssignValue`, in which case we stop the search, and mark
-  // each
-  //    predecessor as not `Ready`. No predecessor walk.
+  //    each predecessor as not `Ready`. No predecessor walk.
   // 2. contains a convertible copy-assign operator, in which case we generate a
   //    fix, and mark each predecessor as not Ready. No predecessor walk.
   // 3. does not interact with `AssignValue`, in which case we decrement the
@@ -174,7 +173,7 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
           continue;
         auto &W = CFGState.find(&*S)->second;
         if (W.Ready) {
-          if (--W.RemainingSuccessors == 0 && S.isReachable())
+          if (--W.RemainingSuccessors == 0)
             WorkList.push_back(&*S);
         }
       }
