@@ -12,6 +12,7 @@ if (FLANG_RT_INCLUDE_CUF)
   add_subdirectory(cuda)
 endif()
 if (FLANG_RT_INCLUDE_AMD)
+  message(STATUS "Adding AMD-specific Fortran runtime implementation")
   add_subdirectory(amd)
 endif()
 

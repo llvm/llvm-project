@@ -13,84 +13,76 @@
 
 #define ALLOC_DEBUG 1
 
+#include "flang/Runtime/AMD/amd_alloc.h"
 #include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/descriptor.h"
-#include "flang/Runtime/AMD/amd_alloc.h"
 #include "flang/Support/Fortran.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-
-// Deliberately use the C interface of Umpire, as it does not require
-// support for exceptions and RTTI, which are not avilable in the
-// Fortran runtime build.
-// TODO: go back to the correct header that is imported from an
-//       installation of Umpire
-// #include "umpire/interface/c_fortran/umpire.h"
-#include "flang-rt/runtime/amd/umpire/interface/c_fortran/umpire.h"
+#include <string_view>
 
 namespace Fortran::runtime::amd {
 
 static bool debugEnabled;
-static umpire_resourcemanager resourceManager;
-static umpire_allocator memoryPool;
 
-void *UmpireAlloc(std::size_t AllocationSize, std::int64_t *) {
+// ====================== OPENMP ======================
+
+// Declare OpenMP memory management routines to avoid importing
+// definitions via "omp.h" (and thus create a dependency to the
+// OpenMP runtime library code).
+extern "C" int omp_get_default_device(void);
+extern "C" void *omp_target_alloc(std::size_t, int);
+extern "C" void omp_target_free(void *, int);
+
+static void *OpenMPAlloc(std::size_t AllocationSize, std::int64_t *) {
 #if ALLOC_DEBUG
   if (debugEnabled) {
     std::fprintf(stderr, "[AMD_ALLOC] %s(%zu) (%s:%d)\n", __PRETTY_FUNCTION__,
         AllocationSize, __FILE__, __LINE__);
   }
 #endif
-  void *pointer{umpire_allocator_allocate(&memoryPool, AllocationSize)};
+  int device{omp_get_default_device()};
+  void *pointer{omp_target_alloc(AllocationSize, device)};
 #if ALLOC_DEBUG
   if (debugEnabled) {
-    std::fprintf(stderr, "[AMD_ALLOC] pointer of size %zu allocated at %p\n",
-        AllocationSize, pointer);
+    std::fprintf(stderr,
+        "[AMD_ALLOC] pointer of size %zu allocated at %p"
+        " on device %d.\n",
+        AllocationSize, pointer, device);
   }
 #endif
   return pointer;
 }
 
-void UmpireFree(void *pointer) {
+void OpenMPFree(void *pointer) {
 #if ALLOC_DEBUG
   if (debugEnabled) {
     std::fprintf(stderr, "[AMD_ALLOC] %s(%p) (%s:%d)\n", __PRETTY_FUNCTION__,
         pointer, __FILE__, __LINE__);
   }
 #endif
-  umpire_allocator_deallocate(&memoryPool, pointer);
+  omp_target_free(pointer, omp_get_default_device());
 }
 
-void registerUmpireAllocator(
-    const std::string &pool, const int initialSize, const int blockSize) {
+static void registerOpenMPAllocator() {
 #if ALLOC_DEBUG
   if (debugEnabled) {
-    std::fprintf(stderr,
-        "[AMD_ALLOC] registering Umpire dynamically growing allocator for "
-        "'%s'\n",
-        pool.c_str());
+    std::fprintf(
+        stderr, "[AMD_ALLOC] registering OpenMP device memory allocator\n");
   }
 #endif // ALLOC_DEBUG
-  // Configure a dynamically growing memory pool.
-  umpire_allocator allocator;
-  umpire_resourcemanager_get_instance(&resourceManager);
-  umpire_resourcemanager_get_allocator_by_name(
-      &resourceManager, pool.c_str(), &allocator);
-  umpire_resourcemanager_make_allocator_list_pool(
-      &resourceManager, "pool", allocator, initialSize, blockSize, &memoryPool);
-
-  allocatorRegistry.Register(1, {&UmpireAlloc, &UmpireFree});
+  allocatorRegistry.Register(1, {&OpenMPAlloc, &OpenMPFree});
 }
 
-static std::string getStringFromEnvironment(
-    const char *envirable, const std::string defaultValue = "") {
+static const char *getStringFromEnvironment(
+    const char *envirable, const char *defaultValue = "") {
   if (auto value{std::getenv(envirable)}) {
-    return std::string{value};
+    return value;
   }
-  return std::string{defaultValue};
+  return defaultValue;
 }
 
 static int getIntFromEnvironment(
@@ -110,13 +102,17 @@ static int getIntFromEnvironment(
   return result;
 }
 
-static std::pair<std::string, std::string> splitAtColon(
-    const std::string &str) {
-  size_t colon = str.find(':');
-  if (colon == std::string::npos) {
-    return {str, ""};
+static std::pair<std::string_view, std::string_view> splitAtColon(
+    std::string_view str) {
+  const char *data = str.data();
+  size_t len = str.size();
+  const char *colon = static_cast<const char *>(std::memchr(data, ':', len));
+  if (!colon) {
+    return {str, std::string_view()};
   }
-  return {str.substr(0, colon), str.substr(colon + 1)};
+  size_t colon_pos = colon - data;
+  return {std::string_view(data, colon_pos),
+      std::string_view(colon + 1, len - colon_pos - 1)};
 }
 
 extern "C" {
@@ -132,62 +128,47 @@ void RTDEF(AMDRegisterAllocator)() {
   }
 #endif
 
-  // Get some basic values from the environment about initial pool size,
-  // allocation block size, etc.
-  auto initialSize{
-      getIntFromEnvironment("AMD_ALLOC_INITIAL_SIZE", ALLOC_INITIAL_SIZE)};
-  auto blockSize{
-      getIntFromEnvironment("AMD_ALLOC_BLOCK_SIZE", ALLOC_BLOCK_SIZE)};
-#if ALLOC_DEBUG
-  if (debugEnabled) {
-    std::fprintf(stderr,
-        "[AMD_ALLOC] initial pool size = %d (%.2f MB), block size = %d (%f.2 "
-        "kB)\n",
-        initialSize, initialSize / 1048576.0f, blockSize, blockSize / 1024.0f);
-  }
-#endif
-
   // Determine what allocator to register via very simplistic parsing of syntax
-  // ALLOCATOR:MEMORY_KIND.  Proper values are: Umpire:host, Umpire:device.
-  std::string allocator = getStringFromEnvironment("AMD_ALLOC", "umpire:host");
-  std::transform(
-      allocator.begin(), allocator.end(), allocator.begin(), ::toupper);
+  // ALLOCATOR:MEMORY_KIND.  Proper values are: OPENMP
+  const char *allocator_env = getStringFromEnvironment("AMD_ALLOC", "openmp");
+  char allocator[256];
+  std::strncpy(allocator, allocator_env, sizeof(allocator) - 1);
+  allocator[sizeof(allocator) - 1] = '\0';
+  for (char *p = allocator; *p; ++p)
+    *p = ::toupper(*p);
 #if ALLOC_DEBUG
   if (debugEnabled) {
-    std::fprintf(
-        stderr, "[AMD_ALLOC] requesting allocator: %s\n", allocator.c_str());
+    std::fprintf(stderr, "[AMD_ALLOC] requesting allocator: %s\n", allocator);
   }
 #endif // ALLOC_DEBUG
-  std::pair<std::string, std::string> allocSpec{splitAtColon(allocator)};
-  if (allocSpec.first != "UMPIRE") {
+  std::pair<std::string_view, std::string_view> allocSpec{
+      splitAtColon(allocator)};
+  if (allocSpec.first != "OPENMP") {
     std::fprintf(stderr,
-        "[AMD_ALLOC] warning: wrong allocator ('%s') specified for Umpire "
-        "allocator, using 'UMPIRE' instead\n",
-        allocSpec.first.c_str());
-    allocSpec.first = std::string("UMPIRE");
+        "[AMD_ALLOC] warning: wrong allocator ('%.*s') specified for AMD "
+        "allocator, using 'OPENMP' instead.\n",
+        static_cast<int>(allocSpec.first.size()), allocSpec.first.data());
+    allocSpec.first = "OPENMP";
   }
-  if (allocSpec.first == "UMPIRE") {
-    // Register this allocator in the infrastructure as allocator 1.
-    // This has a counter part in descriptor.cpp, where (right now)
-    // the allocator is hard-coded to be allocator 1 (and the default
-    // allocator has been disabled).
-    if (allocSpec.second != "HOST" && allocSpec.second != "DEVICE") {
+  if (allocSpec.first == "OPENMP") {
+    if (!allocSpec.second.empty()) {
       std::fprintf(stderr,
-          "[AMD_ALLOC] warning: wrong pool ('%s') specified for Umpire "
-          "allocator, using 'HOST' instead\n",
-          allocSpec.second.c_str());
-      allocSpec.second = std::string{"HOST"};
+          "[AMD_ALLOC] warning: OpenMP allocator does not "
+          "accept allocator option type '%.*s'.\n",
+          static_cast<int>(allocSpec.second.size()), allocSpec.second.data());
     }
-    registerUmpireAllocator(allocSpec.second, initialSize, blockSize);
+    registerOpenMPAllocator();
   }
 }
 
 void RTDEF(AMDAllocatableSetAllocIdx)(Descriptor &descriptor, int pos) {
   if (descriptor.IsAllocatable() && !descriptor.IsAllocated()) {
+#if ALLOC_DEBUG
     if (debugEnabled) {
       std::fprintf(
           stderr, "[AMD_ALLOC] AMDAllocatableSetAllocIdx = %d \n", pos);
     }
+#endif
     descriptor.SetAllocIdx(pos);
   }
 }
