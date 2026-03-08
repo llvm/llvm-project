@@ -2898,7 +2898,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(Op0, V);
 
-  if (auto *Folded = foldV4EqualShuffleAndToV2Equal(I))
+  if (auto *Folded = foldVni2mCmpEqUsingV2nim(I))
     return Folded;
 
   return nullptr;

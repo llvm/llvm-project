@@ -1296,12 +1296,12 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   return SimplifySelectsFeedingBinaryOp(I, LHS, RHS);
 }
 
-// Prior to SSE4.1, to perform equality comparisons between two
-// v2i64 values, the comparison is performed on v4i32 values:
+// Folds patterns which uses comparisons on <2N x iM> type for a <N x i2M>
+// equality comparison.
 //
-// (A1, A2) -> (A1Lower, A1Upper, A2Lower, A2Upper)
-// (B1, B2) -> (B1Lower, B1Upper, B2Lower, B2Upper)
-// (Result1, Result2) -> (Result1, Result1, Result2, Result2)
+// (A1, ..., AN) -> (A1Lower, A1Upper, ..., ANLower, ANUpper)
+// (B1, ..., BN) -> (B1Lower, B1Upper, ..., BNLower, BNUpper)
+// (Result1, ..., ResultN) -> (Result1, Result1, ..., ResultN, ResultN)
 //
 // where,
 //
@@ -1311,33 +1311,45 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
 //
 // Bitwise AND between the upper and lower parts can be achived by performing
 // the operation between the original and shuffled equality vector.
-Instruction *InstCombinerImpl::foldV4EqualShuffleAndToV2Equal(Instruction &I) {
-  // Check argument type
-  auto *OldVecType = dyn_cast<VectorType>(I.getType());
+Instruction *InstCombinerImpl::foldVni2mCmpEqUsingV2nim(Instruction &I) {
+  auto *ResultVecType = dyn_cast<VectorType>(I.getType());
 
-  if (!OldVecType || OldVecType->isScalableTy() ||
-      !OldVecType->getElementType()->isIntegerTy(32) ||
-      OldVecType->getElementCount().getFixedValue() != 4)
+  if (!ResultVecType || ResultVecType->isScalableTy() ||
+      !ResultVecType->getElementType()->isIntegerTy() ||
+      ResultVecType->getElementCount().getFixedValue() % 2 != 0)
     return nullptr;
 
   // Check pattern existance
   Value *L, *R;
   CmpPredicate Pred;
-  SmallVector<int> Mask = {1, 0, 3, 2};
+  ArrayRef<int> Mask;
 
-  auto Equal = m_ICmp(Pred, m_Value(L), m_Value(R));
-  auto Shuffle = m_SExtOrSelf(
-      m_Shuffle(m_SExtOrSelf(Equal), m_Poison(), m_SpecificMask(Mask)));
-  if (!match(&I, m_CombineOr(m_c_And(m_SExt(Equal), Shuffle),
-                             m_Select(Equal, Shuffle, m_Zero()))) ||
+  auto Equal = m_SExtOrSelf(m_ICmp(Pred, m_Value(L), m_Value(R)));
+  auto Shuffle = m_SExtOrSelf(m_Shuffle(Equal, m_Poison(), m_Mask(Mask)));
+  if (!match(&I,
+             m_SExtOrSelf(m_CombineOr(m_c_And(Equal, Shuffle),
+                                      m_Select(Equal, Shuffle, m_Zero())))) ||
       Pred != CmpInst::ICMP_EQ)
     return nullptr;
+
+  auto *OldVecType = cast<VectorType>(L->getType());
+
+  if (OldVecType != ResultVecType)
+    return nullptr;
+
+  // Example shuffle mask: {1, 0, 3, 2}
+  for (auto I = 0; I < static_cast<int>(Mask.size()); I += 2)
+    if (Mask[I] != I + 1 || Mask[I + 1] != I)
+      return nullptr;
 
   LLVM_DEBUG(dbgs() << "IC: Folding equal-shuffle-and pattern" << '\n');
 
   // Perform folding
-  auto *NewElementType = IntegerType::get(I.getContext(), 64);
-  auto *NewVecType = VectorType::get(NewElementType, 2, false);
+  auto OldElementCount = OldVecType->getElementCount().getFixedValue();
+  auto OldElementWidth = OldVecType->getElementType()->getIntegerBitWidth();
+  auto *NewElementType = IntegerType::get(I.getContext(), OldElementWidth * 2);
+  auto *NewVecType =
+      VectorType::get(NewElementType, OldElementCount / 2, false);
   auto *BitCastL = Builder.CreateBitCast(L, NewVecType);
   auto *BitCastR = Builder.CreateBitCast(R, NewVecType);
   auto *Cmp = Builder.CreateICmp(Pred, BitCastL, BitCastR);

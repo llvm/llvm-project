@@ -4982,7 +4982,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return CallInst::Create(Scmp, {CmpLHS, ConstantInt::get(SI.getType(), 0)});
   }
 
-  if (auto *Folded = foldV4EqualShuffleAndToV2Equal(SI))
+  if (auto *Folded = foldVni2mCmpEqUsingV2nim(SI))
     return Folded;
 
   return nullptr;

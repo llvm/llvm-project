@@ -484,7 +484,7 @@ private:
     return Sel;
   }
 
-  Instruction *foldV4EqualShuffleAndToV2Equal(Instruction &I);
+  Instruction *foldVni2mCmpEqUsingV2nim(Instruction &I);
 
   Instruction *foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I);
 
