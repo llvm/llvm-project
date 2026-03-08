@@ -79,8 +79,8 @@ gpu.func @gemm(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %ar
   %c16 = arith.constant 16 : index
   %c8 = arith.constant 8 : index
   %c1024 = arith.constant 1024 : index
-  %block_id_x = gpu.block_id  x
-  %block_id_y = gpu.block_id  y
+  %block_id_x = gpu.block_id x
+  %block_id_y = gpu.block_id y
   %0 = arith.muli %block_id_x, %c8 : index
   %1 = arith.muli %block_id_y, %c16 : index
   %2 = xegpu.create_nd_tdesc %arg2 : memref<1024x1024xf32> ->
@@ -385,7 +385,7 @@ gpu.module @xevm_module{
 gpu.module @xevm_module{
    gpu.func  @vector_shape_cast_scalar_to_vector(%arg0: memref<16xf16>, %arg1: memref<16x16xf16>) {
     %c0 = arith.constant 0 : index
-    %9 = gpu.block_id  x
+    %9 = gpu.block_id x
     %10 = arith.index_cast %9 : index to i16
     %11 = arith.bitcast %10 : i16 to f16
     // CHECK: vector.broadcast {{.*}} : f16 to vector<16xf16>
