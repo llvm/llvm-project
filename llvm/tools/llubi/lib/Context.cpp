@@ -174,6 +174,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
 }
 
 AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
+  assert(Bytes.size() == getEffectiveTypeStoreSize(Ty) &&
+         "Invalid byte array size for the type");
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy())
     return fromBytes(ConstBytesView(Bytes, DL), Ty, /*OffsetInBits=*/0,
                      /*CheckPaddingBits=*/true);
@@ -212,11 +214,12 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
     Type *ElemTy = ArrTy->getElementType();
     uint64_t Stride = getEffectiveTypeAllocSize(ElemTy);
+    uint64_t StoreSize = getEffectiveTypeStoreSize(ElemTy);
     uint32_t NumElements = ArrTy->getNumElements();
     std::vector<AnyValue> ValVec;
     ValVec.reserve(NumElements);
     for (uint32_t I = 0; I != NumElements; ++I)
-      ValVec.push_back(fromBytes(Bytes.slice(I * Stride), ElemTy));
+      ValVec.push_back(fromBytes(Bytes.slice(I * Stride, StoreSize), ElemTy));
     return AnyValue(std::move(ValVec));
   }
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
@@ -224,10 +227,13 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
     std::vector<AnyValue> ValVec;
     uint32_t NumElements = StructTy->getNumElements();
     ValVec.reserve(NumElements);
-    for (uint32_t I = 0; I != NumElements; ++I)
+    for (uint32_t I = 0; I != NumElements; ++I) {
+      Type *ElemTy = StructTy->getElementType(I);
       ValVec.push_back(fromBytes(
-          Bytes.slice(getEffectiveTypeSize(Layout->getElementOffset(I))),
-          StructTy->getElementType(I)));
+          Bytes.slice(getEffectiveTypeSize(Layout->getElementOffset(I)),
+                      getEffectiveTypeStoreSize(ElemTy)),
+          ElemTy));
+    }
     return AnyValue(std::move(ValVec));
   }
   llvm_unreachable("Unsupported first class type.");
@@ -285,6 +291,8 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
 
 void Context::toBytes(const AnyValue &Val, Type *Ty,
                       MutableArrayRef<Byte> Bytes) {
+  assert(Bytes.size() == getEffectiveTypeStoreSize(Ty) &&
+         "Invalid byte array size for the type");
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy()) {
     toBytes(Val, Ty, /*OffsetInBits=*/0, MutableBytesView(Bytes, DL),
             /*PaddingBits=*/true);
@@ -326,10 +334,10 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
     Type *ElemTy = ArrTy->getElementType();
     uint64_t Offset = 0;
-    uint64_t StoreSize = getEffectiveTypeStoreSize(ElemTy);
     uint64_t Stride = getEffectiveTypeAllocSize(ElemTy);
+    uint64_t StoreSize = getEffectiveTypeStoreSize(ElemTy);
     for (const auto &SubVal : Val.asAggregate()) {
-      toBytes(SubVal, ElemTy, Bytes.slice(Offset));
+      toBytes(SubVal, ElemTy, Bytes.slice(Offset, StoreSize));
       FillUndefBytes(Offset + StoreSize, Offset + Stride);
       Offset += Stride;
     }
@@ -341,9 +349,11 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     for (uint32_t I = 0, E = Val.asAggregate().size(); I != E; ++I) {
       Type *ElemTy = StructTy->getElementType(I);
       uint64_t ElemOffset = getEffectiveTypeSize(Layout->getElementOffset(I));
+      uint64_t ElemStoreSize = getEffectiveTypeStoreSize(ElemTy);
       FillUndefBytes(LastAccessedOffset, ElemOffset);
-      toBytes(Val.asAggregate()[I], ElemTy, Bytes.slice(ElemOffset));
-      LastAccessedOffset = ElemOffset + getEffectiveTypeStoreSize(ElemTy);
+      toBytes(Val.asAggregate()[I], ElemTy,
+              Bytes.slice(ElemOffset, ElemStoreSize));
+      LastAccessedOffset = ElemOffset + ElemStoreSize;
     }
     FillUndefBytes(LastAccessedOffset, getEffectiveTypeStoreSize(StructTy));
     return;

@@ -158,22 +158,22 @@ define void @main() {
 ; CHECK-NEXT:   %val18 = load <vscale x 2 x i32>, ptr %alloc_vscale, align 8 => { i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2 }
 ; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x30 [alloc_struct]
 ; CHECK-NEXT:   store %struct { [2 x i16] [i16 1, i16 2], i64 3 }, ptr %alloc_struct, align 8
-; CHECK-NEXT:   %val19 = load %struct, ptr %alloc_struct, align 8 => { { i16 3, i16 3 }, i64 3 }
-; CHECK-NEXT:   %val20 = load i64, ptr %alloc_struct, align 8 => i64 -3863260480978728461
-; CHECK-NEXT:   %val21 = load i64, ptr %alloc_struct, align 8 => i64 -7514139571062690004
+; CHECK-NEXT:   %val19 = load %struct, ptr %alloc_struct, align 8 => { { i16 1, i16 2 }, i64 3 }
+; CHECK-NEXT:   %val20 = load i64, ptr %alloc_struct, align 8 => i64 281486191577587
+; CHECK-NEXT:   %val21 = load i64, ptr %alloc_struct, align 8 => i64 281486962127119
 ; CHECK-NEXT:   %alloc_struct_packed = alloca %struct.packed, align 8 => ptr 0x40 [alloc_struct_packed]
 ; CHECK-NEXT:   store %struct.packed <{ [2 x i16] [i16 1, i16 2], i64 3 }>, ptr %alloc_struct_packed, align 1
-; CHECK-NEXT:   %val22 = load %struct.packed, ptr %alloc_struct_packed, align 1 => { { i16 3, i16 3 }, i64 3 }
-; CHECK-NEXT:   %val23 = load i64, ptr %alloc_struct_packed, align 8 => i64 5694717663415107584
-; CHECK-NEXT:   %val24 = load i64, ptr %alloc_struct_packed, align 8 => i64 -1143453889152942080
+; CHECK-NEXT:   %val22 = load %struct.packed, ptr %alloc_struct_packed, align 1 => { { i16 1, i16 2 }, i64 3 }
+; CHECK-NEXT:   %val23 = load i64, ptr %alloc_struct_packed, align 8 => i64 281483566645248
+; CHECK-NEXT:   %val24 = load i64, ptr %alloc_struct_packed, align 8 => i64 281483566645248
 ; CHECK-NEXT:   %alloc_struct_vscale = alloca %struct.vscale, align 8 => ptr 0x50 [alloc_struct_vscale]
 ; CHECK-NEXT:   store %struct.vscale zeroinitializer, ptr %alloc_struct_vscale, align 4
 ; CHECK-NEXT:   %gep4 = getelementptr <vscale x 1 x i32>, ptr %alloc_struct_vscale, i32 1 => ptr 0x60 [alloc_struct_vscale + 16]
 ; CHECK-NEXT:   store <vscale x 1 x i32> %ones, ptr %gep4, align 4
-; CHECK-NEXT:   %val25 = load %struct.vscale, ptr %alloc_struct_vscale, align 4 => { { i32 1, i32 1, i32 1, i32 1 }, { i32 1, i32 1, i32 1, i32 1 } }
+; CHECK-NEXT:   %val25 = load %struct.vscale, ptr %alloc_struct_vscale, align 4 => { { i32 0, i32 0, i32 0, i32 0 }, { i32 1, i32 1, i32 1, i32 1 } }
 ; CHECK-NEXT:   %alloc_array = alloca [2 x i32], align 4 => ptr 0x70 [alloc_array]
 ; CHECK-NEXT:   store [2 x i32] [i32 1, i32 2], ptr %alloc_array, align 4
-; CHECK-NEXT:   %val26 = load [2 x i32], ptr %alloc_array, align 4 => { i32 2, i32 2 }
+; CHECK-NEXT:   %val26 = load [2 x i32], ptr %alloc_array, align 4 => { i32 1, i32 2 }
 ; CHECK-NEXT:   %alloc_i1_vec = alloca <4 x i1>, align 1 => ptr 0x78 [alloc_i1_vec]
 ; CHECK-NEXT:   store <4 x i1> <i1 true, i1 false, i1 poison, i1 false>, ptr %alloc_i1_vec, align 1
 ; CHECK-NEXT:   %val27 = load <4 x i1>, ptr %alloc_i1_vec, align 1 => { T, F, poison, F }
@@ -182,9 +182,9 @@ define void @main() {
 ; CHECK-NEXT:   store i32 0, ptr %alloc_padding, align 4
 ; CHECK-NEXT:   %alloc_padding_vec = alloca i64, align 8 => ptr 0x80 [alloc_padding_vec]
 ; CHECK-NEXT:   store { <6 x i5>, i32 } { <6 x i5> zeroinitializer, i32 -1 }, ptr %alloc_padding_vec, align 4
-; CHECK-NEXT:   %load_agg = load { <6 x i5>, i32 }, ptr %alloc_padding_vec, align 4 => { { i5 -1, i5 -1, i5 -1, i5 -1, i5 -1, i5 -1 }, i32 -1 }
-; CHECK-NEXT:   %load_vec = load <6 x i5>, ptr %alloc_padding_vec, align 4 => { i5 -1, i5 9, i5 -16, i5 -7, i5 -2, i5 9 }
-; CHECK-NEXT:   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec, align 8 => poison
-; CHECK-NEXT:   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec, align 8 => { poison, poison, poison }
+; CHECK-NEXT:   %load_agg = load { <6 x i5>, i32 }, ptr %alloc_padding_vec, align 4 => { { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }, i32 -1 }
+; CHECK-NEXT:   %load_vec = load <6 x i5>, ptr %alloc_padding_vec, align 4 => { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }
+; CHECK-NEXT:   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec, align 8 => i33 255
+; CHECK-NEXT:   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec, align 8 => { i11 0, i11 0, i11 255 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

@@ -184,8 +184,8 @@ define void @main() {
 ; CHECK-NEXT:   store i32 0, ptr %alloc_padding, align 4
 ; CHECK-NEXT:   %alloc_padding_vec = alloca i64, align 8 => ptr 0x80 [alloc_padding_vec]
 ; CHECK-NEXT:   store { <6 x i5>, i32 } { <6 x i5> zeroinitializer, i32 -1 }, ptr %alloc_padding_vec, align 4
-; CHECK-NEXT:   %load_agg = load { <6 x i5>, i32 }, ptr %alloc_padding_vec, align 4 => { { poison, poison, poison, poison, poison, poison }, i32 -1 }
-; CHECK-NEXT:   %load_vec = load <6 x i5>, ptr %alloc_padding_vec, align 4 => { poison, poison, poison, poison, poison, poison }
+; CHECK-NEXT:   %load_agg = load { <6 x i5>, i32 }, ptr %alloc_padding_vec, align 4 => { { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }, i32 -1 }
+; CHECK-NEXT:   %load_vec = load <6 x i5>, ptr %alloc_padding_vec, align 4 => { i5 0, i5 0, i5 0, i5 0, i5 0, i5 0 }
 ; CHECK-NEXT:   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec, align 8 => poison
 ; CHECK-NEXT:   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec, align 8 => { poison, poison, poison }
 ; CHECK-NEXT:   ret void
