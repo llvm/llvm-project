@@ -2400,13 +2400,38 @@ def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType, [
   let summary = "Integer maximum";
   let description = [{
     The `cir.max` operation computes the maximum of two integer operands.
-    Both operands and the result must have the same integer type.
+    Both operands and the result must have the same integer type or vector of
+    integer type.
 
     Example:
 
     ```mlir
     %0 = cir.max %a, %b : !s32i
     %1 = cir.max %a, %b : !u32i
+    %2 = cir.max %a, %b : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MinOp : CIR_BinaryOp<"min", CIR_AnyIntOrVecOfIntType, [
+  Commutative, Idempotent
+]> {
+  let summary = "Integer minimum";
+  let description = [{
+    The `cir.min` operation computes the minimum of two integer operands.
+    Both operands and the result must have the same integer type or vector of
+    integer type.
+
+    Example:
+
+    ```mlir
+    %0 = cir.min %a, %b : !s32i
+    %1 = cir.min %a, %b : !u32i
+    %2 = cir.min %a, %b : !cir.vector<4 x !s32i>
     ```
   }];
 }
