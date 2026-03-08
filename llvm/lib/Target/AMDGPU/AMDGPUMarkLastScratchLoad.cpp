@@ -119,6 +119,7 @@ bool AMDGPUMarkLastScratchLoad::run(MachineFunction &MF) {
       // instruction from the next slot.
       if (!MISegmentEnd) {
         SlotIndex NextSlot = Slots.getNextNonNullIndex(Segment.end);
+        abort();
         MISegmentEnd = SI->getInstructionFromIndex(NextSlot);
       }
 
