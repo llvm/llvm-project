@@ -24,5 +24,10 @@ add_llvm_target_unittest(AMDGPUTests
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
   LiveRegUnits.cpp
+  NextUseAnalysisTest.cpp
   PALMetadata.cpp
   )
+
+# Define test directory for NextUseAnalysis tests
+target_compile_definitions(AMDGPUTests PRIVATE
+  AMDGPU_NUA_TEST_DIR="${LLVM_MAIN_SRC_DIR}/test/CodeGen/AMDGPU/NextUseAnalysis")

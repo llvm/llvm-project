@@ -1,0 +1,264 @@
+# This test validates the enhanced three-tier distance ranking system in AMDGPU Next Use Analysis.
+#
+# === THREE-TIER DISTANCE SYSTEM ===
+#
+# The analysis uses a sophisticated ranking system to handle complex control flow:
+#
+# Tier 1: FINITE DISTANCES (0 to ~1e12)
+#   - Standard instruction-to-instruction distances within basic blocks
+#   - Cross-block distances for normal control flow
+#   - Used when next use is reachable through finite instruction count
+#
+# Tier 2: LOOP-TAG DISTANCES (LoopTag + finite, where LoopTag = 2^40)
+#   - Applied when crossing loop boundaries (loop-exiting edges)
+#   - Indicates "outside current loop context" with additional finite offset
+#   - Examples: LoopTag+7, LoopTag+15
+#   - For nested loops: LoopTag*2+offset, LoopTag*3+offset, etc.
+#
+# Tier 3: DEAD-TAG DISTANCES (DeadTag + finite, where DeadTag = 2^60)
+#   - Reserved for truly dead registers (no reachable next use)
+#   - Much larger than LoopTag to ensure proper ranking
+#
+# === RANKING HIERARCHY ===
+#
+# The ranking ensures register spiller prioritizes correctly:
+#   finite < LoopTag+finite < LoopTag*2+finite < ... < DeadTag+finite
+#
+# This means:
+# - Registers used soon (finite distances) have highest priority
+# - Registers used outside loops (LoopTag) have medium priority
+# - Dead registers (DeadTag) have lowest priority for spilling
+#
+# === TEST VALIDATION ===
+#
+# This test uses a nested loop structure:
+#   bb.0 → bb.1 ⇄ bb.2 → bb.3 ⇄ bb.3 → bb.4 → bb.1
+#          outer loop    inner loop
+#
+# Key validation points:
+# 1. Variables crossing inner→outer loop boundaries get LoopTag distances
+# 2. Variables crossing outer→exit boundaries get higher LoopTag multiples
+# 3. Instruction-specific distance progression validates offset calculations
+# 4. Three-tier ranking prevents incorrect spilling decisions
+# 5. **LIMITATION**: This test only validates finite + LoopTag tiers
+#    DEAD distances require explicit getNextUseDistance() API calls
+#    See unit tests for DEAD tier validation
+#
+
+# NOTE: Test three-tier ranking with proper nested loops
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=amdgpu-next-use -amdgpu-next-use-dump-distance %s -o /dev/null 2>&1 | FileCheck %s
+
+
+
+# CHECK-LABEL: === NextUseAnalysis Results for test_proper_nested_loops ===
+# CHECK: --- MBB_0 ---
+# CHECK: Instr: %0:sgpr_32 = S_MOV_B32 10
+# CHECK-NEXT: Next-use distances:
+# CHECK: (no register uses)
+# CHECK: Instr: %1:sgpr_32 = S_MOV_B32 5
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 3 ]
+# CHECK: Instr: %2:sgpr_32 = S_MOV_B32 0
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %1[ 2 ]
+# CHECK: Instr: %3:sgpr_32 = S_MOV_B32 999
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 1 ]
+# CHECK: Vreg: %1[ 1 ]
+# CHECK: Vreg: %2[ 1 ]
+# CHECK: Instr: S_BRANCH %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 0 ]
+# CHECK: Vreg: %1[ 0 ]
+# CHECK: Vreg: %2[ 0 ]
+# CHECK: Vreg: %3[ 4 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ 0 ]
+# CHECK: Vreg: %1[ 0 ]
+# CHECK: Vreg: %2[ 0 ]
+# CHECK: Vreg: %3[ 4 ]
+# CHECK: --- MBB_1 ---
+# CHECK: Instr: %4:sgpr_32 = PHI %2, %bb.0, %8, %bb.4
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 1 ]
+# CHECK: Vreg: %1[ 5 ]
+# CHECK: Vreg: %3[ LoopTag+4 ]
+# CHECK: Instr: S_CMP_LT_I32 %4, %0, implicit-def $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 0 ]
+# CHECK: Vreg: %1[ 4 ]
+# CHECK: Vreg: %3[ LoopTag+3 ]
+# CHECK: Vreg: %4[ 0 ]
+# CHECK: Instr: S_CBRANCH_SCC1 %bb.2, implicit $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 11 ]
+# CHECK: Vreg: %1[ 3 ]
+# CHECK: Vreg: %3[ LoopTag+2 ]
+# CHECK: Vreg: %4[ 9 ]
+# CHECK: Instr: S_BRANCH %bb.5
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 10 ]
+# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %3[ LoopTag+1 ]
+# CHECK: Vreg: %4[ 8 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ 10 ]
+# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %3[ LoopTag+1 ]
+# CHECK: Vreg: %4[ 8 ]
+# CHECK: --- MBB_2 ---
+# CHECK: Instr: %5:sgpr_32 = S_MOV_B32 0
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 9 ]
+# CHECK: Vreg: %1[ 1 ]
+# CHECK: Vreg: %3[ LoopTag+12 ]
+# CHECK: Vreg: %4[ 7 ]
+# CHECK: Instr: S_BRANCH %bb.3
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 8 ]
+# CHECK: Vreg: %1[ 0 ]
+# CHECK: Vreg: %3[ LoopTag+11 ]
+# CHECK: Vreg: %4[ 6 ]
+# CHECK: Vreg: %5[ 0 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ 8 ]
+# CHECK: Vreg: %1[ 0 ]
+# CHECK: Vreg: %3[ LoopTag+11 ]
+# CHECK: Vreg: %4[ 6 ]
+# CHECK: Vreg: %5[ 0 ]
+# CHECK: --- MBB_3 ---
+# CHECK: Instr: %6:sgpr_32 = PHI %5, %bb.2, %7, %bb.3
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+8 ]
+# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %3[ LoopTag*2+11 ]
+# CHECK: Vreg: %4[ LoopTag+6 ]
+# CHECK: Instr: S_NOP 0
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+7 ]
+# CHECK: Vreg: %1[ 1 ]
+# CHECK: Vreg: %3[ LoopTag*2+10 ]
+# CHECK: Vreg: %4[ LoopTag+5 ]
+# CHECK: Vreg: %6[ 1 ]
+# CHECK: Instr: S_CMP_LT_I32 %6, %1, implicit-def $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+6 ]
+# CHECK: Vreg: %1[ 0 ]
+# CHECK: Vreg: %3[ LoopTag*2+9 ]
+# CHECK: Vreg: %4[ LoopTag+4 ]
+# CHECK: Vreg: %6[ 0 ]
+# CHECK: Instr: %7:sgpr_32 = S_ADD_U32 %6, 1, implicit-def $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+5 ]
+# CHECK: Vreg: %1[ 4 ]
+# CHECK: Vreg: %3[ LoopTag*2+8 ]
+# CHECK: Vreg: %4[ LoopTag+3 ]
+# CHECK: Vreg: %6[ 0 ]
+# CHECK: Instr: S_CBRANCH_SCC1 %bb.3, implicit $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+4 ]
+# CHECK: Vreg: %1[ 3 ]
+# CHECK: Vreg: %3[ LoopTag*2+7 ]
+# CHECK: Vreg: %4[ LoopTag+2 ]
+# CHECK: Vreg: %7[ 1 ]
+# CHECK: Instr: S_BRANCH %bb.4
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ LoopTag+3 ]
+# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %3[ LoopTag*2+6 ]
+# CHECK: Vreg: %4[ LoopTag+1 ]
+# CHECK: Vreg: %7[ 0 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ LoopTag+3 ]
+# CHECK: Vreg: %1[ 2 ]
+# CHECK: Vreg: %3[ LoopTag*2+6 ]
+# CHECK: Vreg: %4[ LoopTag+1 ]
+# CHECK: Vreg: %7[ 0 ]
+# CHECK: --- MBB_4 ---
+# CHECK: Instr: %8:sgpr_32 = S_ADD_U32 %4, 1, implicit-def $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 2 ]
+# CHECK: Vreg: %1[ 6 ]
+# CHECK: Vreg: %3[ LoopTag+5 ]
+# CHECK: Vreg: %4[ 0 ]
+# CHECK: Instr: S_BRANCH %bb.1
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %0[ 1 ]
+# CHECK: Vreg: %1[ 5 ]
+# CHECK: Vreg: %3[ LoopTag+4 ]
+# CHECK: Vreg: %8[ 0 ]
+# CHECK: Block End Distances:
+# CHECK: Vreg: %0[ 1 ]
+# CHECK: Vreg: %1[ 5 ]
+# CHECK: Vreg: %3[ LoopTag+4 ]
+# CHECK: Vreg: %8[ 0 ]
+# CHECK: --- MBB_5 ---
+# CHECK: Instr: %9:sgpr_32 = S_ADD_U32 %4, %3, implicit-def $scc
+# CHECK-NEXT: Next-use distances:
+# CHECK: Vreg: %3[ 0 ]
+# CHECK: Vreg: %4[ 0 ]
+# CHECK: Instr: S_ENDPGM 0
+# CHECK-NEXT: Next-use distances:
+# CHECK: (no register uses)
+# CHECK: Block End Distances:
+# CHECK: (no registers live at block end)
+# CHECK-LABEL: === End NextUseAnalysis Results ===
+
+---
+name:            test_proper_nested_loops
+alignment:       1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 1, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 2, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 3, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 4, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 5, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 6, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 7, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 8, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 9, class: sgpr_32, preferred-register: '', flags: [  ] }
+body: |
+  bb.0:
+    %0:sgpr_32 = S_MOV_B32 10
+    %1:sgpr_32 = S_MOV_B32 5
+    %2:sgpr_32 = S_MOV_B32 0
+    %3:sgpr_32 = S_MOV_B32 999
+    S_BRANCH %bb.1
+
+  bb.1:
+    %4:sgpr_32 = PHI %2, %bb.0, %8, %bb.4
+    S_CMP_LT_I32 %4, %0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.5
+
+  bb.2:
+    %5:sgpr_32 = S_MOV_B32 0
+    S_BRANCH %bb.3
+
+  bb.3:
+    %6:sgpr_32 = PHI %5, %bb.2, %7, %bb.3
+    S_NOP 0
+    S_CMP_LT_I32 %6, %1, implicit-def $scc
+    %7:sgpr_32 = S_ADD_U32 %6, 1, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.3, implicit $scc
+    S_BRANCH %bb.4
+
+  bb.4:
+    %8:sgpr_32 = S_ADD_U32 %4, 1, implicit-def $scc
+    S_BRANCH %bb.1
+
+  bb.5:
+    %9:sgpr_32 = S_ADD_U32 %4, %3, implicit-def $scc
+    S_ENDPGM 0
+
+
+# Test 1: Basic finite distances in entry block - instruction-specific validation
+
+# Test 2: Three-tier ranking in inner loop - exact instruction context
+
+# Test 3: Loop exit distances validation
+
+...
