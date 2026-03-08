@@ -49,7 +49,7 @@ define <16 x i8> @mul_v16i8_const6(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
+  %result = mul <16 x i8> %a, splat (i8 6)
   ret <16 x i8> %result
 }
 
@@ -79,7 +79,7 @@ define <16 x i8> @mul_v16i8_const10(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
+  %result = mul <16 x i8> %a, splat (i8 10)
   ret <16 x i8> %result
 }
 
@@ -112,7 +112,7 @@ define <16 x i8> @mul_v16i8_const12(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12>
+  %result = mul <16 x i8> %a, splat (i8 12)
   ret <16 x i8> %result
 }
 
@@ -142,7 +142,7 @@ define <16 x i8> @mul_v16i8_const18(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18, i8 18>
+  %result = mul <16 x i8> %a, splat (i8 18)
   ret <16 x i8> %result
 }
 
@@ -175,7 +175,7 @@ define <16 x i8> @mul_v16i8_const20(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20>
+  %result = mul <16 x i8> %a, splat (i8 20)
   ret <16 x i8> %result
 }
 
@@ -208,7 +208,7 @@ define <16 x i8> @mul_v16i8_const24(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
+  %result = mul <16 x i8> %a, splat (i8 24)
   ret <16 x i8> %result
 }
 
@@ -238,7 +238,7 @@ define <16 x i8> @mul_v16i8_const34(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34, i8 34>
+  %result = mul <16 x i8> %a, splat (i8 34)
   ret <16 x i8> %result
 }
 
@@ -271,7 +271,7 @@ define <16 x i8> @mul_v16i8_const36(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36, i8 36>
+  %result = mul <16 x i8> %a, splat (i8 36)
   ret <16 x i8> %result
 }
 
@@ -304,7 +304,7 @@ define <16 x i8> @mul_v16i8_const40(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40, i8 40>
+  %result = mul <16 x i8> %a, splat (i8 40)
   ret <16 x i8> %result
 }
 
@@ -337,7 +337,7 @@ define <16 x i8> @mul_v16i8_const48(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48>
+  %result = mul <16 x i8> %a, splat (i8 48)
   ret <16 x i8> %result
 }
 
@@ -345,136 +345,100 @@ define <16 x i8> @mul_v16i8_const48(<16 x i8> %a) nounwind {
 ;; v16i8 Tests (128-bit vectors) - Difference of two powers of 2
 ;; ============================================================================
 
-; Test multiply by 6 = 8 - 2 = (1 << 3) - (1 << 1)
-define <16 x i8> @mul_v16i8_const6_diff(<16 x i8> %a) nounwind {
-; SSE2-LABEL: mul_v16i8_const6_diff:
+; Test multiply by 14 = 16 - 2 = (1 << 4) - (1 << 1)
+define <16 x i8> @mul_v16i8_const14(<16 x i8> %a) nounwind {
+; SSE2-LABEL: mul_v16i8_const14:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    paddb %xmm0, %xmm1
-; SSE2-NEXT:    psllw $2, %xmm0
+; SSE2-NEXT:    psllw $4, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    paddb %xmm1, %xmm0
+; SSE2-NEXT:    psubb %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX2-LABEL: mul_v16i8_const6_diff:
+; AVX2-LABEL: mul_v16i8_const14:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm1
-; AVX2-NEXT:    vpsllw $2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $4, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: mul_v16i8_const6_diff:
+; AVX512-LABEL: mul_v16i8_const14:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpaddb %xmm0, %xmm0, %xmm1
-; AVX512-NEXT:    vpsllw $2, %xmm0, %xmm0
+; AVX512-NEXT:    vpsllw $4, %xmm0, %xmm0
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
+  %result = mul <16 x i8> %a, splat (i8 14)
   ret <16 x i8> %result
 }
 
-; Test multiply by 12 = 16 - 4 = (1 << 4) - (1 << 2)
-define <16 x i8> @mul_v16i8_const12_diff(<16 x i8> %a) nounwind {
-; SSE2-LABEL: mul_v16i8_const12_diff:
+; Test multiply by 30 = 32 - 2 = (1 << 5) - (1 << 1)
+define <16 x i8> @mul_v16i8_const30(<16 x i8> %a) nounwind {
+; SSE2-LABEL: mul_v16i8_const30:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    paddb %xmm0, %xmm1
+; SSE2-NEXT:    psllw $5, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    psubb %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX2-LABEL: mul_v16i8_const30:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm1
+; AVX2-NEXT:    vpsllw $5, %xmm0, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: mul_v16i8_const30:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpaddb %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vpsllw $5, %xmm0, %xmm0
+; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %result = mul <16 x i8> %a, splat (i8 30)
+  ret <16 x i8> %result
+}
+
+; Test multiply by 60 = 64 - 4 = (1 << 6) - (1 << 2)
+define <16 x i8> @mul_v16i8_const60(<16 x i8> %a) nounwind {
+; SSE2-LABEL: mul_v16i8_const60:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psllw $2, %xmm1
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    psllw $3, %xmm0
+; SSE2-NEXT:    psllw $6, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    paddb %xmm1, %xmm0
+; SSE2-NEXT:    psubb %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX2-LABEL: mul_v16i8_const12_diff:
+; AVX2-LABEL: mul_v16i8_const60:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllw $2, %xmm0, %xmm1
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpsllw $3, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $6, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: mul_v16i8_const12_diff:
+; AVX512-LABEL: mul_v16i8_const60:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsllw $2, %xmm0, %xmm1
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512-NEXT:    vpsllw $3, %xmm0, %xmm0
+; AVX512-NEXT:    vpsllw $6, %xmm0, %xmm0
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12>
+  %result = mul <16 x i8> %a, splat (i8 60)
   ret <16 x i8> %result
 }
 
-; Test multiply by 24 = 32 - 8 = (1 << 5) - (1 << 3)
-define <16 x i8> @mul_v16i8_const24_diff(<16 x i8> %a) nounwind {
-; SSE2-LABEL: mul_v16i8_const24_diff:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psllw $3, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    psllw $4, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    paddb %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; AVX2-LABEL: mul_v16i8_const24_diff:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllw $3, %xmm0, %xmm1
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: mul_v16i8_const24_diff:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllw $3, %xmm0, %xmm1
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
-  ret <16 x i8> %result
-}
-
-; Test multiply by 48 = 64 - 16 = (1 << 6) - (1 << 4)
-define <16 x i8> @mul_v16i8_const48_diff(<16 x i8> %a) nounwind {
-; SSE2-LABEL: mul_v16i8_const48_diff:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psllw $4, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    psllw $5, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    paddb %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; AVX2-LABEL: mul_v16i8_const48_diff:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllw $4, %xmm0, %xmm1
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpsllw $5, %xmm0, %xmm0
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: mul_v16i8_const48_diff:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllw $4, %xmm0, %xmm1
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512-NEXT:    vpsllw $5, %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48>
-  ret <16 x i8> %result
-}
-
-; Test multiply by 96 = 128 - 32 = (1 << 7) - (1 << 5)
+; Test multiply by 96 = 64 + 32 = (1 << 6) + (1 << 5)
 define <16 x i8> @mul_v16i8_const96(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_const96:
 ; SSE2:       # %bb.0:
@@ -503,7 +467,7 @@ define <16 x i8> @mul_v16i8_const96(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96, i8 96>
+  %result = mul <16 x i8> %a, splat (i8 96)
   ret <16 x i8> %result
 }
 
@@ -543,7 +507,7 @@ define <16 x i8> @mul_v16i8_const160(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160, i8 160>
+  %result = mul <16 x i8> %a, splat (i8 160)
   ret <16 x i8> %result
 }
 
@@ -551,7 +515,7 @@ define <16 x i8> @mul_v16i8_const160(<16 x i8> %a) nounwind {
 ;; v16i8 Tests (128-bit vectors) - Negative constants
 ;; ============================================================================
 
-; Test multiply by -6 (i8 250)
+; Test multiply by -6 = -(4 + 2)
 define <16 x i8> @mul_v16i8_const_neg6(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_const_neg6:
 ; SSE2:       # %bb.0:
@@ -584,11 +548,11 @@ define <16 x i8> @mul_v16i8_const_neg6(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250>
+  %result = mul <16 x i8> %a, splat (i8 250)
   ret <16 x i8> %result
 }
 
-; Test multiply by -10 (i8 246)
+; Test multiply by -10 = -(8 + 2)
 define <16 x i8> @mul_v16i8_const_neg10(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_const_neg10:
 ; SSE2:       # %bb.0:
@@ -621,11 +585,11 @@ define <16 x i8> @mul_v16i8_const_neg10(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246, i8 246>
+  %result = mul <16 x i8> %a, splat (i8 246)
   ret <16 x i8> %result
 }
 
-; Test multiply by -12 (i8 244)
+; Test multiply by -12  = -(8+4)
 define <16 x i8> @mul_v16i8_const_neg12(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_const_neg12:
 ; SSE2:       # %bb.0:
@@ -661,11 +625,11 @@ define <16 x i8> @mul_v16i8_const_neg12(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244>
+  %result = mul <16 x i8> %a, splat (i8 244)
   ret <16 x i8> %result
 }
 
-; Test multiply by -24 (i8 232)
+; Test multiply by -24 = -(8 + 16)
 define <16 x i8> @mul_v16i8_const_neg24(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_const_neg24:
 ; SSE2:       # %bb.0:
@@ -701,7 +665,7 @@ define <16 x i8> @mul_v16i8_const_neg24(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232, i8 232>
+  %result = mul <16 x i8> %a, splat (i8 232)
   ret <16 x i8> %result
 }
 
@@ -741,7 +705,7 @@ define <32 x i8> @mul_v32i8_const6(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
+  %result = mul <32 x i8> %a, splat (i8 6)
   ret <32 x i8> %result
 }
 
@@ -777,7 +741,7 @@ define <32 x i8> @mul_v32i8_const10(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
+  %result = mul <32 x i8> %a, splat (i8 10)
   ret <32 x i8> %result
 }
 
@@ -818,7 +782,7 @@ define <32 x i8> @mul_v32i8_const12(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12>
+  %result = mul <32 x i8> %a, splat (i8 12)
   ret <32 x i8> %result
 }
 
@@ -859,7 +823,7 @@ define <32 x i8> @mul_v32i8_const20(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20>
+  %result = mul <32 x i8> %a, splat (i8 20)
   ret <32 x i8> %result
 }
 
@@ -900,11 +864,11 @@ define <32 x i8> @mul_v32i8_const24(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
+  %result = mul <32 x i8> %a, splat (i8 24)
   ret <32 x i8> %result
 }
 
-; Test multiply by -6 (i8 250)
+; Test multiply by -6 = -(4 + 2)
 define <32 x i8> @mul_v32i8_const_neg6(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v32i8_const_neg6:
 ; SSE2:       # %bb.0:
@@ -946,11 +910,11 @@ define <32 x i8> @mul_v32i8_const_neg6(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsubb %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250, i8 250>
+  %result = mul <32 x i8> %a, splat (i8 250)
   ret <32 x i8> %result
 }
 
-; Test multiply by -12 (i8 244)
+; Test multiply by -12 = -(8 + 4)
 define <32 x i8> @mul_v32i8_const_neg12(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v32i8_const_neg12:
 ; SSE2:       # %bb.0:
@@ -997,7 +961,7 @@ define <32 x i8> @mul_v32i8_const_neg12(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsubb %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244, i8 244>
+  %result = mul <32 x i8> %a, splat (i8 244)
   ret <32 x i8> %result
 }
 
@@ -1052,7 +1016,7 @@ define <64 x i8> @mul_v64i8_const6(<64 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
-  %result = mul <64 x i8> %a, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
+  %result = mul <64 x i8> %a, splat (i8 6)
   ret <64 x i8> %result
 }
 
@@ -1103,7 +1067,7 @@ define <64 x i8> @mul_v64i8_const10(<64 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
-  %result = mul <64 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
+  %result = mul <64 x i8> %a, splat (i8 10)
   ret <64 x i8> %result
 }
 
@@ -1163,7 +1127,7 @@ define <64 x i8> @mul_v64i8_const20(<64 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
-  %result = mul <64 x i8> %a, <i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20, i8 20>
+  %result = mul <64 x i8> %a, splat (i8 20)
   ret <64 x i8> %result
 }
 
@@ -1223,15 +1187,12 @@ define <64 x i8> @mul_v64i8_const24(<64 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
-  %result = mul <64 x i8> %a, <i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24, i8 24>
+  %result = mul <64 x i8> %a, splat (i8 24)
   ret <64 x i8> %result
 }
 
 ;; ============================================================================
 ;; Non-decomposable / edge-case constants
-;;
-;; These cases are now part of this file and should not be decomposed into
-;; shift/add/sub sequences.
 ;; ============================================================================
 
 ; Test multiply by 11 (not decomposable)
@@ -1268,7 +1229,7 @@ define <16 x i8> @mul_v16i8_11(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11>
+  %result = mul <16 x i8> %a, splat (i8 11)
   ret <16 x i8> %result
 }
 
@@ -1306,7 +1267,7 @@ define <16 x i8> @mul_v16i8_13(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13>
+  %result = mul <16 x i8> %a, splat (i8 13)
   ret <16 x i8> %result
 }
 
@@ -1344,7 +1305,7 @@ define <16 x i8> @mul_v16i8_19(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19, i8 19>
+  %result = mul <16 x i8> %a, splat (i8 19)
   ret <16 x i8> %result
 }
 
@@ -1382,7 +1343,7 @@ define <16 x i8> @mul_v16i8_23(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23, i8 23>
+  %result = mul <16 x i8> %a, splat (i8 23)
   ret <16 x i8> %result
 }
 
@@ -1420,7 +1381,7 @@ define <16 x i8> @mul_v16i8_29(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29, i8 29>
+  %result = mul <16 x i8> %a, splat (i8 29)
   ret <16 x i8> %result
 }
 
@@ -1458,7 +1419,7 @@ define <16 x i8> @mul_v16i8_37(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37, i8 37>
+  %result = mul <16 x i8> %a, splat (i8 37)
   ret <16 x i8> %result
 }
 
@@ -1496,7 +1457,7 @@ define <16 x i8> @mul_v16i8_41(<16 x i8> %a) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41, i8 41>
+  %result = mul <16 x i8> %a, splat (i8 41)
   ret <16 x i8> %result
 }
 
@@ -1527,7 +1488,7 @@ define <16 x i8> @mul_v16i8_1(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: mul_v16i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
-  %result = mul <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %result = mul <16 x i8> %a, splat (i8 1)
   ret <16 x i8> %result
 }
 
@@ -1686,7 +1647,7 @@ define <32 x i8> @mul_v32i8_11(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11]
 ; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11>
+  %result = mul <32 x i8> %a, splat (i8 11)
   ret <32 x i8> %result
 }
 
@@ -1729,7 +1690,7 @@ define <32 x i8> @mul_v32i8_13(<32 x i8> %a) nounwind {
 ; AVX512-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13,13]
 ; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13, i8 13>
+  %result = mul <32 x i8> %a, splat (i8 13)
   ret <32 x i8> %result
 }
 
@@ -1759,7 +1720,7 @@ define <32 x i8> @mul_v32i8_1(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: mul_v32i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
-  %result = mul <32 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %result = mul <32 x i8> %a, splat (i8 1)
   ret <32 x i8> %result
 }
 
