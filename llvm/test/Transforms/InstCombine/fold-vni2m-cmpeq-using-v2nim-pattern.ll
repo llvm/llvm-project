@@ -52,6 +52,38 @@ define <4 x i32> @cmpeq_epi64_commutated_and(<4 x i32> noundef %a, <4 x i32> nou
   ret <4 x i32> %and
 }
 
+define <4 x i32> @cmpeq_epi64_sext(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @cmpeq_epi64_sext(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i1> [[CMP]], <4 x i1> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i1> [[SHUFFLE]], [[CMP]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[AND]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[SEXT]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %shuffle = shufflevector <4 x i1> %cmp, <4 x i1> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %and = and <4 x i1> %shuffle, %cmp
+  %sext = sext <4 x i1> %and to <4 x i32>
+  ret <4 x i32> %sext
+}
+
+define <6 x i32> @cmpeq_epi64_generalized(<6 x i32> noundef %a, <6 x i32> noundef %b) {
+; CHECK-LABEL: define <6 x i32> @cmpeq_epi64_generalized(
+; CHECK-SAME: <6 x i32> noundef [[A:%.*]], <6 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <6 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <6 x i1> [[CMP]] to <6 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <6 x i32> [[SEXT]], <6 x i32> poison, <6 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4>
+; CHECK-NEXT:    [[AND:%.*]] = select <6 x i1> [[CMP]], <6 x i32> [[SHUFFLE]], <6 x i32> zeroinitializer
+; CHECK-NEXT:    ret <6 x i32> [[AND]]
+;
+  %cmp = icmp eq <6 x i32> %a, %b
+  %sext = sext <6 x i1> %cmp to <6 x i32>
+  %shuffle = shufflevector <6 x i32> %sext, <6 x i32> poison, <6 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4>
+  %and = and <6 x i32> %sext, %shuffle
+  ret <6 x i32> %and
+}
+
 define <4 x i32> @cmpeq_epi64_select_neg_0(<4 x i32> noundef %a, <4 x i32> noundef %b) {
 ; CHECK-LABEL: define <4 x i32> @cmpeq_epi64_select_neg_0(
 ; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
