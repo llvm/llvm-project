@@ -726,9 +726,18 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Constrain it to the register class of MI.
   MRI.constrainRegClass(NewVReg, MRI.getRegClass(VirtReg.reg()));
 
+  // Compute which lanes of the virtual register are live at the use point.
+  LaneBitmask UsedLanes = LaneBitmask::getAll();
+  if (VirtReg.hasSubRanges()) {
+    UsedLanes = LaneBitmask::getNone();
+    for (const LiveInterval::SubRange &SR : VirtReg.subranges())
+      if (SR.liveAt(UseIdx))
+        UsedLanes |= SR.LaneMask;
+  }
+
   // Finally we can rematerialize OrigMI before MI.
-  SlotIndex DefIdx =
-      Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM, TRI);
+  SlotIndex DefIdx = Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM,
+                                           TRI, false, 0, nullptr, UsedLanes);
 
   // We take the DebugLoc from MI, since OrigMI may be attributed to a
   // different source location.

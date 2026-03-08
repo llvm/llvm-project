@@ -643,7 +643,15 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
     if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
         Edit->canRematerializeAt(RM, UseIdx)) {
       if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
-        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
+        LaneBitmask UsedLanes = LaneBitmask::getAll();
+        if (OrigLI.hasSubRanges()) {
+          UsedLanes = LaneBitmask::getNone();
+          for (const LiveInterval::SubRange &SR : OrigLI.subranges())
+            if (SR.liveAt(UseIdx))
+              UsedLanes |= SR.LaneMask;
+        }
+        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late,
+                                              0, nullptr, UsedLanes);
         ++NumRemats;
         // Define the value in Reg.
         return defValue(RegIdx, ParentVNI, Def, false);
