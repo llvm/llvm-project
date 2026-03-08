@@ -129,16 +129,17 @@ define i32 @test_fshl_range_3(i32 %a, i32 %b, i32 %c) {
   ret i32 %shl
 }
 
+
+
 define i32 @test_fshl_range_4(i32 %a, i32 %b, i32 %c) {
+; CHECK-DAG: DemandedBits: 0xffffffff for   %shr = ashr i32 %fshl, 8
+; CHECK-DAG: DemandedBits: 0xffffff00 for %fshl in   %shr = ashr i32 %fshl, 8
+; CHECK-DAG: DemandedBits: 0xffffffff for 8 in   %shr = ashr i32 %fshl, 8
 ; CHECK-DAG: DemandedBits: 0xffffff00 for   %fshl = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
 ; CHECK-DAG: DemandedBits: 0xffffffff for %a in   %fshl = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
 ; CHECK-DAG: DemandedBits: 0xffffffff for %b in   %fshl = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
 ; CHECK-DAG: DemandedBits: 0x1f for %c in   %fshl = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
 ; CHECK-DAG: DemandedBits: 0xffffffffffffffff for @llvm.fshl.i32 in   %fshl = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
-; CHECK-DAG: DemandedBits: 0xffffffff for   %shr = ashr i32 %fshl, 8
-; CHECK-DAG: DemandedBits: 0xffffff00 for %fshl in   %shr = ashr i32 %fshl, 8
-; CHECK-DAG: DemandedBits: 0xffffffff for 8 in   %shr = ashr i32 %fshl, 8
-
 
 ; CHECK-LABEL: 'test_fshl_range_4'
   %fshl = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)

@@ -81,17 +81,18 @@ define i8 @test_fshr(i32 %a, i32 %b, i32 %c) {
 }
 
 define i8 @test_fshr_range_1(i32 %a, i32 %b) {
-; CHECK-LABEL: 'test_lshr_range_1'
-; CHECK-DAG:  DemandedBits: 0xff for   %shl.t = trunc i32 %fshr to i8
-; CHECK-DAG:  DemandedBits: 0xff for %fshr in   %shl.t = trunc i32 %fshr to i8
-; CHECK-DAG:  DemandedBits: 0x1f for   %b2 = and i32 %b, 3
-; CHECK-DAG:  DemandedBits: 0x3 for %b in   %b2 = and i32 %b, 3
-; CHECK-DAG:  DemandedBits: 0x1f for 3 in   %b2 = and i32 %b, 3
-; CHECK-DAG:  DemandedBits: 0xff for   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
-; CHECK-DAG:  DemandedBits: 0xffffffff for %a in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
-; CHECK-DAG:  DemandedBits: 0x7ff for %b in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
-; CHECK-DAG:  DemandedBits: 0x1f for %b2 in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
-; CHECK-DAG:  DemandedBits: 0xffffffffffffffff for @llvm.fshr.i32 in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
+; CHECK-LABEL: 'test_fshr_range_1'
+; CHECK-DAG: DemandedBits: 0xff for   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
+; CHECK-DAG: DemandedBits: 0xffffffff for %a in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
+; CHECK-DAG: DemandedBits: 0x7ff for %b in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
+; CHECK-DAG: DemandedBits: 0x1f for %b2 in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
+; CHECK-DAG: DemandedBits: 0xffffffffffffffff for @llvm.fshr.i32 in   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
+; CHECK-DAG: DemandedBits: 0x1f for   %b2 = and i32 %b, 3
+; CHECK-DAG: DemandedBits: 0x3 for %b in   %b2 = and i32 %b, 3
+; CHECK-DAG: DemandedBits: 0x1f for 3 in   %b2 = and i32 %b, 3
+; CHECK-DAG: DemandedBits: 0xff for   %shl.t = trunc i32 %fshr to i8
+; CHECK-DAG: DemandedBits: 0xff for %fshr in   %shl.t = trunc i32 %fshr to i8
+
 ;
   %b2 = and i32 %b, 3
   %fshr = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %b2)
