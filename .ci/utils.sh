@@ -49,6 +49,7 @@ function at-exit {
   fi
 
   if [[ "$retcode" != "0" ]]; then
+    # Trigger
     sleep 3600
     if [[ -n "$GITHUB_ACTIONS" ]]; then
       python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
