@@ -51,8 +51,8 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
   if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
-    // Look up the actual bitwidth of this int type register from
-    // IntTypeBitwidths map
+    // Look up the bitwidth of this int type register from
+    // IntTypeBitwidths map.
     unsigned IntTypeRegId = getIDFromRegister(MI->getOperand(1).getReg().id());
     auto IntTypeRegIt = IntTypeBitwidths.find(IntTypeRegId);
     if (IntTypeRegIt == IntTypeBitwidths.end()) {
