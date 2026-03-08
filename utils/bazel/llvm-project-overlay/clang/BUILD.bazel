@@ -1876,6 +1876,7 @@ cc_library(
         ":sema",
         ":serialization",
         ":type_nodes_gen",
+        "//llvm:ABI",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
