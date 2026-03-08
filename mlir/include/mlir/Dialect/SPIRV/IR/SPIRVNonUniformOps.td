@@ -290,8 +290,8 @@ def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFi
     %scalar_value = ... : f32
     %vector_value = ... : vector<4xf32>
     %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %scalar_value : f32
-    %1 = spirv.GroupNonUniformBroadcast <Workgroup> %vector_value, %id :
-      vector<4xf32>, i32
+    %1 = spirv.GroupNonUniformBroadcastFirst <Workgroup> %vector_value :
+      vector<4xf32>, i32 i32
     ```
   }];
 

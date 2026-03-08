@@ -124,6 +124,34 @@ func.func @group_non_uniform_broadcast_negative_non_const(%value: f32, %localid:
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBroadcastFirst
+//===----------------------------------------------------------------------===//
+
+func.func @group_non_uniform_broadcast_scalar(%value: f32) -> f32 {
+  // CHECK: spirv.GroupNonUniformBroadcastFirst <Workgroup> %{{.*}} : f32
+  %0 = spirv.GroupNonUniformBroadcastFirst <Workgroup> %value : f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_broadcast_first_scalar(%value: f32) -> f32 {
+  // CHECK: spirv.GroupNonUniformBroadcastFirst <Subgroup> %{{.*}} : f32
+  %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %value : f32
+  return %0 : f32
+}
+
+// -----
+
+func.func @group_non_uniform_broadcast_first_negative_scope(%value: f32) -> f32 {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spirv.GroupNonUniformBroadcastFirst <Device> %value : f32
+  return %0 : f32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.GroupNonUniformElect
 //===----------------------------------------------------------------------===//
 
