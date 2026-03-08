@@ -49,6 +49,7 @@ function at-exit {
   fi
 
   if [[ "$retcode" != "0" ]]; then
+    sleep 3600
     if [[ -n "$GITHUB_ACTIONS" ]]; then
       python "${MONOREPO_ROOT}"/.ci/premerge_advisor_upload.py \
         $(git rev-parse HEAD~1) $GITHUB_RUN_NUMBER \
