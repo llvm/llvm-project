@@ -152,19 +152,18 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
         ArgsBeforeEOO.push_back(Saver.save(Arg).data());
         Passthrough = true;
       } else if (Arg.starts_with("-")) {
-        // Arguments which are not passed through to clang-frontend or
-        // LLVM need to go through the driver. `clang-cl` takes non-CL
-        // options with a `/clang:` prefix to namespace and maintain
-        // compatibility.
+        // Arguments which are not passed through to clang-frontend or LLVM need
+        // to go through the driver. `clang-cl` takes non-CL options with a
+        // `/clang:` prefix to namespace and maintain compatibility.
         if (IsCLMode && !Passthrough)
           ArgsBeforeEOO.push_back(Saver.save(llvm::Twine("/clang:") + Arg).data());
         else
           ArgsBeforeEOO.push_back(Saver.save(Arg).data());
         Passthrough = false;
       } else {
-        // We add -Xclang to flag arguments in cl mode because flags
-        // have a /clang: prefix. For example,
-        // /clang:-fdepscan-share-identifier -Xclang SessionId
+        // We add -Xclang to pass non-flag values in cl mode because the
+        // preceding option has a /clang: prefix. For example,
+        // /clang:-fdepscan-prefix-map -Xclang /path/=^path
         if (!Passthrough && IsCLMode)
           ArgsBeforeEOO.push_back("-Xclang");
         ArgsBeforeEOO.push_back(Saver.save(Arg).data());
@@ -191,7 +190,10 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
     // toolchains, with different clang versions, running under the same
     // `LLVM_CACHE_BUILD_SESSION_ID`; in such a case there will be one daemon
     // started and shared for each unique clang version.
-    AppendArgs({"-fdepscan=daemon", "-fdepscan-share-identifier", SessionId});
+    AppendArgs({
+      "-fdepscan=daemon",
+      (Twine{"-fdepscan-share-identifier="} + SessionId).str(),
+    });
   } else {
     AppendArgs({"-fdepscan"});
   }

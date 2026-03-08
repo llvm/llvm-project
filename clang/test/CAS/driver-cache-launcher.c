@@ -26,7 +26,7 @@
 // INCLUDE-TREE: "-cc1depscan" "-fdepscan=auto"
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=SESSION -DPREFIX=%t
-// SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
+// SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier={{.*}}"
 // SESSION: "-fcas-path" "[[PREFIX]]/cas"
 // SESSION: "-greproducible"
 
@@ -105,7 +105,7 @@
 // SESSION-CMAKE-PREFIX: note: setting LLVM_CACHE_PREFIX_MAPS=/llvm/build=/^build;/llvm/llvm-project/llvm=/^src;/llvm/llvm-project/clang=/^src-clang;/llvm/llvm-project/clang-tools-extra=/^src-clang-tools-extra;/llvm/llvm-project/third-party/benchmark=/^src-benchmark;/llvm/llvm-project/other/benchmark=/^src-benchmark-1;/llvm/llvm-project/another/benchmark=/^src-benchmark-2{{$}}
 // SESSION-CMAKE-PREFIX: note: setting LLVM_CACHE_BUILD_SESSION_ID=
 
-// CLANG-CMAKE-PREFIX: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
+// CLANG-CMAKE-PREFIX: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier={{.*}}"
 // CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "[[INPUTS]]/SDK" "/^sdk"
 // CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "[[INPUTS]]/toolchain_dir" "/^toolchain"
 // CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/build" "/^build"
