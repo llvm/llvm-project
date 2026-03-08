@@ -402,11 +402,11 @@ bool AArch64AdvSIMDScalarImpl::processMachineBasicBlock(
 }
 
 // runOnMachineFunction - Pass entry point from PassManager.
-bool AArch64AdvSIMDScalarLegacy::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
+bool AArch64AdvSIMDScalarLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
     return false;
 
-  return AArch64AdvSIMDScalarImpl().run(mf);
+  return AArch64AdvSIMDScalarImpl().run(MF);
 }
 
 bool AArch64AdvSIMDScalarImpl::run(MachineFunction &MF) {
