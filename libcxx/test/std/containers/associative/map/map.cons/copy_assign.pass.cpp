@@ -10,7 +10,7 @@
 
 // class map
 
-// map& operator=(const map& m);
+// map& operator=(const map& m); // constexpr since C++26
 
 #include <algorithm>
 #include <cassert>
@@ -35,42 +35,43 @@ public:
   using value_type                             = T;
   using propagate_on_container_copy_assignment = std::true_type;
 
-  tracking_allocator(std::vector<void*>& allocs) : allocs_(&allocs) {}
+  TEST_CONSTEXPR_CXX26 tracking_allocator(std::vector<void*>& allocs) : allocs_(&allocs) {}
 
   template <class U>
-  tracking_allocator(const tracking_allocator<U>& other) : allocs_(other.allocs_) {}
+  TEST_CONSTEXPR_CXX26 tracking_allocator(const tracking_allocator<U>& other) : allocs_(other.allocs_) {}
 
-  T* allocate(std::size_t n) {
+  TEST_CONSTEXPR_CXX26 T* allocate(std::size_t n) {
     T* allocation = std::allocator<T>().allocate(n);
     allocs_->push_back(allocation);
     return allocation;
   }
 
-  void deallocate(T* ptr, std::size_t n) TEST_NOEXCEPT {
+  TEST_CONSTEXPR_CXX26 void deallocate(T* ptr, std::size_t n) TEST_NOEXCEPT {
     auto res = std::remove(allocs_->begin(), allocs_->end(), ptr);
     assert(res != allocs_->end() && "Trying to deallocate memory from different allocator?");
     allocs_->erase(res);
     std::allocator<T>().deallocate(ptr, n);
   }
 
-  friend bool operator==(const tracking_allocator& lhs, const tracking_allocator& rhs) {
+  TEST_CONSTEXPR_CXX26 friend bool operator==(const tracking_allocator& lhs, const tracking_allocator& rhs) {
     return lhs.allocs_ == rhs.allocs_;
   }
 
-  friend bool operator!=(const tracking_allocator& lhs, const tracking_allocator& rhs) {
+  TEST_CONSTEXPR_CXX26 friend bool operator!=(const tracking_allocator& lhs, const tracking_allocator& rhs) {
     return lhs.allocs_ != rhs.allocs_;
   }
 };
 
 struct NoOp {
-  void operator()() {}
+  TEST_CONSTEXPR_CXX26 void operator()() {}
 };
 
 template <class Alloc, class AllocatorInvariant = NoOp>
-void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
-                const Alloc& rhs_alloc                   = Alloc(),
-                AllocatorInvariant check_alloc_invariant = NoOp()) {
-  {   // Test empty/non-empty map combinations
+TEST_CONSTEXPR_CXX26 bool
+test_alloc(const Alloc& lhs_alloc                   = Alloc(),
+           const Alloc& rhs_alloc                   = Alloc(),
+           AllocatorInvariant check_alloc_invariant = NoOp()) {
+  {   // Test empty/non-empy map combinations
     { // assign from a non-empty container into an empty one
       using V   = std::pair<const int, int>;
       using Map = std::map<int, int, std::less<int>, Alloc>;
@@ -242,10 +243,15 @@ void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
     }
   }
   check_alloc_invariant();
+  return true;
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc<std::allocator<std::pair<const int, int> > >();
+#if TEST_STD_VER >= 26
+  static_assert(test_alloc<std::allocator<std::pair<const int, int> > >());
+#endif
+
 #if TEST_STD_VER >= 11
   test_alloc<min_allocator<std::pair<const int, int> > >();
 
@@ -256,10 +262,10 @@ void test() {
       std::vector<void*>* rhs_allocs_;
 
     public:
-      AssertEmpty(std::vector<void*>& lhs_allocs, std::vector<void*>& rhs_allocs)
+      TEST_CONSTEXPR_CXX26 AssertEmpty(std::vector<void*>& lhs_allocs, std::vector<void*>& rhs_allocs)
           : lhs_allocs_(&lhs_allocs), rhs_allocs_(&rhs_allocs) {}
 
-      void operator()() {
+      TEST_CONSTEXPR_CXX26 void operator()() {
         assert(lhs_allocs_->empty());
         assert(rhs_allocs_->empty());
       }
@@ -300,10 +306,13 @@ void test() {
     out = in;
     out.erase(std::next(out.begin(), 17), out.end());
   }
+  return true;
 }
 
 int main(int, char**) {
   test();
-
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -31,29 +31,29 @@ private:
 public:
   // [container.node.cons], constructors, copy, and assignment
   constexpr node-handle() noexcept : ptr_(), alloc_() {}
-  node-handle(node-handle&&) noexcept;
-  node-handle& operator=(node-handle&&);
+  constexpr node-handle(node-handle&&) noexcept;         // constexpr since C++26
+  constexpr node-handle& operator=(node-handle&&);       // constexpr since C++26
 
   // [container.node.dtor], destructor
-  ~node-handle();
+  constexpr ~node-handle(); // constexpr since C++26
 
   // [container.node.observers], observers
-  value_type& value() const;            // not present for map containers
-  key_type& key() const;                // not present for set containers
-  mapped_type& mapped() const;          // not present for set containers
+  value_type& value() const;             // not present for map containers
+  key_type& key() const;                 // not present for set containers
+  constexpr mapped_type& mapped() const; // not present for set containers, constexpr since C++26
 
-  allocator_type get_allocator() const;
-  explicit operator bool() const noexcept;
-  [[nodiscard]] bool empty() const noexcept; // nodiscard since C++20
+  constexpr allocator_type get_allocator() const;      // constexpr since C++26
+  constexpr explicit operator bool() const noexcept;   // constexpr since C++26
+  [[nodiscard]] constexpr bool empty() const noexcept; // nodiscard since C++20, constexpr since C++26
 
   // [container.node.modifiers], modifiers
-  void swap(node-handle&)
+  constexpr void swap(node-handle&)
     noexcept(ator_traits::propagate_on_container_swap::value ||
-             ator_traits::is_always_equal::value);
+             ator_traits::is_always_equal::value); // constexpr since C++26
 
-  friend void swap(node-handle& x, node-handle& y) noexcept(noexcept(x.swap(y))) {
+  constexpr friend void swap(node-handle& x, node-handle& y) noexcept(noexcept(x.swap(y))) {
     x.swap(y);
-  }
+  } // constexpr since C++26
 };
 
 */
@@ -99,12 +99,12 @@ private:
   __node_pointer_type __ptr_ = nullptr;
   optional<allocator_type> __alloc_;
 
-  _LIBCPP_HIDE_FROM_ABI void __release_ptr() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __release_ptr() {
     __ptr_   = nullptr;
     __alloc_ = std::nullopt;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __destroy_node_pointer() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __destroy_node_pointer() {
     if (__ptr_ != nullptr) {
       typedef typename __allocator_traits_rebind< allocator_type, _NodeType>::type __node_alloc_type;
       __node_alloc_type __alloc(*__alloc_);
@@ -113,19 +113,20 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI __basic_node_handle(__node_pointer_type __ptr, allocator_type const& __alloc)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __basic_node_handle(__node_pointer_type __ptr, allocator_type const& __alloc)
       : __ptr_(__ptr), __alloc_(__alloc) {}
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __basic_node_handle() = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __basic_node_handle() = default;
 
-  _LIBCPP_HIDE_FROM_ABI __basic_node_handle(__basic_node_handle&& __other) noexcept
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __basic_node_handle(__basic_node_handle&& __other) noexcept
       : __ptr_(__other.__ptr_), __alloc_(std::move(__other.__alloc_)) {
     __other.__ptr_   = nullptr;
     __other.__alloc_ = std::nullopt;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __basic_node_handle& operator=(__basic_node_handle&& __other) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __basic_node_handle& operator=(__basic_node_handle&& __other) {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __alloc_ == std::nullopt || __alloc_traits::propagate_on_container_move_assignment::value ||
             __alloc_ == __other.__alloc_,
@@ -144,13 +145,13 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const { return *__alloc_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type get_allocator() const { return *__alloc_; }
 
-  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const { return __ptr_ != nullptr; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit operator bool() const { return __ptr_ != nullptr; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return __ptr_ == nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool empty() const { return __ptr_ == nullptr; }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(__basic_node_handle& __other) noexcept(
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(__basic_node_handle& __other) noexcept(
       __alloc_traits::propagate_on_container_swap::value || __alloc_traits::is_always_equal::value) {
     using std::swap;
     swap(__ptr_, __other.__ptr_);
@@ -159,12 +160,12 @@ public:
       swap(__alloc_, __other.__alloc_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend void
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 friend void
   swap(__basic_node_handle& __a, __basic_node_handle& __b) noexcept(noexcept(__a.swap(__b))) {
     __a.swap(__b);
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~__basic_node_handle() { __destroy_node_pointer(); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__basic_node_handle() { __destroy_node_pointer(); }
 };
 
 template <class _NodeType, class _Derived>
@@ -179,6 +180,7 @@ struct __map_node_handle_specifics {
   using key_type    = __remove_const_t<typename _NodeType::__node_value_type::first_type>;
   using mapped_type = typename _NodeType::__node_value_type::second_type;
 
+  // This method is not constexpr as per the standard.
   _LIBCPP_HIDE_FROM_ABI key_type& key() const {
     return const_cast<key_type&>(static_cast<_Derived const*>(this)->__ptr_->__get_value().first);
   }
