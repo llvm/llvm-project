@@ -28,22 +28,42 @@ float2x2 dxil_fma_float2x2(float2x2 a, float2x2 b, float2x2 c) {
 
 double dxil_fma_bad_second(double a, float b, double c) {
   return fma(a, b, c);
-  // dxil-error@-1 {{2nd argument must be a scalar, vector, or matrix of double type (was 'float')}}
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 double dxil_fma_bad_third(double a, double b, half c) {
   return fma(a, b, c);
-  // dxil-error@-1 {{3rd argument must be a scalar, vector, or matrix of double type (was 'half')}}
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 double2 dxil_fma_bad_second_vec(double2 a, float2 b, double2 c) {
   return fma(a, b, c);
-  // dxil-error@-1 {{2nd argument must be a scalar, vector, or matrix of double type (was 'float2' (aka 'vector<float, 2>'))}}
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 double2x2 dxil_fma_bad_third_mat(double2x2 a, double2x2 b, float2x2 c) {
   return fma(a, b, c);
-  // dxil-error@-1 {{3rd argument must be a scalar, vector, or matrix of double type (was 'float2x2' (aka 'matrix<float, 2, 2>'))}}
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+double2 dxil_fma_mismatch_second(double2 a, double b, double2 c) {
+  return fma(a, b, c);
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+double2 dxil_fma_mismatch_third(double2 a, double2 b, double c) {
+  return fma(a, b, c);
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+double2x2 dxil_fma_mismatch_second_mat(double2x2 a, double2 b, double2x2 c) {
+  return fma(a, b, c);
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+double2x2 dxil_fma_mismatch_third_mat(double2x2 a, double2x2 b, double2 c) {
+  return fma(a, b, c);
+  // dxil-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 half dxil_fma_half(half a, half b, half c) {
@@ -85,22 +105,42 @@ bool spv_fma_bool(bool a, bool b, bool c) {
 
 float spv_fma_bad_second(float a, int b, float c) {
   return fma(a, b, c);
-  // spv-error@-1 {{2nd argument must be a scalar or vector of floating-point type (was 'int')}}
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 float spv_fma_bad_third(float a, float b, bool c) {
   return fma(a, b, c);
-  // spv-error@-1 {{3rd argument must be a scalar or vector of floating-point type (was 'bool')}}
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 float2 spv_fma_bad_second_vec(float2 a, int2 b, float2 c) {
   return fma(a, b, c);
-  // spv-error@-1 {{2nd argument must be a scalar or vector of floating-point type (was 'int2' (aka 'vector<int, 2>'))}}
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 double2 spv_fma_bad_third_vec(double2 a, double2 b, int2 c) {
   return fma(a, b, c);
-  // spv-error@-1 {{3rd argument must be a scalar or vector of floating-point type (was 'int2' (aka 'vector<int, 2>'))}}
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+float2 spv_fma_mismatch_second(float2 a, float b, float2 c) {
+  return fma(a, b, c);
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+float2 spv_fma_mismatch_third(float2 a, float2 b, float c) {
+  return fma(a, b, c);
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+double2 spv_fma_mismatch_second_double(double2 a, double b, double2 c) {
+  return fma(a, b, c);
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
+}
+
+double2 spv_fma_mismatch_third_double(double2 a, double2 b, double c) {
+  return fma(a, b, c);
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 float2x2 spv_fma_float2x2(float2x2 a, float2x2 b, float2x2 c) {
@@ -110,12 +150,12 @@ float2x2 spv_fma_float2x2(float2x2 a, float2x2 b, float2x2 c) {
 
 float2 spv_fma_bad_second_mat(float2 a, float2x2 b, float2 c) {
   return fma(a, b, c);
-  // spv-error@-1 {{2nd argument must be a scalar or vector of floating-point type (was 'float2x2' (aka 'matrix<float, 2, 2>'))}}
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 double2 spv_fma_bad_third_mat(double2 a, double2 b, double2x2 c) {
   return fma(a, b, c);
-  // spv-error@-1 {{3rd argument must be a scalar or vector of floating-point type (was 'double2x2' (aka 'matrix<double, 2, 2>'))}}
+  // spv-error@-1 {{all arguments to 'fma' must have the same type}}
 }
 
 float2x3 spv_fma_float2x3(float2x3 a, float2x3 b, float2x3 c) {

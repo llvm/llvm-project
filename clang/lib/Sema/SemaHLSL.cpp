@@ -3819,7 +3819,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_fma: {
-    if (SemaRef.checkArgCount(TheCall, 3)) {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckAllArgsHaveSameType(&SemaRef, TheCall)) {
       return true;
     }
     const llvm::Triple &TT = getASTContext().getTargetInfo().getTriple();
