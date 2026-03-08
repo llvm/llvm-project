@@ -143,8 +143,8 @@ private:
             DialectBytecodeWriter &writer) -> LogicalResult {
           // Do not override anything if version greater than 2.0.
           auto versionOr = writer.getDialectVersion<test::TestDialect>();
-          assert(succeeded(versionOr) && "expected reader to be able to access "
-                                         "the version for test dialect");
+          if (failed(versionOr))
+            return failure();
           const auto *version =
               reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
           if (version->major_ >= 2)
@@ -168,8 +168,10 @@ private:
             Type &entry) -> LogicalResult {
           // Get test dialect version from the version map.
           auto versionOr = reader.getDialectVersion<test::TestDialect>();
-          assert(succeeded(versionOr) && "expected reader to be able to access "
-                                         "the version for test dialect");
+          // Missing version is non-fatal (consistent with other test-dialect
+          // readers); return success() and fall through to default parsing.
+          if (failed(versionOr))
+            return success();
           const auto *version =
               reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
           if (version->major_ >= 2)
@@ -193,7 +195,8 @@ private:
                     widthAndSignedness & 0x3)),
                true))
             entry = IntegerType::get(reader.getContext(), width, signedness);
-          // Return nullopt to fall through the rest of the parsing code path.
+          // Return success() and fall through to default parsing when this
+          // callback does not override the entry.
           return success();
         });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
