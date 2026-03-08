@@ -6341,11 +6341,15 @@ def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
   let hasVerifier = 1;
   
   let extraClassDeclaration = [{
+    // Shared lowering for nvvm.addf and nvvm.subf (via fneg+add)
     static void lowerAddFToLLVMIR(
-        Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+        llvm::Value *lhs, llvm::Value *rhs, Value res,
+        NVVM::FPRoundingMode rnd, NVVM::SaturationMode sat, bool ftz,
+        LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   let llvmBuilder = [{
-    NVVM::AddFOp::lowerAddFToLLVMIR(*op, moduleTranslation, builder);
+    NVVM::AddFOp::lowerAddFToLLVMIR($lhs, $rhs, op.getRes(), $rnd, $sat, $ftz, 
+                                    moduleTranslation, builder);
   }];
 }
 
@@ -6366,6 +6370,14 @@ def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
  
   }];
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+
+  let llvmBuilder = [{
+    // sub(a, b) = add(a, -b)
+    llvm::Value *rhs = builder.CreateFNeg($rhs);
+    NVVM::AddFOp::lowerAddFToLLVMIR($lhs, rhs, op.getRes(), $rnd, $sat, $ftz, 
+                                    moduleTranslation, builder);
+  }];
 }
 
 //===----------------------------------------------------------------------===//

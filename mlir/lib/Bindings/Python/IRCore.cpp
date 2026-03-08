@@ -2988,7 +2988,8 @@ void populateIRCore(nb::module_ &m) {
                    "Returns True if an error was encountered during diagnostic "
                    "handling.")
       .def("__enter__", &PyDiagnosticHandler::contextEnter,
-           "Enters the diagnostic handler as a context manager.")
+           "Enters the diagnostic handler as a context manager.",
+           nb::sig("def __enter__(self, /) -> DiagnosticHandler"))
       .def("__exit__", &PyDiagnosticHandler::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the diagnostic handler context manager.");
@@ -3034,7 +3035,8 @@ void populateIRCore(nb::module_ &m) {
                   &PyMlirContext::createFromCapsule,
                   "Creates a Context from a capsule wrapping MlirContext.")
       .def("__enter__", &PyMlirContext::contextEnter,
-           "Enters the context as a context manager.")
+           "Enters the context as a context manager.",
+           nb::sig("def __enter__(self, /) -> Context"))
       .def("__exit__", &PyMlirContext::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the context manager.")
@@ -3260,7 +3262,8 @@ void populateIRCore(nb::module_ &m) {
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyLocation::createFromCapsule,
                   "Creates a Location from a capsule wrapping MlirLocation.")
       .def("__enter__", &PyLocation::contextEnter,
-           "Enters the location as a context manager.")
+           "Enters the location as a context manager.",
+           nb::sig("def __enter__(self, /) -> Location"))
       .def("__exit__", &PyLocation::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the location context manager.")
@@ -4290,7 +4293,8 @@ void populateIRCore(nb::module_ &m) {
       .def(nb::init<PyBlock &>(), "block"_a,
            "Inserts after the last operation but still inside the block.")
       .def("__enter__", &PyInsertionPoint::contextEnter,
-           "Enters the insertion point as a context manager.")
+           "Enters the insertion point as a context manager.",
+           nb::sig("def __enter__(self, /) -> InsertionPoint"))
       .def("__exit__", &PyInsertionPoint::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the insertion point context manager.")

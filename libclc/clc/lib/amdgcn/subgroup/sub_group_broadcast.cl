@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/subgroup/sub_group_broadcast.h"
+#include "clc/subgroup/clc_sub_group_broadcast.h"
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST char
 __clc_sub_group_broadcast(char x, uint sub_group_local_id) {

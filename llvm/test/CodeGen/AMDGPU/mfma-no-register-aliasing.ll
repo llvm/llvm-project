@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -early-live-intervals < %s | FileCheck -enable-var-scope --check-prefixes=GREEDY90A %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -enable-var-scope --check-prefixes=GREEDY942 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -enable-var-scope --check-prefixes=GREEDY90A-GISEL %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -sgpr-regalloc=fast -vgpr-regalloc=fast < %s | FileCheck -enable-var-scope --check-prefixes=FAST90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck -enable-var-scope --check-prefixes=FAST90A %s
 
 ; This is better with 90a
 

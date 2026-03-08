@@ -120,7 +120,14 @@ private:
   int getIndentOffset(const AnnotatedLine &Line) {
     if (Style.isJava() || Style.isJavaScript() || Style.isCSharp())
       return 0;
+
     const auto &RootToken = *Line.First;
+
+    if (Style.IndentGotoLabels == FormatStyle::IGLS_HalfIndent &&
+        RootToken.Next && RootToken.Next->is(TT_GotoLabelColon)) {
+      return -static_cast<int>(Style.IndentWidth / 2);
+    }
+
     if (Line.Type == LT_AccessModifier ||
         RootToken.isAccessSpecifier(/*ColonRequired=*/false) ||
         RootToken.isObjCAccessSpecifier() ||

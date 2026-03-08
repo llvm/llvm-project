@@ -23,7 +23,7 @@ DEFAULT_PLUGINS = [
     "ArchitecturePPC64",
     "ClangREPL",
     "CPlusPlusLanguage",
-    "CXXItaniumABI",
+    "CPPRuntime",
     "DisassemblerLLVMC",
     "HighlighterClang",
     "HighlighterDefault",

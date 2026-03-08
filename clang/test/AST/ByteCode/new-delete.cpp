@@ -1135,6 +1135,15 @@ namespace NonLiteralType {
   }
 }
 
+namespace BrokenDelete {
+  constexpr void foo() {
+    F *f = /* missing */; // both-error {{unknown type name 'F'}} \
+                          // both-error {{expected expression}}
+
+    delete f;
+  }
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

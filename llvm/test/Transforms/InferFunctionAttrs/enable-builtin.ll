@@ -7,7 +7,7 @@
 ; NOBUILTIN: declare ptr @malloc(i64)
 
 ; WITHBUILTIN: declare noalias noundef ptr @malloc(i64 noundef) #0
-; WITHBUILTIN: attributes #0 = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; WITHBUILTIN: attributes #0 = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 
 declare ptr @malloc(i64)
 

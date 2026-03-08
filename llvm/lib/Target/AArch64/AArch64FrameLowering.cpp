@@ -1730,6 +1730,12 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   Register LastReg = 0;
   bool HasCSHazardPadding = AFI->hasStackHazardSlotIndex() && !SplitPPRs;
 
+  auto AlignOffset = [StackFillDir](int Offset, int Align) {
+    if (StackFillDir < 0)
+      return alignDown(Offset, Align);
+    return alignTo(Offset, Align);
+  };
+
   // When iterating backwards, the loop condition relies on unsigned wraparound.
   for (unsigned i = FirstReg; i < Count; i += RegInc) {
     RegPairInfo RPI;
@@ -1844,11 +1850,15 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
 
-    // Realign the scalable offset if necessary.  This is relevant when
-    // spilling predicates on Windows.
-    if (RPI.isScalable() && ScalableByteOffset % Scale != 0) {
-      ScalableByteOffset = alignTo(ScalableByteOffset, Scale);
-    }
+    // Realign the scalable offset if necessary. This is relevant when spilling
+    // predicates on Windows.
+    if (RPI.isScalable() && ScalableByteOffset % Scale != 0)
+      ScalableByteOffset = AlignOffset(ScalableByteOffset, Scale);
+
+    // Realign the fixed offset if necessary. This is relevant when spilling Q
+    // registers after spilling an odd amount of X registers.
+    if (!RPI.isScalable() && ByteOffset % Scale != 0)
+      ByteOffset = AlignOffset(ByteOffset, Scale);
 
     int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPre % Scale == 0);
