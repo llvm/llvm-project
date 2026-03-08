@@ -61,8 +61,8 @@ public:
   }
 
   mlir::Value VisitStmt(Stmt *s) {
-    cgf.cgm.errorNYI(s->getBeginLoc(), "ComplexExprEmitter VisitStmt");
-    return {};
+    s->dump(llvm::errs(), cgf.getContext());
+    llvm_unreachable("Stmt can't have complex result type!");
   }
 
   mlir::Value VisitExpr(Expr *e);
