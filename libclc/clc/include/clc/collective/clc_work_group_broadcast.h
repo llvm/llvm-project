@@ -6,10 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/subgroup/clc_sub_group_broadcast.h"
+#ifndef __CLC_COLLECTIVE_CLC_WORK_GROUP_BROADCAST_H__
+#define __CLC_COLLECTIVE_CLC_WORK_GROUP_BROADCAST_H__
 
-#define __CLC_BODY <sub_group_broadcast.inc>
+#include "clc/internal/clc.h"
+
+#define __CLC_BODY <clc/collective/clc_work_group_broadcast.inc>
 #include <clc/integer/gentype.inc>
 
-#define __CLC_BODY <sub_group_broadcast.inc>
+#define __CLC_BODY <clc/collective/clc_work_group_broadcast.inc>
 #include <clc/math/gentype.inc>
+
+#endif // __CLC_COLLECTIVE_CLC_WORK_GROUP_BROADCAST_H__
