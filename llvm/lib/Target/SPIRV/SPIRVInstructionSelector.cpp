@@ -336,6 +336,9 @@ private:
   bool selectWaveOpInst(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, unsigned Opcode) const;
 
+  bool selectBarrierInst(MachineInstr &I, unsigned Scope,
+                         bool WithGroupSync) const;
+
   bool selectWaveActiveCountBits(Register ResVReg, SPIRVTypeInst ResType,
                                  MachineInstr &I) const;
 
@@ -1893,15 +1896,15 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
     ValueReg = TmpReg;
   }
 
-         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
-             .addDef(ResVReg)
-             .addUse(GR.getSPIRVTypeID(ResType))
-             .addUse(Ptr)
-             .addUse(ScopeReg)
-             .addUse(MemSemReg)
-             .addUse(ValueReg)
-             .constrainAllUses(TII, TRI, RBI);
-         return true;
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(Ptr)
+      .addUse(ScopeReg)
+      .addUse(MemSemReg)
+      .addUse(ValueReg)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
@@ -2551,12 +2554,12 @@ bool SPIRVInstructionSelector::selectIntegerDotExpansion(
   for (unsigned i = 1; i < GR.getScalarOrVectorComponentCount(VecType); i++) {
     Register Elt = MRI->createVirtualRegister(GR.getRegClass(ResType));
 
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-            .addDef(Elt)
-            .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(TmpVec)
-            .addImm(i)
-            .constrainAllUses(TII, TRI, RBI);
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+        .addDef(Elt)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(TmpVec)
+        .addImm(i)
+        .constrainAllUses(TII, TRI, RBI);
 
     Register Sum = i < GR.getScalarOrVectorComponentCount(VecType) - 1
                        ? MRI->createVirtualRegister(GR.getRegClass(ResType))
@@ -2757,13 +2760,13 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
                          ? MRI->createVirtualRegister(&SPIRV::IDRegClass)
                          : ResVReg;
 
-      BuildMI(BB, I, DL, TII.get(SPIRV::OpExtInst))
-          .addDef(SignReg)
-          .addUse(GR.getSPIRVTypeID(InputType))
-          .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-          .addImm(SignOpcode)
-          .addUse(InputRegister)
-          .constrainAllUses(TII, TRI, RBI);
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpExtInst))
+      .addDef(SignReg)
+      .addUse(GR.getSPIRVTypeID(InputType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(SignOpcode)
+      .addUse(InputRegister)
+      .constrainAllUses(TII, TRI, RBI);
 
   if (NeedsConversion) {
     auto ConvertOpcode = IsFloatTy ? SPIRV::OpConvertFToS : SPIRV::OpSConvert;
@@ -2795,6 +2798,23 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
   }
 
   BMI.constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
+                                                 unsigned Scope,
+                                                 bool WithGroupSync) const {
+  auto BarrierType =
+      WithGroupSync ? SPIRV::OpControlBarrier : SPIRV::OpMemoryBarrier;
+  Register MemSemReg =
+      buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
+  Register ScopeReg = buildI32Constant(Scope, I);
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(BarrierType))
+      .addUse(ScopeReg)
+      .addUse(ScopeReg)
+      .addUse(MemSemReg)
+      .constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
@@ -3848,22 +3868,22 @@ bool SPIRVInstructionSelector::selectDerivativeInst(
   Register ConvertToVReg = MRI->createVirtualRegister(RegClass);
   Register DpdOpVReg = MRI->createVirtualRegister(RegClass);
 
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
-          .addDef(ConvertToVReg)
-          .addUse(GR.getSPIRVTypeID(F32ConvertTy))
-          .addUse(SrcReg)
-          .constrainAllUses(TII, TRI, RBI);
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
-          .addDef(DpdOpVReg)
-          .addUse(GR.getSPIRVTypeID(F32ConvertTy))
-          .addUse(ConvertToVReg)
-          .constrainAllUses(TII, TRI, RBI);
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
-          .addDef(ResVReg)
-          .addUse(GR.getSPIRVTypeID(ResType))
-          .addUse(DpdOpVReg)
-          .constrainAllUses(TII, TRI, RBI);
-      return true;
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+      .addDef(ConvertToVReg)
+      .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+      .addUse(SrcReg)
+      .constrainAllUses(TII, TRI, RBI);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
+      .addDef(DpdOpVReg)
+      .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+      .addUse(ConvertToVReg)
+      .constrainAllUses(TII, TRI, RBI);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(DpdOpVReg)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
@@ -4160,18 +4180,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/true);
   case Intrinsic::spv_firstbitlow: // There is no CL equivlent of FindILsb
     return selectFirstBitLow(ResVReg, ResType, I);
-  case Intrinsic::spv_group_memory_barrier_with_group_sync: {
-    Register MemSemReg =
-        buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
-    Register ScopeReg = buildI32Constant(SPIRV::Scope::Workgroup, I);
-    MachineBasicBlock &BB = *I.getParent();
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpControlBarrier))
-        .addUse(ScopeReg)
-        .addUse(ScopeReg)
-        .addUse(MemSemReg)
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
-  }
+  case Intrinsic::spv_group_memory_barrier:
+    return selectBarrierInst(I, SPIRV::Scope::Device, false);
+  case Intrinsic::spv_group_memory_barrier_with_group_sync:
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup, true);
   case Intrinsic::spv_generic_cast_to_ptr_explicit: {
     Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
     SPIRV::StorageClass::StorageClass ResSC =
@@ -4333,8 +4345,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
 bool SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
                                                        SPIRVTypeInst ResType,
                                                        MachineInstr &I) const {
-  // The images need to be loaded in the same basic block as their use. We defer
-  // loading the image to the intrinsic that uses it.
+  // The images need to be loaded in the same basic block as their use. We
+  // defer loading the image to the intrinsic that uses it.
   if (ResType->getOpcode() == SPIRV::OpTypeImage)
     return true;
 
@@ -4381,9 +4393,9 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
   Register CounterHandleReg = Intr.getOperand(2).getReg();
   Register IncrReg = Intr.getOperand(3).getReg();
 
-  // The counter handle is a pointer to the counter variable (which is a struct
-  // containing an i32). We need to get a pointer to that i32 member to do the
-  // atomic operation.
+  // The counter handle is a pointer to the counter variable (which is a
+  // struct containing an i32). We need to get a pointer to that i32 member to
+  // do the atomic operation.
 #ifndef NDEBUG
   SPIRVTypeInst CounterVarType = GR.getSPIRVTypeForVReg(CounterHandleReg);
   SPIRVTypeInst CounterVarPointeeType = GR.getPointeeType(CounterVarType);
@@ -4442,8 +4454,8 @@ bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
   }
 
   // In HLSL, IncrementCounter returns the value *before* the increment, while
-  // DecrementCounter returns the value *after* the decrement. Both are lowered
-  // to the same atomic intrinsic which returns the value *before* the
+  // DecrementCounter returns the value *after* the decrement. Both are
+  // lowered to the same atomic intrinsic which returns the value *before* the
   // operation. So for decrements (negative IncrVal), we must subtract the
   // increment value from the result to get the post-decrement value.
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
@@ -4462,8 +4474,8 @@ bool SPIRVInstructionSelector::selectReadImageIntrinsic(Register &ResVReg,
   // this will generate invalid code. A proper solution is to move
   // the OpLoad from selectHandleFromBinding here. However, to do
   // that we will need to change the return type of the intrinsic.
-  // We will do that when we can, but for now trying to move forward with other
-  // issues.
+  // We will do that when we can, but for now trying to move forward with
+  // other issues.
   Register ImageReg = I.getOperand(2).getReg();
   auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
   Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
@@ -4682,8 +4694,8 @@ bool SPIRVInstructionSelector::selectGatherIntrinsic(Register &ResVReg,
   auto Dim = static_cast<SPIRV::Dim::Dim>(ImageType->getOperand(2).getImm());
   if (Dim != SPIRV::Dim::DIM_2D && Dim != SPIRV::Dim::DIM_Cube &&
       Dim != SPIRV::Dim::DIM_Rect) {
-    I.emitGenericError(
-        "Gather operations are only supported for 2D, Cube, and Rect images.");
+    I.emitGenericError("Gather operations are only supported for 2D, Cube, "
+                       "and Rect images.");
     return false;
   }
 
@@ -4806,10 +4818,10 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
   Register ResourcePtr = I.getOperand(2).getReg();
   SPIRVTypeInst RegType = GR.getSPIRVTypeForVReg(ResourcePtr, I.getMF());
   if (RegType->getOpcode() == SPIRV::OpTypeImage) {
-    // For texel buffers, the index into the image is part of the OpImageRead or
-    // OpImageWrite instructions. So we will do nothing in this case. This
-    // intrinsic will be combined with the load or store when selecting the load
-    // or store.
+    // For texel buffers, the index into the image is part of the OpImageRead
+    // or OpImageWrite instructions. So we will do nothing in this case. This
+    // intrinsic will be combined with the load or store when selecting the
+    // load or store.
     return true;
   }
 
@@ -4927,8 +4939,8 @@ bool SPIRVInstructionSelector::selectImageWriteIntrinsic(
   // this will generate invalid code. A proper solution is to move
   // the OpLoad from selectHandleFromBinding here. However, to do
   // that we will need to change the return type of the intrinsic.
-  // We will do that when we can, but for now trying to move forward with other
-  // issues.
+  // We will do that when we can, but for now trying to move forward with
+  // other issues.
   Register ImageReg = I.getOperand(1).getReg();
   auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
   Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
@@ -5246,8 +5258,8 @@ bool SPIRVInstructionSelector::selectFirstBitHigh(Register ResVReg,
     return selectFirstBitSet64(ResVReg, ResType, I, OpReg, BitSetOpcode,
                                /*SwapPrimarySide=*/false);
   default:
-    report_fatal_error(
-        "spv_firstbituhigh and spv_firstbitshigh only support 16,32,64 bits.");
+    report_fatal_error("spv_firstbituhigh and spv_firstbitshigh only support "
+                       "16,32,64 bits.");
   }
 }
 
@@ -5258,8 +5270,8 @@ bool SPIRVInstructionSelector::selectFirstBitLow(Register ResVReg,
   Register OpReg = I.getOperand(2).getReg();
   SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpReg);
   // OpUConvert treats the operand bits as an unsigned i16 and zero extends it
-  // to an unsigned i32. As this leaves all the least significant bits unchanged
-  // so the first set bit from the LSB side doesn't change.
+  // to an unsigned i32. As this leaves all the least significant bits
+  // unchanged so the first set bit from the LSB side doesn't change.
   unsigned ExtendOpcode = SPIRV::OpUConvert;
   unsigned BitSetOpcode = GL::FindILsb;
 
@@ -5340,11 +5352,11 @@ bool SPIRVInstructionSelector::selectBranchCond(MachineInstr &I) const {
   // G_BRCOND to create an OpBranchConditional. We should hit G_BR first, and
   // generate the OpBranchConditional in selectBranch above.
   //
-  // If an OpBranchConditional has been generated, we simply return, as the work
-  // is alread done. If there is no OpBranchConditional, LLVM must be relying on
-  // implicit fallthrough to the next basic block, so we need to create an
-  // OpBranchConditional with an explicit "false" argument pointing to the next
-  // basic block that LLVM would fall through to.
+  // If an OpBranchConditional has been generated, we simply return, as the
+  // work is alread done. If there is no OpBranchConditional, LLVM must be
+  // relying on implicit fallthrough to the next basic block, so we need to
+  // create an OpBranchConditional with an explicit "false" argument pointing
+  // to the next basic block that LLVM would fall through to.
   const MachineInstr *NextI = I.getNextNode();
   // Check if this has already been successfully selected.
   if (NextI != nullptr && NextI->getOpcode() == SPIRV::OpBranchConditional)
@@ -5458,8 +5470,8 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   auto GlobalVar = cast<GlobalVariable>(GV);
   assert(GlobalVar->getName() != "llvm.global.annotations");
 
-  // Skip empty declaration for GVs with initializers till we get the decl with
-  // passed initializer.
+  // Skip empty declaration for GVs with initializers till we get the decl
+  // with passed initializer.
   if (hasInitializer(GlobalVar) && !Init)
     return true;
 
@@ -5475,9 +5487,9 @@ bool SPIRVInstructionSelector::selectGlobalValue(
       ResVReg, ResType, GlobalIdent, GV, StorageClass, Init,
       GlobalVar->isConstant(), LnkType, MIRBuilder, true);
   // TODO: For AMDGCN, we pipe externally_initialized through via
-  // HostAccessINTEL, with ReadWrite (3) access, which is we then handle during
-  // reverse translation. We should remove this once SPIR-V gains the ability to
-  // express the concept.
+  // HostAccessINTEL, with ReadWrite (3) access, which is we then handle
+  // during reverse translation. We should remove this once SPIR-V gains the
+  // ability to express the concept.
   if (GlobalVar->isExternallyInitialized() &&
       STI.getTargetTriple().getVendor() == Triple::AMD) {
     constexpr unsigned ReadWriteINTEL = 3u;
@@ -5746,8 +5758,8 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
       buildPointerToResource(SPIRVTypeInst(VarType), SC, Set, Binding,
                              ArraySize, IndexReg, Name, MIRBuilder);
 
-  // The handle for the buffer is the pointer to the resource. For an image, the
-  // handle is the image object. So images get an extra load.
+  // The handle for the buffer is the pointer to the resource. For an image,
+  // the handle is the image object. So images get an extra load.
   uint32_t LoadOpcode =
       IsStructuredBuffer ? SPIRV::OpCopyObject : SPIRV::OpLoad;
   GR.assignSPIRVTypeToVReg(ResType, HandleReg, *Pos.getMF());
