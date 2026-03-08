@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-identifier-length %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  {readability-identifier-length.IgnoredVariableNames: "^[xy]$"}}' \
+// RUN:  {readability-identifier-length.IgnoredVariableNames: "^[xy]$", readability-identifier-length.LineCountThreshold: 1}}' \
 // RUN: -- -fexceptions
 
 struct myexcept {
@@ -11,7 +11,8 @@ struct simpleexcept {
   int other;
 };
 
-void doIt();
+template<typename... Ts>
+void doIt(Ts...);
 
 void tooShortVariableNames(int z)
 // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: parameter name 'z' is too short, expected at least 3 characters [readability-identifier-length]
@@ -25,39 +26,47 @@ void tooShortVariableNames(int z)
   for (int m = 0; m < 5; ++m)
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: loop variable name 'm' is too short, expected at least 2 characters [readability-identifier-length]
   {
-    doIt();
+    doIt(i, jj, m);
   }
 
   try {
-    doIt();
+    doIt(z);
   } catch (const myexcept &x)
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: exception variable name 'x' is too short, expected at least 2 characters [readability-identifier-length]
   {
-    doIt();
+    doIt(x);
   }
 }
 
-void longEnoughVariableNames(int n) // argument 'n' ignored by default configuration
+void longEnoughVariableNames(int n, int m) // argument 'n' ignored by default configuration, 'm' is only used on this line
 {
   int var = 5;
 
   for (int i = 0; i < 42; ++i) // 'i' is default allowed, for historical reasons
   {
-    doIt();
+    doIt(var, i);
+  }
+
+  for (int a = 0; a < 42; ++a) // 'a' is only used on this line
+  {
+      doIt();
   }
 
   for (int kk = 0; kk < 42; ++kk) {
-    doIt();
+    doIt(kk);
   }
 
   try {
-    doIt();
+    doIt(n);
   } catch (const simpleexcept &e) // ignored by default configuration
   {
-    doIt();
+    doIt(e);
   } catch (const myexcept &ex) {
-    doIt();
-  }
+    doIt(ex);
+  } catch (const int &d) { doIt(d); } // 'd' is only used on this line
 
   int x = 5; // ignored by configuration
+  ++x;
+
+  int b = 0; // 'b' is only used on this line
 }
