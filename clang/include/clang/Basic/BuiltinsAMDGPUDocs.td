@@ -590,17 +590,9 @@ Returns the value of ``src`` held by the lane identified by ``idx``. This is
 a high-level wave shuffle operation that is correctly lowered for both wave32
 and wave64 without requiring the caller to compute byte offsets.
 
-.. code-block:: c
-
-   int __builtin_amdgcn_wave_shuffle(int src, int idx);
-
-``src``
-  The 32-bit value from the current lane to make available for shuffling.
-
-``idx``
-  The lane index to read from. If the index is outside the valid range
-  ``[0, wavefront_size)``, it wraps around modulo the wavefront size.
-  Reading from an inactive lane returns a nondeterministic value.
+If the index is outside the valid range ``[0, wavefront_size)``, it wraps
+around modulo the wavefront size. Reading from an inactive lane returns a
+nondeterministic value.
 }];
 }
 
