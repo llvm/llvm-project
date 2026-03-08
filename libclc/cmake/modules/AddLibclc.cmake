@@ -6,6 +6,17 @@ macro(libclc_configure_source_list variable path)
   set(${variable} ${${variable}} PARENT_SCOPE)
 endmacro()
 
+# Appends a compile option to the given source files. Paths are relative
+# to `path` and the property is set in the top-level libclc directory scope.
+macro(libclc_configure_source_options path option)
+  set(_option_srcs ${ARGN})
+  list(TRANSFORM _option_srcs PREPEND "${path}/")
+  set_property(SOURCE ${_option_srcs}
+    DIRECTORY ${LIBCLC_SOURCE_DIR}
+    APPEND PROPERTY COMPILE_OPTIONS ${option}
+  )
+endmacro()
+
 # Merges OpenCL C source file lists with priority deduplication.
 #
 # All arguments after the output variable name are treated as source file

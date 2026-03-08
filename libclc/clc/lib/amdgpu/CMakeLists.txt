@@ -14,3 +14,9 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   math/clc_native_log10.cl
   math/clc_sqrt.cl
 )
+
+libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
+  math/clc_native_exp.cl
+  math/clc_native_exp2.cl
+  math/clc_native_log10.cl
+)

@@ -17,7 +17,6 @@ include( AddLibclc )
 include( GNUInstallDirs )
 
 set( LIBCLC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
-set( LIBCLC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 
 # A runtimes cross-build should only use the requested target.
 set( LIBCLC_DEFAULT_TARGET "all" )
@@ -134,47 +133,8 @@ add_subdirectory(clc/lib/clspv)
 
 add_subdirectory(opencl/lib/generic)
 add_subdirectory(opencl/lib/amdgcn)
-add_subdirectory(opencl/lib/ptx-nvidiacl)
 add_subdirectory(opencl/lib/clspv)
 add_subdirectory(opencl/lib/spirv)
-
-set_property(SOURCE
-  # CLC builtins
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_divide.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp10.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp2.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log10.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log2.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_powr.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_recip.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_rsqrt.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sin.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sqrt.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_tan.cl
-  # Target-specific CLC builtins
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
-  # OpenCL builtins
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_cos.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_divide.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp10.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp2.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log10.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log2.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_powr.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_recip.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_rsqrt.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sin.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sqrt.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_tan.cl
-  APPEND PROPERTY COMPILE_OPTIONS -fapprox-func
-)
 
 add_custom_target( libclc ALL )
 
@@ -245,32 +205,15 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
   endif()
 
-  # Identify which source directory to search through for this target.
-  if( ${ARCH} STREQUAL nvptx64 )
-    set( DARCH ptx )
-  elseif( ${ARCH} STREQUAL clspv OR ${ARCH} STREQUAL clspv64 )
-    set( DARCH clspv )
-  elseif( ${ARCH} STREQUAL spirv OR ${ARCH} STREQUAL spirv64 )
-    set( DARCH spirv )
-  elseif( ${ARCH} STREQUAL amdgcn-mesa3d )
-    set( DARCH amdgcn-amdhsa )
-  else()
-    set( DARCH ${ARCH} )
-  endif()
-  if ( "${OS}" STREQUAL cuda )
-    set( OS nvidiacl )
-  endif()
-
-  # Collect CLC sources, target specific sources will override the generic ones
-  # if present in the list.
+  # Collect CLC sources; target-specific sources override generic ones by basename.
   set(_clc_overrides)
   if(ARCH STREQUAL amdgcn)
     list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES} ${CLC_AMDGCN_SOURCES})
-  elseif(DARCH STREQUAL ptx AND OS STREQUAL nvidiacl)
+  elseif(ARCH STREQUAL nvptx64 AND (OS STREQUAL nvidiacl OR OS STREQUAL cuda))
     list(APPEND _clc_overrides ${CLC_PTX_NVIDIACL_SOURCES})
-  elseif(DARCH STREQUAL spirv)
+  elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
     list(APPEND _clc_overrides ${CLC_SPIRV_SOURCES})
-  elseif(DARCH STREQUAL clspv)
+  elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
     list(APPEND _clc_overrides ${CLC_CLSPV_SOURCES})
   endif()
   libclc_merge_sources(clc_sources ${CLC_GENERIC_SOURCES} ${_clc_overrides})
@@ -285,8 +228,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set(_opencl_overrides)
     if(ARCH STREQUAL amdgcn)
       list(APPEND _opencl_overrides ${OPENCL_AMDGCN_SOURCES})
-    elseif(DARCH STREQUAL ptx AND OS STREQUAL nvidiacl)
-      list(APPEND _opencl_overrides ${OPENCL_PTX_NVIDIACL_SOURCES})
     endif()
     libclc_merge_sources(opencl_sources
       ${OPENCL_GENERIC_SOURCES} ${_opencl_overrides})

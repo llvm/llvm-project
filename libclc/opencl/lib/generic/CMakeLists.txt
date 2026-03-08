@@ -221,3 +221,20 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   workitem/get_num_groups.cl
   workitem/get_work_dim.cl
 )
+
+libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
+  math/native_cos.cl
+  math/native_divide.cl
+  math/native_exp.cl
+  math/native_exp2.cl
+  math/native_exp10.cl
+  math/native_log.cl
+  math/native_log2.cl
+  math/native_log10.cl
+  math/native_powr.cl
+  math/native_recip.cl
+  math/native_rsqrt.cl
+  math/native_sin.cl
+  math/native_sqrt.cl
+  math/native_tan.cl
+)

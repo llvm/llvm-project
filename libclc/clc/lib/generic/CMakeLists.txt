@@ -188,3 +188,20 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   workitem/clc_get_sub_group_id.cl
   workitem/clc_get_sub_group_size.cl
 )
+
+libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
+  math/clc_native_cos.cl
+  math/clc_native_divide.cl
+  math/clc_native_exp.cl
+  math/clc_native_exp2.cl
+  math/clc_native_exp10.cl
+  math/clc_native_log.cl
+  math/clc_native_log2.cl
+  math/clc_native_log10.cl
+  math/clc_native_powr.cl
+  math/clc_native_recip.cl
+  math/clc_native_rsqrt.cl
+  math/clc_native_sin.cl
+  math/clc_native_sqrt.cl
+  math/clc_native_tan.cl
+)
