@@ -123,8 +123,35 @@ function(mlir_generate_type_stubs)
     "IMPORT_PATHS;DEPENDS_TARGETS;OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
     ${ARGN})
 
+  # Allow overriding the stubgen.py path or fetching a specific version
+  # from the nanobind repository, independent of the nanobind used for
+  # building. This is useful when a newer stubgen has bug fixes or features
+  # not yet available in the nanobind version used for compilation.
+  if(MLIR_NB_STUBGEN)
+    set(NB_STUBGEN "${MLIR_NB_STUBGEN}")
+  elseif(MLIR_NB_STUBGEN_VERSION)
+    set(_stubgen_path "${MLIR_BINARY_DIR}/stubgen/${MLIR_NB_STUBGEN_VERSION}/stubgen.py")
+    if(NOT EXISTS "${_stubgen_path}")
+      message(STATUS "Downloading stubgen.py from nanobind ${MLIR_NB_STUBGEN_VERSION}...")
+      file(MAKE_DIRECTORY "${MLIR_BINARY_DIR}/stubgen/${MLIR_NB_STUBGEN_VERSION}" RESULT _created_dir)
+      if(NOT _created_dir EQUAL 0)
+        list(GET _created_dir 1 _created_dir_error)
+        message(FATAL_ERROR "Failed to create parent dir for stubgen.py: ${_created_dir_error}")
+      endif()
+      file(DOWNLOAD
+        "https://raw.githubusercontent.com/wjakob/nanobind/${MLIR_NB_STUBGEN_VERSION}/src/stubgen.py"
+        "${_stubgen_path}"
+        STATUS _download_status
+      )
+      list(GET _download_status 0 _download_code)
+      if(NOT _download_code EQUAL 0)
+        list(GET _download_status 1 _download_error)
+        message(FATAL_ERROR "Failed to download stubgen.py: ${_download_error}")
+      endif()
+    endif()
+    set(NB_STUBGEN "${_stubgen_path}")
   # for people installing a distro (e.g., pip install) of nanobind
-  if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
+  elseif(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
