@@ -785,6 +785,64 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpLLVMRegisterPair: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::RegisterPairFields>();
+
+    OS << "llvm_register_pair ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.Reg1, OS, TRI);
+    OS << ", " << Fields.Reg1SizeInBits << ", ";
+    printCFIRegister(Fields.Reg2, OS, TRI);
+    OS << ", " << Fields.Reg2SizeInBits;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisters: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
+
+    OS << "llvm_vector_registers ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    for (auto [Reg, Lane, Size] : Fields.VectorRegisters) {
+      OS << ", ";
+      printCFIRegister(Reg, OS, TRI);
+      OS << ", " << Lane << ", " << Size;
+    }
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorOffset: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
+
+    OS << "llvm_vector_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", " << Fields.RegisterSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits << ", " << Fields.Offset;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisterMask: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
+
+    OS << "llvm_vector_register_mask ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.SpillRegister, OS, TRI);
+    OS << ", " << Fields.SpillRegisterLaneSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits;
+    break;
+  }
   case MCCFIInstruction::OpNegateRAStateWithPC:
     OS << "negate_ra_sign_state_with_pc ";
     if (MCSymbol *Label = CFI.getLabel())

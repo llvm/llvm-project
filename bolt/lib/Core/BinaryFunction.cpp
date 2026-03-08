@@ -2836,6 +2836,12 @@ private:
     case MCCFIInstruction::OpNegateRAState:
       llvm_unreachable("unsupported CFI opcode");
       break;
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      llvm_unreachable("unsupported LLVM-specific pseudo-CFI opcode");
+      break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -2976,6 +2982,12 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
       llvm_unreachable("unsupported CFI opcode");
+      return false;
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      llvm_unreachable("unsupported LLVM-specific pseudo-CFI opcode");
       return false;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -3127,6 +3139,12 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
       llvm_unreachable("unsupported CFI opcode");
+      break;
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      llvm_unreachable("unsupported LLVM-specific pseudo-CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
