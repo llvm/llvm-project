@@ -573,7 +573,26 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // The CFG leaves in dead things, and we don't want the dead code paths to
   // confuse us, so we mark all live things first.
   llvm::BitVector live(cfg->getNumBlockIDs());
-  reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
+  unsigned count =
+      reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
+
+  bool AddEHEdges = AC.getAddEHEdges();
+  if (!AddEHEdges && count != cfg->getNumBlockIDs())
+    // When there are things remaining dead, and we didn't add EH edges
+    // from CallExprs to the catch clauses, we have to go back and
+    // mark them as live.
+    for (const auto *B : *cfg) {
+      if (!live[B->getBlockID()]) {
+        if (B->preds().empty()) {
+          const Stmt *Term = B->getTerminatorStmt();
+          if (isa_and_nonnull<CXXTryStmt>(Term))
+            // When not adding EH edges from calls, catch clauses
+            // can otherwise seem dead.  Avoid noting them as dead.
+            count += reachable_code::ScanReachableFromBlock(B, live);
+          continue;
+        }
+      }
+    }
 
   // Now we know what is live, we check the live precessors of the exit block
   // and look for fall through paths, being careful to ignore normal returns,
@@ -2536,16 +2555,46 @@ public:
     SourceRange Range;
     unsigned MsgParam = 0;
 
-    // This function only handles SpanTwoParamConstructorGadget so far, which
-    // always gives a CXXConstructExpr.
     const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
     Loc = CtorExpr->getLocation();
+    Range = CtorExpr->getSourceRange();
 
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
+    std::string ContainerName = "std::span";
+    if (auto *TD = CtorExpr->getConstructor()->getParent()) {
+      // This will provide "std::span" if it's in the std namespace
+      ContainerName = TD->getQualifiedNameAsString();
+    }
+
+    // FIX: Pass the container name to fill the %0 parameter
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container) << ContainerName;
+
     if (IsRelatedToDecl) {
       assert(!SuggestSuggestions &&
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
+    }
+  }
+
+  void handleUnsafeOperationInStringView(const Stmt *Operation,
+                                         bool IsRelatedToDecl,
+                                         ASTContext &Ctx) override {
+    // Extracting location: prioritize the specific location of the constructor
+    SourceLocation Loc = Operation->getBeginLoc();
+    SourceRange Range = Operation->getSourceRange();
+
+    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      Loc = CtorExpr->getLocation();
+    }
+
+    // 1. Emit the primary warning for string_view
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container)
+        << "std::string_view";
+
+    // 2. If a specific variable is 'blamed', emit the note
+    if (IsRelatedToDecl) {
+      // MsgParam 0 is "unsafe operation"
+      // Range helps the IDE underline the whole expression
+      S.Diag(Loc, diag::note_unsafe_buffer_operation) << 0 << Range;
     }
   }
 
@@ -2862,12 +2911,10 @@ public:
 
   void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                           const Expr *MovedExpr, SourceLocation FreeLoc,
-                          Confidence C) override {
+                          Confidence) override {
     S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_loan_expires_moved_strict
-           : C == Confidence::Definite
-               ? diag::warn_lifetime_safety_loan_expires_permissive
-               : diag::warn_lifetime_safety_loan_expires_strict)
+           MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
+                     : diag::warn_lifetime_safety_use_after_scope)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -2879,10 +2926,10 @@ public:
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
                             const Expr *MovedExpr, SourceLocation ExpiryLoc,
-                            Confidence C) override {
+                            Confidence) override {
     S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved_strict
-                     : diag::warn_lifetime_safety_return_stack_addr_permissive)
+           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
+                     : diag::warn_lifetime_safety_return_stack_addr)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -3148,17 +3195,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool IsLifetimeSafetyDiagnosticEnabled =
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope_moved,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_moved_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_moved,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(
-          diag::warn_lifetime_safety_return_stack_addr_moved_strict,
-          D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
                        D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,

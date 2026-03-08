@@ -10,9 +10,6 @@ typedef long __attribute__((overflow_behavior(trap))) ok_nowrap; // OK
 typedef unsigned long __attribute__((overflow_behavior("wrap"))) str_ok_wrap; // OK
 typedef char __attribute__((overflow_behavior("trap"))) str_ok_nowrap; // OK
 
-#define __wrap __attribute__((overflow_behavior(wrap)))
-#define __trap __attribute__((overflow_behavior(trap)))
-
 struct struct_not_allowed {
   int i;
 } __attribute__((overflow_behavior(wrap))); // expected-warning {{'overflow_behavior' attribute only applies to variables, typedefs, and data members}}

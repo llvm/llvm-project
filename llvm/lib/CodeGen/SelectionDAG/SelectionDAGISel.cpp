@@ -3233,7 +3233,15 @@ static size_t IsPredicateKnownToFail(
   case SelectionDAGISel::OPC_CheckChild4TypeByHwMode:
   case SelectionDAGISel::OPC_CheckChild5TypeByHwMode:
   case SelectionDAGISel::OPC_CheckChild6TypeByHwMode:
-  case SelectionDAGISel::OPC_CheckChild7TypeByHwMode: {
+  case SelectionDAGISel::OPC_CheckChild7TypeByHwMode:
+  case SelectionDAGISel::OPC_CheckChild0TypeByHwMode0:
+  case SelectionDAGISel::OPC_CheckChild1TypeByHwMode0:
+  case SelectionDAGISel::OPC_CheckChild2TypeByHwMode0:
+  case SelectionDAGISel::OPC_CheckChild3TypeByHwMode0:
+  case SelectionDAGISel::OPC_CheckChild4TypeByHwMode0:
+  case SelectionDAGISel::OPC_CheckChild5TypeByHwMode0:
+  case SelectionDAGISel::OPC_CheckChild6TypeByHwMode0:
+  case SelectionDAGISel::OPC_CheckChild7TypeByHwMode0: {
     MVT VT;
     unsigned ChildNo;
     if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeI32 &&
@@ -3248,6 +3256,10 @@ static size_t IsPredicateKnownToFail(
                Opcode <= SelectionDAGISel::OPC_CheckChild7TypeByHwMode) {
       VT = getHwModeVT(Table, Index, SDISel);
       ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeByHwMode;
+    } else if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeByHwMode0 &&
+               Opcode <= SelectionDAGISel::OPC_CheckChild7TypeByHwMode0) {
+      VT = SDISel.getValueTypeForHwMode(0);
+      ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeByHwMode0;
     } else {
       VT = getSimpleVT(Table, Index);
       ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0Type;
@@ -3909,9 +3921,25 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_CheckChild4TypeByHwMode:
     case OPC_CheckChild5TypeByHwMode:
     case OPC_CheckChild6TypeByHwMode:
-    case OPC_CheckChild7TypeByHwMode: {
-      MVT VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
-      unsigned ChildNo = Opcode - OPC_CheckChild0TypeByHwMode;
+    case OPC_CheckChild7TypeByHwMode:
+    case OPC_CheckChild0TypeByHwMode0:
+    case OPC_CheckChild1TypeByHwMode0:
+    case OPC_CheckChild2TypeByHwMode0:
+    case OPC_CheckChild3TypeByHwMode0:
+    case OPC_CheckChild4TypeByHwMode0:
+    case OPC_CheckChild5TypeByHwMode0:
+    case OPC_CheckChild6TypeByHwMode0:
+    case OPC_CheckChild7TypeByHwMode0: {
+      MVT VT;
+      unsigned ChildNo;
+      if (Opcode >= OPC_CheckChild0TypeByHwMode0 &&
+          Opcode <= OPC_CheckChild7TypeByHwMode0) {
+        VT = getValueTypeForHwMode(0);
+        ChildNo = Opcode - OPC_CheckChild0TypeByHwMode0;
+      } else {
+        VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+        ChildNo = Opcode - OPC_CheckChild0TypeByHwMode;
+      }
       if (!::CheckChildType(VT.SimpleTy, N, TLI, CurDAG->getDataLayout(),
                             ChildNo))
         break;
@@ -3986,7 +4014,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitIntegerI16:
     case OPC_EmitIntegerI32:
     case OPC_EmitIntegerI64:
-    case OPC_EmitIntegerByHwMode: {
+    case OPC_EmitIntegerByHwMode:
+    case OPC_EmitIntegerByHwMode0: {
       MVT VT;
       switch (Opcode) {
       case OPC_EmitIntegerI8:
@@ -4003,6 +4032,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       case OPC_EmitIntegerByHwMode:
         VT = getHwModeVT(MatcherTable, MatcherIndex, *this);
+        break;
+      case OPC_EmitIntegerByHwMode0:
+        VT = getValueTypeForHwMode(0);
         break;
       default:
         VT = getSimpleVT(MatcherTable, MatcherIndex);

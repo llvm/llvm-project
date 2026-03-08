@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 # Add path for custom modules
 list( INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" )
 
+enable_language( CLC )
+
 set( LIBCLC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 set( LIBCLC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 set( LIBCLC_OBJFILE_DIR ${LIBCLC_BINARY_DIR}/obj.libclc.dir )
@@ -367,8 +369,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -include opencl-c-base.h
       # Error on undefined macros
       -Werror=undef
+      -Wall
+      -Wextra
       -fdiscard-value-names
       -ffp-contract=fast-honor-pragmas
+      -fdenormal-fp-math=dynamic
     )
 
     if( NOT "${cpu}" STREQUAL "" )
@@ -389,7 +394,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     # maps to the private address space.
     set ( private_addrspace_val 0 )
     set ( generic_addrspace_val 0 )
-    if( ARCH STREQUAL amdgcn-amdhsa )
+    if( ARCH STREQUAL amdgcn )
       set ( private_addrspace_val 5 )
     endif()
     if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)

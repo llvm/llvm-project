@@ -3460,17 +3460,10 @@ def: Pat<(trap), (PS_crash)>;
 def: Pat<(debugtrap), (Y2_break)>;
 
 // Read cycle counter.
-def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;
-def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
-  [SDNPHasChain]>;
+def : Pat<(i64 (readcyclecounter)), (PS_readcr64 UPCYCLE)>;
 
-def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
-
-// Read time counter.
-def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
-  [SDNPHasChain]>;
-
-def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
+// Read packet counter
+def : Pat<(i64 (readsteadycounter)), (PS_readcr64 UTIMER)>;
 
 def SDTInt32Leaf : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
 def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTPtrLeaf>;

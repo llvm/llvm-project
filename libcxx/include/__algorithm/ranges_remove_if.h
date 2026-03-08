@@ -10,10 +10,9 @@
 #define _LIBCPP___ALGORITHM_RANGES_REMOVE_IF_H
 #include <__config>
 
-#include <__algorithm/ranges_find_if.h>
+#include <__algorithm/find_if.h>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
-#include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/permutable.h>
@@ -39,7 +38,7 @@ namespace ranges {
 template <class _Iter, class _Sent, class _Proj, class _Pred>
 _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
 __remove_if_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
-  auto __new_end = ranges::__find_if_impl(__first, __last, __pred, __proj);
+  auto __new_end = std::__find_if(__first, __last, __pred, __proj);
   if (__new_end == __last)
     return {__new_end, __new_end};
 

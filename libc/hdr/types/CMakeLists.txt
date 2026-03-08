@@ -234,6 +234,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  key_t
+  HDRS
+    key_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.key_t
+    libc.include.sys_ipc
+)
+
+add_proxy_header_library(
   pid_t
   HDRS
     pid_t.h
@@ -359,6 +368,15 @@ add_proxy_header_library(
     struct_sockaddr.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sockaddr
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
+  struct_sockaddr_un
+  HDRS
+    struct_sockaddr_un.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sockaddr_un
     libc.include.sys_socket
 )
 

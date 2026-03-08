@@ -848,6 +848,9 @@ void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
   SmallString<128> ModelStorage;
   Model.toVector(ModelStorage);
 
+  assert(llvm::is_contained(ModelStorage, '%') &&
+         "createUniquePath: Model must contain at least one '%'");
+
   if (MakeAbsolute) {
     // Make model absolute by prepending a temp directory if it's not already.
     if (!sys::path::is_absolute(Twine(ModelStorage))) {

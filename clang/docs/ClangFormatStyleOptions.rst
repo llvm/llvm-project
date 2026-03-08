@@ -182,11 +182,13 @@ the configuration (without a prefix: ``Auto``).
     Not a real style, but allows to use the ``.clang-format`` file from the
     parent directory (or its parent if there is none). If there is no parent
     file found it falls back to the ``fallback`` style, and applies the changes
-    to that.
-
-    With this option you can overwrite some parts of your main style for your
-    subdirectories. This is also possible through the command line, e.g.:
+    to that. With this option you can overwrite some parts of your main style
+    for your subdirectories. This is also possible through the command line,
+    e.g.:
     ``--style={BasedOnStyle: InheritParentConfig, ColumnLimit: 20}``
+  * ``InheritParentConfig=<directory-path>``
+    Same as the above except that the inheritance is redirected to
+    ``<directory-path>``. This is only supported in configuration files.
 
 .. START_FORMAT_STYLE_OPTIONS
 
@@ -3613,42 +3615,110 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BreakBinaryOperations:
 
-**BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
+**BreakBinaryOperations** (``BreakBinaryOperationsOptions``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
   The break binary operations style to use.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``BBO_Never`` (in configuration: ``Never``)
-    Don't break binary operations
+  Options for ``BreakBinaryOperations``.
 
-    .. code-block:: c++
+  If specified as a simple string (e.g. ``OnePerLine``), it behaves like
+  the original enum and applies to all binary operators.
 
-       aaa + bbbb * ccccc - ddddd +
-       eeeeeeeeeeeeeeee;
+  If specified as a struct, allows per-operator configuration:
 
-  * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
-    Binary operations will either be all on the same line, or each operation
-    will have one line each.
+  .. code-block:: yaml
 
-    .. code-block:: c++
+    BreakBinaryOperations:
+      Default: Never
+      PerOperator:
+        - Operators: ['&&', '||']
+          Style: OnePerLine
+          MinChainLength: 3
 
-       aaa +
-       bbbb *
-       ccccc -
-       ddddd +
-       eeeeeeeeeeeeeeee;
+  * ``BreakBinaryOperationsStyle Default`` :versionbadge:`clang-format 23`
 
-  * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
-    Binary operations of a particular precedence that exceed the column
-    limit will have one line each.
+    The default break style for operators not covered by ``PerOperator``.
 
-    .. code-block:: c++
+    Possible values:
 
-       aaa +
-       bbbb * ccccc -
-       ddddd +
-       eeeeeeeeeeeeeeee;
+    * ``BBO_Never`` (in configuration: ``Never``)
+      Don't break binary operations
 
+      .. code-block:: c++
+
+         aaa + bbbb * ccccc - ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+      Binary operations will either be all on the same line, or each operation
+      will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb *
+         ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+      Binary operations of a particular precedence that exceed the column
+      limit will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb * ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+
+  * ``List of BinaryOperationBreakRules PerOperator`` Per-operator override rules.
+
+  * ``List of Strings Operators`` :versionbadge:`clang-format 23` The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
+    Alternative spellings (e.g. ``and`` for ``&&``) are accepted.
+
+  * ``BreakBinaryOperationsStyle Style``
+    The break style for these operators (defaults to ``OnePerLine``).
+
+    Possible values:
+
+    * ``BBO_Never`` (in configuration: ``Never``)
+      Don't break binary operations
+
+      .. code-block:: c++
+
+         aaa + bbbb * ccccc - ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+      Binary operations will either be all on the same line, or each operation
+      will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb *
+         ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+      Binary operations of a particular precedence that exceed the column
+      limit will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb * ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+
+  * ``unsigned MinChainLength`` Minimum number of operands in a chain before the rule triggers.
+    For example, ``a && b && c`` is a chain of length 3.
+    ``0`` means always break (when the line is too long).
 
 
 .. _BreakConstructorInitializers:
@@ -4543,22 +4613,70 @@ the configuration (without a prefix: ``Auto``).
 
 .. _IndentGotoLabels:
 
-**IndentGotoLabels** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <IndentGotoLabels>`
-  Indent goto labels.
+**IndentGotoLabels** (``IndentGotoLabelStyle``) :versionbadge:`clang-format 10` :ref:`¶ <IndentGotoLabels>`
+  The goto label indenting style to use.
 
-  When ``false``, goto labels are flushed left.
+  Possible values:
 
-  .. code-block:: c++
+  * ``IGLS_NoIndent`` (in configuration: ``NoIndent``)
+    Do not indent goto labels.
 
-     true:                                  false:
-     int f() {                      vs.     int f() {
-       if (foo()) {                           if (foo()) {
-       label1:                              label1:
-         bar();                                 bar();
-       }                                      }
-     label2:                                label2:
-       return 1;                              return 1;
-     }                                      }
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+       label1:
+           bar();
+         }
+       label2:
+         return 1;
+       }
+
+  * ``IGLS_OuterIndent`` (in configuration: ``OuterIndent``)
+    Indent goto labels to the enclosing block (previous indenting level).
+
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+         label1:
+           bar();
+         }
+       label2:
+         return 1;
+       }
+
+  * ``IGLS_InnerIndent`` (in configuration: ``InnerIndent``)
+    Indent goto labels to the surrounding statements (current indenting
+    level).
+
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+           label1:
+           bar();
+         }
+         label2:
+         return 1;
+       }
+
+  * ``IGLS_HalfIndent`` (in configuration: ``HalfIndent``)
+    Indent goto labels to half the indentation of the surrounding code.
+    If the indentation width is an odd number, it will round up.
+
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+          label1:
+           bar();
+         }
+        label2:
+         return 1;
+       }
+
+
 
 .. _IndentPPDirectives:
 
@@ -4751,7 +4869,7 @@ the configuration (without a prefix: ``Auto``).
 .. _IntegerLiteralSeparator:
 
 **IntegerLiteralSeparator** (``IntegerLiteralSeparatorStyle``) :versionbadge:`clang-format 16` :ref:`¶ <IntegerLiteralSeparator>`
-  Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
+  Format integer literal separators (``'`` for C/C++ and ``_`` for C#, Java,
   and JavaScript).
 
   Nested configuration flags:

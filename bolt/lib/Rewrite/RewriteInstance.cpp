@@ -4583,17 +4583,12 @@ void RewriteInstance::patchELFPHDRTable() {
     return Phdr;
   };
 
-  auto writeNewSegmentPhdrs = [&]() {
-    for (const SegmentInfo &SI : BC->NewSegments) {
-      ELF64LEPhdrTy Phdr = createPhdr(SI);
-      OS.write(reinterpret_cast<const char *>(&Phdr), sizeof(Phdr));
-    }
-  };
+  // Collect modified program headers, then insert new PT_LOAD segments
+  // right after existing PT_LOAD segments to maintain ascending p_vaddr
+  // order required by the ELF specification.
+  SmallVector<ELF64LEPhdrTy, 16> Phdrs;
 
-  bool ModdedGnuStack = false;
-  bool AddedSegment = false;
-
-  // Copy existing program headers with modifications.
+  bool SkippedGnuStack = false;
   for (const ELF64LE::Phdr &Phdr : cantFail(Obj.program_headers())) {
     ELF64LE::Phdr NewPhdr = Phdr;
     switch (Phdr.p_type) {
@@ -4628,34 +4623,34 @@ void RewriteInstance::patchELFPHDRTable() {
     }
     case ELF::PT_GNU_STACK:
       if (opts::UseGnuStack) {
-        // Overwrite the header with the new segment header.
         assert(BC->NewSegments.size() == 1 &&
                "Expected exactly one new segment");
-        NewPhdr = createPhdr(BC->NewSegments.front());
-        ModdedGnuStack = true;
-      }
-      break;
-    case ELF::PT_DYNAMIC:
-      if (!opts::UseGnuStack) {
-        // Insert new headers before DYNAMIC.
-        writeNewSegmentPhdrs();
-        AddedSegment = true;
+        SkippedGnuStack = true;
+        continue; // Remove; new PT_LOAD will be added after existing ones.
       }
       break;
     }
-    OS.write(reinterpret_cast<const char *>(&NewPhdr), sizeof(NewPhdr));
+    Phdrs.push_back(NewPhdr);
   }
 
-  if (!opts::UseGnuStack && !AddedSegment) {
-    // Append new headers to the end of the table.
-    writeNewSegmentPhdrs();
-  }
-
-  if (opts::UseGnuStack && !ModdedGnuStack) {
+  if (opts::UseGnuStack && !SkippedGnuStack) {
     BC->errs()
         << "BOLT-ERROR: could not find PT_GNU_STACK program header to modify\n";
     exit(1);
   }
+
+  // Insert new PT_LOAD segments right after the last existing PT_LOAD to
+  // maintain ascending p_vaddr order.
+  auto LastPTLoad = llvm::find_if(reverse(Phdrs), [](const ELF64LE::Phdr &P) {
+    return P.p_type == ELF::PT_LOAD;
+  });
+  assert(LastPTLoad != Phdrs.rend() && "No existing PT_LOAD found");
+  auto InsertPos = LastPTLoad.base();
+  for (const SegmentInfo &SI : BC->NewSegments)
+    InsertPos = std::next(Phdrs.insert(InsertPos, createPhdr(SI)));
+
+  OS.write(reinterpret_cast<const char *>(Phdrs.data()),
+           sizeof(ELF64LE::Phdr) * Phdrs.size());
 
   OS.seek(SavedPos);
 }
@@ -5357,12 +5352,26 @@ void RewriteInstance::updateELFSymbolTable(
     } else {
       // Check if the function symbol matches address inside a function, i.e.
       // it marks a secondary entry point.
+      // Also look up local NOTYPE symbols inside functions so we can
+      // update their addresses to reflect the output layout.
+      // Skip AArch64/RISC-V marker symbols ($d, $x) inside functions —
+      // BOLT generates its own via addExtraSymbols.
+      auto IsMarkerSymbol = [&]() {
+        return BC->getMarkerType(Symbol.getType(), Symbol.st_size,
+                                 *SymbolName) != MarkerSymType::NONE;
+      };
+      const bool IsLocalLabel = Symbol.getType() == ELF::STT_NOTYPE &&
+                                Symbol.getBinding() == ELF::STB_LOCAL &&
+                                Symbol.st_size == 0 && !IsMarkerSymbol();
       Function =
-          (Symbol.getType() == ELF::STT_FUNC)
+          (Symbol.getType() == ELF::STT_FUNC || IsLocalLabel)
               ? BC->getBinaryFunctionContainingAddress(Symbol.st_value,
                                                        /*CheckPastEnd=*/false,
                                                        /*UseMaxSize=*/true)
               : nullptr;
+
+      assert((!Function || !IsLocalLabel || !Function->isFolded()) &&
+             "Local label inside ICF-folded function");
 
       if (Function && Function->isEmitted()) {
         assert(Function->getLayout().isHotColdSplit() &&
@@ -5370,6 +5379,12 @@ void RewriteInstance::updateELFSymbolTable(
                "2 fragments");
         const uint64_t OutputAddress =
             Function->translateInputToOutputAddress(Symbol.st_value);
+
+        // Remove symbols that cannot be mapped to the output, e.g.
+        // data-in-code labels (jump tables) whose addresses BOLT
+        // does not track.
+        if (!OutputAddress)
+          continue;
 
         NewSymbol.st_value = OutputAddress;
         // Force secondary entry points to have zero size.
@@ -5419,19 +5434,14 @@ void RewriteInstance::updateELFSymbolTable(
             NewSymbol.st_shndx = getNewSectionIndex(Symbol.st_shndx);
         }
 
-        // Detect local syms in the text section that we didn't update
-        // and that were preserved by the linker to support relocations against
-        // .text. Remove them from the symtab.
-        if (Symbol.getType() == ELF::STT_NOTYPE &&
-            Symbol.getBinding() == ELF::STB_LOCAL && Symbol.st_size == 0) {
-          if (BC->getBinaryFunctionContainingAddress(Symbol.st_value,
-                                                     /*CheckPastEnd=*/false,
-                                                     /*UseMaxSize=*/true)) {
-            // Can only delete the symbol if not patching. Such symbols should
-            // not exist in the dynamic symbol table.
-            assert(!IsDynSym && "cannot delete symbol");
-            continue;
-          }
+        // Drop AArch64/RISC-V marker symbols ($d, $x) inside functions —
+        // BOLT generates its own via addExtraSymbols.
+        if (IsMarkerSymbol() &&
+            BC->getBinaryFunctionContainingAddress(Symbol.st_value,
+                                                   /*CheckPastEnd=*/false,
+                                                   /*UseMaxSize=*/true)) {
+          assert(!IsDynSym && "cannot delete symbol");
+          continue;
         }
       }
     }
