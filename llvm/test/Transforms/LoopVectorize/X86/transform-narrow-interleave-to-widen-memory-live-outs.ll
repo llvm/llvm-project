@@ -13,9 +13,9 @@ define i64 @test_4xi64_induction_live_out(ptr noalias %data, ptr noalias %factor
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
@@ -53,15 +53,15 @@ define i64 @test_4xi64_induction_live_out(ptr noalias %data, ptr noalias %factor
 ; CHECK-NEXT:    store <4 x i64> [[TMP18]], ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_FACTOR:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[DATA_0:%.*]] = getelementptr inbounds { i64, i64, i64, i64 }, ptr [[DATA]], i64 [[IV]], i32 0
@@ -82,9 +82,9 @@ define i64 @test_4xi64_induction_live_out(ptr noalias %data, ptr noalias %factor
 ; CHECK-NEXT:    store i64 [[MUL_3]], ptr [[DATA_3]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_NEXT]], %[[LOOP]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_NEXT]], %[[LOOP1]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[IV_NEXT_LCSSA]]
 ;
 entry:
@@ -94,19 +94,19 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %arrayidx = getelementptr inbounds i64, ptr %factor, i64 %iv
   %l.factor = load i64, ptr %arrayidx, align 8
-  %data.0 = getelementptr inbounds { i64 , i64, i64, i64 }, ptr %data, i64 %iv, i32 0
+  %data.0 = getelementptr inbounds { i64, i64, i64, i64 }, ptr %data, i64 %iv, i32 0
   %l.0 = load i64, ptr %data.0, align 8
   %mul.0 = mul i64 %l.factor, %l.0
   store i64 %mul.0, ptr %data.0, align 8
-  %data.1 = getelementptr inbounds { i64 , i64, i64, i64 }, ptr %data, i64 %iv, i32 1
+  %data.1 = getelementptr inbounds { i64, i64, i64, i64 }, ptr %data, i64 %iv, i32 1
   %l.1 = load i64, ptr %data.1, align 8
   %mul.1 = mul i64 %l.factor, %l.1
   store i64 %mul.1, ptr %data.1, align 8
-  %data.2 = getelementptr inbounds { i64 , i64, i64, i64 }, ptr %data, i64 %iv, i32 2
+  %data.2 = getelementptr inbounds { i64, i64, i64, i64 }, ptr %data, i64 %iv, i32 2
   %l.2 = load i64, ptr %data.2, align 8
   %mul.2 = mul i64 %l.factor, %l.2
   store i64 %mul.2, ptr %data.2, align 8
-  %data.3 = getelementptr inbounds { i64 , i64, i64, i64 }, ptr %data, i64 %iv, i32 3
+  %data.3 = getelementptr inbounds { i64, i64, i64, i64 }, ptr %data, i64 %iv, i32 3
   %l.3 = load i64, ptr %data.3, align 8
   %mul.3 = mul i64 %l.factor, %l.3
   store i64 %mul.3, ptr %data.3, align 8
