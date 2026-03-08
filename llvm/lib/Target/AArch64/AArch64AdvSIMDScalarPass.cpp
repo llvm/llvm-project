@@ -84,10 +84,10 @@ private:
   const TargetInstrInfo *TII;
 };
 
-class AArch64AdvSIMDScalar : public MachineFunctionPass {
+class AArch64AdvSIMDScalarLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
-  explicit AArch64AdvSIMDScalar() : MachineFunctionPass(ID) {}
+  explicit AArch64AdvSIMDScalarLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -98,11 +98,22 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char AArch64AdvSIMDScalar::ID = 0;
+char AArch64AdvSIMDScalarLegacy::ID = 0;
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64AdvSIMDScalar, "aarch64-simd-scalar",
+INITIALIZE_PASS(AArch64AdvSIMDScalarLegacy, "aarch64-simd-scalar",
                 AARCH64_ADVSIMD_NAME, false, false)
+
+PreservedAnalyses
+AArch64AdvSIMDScalarPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  const bool Changed = AArch64AdvSIMDScalarImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
 static bool isGPR64(unsigned Reg, unsigned SubReg,
                     const MachineRegisterInfo *MRI) {
@@ -391,7 +402,7 @@ bool AArch64AdvSIMDScalarImpl::processMachineBasicBlock(
 }
 
 // runOnMachineFunction - Pass entry point from PassManager.
-bool AArch64AdvSIMDScalar::runOnMachineFunction(MachineFunction &mf) {
+bool AArch64AdvSIMDScalarLegacy::runOnMachineFunction(MachineFunction &mf) {
   if (skipFunction(mf.getFunction()))
     return false;
 
@@ -415,5 +426,5 @@ bool AArch64AdvSIMDScalarImpl::run(MachineFunction &MF) {
 // createAArch64AdvSIMDScalar - Factory function used by AArch64TargetMachine
 // to add the pass to the PassManager.
 FunctionPass *llvm::createAArch64AdvSIMDScalar() {
-  return new AArch64AdvSIMDScalar();
+  return new AArch64AdvSIMDScalarLegacy();
 }
