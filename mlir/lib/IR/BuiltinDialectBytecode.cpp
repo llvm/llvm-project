@@ -267,7 +267,7 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
 
     auto dialectVersion = std::make_unique<BuiltinDialectVersion>(version);
     if (BuiltinDialectVersion::getCurrentVersion() < *dialectVersion) {
-      reader.emitWarning()
+      reader.emitError()
           << "reading newer builtin dialect version than supported";
       return nullptr;
     }
