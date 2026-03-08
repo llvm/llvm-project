@@ -15,9 +15,13 @@ _CLC_DEF _CLC_OVERLOAD void wait_group_events(int n, __private event_t *evs) {
                      memory_scope_work_group);
 }
 
-_CLC_DEF _CLC_OVERLOAD void wait_group_events(int n, __generic event_t *evs) {
+#if _CLC_GENERIC_AS_SUPPORTED
+
+_CLC_DEF _CLC_OVERLOAD void wait_group_events(int n, event_t *evs) {
   (void)n;
   (void)evs;
   work_group_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE,
                      memory_scope_work_group);
 }
+
+#endif

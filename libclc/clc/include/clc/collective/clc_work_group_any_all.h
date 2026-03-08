@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_sub_group_local_id.h>
+#ifndef __CLC_COLLECTIVE_CLC_WORK_GROUP_ANY_ALL_H__
+#define __CLC_COLLECTIVE_CLC_WORK_GROUP_ANY_ALL_H__
 
-_CLC_OVERLOAD _CLC_DEF uint get_sub_group_local_id() {
-  return __clc_get_sub_group_local_id();
-}
+#include "clc/internal/clc.h"
+
+_CLC_OVERLOAD _CLC_DECL int __clc_work_group_any(int predicate);
+_CLC_OVERLOAD _CLC_DECL int __clc_work_group_all(int predicate);
+
+#endif // __CLC_COLLECTIVE_CLC_WORK_GROUP_ANY_ALL_H__

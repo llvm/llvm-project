@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_local_linear_id.h>
+#include "clc/collective/clc_work_group_broadcast.h"
 
-_CLC_OVERLOAD _CLC_DEF size_t get_local_linear_id() {
-  return __clc_get_local_linear_id();
-}
+#define __CLC_BODY <work_group_broadcast.inc>
+#include <clc/integer/gentype.inc>
+
+#define __CLC_BODY <work_group_broadcast.inc>
+#include <clc/math/gentype.inc>
