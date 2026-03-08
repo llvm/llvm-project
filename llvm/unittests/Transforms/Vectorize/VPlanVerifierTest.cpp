@@ -39,7 +39,9 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   // Add a dummy instruction to VPBB2 to make it non-empty
-  VPInstruction *Dummy = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *Dummy =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPBB2->appendRecipe(Dummy);
   VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
                                             "R1", VPBB2, VPBB2);

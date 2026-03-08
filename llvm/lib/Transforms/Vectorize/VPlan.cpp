@@ -570,6 +570,11 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
   auto *SplitBlock = getPlan()->createVPBasicBlock(getName() + ".split");
   VPBlockUtils::insertBlockAfter(SplitBlock, this);
 
+  // If this is the exiting block, make the split the new exiting block.
+  auto *ParentRegion = getParent();
+  if (ParentRegion && ParentRegion->getExiting() == this)
+    ParentRegion->setExiting(SplitBlock);
+
   // Finally, move the recipes starting at SplitAt to new block.
   for (VPRecipeBase &ToMove :
        make_early_inc_range(make_range(SplitAt, this->end())))
@@ -748,14 +753,13 @@ VPRegionBlock *VPRegionBlock::clone() {
   if (isReplicator()) {
     NewRegion = Plan.createReplicateRegion(NewEntry, NewExiting, getName());
   } else {
-    auto *CanIV = CanIVInfo->getVPValue();
-    NewRegion = Plan.createLoopRegion(CanIV->getType(), CanIV->getDebugLoc(),
-                                      getName(), NewEntry, NewExiting);
+    NewRegion =
+        Plan.createLoopRegion(getCanonicalIVType(), getCanonicalIVDebugLoc(),
+                              getName(), NewEntry, NewExiting);
   }
 
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
-
   return NewRegion;
 }
 
@@ -814,7 +818,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
       Cost += Block->cost(VF, Ctx);
     InstructionCost BackedgeCost =
         ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost.getNumOccurrences())
+            ? InstructionCost(ForceTargetInstructionCost)
             : Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
     LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
                       << ": vector loop backedge\n");
@@ -858,15 +862,15 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-  auto *CanIV = cast<VPRegionValue>(getCanonicalIV());
+  auto *CanIV = getCanonicalIV();
   if (CanIV->getNumUsers() > 0) {
     VPlan &Plan = *getPlan();
     VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
     auto *ScalarR =
         VPBuilder(Header, Header->begin())
-            .createScalarPhi({Plan.getConstantInt(CanIV->getType(), 0),
-                              CanIVInc},
-                             CanIV->getDebugLoc(), "index");
+            .createScalarPhi(
+                {Plan.getConstantInt(CanIV->getType(), 0), CanIVInc},
+                CanIV->getDebugLoc(), "index");
     CanIV->replaceAllUsesWith(ScalarR);
   }
 
@@ -912,7 +916,7 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
 
   return VPBuilder(ExitingLatch->getTerminator())
       .createOverflowingOp(Instruction::Add, {CanIV, &getPlan()->getVFxUF()},
-                           {CanIVInfo->hasNUW(), /* HasNSW */ false},
+                           {hasCanonicalIVNUW(), /* HasNSW */ false},
                            CanIV->getDebugLoc(), "index.next");
 }
 

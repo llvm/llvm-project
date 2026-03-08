@@ -305,7 +305,7 @@ cir.func @test_try_in_cleanup() {
 
 // Test try with catch all and no throwing calls.
 // The try body doesn't have throwing calls, so no try_call/unwind blocks are
-// needed. The handlers are still built but won't be reachable.
+// needed. The handler and dispatch blocks should not be generated.
 cir.func @test_try_catch_all_no_throwing_calls() {
   cir.scope {
     cir.try {
@@ -329,17 +329,11 @@ cir.func @test_try_catch_all_no_throwing_calls() {
 // CHECK:         %{{.*}} = cir.const #cir.int<42> : !s32i
 // CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
 //
-// Catch dispatch (unreachable since there are no throwing calls).
-// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
-// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
-// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
-// CHECK:         ]
-//
-// Catch-all handler (unreachable).
-// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
-// CHECK:         %[[CT:.*]], %{{.*}} = cir.begin_catch %[[ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
-// CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
-// CHECK:         cir.br ^[[CONTINUE]]
+// No dispatch or handler blocks should be generated since there are
+// no throwing calls.
+// CHECK-NOT:     cir.eh.dispatch
+// CHECK-NOT:     cir.begin_catch
+// CHECK-NOT:     cir.end_catch
 //
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         cir.br ^[[SCOPE_EXIT:bb[0-9]+]]

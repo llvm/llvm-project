@@ -2204,6 +2204,11 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
 }
 
 LogicalResult AffineForOp::verifyRegions() {
+  // Step must be a strictly positive integer.
+  if (getStepAsInt() <= 0)
+    return emitOpError("expected step to be a positive integer, got ")
+           << getStepAsInt();
+
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = getBody();
@@ -2370,7 +2375,7 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
                               result.attributes))
       return failure();
 
-    if (stepAttr.getValue().isNegative())
+    if (!stepAttr.getValue().isStrictlyPositive())
       return parser.emitError(
           stepLoc,
           "expected step to be representable as a positive signed integer");
@@ -5298,7 +5303,12 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
+  // Return nullptr if any multi-index attribute has not been folded to a
+  // concrete integer (e.g. it is still a runtime value or has folded to a
+  // non-integer attribute such as #ub.poison).
+  if (llvm::any_of(adaptor.getMultiIndex(), [](Attribute a) {
+        return !isa_and_nonnull<IntegerAttr>(a);
+      }))
     return nullptr;
 
   if (!adaptor.getDynamicBasis().empty())

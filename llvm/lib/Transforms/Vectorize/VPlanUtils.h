@@ -61,7 +61,7 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
 /// or its operand is known to be uniform across all VFs and UFs (e.g.
-/// VPDerivedIV or VPCanonicalIVPHI).
+/// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none

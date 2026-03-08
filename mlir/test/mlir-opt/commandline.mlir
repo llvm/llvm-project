@@ -3,7 +3,6 @@
 // CHECK-SAME: acc
 // CHECK-SAME: affine
 // CHECK-SAME: amdgpu
-// CHECK-SAME: amx
 // CHECK-SAME: arith
 // CHECK-SAME: arm_neon
 // CHECK-SAME: arm_sme

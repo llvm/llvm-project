@@ -412,3 +412,13 @@ func.func @test_no_skip_block_erasure_block_args(%arg0: i32, %arg1: i32) -> i32 
   %0 = arith.addi %arg0, %arg1 : i32
   return %0 : i32
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/183511:
+// testNoSkipErasureCallbacks should not crash when visiting an empty block.
+// The module body block has no ops, so block->front() would previously dereference
+// the ilist sentinel, causing an assertion failure.
+module {}
+// CHECK-LABEL: Block post-order erasures (no skip)
+// CHECK-NEXT:  Erasing block ^bb0 from region 0 from operation 'builtin.module'

@@ -16,12 +16,24 @@
 #include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
 namespace Fortran::parser::omp {
+
+std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
+
+std::string GetUpperName(llvm::omp::Directive id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {
   if (auto *y = std::get_if<SpecificationConstruct>(&x.u)) {
@@ -131,6 +143,16 @@ const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause) {
 
 const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
   return &std::get<OmpObjectList>(x.t);
+}
+
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId) {
+  for (auto &clause : spec.Clauses().v) {
+    if (clause.Id() == clauseId) {
+      return &clause;
+    }
+  }
+  return nullptr;
 }
 
 const BlockConstruct *GetFortranBlockConstruct(

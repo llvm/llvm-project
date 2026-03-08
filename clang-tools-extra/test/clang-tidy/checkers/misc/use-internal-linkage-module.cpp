@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s misc-use-internal-linkage %t -- -- -I%S/Inputs/use-internal-linkage
+// RUN: %check_clang_tidy -std=c++20-or-later %s misc-use-internal-linkage %t -- -- -I%S/Inputs/use-internal-linkage
 
 module;
 

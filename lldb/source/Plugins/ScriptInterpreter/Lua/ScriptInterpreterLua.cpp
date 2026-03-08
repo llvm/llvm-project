@@ -240,13 +240,9 @@ bool ScriptInterpreterLua::LoadScriptingModule(
 }
 
 void ScriptInterpreterLua::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguageLua, CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                lldb::eScriptLanguageLua, CreateInstance);
 }
 
 void ScriptInterpreterLua::Terminate() {}

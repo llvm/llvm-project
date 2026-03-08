@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Unit tests for SSAF JSON serialization format reading and writing of
-// TUSummary.
+// TUSummary and TUSummaryEncoding.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,535 +16,73 @@
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
-#include "llvm/Support/Registry.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 
 #include <memory>
-#include <vector>
 
 using namespace clang::ssaf;
 using namespace llvm;
 using ::testing::AllOf;
 using ::testing::HasSubstr;
+
 namespace {
 
 // ============================================================================
-// First Test Analysis - Simple analysis for testing JSON serialization.
+// TUSummaryOps - Parameterization for TUSummary/TUSummaryEncoding tests
 // ============================================================================
 
-struct PairsEntitySummaryForJSONFormatTest final : EntitySummary {
+SummaryOps TUSummaryOps{
+    "Resolved", "TUSummary",
+    [](llvm::StringRef FilePath) -> llvm::Error {
+      auto Result = JSONFormat().readTUSummary(FilePath);
+      return Result ? llvm::Error::success() : Result.takeError();
+    },
+    [](llvm::StringRef FilePath) -> llvm::Error {
+      BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
+      TUSummary S(std::move(BN));
+      return JSONFormat().writeTUSummary(S, FilePath);
+    },
+    [](llvm::StringRef InputFilePath,
+       llvm::StringRef OutputFilePath) -> llvm::Error {
+      auto ExpectedS = JSONFormat().readTUSummary(InputFilePath);
+      if (!ExpectedS) {
+        return ExpectedS.takeError();
+      }
+      return JSONFormat().writeTUSummary(*ExpectedS, OutputFilePath);
+    }};
 
-  SummaryName getSummaryName() const override {
-    return SummaryName("PairsEntitySummaryForJSONFormatTest");
-  }
-
-  std::vector<std::pair<EntityId, EntityId>> Pairs;
-};
-
-static json::Object serializePairsEntitySummaryForJSONFormatTest(
-    const EntitySummary &Summary,
-    const JSONFormat::EntityIdConverter &Converter) {
-  const auto &TA =
-      static_cast<const PairsEntitySummaryForJSONFormatTest &>(Summary);
-  json::Array PairsArray;
-  for (const auto &[First, Second] : TA.Pairs) {
-    PairsArray.push_back(json::Object{
-        {"first", Converter.toJSON(First)},
-        {"second", Converter.toJSON(Second)},
-    });
-  }
-  return json::Object{{"pairs", std::move(PairsArray)}};
-}
-
-static Expected<std::unique_ptr<EntitySummary>>
-deserializePairsEntitySummaryForJSONFormatTest(
-    const json::Object &Obj, EntityIdTable &IdTable,
-    const JSONFormat::EntityIdConverter &Converter) {
-  auto Result = std::make_unique<PairsEntitySummaryForJSONFormatTest>();
-  const json::Array *PairsArray = Obj.getArray("pairs");
-  if (!PairsArray)
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'pairs'");
-  for (const auto &[Index, Value] : llvm::enumerate(*PairsArray)) {
-    const json::Object *Pair = Value.getAsObject();
-    if (!Pair)
-      return createStringError(
-          inconvertibleErrorCode(),
-          "pairs element at index %zu is not a JSON object", Index);
-    auto FirstOpt = Pair->getInteger("first");
-    if (!FirstOpt)
-      return createStringError(
-          inconvertibleErrorCode(),
-          "missing or invalid 'first' field at index '%zu'", Index);
-    auto SecondOpt = Pair->getInteger("second");
-    if (!SecondOpt)
-      return createStringError(
-          inconvertibleErrorCode(),
-          "missing or invalid 'second' field at index '%zu'", Index);
-    Result->Pairs.emplace_back(Converter.fromJSON(*FirstOpt),
-                               Converter.fromJSON(*SecondOpt));
-  }
-  return std::move(Result);
-}
-
-struct PairsEntitySummaryForJSONFormatTestFormatInfo final
-    : JSONFormat::FormatInfo {
-  PairsEntitySummaryForJSONFormatTestFormatInfo()
-      : JSONFormat::FormatInfo(
-            SummaryName("PairsEntitySummaryForJSONFormatTest"),
-            serializePairsEntitySummaryForJSONFormatTest,
-            deserializePairsEntitySummaryForJSONFormatTest) {}
-};
-
-static llvm::Registry<JSONFormat::FormatInfo>::Add<
-    PairsEntitySummaryForJSONFormatTestFormatInfo>
-    RegisterPairsEntitySummaryForJSONFormatTest(
-        "PairsEntitySummaryForJSONFormatTest",
-        "Format info for PairsArrayEntitySummary");
+SummaryOps TUSummaryEncodingOps{
+    "Encoding", "TUSummary",
+    [](llvm::StringRef FilePath) -> llvm::Error {
+      auto Result = JSONFormat().readTUSummaryEncoding(FilePath);
+      return Result ? llvm::Error::success() : Result.takeError();
+    },
+    [](llvm::StringRef FilePath) -> llvm::Error {
+      BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
+      TUSummaryEncoding E(std::move(BN));
+      return JSONFormat().writeTUSummaryEncoding(E, FilePath);
+    },
+    [](llvm::StringRef InputFilePath,
+       llvm::StringRef OutputFilePath) -> llvm::Error {
+      auto ExpectedE = JSONFormat().readTUSummaryEncoding(InputFilePath);
+      if (!ExpectedE) {
+        return ExpectedE.takeError();
+      }
+      return JSONFormat().writeTUSummaryEncoding(*ExpectedE, OutputFilePath);
+    }};
 
 // ============================================================================
-// Second Test Analysis - Simple analysis for multi-summary round-trip tests.
+// LUSummaryTest Test Fixture
 // ============================================================================
 
-struct TagsEntitySummaryForJSONFormatTest final : EntitySummary {
-  SummaryName getSummaryName() const override {
-    return SummaryName("TagsEntitySummaryForJSONFormatTest");
-  }
+class TUSummaryTest : public SummaryTest {};
 
-  std::vector<std::string> Tags;
-};
-
-static json::Object serializeTagsEntitySummaryForJSONFormatTest(
-    const EntitySummary &Summary, const JSONFormat::EntityIdConverter &) {
-  const auto &TA =
-      static_cast<const TagsEntitySummaryForJSONFormatTest &>(Summary);
-  json::Array TagsArray;
-  for (const auto &Tag : TA.Tags) {
-    TagsArray.push_back(Tag);
-  }
-  return json::Object{{"tags", std::move(TagsArray)}};
-}
-
-static Expected<std::unique_ptr<EntitySummary>>
-deserializeTagsEntitySummaryForJSONFormatTest(
-    const json::Object &Obj, EntityIdTable &,
-    const JSONFormat::EntityIdConverter &) {
-  auto Result = std::make_unique<TagsEntitySummaryForJSONFormatTest>();
-  const json::Array *TagsArray = Obj.getArray("tags");
-  if (!TagsArray) {
-    return createStringError(inconvertibleErrorCode(),
-                             "missing or invalid field 'tags'");
-  }
-  for (const auto &[Index, Value] : llvm::enumerate(*TagsArray)) {
-    auto Tag = Value.getAsString();
-    if (!Tag) {
-      return createStringError(inconvertibleErrorCode(),
-                               "tags element at index %zu is not a string",
-                               Index);
-    }
-    Result->Tags.push_back(Tag->str());
-  }
-  return std::move(Result);
-}
-
-struct TagsEntitySummaryForJSONFormatTestFormatInfo final
-    : JSONFormat::FormatInfo {
-  TagsEntitySummaryForJSONFormatTestFormatInfo()
-      : JSONFormat::FormatInfo(
-            SummaryName("TagsEntitySummaryForJSONFormatTest"),
-            serializeTagsEntitySummaryForJSONFormatTest,
-            deserializeTagsEntitySummaryForJSONFormatTest) {}
-};
-
-static llvm::Registry<JSONFormat::FormatInfo>::Add<
-    TagsEntitySummaryForJSONFormatTestFormatInfo>
-    RegisterTagsEntitySummaryForJSONFormatTest(
-        "TagsEntitySummaryForJSONFormatTest",
-        "Format info for TagsEntitySummary");
-
-// ============================================================================
-// NullEntitySummaryForJSONFormatTest - For null data checks
-// ============================================================================
-
-struct NullEntitySummaryForJSONFormatTest final : EntitySummary {
-  SummaryName getSummaryName() const override {
-    return SummaryName("NullEntitySummaryForJSONFormatTest");
-  }
-};
-
-struct NullEntitySummaryForJSONFormatTestFormatInfo final
-    : JSONFormat::FormatInfo {
-  NullEntitySummaryForJSONFormatTestFormatInfo()
-      : JSONFormat::FormatInfo(
-            SummaryName("NullEntitySummaryForJSONFormatTest"),
-            [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
-                -> json::Object { return json::Object{}; },
-            [](const json::Object &, EntityIdTable &,
-               const JSONFormat::EntityIdConverter &)
-                -> llvm::Expected<std::unique_ptr<EntitySummary>> {
-              return nullptr;
-            }) {}
-};
-
-static llvm::Registry<JSONFormat::FormatInfo>::Add<
-    NullEntitySummaryForJSONFormatTestFormatInfo>
-    RegisterNullEntitySummaryForJSONFormatTest(
-        "NullEntitySummaryForJSONFormatTest",
-        "Format info for NullEntitySummary");
-
-// ============================================================================
-// UnregisteredEntitySummaryForJSONFormatTest - For missing FormatInfo checks
-// ============================================================================
-
-struct UnregisteredEntitySummaryForJSONFormatTest final : EntitySummary {
-  SummaryName getSummaryName() const override {
-    return SummaryName("UnregisteredEntitySummaryForJSONFormatTest");
-  }
-};
-
-// ============================================================================
-// MismatchedEntitySummaryForJSONFormatTest - For mismatched SummaryName checks
-// ============================================================================
-
-struct MismatchedEntitySummaryForJSONFormatTest final : EntitySummary {
-  SummaryName getSummaryName() const override {
-    return SummaryName("MismatchedEntitySummaryForJSONFormatTest_WrongName");
-  }
-};
-
-struct MismatchedEntitySummaryForJSONFormatTestFormatInfo final
-    : JSONFormat::FormatInfo {
-  MismatchedEntitySummaryForJSONFormatTestFormatInfo()
-      : JSONFormat::FormatInfo(
-            SummaryName("MismatchedEntitySummaryForJSONFormatTest"),
-            [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
-                -> json::Object { return json::Object{}; },
-            [](const json::Object &, EntityIdTable &,
-               const JSONFormat::EntityIdConverter &)
-                -> llvm::Expected<std::unique_ptr<EntitySummary>> {
-              return std::make_unique<
-                  MismatchedEntitySummaryForJSONFormatTest>();
-            }) {}
-};
-
-static llvm::Registry<JSONFormat::FormatInfo>::Add<
-    MismatchedEntitySummaryForJSONFormatTestFormatInfo>
-    RegisterMismatchedEntitySummaryForJSONFormatTest(
-        "MismatchedEntitySummaryForJSONFormatTest",
-        "Format info for MismatchedEntitySummary");
-
-// ============================================================================
-// TUSummaryOps - Parameterization support for TUSummary/TUSummaryEncoding tests
-// ============================================================================
-
-struct TUSummaryOps {
-  std::string Name;
-  std::function<llvm::Error(llvm::StringRef FilePath)> ReadFromFile;
-  std::function<llvm::Error(llvm::StringRef FilePath)> WriteEmpty;
-  std::function<llvm::Error(llvm::StringRef InputFilePath,
-                            llvm::StringRef OutputFilePath)>
-      ReadWriteRoundTrip;
-};
-
-static TUSummaryOps makeTUSummaryOps() {
-  return TUSummaryOps{
-      "Resolved",
-      [](llvm::StringRef FilePath) -> llvm::Error {
-        auto Result = JSONFormat().readTUSummary(FilePath);
-        return Result ? llvm::Error::success() : Result.takeError();
-      },
-      [](llvm::StringRef FilePath) -> llvm::Error {
-        TUSummary S(
-            BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-        return JSONFormat().writeTUSummary(S, FilePath);
-      },
-      [](llvm::StringRef InputFilePath,
-         llvm::StringRef OutputFilePath) -> llvm::Error {
-        auto ExpectedS = JSONFormat().readTUSummary(InputFilePath);
-        if (!ExpectedS)
-          return ExpectedS.takeError();
-        return JSONFormat().writeTUSummary(*ExpectedS, OutputFilePath);
-      }};
-}
-
-static TUSummaryOps makeTUSummaryEncodingOps() {
-  return TUSummaryOps{
-      "Encoding",
-      [](llvm::StringRef FilePath) -> llvm::Error {
-        auto Result = JSONFormat().readTUSummaryEncoding(FilePath);
-        return Result ? llvm::Error::success() : Result.takeError();
-      },
-      [](llvm::StringRef FilePath) -> llvm::Error {
-        TUSummaryEncoding E(
-            BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
-        return JSONFormat().writeTUSummaryEncoding(E, FilePath);
-      },
-      [](llvm::StringRef InputFilePath,
-         llvm::StringRef OutputFilePath) -> llvm::Error {
-        auto ExpectedE = JSONFormat().readTUSummaryEncoding(InputFilePath);
-        if (!ExpectedE)
-          return ExpectedE.takeError();
-        return JSONFormat().writeTUSummaryEncoding(*ExpectedE, OutputFilePath);
-      }};
-}
-
-// ============================================================================
-// TUSummaryTest Test Fixture
-// ============================================================================
-
-class TUSummaryTest : public JSONFormatTest,
-                      public ::testing::WithParamInterface<TUSummaryOps> {
-protected:
-  llvm::Error readFromString(StringRef JSON,
-                             StringRef FileName = "test.json") const {
-    auto ExpectedFilePath = writeJSON(JSON, FileName);
-    if (!ExpectedFilePath)
-      return ExpectedFilePath.takeError();
-    return GetParam().ReadFromFile(*ExpectedFilePath);
-  }
-
-  llvm::Error readFromFile(StringRef FileName) const {
-    return GetParam().ReadFromFile(makePath(FileName));
-  }
-
-  llvm::Error writeEmpty(StringRef FileName) const {
-    return GetParam().WriteEmpty(makePath(FileName));
-  }
-
-  llvm::Error readWriteRoundTrip(StringRef InputFileName,
-                                 StringRef OutputFileName) const {
-    return GetParam().ReadWriteRoundTrip(makePath(InputFileName),
-                                         makePath(OutputFileName));
-  }
-
-  void readWriteCompare(StringRef JSON) const;
-};
-
-INSTANTIATE_TEST_SUITE_P(
-    JSONFormat, TUSummaryTest,
-    ::testing::Values(makeTUSummaryOps(), makeTUSummaryEncodingOps()),
-    [](const ::testing::TestParamInfo<TUSummaryOps> &Info) {
-      return Info.param.Name;
-    });
-
-// ============================================================================
-// TUSummary JSON Normalization Helpers
-// ============================================================================
-
-static llvm::Error normalizeIDTable(json::Array &IDTable) {
-  for (const auto &[Index, Entry] : llvm::enumerate(IDTable)) {
-    const auto *EntryObj = Entry.getAsObject();
-    if (!EntryObj) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: id_table entry at index %zu "
-          "is not an object",
-          Index);
-    }
-
-    const auto *IDValue = EntryObj->get("id");
-    if (!IDValue) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: id_table entry at index %zu "
-          "does not contain an 'id' field",
-          Index);
-    }
-
-    if (!IDValue->getAsUINT64()) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: id_table entry at index %zu "
-          "does not contain a valid 'id' uint64_t field",
-          Index);
-    }
-  }
-
-  // Safe to dereference: all entries were validated above.
-  llvm::sort(IDTable, [](const json::Value &A, const json::Value &B) {
-    return *A.getAsObject()->get("id")->getAsUINT64() <
-           *B.getAsObject()->get("id")->getAsUINT64();
-  });
-
-  return llvm::Error::success();
-}
-
-static llvm::Error normalizeLinkageTable(json::Array &LinkageTable) {
-  for (const auto &[Index, Entry] : llvm::enumerate(LinkageTable)) {
-    const auto *EntryObj = Entry.getAsObject();
-    if (!EntryObj) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: linkage_table entry at index "
-          "%zu is not an object",
-          Index);
-    }
-
-    const auto *IDValue = EntryObj->get("id");
-    if (!IDValue) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: linkage_table entry at index "
-          "%zu does not contain an 'id' field",
-          Index);
-    }
-
-    if (!IDValue->getAsUINT64()) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: linkage_table entry at index "
-          "%zu does not contain a valid 'id' uint64_t field",
-          Index);
-    }
-  }
-
-  // Safe to dereference: all entries were validated above.
-  llvm::sort(LinkageTable, [](const json::Value &A, const json::Value &B) {
-    return *A.getAsObject()->get("id")->getAsUINT64() <
-           *B.getAsObject()->get("id")->getAsUINT64();
-  });
-
-  return llvm::Error::success();
-}
-
-static llvm::Error normalizeSummaryData(json::Array &SummaryData,
-                                        size_t DataIndex) {
-  for (const auto &[SummaryIndex, SummaryEntry] :
-       llvm::enumerate(SummaryData)) {
-    const auto *SummaryEntryObj = SummaryEntry.getAsObject();
-    if (!SummaryEntryObj) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: data entry at index %zu, "
-          "summary_data entry at index %zu is not an object",
-          DataIndex, SummaryIndex);
-    }
-
-    const auto *EntityIDValue = SummaryEntryObj->get("entity_id");
-    if (!EntityIDValue) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: data entry at index %zu, "
-          "summary_data entry at index %zu does not contain an "
-          "'entity_id' field",
-          DataIndex, SummaryIndex);
-    }
-
-    if (!EntityIDValue->getAsUINT64()) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: data entry at index %zu, "
-          "summary_data entry at index %zu does not contain a valid "
-          "'entity_id' uint64_t field",
-          DataIndex, SummaryIndex);
-    }
-  }
-
-  // Safe to dereference: all entries were validated above.
-  llvm::sort(SummaryData, [](const json::Value &A, const json::Value &B) {
-    return *A.getAsObject()->get("entity_id")->getAsUINT64() <
-           *B.getAsObject()->get("entity_id")->getAsUINT64();
-  });
-
-  return llvm::Error::success();
-}
-
-static llvm::Error normalizeData(json::Array &Data) {
-  for (const auto &[DataIndex, DataEntry] : llvm::enumerate(Data)) {
-    auto *DataEntryObj = DataEntry.getAsObject();
-    if (!DataEntryObj) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: data entry at index %zu "
-          "is not an object",
-          DataIndex);
-    }
-
-    if (!DataEntryObj->getString("summary_name")) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: data entry at index %zu "
-          "does not contain a 'summary_name' string field",
-          DataIndex);
-    }
-
-    auto *SummaryData = DataEntryObj->getArray("summary_data");
-    if (!SummaryData) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Cannot normalize TUSummary JSON: data entry at index %zu "
-          "does not contain a 'summary_data' array field",
-          DataIndex);
-    }
-
-    if (auto Err = normalizeSummaryData(*SummaryData, DataIndex)) {
-      return Err;
-    }
-  }
-
-  // Safe to dereference: all entries were validated above.
-  llvm::sort(Data, [](const json::Value &A, const json::Value &B) {
-    return *A.getAsObject()->getString("summary_name") <
-           *B.getAsObject()->getString("summary_name");
-  });
-
-  return llvm::Error::success();
-}
-
-static Expected<json::Value> normalizeTUSummaryJSON(json::Value Val) {
-  auto *Obj = Val.getAsObject();
-  if (!Obj) {
-    return createStringError(
-        inconvertibleErrorCode(),
-        "Cannot normalize TUSummary JSON: expected an object");
-  }
-
-  auto *IDTable = Obj->getArray("id_table");
-  if (!IDTable) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Cannot normalize TUSummary JSON: 'id_table' "
-                             "field is either missing or has the wrong type");
-  }
-  if (auto Err = normalizeIDTable(*IDTable)) {
-    return std::move(Err);
-  }
-
-  auto *LinkageTable = Obj->getArray("linkage_table");
-  if (!LinkageTable) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Cannot normalize TUSummary JSON: 'linkage_table' "
-                             "field is either missing or has the wrong type");
-  }
-  if (auto Err = normalizeLinkageTable(*LinkageTable)) {
-    return std::move(Err);
-  }
-
-  auto *Data = Obj->getArray("data");
-  if (!Data) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Cannot normalize TUSummary JSON: 'data' "
-                             "field is either missing or has the wrong type");
-  }
-  if (auto Err = normalizeData(*Data)) {
-    return std::move(Err);
-  }
-
-  return Val;
-}
-
-// Compare two TUSummary JSON values with normalization.
-static Expected<bool> compareTUSummaryJSON(json::Value A, json::Value B) {
-  auto ExpectedNormalizedA = normalizeTUSummaryJSON(std::move(A));
-  if (!ExpectedNormalizedA)
-    return ExpectedNormalizedA.takeError();
-
-  auto ExpectedNormalizedB = normalizeTUSummaryJSON(std::move(B));
-  if (!ExpectedNormalizedB)
-    return ExpectedNormalizedB.takeError();
-
-  return *ExpectedNormalizedA == *ExpectedNormalizedB;
-}
+INSTANTIATE_TEST_SUITE_P(JSONFormat, TUSummaryTest,
+                         ::testing::Values(TUSummaryOps, TUSummaryEncodingOps),
+                         [](const ::testing::TestParamInfo<SummaryOps> &Info) {
+                           return Info.param.GTestInstantiationSuffix;
+                         });
 
 // ============================================================================
 // JSONFormatTUSummaryTest Test Fixture
@@ -554,7 +92,6 @@ class JSONFormatTUSummaryTest : public JSONFormatTest {
 protected:
   llvm::Expected<TUSummary> readTUSummaryFromFile(StringRef FileName) const {
     PathString FilePath = makePath(FileName);
-
     return JSONFormat().readTUSummary(FilePath);
   }
 
@@ -562,8 +99,9 @@ protected:
   readTUSummaryFromString(StringRef JSON,
                           StringRef FileName = "test.json") const {
     auto ExpectedFilePath = writeJSON(JSON, FileName);
-    if (!ExpectedFilePath)
+    if (!ExpectedFilePath) {
       return ExpectedFilePath.takeError();
+    }
 
     return readTUSummaryFromFile(FileName);
   }
@@ -571,89 +109,9 @@ protected:
   llvm::Error writeTUSummary(const TUSummary &Summary,
                              StringRef FileName) const {
     PathString FilePath = makePath(FileName);
-
     return JSONFormat().writeTUSummary(Summary, FilePath);
   }
-
-  void readWriteCompareTUSummary(StringRef JSON) const {
-    const PathString InputFileName("input.json");
-    const PathString OutputFileName("output.json");
-
-    auto ExpectedInputFilePath = writeJSON(JSON, InputFileName);
-    ASSERT_THAT_EXPECTED(ExpectedInputFilePath, Succeeded());
-
-    auto ExpectedTUSummary = readTUSummaryFromFile(InputFileName);
-    ASSERT_THAT_EXPECTED(ExpectedTUSummary, Succeeded());
-
-    auto WriteError = writeTUSummary(*ExpectedTUSummary, OutputFileName);
-    ASSERT_THAT_ERROR(std::move(WriteError), Succeeded())
-        << "Failed to write to file: " << OutputFileName;
-
-    auto ExpectedInputJSON = readJSONFromFile(InputFileName);
-    ASSERT_THAT_EXPECTED(ExpectedInputJSON, Succeeded());
-    auto ExpectedOutputJSON = readJSONFromFile(OutputFileName);
-    ASSERT_THAT_EXPECTED(ExpectedOutputJSON, Succeeded());
-
-    auto ExpectedComparisonResult =
-        compareTUSummaryJSON(*ExpectedInputJSON, *ExpectedOutputJSON);
-    ASSERT_THAT_EXPECTED(ExpectedComparisonResult, Succeeded())
-        << "Failed to normalize JSON for comparison";
-
-    if (!*ExpectedComparisonResult) {
-      auto ExpectedNormalizedInput = normalizeTUSummaryJSON(*ExpectedInputJSON);
-      auto ExpectedNormalizedOutput =
-          normalizeTUSummaryJSON(*ExpectedOutputJSON);
-      FAIL() << "Serialization is broken: input JSON is different from output "
-                "json\n"
-             << "Input:  "
-             << (ExpectedNormalizedInput
-                     ? llvm::formatv("{0:2}", *ExpectedNormalizedInput).str()
-                     : "normalization failed")
-             << "\n"
-             << "Output: "
-             << (ExpectedNormalizedOutput
-                     ? llvm::formatv("{0:2}", *ExpectedNormalizedOutput).str()
-                     : "normalization failed");
-    }
-  }
 };
-
-void TUSummaryTest::readWriteCompare(StringRef JSON) const {
-  const PathString InputFileName("input.json");
-  const PathString OutputFileName("output.json");
-
-  auto ExpectedInputFilePath = writeJSON(JSON, InputFileName);
-  ASSERT_THAT_EXPECTED(ExpectedInputFilePath, Succeeded());
-
-  ASSERT_THAT_ERROR(readWriteRoundTrip(InputFileName, OutputFileName),
-                    Succeeded());
-
-  auto ExpectedInputJSON = readJSONFromFile(InputFileName);
-  ASSERT_THAT_EXPECTED(ExpectedInputJSON, Succeeded());
-  auto ExpectedOutputJSON = readJSONFromFile(OutputFileName);
-  ASSERT_THAT_EXPECTED(ExpectedOutputJSON, Succeeded());
-
-  auto ExpectedComparisonResult =
-      compareTUSummaryJSON(*ExpectedInputJSON, *ExpectedOutputJSON);
-  ASSERT_THAT_EXPECTED(ExpectedComparisonResult, Succeeded())
-      << "Failed to normalize JSON for comparison";
-
-  if (!*ExpectedComparisonResult) {
-    auto ExpectedNormalizedInput = normalizeTUSummaryJSON(*ExpectedInputJSON);
-    auto ExpectedNormalizedOutput = normalizeTUSummaryJSON(*ExpectedOutputJSON);
-    FAIL() << "Serialization is broken: input JSON is different from output "
-              "json\n"
-           << "Input:  "
-           << (ExpectedNormalizedInput
-                   ? llvm::formatv("{0:2}", *ExpectedNormalizedInput).str()
-                   : "normalization failed")
-           << "\n"
-           << "Output: "
-           << (ExpectedNormalizedOutput
-                   ? llvm::formatv("{0:2}", *ExpectedNormalizedOutput).str()
-                   : "normalization failed");
-  }
-}
 
 // ============================================================================
 // readJSON() Error Tests
@@ -702,12 +160,14 @@ TEST_P(TUSummaryTest, BrokenSymlink) {
   GTEST_SKIP() << "Symlink model differs on Windows";
 #endif
 
+  const PathString SymlinkFileName("broken_symlink.json");
+
   // Create a symlink pointing to a non-existent file
   auto ExpectedSymlinkPath =
-      makeSymlink("nonexistent_target.json", "broken_symlink.json");
+      makeSymlink("nonexistent_target.json", SymlinkFileName);
   ASSERT_THAT_EXPECTED(ExpectedSymlinkPath, Succeeded());
 
-  auto Result = readFromFile(*ExpectedSymlinkPath);
+  auto Result = readFromFile(SymlinkFileName);
 
   EXPECT_THAT_ERROR(std::move(Result),
                     FailedWithMessage(AllOf(HasSubstr("reading TUSummary from"),

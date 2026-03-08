@@ -1039,9 +1039,28 @@ nb::int_ PyDenseIntElementsAttribute::dunderGetItem(intptr_t pos) const {
 void PyDenseIntElementsAttribute::bindDerived(ClassTy &c) {
   c.def("__getitem__", &PyDenseIntElementsAttribute::dunderGetItem);
 }
-// Check if the python version is less than 3.13. Py_IsFinalizing is a part
-// of stable ABI since 3.13 and before it was available as _Py_IsFinalizing.
-#if PY_VERSION_HEX < 0x030d0000
+
+// Py_IsFinalizing is part of the stable ABI since 3.13. Before that, it was
+// available as the private _Py_IsFinalizing, which is not part of the limited
+// API.
+#if defined(Py_LIMITED_API) && Py_LIMITED_API < 0x030d0000
+// Under limited API targeting < 3.13, use sys.is_finalizing() via C API.
+// PySys_GetObject avoids import machinery (safe during finalization).
+static int Py_IsFinalizing(void) {
+  // PySys_GetObject returns a borrowed reference; no Py_DECREF needed.
+  PyObject *fn = PySys_GetObject("is_finalizing");
+  if (!fn)
+    return 0;
+  PyObject *result = PyObject_CallNoArgs(fn);
+  if (!result) {
+    PyErr_Clear();
+    return 0;
+  }
+  int val = PyObject_IsTrue(result);
+  Py_DECREF(result);
+  return val > 0 ? 1 : 0;
+}
+#elif PY_VERSION_HEX < 0x030d0000
 #define Py_IsFinalizing _Py_IsFinalizing
 #endif
 

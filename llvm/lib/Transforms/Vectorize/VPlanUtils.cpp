@@ -360,7 +360,7 @@ static bool preservesUniformity(unsigned Opcode) {
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  // Live-in, symbolic and region-values must be uniform across the their scope.
+  // Live-in, symbolic and region-values must be uniform across their scope.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
     return true;
 
@@ -386,8 +386,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe,
-          VPVectorEndPointerRecipe>(VPV))
+  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();
@@ -397,8 +396,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  // Live-ins are uniform.
-  if (isa<VPIRValue, VPSymbolicValue>(V))
+  // Live-ins and canonical IVs are uniform.
+  if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
     return true;
 
   VPRecipeBase *R = V->getDefiningRecipe();
@@ -411,9 +410,6 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
       return false;
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
-
-  if (isa<VPRegionValue>(V))
-    return true;
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case([](const VPDerivedIVRecipe *R) { return true; })
@@ -496,8 +492,8 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   // Successor(s): vector loop
   //
   // <x1> vector loop: {
+  // vp<%2> = CANONICAL-IV
   //   vector.body:
-  //     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>
   //     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>, vp<%0>
   //     CLONE ir<%ee.addr> = getelementptr ir<0>, vp<%3>
   //     WIDEN ir<%ee.load> = load ir<%ee.addr>
