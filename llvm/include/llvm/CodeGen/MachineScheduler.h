@@ -1204,6 +1204,12 @@ public:
                                     const TargetSchedModel *SchedModel);
   };
 
+  static void tracePick(CandReason Reason, bool IsTop, bool IsPostRA = false);
+
+  static void tracePick(const SchedCandidate &Cand, bool IsPostRA = false) {
+    tracePick(Cand.Reason, Cand.AtTop, IsPostRA);
+  }
+
 protected:
   const MachineSchedContext *Context;
   const TargetSchedModel *SchedModel = nullptr;

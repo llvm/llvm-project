@@ -3505,8 +3505,8 @@ bool llvm::tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
   return false;
 }
 
-static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
-                      bool IsPostRA = false) {
+void GenericSchedulerBase::tracePick(CandReason Reason, bool IsTop,
+                                     bool IsPostRA) {
   LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
                     << GenericSchedulerBase::getReasonStr(Reason) << " ["
                     << (IsPostRA ? "post-RA" : "pre-RA") << "]\n");
@@ -3631,11 +3631,6 @@ static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
     };
   }
   llvm_unreachable("Unknown reason!");
-}
-
-static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand,
-                      bool IsPostRA = false) {
-  tracePick(Cand.Reason, Cand.AtTop, IsPostRA);
 }
 
 void GenericScheduler::initialize(ScheduleDAGMI *dag) {
@@ -4146,7 +4141,9 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   SUnit *SU;
   if (RegionPolicy.OnlyTopDown) {
     SU = Top.pickOnlyChoice();
-    if (!SU) {
+    if (SU) {
+      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/false);
+    } else {
       CandPolicy NoPolicy;
       TopCand.reset(NoPolicy);
       pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
@@ -4157,7 +4154,9 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     IsTopNode = true;
   } else if (RegionPolicy.OnlyBottomUp) {
     SU = Bot.pickOnlyChoice();
-    if (!SU) {
+    if (SU) {
+      tracePick(Only1, /*IsTopNode=*/false, /*IsPostRA=*/false);
+    } else {
       CandPolicy NoPolicy;
       BotCand.reset(NoPolicy);
       pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
@@ -4513,7 +4512,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   if (RegionPolicy.OnlyBottomUp) {
     SU = Bot.pickOnlyChoice();
     if (SU) {
-      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+      tracePick(Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
     } else {
       CandPolicy NoPolicy;
       BotCand.reset(NoPolicy);

@@ -783,7 +783,7 @@ public:
       : GCNSchedStage(StageID, DAG) {}
 };
 
-class GCNPostScheduleDAGMILive final : public ScheduleDAGMI {
+class GCNPostScheduleDAGMI final : public ScheduleDAGMI {
 private:
   std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
 
@@ -794,9 +794,9 @@ public:
 
   void finalizeSchedule() override;
 
-  GCNPostScheduleDAGMILive(MachineSchedContext *C,
-                           std::unique_ptr<MachineSchedStrategy> S,
-                           bool RemoveKillFlags);
+  GCNPostScheduleDAGMI(MachineSchedContext *C,
+                       std::unique_ptr<MachineSchedStrategy> S,
+                       bool RemoveKillFlags);
 };
 
 } // End namespace llvm
