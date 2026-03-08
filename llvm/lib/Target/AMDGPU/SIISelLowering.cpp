@@ -13821,9 +13821,12 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   }
 
   if (VT == MVT::i32 && (RHS.getOpcode() == ISD::SIGN_EXTEND ||
-                         LHS.getOpcode() == ISD::SIGN_EXTEND)) {
-    // and x, (sext cc from i1) => select cc, x, 0
-    if (RHS.getOpcode() != ISD::SIGN_EXTEND)
+                         RHS.getOpcode() == ISD::ANY_EXTEND ||
+                         LHS.getOpcode() == ISD::SIGN_EXTEND ||
+                         LHS.getOpcode() == ISD::ANY_EXTEND)) {
+    // and x, (sext/anyext cc from i1) => select cc, x, 0
+    if (RHS.getOpcode() != ISD::SIGN_EXTEND &&
+        RHS.getOpcode() != ISD::ANY_EXTEND)
       std::swap(LHS, RHS);
     if (isBoolSGPR(RHS.getOperand(0)))
       return DAG.getSelect(SDLoc(N), MVT::i32, RHS.getOperand(0), LHS,
