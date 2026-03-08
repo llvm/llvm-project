@@ -8,16 +8,12 @@
 define <8 x float> @fma_parallel_chains(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: define <8 x float> @fma_parallel_chains(
 ; CHECK-SAME: <4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]]) {
-; CHECK-NEXT:    [[D0:%.*]] = fadd <4 x float> [[A0]], splat (float -1.000000e+00)
-; CHECK-NEXT:    [[D1:%.*]] = fadd <4 x float> [[A1]], splat (float -1.000000e+00)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[D0]], <4 x float> [[D1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> [[A1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[TMP5]], splat (float -1.000000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP1]], <8 x float> splat (float f0x3C6F4682), <8 x float> splat (float f0xBD9B8AF7))
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[D0]], <4 x float> [[D1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP3]], <8 x float> splat (float f0x3E413BC5))
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[D0]], <4 x float> [[D1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP5]], <8 x float> splat (float f0xBEA49FBF))
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[D0]], <4 x float> [[D1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP6]], <8 x float> [[TMP7]], <8 x float> splat (float f0x3EF18891))
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP1]], <8 x float> splat (float f0x3E413BC5))
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP3]], <8 x float> [[TMP1]], <8 x float> splat (float f0xBEA49FBF))
+; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP4]], <8 x float> [[TMP1]], <8 x float> splat (float f0x3EF18891))
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
 ;
   %d0 = fadd <4 x float> %a0, splat (float -1.000000e+00)
