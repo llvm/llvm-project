@@ -1,3 +1,4 @@
+async/wait_group_events.cl
 mem_fence/fence.cl
 subgroup/subgroup.cl
 synchronization/sub_group_barrier.cl
