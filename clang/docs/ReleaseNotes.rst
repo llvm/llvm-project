@@ -252,6 +252,11 @@ Attribute Changes in Clang
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
 
+- Added support for ``[[msvc::forceinline]]`` for functions and
+  ``[[msvc::forceinline_calls]]`` for statements. Both are aliases to
+  ``[[clang::always_inline]]`` with additional checks to ensure that they
+  are only accepted in places where MSVC also does.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - ``-Wunused-but-set-variable`` now diagnoses file-scope variables with
