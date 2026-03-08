@@ -8199,6 +8199,10 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "  new Class(a,\n"
                "            b,\n"
                "            c);\n"
+               "  int nums[]{1, 2};\n"
+               "  int nums[]{1,\n"
+               "             2,\n"
+               "             3};\n"
                "}",
                Style);
 }
