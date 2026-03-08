@@ -143,6 +143,37 @@ private:
   llvm::BasicBlock *linearFinalizationBB;
   llvm::BasicBlock *linearExitBB;
   llvm::BasicBlock *linearLastIterExitBB;
+  Value linearLoopIV;
+  Value linearLoopIVStart;
+
+  void updateLinearVar(llvm::IRBuilderBase &builder, llvm::Type *varType,
+                       llvm::Value *var, llvm::Value *varStart,
+                       llvm::Value *step, llvm::Value *iv) {
+    if (!iv->getType()->isIntegerTy())
+      llvm_unreachable("OpenMP loop induction variable must be an integer "
+                       "type");
+
+    if (varType->isIntegerTy()) {
+      // Integer path: normalize all arithmetic to linearVarType
+      iv = builder.CreateSExtOrTrunc(iv, varType);
+      step = builder.CreateSExtOrTrunc(step, varType);
+
+      llvm::Value *mulInst = builder.CreateMul(iv, step);
+      llvm::Value *addInst = builder.CreateAdd(varStart, mulInst);
+      builder.CreateStore(addInst, var);
+    } else if (varType->isFloatingPointTy()) {
+      // Float path: perform multiply in integer, then convert to float
+      step = builder.CreateSExtOrTrunc(step, iv->getType());
+
+      llvm::Value *mulInst = builder.CreateMul(iv, step);
+      llvm::Value *mulFp = builder.CreateSIToFP(mulInst, varType);
+      llvm::Value *addInst = builder.CreateFAdd(varStart, mulFp);
+      builder.CreateStore(addInst, var);
+    } else {
+      llvm_unreachable(
+          "Linear variable must be of integer or floating-point type");
+    }
+  }
 
 public:
   // Register type for the linear variables
@@ -182,44 +213,61 @@ public:
     }
   }
 
-  // Emit IR for updating Linear variables
-  void updateLinearVar(llvm::IRBuilderBase &builder, llvm::BasicBlock *loopBody,
-                       llvm::Value *loopInductionVar) {
-    builder.SetInsertPoint(loopBody->getTerminator());
-    for (size_t index = 0; index < linearPreconditionVars.size(); index++) {
-      llvm::Type *linearVarType = linearVarTypes[index];
-      llvm::Value *iv = loopInductionVar;
-      llvm::Value *step = linearSteps[index];
-
-      if (!iv->getType()->isIntegerTy())
-        llvm_unreachable("OpenMP loop induction variable must be an integer "
-                         "type");
-
-      if (linearVarType->isIntegerTy()) {
-        // Integer path: normalize all arithmetic to linearVarType
-        iv = builder.CreateSExtOrTrunc(iv, linearVarType);
-        step = builder.CreateSExtOrTrunc(step, linearVarType);
-
-        llvm::LoadInst *linearVarStart =
-            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
-        llvm::Value *mulInst = builder.CreateMul(iv, step);
-        llvm::Value *addInst = builder.CreateAdd(linearVarStart, mulInst);
-        builder.CreateStore(addInst, linearLoopBodyTemps[index]);
-      } else if (linearVarType->isFloatingPointTy()) {
-        // Float path: perform multiply in integer, then convert to float
-        step = builder.CreateSExtOrTrunc(step, iv->getType());
-        llvm::Value *mulInst = builder.CreateMul(iv, step);
-
-        llvm::LoadInst *linearVarStart =
-            builder.CreateLoad(linearVarType, linearPreconditionVars[index]);
-        llvm::Value *mulFp = builder.CreateSIToFP(mulInst, linearVarType);
-        llvm::Value *addInst = builder.CreateFAdd(linearVarStart, mulFp);
-        builder.CreateStore(addInst, linearLoopBodyTemps[index]);
-      } else {
-        llvm_unreachable(
-            "Linear variable must be of integer or floating-point type");
+  // Find linear iteration variable and save it for later updates
+  void initLinearIV(omp::SimdOp simdOp) {
+    auto loopOp = cast<omp::LoopNestOp>(simdOp.getWrappedLoop());
+    // NOTE iteration variables can only be linear in non-nested loops.
+    if (loopOp.getIVs().size() != 1)
+      return;
+    // The linear IV is the loop IV's store address.
+    BlockArgument arg = loopOp.getIVs().front();
+    for (const Operation *user : arg.getUsers()) {
+      if (auto storeOp = dyn_cast<LLVM::StoreOp>(user)) {
+        for (Value linearVar : simdOp.getLinearVars()) {
+          if (linearVar == storeOp.getAddr()) {
+            linearLoopIV = linearVar;
+            linearLoopIVStart = loopOp.getLoopLowerBounds().front();
+            break;
+          }
+        }
       }
     }
+  }
+
+  // Emit IR for updating Linear variables
+  void updateLinearVars(llvm::IRBuilderBase &builder,
+                        llvm::BasicBlock *loopBody,
+                        llvm::Value *loopInductionVar) {
+    builder.SetInsertPoint(loopBody->getTerminator());
+    for (size_t index = 0; index < linearPreconditionVars.size(); index++) {
+      llvm::LoadInst *linearVarStart = builder.CreateLoad(
+          linearVarTypes[index], linearPreconditionVars[index]);
+      updateLinearVar(builder, linearVarTypes[index],
+                      linearLoopBodyTemps[index], linearVarStart,
+                      linearSteps[index], loopInductionVar);
+    }
+  }
+
+  // Emit IR for updating linear iteration variables on loop exit
+  void updateLinearIV(llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation,
+                      llvm::Value *loopIV) {
+    if (!linearLoopIV)
+      return;
+    llvm::Value *linearIV = moduleTranslation.lookupValue(linearLoopIV);
+    llvm::Value *linearIVStart =
+        moduleTranslation.lookupValue(linearLoopIVStart);
+
+    // Find linearIV's index
+    size_t index;
+    for (index = 0; index < linearOrigVal.size(); index++)
+      if (linearIV == linearOrigVal[index])
+        break;
+    if (index == linearOrigVal.size())
+      return;
+
+    updateLinearVar(builder, linearVarTypes[index], linearLoopBodyTemps[index],
+                    linearIVStart, linearSteps[index], loopIV);
   }
 
   // Linear variable finalization is conditional on the last logical iteration.
@@ -3098,8 +3146,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
     builder.restoreIP(*afterBarrierIP);
-    linearClauseProcessor.updateLinearVar(builder, loopInfo->getBody(),
-                                          loopInfo->getIndVar());
+    linearClauseProcessor.updateLinearVars(builder, loopInfo->getBody(),
+                                           loopInfo->getIndVar());
     linearClauseProcessor.splitLinearFiniBB(builder, loopInfo->getExit());
   }
 
@@ -3401,6 +3449,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
 
+  linearClauseProcessor.initLinearIV(simdOp);
+
   if (!simdOp.getLinearVars().empty()) {
     auto linearVarTypes = simdOp.getLinearVarTypes().value();
     for (mlir::Attribute linearVarType : linearVarTypes)
@@ -3498,8 +3548,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     linearClauseProcessor.initLinearVar(builder, moduleTranslation,
                                         loopInfo->getPreheader());
 
-    linearClauseProcessor.updateLinearVar(builder, loopInfo->getBody(),
-                                          loopInfo->getIndVar());
+    linearClauseProcessor.updateLinearVars(builder, loopInfo->getBody(),
+                                           loopInfo->getIndVar());
   }
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
 
@@ -3508,6 +3558,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
                             : nullptr,
                         order, simdlen, safelen);
+
+  linearClauseProcessor.updateLinearIV(builder, moduleTranslation,
+                                       loopInfo->getIndVar());
 
   linearClauseProcessor.emitStoresForLinearVar(builder);
 
