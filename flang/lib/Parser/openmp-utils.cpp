@@ -145,6 +145,16 @@ const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
   return &std::get<OmpObjectList>(x.t);
 }
 
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId) {
+  for (auto &clause : spec.Clauses().v) {
+    if (clause.Id() == clauseId) {
+      return &clause;
+    }
+  }
+  return nullptr;
+}
+
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc) {
   // ExecutionPartConstruct -> ExecutableConstruct

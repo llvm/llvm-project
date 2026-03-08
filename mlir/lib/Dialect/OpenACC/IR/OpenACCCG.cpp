@@ -417,8 +417,7 @@ SmallVector<GPUParallelDimAttr> ComputeRegionOp::getLaunchParDims() {
 Value ComputeRegionOp::getOperand(BlockArgument blockArg) {
   unsigned argNumber = blockArg.getArgNumber();
   unsigned numLaunchArgs = getLaunchArgs().size();
-  unsigned numInputArgs = getInputArgs().size();
-  assert(argNumber < (numLaunchArgs + numInputArgs) &&
+  assert(argNumber < (numLaunchArgs + getInputArgs().size()) &&
          "invalid block argument");
   if (argNumber < numLaunchArgs)
     return getLaunchArgs()[argNumber];

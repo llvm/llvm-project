@@ -157,6 +157,11 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
+  to :doc:`portability-no-assembler
+  <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+  name is kept as an alias.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -210,6 +215,10 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
+
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by fixing
+  a false positive for constrained template parameters.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer

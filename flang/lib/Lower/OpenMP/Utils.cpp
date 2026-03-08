@@ -786,13 +786,9 @@ static void processTileSizesFromOpenMPConstruct(
           innerConstruct->BeginDir();
       if (innerBeginSpec.DirId() == llvm::omp::Directive::OMPD_tile) {
         // Get the size values from parse tree and convert to a vector.
-        for (const auto &clause : innerBeginSpec.Clauses().v) {
-          if (const auto tclause{
-                  std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
-            processFun(tclause);
-            break;
-          }
-        }
+        if (auto *clause = parser::omp::FindClause(
+                innerBeginSpec, llvm::omp::Clause::OMPC_sizes))
+          processFun(&std::get<parser::OmpClause::Sizes>(clause->u));
       }
     }
   }

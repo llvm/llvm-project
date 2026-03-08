@@ -15,4 +15,6 @@ target_link_libraries(ClangDocBenchmark
   clangTooling
   clangBasic
   clangAST
+  clangFrontend
+  clangSerialization
 )

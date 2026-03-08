@@ -226,6 +226,10 @@ enum RegBankLLTMappingApplyID {
   SgprP0Call_WF,
   SgprP4Call_WF,
 
+  // Src only modifiers: for operands that must end up in M0. If divergent,
+  // readfirstlane to SGPR. The result can then be copied to M0 in ISel.
+  SgprB32_M0,
+
   // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
@@ -267,6 +271,9 @@ enum LoweringMethodID {
   VerifyAllSgpr,
   ApplyAllVgpr,
   UnmergeToShiftTrunc,
+  AextToS32InIncomingBlockGPHI,
+  VerifyAllSgprGPHI,
+  VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE
 };
 

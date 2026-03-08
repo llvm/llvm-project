@@ -4522,6 +4522,7 @@ cc_library(
     hdrs = ["include/mlir/Interfaces/LoopLikeInterface.h"],
     includes = ["include"],
     deps = [
+        ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterfaceIncGen",
@@ -10366,6 +10367,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
+        ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":LLVMDialect",
@@ -14285,7 +14287,10 @@ cc_library(
     srcs = [
         "lib/Dialect/UB/IR/UBOps.cpp",
     ],
-    hdrs = ["include/mlir/Dialect/UB/IR/UBOps.h"],
+    hdrs = [
+        "include/mlir/Dialect/UB/IR/UBMatchers.h",
+        "include/mlir/Dialect/UB/IR/UBOps.h",
+    ],
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
