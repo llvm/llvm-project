@@ -1833,13 +1833,11 @@ public:
   bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                              SmallVectorImpl<Token> &Suffix,
                              SmallVectorImpl<IdentifierLoc> &Path,
-                             bool IsPartition = false,
-                             bool AllowMacroExpansion = true);
+                             bool AllowMacroExpansion, bool IsPartition);
   bool HandleModuleName(StringRef DirType, SourceLocation UseLoc, Token &Tok,
                         SmallVectorImpl<IdentifierLoc> &Path,
                         SmallVectorImpl<Token> &DirToks,
-                        bool IsPartition = false,
-                        bool AllowMacroExpansion = true);
+                        bool AllowMacroExpansion, bool IsPartition);
   void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
   void HandleCXXImportDirective(Token Import);
   void HandleCXXModuleDirective(Token Module);

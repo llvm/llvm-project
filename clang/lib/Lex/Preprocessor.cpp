@@ -1205,8 +1205,8 @@ ModuleNameLoc *ModuleNameLoc::Create(Preprocessor &PP, ModuleIdPath Path) {
 bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
                                          SmallVectorImpl<Token> &Suffix,
                                          SmallVectorImpl<IdentifierLoc> &Path,
-                                         bool IsPartition,
-                                         bool AllowMacroExpansion) {
+                                         bool AllowMacroExpansion,
+                                         bool IsPartition) {
   auto ConsumeToken = [&]() {
     if (AllowMacroExpansion)
       Lex(Tok);
@@ -1254,12 +1254,12 @@ bool Preprocessor::HandleModuleName(StringRef DirType, SourceLocation UseLoc,
                                     Token &Tok,
                                     SmallVectorImpl<IdentifierLoc> &Path,
                                     SmallVectorImpl<Token> &DirToks,
-                                    bool IsPartition,
-                                    bool AllowMacroExpansion) {
+                                    bool AllowMacroExpansion,
+                                    bool IsPartition) {
   bool LeadingSpace = Tok.hasLeadingSpace();
   unsigned NumToksInDirective = DirToks.size();
-  if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path, IsPartition,
-                            AllowMacroExpansion)) {
+  if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path, AllowMacroExpansion,
+                            IsPartition)) {
     if (Tok.isNot(tok::eod))
       CheckEndOfDirective(DirType,
                           /*EnableMacros=*/false, &DirToks);
@@ -1440,7 +1440,9 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   SmallVector<Token, 32> Suffix;
   SmallVector<IdentifierLoc, 3> Path;
   Lex(Result);
-  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
+  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path,
+                            /*AllowMacroExpansion=*/true,
+                            /*IsPartition=*/false))
     return CollectPPImportSuffixAndEnterStream(Suffix);
 
   ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);

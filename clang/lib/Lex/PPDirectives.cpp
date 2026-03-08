@@ -4222,7 +4222,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
     [[fallthrough]];
   case tok::identifier: {
     if (HandleModuleName(ImportTok.getIdentifierInfo()->getName(), UseLoc, Tok,
-                         Path, DirToks, IsPartition))
+                         Path, DirToks, /*AllowMacroExpansion=*/true,
+                         IsPartition))
       return;
 
     std::string FlatName;
@@ -4367,8 +4368,8 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     break;
   case tok::identifier: {
     if (HandleModuleName(ModuleTok.getIdentifierInfo()->getName(), UseLoc, Tok,
-                         Path, DirToks, /*IsPartition=*/false,
-                         /*AllowMacroExpansion=*/false))
+                         Path, DirToks, /*AllowMacroExpansion=*/false,
+                         /*IsPartition=*/false))
       return;
 
     // C++20 [cpp.module]p
@@ -4377,8 +4378,8 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     if (Tok.is(tok::colon)) {
       LexUnexpandedToken(Tok);
       if (HandleModuleName(ModuleTok.getIdentifierInfo()->getName(), UseLoc,
-                           Tok, Partition, DirToks, /*IsPartition=*/true,
-                           /*AllowMacroExpansion=*/false))
+                           Tok, Partition, DirToks,
+                           /*AllowMacroExpansion=*/false, /*IsPartition=*/true))
         return;
     }
 
