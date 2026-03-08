@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_global_id.h>
+#include "clc/amdgpu/amdgpu_utils.h"
+#include "clc/subgroup/clc_subgroup.h"
 
-_CLC_OVERLOAD _CLC_DEF size_t get_global_id(uint dim) {
-  return __clc_get_global_id(dim);
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST uint __clc_get_num_sub_groups(void) {
+  uint group_size = __clc_amdgpu_workgroup_size();
+  return (group_size + __builtin_amdgcn_wavefrontsize() - 1) >>
+         __clc_amdgpu_wavesize_log2();
 }
