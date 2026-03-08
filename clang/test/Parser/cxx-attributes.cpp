@@ -41,6 +41,13 @@ void fn() {
   pi = &i[0];
 }
 
+namespace GH184954 {
+  struct S {
+    int a __attribute__((packed)) : 4;
+    int b __attribute__((aligned(16))) : 4;
+  };
+}
+
 [[deprecated([""])]] int WrongArgs; // expected-error {{expected string literal as argument of 'deprecated' attribute}}
 [[,,,,,]] int Commas1; // ok
 [[,, maybe_unused]] int Commas2; // ok

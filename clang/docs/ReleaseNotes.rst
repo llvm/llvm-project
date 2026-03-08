@@ -207,6 +207,8 @@ Attribute Changes in Clang
   type-level control over overflow behavior. There is also an accompanying type
   specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
+- Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,

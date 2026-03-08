@@ -2512,11 +2512,15 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   else
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
+  const bool IsFunctionDeclarator = DeclaratorInfo.isFunctionDeclarator();
+  if (!IsFunctionDeclarator)
+    MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
+
   if (getLangOpts().HLSL)
     MaybeParseHLSLAnnotations(DeclaratorInfo, nullptr,
                               /*CouldBeBitField*/ true);
 
-  if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
+  if (!IsFunctionDeclarator && TryConsumeToken(tok::colon)) {
     assert(DeclaratorInfo.isPastIdentifier() &&
            "don't know where identifier would go yet?");
     BitfieldSize = ParseConstantExpression();
