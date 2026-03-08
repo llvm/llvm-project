@@ -78,15 +78,13 @@ define <256 x i1> @testLXVPRL(ptr %vpp, i64 %b) {
 ; CHECK-LABEL: testLXVPRL:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvprl vsp34, r4, r5
-; CHECK-NEXT:    stxv v2, 16(r3)
-; CHECK-NEXT:    stxv v3, 0(r3)
+; CHECK-NEXT:    stxvp vsp34, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; AIX-LABEL: testLXVPRL:
 ; AIX:       # %bb.0: # %entry
 ; AIX-NEXT:    lxvprl vsp34, r4, r5
-; AIX-NEXT:    stxv v3, 16(r3)
-; AIX-NEXT:    stxv v2, 0(r3)
+; AIX-NEXT:    stxvp vsp34, 0(r3)
 ; AIX-NEXT:    blr
 entry:
   %0 = tail call <256 x i1> @llvm.ppc.vsx.lxvprl(ptr %vpp, i64 %b)
@@ -98,15 +96,13 @@ define <256 x i1> @testLXVPRLL(ptr %vpp, i64 %b) {
 ; CHECK-LABEL: testLXVPRLL:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvprll vsp34, r4, r5
-; CHECK-NEXT:    stxv v2, 16(r3)
-; CHECK-NEXT:    stxv v3, 0(r3)
+; CHECK-NEXT:    stxvp vsp34, 0(r3)
 ; CHECK-NEXT:    blr
 ;
 ; AIX-LABEL: testLXVPRLL:
 ; AIX:       # %bb.0: # %entry
 ; AIX-NEXT:    lxvprll vsp34, r4, r5
-; AIX-NEXT:    stxv v3, 16(r3)
-; AIX-NEXT:    stxv v2, 0(r3)
+; AIX-NEXT:    stxvp vsp34, 0(r3)
 ; AIX-NEXT:    blr
 entry:
   %0 = tail call <256 x i1> @llvm.ppc.vsx.lxvprll(ptr %vpp, i64 %b)
@@ -117,15 +113,13 @@ declare <256 x i1> @llvm.ppc.vsx.lxvprll(ptr, i64)
 define void @testSTXVPRL(ptr %v, ptr %vp, i64 %len) {
 ; CHECK-LABEL: testSTXVPRL:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv v2, 16(r3)
-; CHECK-NEXT:    lxv v3, 0(r3)
+; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    stxvprl vsp34, r4, r5
 ; CHECK-NEXT:    blr
 ;
 ; AIX-LABEL: testSTXVPRL:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    lxv v2, 0(r3)
-; AIX-NEXT:    lxv v3, 16(r3)
+; AIX-NEXT:    lxvp vsp34, 0(r3)
 ; AIX-NEXT:    stxvprl vsp34, r4, r5
 ; AIX-NEXT:    blr
 entry:
@@ -138,15 +132,13 @@ declare void @llvm.ppc.vsx.stxvprl(<256 x i1>, ptr, i64)
 define void @testSTXVPRLL(ptr %v, ptr %vp, i64 %len) {
 ; CHECK-LABEL: testSTXVPRLL:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv v2, 16(r3)
-; CHECK-NEXT:    lxv v3, 0(r3)
+; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    stxvprll vsp34, r4, r5
 ; CHECK-NEXT:    blr
 ;
 ; AIX-LABEL: testSTXVPRLL:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    lxv v2, 0(r3)
-; AIX-NEXT:    lxv v3, 16(r3)
+; AIX-NEXT:    lxvp vsp34, 0(r3)
 ; AIX-NEXT:    stxvprll vsp34, r4, r5
 ; AIX-NEXT:    blr
 entry:

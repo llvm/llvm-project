@@ -596,6 +596,17 @@ def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRL $XTp,
                                                                     $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
+
+// Regular load/store patterns for v256i1 (for ISA Future)
+let Predicates = [PairedVectorMemops, IsISAFuture] in {
+  def : Pat<(v256i1 (load iaddrX16:$src)), (LXVP iaddrX16:$src)>;
+  def : Pat<(v256i1 (load PDForm:$src)), (PLXVP memri34:$src)>;
+  def : Pat<(v256i1 (load xoaddr:$src)), (LXVPX xoaddr:$src)>;
+  def : Pat<(store v256i1:$XSp, iaddrX16:$dst), (STXVP $XSp, iaddrX16:$dst)>;
+  def : Pat<(store v256i1:$XSp, PDForm:$dst), (PSTXVP $XSp, memri34:$dst)>;
+  def : Pat<(store v256i1:$XSp, xoaddr:$dst), (STXVPX $XSp, xoaddr:$dst)>;
+}
+
 let Predicates = [HasVSX, IsISAFuture] in {
   def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
                                                      v4i32:$vB))>;

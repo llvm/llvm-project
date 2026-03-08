@@ -134,22 +134,18 @@ define void @text512(ptr %vp1, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    dmsetdmrz dmr0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; CHECK-NEXT:    stxv v2, 16(r4)
-; CHECK-NEXT:    stxv v3, 0(r4)
+; CHECK-NEXT:    stxvp vsp34, 0(r4)
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
-; CHECK-NEXT:    stxv v2, 16(r6)
-; CHECK-NEXT:    stxv v3, 0(r6)
+; CHECK-NEXT:    stxvp vsp34, 0(r6)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: text512:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    dmsetdmrz dmr0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; CHECK-BE-NEXT:    stxv v3, 16(r4)
-; CHECK-BE-NEXT:    stxv v2, 0(r4)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r4)
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
-; CHECK-BE-NEXT:    stxv v3, 16(r6)
-; CHECK-BE-NEXT:    stxv v2, 0(r6)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
   %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
@@ -167,34 +163,26 @@ define void @text256(ptr %vp1, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    dmsetdmrz dmr0
 ; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 0
-; CHECK-NEXT:    stxv v2, 16(r4)
-; CHECK-NEXT:    stxv v3, 0(r4)
+; CHECK-NEXT:    stxvp vsp34, 0(r4)
 ; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 1
-; CHECK-NEXT:    stxv v2, 16(r5)
-; CHECK-NEXT:    stxv v3, 0(r5)
+; CHECK-NEXT:    stxvp vsp34, 0(r5)
 ; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 2
-; CHECK-NEXT:    stxv v2, 16(r6)
-; CHECK-NEXT:    stxv v3, 0(r6)
+; CHECK-NEXT:    stxvp vsp34, 0(r6)
 ; CHECK-NEXT:    dmxxextfdmr256 vsp34, dmr0, 3
-; CHECK-NEXT:    stxv v2, 16(r7)
-; CHECK-NEXT:    stxv v3, 0(r7)
+; CHECK-NEXT:    stxvp vsp34, 0(r7)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: text256:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    dmsetdmrz dmr0
 ; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 0
-; CHECK-BE-NEXT:    stxv v3, 16(r4)
-; CHECK-BE-NEXT:    stxv v2, 0(r4)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r4)
 ; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 1
-; CHECK-BE-NEXT:    stxv v3, 16(r5)
-; CHECK-BE-NEXT:    stxv v2, 0(r5)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r5)
 ; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 2
-; CHECK-BE-NEXT:    stxv v3, 16(r6)
-; CHECK-BE-NEXT:    stxv v2, 0(r6)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r6)
 ; CHECK-BE-NEXT:    dmxxextfdmr256 vsp34, dmr0, 3
-; CHECK-BE-NEXT:    stxv v3, 16(r7)
-; CHECK-BE-NEXT:    stxv v2, 0(r7)
+; CHECK-BE-NEXT:    stxvp vsp34, 0(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
   %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
@@ -212,10 +200,8 @@ entry:
 define void @tins512(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2)  {
 ; CHECK-LABEL: tins512:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv v2, 16(r3)
-; CHECK-NEXT:    lxv v3, 0(r3)
-; CHECK-NEXT:    lxv v4, 16(r4)
-; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    lxvp vsp34, 0(r3)
+; CHECK-NEXT:    lxvp vsp36, 0(r4)
 ; CHECK-NEXT:    dmsetdmrz dmr0
 ; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
@@ -224,10 +210,8 @@ define void @tins512(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2)
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-NEXT:    stxvp vsp34, 32(r7)
 ; CHECK-NEXT:    stxvp vsp36, 0(r7)
-; CHECK-NEXT:    lxv v2, 16(r5)
-; CHECK-NEXT:    lxv v4, 16(r6)
-; CHECK-NEXT:    lxv v3, 0(r5)
-; CHECK-NEXT:    lxv v5, 0(r6)
+; CHECK-NEXT:    lxvp vsp34, 0(r5)
+; CHECK-NEXT:    lxvp vsp36, 0(r6)
 ; CHECK-NEXT:    dmxxextfdmr512 vsp32, vsp38, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp32, 96(r8)
 ; CHECK-NEXT:    stxvp vsp38, 64(r8)
@@ -239,10 +223,8 @@ define void @tins512(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2)
 ;
 ; CHECK-BE-LABEL: tins512:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv v2, 0(r3)
-; CHECK-BE-NEXT:    lxv v4, 0(r4)
-; CHECK-BE-NEXT:    lxv v3, 16(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    lxvp vsp34, 0(r3)
+; CHECK-BE-NEXT:    lxvp vsp36, 0(r4)
 ; CHECK-BE-NEXT:    dmsetdmrz dmr0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp32, vsp38, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp38, 96(r7)
@@ -251,10 +233,8 @@ define void @tins512(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2)
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxvp vsp36, 32(r7)
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r7)
-; CHECK-BE-NEXT:    lxv v2, 0(r5)
-; CHECK-BE-NEXT:    lxv v4, 0(r6)
-; CHECK-BE-NEXT:    lxv v3, 16(r5)
-; CHECK-BE-NEXT:    lxv v5, 16(r6)
+; CHECK-BE-NEXT:    lxvp vsp34, 0(r5)
+; CHECK-BE-NEXT:    lxvp vsp36, 0(r6)
 ; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi0, vsp34, vsp36, 1
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r8)
@@ -279,8 +259,7 @@ entry:
 define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
 ; CHECK-LABEL: tins256:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv v2, 16(r3)
-; CHECK-NEXT:    lxv v3, 0(r3)
+; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    dmsetdmrz dmr0
 ; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 0
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
@@ -289,8 +268,7 @@ define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2,
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
 ; CHECK-NEXT:    stxvp vsp34, 32(r7)
 ; CHECK-NEXT:    stxvp vsp36, 0(r7)
-; CHECK-NEXT:    lxv v2, 16(r4)
-; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    lxvp vsp34, 0(r4)
 ; CHECK-NEXT:    dmxxinstdmr256 dmr0, vsp34, 1
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp36, 96(r8)
@@ -316,8 +294,7 @@ define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2,
 ;
 ; CHECK-BE-LABEL: tins256:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv v2, 0(r3)
-; CHECK-BE-NEXT:    lxv v3, 16(r3)
+; CHECK-BE-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-BE-NEXT:    dmsetdmrz dmr0
 ; CHECK-BE-NEXT:    dmxxinstdmr256 dmr0, vsp34, 0
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi0, 1
@@ -326,8 +303,7 @@ define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2,
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxvp vsp36, 32(r7)
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r7)
-; CHECK-BE-NEXT:    lxv v2, 0(r4)
-; CHECK-BE-NEXT:    lxv v3, 16(r4)
+; CHECK-BE-NEXT:    lxvp vsp34, 0(r4)
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc_hi0, 1
 ; CHECK-BE-NEXT:    stxvp vsp32, 96(r8)
 ; CHECK-BE-NEXT:    stxvp vsp36, 64(r8)
