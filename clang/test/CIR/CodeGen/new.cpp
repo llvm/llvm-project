@@ -551,19 +551,14 @@ void t_new_var_size5(int n) {
   auto p = new double[n][2][3];
 }
 
-// NUM_ELEMENTS isn't used in this case because there is no cookie. It isn't
-// used in the allocation size because the allocation size is calculated with
-// the element size and the fixed size dimensions already combined (6 * 8 = 48).
-// We don't DCE NUM_ELEMENTS because it's not a constant, but later
-// optimizations will eliminate it.
+// The allocation size is calculated with the element size and the fixed size
+// dimensions already combined (6 * 8 = 48).
 
 // CHECK:  cir.func {{.*}} @_Z15t_new_var_size5i
 // CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
 // CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<48> : !u64i
 // CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
-// CHECK:    %[[NUM_ELEMENTS_MULTIPLIER:.*]] = cir.const #cir.int<6>
-// CHECK:    %[[NUM_ELEMENTS:.*]] = cir.mul %[[N_SIZE_T]], %[[NUM_ELEMENTS_MULTIPLIER]] : !u64i
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef})
