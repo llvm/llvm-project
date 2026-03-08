@@ -14,6 +14,8 @@ atomic/clc_atomic_flag_test_and_set.cl
 atomic/clc_atomic_inc.cl
 atomic/clc_atomic_load.cl
 atomic/clc_atomic_store.cl
+collective/clc_work_group_any_all.cl
+collective/clc_work_group_broadcast.cl
 common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
@@ -176,6 +178,9 @@ shared/clc_min.cl
 shared/clc_qualifier.cl
 shared/clc_vload.cl
 shared/clc_vstore.cl
+subgroup/sub_group_barrier.cl
+workitem/clc_get_global_id.cl
+workitem/clc_get_global_linear_id.cl
 workitem/clc_get_local_linear_id.cl
 workitem/clc_get_num_sub_groups.cl
 workitem/clc_get_sub_group_id.cl

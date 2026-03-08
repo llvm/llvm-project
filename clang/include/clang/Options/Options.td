@@ -7651,6 +7651,17 @@ def J : JoinedOrSeparate<["-"], "J">,
 
 let Visibility = [FC1Option] in {
 
+def ffp_maxmin_behavior_EQ
+    : Joined<["-"], "ffp-maxmin-behavior=">,
+      Flags<[HelpHidden]>,
+      Group<f_Group>,
+      Values<"legacy,portable,extremum,extremenum">,
+      HelpText<"Control max/min and [max|min][loc|val] behavior: "
+               "legacy (cmp+select), portable (same as legacy, "
+               " but may use max/minNum when -fno-signed-zeros "
+               "-fno-honor-nans), extremum (IEEE-754-2019 maximum/minimum), "
+               "extremenum (IEEE-754-2008 max/minNum)">;
+
 def fget_definition : MultiArg<["-"], "fget-definition", 3>,
   HelpText<"Get the symbol definition from <line> <start-column> <end-column>">,
   Group<Action_Group>;
