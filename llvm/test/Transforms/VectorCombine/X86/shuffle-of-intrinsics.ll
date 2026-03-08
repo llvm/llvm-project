@@ -38,7 +38,7 @@ define <8 x i32> @test3(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, <4 x i32> %3) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP2:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP1:%.*]], <4 x i32> [[TMP3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP4]], <8 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP5]], <8 x i32> [[TMP4]])
 ; CHECK-NEXT:    ret <8 x i32> [[TMP6]]
 ;
 entry:
@@ -103,7 +103,7 @@ define <2 x float> @test6(<4 x float> %a1, <4 x float> %b1, <4 x float> %c1, <4 
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A1:%.*]], <4 x float> [[A2:%.*]], <2 x i32> <i32 0, i32 4>
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[B1:%.*]], <4 x float> [[B2:%.*]], <2 x i32> <i32 0, i32 4>
 ; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[C1:%.*]], <4 x float> [[C2:%.*]], <2 x i32> <i32 0, i32 4>
-; SSE-NEXT:    [[S:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP1]], <2 x float> [[TMP2]], <2 x float> [[TMP3]])
+; SSE-NEXT:    [[S:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP2]], <2 x float> [[TMP1]])
 ; SSE-NEXT:    ret <2 x float> [[S]]
 ;
 ; AVX-LABEL: @test6(
@@ -131,8 +131,8 @@ define <8 x float> @test7(<4 x float> %x0, <4 x float> %x1, <4 x float> %y0, <4 
 ; AVX-LABEL: @test7(
 ; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X1:%.*]], <4 x float> [[Y1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X0:%.*]], <4 x float> [[Y0:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP2]], <8 x float> zeroinitializer)
-; AVX-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP1]], <8 x float> [[TMP1]], <8 x float> [[TMP3]])
+; AVX-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP1]], <8 x float> [[TMP1]], <8 x float> zeroinitializer)
+; AVX-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP2]], <8 x float> [[TMP3]])
 ; AVX-NEXT:    ret <8 x float> [[RES]]
 ;
   %l0 = call <4 x float> @llvm.fma.v4f32(<4 x float> %x0, <4 x float> %x0, <4 x float> zeroinitializer)
@@ -164,9 +164,9 @@ define <8 x i32> @test_multiuse_one_side(<4 x i32> %0, <4 x i32> %1) {
 ;
 ; AVX-LABEL: @test_multiuse_one_side(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[A:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP0:%.*]], i1 false)
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX-NEXT:    [[A:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP0]], i1 false)
 ; AVX-NEXT:    [[EXTRA_USE:%.*]] = extractelement <4 x i32> [[A]], i32 0
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; AVX-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.abs.v8i32(<8 x i32> [[TMP2]], i1 false)
 ; AVX-NEXT:    [[RES:%.*]] = add i32 [[EXTRA_USE]], 1
 ; AVX-NEXT:    ret <8 x i32> [[R]]
