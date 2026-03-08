@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, iswcntrl, (wint_t c)) {
-  return internal::iswcntrl(static_cast<wchar_t>(c));
+  return internal::iscntrl(static_cast<wchar_t>(c));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
