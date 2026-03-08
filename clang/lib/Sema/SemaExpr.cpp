@@ -15844,6 +15844,55 @@ static void DiagnoseShiftCompare(Sema &S, SourceLocation OpLoc,
       SourceRange(OCE->getArg(1)->getBeginLoc(), RHSExpr->getEndLoc()));
 }
 
+static bool operandEscapesImmediateMacroExpansion(const SourceManager &SM,
+                                                  SourceLocation OpLoc,
+                                                  SourceRange OperandRange) {
+
+  if (!OpLoc.isMacroID())
+    return false;
+
+  SourceLocation Begin = OperandRange.getBegin();
+  SourceLocation End = OperandRange.getEnd();
+
+  if (!Begin.isValid() || !End.isValid())
+    return false;
+
+  // If operand comes directly from file → definitely escapes
+  if (!Begin.isMacroID() || !End.isMacroID())
+    return true;
+
+  // Compare the immediate expansion location
+  SourceLocation OpExp = SM.getImmediateMacroCallerLoc(OpLoc);
+  SourceLocation BeginExp = SM.getImmediateMacroCallerLoc(Begin);
+  SourceLocation EndExp = SM.getImmediateMacroCallerLoc(End);
+
+  return BeginExp != OpExp || EndExp != OpExp;
+}
+static void DiagnoseMacroMixedOperator(Sema &Self, BinaryOperatorKind Opc,
+                                       SourceLocation OpLoc, Expr *LHSExpr,
+                                       Expr *RHSExpr) {
+  const SourceManager &SM = Self.getSourceManager();
+
+  if (!OpLoc.isMacroID())
+    return;
+
+  // Only when the operator token comes from the macro *body*.
+  if (!SM.isMacroBodyExpansion(OpLoc))
+    return;
+
+  bool LHSBad = operandEscapesImmediateMacroExpansion(
+      SM, OpLoc, LHSExpr->getSourceRange());
+  bool RHSBad = operandEscapesImmediateMacroExpansion(
+      SM, OpLoc, RHSExpr->getSourceRange());
+
+  if (!LHSBad && !RHSBad)
+    return;
+
+  Self.Diag(OpLoc, diag::warn_operator_in_macro_with_mixed_operand)
+      << BinaryOperator::getOpcodeStr(Opc) << LHSExpr->getSourceRange()
+      << RHSExpr->getSourceRange();
+}
+
 /// DiagnoseBinOpPrecedence - Emit warnings for expressions with tricky
 /// precedence.
 static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
@@ -15889,6 +15938,8 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
 
   // Emit warnings for tricky precedence issues, e.g. "bitfield & 0x4 == 0"
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
+
+  DiagnoseMacroMixedOperator(*this, Opc, TokLoc, LHSExpr, RHSExpr);
 
   BuiltinCountedByRefKind K = BinaryOperator::isAssignmentOp(Opc)
                                   ? BuiltinCountedByRefKind::Assignment

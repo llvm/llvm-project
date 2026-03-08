@@ -7582,6 +7582,11 @@ def warn_addition_in_bitshift : Warning<
   "operator '%0' has lower precedence than '%1'; "
   "'%1' will be evaluated first">, InGroup<ShiftOpParentheses>;
 
+def warn_operator_in_macro_with_mixed_operand : Warning<
+  "operator '%0' in macro expansion has operand outside the macro; "
+  "operator precedence may be different than expected">,
+  InGroup<DiagGroup<"macro-mixed-operator">>, DefaultIgnore;
+
 def warn_self_assignment_builtin : Warning<
   "explicitly assigning value of variable of type %0 to itself%select{|; did "
   "you mean to assign to member %2?}1">,
