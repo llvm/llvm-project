@@ -16,13 +16,16 @@ entry:
   ; FIXME: The provenance is lost.
   %bitcast_ptr2ptr = bitcast ptr %ptr to ptr
 
-  %bitcast_vec2scalar = bitcast <2 x i32> <i32 0, i32 1> to i64
-  %bitcast_scalar2vec = bitcast i64 1 to <2 x i32>
+  %bitcast_vec2scalar1 = bitcast <2 x i32> <i32 0, i32 1> to i64
+  %bitcast_vec2scalar2 = bitcast <4 x i4> <i4 1, i4 2, i4 3, i4 5> to i16
+  %bitcast_scalar2vec1 = bitcast i64 1 to <2 x i32>
+  %bitcast_scalar2vec2 = bitcast i16 32768 to <16 x i1>
   %bitcast_vec2scalar_partial_poison = bitcast <2 x i32> <i32 poison, i32 0> to i64
   %bitcast_scalar2vec_poison = bitcast i64 poison to <2 x i32>
 
   %bitcast_vec2vec_up = bitcast <2 x i32> <i32 1, i32 poison> to <4 x i16>
-  %bitcast_vec2vec_down = bitcast <4 x i16> <i16 0, i16 poison, i16 2, i16 3> to <2 x i32>
+  %bitcast_vec2vec_down1 = bitcast <4 x i16> <i16 0, i16 poison, i16 2, i16 3> to <2 x i32>
+  %bitcast_vec2vec_down2 = bitcast <4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x i64>
   %bitcast_vec2vec_weird = bitcast <8 x i3> <i3 0, i3 1, i3 2, i3 3, i3 4, i3 5, i3 6, i3 7> to <3 x i8>
 
   %bitcast_intvec2floatvec = bitcast <2 x i32> <i32 1, i32 2> to <4 x half>
@@ -40,12 +43,15 @@ entry:
 ; CHECK-NEXT:   %bitcast_half2bf16 = bitcast half 0xH3C00 to bfloat => bfloat 7.812500e-03
 ; CHECK-NEXT:   %ptr = alloca i32, align 4 => ptr 0x8 [ptr]
 ; CHECK-NEXT:   %bitcast_ptr2ptr = bitcast ptr %ptr to ptr => ptr 0x8 [dangling]
-; CHECK-NEXT:   %bitcast_vec2scalar = bitcast <2 x i32> <i32 0, i32 1> to i64 => i64 4294967296
-; CHECK-NEXT:   %bitcast_scalar2vec = bitcast i64 1 to <2 x i32> => { i32 1, i32 0 }
+; CHECK-NEXT:   %bitcast_vec2scalar1 = bitcast <2 x i32> <i32 0, i32 1> to i64 => i64 4294967296
+; CHECK-NEXT:   %bitcast_vec2scalar2 = bitcast <4 x i4> <i4 1, i4 2, i4 3, i4 5> to i16 => i16 21281
+; CHECK-NEXT:   %bitcast_scalar2vec1 = bitcast i64 1 to <2 x i32> => { i32 1, i32 0 }
+; CHECK-NEXT:   %bitcast_scalar2vec2 = bitcast i16 -32768 to <16 x i1> => { F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, T }
 ; CHECK-NEXT:   %bitcast_vec2scalar_partial_poison = bitcast <2 x i32> <i32 poison, i32 0> to i64 => poison
 ; CHECK-NEXT:   %bitcast_scalar2vec_poison = bitcast i64 poison to <2 x i32> => { poison, poison }
 ; CHECK-NEXT:   %bitcast_vec2vec_up = bitcast <2 x i32> <i32 1, i32 poison> to <4 x i16> => { i16 1, i16 0, poison, poison }
-; CHECK-NEXT:   %bitcast_vec2vec_down = bitcast <4 x i16> <i16 0, i16 poison, i16 2, i16 3> to <2 x i32> => { poison, i32 196610 }
+; CHECK-NEXT:   %bitcast_vec2vec_down1 = bitcast <4 x i16> <i16 0, i16 poison, i16 2, i16 3> to <2 x i32> => { poison, i32 196610 }
+; CHECK-NEXT:   %bitcast_vec2vec_down2 = bitcast <4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x i64> => { i64 4294967296, i64 12884901890 }
 ; CHECK-NEXT:   %bitcast_vec2vec_weird = bitcast <8 x i3> <i3 0, i3 1, i3 2, i3 3, i3 -4, i3 -3, i3 -2, i3 -1> to <3 x i8> => { i8 -120, i8 -58, i8 -6 }
 ; CHECK-NEXT:   %bitcast_intvec2floatvec = bitcast <2 x i32> <i32 1, i32 2> to <4 x half> => { half 5.960460e-08, half 0.000000e+00, half 1.192090e-07, half 0.000000e+00 }
 ; CHECK-NEXT:   %bitcast_floatvec2int = bitcast <4 x half> <half 0xH3C00, half 0xH4000, half 0xH4200, half 0xH4400> to i64 => i64 4899988963420290048
