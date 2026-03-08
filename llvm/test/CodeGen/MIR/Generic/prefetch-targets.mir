@@ -1,0 +1,13 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the prefetch-targets attribute
+# correctly.
+
+# CHECK-LABEL: name: prefetch
+# CHECK:       bb.0:
+# CHECK-NEXT:    prefetch-targets: 0, 1, 2
+
+name: prefetch
+body: |
+  bb.0:
+    prefetch-targets: 0, 1, 2
+...

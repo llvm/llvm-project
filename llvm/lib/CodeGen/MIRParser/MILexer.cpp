@@ -275,6 +275,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
+      .Case("prefetch-targets", MIToken::kw_prefetch_targets)
       .Case("floatpred", MIToken::kw_floatpred)
       .Case("intpred", MIToken::kw_intpred)
       .Case("shufflemask", MIToken::kw_shufflemask)
