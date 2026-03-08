@@ -17205,6 +17205,74 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
+/// Optimize the bitfloor(X) pattern for PowerPC.
+/// Transforms: select_cc X, 0, 0, (srl MinSignedValue, (ctlz X)), seteq
+/// Into: srl MinSignedValue, (ctlz X)
+///
+/// This is safe on PowerPC because the srw instruction returns 0 when the
+/// shift amount is == bitwidth, which matches the behavior we need for X=0.
+static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SELECT_CC)
+    return SDValue();
+
+  // SELECT_CC operands: LHS, RHS, TrueVal, FalseVal, CC
+  SDValue CmpLHS = N->getOperand(0);
+  SDValue CmpRHS = N->getOperand(1);
+  SDValue TrueVal = N->getOperand(2);
+  SDValue FalseVal = N->getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+
+  // Check if condition is (X == 0)
+  if (CC != ISD::SETEQ || !isNullConstant(CmpRHS))
+    return SDValue();
+
+  // Check if TrueVal is constant 0
+  if (!isNullConstant(TrueVal))
+    return SDValue();
+
+  // We also require hasOneUse()  to ensure that we can safely replace ISD::SRL
+  // with PPCISD::SRL without affecting other users later.
+  if (FalseVal.getOpcode() != ISD::SRL || !FalseVal.hasOneUse())
+    return SDValue();
+
+  SDValue ShiftVal = FalseVal.getOperand(0);
+  SDValue ShiftAmt = FalseVal.getOperand(1);
+
+  // Check if ShiftVal is MinSignedValue
+  auto *ShiftConst = dyn_cast<ConstantSDNode>(ShiftVal);
+  if (!ShiftConst || !ShiftConst->getAPIntValue().isMinSignedValue())
+    return SDValue();
+
+  SDValue CtlzArg;
+  // Check if ShiftAmt is (ctlz CmpLHS) or (truncate (ctlz ...))
+  if (ShiftAmt.getOpcode() != ISD::CTLZ) {
+    // Look through truncate if present (for i64 ctlz truncated to i32 shift
+    // amount)
+    if (ShiftAmt.getOpcode() != ISD::TRUNCATE)
+      return SDValue();
+
+    SDValue CtlzNode = ShiftAmt.getOperand(0);
+
+    if (CtlzNode.getOpcode() != ISD::CTLZ)
+      return SDValue();
+
+    CtlzArg = CtlzNode.getOperand(0);
+  } else
+    CtlzArg = ShiftAmt.getOperand(0);
+
+  // Check if ctlz operates on the same value as the comparison
+  if (CtlzArg != CmpLHS)
+    return SDValue();
+
+  // Replace ISD::SRL with PPCISD::SRL to ensure well-defined behavior.
+  // On PowerPC, PPCISD::SRL guarantees that shift by bitwidth returns 0,
+  // which is exactly what we need for the bitfloor(0) case.
+  SDLoc DL(N);
+  SDValue PPCSrl =
+      DAG.getNode(PPCISD::SRL, DL, FalseVal.getValueType(), ShiftVal, ShiftAmt);
+  return PPCSrl;
+}
+
 // Optimize zero-extension of setcc when the compared value is known to be 0
 // or 1.
 //
@@ -17441,6 +17509,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       return CSCC;
     [[fallthrough]];
   case ISD::SELECT_CC:
+    if (SDValue V = combineSELECT_CCBitFloor(N, DAG))
+      return V;
     return DAGCombineTruncBoolExt(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
