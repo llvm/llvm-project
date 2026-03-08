@@ -204,6 +204,7 @@ add_fp_unittest(
     libc.src.__support.math.nextafterf128
     libc.src.__support.math.pow
     libc.src.__support.math.powf
+    libc.src.__support.math.powf16
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.setpayload
