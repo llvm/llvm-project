@@ -78,14 +78,16 @@ cleanup:                                          ; preds = %wakeup, %entry
 ; CHECK-NEXT:    call void @usePointer(ptr [[CORO_STATE]])
 ; CHECK-NEXT:    call void @usePointer(ptr [[A4_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @usePointer2(ptr [[CORO_STATE]])
-; CHECK-NEXT:    call void @free(ptr [[CORO_STATE]])
+; CHECK-NEXT:    [[CORO_MEMFREE:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[CORO_STATE]])
+; CHECK-NEXT:    call void @free(ptr [[CORO_MEMFREE]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal fastcc void @foo.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[CORO_STATE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    call void @free(ptr [[CORO_STATE]])
+; CHECK-NEXT:    [[CORO_MEMFREE:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[CORO_STATE]])
+; CHECK-NEXT:    call void @free(ptr [[CORO_MEMFREE]])
 ; CHECK-NEXT:    ret void
 ;
 ;
