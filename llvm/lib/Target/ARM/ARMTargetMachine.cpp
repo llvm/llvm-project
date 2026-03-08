@@ -341,8 +341,7 @@ INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
                     "ARM Execution Domain Fix", false, false)
 
-void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
-
+void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "ARMPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }

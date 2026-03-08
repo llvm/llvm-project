@@ -26,6 +26,6 @@
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
-MACHINE_FUNCTION_PASS("arm-prera-ldst-opt", ARMPreAllocLoadStoreOptPass())
 MACHINE_FUNCTION_PASS("arm-ldst-opt", ARMLoadStoreOptPass())
+MACHINE_FUNCTION_PASS("arm-prera-ldst-opt", ARMPreAllocLoadStoreOptPass())
 #undef MACHINE_FUNCTION_PASS
