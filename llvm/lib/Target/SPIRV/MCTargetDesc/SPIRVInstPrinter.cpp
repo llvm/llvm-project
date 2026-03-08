@@ -51,6 +51,15 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
   if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
+    // Look up the actual bitwidth of this int type register from
+    // IntTypeBitwidths map
+    unsigned IntTypeRegId = getIDFromRegister(MI->getOperand(1).getReg().id());
+    auto IntTypeRegIt = IntTypeBitwidths.find(IntTypeRegId);
+    if (IntTypeRegIt == IntTypeBitwidths.end()) {
+      llvm_unreachable("Int type register used before defined in OpTypeInt");
+    }
+    int Bitwidth = IntTypeRegIt->second;
+
     // SPV_ALTERA_arbitrary_precision_integers allows for integer widths greater
     // than 64, which will be encoded via multiple operands.
     const unsigned TotalBits = NumVarOps * 32;
@@ -59,7 +68,8 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
       uint64_t Word = MI->getOperand(StartIndex + i).getImm();
       Val |= APInt(TotalBits, Word) << (i * 32);
     }
-    O << ' ' << Val;
+    APInt ActualVal = Val.trunc(Bitwidth);
+    O << ' ' << ActualVal;
     return;
   }
 
@@ -106,6 +116,12 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   O << Imm;
 }
 
+void SPIRVInstPrinter::recordIntType(const MCInst *MI) {
+  unsigned IntTypeRegId = getIDFromRegister(MI->getOperand(0).getReg().id());
+  unsigned Bitwidth = MI->getOperand(1).getImm();
+  IntTypeBitwidths[IntTypeRegId] = Bitwidth;
+}
+
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
   MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
@@ -118,6 +134,9 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                  raw_ostream &OS) {
   const unsigned OpCode = MI->getOpcode();
   printInstruction(MI, Address, OS);
+  if (OpCode == SPIRV::OpTypeInt) {
+    recordIntType(MI);
+  }
 
   if (OpCode == SPIRV::OpDecorate) {
     printOpDecorate(MI, OS);
