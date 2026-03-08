@@ -183,6 +183,13 @@ namespace llvm {
     Enabled = 2,
   };
 
+  enum class ControlFlowGuardMechanism {
+    // Choose the mechanism automatically based on the target.
+    Automatic = 0,
+    Check = 1,
+    Dispatch = 2,
+  };
+
   } // namespace llvm
 
 #endif

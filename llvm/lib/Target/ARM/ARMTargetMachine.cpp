@@ -384,7 +384,7 @@ void ARMPassConfig::addIRPasses() {
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+    addPass(createCFGuardPass());
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
