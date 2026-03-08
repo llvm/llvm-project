@@ -31,6 +31,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -3040,6 +3041,36 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
   return false;
 }
 
+static bool CheckFloatOrHalfOrDoubleRepresentation(Sema *S, SourceLocation Loc,
+                                                   int ArgOrdinal,
+                                                   clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isFloatingType())
+    return S->Diag(Loc, diag::err_builtin_requires_fp_scalar_or_vector_type)
+           << ArgOrdinal << PassedType;
+  return false;
+}
+
+static bool CheckAnyDoubleRepresentation(Sema *S, SourceLocation Loc,
+                                         int ArgOrdinal,
+                                         clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+      : PassedType->isMatrixType()
+          ? PassedType->castAs<clang::MatrixType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isDoubleType()) {
+    return S->Diag(Loc, diag::err_builtin_requires_double_type)
+           << ArgOrdinal << PassedType;
+  }
+
+  return false;
+}
+
 static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
                                   unsigned ArgIndex) {
   auto *Arg = TheCall->getArg(ArgIndex);
@@ -3787,6 +3818,35 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_elementwise_fma: {
+    if (SemaRef.checkArgCount(TheCall, 3)) {
+      return true;
+    }
+    const llvm::Triple &TT = getASTContext().getTargetInfo().getTriple();
+    // This check is here because emitting a general error for both backends
+    // here (like for exmaple "Accepts only floating points") won't end really
+    // good. after that we still need to check if the types satisfy
+    // backends constrains, so we better check everything now rather than
+    // confusing user with 2 different error messages
+
+    if (TT.isSPIRV()) {
+      // SPIR-V accept any float (besides matrices)
+      if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                     CheckFloatOrHalfOrDoubleRepresentation))
+        return true;
+    } else if (TT.isDXIL()) {
+      // while DirectX accepts only double
+      if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                     CheckAnyDoubleRepresentation))
+        return true;
+    }
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as input type
+    TheCall->setType(ArgTyA);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -3936,6 +3996,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_elementwise_exp10:
   case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_fmod:
+  case Builtin::BI__builtin_elementwise_fma:
   case Builtin::BI__builtin_elementwise_log:
   case Builtin::BI__builtin_elementwise_log2:
   case Builtin::BI__builtin_elementwise_log10:

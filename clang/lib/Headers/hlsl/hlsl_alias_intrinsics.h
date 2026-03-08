@@ -1892,6 +1892,22 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 float4 pow(float4, float4);
 
 //===----------------------------------------------------------------------===//
+// fused multiply-add builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_fma)
+double fma(double, double, double);
+
+template <int s>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_fma)
+vector<double, s> fma(vector<double, s>, vector<double, s>, vector<double, s>);
+
+template <int w, int h>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_fma)
+matrix<double, w, h> fma(matrix<double, w, h>, matrix<double, w, h>,
+                         matrix<double, w, h>);
+
+//===----------------------------------------------------------------------===//
 // reversebits builtins
 //===----------------------------------------------------------------------===//
 

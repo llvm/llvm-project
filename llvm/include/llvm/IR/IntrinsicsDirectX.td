@@ -259,4 +259,6 @@ def int_dx_store_output
                             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
                              llvm_i32_ty, llvm_any_ty],
                             [IntrConvergent]>;
+// We reject any non-double types in SemaHLSL.cpp so hopefully they won't fall through here. as we don't have `llvm_anydouble_ty` we have to rely on Sema to do its job and filter out all non-double types.
+def int_dx_fma : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 }
