@@ -38,6 +38,16 @@ struct basic_string_view {
 
 typedef basic_string_view<char> string_view;
 typedef basic_string_view<wchar_t> wstring_view;
+
+template <typename T> struct set {
+  struct iterator {
+    const T& operator*() const;
+    iterator& operator++();
+    bool operator!=(const iterator&) const;
+  };
+  iterator begin() const;
+  iterator end() const;
+};
 }  // namespace std
 
 namespace llvm {
@@ -143,9 +153,14 @@ int FindTemplateDependant(T value) {
 }
 template <typename T>
 int FindTemplateNotDependant(T pos) {
+  // Ignored since the type of `pos` is dependent, the call cannot be completely resolved without instantiating the template.
   return std::string().find("A", pos);
+}
+template <typename T>
+int FindTemplateNotDependant2() {
+  return std::string().find("A");
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: 'find' called with a string literal
-  // CHECK-FIXES: return std::string().find('A', pos);
+  // CHECK-FIXES: return std::string().find('A');
 }
 
 int FindStr() {
@@ -159,4 +174,13 @@ int Macros() {
   return STR_MACRO(std::string()) + POS_MACRO(1);
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'find' called with a string literal
   // CHECK-MESSAGES: [[@LINE-2]]:37: warning: 'find' called with a string literal
+}
+
+void IteratorInLibStdCXX() {
+  std::set<std::string> s;
+  for (const auto &str : s) {
+    str.find("a");
+    // CHECK-MESSAGES: [[@LINE-1]]:14: warning: 'find' called with a string literal
+    // CHECK-FIXES: str.find('a');
+  }
 }

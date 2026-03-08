@@ -42,16 +42,6 @@ makeCharacterLiteral(const StringLiteral *Literal) {
   return Result;
 }
 
-namespace {
-
-AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<Expr>,
-                     hasSubstitutedType) {
-  return hasType(qualType(anyOf(substTemplateTypeParmType(),
-                                hasDescendant(substTemplateTypeParmType()))));
-}
-
-} // namespace
-
 FasterStringFindCheck::FasterStringFindCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -77,9 +67,8 @@ void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
           callee(functionDecl(InterestingStringFunction).bind("func")),
           anyOf(argumentCountIs(1), argumentCountIs(2)),
           hasArgument(0, SingleChar),
-          on(expr(hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                      recordDecl(hasAnyName(StringLikeClasses)))))),
-                  unless(hasSubstitutedType())))),
+          on(expr(hasType(hasUnqualifiedDesugaredType(recordType(
+              hasDeclaration(recordDecl(hasAnyName(StringLikeClasses))))))))),
       this);
 }
 
