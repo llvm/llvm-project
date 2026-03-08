@@ -17,8 +17,8 @@
 ; CHECK: @D1_a = weak_odr dso_local unnamed_addr alias void (ptr), ptr @_ZN1AD1Ev
 ; CHECK: @_ZN1AD1Ev = weak_odr dso_local unnamed_addr alias void (ptr), ptr @_ZN1AD2Ev
 ; CHECK: @D1_a_a = weak_odr dso_local unnamed_addr alias void (ptr), ptr @D1_a
-; CHECK: define weak_odr dso_local void @_ZN1AD2Ev(ptr noundef nonnull %0) unnamed_addr comdat($_ZN1AD5Ev) {
-; CHECK: define available_externally dso_local void @_ZN1AD0Ev(ptr noundef nonnull %0) unnamed_addr {
+; CHECK: define weak_odr dso_local void @_ZN1AD2Ev(ptr noundef nonnull %0) unnamed_addr comdat($_ZN1AD5Ev)
+; CHECK: define available_externally dso_local void @_ZN1AD0Ev(ptr noundef nonnull %0) unnamed_addr
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

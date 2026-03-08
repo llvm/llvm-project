@@ -9,8 +9,8 @@
 
 ; CHECK: @anon = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr null, ptr @"??_Gbad_array_new_length@stdext@@UEAAPEAXI@Z"] }, comdat($"??_7bad_array_new_length@stdext@@6B@")
 ; CHECK: @"??_7bad_array_new_length@stdext@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @anon, i32 0, i32 0, i32 1){{$}}
-; CHECK: define available_externally dso_local noundef ptr @"??_Gbad_array_new_length@stdext@@UEAAPEAXI@Z"(ptr noundef nonnull %this) {
-; CHECK: define available_externally dso_local void @"?_Throw_bad_array_new_length@std@@YAXXZ"(ptr noundef nonnull %0) unnamed_addr {
+; CHECK: define available_externally dso_local noundef ptr @"??_Gbad_array_new_length@stdext@@UEAAPEAXI@Z"(ptr noundef nonnull %this)
+; CHECK: define available_externally dso_local void @"?_Throw_bad_array_new_length@std@@YAXXZ"(ptr noundef nonnull %0) unnamed_addr
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.26.0"

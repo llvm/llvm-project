@@ -7,6 +7,7 @@
 
 ; CHECK: <SOURCE_FILENAME
 ; "bar"
+; CHECK-NEXT: <GUIDLIST
 ; CHECK-NEXT: <GLOBALVAR {{.*}} op0=0 op1=3
 ; "globalvar"
 ; CHECK-NEXT: <GLOBALVAR {{.*}} op0=3 op1=9

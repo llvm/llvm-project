@@ -60,10 +60,10 @@ target datalayout = "e-p:64:64"
 ; CHECK: [[CVT3D:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\00\00\00\01", ptr @vf1i1, [0 x i8] zeroinitializer }, !type !0
 @vt3d = constant ptr @vf1i1, !type !0
 
-; CHECK: [[CVT4A:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\01\00\00\00", ptr @vf1i32, [0 x i8] zeroinitializer }, !type !1
+; CHECK: [[CVT4A:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\01\00\00\00", ptr @vf1i32, [0 x i8] zeroinitializer }, !type !5
 @vt4a = constant ptr @vf1i32, !type !1
 
-; CHECK: [[CVT4B:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\02\00\00\00", ptr @vf2i32, [0 x i8] zeroinitializer }, !type !1
+; CHECK: [[CVT4B:.*]] = private constant { [8 x i8], ptr, [0 x i8] } { [8 x i8] c"\00\00\00\00\02\00\00\00", ptr @vf2i32, [0 x i8] zeroinitializer }, !type !5
 @vt4b = constant ptr @vf2i32, !type !1
 
 ; X86: @__typeid_typeid3_0_12_24_byte = hidden alias i8, inttoptr (i32 -1 to ptr)
@@ -96,7 +96,7 @@ define i32 @vf2i32(ptr %this, i32, i32) readnone {
 }
 
 ; CHECK: !0 = !{i32 8, !"typeid3"}
-; CHECK: !1 = !{i32 8, !"typeid4"}
+; CHECK: !5 = !{i32 8, !"typeid4"}
 
 !0 = !{i32 0, !"typeid3"}
 !1 = !{i32 0, !"typeid4"}

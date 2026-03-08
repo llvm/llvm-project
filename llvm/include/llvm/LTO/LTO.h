@@ -572,6 +572,23 @@ private:
     /// LTO backend.
     unsigned Partition = Unknown;
 
+    // FIXME: make private, and also make GlobalResolution a class, it has been
+    // becoming more than just a data bag.
+    GlobalValue::GUID GUID = 0;
+
+    void setGUID(GlobalValue::GUID G) {
+      assert(G);
+      assert(!GUID || GUID == G);
+      GUID = G;
+    }
+
+    GlobalValue::GUID getGUID() const {
+      return GUID ? GUID
+                  : GlobalValue::getGUIDAssumingExternalLinkage(
+                        GlobalValue::getGlobalIdentifier(
+                            IRName, GlobalValue::LinkageTypes::ExternalLinkage,
+                            ""));
+    }
     /// Special partition numbers.
     enum : unsigned {
       /// A partition number has not yet been assigned to this global.

@@ -253,6 +253,7 @@ public:
 
 protected:
   void writePerModuleGlobalValueSummary();
+  void writeGUIDList();
 
 private:
   void writePerModuleFunctionSummaryRecord(
@@ -1591,6 +1592,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {
@@ -4586,12 +4589,21 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   NameVals.clear();
 }
 
+static GlobalValue::GUID getOrComputeGUID(const GlobalValue& V) {
+  auto MaybeGUID = V.getGUIDIfAssigned();
+  return MaybeGUID ? *MaybeGUID : GlobalValue::getGUIDAssumingExternalLinkage(V.getName());
+}
+
 // Collect the global value references in the given variable's initializer,
 // and emit them in a summary record.
 void ModuleBitcodeWriterBase::writeModuleLevelReferences(
     const GlobalVariable &V, SmallVector<uint64_t, 64> &NameVals,
     unsigned FSModRefsAbbrev, unsigned FSModVTableRefsAbbrev) {
-  auto VI = Index->getValueInfo(V.getGUID());
+  // Be a little lenient here, to accomodate older files without GUIDs
+  // already computed and assigned as metadata.
+  GlobalValue::GUID GUID = getOrComputeGUID(V);
+
+  auto VI = Index->getValueInfo(GUID);
   if (!VI || VI.getSummaryList().empty()) {
     // Only declarations should not have a summary (a declaration might however
     // have a summary if the def was in module level asm).
@@ -4804,7 +4816,11 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    // Be a little lenient here, to accomodate older files without GUIDs
+    // already computed and assigned as metadata.
+    GlobalValue::GUID GUID = getOrComputeGUID(F);
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
@@ -4836,7 +4852,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    ValueInfo VI = Index->getValueInfo(F.getGUID());
+    GlobalValue::GUID GUID = getOrComputeGUID(F);
+
+    ValueInfo VI = Index->getValueInfo(GUID);
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
@@ -4886,6 +4904,27 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                       ArrayRef<uint64_t>{Index->getBlockCount()});
 
   Stream.ExitBlock();
+}
+
+void ModuleBitcodeWriterBase::writeGUIDList() {
+  const ValueEnumerator::ValueList &Vals = VE.getValues();
+  const size_t Max = Vals.size();
+
+  std::vector<GlobalValue::GUID> GUIDs(Max, 0);
+  for (const GlobalValue &GV : M.global_values()) {
+    GlobalValue::GUID GUID;
+    if (auto MaybeGUID = GV.getGUIDIfAssigned(); MaybeGUID) {
+      GUID = *MaybeGUID;
+    } else {
+      GUID = 0;
+    }
+    if (GUID == 0) continue;
+
+    const auto ValueID = VE.getValueID(&GV);
+    GUIDs[ValueID] = GUID;
+  }
+
+  Stream.EmitRecord(bitc::MODULE_CODE_GUIDLIST, GUIDs);
 }
 
 /// Emit the combined summary section into the combined index file.
@@ -5678,6 +5717,8 @@ void ThinLinkBitcodeWriter::writeSimplifiedModuleInfo() {
     Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
     Vals.clear();
   }
+
+  writeGUIDList();
 
   // Emit the global variable information.
   for (const GlobalVariable &GV : M.globals()) {

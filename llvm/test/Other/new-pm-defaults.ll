@@ -299,10 +299,11 @@
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-LTO-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-LTO-NEXT: Running pass: NameAnonGlobalPass
+; CHECK-LTO-NEXT: Running pass: AssignGUIDPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 ;
 ; Make sure we get the IR back out without changes when we print the module.
-; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr {
+; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr
 ; CHECK-O-NEXT: entry:
 ; CHECK-O-NEXT:   br label %loop
 ; CHECK-O:      loop:
