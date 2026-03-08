@@ -28,6 +28,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
 
+#ifndef __cl_clang_function_scope_local_variables
+#error "Missing __cl_clang_function_scope_local_variables define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+
 #ifndef __cl_clang_non_portable_kernel_param_types
 #error "Missing __cl_clang_non_portable_kernel_param_types define"
 #endif

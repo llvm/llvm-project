@@ -7,10 +7,10 @@
 }}
 <div id="{{USR}}" class="delimiter-container">
         {{#Template}}
-        <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
+        <pre><code class="language-cpp code-clang-doc">template &lt;{{^VerticalDisplay}}{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}{{/VerticalDisplay}}</code>{{#VerticalDisplay}}<span class="param-container">{{#Parameters}}<span class="param"><code class="language-cpp code-clang-doc">{{Param}}{{^End}}, {{/End}}</code></span>{{/Parameters}}</span>{{/VerticalDisplay}}<code class="language-cpp code-clang-doc">&gt;</code></pre>
         {{/Template}}
         {{! Function Prototype }}
-        <pre><code class="language-cpp code-clang-doc">{{ReturnType.QualName}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
+        <pre><code class="language-cpp code-clang-doc">{{ReturnType.QualName}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{^VerticalDisplay}}{{#Params}}{{Type.QualName}} {{Name}}{{^ParamEnd}}, {{/ParamEnd}}{{/Params}}){{/VerticalDisplay}}</code>{{#VerticalDisplay}}<span class="param-container">{{#Params}}<span class="param"><code class="language-cpp code-clang-doc">{{Type.QualName}}</code> <code class="language-cpp code-clang-doc">{{Name}}{{^ParamEnd}}, {{/ParamEnd}}</code></span>{{/Params}}</span><code class="language-cpp code-clang-doc">)</code>{{/VerticalDisplay}}</pre>
         {{! Function Comments }}
         {{#Description}}
         <div class="doc-card">

@@ -265,6 +265,14 @@ CIRGenFunction::emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
       /*IsArrow=*/false, e->getArg(0));
 }
 
+RValue CIRGenFunction::emitCUDAKernelCallExpr(const CUDAKernelCallExpr *expr,
+                                              ReturnValueSlot returnValue) {
+  // Emit as a device kernel call if CUDA device code is to be generated.
+  if (!getLangOpts().HIP && getLangOpts().CUDAIsDevice)
+    cgm.errorNYI("CUDA Device side kernel call");
+  return cgm.getCUDARuntime().emitCUDAKernelCallExpr(*this, expr, returnValue);
+}
+
 RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
     const CXXMethodDecl *md, const CIRGenCallee &callee,
     ReturnValueSlot returnValue, mlir::Value thisPtr, mlir::Value implicitParam,
@@ -525,7 +533,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // Create a value for the variable number of elements
     numElements = cgf.emitScalarExpr(*e->getArraySize());
     auto numElementsType = mlir::cast<cir::IntType>(numElements.getType());
-    unsigned numElementsWidth = numElementsType.getWidth();
+    [[maybe_unused]] unsigned numElementsWidth = numElementsType.getWidth();
 
     // We might need check for overflow.
 

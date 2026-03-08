@@ -2477,6 +2477,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpif_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    libc.src.math.asinpif
+)
+
+add_fp_unittest(
   asinpif16_test
   NEED_MPFR
   SUITE
@@ -2520,6 +2531,17 @@ add_fp_unittest(
     acosf16_test.cpp
   DEPENDS
     libc.src.math.acosf16  
+)
+
+add_fp_unittest(
+  acospif_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    libc.src.math.acospif
 )
 
 add_fp_unittest(

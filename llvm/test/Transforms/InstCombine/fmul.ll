@@ -1257,7 +1257,7 @@ define float @fmul_select_strict(float %x, i1 %c) {
 define double @fmul_sqrt_select(double %x, i1 %c) {
 ; CHECK-LABEL: @fmul_sqrt_select(
 ; CHECK-NEXT:    [[SQR:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = select fast i1 [[C:%.*]], double [[X]], double [[SQR]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C:%.*]], double [[X]], double [[SQR]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
   %sqr = call double @llvm.sqrt.f64(double %x)

@@ -2814,15 +2814,8 @@ bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
   if (Worklist.empty())
     return false;
 
-  std::string ServiceFunName = SPIRV_BACKEND_SERVICE_FUN_NAME;
-  if (!getVacantFunctionName(M, ServiceFunName))
-    report_fatal_error(
-        "cannot allocate a name for the internal service function");
   LLVMContext &Ctx = M.getContext();
-  Function *SF =
-      Function::Create(FunctionType::get(Type::getVoidTy(Ctx), {}, false),
-                       GlobalValue::PrivateLinkage, ServiceFunName, M);
-  SF->addFnAttr(SPIRV_BACKEND_SERVICE_FUN_NAME, "");
+  Function *SF = getOrCreateBackendServiceFunction(M);
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", SF);
   IRBuilder<> IRB(BB);
 

@@ -57,7 +57,7 @@ struct FormatStyle {
   // If the BasedOn: was InheritParentConfig and this style needs the file from
   // the parent directories. It is not part of the actual style for formatting.
   // Thus the // instead of ///.
-  bool InheritsParentConfig;
+  std::string InheritConfig;
 
   /// The extra indent or outdent of access modifiers, e.g. ``public:``.
   /// \version 3.3
@@ -3471,7 +3471,7 @@ struct FormatStyle {
     }
   };
 
-  /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
+  /// Format integer literal separators (``'`` for C/C++ and ``_`` for C#, Java,
   /// and JavaScript).
   /// \version 16
   IntegerLiteralSeparatorStyle IntegerLiteralSeparator;

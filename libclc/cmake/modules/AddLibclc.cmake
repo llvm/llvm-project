@@ -296,7 +296,7 @@ function(add_libclc_builtin_set)
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
-      EXTRA_OPTS -nostdlib "${ARG_COMPILE_FLAGS}"
+      EXTRA_OPTS -nostdlib -nostdlibinc "${ARG_COMPILE_FLAGS}"
         "${file_specific_compile_options}"
         -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
     )
@@ -374,6 +374,10 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
+  if (NOT DEFINED ARG_PARENT_TARGET OR ARG_PARENT_TARGET STREQUAL "")
+    message(FATAL_ERROR "PARENT_TARGET parameter is required and must be non-empty.")
+  endif()
+
   if (NOT DEFINED ARG_OUTPUT_FILENAME OR ARG_OUTPUT_FILENAME STREQUAL "")
     message(FATAL_ERROR "OUTPUT_FILENAME parameter is required and must be non-empty.")
   endif()
@@ -439,6 +443,7 @@ function(add_libclc_builtin_set)
   install(
     FILES ${libclc_builtins_lib}
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
+    COMPONENT ${ARG_PARENT_TARGET}
   )
 
   # SPIR-V targets can exit early here
@@ -490,6 +495,7 @@ function(add_libclc_builtin_set)
     install(
       FILES ${libclc_alias_lib}
       DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}/${a}
+      COMPONENT ${ARG_PARENT_TARGET}
     )
   endforeach( a )
 endfunction(add_libclc_builtin_set)

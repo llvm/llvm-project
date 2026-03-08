@@ -107,8 +107,10 @@ func.func @remap_input_1_to_N_remaining_use(%arg0: f32) {
 // CHECK-LABEL: func @remap_materialize_1_to_1(%{{.*}}: i43)
 func.func @remap_materialize_1_to_1(%arg0: i42) {
   // CHECK: %[[V:.*]] = "test.cast"(%arg0) : (i43) -> i42
-  // CHECK: "test.return"(%[[V]])
-  "test.return"(%arg0) : (i42) -> ()
+  // CHECK-NEXT: "work"(%[[V]])
+  // expected-remark@+1 {{op 'work' is not legalizable}}
+  "work"(%arg0) : (i42) -> ()
+  "test.return"() : () -> ()
 }
 
 // -----
@@ -251,7 +253,7 @@ func.func @replace_block_arg_1_to_n() {
 // -----
 
 // CHECK-LABEL: @replace_op_result_1_to_n
-func.func @replace_op_result_1_to_n() {
+func.func @replace_op_result_1_to_n() -> i32 {
   // CHECK: %[[orig:.*]] = "test.legal_op"() : () -> i32
   // CHECK: %[[repl:.*]] = "test.legal_op"() : () -> i16
   %0 = "test.legal_op"() : () -> i32

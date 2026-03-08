@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -isystem %clang_tidy_headers -I %S/Inputs/
+// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -isystem %clang_tidy_headers -I %S/Inputs/
 // Example: ./check_clang_tidy.py -std=c++20 checkers/modernize/use-ranges.cpp modernize-use-ranges temp.txt -- -- -I ~/llvm-project/clang-tools-extra/test/clang-tidy/checkers/modernize/Inputs/
 
 // CHECK-FIXES: #include <algorithm>

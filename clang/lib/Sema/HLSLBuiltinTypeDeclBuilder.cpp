@@ -167,7 +167,7 @@ private:
   StorageClass SC;
   llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
-  TemplateParameterList *TemplateParams;
+  TemplateParameterList *TemplateParams = nullptr;
   llvm::SmallVector<NamedDecl *> TemplateParamDecls;
 
   // Argument placeholders, inspired by std::placeholder. These are the indices
@@ -202,7 +202,7 @@ public:
                            QualType ReturnTy, bool IsConst = false,
                            bool IsCtor = false, StorageClass SC = SC_None)
       : DeclBuilder(DB), Name(Name), ReturnTy(ReturnTy), Method(nullptr),
-        IsConst(IsConst), IsCtor(IsCtor), SC(SC), TemplateParams(nullptr) {}
+        IsConst(IsConst), IsCtor(IsCtor), SC(SC) {}
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef NameStr,
                            QualType ReturnTy, bool IsConst = false,

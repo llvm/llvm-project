@@ -65,6 +65,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
       genCUDAStreamSynchronize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCUDAStreamSynchronizeNull(mlir::Type,
                                            llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genCUDAStreamDestroy(mlir::Type,
+                                          llvm::ArrayRef<fir::ExtendedValue>);
   void genFenceProxyAsync(llvm::ArrayRef<fir::ExtendedValue>);
   template <const char *fctName, int extent>
   fir::ExtendedValue genLDXXFunc(mlir::Type,

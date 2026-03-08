@@ -66,3 +66,8 @@ when output takes place to a sequential unit after
 executing a `BACKSPACE` or `REWIND` statement.
 Truncation of a stream-access unit is common to several other
 compilers, but it is not mentioned in the standard.
+
+## `FORT_NO_EMPTY_ALLOCATION`
+
+Set `FORT_NO_EMPTY_ALLOCATION=1` to cause `ALLOCATE` statements
+fail when the allocated size is empty.

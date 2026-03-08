@@ -25,6 +25,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -578,25 +579,20 @@ DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
                                                  StringRef thing1,
                                                  StringRef thing2) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 %1 yet");
-  return Diags.Report(loc, DiagID) << thing1 << thing2;
+  return Diags.Report(loc, diag::err_ms_mangle_unsupported_with_detail)
+         << thing1 << thing2;
 }
 
 DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
                                                  StringRef thingy) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 yet");
-  return Diags.Report(loc, DiagID) << thingy;
+  return Diags.Report(loc, diag::err_ms_mangle_unsupported) << thingy;
 }
 
 DiagnosticBuilder MicrosoftCXXNameMangler::Error(StringRef thingy) {
   DiagnosticsEngine &Diags = Context.getDiags();
   // extra placeholders are ignored quietly when not used
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 yet");
-  return Diags.Report(DiagID) << thingy;
+  return Diags.Report(diag::err_ms_mangle_unsupported) << thingy;
 }
 
 void MicrosoftCXXNameMangler::mangle(GlobalDecl GD, StringRef Prefix) {

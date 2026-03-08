@@ -172,13 +172,13 @@ def test_reductions():
                     nvvm.ReductionKind.UMIN,
                     nvvm.ReductionKind.XOR,
                 ):
-                    nvvm.redux_sync(i32, vi32, kind, vi32)
+                    nvvm.redux_sync(vi32, kind, vi32)
 
                 for kind in (
                     nvvm.ReductionKind.FMIN,
                     nvvm.ReductionKind.FMAX,
                 ):
-                    nvvm.redux_sync(f32, vf32, kind, vi32, abs=abs, nan=nan)
+                    nvvm.redux_sync(vf32, kind, vi32, abs=abs, nan=nan)
 
 
 # CHECK-LABEL:   func.func @reductions(

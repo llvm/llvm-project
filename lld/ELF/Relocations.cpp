@@ -1138,8 +1138,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
 
   bool isRISCV = ctx.arg.emachine == EM_RISCV;
 
-  if (oneof<R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT,
-            RE_LOONGARCH_TLSDESC_PAGE_PC>(expr) &&
+  if (oneof<R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT>(expr) &&
       ctx.arg.shared) {
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
     // set NEEDS_TLSDESC on the label.
@@ -1151,22 +1150,12 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  // LoongArch supports IE to LE, DESC GD/LD to IE/LE optimizations in
-  // non-extreme code model.
-  bool execOptimizeInLoongArch =
-      ctx.arg.emachine == EM_LOONGARCH &&
-      (type == R_LARCH_TLS_IE_PC_HI20 || type == R_LARCH_TLS_IE_PC_LO12 ||
-       type == R_LARCH_TLS_DESC_PC_HI20 || type == R_LARCH_TLS_DESC_PC_LO12 ||
-       type == R_LARCH_TLS_DESC_LD || type == R_LARCH_TLS_DESC_CALL ||
-       type == R_LARCH_TLS_DESC_PCREL20_S2);
-
-  // LoongArch and RISC-V do not support GD/LD to IE/LE optimizations.
+  // RISC-V does not support GD/LD to IE/LE optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared &&
-      (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL);
 
   // If we are producing an executable and the symbol is non-preemptable, it
@@ -1204,23 +1193,8 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  // LoongArch does not support transition from TLSDESC to LE/IE in the extreme
-  // code model, in which NEEDS_TLSDESC should set, rather than NEEDS_TLSGD. So
-  // we check independently.
-  if (ctx.arg.emachine == EM_LOONGARCH &&
-      oneof<RE_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_PC,
-            R_TLSDESC_CALL>(expr) &&
-      !execOptimize) {
-    if (expr != R_TLSDESC_CALL) {
-      sym.setFlags(NEEDS_TLSDESC);
-      sec->addReloc({expr, type, offset, addend, &sym});
-    }
-    return 1;
-  }
-
   if (oneof<R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC, R_TLSDESC_GOTPLT,
-            R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC, RE_LOONGARCH_TLSGD_PAGE_PC,
-            RE_LOONGARCH_TLSDESC_PAGE_PC>(expr)) {
+            R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(expr)) {
     if (!execOptimize) {
       sym.setFlags(NEEDS_TLSGD);
       sec->addReloc({expr, type, offset, addend, &sym});
@@ -1244,8 +1218,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     return ctx.target->getTlsGdRelaxSkip(type);
   }
 
-  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF,
-            R_TLSIE_HINT>(expr)) {
+  if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
     // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
     // locally defined.
     if (execOptimize && isLocalInExecutable) {
@@ -1259,14 +1232,6 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
-    return 1;
-  }
-
-  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_GOT, in which
-  // NEEDS_TLSIE shouldn't set. So we check independently.
-  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
-      execOptimize && isLocalInExecutable) {
-    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
 
@@ -1285,10 +1250,8 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 
   // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20, ALIGN relocations and the branch-to-branch
-  // optimization.
-  if (is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) ||
-      ctx.arg.branchToBranch)
+  // R_RISCV_PCREL_HI20 and the branch-to-branch optimization.
+  if (ctx.arg.emachine == EM_RISCV || ctx.arg.branchToBranch)
     llvm::stable_sort(sec.relocs(),
                       [](const Relocation &lhs, const Relocation &rhs) {
                         return lhs.offset < rhs.offset;

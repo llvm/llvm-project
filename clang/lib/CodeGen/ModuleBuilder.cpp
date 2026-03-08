@@ -393,7 +393,7 @@ namespace clang {
 namespace CodeGen {
 std::optional<std::pair<StringRef, StringRef>>
 DemangleTrapReasonInDebugInfo(StringRef FuncName) {
-  static auto TrapRegex =
+  static const auto TrapRegex =
       llvm::Regex(llvm::formatv("^{0}\\$(.*)\\$(.*)$", ClangTrapPrefix).str());
   llvm::SmallVector<llvm::StringRef, 3> Matches;
   std::string *ErrorPtr = nullptr;

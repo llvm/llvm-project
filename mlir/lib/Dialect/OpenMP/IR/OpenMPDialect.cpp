@@ -423,18 +423,21 @@ static ParseResult parseLinearClause(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearVars,
     SmallVectorImpl<Type> &linearTypes,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars) {
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars,
+    SmallVectorImpl<Type> &linearStepTypes) {
   return parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand var;
-    Type type;
+    Type type, stepType;
     OpAsmParser::UnresolvedOperand stepVar;
-    if (parser.parseOperand(var) || parser.parseEqual() ||
-        parser.parseOperand(stepVar) || parser.parseColonType(type))
+    if (parser.parseOperand(var) || parser.parseColonType(type) ||
+        parser.parseEqual() || parser.parseOperand(stepVar) ||
+        parser.parseColonType(stepType))
       return failure();
 
     linearVars.push_back(var);
     linearTypes.push_back(type);
     linearStepVars.push_back(stepVar);
+    linearStepTypes.push_back(stepType);
     return success();
   });
 }
@@ -442,14 +445,14 @@ static ParseResult parseLinearClause(
 /// Print Linear Clause
 static void printLinearClause(OpAsmPrinter &p, Operation *op,
                               ValueRange linearVars, TypeRange linearTypes,
-                              ValueRange linearStepVars) {
+                              ValueRange linearStepVars,
+                              TypeRange stepVarTypes) {
   size_t linearVarsSize = linearVars.size();
   for (unsigned i = 0; i < linearVarsSize; ++i) {
     std::string separator = i == linearVarsSize - 1 ? "" : ", ";
-    p << linearVars[i];
-    if (linearStepVars.size() > i)
-      p << " = " << linearStepVars[i];
-    p << " : " << linearVars[i].getType() << separator;
+    p << linearVars[i] << " : " << linearTypes[i];
+    p << " = " << linearStepVars[i] << " : " << stepVarTypes[i];
+    p << separator;
   }
 }
 
@@ -4622,6 +4625,126 @@ static void printAffinityClause(OpAsmPrinter &p, Operation *op,
       p << ", ";
     p << affinityVars[i] << " : " << affinityTypes[i];
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Parser, printer, and verifier for Iterator modifier
+//===----------------------------------------------------------------------===//
+
+static ParseResult
+parseIteratorHeader(OpAsmParser &parser, Region &region,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lbs,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &ubs,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
+                    SmallVectorImpl<Type> &lbTypes,
+                    SmallVectorImpl<Type> &ubTypes,
+                    SmallVectorImpl<Type> &stepTypes) {
+
+  llvm::SMLoc ivLoc = parser.getCurrentLocation();
+  SmallVector<OpAsmParser::Argument> ivArgs;
+
+  // Parse induction variables: %i : i32, %j : i32
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        OpAsmParser::Argument &arg = ivArgs.emplace_back();
+        if (parser.parseArgument(arg))
+          return failure();
+
+        // Optional type, default to Index if not provided
+        if (succeeded(parser.parseOptionalColon())) {
+          if (parser.parseType(arg.type))
+            return failure();
+        } else {
+          arg.type = parser.getBuilder().getIndexType();
+        }
+        return success();
+      }))
+    return failure();
+
+  // ) = (
+  if (parser.parseRParen() || parser.parseEqual() || parser.parseLParen())
+    return failure();
+
+  // Parse Ranges: (%lb to %ub step %st, ...)
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        OpAsmParser::UnresolvedOperand lb, ub, st;
+        if (parser.parseOperand(lb) || parser.parseKeyword("to") ||
+            parser.parseOperand(ub) || parser.parseKeyword("step") ||
+            parser.parseOperand(st))
+          return failure();
+
+        lbs.push_back(lb);
+        ubs.push_back(ub);
+        steps.push_back(st);
+        return success();
+      }))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  if (ivArgs.size() != lbs.size())
+    return parser.emitError(ivLoc)
+           << "mismatch: " << ivArgs.size() << " variables but " << lbs.size()
+           << " ranges";
+
+  for (auto &arg : ivArgs) {
+    lbTypes.push_back(arg.type);
+    ubTypes.push_back(arg.type);
+    stepTypes.push_back(arg.type);
+  }
+
+  return parser.parseRegion(region, ivArgs);
+}
+
+static void printIteratorHeader(OpAsmPrinter &p, Operation *op, Region &region,
+                                ValueRange lbs, ValueRange ubs,
+                                ValueRange steps, TypeRange, TypeRange,
+                                TypeRange) {
+  Block &entry = region.front();
+
+  for (unsigned i = 0, e = entry.getNumArguments(); i < e; ++i) {
+    if (i != 0)
+      p << ", ";
+    p.printRegionArgument(entry.getArgument(i));
+  }
+  p << ") = (";
+
+  // (%lb0 to %ub0 step %step0, %lb1 to %ub1 step %step1, ...)
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    if (i)
+      p << ", ";
+    p << lbs[i] << " to " << ubs[i] << " step " << steps[i];
+  }
+  p << ") ";
+
+  p.printRegion(region, /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+}
+
+LogicalResult IteratorOp::verify() {
+  auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
+  if (!iteratedTy)
+    return emitOpError() << "result must be omp.iterated<entry_ty>";
+
+  Block &b = getRegion().front();
+  auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
+
+  if (!yield)
+    return emitOpError() << "region must be terminated by omp.yield";
+
+  if (yield.getNumOperands() != 1)
+    return emitOpError()
+           << "omp.yield in omp.iterator region must yield exactly one value";
+
+  mlir::Type yieldedTy = yield.getOperand(0).getType();
+  mlir::Type elemTy = iteratedTy.getElementType();
+
+  if (yieldedTy != elemTy)
+    return emitOpError() << "omp.iterated element type (" << elemTy
+                         << ") does not match omp.yield operand type ("
+                         << yieldedTy << ")";
+
+  return success();
 }
 
 #define GET_ATTRDEF_CLASSES

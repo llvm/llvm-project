@@ -6,6 +6,9 @@
 ; CHECK-DAG: OpExtension "SPV_INTEL_function_pointers"
 ; CHECK-DAG: OpName %[[#fArray:]] "array"
 ; CHECK-DAG: OpName %[[#fStruct:]] "struct"
+; CHECK-DAG: OpName %[[#f0:]] "f0"
+; CHECK-DAG: OpName %[[#f1:]] "f1"
+; CHECK-DAG: OpName %[[#f2:]] "f2"
 
 ; CHECK-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
 ; CHECK: %[[#GlobalInt8PtrTy:]] = OpTypePointer CrossWorkgroup %[[#Int8Ty]]
@@ -30,9 +33,9 @@
 ; CHECK: %[[#I64Const2:]] = OpConstant %[[#Int64Ty]] 2
 ; CHECK: %[[#I64Const1:]] = OpConstant %[[#Int64Ty]] 1
 ; CHECK: %[[#I64Const0:]] = OpConstantNull %[[#Int64Ty]]
-; CHECK: %[[#f0Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %28
-; CHECK: %[[#f1Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %32
-; CHECK: %[[#f2Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %36
+; CHECK: %[[#f0Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %[[#f0]]
+; CHECK: %[[#f1Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %[[#f1]]
+; CHECK: %[[#f2Pfn:]] = OpConstantFunctionPointerINTEL %[[#IntelFnPtrTy]] %[[#f2]]
 ; CHECK: %[[#f0Cast:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f0Pfn]]
 ; CHECK: %[[#f1Cast:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f1Pfn]]
 ; CHECK: %[[#f2Cast:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f2Pfn]]

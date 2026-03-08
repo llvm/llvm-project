@@ -68,12 +68,6 @@ static cl::opt<unsigned>
     ClMergeInitSizeLimit("stack-tagging-merge-init-size-limit", cl::init(272),
                          cl::Hidden);
 
-static cl::opt<size_t> ClMaxLifetimes(
-    "stack-tagging-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
-    cl::ReallyHidden,
-    cl::desc("How many lifetime ends to handle for a single alloca."),
-    cl::Optional);
-
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
 enum StackTaggingRecordStackHistoryMode {
@@ -598,8 +592,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
-        !SInfo.CallsReturnTwice &&
-        memtag::isStandardLifetime(Info, DT, LI, ClMaxLifetimes);
+        !SInfo.CallsReturnTwice && memtag::isSupportedLifetime(Info, DT, LI);
     if (StandardLifetime) {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);

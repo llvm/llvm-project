@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++14 %s boost-use-ranges %t  -- -- -I %S/Inputs/use-ranges/
-// RUN: %check_clang_tidy -std=c++17 %s boost-use-ranges %t -check-suffixes=,CPP17 -- -I %S/Inputs/use-ranges/
+// RUN: %check_clang_tidy -std=c++14 %s boost-use-ranges %t  -- -- -isystem %clang_tidy_headers -I %S/Inputs/use-ranges/
+// RUN: %check_clang_tidy -std=c++17 %s boost-use-ranges %t -check-suffixes=,CPP17 -- -isystem %clang_tidy_headers -I %S/Inputs/use-ranges/
 
 // CHECK-FIXES: #include <boost/range/algorithm/find.hpp>
 // CHECK-FIXES: #include <boost/range/algorithm/reverse.hpp>

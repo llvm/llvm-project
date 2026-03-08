@@ -19,7 +19,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
-#include "mlir/Dialect/X86Vector/Transforms.h"
+#include "mlir/Dialect/X86/Transforms.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -1360,9 +1360,10 @@ struct LowerUnPackOpResult {
   linalg::TransposeOp transposeOp;
   tensor::CollapseShapeOp collapseShapeOp;
   tensor::ExtractSliceOp extractSliceOp;
+  linalg::CopyOp copyOp;
 };
 
-/// Rewrite pack as empty + transpose + reshape + extract_slice.
+/// Rewrite pack as empty + transpose + reshape + extract_slice + copy.
 FailureOr<LowerUnPackOpResult>
 lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
             bool lowerUnpadLikeWithExtractSlice = true);
@@ -1928,7 +1929,6 @@ private:
 /// Canonicalization patterns relevant to apply after tiling patterns. These
 /// are applied automatically by the tiling pass but need to be applied
 /// manually when tiling is called programmatically.
-RewritePatternSet getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
 /// Linalg generalization patterns

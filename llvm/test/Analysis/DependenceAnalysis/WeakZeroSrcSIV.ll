@@ -14,7 +14,7 @@ target triple = "x86_64-apple-macosx10.6.0"
 define void @dstzero(ptr nocapture %A, i32 %N) {
 ; CHECK-LABEL: 'dstzero'
 ; CHECK-NEXT:  Src: store i32 0, ptr %A, align 4 --> Dst: store i32 0, ptr %A, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 0, ptr %A, align 4 --> Dst: store i32 1, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - output [p=>|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx1, align 4 --> Dst: store i32 1, ptr %arrayidx1, align 4
@@ -45,7 +45,7 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 define void @weakzerosrc0(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'weakzerosrc0'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - flow [p=>|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
@@ -88,13 +88,13 @@ for.end:                                          ; preds = %for.body
 define void @weakzerosrc1(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'weakzerosrc1'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - flow [p=>|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
-; CHECK-NEXT:    da analyze - consistent input [0]!
+; CHECK-NEXT:    da analyze - input [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: (4 * %n) ne) 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
@@ -140,7 +140,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 define void @weakzerosrc2(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'weakzerosrc2'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
@@ -182,7 +182,7 @@ for.end:                                          ; preds = %for.body
 define void @weakzerosrc3(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'weakzerosrc3'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - flow [<=p|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
@@ -224,7 +224,7 @@ for.end:                                          ; preds = %for.body
 define void @weakzerosrc4(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'weakzerosrc4'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
@@ -266,7 +266,7 @@ for.end:                                          ; preds = %for.body
 define void @weakzerosrc5(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'weakzerosrc5'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.01, align 4
@@ -308,7 +308,7 @@ for.end:                                          ; preds = %for.body
 define void @weakzerosrc6(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: 'weakzerosrc6'
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4

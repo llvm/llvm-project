@@ -15,9 +15,6 @@ void foo() {
   (ok_wrap)2147483647 + 100; // no warn
 }
 
-#define __wrap __attribute__((overflow_behavior(wrap)))
-#define __trap __attribute__((overflow_behavior(trap)))
-
 void ptr(int a) {
   int __ob_trap *p = &a; // expected-warning {{initializing '__ob_trap int *' with an expression of type 'int *' discards overflow behavior}}
 }

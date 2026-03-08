@@ -441,8 +441,8 @@ protected:
       if (mangled.GuessLanguage() == lldb::eLanguageTypeC_plus_plus) {
         ConstString demangled(mangled.GetDisplayDemangledName());
         demangled_any = true;
-        result.AppendMessageWithFormat("%s ---> %s\n", entry.c_str(),
-                                       demangled.GetCString());
+        result.AppendMessageWithFormatv("{0} ---> {1}", entry.c_str(),
+                                        demangled.GetCString());
       } else {
         error_any = true;
         result.AppendErrorWithFormat("%s is not a valid C++ mangled name\n",

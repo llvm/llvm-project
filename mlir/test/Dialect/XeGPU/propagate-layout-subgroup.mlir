@@ -254,3 +254,18 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+gpu.module @xevm_module{
+  // CHECK-LABEL: load_store_matrix
+  gpu.func @load_store_matrix(%arg0: !xegpu.mem_desc<64x128xf32>, %sg_id_lt_2: i1) {
+    %c0 = arith.constant 0 : index
+    scf.if %sg_id_lt_2 {
+      // CHECK: xegpu.load_matrix %{{.*}} <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 16]>}>
+      %1 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
+      // CHECK: xegpu.store_matrix %{{.*}} <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 16]>}>
+      xegpu.store_matrix %1, %arg0[%c0, %c0] <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 16]>}> : vector<32x32xf32>, !xegpu.mem_desc<64x128xf32>, index, index
+    }
+    gpu.return
+  }
+}
