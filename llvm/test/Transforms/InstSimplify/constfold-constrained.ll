@@ -535,6 +535,43 @@ entry:
 }
 
 
+; The sign of 0.0 - 0.0 depends on the rounding mode (IEEE 754, section 6.3).
+; With round.dynamic, this must not be folded.
+define double @fsub_zero_zero_dynamic() #0 {
+; CHECK-LABEL: @fsub_zero_zero_dynamic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double 0.000000e+00, double 0.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+entry:
+  %result = call double @llvm.experimental.constrained.fsub.f64(double 0.0, double 0.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; With a known rounding mode, 0.0 - 0.0 can be folded.
+define double @fsub_zero_zero_tonearest() #0 {
+; CHECK-LABEL: @fsub_zero_zero_tonearest(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double 0.000000e+00, double 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret double 0.000000e+00
+;
+entry:
+  %result = call double @llvm.experimental.constrained.fsub.f64(double 0.0, double 0.0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; 1.0 + 1.0 = 2.0 exactly, no sign-of-zero issue, safe to fold even with round.dynamic.
+define double @fadd_one_one_dynamic() #0 {
+; CHECK-LABEL: @fadd_one_one_dynamic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double 1.000000e+00, double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret double 2.000000e+00
+;
+entry:
+  %result = call double @llvm.experimental.constrained.fadd.f64(double 1.0, double 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
 attributes #0 = { strictfp }
 
 declare double @llvm.experimental.constrained.nearbyint.f64(double, metadata, metadata)
