@@ -208,6 +208,8 @@ private:
   SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerLROUND(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue PromoteBinOpIfF32FTZ(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
