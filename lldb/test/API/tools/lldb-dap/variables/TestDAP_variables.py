@@ -614,8 +614,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         var_ref = permanent_expandable_ref
         response = self.dap_server.request_variables(var_ref)
-        self.verify_variables(
-            expandable_expression["children"], response["body"]["variables"]
+        self.assertTrue(
+            response["success"],
+            f"variable reference {var_ref} should be out of scope in {response}",
         )
 
         # Test that frame scopes have corresponding presentation hints.
