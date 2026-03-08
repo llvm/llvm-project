@@ -16,6 +16,7 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
 // NOLINTBEGIN(readability-duplicate-include)
 
 #define _LIBCPP_FUNCTION_REF_CV
@@ -43,5 +44,6 @@
 #undef _LIBCPP_FUNCTION_REF_NOEXCEPT
 
 // NOLINTEND(readability-duplicate-include)
+#endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
 
 #endif // _LIBCPP___FUNCTIONAL_FUNCTION_REF_H

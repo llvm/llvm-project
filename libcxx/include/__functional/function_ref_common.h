@@ -14,7 +14,7 @@
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/remove_pointer.h>
-#include <__utility/nontype.h>
+#include <__utility/constant_arg.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
 
 template <class...>
 class function_ref;
@@ -38,22 +38,22 @@ struct __function_ref_bind {};
 
 template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
 struct __function_ref_bind<_Rp (*)(_Gp, _ArgTypes...), _Tp> {
-  using type = _Rp(_ArgTypes...);
+  using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...);
 };
 
 template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
 struct __function_ref_bind<_Rp (*)(_Gp, _ArgTypes...) noexcept, _Tp> {
-  using type = _Rp(_ArgTypes...) noexcept;
+  using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...) noexcept;
 };
 
 template <class _Tp, class _Mp, class _Gp>
   requires is_object_v<_Mp>
 struct __function_ref_bind<_Mp _Gp::*, _Tp> {
-  using type = invoke_result_t<_Mp _Gp::*, _Tp&>();
+  using type _LIBCPP_NODEBUG = invoke_result_t<_Mp _Gp::*, _Tp&>();
 };
 
 template <class _Fp, class _Tp>
-using __function_ref_bind_t = __function_ref_bind<_Fp, _Tp>::type;
+using __function_ref_bind_t _LIBCPP_NODEBUG = __function_ref_bind<_Fp, _Tp>::type;
 
 template <class _Fp>
   requires is_function_v<_Fp>
@@ -61,12 +61,12 @@ function_ref(_Fp*) -> function_ref<_Fp>;
 
 template <auto _Fn>
   requires is_function_v<remove_pointer_t<decltype(_Fn)>>
-function_ref(nontype_t<_Fn>) -> function_ref<remove_pointer_t<decltype(_Fn)>>;
+function_ref(constant_arg_t<_Fn>) -> function_ref<remove_pointer_t<decltype(_Fn)>>;
 
 template <auto _Fn, class _Tp>
-function_ref(nontype_t<_Fn>, _Tp&&) -> function_ref<__function_ref_bind_t<decltype(_Fn), _Tp&>>;
+function_ref(constant_arg_t<_Fn>, _Tp&&) -> function_ref<__function_ref_bind_t<decltype(_Fn), _Tp&>>;
 
-#endif // _LIBCPP_STD_VER >= 26
+#endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -7008,7 +7008,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
 #    ifndef __cpp_lib_function_ref
 #      error "__cpp_lib_function_ref should be defined in c++26"
 #    endif
@@ -7017,7 +7017,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_function_ref
-#      error "__cpp_lib_function_ref should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_function_ref should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF' is not met!"
 #    endif
 #  endif
 

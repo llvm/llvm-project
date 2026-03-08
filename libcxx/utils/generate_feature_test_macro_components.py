@@ -693,7 +693,8 @@ feature_test_macros = [
                 "c++26": 202306  # P0792R14 function_ref: a type-erased callable reference
             },
             "headers": ["functional"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF",
+            "libcxx_guard": "_LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF"
         },
         {
             "name": "__cpp_lib_gcd_lcm",

@@ -39,41 +39,41 @@ void test() {
   }
 
   // template<auto f>
-  //  function_ref(nontype_t<f>) -> function_ref<...>;
+  //  function_ref(constant_arg_t<f>) -> function_ref<...>;
   {
-    std::function_ref fn_ref = std::nontype_t<fn>();
+    std::function_ref fn_ref = std::constant_arg_t<fn>();
     static_assert(std::is_same_v<decltype(fn_ref), std::function_ref<int(int, float)>>);
   }
   {
-    std::function_ref fn_ref = std::nontype_t<fn_noexcept>();
+    std::function_ref fn_ref = std::constant_arg_t<fn_noexcept>();
     static_assert(std::is_same_v<decltype(fn_ref), std::function_ref<int(int, float) noexcept>>);
   }
 
   // template<auto f, class T>
-  //  function_ref(nontype_t<f>, T&&) -> function_ref<...>;
+  //  function_ref(constant_arg_t<f>, T&&) -> function_ref<...>;
   {
     int arg                  = 0;
-    std::function_ref fn_ref = {std::nontype_t<fn>(), arg};
+    std::function_ref fn_ref = {std::constant_arg_t<fn>(), arg};
     static_assert(std::is_same_v<decltype(fn_ref), std::function_ref<int(float)>>);
   }
   {
     S s;
-    std::function_ref fn_ref = {std::nontype_t<&S::data_mem>(), s};
+    std::function_ref fn_ref = {std::constant_arg_t<&S::data_mem>(), s};
     static_assert(std::is_same_v<decltype(fn_ref), std::function_ref<int&()>>);
   }
   {
     const S s;
-    std::function_ref fn_ref = {std::nontype_t<&S::data_mem>(), s};
+    std::function_ref fn_ref = {std::constant_arg_t<&S::data_mem>(), s};
     static_assert(std::is_same_v<decltype(fn_ref), std::function_ref<int const&()>>);
   }
   {
     S s;
-    std::function_ref fn_ref = {std::nontype_t<&S::fn_mem>(), s};
+    std::function_ref fn_ref = {std::constant_arg_t<&S::fn_mem>(), s};
     static_assert(std::is_same_v<decltype(fn_ref), std::function_ref<int(int, float)>>);
   }
   {
     S s;
-    std::function_ref fn_ref = {std::nontype_t<&S::fn_mem_noexcept>(), s};
+    std::function_ref fn_ref = {std::constant_arg_t<&S::fn_mem_noexcept>(), s};
     static_assert(std::is_same_v<decltype(fn_ref), std::function_ref<int(int, float) noexcept>>);
   }
 }

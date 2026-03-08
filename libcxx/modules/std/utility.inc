@@ -90,8 +90,8 @@ export namespace std {
   using std::in_place_index_t;
 
 #if _LIBCPP_STD_VER >= 26
-  using std::nontype;
-  using std::nontype_t;
+  using std::constant_arg;
+  using std::constant_arg_t;
 #endif // _LIBCPP_STD_VER >= 23
 
   // [depr.relops]

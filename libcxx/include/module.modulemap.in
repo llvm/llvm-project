@@ -2174,6 +2174,7 @@ module std [system] {
       export std_core.type_traits.decay // the macro expansion uses that trait
     }
     module cmp                             { header "__utility/cmp.h" }
+    module constant_arg                    { header "__utility/constant_arg.h" }
     module convert_to_integral             { header "__utility/convert_to_integral.h" }
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
     module element_count                   { header "__utility/element_count.h" }
@@ -2189,7 +2190,6 @@ module std [system] {
     module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
     module move                            { header "__utility/move.h" }
     module no_destroy                      { header "__utility/no_destroy.h" }
-    module nontype                         { header "__utility/nontype.h" }
     module pair                            {
       header "__utility/pair.h"
       export std.utility.piecewise_construct

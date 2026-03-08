@@ -55,70 +55,70 @@ struct S {
   int fn_mem() const { return 42; }
 };
 
-void test_nontype_t() {
-  // template<auto f> constexpr function_ref(nontype_t<f>) noexcept;
+void test_constant_arg_t() {
+  // template<auto f> constexpr function_ref(constant_arg_t<f>) noexcept;
   {
-    // initialized from a function through `nontype_t`
-    std::function_ref<int() const> fn_ref = std::nontype_t<fn>();
+    // initialized from a function through `constant_arg_t`
+    std::function_ref<int() const> fn_ref = std::constant_arg_t<fn>();
     assert(fn_ref() == 42);
   }
   {
-    // initialized from a function pointer through `nontype_t`
-    std::function_ref<int() const> fn_ref = std::nontype_t<&fn>();
+    // initialized from a function pointer through `constant_arg_t`
+    std::function_ref<int() const> fn_ref = std::constant_arg_t<&fn>();
     assert(fn_ref() == 42);
   }
   {
-    // initialized from a function object through `nontype_t`
-    std::function_ref<int() const> fn_ref = std::nontype_t<fn_obj>();
+    // initialized from a function object through `constant_arg_t`
+    std::function_ref<int() const> fn_ref = std::constant_arg_t<fn_obj>();
     assert(fn_ref() == 42);
   }
   {
     S s;
-    // initialized from a pointer to data member through `nontype_t`
-    std::function_ref<int(S) const> fn_ref = std::nontype_t<&S::data_mem>();
+    // initialized from a pointer to data member through `constant_arg_t`
+    std::function_ref<int(S) const> fn_ref = std::constant_arg_t<&S::data_mem>();
     assert(fn_ref(s) == 42);
   }
   {
     S s;
-    // initialized from a pointer to function member through `nontype_t`
-    std::function_ref<int(S) const> fn_ref = std::nontype_t<&S::fn_mem>();
+    // initialized from a pointer to function member through `constant_arg_t`
+    std::function_ref<int(S) const> fn_ref = std::constant_arg_t<&S::fn_mem>();
     assert(fn_ref(s) == 42);
   }
 
   // template<auto f, class U>
-  //   constexpr function_ref(nontype_t<f>, U&& obj) noexcept;
+  //   constexpr function_ref(constant_arg_t<f>, U&& obj) noexcept;
   {
     S s;
-    // initialized from a pointer to data member through `nontype_t` and bound to an object through a reference
-    std::function_ref<int() const> fn_ref = {std::nontype_t<&S::data_mem>(), s};
+    // initialized from a pointer to data member through `constant_arg_t` and bound to an object through a reference
+    std::function_ref<int() const> fn_ref = {std::constant_arg_t<&S::data_mem>(), s};
     assert(fn_ref() == 42);
   }
   {
     S s;
-    // initialized from a pointer to function member through `nontype_t` and bound to an object through a reference
-    std::function_ref<int() const> fn_ref = {std::nontype_t<&S::fn_mem>(), s};
+    // initialized from a pointer to function member through `constant_arg_t` and bound to an object through a reference
+    std::function_ref<int() const> fn_ref = {std::constant_arg_t<&S::fn_mem>(), s};
     assert(fn_ref() == 42);
   }
 
   // template<auto f, class T>
-  //   constexpr function_ref(nontype_t<f>, cv T* obj) noexcept;
+  //   constexpr function_ref(constant_arg_t<f>, cv T* obj) noexcept;
   {
     S s;
-    // initialized from a pointer to data member through `nontype_t` and bound to an object through a pointer
-    std::function_ref<int() const> fn_ref = {std::nontype_t<&S::data_mem>(), &s};
+    // initialized from a pointer to data member through `constant_arg_t` and bound to an object through a pointer
+    std::function_ref<int() const> fn_ref = {std::constant_arg_t<&S::data_mem>(), &s};
     assert(fn_ref() == 42);
   }
   {
     S s;
-    // initialized from a pointer to function member through `nontype_t` and bound to an object through a pointer
+    // initialized from a pointer to function member through `constant_arg_t` and bound to an object through a pointer
     static_assert(std::is_same_v<decltype(&s), S*>);
-    std::function_ref<int() const> fn_ref = {std::nontype_t<&S::fn_mem>(), &s};
+    std::function_ref<int() const> fn_ref = {std::constant_arg_t<&S::fn_mem>(), &s};
     assert(fn_ref() == 42);
   }
 }
 
 int main(int, char**) {
   test();
-  test_nontype_t();
+  test_constant_arg_t();
   return 0;
 }

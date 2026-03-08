@@ -581,7 +581,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 #   define __cpp_lib_fstream_native_handle              202306L
 # endif
-// # define __cpp_lib_function_ref                         202306L
+# if _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
+#   define __cpp_lib_function_ref                       202306L
+# endif
 // # define __cpp_lib_generate_random                      202403L
 // # define __cpp_lib_hazard_pointer                       202306L
 // # define __cpp_lib_inplace_vector                       202406L
