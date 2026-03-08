@@ -2529,14 +2529,15 @@ LLVM_C_ABI long long LLVMConstIntGetSExtValue(LLVMValueRef ConstantVal);
  *
  * @see llvm::ConstantByte::getZExtValue()
  */
-unsigned long long LLVMConstByteGetZExtValue(LLVMValueRef ConstantVal);
+LLVM_C_ABI unsigned long long
+LLVMConstByteGetZExtValue(LLVMValueRef ConstantVal);
 
 /**
  * Obtain the sign extended value for a byte constant value.
  *
  * @see llvm::ConstantByte::getSExtValue()
  */
-long long LLVMConstByteGetSExtValue(LLVMValueRef ConstantVal);
+LLVM_C_ABI long long LLVMConstByteGetSExtValue(LLVMValueRef ConstantVal);
 
 /**
  * Obtain the double value for an floating point constant value.

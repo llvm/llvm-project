@@ -839,7 +839,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 /// An array constant whose element type is a simple 1/2/4/8-byte integer, bytes
-//  or float/double, and whose elements are just simple data values
+///  or float/double, and whose elements are just simple data values
 /// (i.e. ConstantInt/ConstantFP). This Constant node has no operands because it
 /// stores all of the elements of the constant as densely packed data, instead
 /// of as Value*'s.

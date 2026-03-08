@@ -680,10 +680,6 @@ LLVMTypeRef LLVMByteTypeInContext(LLVMContextRef C, unsigned NumBits) {
   return wrap(ByteType::get(*unwrap(C), NumBits));
 }
 
-LLVMTypeRef LLVMByteType(unsigned NumBits) {
-  return LLVMByteTypeInContext(getGlobalContextForCAPI(), NumBits);
-}
-
 unsigned LLVMGetByteTypeWidth(LLVMTypeRef ByteTy) {
   return unwrap<ByteType>(ByteTy)->getBitWidth();
 }

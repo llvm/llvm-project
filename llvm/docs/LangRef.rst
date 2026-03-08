@@ -4491,8 +4491,7 @@ expected to use a byte type when:
 
 #. Working with possibly uninitialized data.
 
-Otherwise, when known, the specific specific type should be used. Each bit can
-be:
+Otherwise, when known, the specific type should be used. Each bit can be:
 
 * An integer bit (0 or 1)
 * Part of a pointer value
@@ -13110,32 +13109,32 @@ element zero ends up in the most significant bits for big-endian.
 
 If ``value`` is of the :ref:`byte type <t_byte>`:
 
-* If ``value`` contains at least one ``poison`` bit, the cast result is
+* If ``ty2`` is a scalar type:
 
-    * ``poison``, if ``ty2`` is a scalar type.
+    * If ``ty2`` is a byte type, the original bits are unchanged.
 
-    * a vector where only the lanes containing at least one ``poison`` bit are
-      ``poison``, if ``ty2`` is a vector type. The values of the remaining
-      non-``poison`` lanes are given by bitcasting the bits of ``value``
-      corresponding to each lane (according to the target's endianness) to the
-      lane element type.
+    * If ``ty2`` is a pointer type:
 
-* If ``value`` is any mix of (non-``poison``) pointer and non-pointer bits:
+        * If at least one bit of ``value`` is ``poison``, the result is
+          ``poison``.
 
-    * If ``ty2`` is a non-pointer type, the provenance of the pointer bits is
-      stripped without being exposed, similarly to the
-      :ref:`ptrtoaddr <i_ptrtoaddr>` instruction.
+        * If all bits of ``value`` are from the same pointer and are correctly
+          ordered (there were no pointer bit swaps), the result is that pointer.
 
-    * If ``ty2`` is a pointer type, then if all bits of ``value`` are from the
-      same pointer and are correctly ordered (there were no pointer bit swaps),
-      the cast result is that pointer. If all the bits are from the same pointer
-      and these are not correctly ordered, or if ``value`` is a mix of bits from
-      different pointers or a mix of pointer and non-pointer bits, the result is
-      a pointer without provenance. This pointer cannot be dereferenced, but can
-      be used in comparisons or :ref:`getelementptr <i_getelementptr>`
-      instructions.
+        * Otherwise, the result is a pointer with the address given by the
+          integer value of the input, and without provenance.
 
-* Otherwise, the cast is a *no-op*.
+    * If ``ty2`` is an integer or floating-point type:
+
+        * If at least one bit of ``value`` is ``poison``, the result is
+          ``poison``.
+
+        * Otherwise, the result is the value encoded by the input bits with
+          their provenance stripped without being exposed.
+
+* If ``ty2`` is a vector type, the input bits get sliced into chunks
+  corresponding to lanes of the output. Each lane is then converted using the
+  rules for scalar types above.
 
 Example:
 """"""""
@@ -13618,7 +13617,7 @@ Example:
       %d = extractelement <2 x i32> %v.fr, i32 0 ; not undef
       %add.f = add i32 %d, %d                    ; even number
 
-      %l = load b32, ptr %p                      ; may be unitialized
+      %l = load b32, ptr %p                      ; may be uninitialized
       %f = freeze b32 %l                         ; freezes on a per-bit basis
 
       ; branching on frozen value
