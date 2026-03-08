@@ -11,21 +11,21 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibciswcntrl, DefaultLocale) {
-  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\0'),  0);
-  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\t'),  0);
-  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\n'),  0);
-  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\v'),  0);
-  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\f'),  0);
-  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\r'),  0);
+  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\0'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\t'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\n'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\v'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\f'), 0);
+  EXPECT_NE(LIBC_NAMESPACE::iswcntrl(L'\r'), 0);
 
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L' '),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'!'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'0'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'9'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'A'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'Z'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'a'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'z'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'?'),   0);
-  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'~'),   0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L' '), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'!'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'0'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'9'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'A'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'Z'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'a'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'z'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'?'), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::iswcntrl(L'~'), 0);
 }
