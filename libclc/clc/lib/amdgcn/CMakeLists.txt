@@ -5,6 +5,7 @@ libclc_configure_source_list(CLC_AMDGCN_SOURCES
   mem_fence/clc_mem_fence.cl
   subgroup/subgroup.cl
   subgroup/sub_group_broadcast.cl
+  subgroup/sub_group_reduce.cl
   synchronization/clc_sub_group_barrier.cl
   synchronization/clc_work_group_barrier.cl
   workitem/clc_get_enqueued_local_size.cl
