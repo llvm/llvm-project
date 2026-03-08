@@ -8180,6 +8180,18 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "  call(a,\n"
                "       b,\n"
                "       c);\n"
+               "  call(a, inner(a, b));\n"
+               "  call(a,\n"
+               "       inner(a, b),\n"
+               "       b);\n"
+               "  call(a, inner(a,\n"
+               "                b,\n"
+               "                c));\n"
+               "  call(a,\n"
+               "       inner(a,\n"
+               "             b,\n"
+               "             c),\n"
+               "       b);\n"
                "}",
                Style);
   verifyFormat("void foo() {\n"
