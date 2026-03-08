@@ -432,5 +432,41 @@ template <typename T, template <typename...> concept C1>
 concept TestBinary = T::a || C1<T>;
 static_assert(TestBinary<int, A>);
 
+}
+
+namespace concept_template_parameter_as_second_parameter {
+
+template <typename>
+concept Any = true;
+
+template <typename T, template <typename...> concept C>
+concept Wrap = C<T>;
+
+template <typename T, Wrap<Any> U>
+void f(T&&, U&&) {}
+
+void test() {
+    f(0, 1);
+}
+
+}
+
+namespace multi_level_concept_template_parameter {
+
+template <typename>
+concept Any = true;
+
+template <typename T, template <typename...> concept C0, template <typename...> concept C1>
+concept Both = C0<T> && C1<T>;
+
+template <typename T, template <typename...> concept C>
+concept Wrap = Both<T, Any, C>;
+
+template <typename T, Wrap<Any> U>
+void f(T&&, U&&) {}
+
+void test() {
+    f(0, 1);
+}
 
 }
