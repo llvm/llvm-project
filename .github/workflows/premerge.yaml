@@ -74,7 +74,7 @@ jobs:
         id: vars
         run: |
           echo "windows-projects=clang;clang-tools-extra;lld;llvm;mlir;polly" >> $GITHUB_OUTPUT
-          echo "windows-check-targets=" >> $GITHUB_OUTPUT
+          echo "windows-check-targets=all llvm-test-depends clang-test-depends lld-test-depends" >> $GITHUB_OUTPUT
           echo "windows-runtimes=" >> $GITHUB_OUTPUT
           echo "windows-runtimes-check-targets=" >> $GITHUB_OUTPUT
       - name: Build and Test
