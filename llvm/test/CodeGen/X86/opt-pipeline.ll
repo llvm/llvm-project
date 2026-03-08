@@ -17,8 +17,8 @@
 ; CHECK-NEXT: Target Pass Configuration
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
-; CHECK-NEXT: Library Function Lowering Analysis
 ; CHECK-NEXT: Assumption Cache Tracker
+; CHECK-NEXT: Library Function Lowering Analysis
 ; CHECK-NEXT: Type-Based Alias Analysis
 ; CHECK-NEXT: Scoped NoAlias Alias Analysis
 ; CHECK-NEXT: Profile summary info
@@ -27,6 +27,11 @@
 ; CHECK-NEXT: Default Regalloc Eviction Advisor
 ; CHECK-NEXT: Default Regalloc Priority Advisor
 ; CHECK-NEXT:   ModulePass Manager
+; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
+; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       ObjC ARC contraction
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand IR instructions
@@ -73,9 +78,6 @@
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
-; CHECK-NEXT:       Function Alias Analysis Results
-; CHECK-NEXT:       ObjC ARC contraction
 ; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
@@ -230,9 +232,12 @@
 ; CHECK-NEXT:       X86 Assembly Printer
 ; CHECK-NEXT:       Free MachineFunction
 
-; We should only have one function pass manager.
-; In the past, module passes have accidentally been added into the middle of
-; the codegen pipeline, implicitly creating new function pass managers.
+; We should only have two function pass managers: one for ObjCARCContract
+; (which must run before the PreISelIntrinsicLowering module pass), and one
+; for everything else. In the past, module passes have accidentally been added
+; into the middle of the codegen pipeline, implicitly creating new function
+; pass managers.
+; FPM: FunctionPass Manager
 ; FPM: FunctionPass Manager
 ; FPM-NOT: FunctionPass Manager
 
