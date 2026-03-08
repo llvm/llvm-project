@@ -107,6 +107,15 @@ private:
   /// RecursivelyDeleteTriviallyDeadInstructions.
   Instruction *NextInst;
 
+  /// Find an existing shufflevector equivalent to shuffle(V0, V1, Mask) that
+  /// can supply a new use at InsertPt: either because it already
+  /// dominates InsertPt, or because moving it up to InsertPt is legal.
+  /// Returns nullptr if there is no such shuffle. Never modifies the IR; the
+  /// caller performs the move.
+  ShuffleVectorInst *findReusableShuffle(Value *V0, Value *V1,
+                                         ArrayRef<int> Mask,
+                                         Instruction *InsertPt);
+
   // TODO: Direct calls from the top-level "run" loop use a plain "Instruction"
   //       parameter. That should be updated to specific sub-classes because the
   //       run loop was changed to dispatch on opcode.
@@ -3494,6 +3503,10 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
         // We've already computed the cost for this operand pair.
         continue;
       }
+      if (findReusableShuffle(OperandPair.first, OperandPair.second, OldMask,
+                              &I)) {
+        continue;
+      }
       NewCost += TTI.getShuffleCost(
           TargetTransformInfo::SK_PermuteTwoSrc, ArgTy, VecTy, CostKind,
           OldMask, 0, nullptr,
@@ -3521,19 +3534,21 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     if (isVectorIntrinsicWithScalarOpAtArg(IID, Idx, &TTI)) {
       NewArgs.push_back(II0->getArgOperand(Idx));
     } else {
-      std::pair<Value *, Value *> OperandPair =
-          std::make_pair(II0->getArgOperand(Idx), II1->getArgOperand(Idx));
-      auto It = ShuffleCache.find(OperandPair);
-      if (It != ShuffleCache.end()) {
-        // Reuse previously created shuffle for this operand pair.
-        NewArgs.push_back(It->second);
-        continue;
+      Value *Arg0 = II0->getArgOperand(Idx), *Arg1 = II1->getArgOperand(Idx);
+      Value *&Shuf = ShuffleCache[std::make_pair(Arg0, Arg1)];
+      if (!Shuf) {
+        if (auto *SV = findReusableShuffle(Arg0, Arg1, OldMask, &I)) {
+          // SV may sit below the new use, in which case move it up so that it
+          // dominates. findReusableShuffle has established this is legal.
+          if (!DT.dominates(SV, &I))
+            SV->moveBefore(I.getIterator());
+          Shuf = SV;
+        } else {
+          Shuf = Builder.CreateShuffleVector(Arg0, Arg1, OldMask);
+          Worklist.pushValue(Shuf);
+        }
       }
-      Value *Shuf = Builder.CreateShuffleVector(
-          II0->getArgOperand(Idx), II1->getArgOperand(Idx), OldMask);
-      ShuffleCache[OperandPair] = Shuf;
       NewArgs.push_back(Shuf);
-      Worklist.pushValue(Shuf);
     }
   }
   Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
@@ -6864,6 +6879,41 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
 
   replaceValue(*Phi, *NewShuf1);
   return true;
+}
+
+ShuffleVectorInst *VectorCombine::findReusableShuffle(Value *V0, Value *V1,
+                                                      ArrayRef<int> Mask,
+                                                      Instruction *InsertPt) {
+  auto CanScan = [&](Value *V) {
+    return V->hasUseList() && !V->hasNUsesOrMore(MaxInstrsToScan);
+  };
+
+  Value *Base = nullptr;
+  if (CanScan(V0))
+    Base = V0;
+  else if (CanScan(V1))
+    Base = V1;
+  else
+    return nullptr;
+
+  for (User *U : Base->users()) {
+    auto *SV = dyn_cast<ShuffleVectorInst>(U);
+    // Operands + mask fully determine the result type, so no type check.
+    if (!SV || SV == InsertPt || SV->getOperand(0) != V0 ||
+        SV->getOperand(1) != V1 || SV->getShuffleMask() != Mask)
+      continue;
+
+    // Usable as-is.
+    if (DT.dominates(SV, InsertPt))
+      return SV;
+
+    // Otherwise the new use sits above SV, and moving SV up to InsertPt is
+    // legal.
+    if (DT.dominates(InsertPt, SV) && DT.dominates(V0, InsertPt) &&
+        DT.dominates(V1, InsertPt))
+      return SV;
+  }
+  return nullptr;
 }
 
 /// This is the entry point for all transforms. Pass manager differences are
