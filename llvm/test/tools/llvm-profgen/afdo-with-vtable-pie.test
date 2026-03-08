@@ -3,7 +3,7 @@ RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \
 RUN: --binary=%p/Inputs/dap-pie.bin --format=text --pid=1725662 \
 RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
 
-RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.afdo 2>&1 | FileCheck %s --dump-input=always
+RUN: llvm-profdata show --sample --function _Z9loop_funciii %t.afdo 2>&1 | FileCheck %s --dump-input=always
 
 RUN: not llvm-profgen --perfscript=%p/Inputs/pie-lbr-perf.script \
 RUN: --data-access-perftrace=%p/Inputs/pie-dap-perf.txt  \

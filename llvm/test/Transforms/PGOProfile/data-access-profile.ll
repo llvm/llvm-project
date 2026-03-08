@@ -4,8 +4,8 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
 ;; Read text profiles and merge them into indexed profiles.
-; RUN: llvm-profdata merge --memprof-version=4 memprof.yaml -o memprof.profdata
-; RUN: llvm-profdata merge --memprof-version=4 memprof-no-dap.yaml -o memprof-no-dap.profdata
+; RUN: llvm-profdata merge --memprof-version 4 memprof.yaml -o memprof.profdata
+; RUN: llvm-profdata merge --memprof-version 4 memprof-no-dap.yaml -o memprof-no-dap.profdata
 
 ;; Run optimizer pass on an IR module without IR functions, and test that global
 ;; variables in the module could be annotated (i.e., no early return),

@@ -1,4 +1,4 @@
-# RUN: llvm-profdata order %s --num-test-traces=1 | FileCheck %s
+# RUN: llvm-profdata order %s --num-test-traces 1 | FileCheck %s
 
 # CHECK: # Total area under the page fault curve: 4.000000e+00
 

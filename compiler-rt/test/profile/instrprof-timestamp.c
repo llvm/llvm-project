@@ -2,14 +2,14 @@
 // RUN: %clang_pgogen -o %t -mllvm -pgo-temporal-instrumentation %s
 // RUN: env LLVM_PROFILE_FILE=%t.0.profraw %run %t n
 // RUN: env LLVM_PROFILE_FILE=%t.1.profraw %run %t y
-// RUN: llvm-profdata merge -o %t.profdata %t.0.profraw --weighted-input=5,%t.1.profraw
+// RUN: llvm-profdata merge -o %t.profdata %t.0.profraw --weighted-input 5,%t.1.profraw
 // RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --implicit-check-not=unused
 
 // RUN: rm -f %t.profdata
 // RUN: %clang_pgogen -o %t -mllvm -pgo-temporal-instrumentation -mllvm -pgo-block-coverage %s
 // RUN: env LLVM_PROFILE_FILE=%t.0.profraw %run %t n
 // RUN: env LLVM_PROFILE_FILE=%t.1.profraw %run %t y
-// RUN: llvm-profdata merge -o %t.profdata %t.0.profraw --weighted-input=5,%t.1.profraw
+// RUN: llvm-profdata merge -o %t.profdata %t.0.profraw --weighted-input 5,%t.1.profraw
 // RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --implicit-check-not=unused
 
 extern void exit(int);

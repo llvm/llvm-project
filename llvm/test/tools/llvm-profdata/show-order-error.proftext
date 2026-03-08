@@ -1,4 +1,4 @@
-# RUN: not llvm-profdata order %s --num-test-traces=10 2>&1 | FileCheck %s
+# RUN: not llvm-profdata order %s --num-test-traces 10 2>&1 | FileCheck %s
 
 # CHECK: --num-test-traces must be smaller than the total number of traces
 

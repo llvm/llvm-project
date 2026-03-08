@@ -9,7 +9,7 @@ SHOW1-DAG: Function: _Z3bari: 20301, 1437, 1 sampled lines
 SHOW1-DAG: 1: 1437
 
 2- Show only bar
-RUN: llvm-profdata show --sample --function=_Z3bari %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=SHOW2
+RUN: llvm-profdata show --sample --function _Z3bari %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=SHOW2
 SHOW2: Function: _Z3bari: 20301, 1437, 1 sampled lines
 SHOW2: 1: 1437
 SHOW2-NOT: Function: main: 184019, 0, 7 sampled lines

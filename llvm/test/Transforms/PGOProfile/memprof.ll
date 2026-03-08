@@ -108,7 +108,7 @@
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=ALL,MEMPROFONLY,MEMPROFSTATS
 
 ;; Make sure we use a specific random hotness seed if requested.
-; RUN: llvm-profdata merge -memprof-random-hotness -memprof-random-hotness-seed=1730170724 %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand2 2>&1 | FileCheck %s --check-prefix=RAND2
+; RUN: llvm-profdata merge -memprof-random-hotness -memprof-random-hotness-seed 1730170724 %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand2 2>&1 | FileCheck %s --check-prefix=RAND2
 ; RAND2: random hotness seed = 1730170724
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2,ALL,MEMPROFONLY,MEMPROFSTATS
 
