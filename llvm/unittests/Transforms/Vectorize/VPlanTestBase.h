@@ -17,6 +17,7 @@
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -75,7 +76,23 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
+    if (HasUncountableExit) {
+      // handleEarlyExits requires induction phi recipes.
+      MapVector<PHINode *, InductionDescriptor> Inductions;
+      for (PHINode &Phi : LoopHeader->phis()) {
+        InductionDescriptor ID;
+        if (InductionDescriptor::isInductionPHI(&Phi, L, PSE, ID))
+          Inductions[&Phi] = ID;
+      }
+      VPlanTransforms::createHeaderPhiRecipes(
+          *Plan, PSE, *L, Inductions,
+          MapVector<PHINode *, RecurrenceDescriptor>(),
+          SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
+          /*AllowReordering=*/false);
+    }
+
+    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit, L, PSE, *DT,
+                                      AC.get());
     VPlanTransforms::addMiddleCheck(*Plan, true, false);
 
     VPlanTransforms::createLoopRegions(*Plan);

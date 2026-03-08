@@ -8179,7 +8179,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
+  if (!VPlanTransforms::handleEarlyExits(
+          *Plan, Legal->hasUncountableEarlyExit(), OrigLoop, PSE, *DT,
+          Legal->getAssumptionCache()))
+    return nullptr;
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
@@ -8429,8 +8432,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       MapVector<PHINode *, RecurrenceDescriptor>(),
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
-  VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false);
+  if (!VPlanTransforms::handleEarlyExits(*Plan,
+                                         /*HasUncountableExit*/ false, OrigLoop,
+                                         PSE, *DT, Legal->getAssumptionCache()))
+    return nullptr;
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
                                   /*TailFolded*/ false);
 
@@ -9513,13 +9518,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
-  }
-
-  if (!LVL.getPotentiallyFaultingLoads().empty()) {
-    reportVectorizationFailure("Auto-vectorization of loops with potentially "
-                               "faulting load is not supported",
-                               "PotentiallyFaultingLoadsNotSupported", ORE, L);
-    return false;
   }
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
