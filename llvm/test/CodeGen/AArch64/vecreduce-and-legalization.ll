@@ -107,9 +107,9 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and x8, x8, x8, lsr #32
-; CHECK-NEXT:    and x8, x8, x8, lsr #16
-; CHECK-NEXT:    lsr x9, x8, #8
-; CHECK-NEXT:    and w0, w8, w9
+; CHECK-NEXT:    lsr x9, x8, #16
+; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    and w0, w8, w8, lsr #8
 ; CHECK-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.and.v9i8(<9 x i8> %a)
   ret i8 %b

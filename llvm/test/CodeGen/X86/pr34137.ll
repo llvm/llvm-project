@@ -15,10 +15,10 @@ define void @pr34127() {
 ; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl var_3(%rip), %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testl %eax, %ecx
+; CHECK-NEXT:    testw %ax, %cx
 ; CHECK-NEXT:    sete %dl
-; CHECK-NEXT:    andl %ecx, %edx
-; CHECK-NEXT:    movq %rdx, var_212(%rip)
+; CHECK-NEXT:    andl %edx, %ecx
+; CHECK-NEXT:    movq %rcx, var_212(%rip)
 ; CHECK-NEXT:    movw $0, (%rax)
 ; CHECK-NEXT:    retq
 entry:
