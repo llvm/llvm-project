@@ -552,6 +552,8 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
       return true;
 
     // Check if the Offset < Threshold (positive CI only) otherwise
+    if (Offset < 0)
+      return true;
     if (APInt(128, (uint64_t)Offset).ult(Threshold))
       return true;
   } else {
