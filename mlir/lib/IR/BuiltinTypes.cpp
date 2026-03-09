@@ -566,7 +566,7 @@ unsigned MemRefType::getMemorySpaceAsInt() const {
   return detail::getMemorySpaceAsInt(getMemorySpace());
 }
 
-static bool getNumContiguousTrailingDimsImpl(ArrayRef<int64_t> shape,
+static int64_t getNumContiguousTrailingDimsImpl(ArrayRef<int64_t> shape,
                                              ArrayRef<int64_t> strides) {
   const int64_t n = shape.size();
   // A memref with dimensions `d0, d1, ..., dn-1` and strides
@@ -595,13 +595,13 @@ MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
     // Use default layout for empty attribute.
     layout = AffineMapAttr::get(AffineMap::getMultiDimIdentityMap(
         shape.size(), elementType.getContext()));
-  } else {
+  } else if (shape.size() == layout.getAffineMap().getNumDims()) {
     // If the layout can be inferred to be an identity, prefer using the
     // identity layout.
     int64_t offset;
     SmallVector<int64_t> strides;
     (void)layout.getStridesAndOffset(shape, strides, offset);
-    if (offset == 0 &&
+    if (offset == 0 && strides.size() == shape.size() &&
         getNumContiguousTrailingDimsImpl(shape, strides) == shape.size())
       layout = AffineMapAttr::get(AffineMap::getMultiDimIdentityMap(
           shape.size(), elementType.getContext()));
@@ -622,13 +622,13 @@ MemRefType MemRefType::getChecked(
     // Use default layout for empty attribute.
     layout = AffineMapAttr::get(AffineMap::getMultiDimIdentityMap(
         shape.size(), elementType.getContext()));
-  } else {
+  } else if (shape.size() == layout.getAffineMap().getNumDims()) {
     // If the layout can be inferred to be an identity, prefer using the
     // identity layout.
     int64_t offset;
     SmallVector<int64_t> strides;
     (void)layout.getStridesAndOffset(shape, strides, offset);
-    if (offset == 0 &&
+    if (offset == 0 && strides.size() == shape.size() &&
         getNumContiguousTrailingDimsImpl(shape, strides) == shape.size())
       layout = AffineMapAttr::get(AffineMap::getMultiDimIdentityMap(
           shape.size(), elementType.getContext()));
@@ -648,14 +648,14 @@ MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
     // Use default layout for empty map.
     map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                             elementType.getContext());
-  } else {
+  } else if (shape.size() == map.getNumDims()) {
     // If the layout can be inferred to be an identity, prefer using the
     // identity layout.
     int64_t offset;
     SmallVector<int64_t> strides;
     (void)::mlir::detail::getAffineMapStridesAndOffset(map, shape, strides,
                                                        offset);
-    if (offset == 0 &&
+    if (offset == 0 && strides.size() == shape.size() &&
         getNumContiguousTrailingDimsImpl(shape, strides) == shape.size())
       map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                               elementType.getContext());
@@ -680,14 +680,14 @@ MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
     // Use default layout for empty map.
     map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                             elementType.getContext());
-  } else {
+  } else if (shape.size() == map.getNumDims()) {
     // If the layout can be inferred to be an identity, prefer using the
     // identity layout.
     int64_t offset;
     SmallVector<int64_t> strides;
     (void)::mlir::detail::getAffineMapStridesAndOffset(map, shape, strides,
                                                        offset);
-    if (offset == 0 &&
+    if (offset == 0 && strides.size() == shape.size() &&
         getNumContiguousTrailingDimsImpl(shape, strides) == shape.size())
       map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                               elementType.getContext());
@@ -710,14 +710,14 @@ MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
     // Use default layout for empty map.
     map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                             elementType.getContext());
-  } else {
+  } else if (shape.size() == map.getNumDims()) {
     // If the layout can be inferred to be an identity, prefer using the
     // identity layout.
     int64_t offset;
     SmallVector<int64_t> strides;
     (void)::mlir::detail::getAffineMapStridesAndOffset(map, shape, strides,
                                                        offset);
-    if (offset == 0 &&
+    if (offset == 0 && strides.size() == shape.size() &&
         getNumContiguousTrailingDimsImpl(shape, strides) == shape.size())
       map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                               elementType.getContext());
@@ -743,14 +743,14 @@ MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
     // Use default layout for empty map.
     map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                             elementType.getContext());
-  } else {
+  } else if (shape.size() == map.getNumDims()) {
     // If the layout can be inferred to be an identity, prefer using the
     // identity layout.
     int64_t offset;
     SmallVector<int64_t> strides;
     (void)::mlir::detail::getAffineMapStridesAndOffset(map, shape, strides,
                                                        offset);
-    if (offset == 0 &&
+    if (offset == 0 && strides.size() == shape.size() &&
         getNumContiguousTrailingDimsImpl(shape, strides) == shape.size())
       map = AffineMap::getMultiDimIdentityMap(shape.size(),
                                               elementType.getContext());

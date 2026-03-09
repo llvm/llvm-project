@@ -561,7 +561,6 @@ func.func @entry(%A : tensor<?xf32> {bufferization.buffer_layout = affine_map<(i
 // %A, %B and %C are not inplaceable. This test case shows that this kind of
 // conflict detection has a "transitive" nature.
 //  CHECK-DAG: %[[ALLOC_A:.*]] = memref.alloc
-//  CHECK-DAG: %[[CASTED_A:.*]] = memref.cast %[[ALLOC_A]]
 //  CHECK-DAG: %[[ALLOC_B:.*]] = memref.alloc
 //  CHECK-DAG: %[[CASTED_B:.*]] = memref.cast %[[ALLOC_B]]
 //  CHECK-DAG: %[[ALLOC_C:.*]] = memref.alloc
@@ -569,7 +568,7 @@ func.func @entry(%A : tensor<?xf32> {bufferization.buffer_layout = affine_map<(i
 //  CHECK-DAG: memref.copy %[[A]], %[[ALLOC_A]]
 //  CHECK-DAG: memref.copy %[[B]], %[[ALLOC_B]]
 //  CHECK-DAG: memref.copy %[[C]], %[[ALLOC_C]]
-// CHECK-NEXT: call @callee(%[[CASTED_A]], %[[CASTED_B]], %[[CASTED_C]])
+// CHECK-NEXT: call @callee(%[[ALLOC_A]], %[[CASTED_B]], %[[CASTED_C]])
   call @callee(%A, %B, %C) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) -> ()
   return
 }
