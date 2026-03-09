@@ -995,6 +995,7 @@ public:
   bool Pre(const parser::NamedConstant &);
   void Post(const parser::EnumDef &);
   bool Pre(const parser::Enumerator &);
+  bool Pre(const parser::EnumerationTypeDef &);
   bool Pre(const parser::AccessSpec &);
   bool Pre(const parser::AsynchronousStmt &);
   bool Pre(const parser::ContiguousStmt &);
@@ -5860,6 +5861,12 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
 void DeclarationVisitor::Post(const parser::EnumDef &) {
   enumerationState_ = EnumeratorState{};
+}
+
+bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
+  Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
+      "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
+  return false;
 }
 
 bool DeclarationVisitor::Pre(const parser::AccessSpec &x) {

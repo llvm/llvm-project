@@ -669,6 +669,34 @@ TYPE_PARSER(
 TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
     construct<EndEnumStmt>())
 
+// R766 enumeration-type-def ->
+//        enumeration-type-stmt
+//        enumeration-enumerator-stmt [ enumeration-enumerator-stmt ]...
+//        end-enumeration-type-stmt
+TYPE_CONTEXT_PARSER("enumeration type definition"_en_US,
+    construct<EnumerationTypeDef>(statement(Parser<EnumerationTypeStmt>{}),
+        some(unambiguousStatement(Parser<EnumerationEnumeratorStmt>{})),
+        statement(Parser<EndEnumerationTypeStmt>{})))
+
+// R767 enumeration-type-stmt ->
+//        ENUMERATION TYPE [ [ , access-spec ] :: ] enumeration-type-name
+TYPE_CONTEXT_PARSER("ENUMERATION TYPE statement"_en_US,
+    "ENUMERATION TYPE" >>
+        construct<EnumerationTypeStmt>(
+            maybe("," >> Parser<AccessSpec>{} / "::"), maybe("::"_tok) >> name))
+
+// R768 enumeration-enumerator-stmt -> ENUMERATOR [ :: ] enumerator-name-list
+//   (Note: distinct from R761 enumerator-def-stmt — no "= expr" allowed here)
+TYPE_CONTEXT_PARSER("ENUMERATOR statement (enumeration type)"_en_US,
+    construct<EnumerationEnumeratorStmt>("ENUMERATOR" >> maybe("::"_tok) >>
+        nonemptyList("expected enumerator names"_err_en_US, name)))
+
+// R769 end-enumeration-type-stmt ->
+//        END ENUMERATION TYPE [ enumeration-type-name ]
+TYPE_PARSER(
+    recovery("END ENUMERATION TYPE"_tok, constructEndStmtErrorRecovery) >>
+    construct<EndEnumerationTypeStmt>(maybe(name)))
+
 // R801 type-declaration-stmt ->
 //        declaration-type-spec [[, attr-spec]... ::] entity-decl-list
 constexpr auto entityDeclWithoutEqInit{

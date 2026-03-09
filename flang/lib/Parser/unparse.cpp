@@ -425,6 +425,21 @@ public:
   void Post(const EndEnumStmt &) { // R763
     Outdent(), Word("END ENUM");
   }
+  void Unparse(const EnumerationTypeStmt &x) { // R767
+    Word("ENUMERATION TYPE");
+    if (auto &accessSpec{std::get<std::optional<AccessSpec>>(x.t)}) {
+      Word(", "), Walk(*accessSpec);
+    }
+    Word(" :: "), Walk(std::get<Name>(x.t));
+    Indent();
+  }
+  void Unparse(const EnumerationEnumeratorStmt &x) { // R768
+    Word("ENUMERATOR :: "), Walk(x.v, ", ");
+  }
+  void Unparse(const EndEnumerationTypeStmt &x) { // R769
+    Outdent(), Word("END ENUMERATION TYPE");
+    Walk(" ", x.v);
+  }
   void Unparse(const BOZLiteralConstant &x) { // R764 - R767
     Put(x.v);
   }
