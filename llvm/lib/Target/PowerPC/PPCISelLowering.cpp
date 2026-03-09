@@ -15896,8 +15896,22 @@ static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
   llvm_unreachable("Should not reach here.");
 }
 
+// Match `sext(setcc X, 0, eq)` and turn it into an ADDIC/SUBFE sequence.
+//
+// This generates code for:
+//   X == 0 ? -1 : 0
+//
+// On pre-ISA 3.1 targets, this is better than the longer CNTLZW/SRWI/NEG
+// sequence. This is useful for cases like:
+//   uint8_t f(uint8_t x) { return (x == 0) ? -1 : 0; }
+//
+// ISA 3.1+ is skipped because those targets can use SETBC.
+
 SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
+  if (Subtarget.isISA3_1())
+    return SDValue();
+
   if (N->getValueType(0) != MVT::i32 && N->getValueType(0) != MVT::i64)
     return SDValue();
 
