@@ -353,14 +353,14 @@ static void SetupAdditionalLogs(DiagnosticOptions &DiagOpts,
     PairsString.split(PairStrings, ",", -1, /* KeepEmpty = */ false);
     SmallVector<std::pair<StringRef, StringRef>, 4> Pairs;
     for (const auto &PairString : PairStrings) {
-      auto [key, value] = PairString.split("=");
-      if (value.empty()) {
+      auto [Key, Value] = PairString.split("=");
+      if (Value.empty()) {
         Diags.Report(SourceLocation(), diag::err_diagnostic_output_no_value)
-            << key;
+            << Key;
         break;
       }
 
-      Pairs.push_back(std::make_pair(key, value));
+      Pairs.push_back(std::make_pair(Key, Value));
     }
 
     std::unique_ptr<DiagnosticConsumer> Consumer;
