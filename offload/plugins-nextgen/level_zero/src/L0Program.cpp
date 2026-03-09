@@ -223,24 +223,25 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     // Parse inner OffloadBinary
     auto InnerBinariesOrErr = llvm::object::OffloadBinary::create(Image);
     if (!InnerBinariesOrErr)
-      return Plugin::error(ErrorCode::UNKNOWN,
-                          "Failed to parse inner OffloadBinary: %s",
-                          llvm::toString(InnerBinariesOrErr.takeError()).c_str());
+      return Plugin::error(
+          ErrorCode::UNKNOWN, "Failed to parse inner OffloadBinary: %s",
+          llvm::toString(InnerBinariesOrErr.takeError()).c_str());
 
     auto &InnerBinaries = *InnerBinariesOrErr;
 
     // Should contain exactly one image
     if (InnerBinaries.size() != 1)
       return Plugin::error(ErrorCode::UNKNOWN,
-                          "Expected single inner OffloadBinary entry, got %zu",
-                          InnerBinaries.size());
+                           "Expected single inner OffloadBinary entry, got %zu",
+                           InnerBinaries.size());
 
     const llvm::object::OffloadBinary *InnerBinary = InnerBinaries[0].get();
     llvm::object::ImageKind ImageKind = InnerBinary->getImageKind();
 
     // Extract image data from inner binary
     llvm::StringRef ImageData = InnerBinary->getImage();
-    const uint8_t *ImgBegin = reinterpret_cast<const uint8_t *>(ImageData.data());
+    const uint8_t *ImgBegin =
+        reinterpret_cast<const uint8_t *>(ImageData.data());
 
     // Read metadata from inner binary
     llvm::StringRef Version = InnerBinary->getString("version");
@@ -249,7 +250,8 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     llvm::StringRef LinkOpts = InnerBinary->getString("link-opts");
 
     ODBG(OLDT_Module) << "Inner OffloadBinary metadata: version=" << Version
-                      << ", format=" << Format << ", kind=" << ImageKind << "\n";
+                      << ", format=" << Format << ", kind=" << ImageKind
+                      << "\n";
 
     // Build options string combining BuildOptions with compile/link opts
     std::string Options(BuildOptions);
@@ -275,8 +277,8 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
       ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
     } else {
       return Plugin::error(ErrorCode::UNKNOWN,
-                          "Unsupported image kind %d in inner OffloadBinary",
-                          static_cast<int>(ImageKind));
+                           "Unsupported image kind %d in inner OffloadBinary",
+                           static_cast<int>(ImageKind));
     }
 
     // Load module into Level Zero
