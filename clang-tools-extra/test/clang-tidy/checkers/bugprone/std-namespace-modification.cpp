@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-std-namespace-modification %t -- -- -I %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-std-namespace-modification %t
 
 #include "system-header-simulation.h"
 

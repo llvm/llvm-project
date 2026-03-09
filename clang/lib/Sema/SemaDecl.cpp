@@ -553,6 +553,17 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     }
     return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
   }
+
+  if (getLangOpts().HLSL) {
+    if (auto *TD = dyn_cast_or_null<TemplateDecl>(
+            getAsTemplateNameDecl(IIDecl, /*AllowFunctionTemplates=*/false,
+                                  /*AllowDependent=*/false))) {
+      QualType ShorthandTy = HLSL().ActOnTemplateShorthand(TD, NameLoc);
+      if (!ShorthandTy.isNull())
+        return ParsedType::make(ShorthandTy);
+    }
+  }
+
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(IIDecl)) {
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot) {

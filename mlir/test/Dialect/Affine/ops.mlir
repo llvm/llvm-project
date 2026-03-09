@@ -328,7 +328,7 @@ module {
     %c1 = arith.constant 1 : index
     gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1)
     threads(%arg3, %arg4, %arg5) in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1) {
-      %thread_id_x = gpu.thread_id  x
+      %thread_id_x = gpu.thread_id x
       %c128 = arith.constant 128 : index
       affine.for %arg12 = %thread_id_x to %c128 step 8 {
       }
@@ -338,7 +338,7 @@ module {
   }
 }
 
-// CHECK: %[[THREAD_ID:.*]] = gpu.thread_id  x
+// CHECK: %[[THREAD_ID:.*]] = gpu.thread_id x
 // CHECK: %[[VAL:.*]] = arith.constant 128 : index
 // CHECK: affine.for %{{.*}} = %[[THREAD_ID]] to %[[VAL]] step 8 {
 
@@ -357,7 +357,7 @@ module {
       %dim = memref.dim %arg0, %c3 : memref<?x?xf32>
       %c0 = arith.constant 0 : index
       affine.for %arg3 = %c0 to %dim step 32 {
-        %thread_id_x = gpu.thread_id  x
+        %thread_id_x = gpu.thread_id x
         %0 = affine.apply #map()[%thread_id_x]
         %c128 = arith.constant 128 : index
         affine.for %arg4 = %0 to %c128 step 8 {
@@ -374,7 +374,7 @@ module {
 // CHECK: %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
 // CHECK: %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK: affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
-// CHECK: %[[VAL_5:.*]] = gpu.thread_id  x
+// CHECK: %[[VAL_5:.*]] = gpu.thread_id x
 // CHECK: %[[VAL_6:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[VAL_5]]]
 // CHECK: %[[VAL_7:.*]] = arith.constant 128 : index
 // CHECK: affine.for %{{.*}} = %[[VAL_6]] to %[[VAL_7]] step 8 {

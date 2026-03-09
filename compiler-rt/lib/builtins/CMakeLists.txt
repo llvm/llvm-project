@@ -340,14 +340,16 @@ if (NOT MSVC)
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       ${x86_80_BIT_SOURCES}
-      x86_64/floatdixf.c)
+      x86_64/floatdixf.c
+    )
 
     # TODO(compnerd) floatundixf.S currently implements the SysV calling
     # convention, this must be ported to the Windows ABI.
     if(NOT WIN32)
       set(x86_64_SOURCES
         ${x86_64_SOURCES}
-        x86_64/floatundixf.S)
+        x86_64/floatundixf.S
+      )
     endif()
   endif()
 
