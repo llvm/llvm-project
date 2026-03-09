@@ -1340,6 +1340,19 @@ public:
     return std::nullopt;
   }
 
+  /// Attempt to invert the predicate produced by a comparison instruction
+  /// and adjust all its dependent users (e.g., conditional branches
+  /// consuming the predicate) in place. The operation must be
+  /// self-inverting: calling it twice restores the original state.
+  ///
+  /// \param MI  The comparison instruction whose predicate to invert.
+  /// \param MRI The MachineRegisterInfo to iterate users.
+  /// \return true if the inversion was successfully applied
+  virtual bool invertPredicateWithUsers(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI) const {
+    return false;
+  }
+
   /// Return true when \P Opcode1 or its inversion is equal to \P Opcode2.
   bool areOpcodesEqualOrInverse(unsigned Opcode1, unsigned Opcode2) const;
 

@@ -193,3 +193,193 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
 }
+
+bool NVPTXInstrInfo::invertPredicateBranchInstr(MachineInstr &MI) const {
+  if (MI.getOpcode() == NVPTX::CBranch) {
+    MI.setDesc(get(NVPTX::CBranchOther));
+    return true;
+  }
+
+  if (MI.getOpcode() == NVPTX::CBranchOther) {
+    MI.setDesc(get(NVPTX::CBranch));
+    return true;
+  }
+
+  return false;
+}
+
+bool NVPTXInstrInfo::isIntegerSetp(const MachineInstr &MI) const {
+  if (!MI.isCompare() || MI.getNumOperands() < 4)
+    return false;
+
+  switch (MI.getOpcode()) {
+  case NVPTX::SETP_i16rr:
+  case NVPTX::SETP_i16ri:
+  case NVPTX::SETP_i16ir:
+  case NVPTX::SETP_i32rr:
+  case NVPTX::SETP_i32ri:
+  case NVPTX::SETP_i32ir:
+  case NVPTX::SETP_i64rr:
+  case NVPTX::SETP_i64ri:
+  case NVPTX::SETP_i64ir:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool NVPTXInstrInfo::isFloatSetp(const MachineInstr &MI) const {
+  if (!MI.isCompare() || MI.getNumOperands() < 4)
+    return false;
+
+  switch (MI.getOpcode()) {
+  case NVPTX::SETP_bf16rr:
+  case NVPTX::SETP_f16rr:
+  case NVPTX::SETP_f32rr:
+  case NVPTX::SETP_f32ri:
+  case NVPTX::SETP_f32ir:
+  case NVPTX::SETP_f64rr:
+  case NVPTX::SETP_f64ri:
+  case NVPTX::SETP_f64ir:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool NVPTXInstrInfo::invertCompareInstr(MachineInstr &MI) const {
+  if (isIntegerSetp(MI)) {
+    // Comparison mode is in operand 3 (includes flags in upper bits)
+    MachineOperand &ModeOp = MI.getOperand(3);
+    if (!ModeOp.isImm())
+      return false;
+
+    int64_t CompareMode = ModeOp.getImm();
+
+    int64_t InvertedCompareMode;
+    switch (CompareMode) {
+    case NVPTX::PTXCmpMode::EQ:
+      InvertedCompareMode = NVPTX::PTXCmpMode::NE;
+      break;
+    case NVPTX::PTXCmpMode::NE:
+      InvertedCompareMode = NVPTX::PTXCmpMode::EQ;
+      break;
+    case NVPTX::PTXCmpMode::LT:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GE;
+      break;
+    case NVPTX::PTXCmpMode::LE:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GT;
+      break;
+    case NVPTX::PTXCmpMode::GT:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LE;
+      break;
+    case NVPTX::PTXCmpMode::GE:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LT;
+      break;
+    case NVPTX::PTXCmpMode::LTU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GEU;
+      break;
+    case NVPTX::PTXCmpMode::LEU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GTU;
+      break;
+    case NVPTX::PTXCmpMode::GTU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LEU;
+      break;
+    case NVPTX::PTXCmpMode::GEU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LTU;
+      break;
+    default:
+      return false;
+    }
+
+    ModeOp.setImm(InvertedCompareMode);
+    return true;
+  }
+
+  if (isFloatSetp(MI)) {
+    MachineOperand &ModeOp = MI.getOperand(3);
+    if (!ModeOp.isImm())
+      return false;
+
+    int64_t CompareMode = ModeOp.getImm();
+
+    int64_t InvertedCompareMode;
+    switch (CompareMode) {
+    case NVPTX::PTXCmpMode::EQ:
+      InvertedCompareMode = NVPTX::PTXCmpMode::NEU;
+      break;
+    case NVPTX::PTXCmpMode::NE:
+      InvertedCompareMode = NVPTX::PTXCmpMode::EQU;
+      break;
+    case NVPTX::PTXCmpMode::EQU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::NE;
+      break;
+    case NVPTX::PTXCmpMode::NEU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::EQ;
+      break;
+    case NVPTX::PTXCmpMode::LT:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GEU;
+      break;
+    case NVPTX::PTXCmpMode::LE:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GTU;
+      break;
+    case NVPTX::PTXCmpMode::GT:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LEU;
+      break;
+    case NVPTX::PTXCmpMode::GE:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LTU;
+      break;
+    case NVPTX::PTXCmpMode::LTU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GE;
+      break;
+    case NVPTX::PTXCmpMode::LEU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::GT;
+      break;
+    case NVPTX::PTXCmpMode::GTU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LE;
+      break;
+    case NVPTX::PTXCmpMode::GEU:
+      InvertedCompareMode = NVPTX::PTXCmpMode::LT;
+      break;
+    case NVPTX::PTXCmpMode::NUM:
+      InvertedCompareMode = NVPTX::PTXCmpMode::NotANumber;
+      break;
+    case NVPTX::PTXCmpMode::NotANumber:
+      InvertedCompareMode = NVPTX::PTXCmpMode::NUM;
+      break;
+    default:
+      return false;
+    }
+
+    ModeOp.setImm(InvertedCompareMode);
+    return true;
+  }
+
+  return false;
+}
+
+bool NVPTXInstrInfo::invertPredicateWithUsers(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI) const {
+  if (!invertCompareInstr(MI))
+    return false;
+
+  bool AllInverted = true;
+  for (MachineInstr &UseMI :
+       MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+    if (!(UseMI.isConditionalBranch() && invertPredicateBranchInstr(UseMI))) {
+      AllInverted = false;
+      break;
+    }
+  }
+
+  if (!AllInverted) {
+    for (MachineInstr &UseMI :
+         MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
+      if (!(UseMI.isConditionalBranch() && invertPredicateBranchInstr(UseMI)))
+        break;
+    }
+    invertCompareInstr(MI);
+    return false;
+  }
+  return true;
+}
