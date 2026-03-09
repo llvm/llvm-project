@@ -1222,6 +1222,9 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
+    return false;
+
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   assert(Coeff == Dst->getStepRecurrence(*SE) &&
          "Expecting same coefficient in Strong SIV test");

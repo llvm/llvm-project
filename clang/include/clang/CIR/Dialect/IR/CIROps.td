@@ -204,7 +204,6 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
 def CIR_CastOp : CIR_Op<"cast", [
   Pure, DeclareOpInterfaceMethods<PromotableOpInterface>
 ]> {
-  // FIXME: not all conversions are free of side effects.
   let summary = "Conversion between values of different types";
   let description = [{
     Apply the usual C/C++ conversion rules between values. This operation models
@@ -2804,7 +2803,7 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the vptr address", [MemRead]>:$src
+    CIR_PointerType:$src
   );
 
   let results = (outs CIR_PtrToVPtr:$result);
@@ -2851,7 +2850,7 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
   }];
 
   let arguments = (ins
-    Arg<CIR_VPtrType, "vptr", [MemRead]>:$vptr,
+    CIR_VPtrType:$vptr,
     I64Attr:$index);
 
   let results = (outs CIR_PointerType:$result);
@@ -2890,7 +2889,7 @@ def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
     ```
   }];
 
-  let arguments = (ins Arg<CIR_VPtrType, "vptr", [MemRead]>:$vptr);
+  let arguments = (ins CIR_VPtrType:$vptr);
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
@@ -3149,7 +3148,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 // GetMemberOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetMemberOp : CIR_Op<"get_member"> {
+def CIR_GetMemberOp : CIR_Op<"get_member", [Pure]> {
   let summary = "Get the address of a member of a record";
   let description = [{
     The `cir.get_member` operation gets the address of a particular named
@@ -3171,7 +3170,7 @@ def CIR_GetMemberOp : CIR_Op<"get_member"> {
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    CIR_PointerType:$addr,
     StrAttr:$name,
     IndexAttr:$index_attr);
 
@@ -4317,7 +4316,7 @@ def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
 // GetRuntimeMemberOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
+def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member", [Pure]> {
   let summary = "Get the address of a member of a record";
   let description = [{
     The `cir.get_runtime_member` operation gets the address of a member from
@@ -4357,8 +4356,8 @@ def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
   }];
 
   let arguments = (ins
-    Arg<CIR_PtrToRecordType, "address of the record object", [MemRead]>:$addr,
-    Arg<CIR_DataMemberType, "pointer to the target member">:$member);
+    CIR_PtrToRecordType:$addr,
+    CIR_DataMemberType:$member);
 
   let results = (outs Res<CIR_PointerType, "">:$result);
 
@@ -4714,7 +4713,7 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 // BaseClassAddrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
+def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
   let summary = "Get the base class address for a class/struct";
   let description = [{
     The `cir.base_class_addr` operaration gets the address of a particular
@@ -4743,7 +4742,7 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
+    CIR_PointerType:$derived_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
 
   let results = (outs Res<CIR_PointerType, "">:$base_addr);
@@ -4759,7 +4758,7 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr"> {
 // DerivedClassAddrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
+def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
   let summary = "Get the derived class address for a class/struct";
   let description = [{
     The `cir.derived_class_addr` operaration gets the address of a particular
@@ -4793,7 +4792,7 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "base class pointer", [MemRead]>:$base_addr,
+    CIR_PointerType:$base_addr,
     IndexAttr:$offset, UnitAttr:$assume_not_null);
 
   let results = (outs Res<CIR_PointerType, "">:$derived_addr);
