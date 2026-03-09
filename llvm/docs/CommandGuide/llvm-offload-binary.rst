@@ -17,22 +17,9 @@ into the host section table to form a fat binary containing offloading code for
 different targets. Conversely, it can also extract previously bundled device
 images from offload binaries.
 
-**Extraction modes:**
-
-- **Extract all images**: When no ``--image`` filters are specified, all offload
-  images are automatically extracted with descriptive filenames.
-- **Extract filtered images**: When ``--image`` filters are specified, only
-  matching images are extracted.
-
-**SPIR-V support:**
-
-For Intel SPIR-V targets (``spirv64-intel`` and ``spirv32-intel``), the tool
-provides automatic extraction:
-
-- **Raw SPIR-V**: Detected using file magic and extracted with ``.spv`` extension
-- **ELF-wrapped SPIR-V**: Extracts both the ELF wrapper (``.elf``) and embedded
-  SPIR-V binaries from sections named ``__openmp_offload_spirv_*`` (``.spv``)
-- **Unknown format**: Extracted with ``.bin`` extension for inspection
+When extracting images, if no :option:`--image` filters are specified, all
+offload images are automatically extracted with descriptive filenames. When
+:option:`--image` filters are provided, only matching images are extracted.
 
 The binary format begins with the magic bytes ``0x10FF10AD``, followed by a
 version and size. Each binary contains its own header, allowing tools to locate
@@ -81,6 +68,12 @@ OPTIONS
   Specify a set of arbitrary key-value arguments describing an image.
   Commonly used optional keys include ``arch`` (e.g. ``sm_70`` for CUDA) and
   ``triple`` (e.g. nvptx64-nvidia-cuda).
+
+  When bundling, this option specifies images to include in the output binary.
+  When extracting, this option acts as a filter: only images matching the
+  specified keys are extracted. If no :option:`--image` options are provided
+  during extraction, all images are automatically extracted with descriptive
+  filenames.
 
 .. option:: -o <file>
 
