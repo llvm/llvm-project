@@ -49,7 +49,7 @@ public:
                                   lldb::eScriptLanguagePython, CreateInstance);
   }
 
-  static void Terminate() {}
+  static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
 
   bool IsReservedWord(const char *word) override {
     return llvm::is_contained({"import"}, llvm::StringRef(word));
