@@ -163,13 +163,15 @@ LLVM_ABI Error getAMDGPUMetaDataFromImage(
 /// \param Binary The image to containerize
 /// \param ImageKind The format of the image, e.g. SPIR-V or CUBIN.
 /// \param OffloadKind The expected consumer of the image, e.g. CUDA or OpenMP.
-/// \param ImageFlags Flags associated with the image, e.g. for AMDGPU the features
-/// \param MetaData The key-value map of metadata to be associated with the image.
+/// \param ImageFlags Flags associated with the image, e.g. for AMDGPU the
+/// features
+/// \param MetaData The key-value map of metadata to be associated with the
+/// image.
 LLVM_ABI Error containerizeImage(std::unique_ptr<MemoryBuffer> &Binary,
-    object::ImageKind ImageKind,
-    object::OffloadKind OffloadKind,
-    int32_t ImageFlags,
-    MapVector<StringRef, StringRef> &MetaData);
+                                 object::ImageKind ImageKind,
+                                 object::OffloadKind OffloadKind,
+                                 int32_t ImageFlags,
+                                 MapVector<StringRef, StringRef> &MetaData);
 
 namespace intel {
 /// Containerizes OpenMP SPIR-V image into inner OffloadBinary format.
