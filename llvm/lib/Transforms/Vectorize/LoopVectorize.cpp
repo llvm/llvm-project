@@ -3213,6 +3213,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
         case Intrinsic::assume:
         case Intrinsic::lifetime_start:
         case Intrinsic::lifetime_end:
+        case Intrinsic::pseudoprobe:
           if (TheLoop->hasLoopInvariantOperands(&I))
             AddToWorklistIfAllowed(&I);
           break;
@@ -8008,6 +8009,7 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
     case Intrinsic::assume:
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+    case Intrinsic::pseudoprobe:
       // For scalable vectors if one of the operands is variant then we still
       // want to mark as uniform, which will generate one instruction for just
       // the first lane of the vector. We can't scalarize the call in the same
