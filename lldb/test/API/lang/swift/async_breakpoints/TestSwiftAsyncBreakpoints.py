@@ -21,19 +21,19 @@ class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
         breakpoint3 = target.BreakpointCreateBySourceRegex("Breakpoint3", filespec)
         breakpoint4 = target.BreakpointCreateBySourceRegex("Breakpoint4", filespec)
         breakpoint5 = target.BreakpointCreateBySourceRegex("Breakpoint5", filespec)
-        self.assertEquals(breakpoint1.GetNumLocations(), 1)
-        self.assertEquals(breakpoint2.GetNumLocations(), 1)
-        self.assertEquals(breakpoint3.GetNumLocations(), 1)
-        self.assertEquals(breakpoint4.GetNumLocations(), 2)
-        self.assertEquals(breakpoint5.GetNumLocations(), 1)
+        self.assertEqual(breakpoint1.GetNumLocations(), 1)
+        self.assertEqual(breakpoint2.GetNumLocations(), 1)
+        self.assertEqual(breakpoint3.GetNumLocations(), 1)
+        self.assertEqual(breakpoint4.GetNumLocations(), 2)
+        self.assertEqual(breakpoint5.GetNumLocations(), 1)
 
         location11 = breakpoint1.GetLocationAtIndex(0)
-        self.assertEquals(location11.GetHitCount(), 1)
+        self.assertEqual(location11.GetHitCount(), 1)
 
-        self.assertEquals(thread.GetStopDescription(128), "breakpoint 1.1")
+        self.assertEqual(thread.GetStopDescription(128), "breakpoint 1.1")
         process.Continue()
 
-        self.assertEquals(thread.GetStopDescription(128), "breakpoint 2.1")
+        self.assertEqual(thread.GetStopDescription(128), "breakpoint 2.1")
         self.expect("expr timestamp1", substrs=["42"])
 
         process.Continue()
@@ -44,4 +44,4 @@ class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
         breakpoint1_no_filter = target.BreakpointCreateBySourceRegex(
             "Breakpoint1", filespec
         )
-        self.assertEquals(breakpoint1_no_filter.GetNumLocations(), 2)
+        self.assertEqual(breakpoint1_no_filter.GetNumLocations(), 2)

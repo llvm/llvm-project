@@ -34,4 +34,4 @@ class TestSwiftFoundationTypeNotification(lldbtest.TestBase):
         name = self.frame().FindVariable("name")
         # This is a "don't crash" test.
         child = name.GetChildAtIndex(0)
-        self.assertEquals(name.GetSummary(), '"MyNotification"')
+        self.assertEqual(name.GetSummary(), '"MyNotification"')
