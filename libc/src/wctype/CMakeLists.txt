@@ -18,7 +18,6 @@ add_entrypoint_object(
     libc.src.__support.wctype_utils    
 )
 
-
 add_entrypoint_object(
   iswgraph
   SRCS
@@ -26,5 +25,7 @@ add_entrypoint_object(
   HDRS
     iswgraph.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.wctype_utils    
+    libc.hdr.types.wint_t
 )
