@@ -14,43 +14,43 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
-  const auto makeBinaryOperatorMatcher = [](auto Op) {
-    return [=](auto LHS, auto RHS) {
+  const auto MakeBinaryOperatorMatcher = [](auto Op) {
+    return [=](const auto &LHS, const auto &RHS) {
       return binaryOperator(
           hasOperatorName(Op),
           hasOperands(ignoringParenImpCasts(LHS), ignoringParenImpCasts(RHS)));
     };
   };
 
-  const auto logicalAnd = makeBinaryOperatorMatcher("&&");
-  const auto sub = makeBinaryOperatorMatcher("-");
-  const auto bitwiseAnd = makeBinaryOperatorMatcher("&");
-  const auto cmpNot = makeBinaryOperatorMatcher("!=");
-  const auto cmpGt = makeBinaryOperatorMatcher(">");
+  const auto LogicalAnd = MakeBinaryOperatorMatcher("&&");
+  const auto Sub = MakeBinaryOperatorMatcher("-");
+  const auto BitwiseAnd = MakeBinaryOperatorMatcher("&");
+  const auto CmpNot = MakeBinaryOperatorMatcher("!=");
+  const auto CmpGt = MakeBinaryOperatorMatcher(">");
 
-  const auto logicalNot = [](auto Expr) {
+  const auto LogicalNot = [](const auto &Expr) {
     return unaryOperator(hasOperatorName("!"),
                          hasUnaryOperand(ignoringParenImpCasts(Expr)));
   };
 
-  const auto isNonNull = [=](auto Expr) {
-    return anyOf(Expr, cmpNot(Expr, integerLiteral(equals(0))),
-                 cmpGt(Expr, integerLiteral(equals(0))));
+  const auto IsNonNull = [=](const auto &Expr) {
+    return anyOf(Expr, CmpNot(Expr, integerLiteral(equals(0))),
+                 CmpGt(Expr, integerLiteral(equals(0))));
   };
-  const auto bindDeclRef = [](auto Name) {
+  const auto BindDeclRef = [](auto Name) {
     return declRefExpr(to(varDecl(hasType(isUnsignedInteger())).bind(Name)));
   };
-  const auto boundDeclRef = [](auto Name) {
+  const auto BoundDeclRef = [](auto Name) {
     return declRefExpr(to(varDecl(equalsBoundNode(Name))));
   };
 
   // https://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
   // has_one_bit(v) = v && !(v & (v - 1));
   Finder->addMatcher(
-      logicalAnd(isNonNull(bindDeclRef("v")),
-                 logicalNot(bitwiseAnd(
-                     boundDeclRef("v"),
-                     sub(boundDeclRef("v"), integerLiteral(equals(1))))))
+      LogicalAnd(IsNonNull(BindDeclRef("v")),
+                 LogicalNot(BitwiseAnd(
+                     BoundDeclRef("v"),
+                     Sub(BoundDeclRef("v"), integerLiteral(equals(1))))))
           .bind("expr"),
       this);
 }
