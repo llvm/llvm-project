@@ -262,6 +262,35 @@ public:
     return Pack;
   }
 
+  static constexpr const char AuxArgBeginToken = '(';
+  static constexpr const char AuxArgEndToken = ')';
+  /// \Returns the auxiliary pass argument by parsing \p Args. The auxiliary
+  /// pass argument is enclosed in parentheses and should be before any other
+  /// argument.
+  static StringRef getAuxPassArg(StringRef Args) {
+    if (Args.empty())
+      return Args;
+    if (Args[0] != AuxArgBeginToken)
+      return StringRef();
+    // We found the Begin token, so look for the End token.
+    size_t EndIdx = Args.find(AuxArgEndToken);
+    if (EndIdx == StringRef::npos) {
+      errs() << "Missing '" << AuxArgEndToken << "' in '" << Args << "' !\n";
+      exit(1);
+    }
+    assert(EndIdx >= 1 && "Expected at index 1 or later!");
+    return Args.substr(1, EndIdx - 1);
+  }
+
+  /// \Returns \p Args with the auxiliary argument removed.
+  /// For example: "(foo)bar1,bar2" returns "bar1,bar2".
+  static StringRef stripAuxPassArg(StringRef Args) {
+    StringRef Aux = getAuxPassArg(Args);
+    if (Aux.empty())
+      return Args;
+    return Args.slice(Aux.size() + 2, StringRef::npos);
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);
