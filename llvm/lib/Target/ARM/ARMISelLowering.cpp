@@ -4728,8 +4728,8 @@ static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG, bool Invert) {
   EVT VT = Value.getValueType();
 
   if (Invert)
-    Value = DAG.getNode(ISD::SUB, DL, MVT::i32,
-                        DAG.getConstant(1, DL, MVT::i32), Value);
+    Value =
+        DAG.getNode(ISD::XOR, DL, VT, Value, DAG.getConstant(1, DL, MVT::i32));
 
   SDValue Cmp = DAG.getNode(ARMISD::SUBC, DL, DAG.getVTList(VT, MVT::i32),
                             Value, DAG.getConstant(1, DL, VT));
@@ -4745,7 +4745,7 @@ static SDValue carryFlagToValue(SDValue Flags, EVT VT, SelectionDAG &DAG,
     SDValue BoolCarry = DAG.getNode(
         ARMISD::ADDE, DL, DAG.getVTList(VT, MVT::i32),
         DAG.getConstant(0, DL, VT), DAG.getConstant(0, DL, VT), Flags);
-    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(1, DL, VT), BoolCarry);
+    return DAG.getNode(ISD::XOR, DL, VT, BoolCarry, DAG.getConstant(1, DL, VT));
   }
 
   // Now convert the carry flag into a boolean carry. We do this
@@ -18525,9 +18525,8 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
         SDValue Neg = DAG.getNode(ISD::USUBO, dl, VTs, FalseVal, Sub);
         // ISD::USUBO_CARRY returns a borrow but we want the carry here
         // actually.
-        SDValue Carry =
-            DAG.getNode(ISD::SUB, dl, MVT::i32,
-                        DAG.getConstant(1, dl, MVT::i32), Neg.getValue(1));
+        SDValue Carry = DAG.getNode(ISD::XOR, dl, MVT::i32, Neg.getValue(1),
+                                    DAG.getConstant(1, dl, MVT::i32));
         Res = DAG.getNode(ISD::UADDO_CARRY, dl, VTs, Sub, Neg, Carry);
       }
     } else if (CC == ARMCC::NE && !isNullConstant(RHS) &&
