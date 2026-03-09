@@ -99,10 +99,10 @@ static unsigned countLinesToLastUse(const VarDecl* Var, const SourceManager* Src
     explicit VarUseCallback(unsigned* Output): LastUseLineNumber{Output} {}
 
     void run(const MatchFinder::MatchResult &Result) override {
-      const DeclRefExpr *Use = Result.Nodes.getNodeAs<DeclRefExpr>("varUse");
+      const auto *Use = Result.Nodes.getNodeAs<DeclRefExpr>("varUse");
       if (Use && LastUseLineNumber) {
         auto Loc = Use->getLocation();
-        unsigned UseLine = Result.SourceManager->getSpellingLineNumber(Loc);
+        const unsigned UseLine = Result.SourceManager->getSpellingLineNumber(Loc);
         *LastUseLineNumber = std::max(*LastUseLineNumber, UseLine);
       }
     }
