@@ -365,6 +365,10 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
 TEST_F(TestTypeSystemClang, TestGetPointerDiffType) {
   CompilerType ptrdiff_t = m_ast->GetPointerDiffType(/*is_signed=*/true);
   EXPECT_EQ(ptrdiff_t.GetDisplayTypeName(), "__ptrdiff_t");
+  EXPECT_TRUE(ptrdiff_t.IsSigned());
+  EXPECT_EQ(
+      llvm::expectedToOptional(ptrdiff_t.GetByteSize(nullptr)).value_or(0),
+      m_ast->GetPointerByteSize());
 
   CompilerType uptrdiff_t = m_ast->GetPointerDiffType(/*is_signed=*/false);
   EXPECT_FALSE(uptrdiff_t.IsSigned());

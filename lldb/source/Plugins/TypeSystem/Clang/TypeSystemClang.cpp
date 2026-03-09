@@ -2402,6 +2402,7 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
 }
 
 CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  // Check if builtin types are initialized.
   if (!getASTContext().VoidPtrTy)
     return {};
 
