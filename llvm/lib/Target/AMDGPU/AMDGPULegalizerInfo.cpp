@@ -1942,18 +1942,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     unsigned BigTyIdx = Op == G_EXTRACT ? 1 : 0;
     unsigned LitTyIdx = Op == G_EXTRACT ? 0 : 1;
     getActionDefinitionsBuilder(Op)
-        .lowerIf([=](const LegalityQuery &Query) {
-          return Query.Types[BigTyIdx].isVector();
-        })
-        .customIf([=](const LegalityQuery &Query) {
-          // Generic lower is not aware of subregs and can produce inefficient
-          // shift+trunc/mask sequences. We can instead use custom lowering
-          // for simple 32-bit aligned cases and use unmerge/merge.
-          const LLT BigTy = Query.Types[BigTyIdx];
-          const LLT LitTy = Query.Types[LitTyIdx];
-          return BigTy.getSizeInBits() % 32 == 0 &&
-                 LitTy.getSizeInBits() % 32 == 0;
-        })
         .widenScalarIf(
             [=](const LegalityQuery &Query) {
               const LLT BigTy = Query.Types[BigTyIdx];
@@ -1968,6 +1956,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
             LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
         .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
         .widenScalarToNextPow2(BigTyIdx, 32)
+        .customIf([=](const LegalityQuery &Query) {
+          // Generic lower is not aware of subregs and can produce inefficient
+          // shift+trunc/mask sequences. We can instead use custom lowering
+          // for simple 32-bit aligned cases and use unmerge/merge.
+          const LLT BigTy = Query.Types[BigTyIdx];
+          const LLT LitTy = Query.Types[LitTyIdx];
+          return !BigTy.isVector() &&
+                 BigTy.getSizeInBits() % 32 == 0 &&
+                 LitTy.getSizeInBits() % 32 == 0;
+        })
         .lower();
   }
 
