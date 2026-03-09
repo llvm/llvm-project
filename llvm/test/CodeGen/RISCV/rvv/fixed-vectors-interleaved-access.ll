@@ -2474,5 +2474,24 @@ define <4 x i8> @maskedload_factor5_one_active(ptr %ptr) {
 ; CHECK-NEXT:    ret
  %interleaved.vec = tail call <20 x i8> @llvm.masked.load.v20i8.p0(ptr %ptr, <20 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <20 x i8> poison)
   %v0 = shufflevector <20 x i8> %interleaved.vec, <20 x i8> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+ ret <4 x i8> %v0
+}
+
+define <4 x i8> @vp_load_v16i8_factor5_one_active(ptr %ptr) {
+; CHECK-LABEL: vp_load_v16i8_factor5_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 20, e8, m1, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    li a0, 33
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v8, 8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
+; CHECK-NEXT:    vmv.v.i v0, 10
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4, v0.t
+; CHECK-NEXT:    ret
+ %interleaved.vec = tail call <16 x i8> @llvm.vp.load.v16i8.p0(ptr %ptr, <16 x i1>  splat (i1 true), i32 20)
+  %v0 = shufflevector <16 x i8> %interleaved.vec, <16 x i8> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
   ret <4 x i8> %v0
 }
