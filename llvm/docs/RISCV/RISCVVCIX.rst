@@ -13,7 +13,7 @@ SiFive makes no guarantee that modifying the upstream code to describe their VCI
 
 Introduction
 ------------
-LLVM uses scheduler models to describe the behavior of processor latencies and resources. The scheduler models are attached to a processor definition (i.e. ``-mcpu=``) or tunings (i.e. ``-mtune=``). The challenge with VCIX is that the same processor definition could be used with different coprocessors that have very different latencies or processor resource usage for a given instruction. As a result, a default implementation is provided, and SiFive customers may use this document to customize the existing implementation to their needs.
+LLVM uses scheduler models to describe the behavior of processor latencies and resources. The scheduler models are attached to a processor definition (i.e. ``-mcpu=``) or tunings (i.e. ``-mtune=``). The challenge with VCIX is that the same processor definition could be used with different coprocessors that have very different latencies or processor resource usage for a given instruction. As a result, a default implementation is provided, and one may use this document to customize the existing implementation to their needs.
 
 Understanding the VCIX Scheduling Model Information
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
