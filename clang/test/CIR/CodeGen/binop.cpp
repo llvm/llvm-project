@@ -17,14 +17,14 @@ void b0(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z2b0ii(
-// CIR: %{{.+}} = cir.binop(mul, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(div, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(rem, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(add, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(sub, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(and, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(xor, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(or, %{{.+}}, %{{.+}}) : !s32i
+// CIR: %{{.+}} = cir.mul nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.div %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.rem %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.add nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.sub nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.and %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.xor %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.or %{{.+}}, %{{.+}} : !s32i
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z2b0ii(
@@ -134,10 +134,10 @@ void testFloatingPointBinOps(float a, float b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z23testFloatingPointBinOpsff(
-// CIR: cir.binop(mul, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(div, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(add, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
+// CIR: cir.mul %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.div %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.add %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.sub %{{.+}}, %{{.+}} : !cir.float
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(

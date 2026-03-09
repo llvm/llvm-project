@@ -169,7 +169,7 @@ IR2VecTool::createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const {
                              "Failed to create embedder for function '%s'.",
                              F.getName().str().c_str());
 
-  return Emb;
+  return std::move(Emb);
 }
 
 Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,

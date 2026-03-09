@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
 
 // NOLINTBEGIN
 namespace std {

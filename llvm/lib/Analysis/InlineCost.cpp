@@ -1703,7 +1703,7 @@ bool CallAnalyzer::visitPHI(PHINode &I) {
 
   // Check if we can map phi to a pointer with constant offset.
   if (FirstBaseAndOffset.first) {
-    ConstantOffsetPtrs[&I] = FirstBaseAndOffset;
+    ConstantOffsetPtrs[&I] = std::move(FirstBaseAndOffset);
 
     if (auto *SROAArg = getSROAArgForValueOrNull(FirstV))
       SROAArgValues[&I] = SROAArg;
@@ -1879,7 +1879,7 @@ bool CallAnalyzer::visitBitCast(BitCastInst &I) {
       ConstantOffsetPtrs.lookup(I.getOperand(0));
   // Casts don't change the offset, just wrap it up.
   if (BaseAndOffset.first)
-    ConstantOffsetPtrs[&I] = BaseAndOffset;
+    ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
 
   // Also look for SROA candidates here.
   if (auto *SROAArg = getSROAArgForValueOrNull(I.getOperand(0)))
@@ -1902,7 +1902,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
     std::pair<Value *, APInt> BaseAndOffset =
         ConstantOffsetPtrs.lookup(I.getOperand(0));
     if (BaseAndOffset.first)
-      ConstantOffsetPtrs[&I] = BaseAndOffset;
+      ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
   }
 
   // This is really weird. Technically, ptrtoint will disable SROA. However,
@@ -1931,7 +1931,7 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
   if (IntegerSize <= DL.getPointerTypeSizeInBits(I.getType())) {
     std::pair<Value *, APInt> BaseAndOffset = ConstantOffsetPtrs.lookup(Op);
     if (BaseAndOffset.first)
-      ConstantOffsetPtrs[&I] = BaseAndOffset;
+      ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
   }
 
   // "Propagate" SROA here in the same manner as we do for ptrtoint above.
@@ -2597,7 +2597,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
     std::pair<Value *, APInt> FalseBaseAndOffset =
         ConstantOffsetPtrs.lookup(FalseVal);
     if (TrueBaseAndOffset == FalseBaseAndOffset && TrueBaseAndOffset.first) {
-      ConstantOffsetPtrs[&SI] = TrueBaseAndOffset;
+      ConstantOffsetPtrs[&SI] = std::move(TrueBaseAndOffset);
 
       if (auto *SROAArg = getSROAArgForValueOrNull(TrueVal))
         SROAArgValues[&SI] = SROAArg;
@@ -2636,7 +2636,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
   std::pair<Value *, APInt> BaseAndOffset =
       ConstantOffsetPtrs.lookup(SelectedV);
   if (BaseAndOffset.first) {
-    ConstantOffsetPtrs[&SI] = BaseAndOffset;
+    ConstantOffsetPtrs[&SI] = std::move(BaseAndOffset);
 
     if (auto *SROAArg = getSROAArgForValueOrNull(SelectedV))
       SROAArgValues[&SI] = SROAArg;

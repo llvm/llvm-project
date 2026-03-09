@@ -169,6 +169,7 @@ class PPC64 final : public TargetInfo {
 public:
   PPC64(Ctx &);
   uint32_t calcEFlags() const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -967,6 +968,12 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     llvm_unreachable("unknown relocation for IE to LE");
     break;
   }
+}
+
+void PPC64::initTargetSpecificSections() {
+  ctx.in.ppc64LongBranchTarget =
+      std::make_unique<PPC64LongBranchTargetSection>(ctx);
+  ctx.inputSections.push_back(ctx.in.ppc64LongBranchTarget.get());
 }
 
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.
