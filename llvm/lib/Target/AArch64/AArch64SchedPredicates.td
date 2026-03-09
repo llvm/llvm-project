@@ -61,6 +61,11 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
 // Generic predicates.
 
 // Check for ZR in a register operand.
+def CheckIsReg0Zero : CheckAll<
+                        [CheckIsRegOperand<0>,
+                         CheckAny<
+                           [CheckRegOperand<0, WZR>,
+                            CheckRegOperand<0, XZR>]>]>;
 foreach I = {1-3} in {
   def CheckIsReg#I#Zero : CheckAll<
                             [CheckIsRegOperand<I>,
@@ -68,6 +73,7 @@ foreach I = {1-3} in {
                                [CheckRegOperand<I, WZR>,
                                 CheckRegOperand<I, XZR>]>]>;
 }
+def IsReg0ZeroPred  : MCSchedPredicate<CheckIsReg0Zero>;
 def IsReg1ZeroPred  : MCSchedPredicate<CheckIsReg1Zero>;
 def IsReg2ZeroPred  : MCSchedPredicate<CheckIsReg2Zero>;
 def IsReg3ZeroPred  : MCSchedPredicate<CheckIsReg3Zero>;

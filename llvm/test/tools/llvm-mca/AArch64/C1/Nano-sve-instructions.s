@@ -3476,12 +3476,12 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      3     0.50                        add	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      3     0.50                        add	z31.s, z31.s, #65280
 # CHECK-NEXT:  1      3     0.50                        add	z31.s, z31.s, z31.s
-# CHECK-NEXT:  1      6     0.50                        addhnb	z0.b, z1.h, z31.h
-# CHECK-NEXT:  1      6     0.50                        addhnb	z0.h, z1.s, z31.s
-# CHECK-NEXT:  1      6     0.50                        addhnb	z0.s, z1.d, z31.d
-# CHECK-NEXT:  1      6     0.50                        addhnt	z0.b, z1.h, z31.h
-# CHECK-NEXT:  1      6     0.50                        addhnt	z0.h, z1.s, z31.s
-# CHECK-NEXT:  1      6     0.50                        addhnt	z0.s, z1.d, z31.d
+# CHECK-NEXT:  1      4     0.50                        addhnb	z0.b, z1.h, z31.h
+# CHECK-NEXT:  1      4     0.50                        addhnb	z0.h, z1.s, z31.s
+# CHECK-NEXT:  1      4     0.50                        addhnb	z0.s, z1.d, z31.d
+# CHECK-NEXT:  1      4     0.50                        addhnt	z0.b, z1.h, z31.h
+# CHECK-NEXT:  1      4     0.50                        addhnt	z0.h, z1.s, z31.s
+# CHECK-NEXT:  1      4     0.50                        addhnt	z0.s, z1.d, z31.d
 # CHECK-NEXT:  1      3     0.50                        addp	z0.b, p0/m, z0.b, z1.b
 # CHECK-NEXT:  1      3     0.50                        addp	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  1      3     0.50                        addp	z29.s, p7/m, z29.s, z30.s
@@ -3892,21 +3892,21 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      1     0.50                        ctermne	wzr, w30
 # CHECK-NEXT:  1      1     0.50                        ctermne	x30, xzr
 # CHECK-NEXT:  1      1     0.50                        ctermne	xzr, x30
-# CHECK-NEXT:  1      3     0.50                        decb	x0
-# CHECK-NEXT:  1      3     0.50                        decb	x0, #14
-# CHECK-NEXT:  1      3     0.50                        decb	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        decb	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        decb	x0, vl1
-# CHECK-NEXT:  1      3     0.50                        decd	x0
-# CHECK-NEXT:  1      3     0.50                        decd	x0, #14
-# CHECK-NEXT:  1      3     0.50                        decd	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        decd	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        decd	x0, vl1
-# CHECK-NEXT:  1      3     0.50                        dech	x0
-# CHECK-NEXT:  1      3     0.50                        dech	x0, #14
-# CHECK-NEXT:  1      3     0.50                        dech	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        dech	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        dech	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        decb	x0
+# CHECK-NEXT:  1      1     0.50                        decb	x0, #14
+# CHECK-NEXT:  1      1     0.50                        decb	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        decb	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        decb	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        decd	x0
+# CHECK-NEXT:  1      1     0.50                        decd	x0, #14
+# CHECK-NEXT:  1      1     0.50                        decd	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        decd	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        decd	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        dech	x0
+# CHECK-NEXT:  1      1     0.50                        dech	x0, #14
+# CHECK-NEXT:  1      1     0.50                        dech	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        dech	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        dech	x0, vl1
 # CHECK-NEXT:  1      1     1.00                        decp	x0, p0.b
 # CHECK-NEXT:  1      1     1.00                        decp	x0, p0.d
 # CHECK-NEXT:  1      1     1.00                        decp	x0, p0.h
@@ -3918,11 +3918,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      3     1.00                        decp	z31.d, p15.d
 # CHECK-NEXT:  1      3     1.00                        decp	z31.h, p15.h
 # CHECK-NEXT:  1      3     1.00                        decp	z31.s, p15.s
-# CHECK-NEXT:  1      3     0.50                        decw	x0
-# CHECK-NEXT:  1      3     0.50                        decw	x0, #14
-# CHECK-NEXT:  1      3     0.50                        decw	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        decw	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        decw	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        decw	x0
+# CHECK-NEXT:  1      1     0.50                        decw	x0, #14
+# CHECK-NEXT:  1      1     0.50                        decw	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        decw	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        decw	x0, vl1
 # CHECK-NEXT:  1      4     0.50                        dupm	z0.d, #0xfffffffffffffff9
 # CHECK-NEXT:  1      4     0.50                        dupm	z0.s, #0xfffffff9
 # CHECK-NEXT:  1      4     0.50                        dupm	z23.h, #0xfff9
@@ -4309,23 +4309,23 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      6     4.00                        histcnt	z0.s, p0/z, z1.s, z2.s
 # CHECK-NEXT:  1      6     4.00                        histcnt	z29.d, p7/z, z30.d, z31.d
 # CHECK-NEXT:  1      6     4.00                        histseg	z0.b, z1.b, z31.b
-# CHECK-NEXT:  1      3     0.50                        incb	x0
-# CHECK-NEXT:  1      3     0.50                        incb	x0, #14
-# CHECK-NEXT:  1      3     0.50                        incb	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        incb	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        incb	x0, vl1
-# CHECK-NEXT:  1      3     0.50                        incd	x0
-# CHECK-NEXT:  1      3     0.50                        incd	x0, #14
-# CHECK-NEXT:  1      3     0.50                        incd	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        incd	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        incd	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        incb	x0
+# CHECK-NEXT:  1      1     0.50                        incb	x0, #14
+# CHECK-NEXT:  1      1     0.50                        incb	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        incb	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        incb	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        incd	x0
+# CHECK-NEXT:  1      1     0.50                        incd	x0, #14
+# CHECK-NEXT:  1      1     0.50                        incd	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        incd	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        incd	x0, vl1
 # CHECK-NEXT:  1      4     0.50                        incd	z0.d
 # CHECK-NEXT:  1      4     0.50                        incd	z0.d, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        inch	x0
-# CHECK-NEXT:  1      3     0.50                        inch	x0, #14
-# CHECK-NEXT:  1      3     0.50                        inch	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        inch	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        inch	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        inch	x0
+# CHECK-NEXT:  1      1     0.50                        inch	x0, #14
+# CHECK-NEXT:  1      1     0.50                        inch	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        inch	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        inch	x0, vl1
 # CHECK-NEXT:  1      4     0.50                        inch	z0.h
 # CHECK-NEXT:  1      4     0.50                        inch	z0.h, all, mul #16
 # CHECK-NEXT:  1      1     1.00                        incp	x0, p0.b
@@ -4339,11 +4339,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      3     1.00                        incp	z31.d, p15.d
 # CHECK-NEXT:  1      3     1.00                        incp	z31.h, p15.h
 # CHECK-NEXT:  1      3     1.00                        incp	z31.s, p15.s
-# CHECK-NEXT:  1      3     0.50                        incw	x0
-# CHECK-NEXT:  1      3     0.50                        incw	x0, #14
-# CHECK-NEXT:  1      3     0.50                        incw	x0, all, mul #16
-# CHECK-NEXT:  1      3     0.50                        incw	x0, pow2
-# CHECK-NEXT:  1      3     0.50                        incw	x0, vl1
+# CHECK-NEXT:  1      1     0.50                        incw	x0
+# CHECK-NEXT:  1      1     0.50                        incw	x0, #14
+# CHECK-NEXT:  1      1     0.50                        incw	x0, all, mul #16
+# CHECK-NEXT:  1      1     0.50                        incw	x0, pow2
+# CHECK-NEXT:  1      1     0.50                        incw	x0, vl1
 # CHECK-NEXT:  1      4     0.50                        incw	z0.s
 # CHECK-NEXT:  1      4     0.50                        incw	z0.s, all, mul #16
 # CHECK-NEXT:  1      4     0.50                        index	z0.b, #0, #0
@@ -5663,13 +5663,13 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                        sqdecp	x0, p0.d
 # CHECK-NEXT:  1      2     1.00                        sqdecp	x0, p0.h
 # CHECK-NEXT:  1      2     1.00                        sqdecp	x0, p0.s
-# CHECK-NEXT:  1      2     1.00                        sqdecp	xzr, p15.b, wzr
-# CHECK-NEXT:  1      2     1.00                        sqdecp	xzr, p15.d, wzr
-# CHECK-NEXT:  1      2     1.00                        sqdecp	xzr, p15.h, wzr
-# CHECK-NEXT:  1      2     1.00                        sqdecp	xzr, p15.s, wzr
-# CHECK-NEXT:  1      3     1.00                        sqdecp	z0.d, p0.d
-# CHECK-NEXT:  1      3     1.00                        sqdecp	z0.h, p0.h
-# CHECK-NEXT:  1      3     1.00                        sqdecp	z0.s, p0.s
+# CHECK-NEXT:  1      1     1.00                        sqdecp	xzr, p15.b, wzr
+# CHECK-NEXT:  1      1     1.00                        sqdecp	xzr, p15.d, wzr
+# CHECK-NEXT:  1      1     1.00                        sqdecp	xzr, p15.h, wzr
+# CHECK-NEXT:  1      1     1.00                        sqdecp	xzr, p15.s, wzr
+# CHECK-NEXT:  1      4     1.00                        sqdecp	z0.d, p0.d
+# CHECK-NEXT:  1      4     1.00                        sqdecp	z0.h, p0.h
+# CHECK-NEXT:  1      4     1.00                        sqdecp	z0.s, p0.s
 # CHECK-NEXT:  1      5     0.50                        sqdecw	x0
 # CHECK-NEXT:  1      5     0.50                        sqdecw	x0, #14
 # CHECK-NEXT:  1      5     0.50                        sqdecw	x0, all, mul #16
@@ -5765,13 +5765,13 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                        sqincp	x0, p0.d
 # CHECK-NEXT:  1      2     1.00                        sqincp	x0, p0.h
 # CHECK-NEXT:  1      2     1.00                        sqincp	x0, p0.s
-# CHECK-NEXT:  1      2     1.00                        sqincp	xzr, p15.b, wzr
-# CHECK-NEXT:  1      2     1.00                        sqincp	xzr, p15.d, wzr
-# CHECK-NEXT:  1      2     1.00                        sqincp	xzr, p15.h, wzr
-# CHECK-NEXT:  1      2     1.00                        sqincp	xzr, p15.s, wzr
-# CHECK-NEXT:  1      3     1.00                        sqincp	z0.d, p0.d
-# CHECK-NEXT:  1      3     1.00                        sqincp	z0.h, p0.h
-# CHECK-NEXT:  1      3     1.00                        sqincp	z0.s, p0.s
+# CHECK-NEXT:  1      1     1.00                        sqincp	xzr, p15.b, wzr
+# CHECK-NEXT:  1      1     1.00                        sqincp	xzr, p15.d, wzr
+# CHECK-NEXT:  1      1     1.00                        sqincp	xzr, p15.h, wzr
+# CHECK-NEXT:  1      1     1.00                        sqincp	xzr, p15.s, wzr
+# CHECK-NEXT:  1      4     1.00                        sqincp	z0.d, p0.d
+# CHECK-NEXT:  1      4     1.00                        sqincp	z0.h, p0.h
+# CHECK-NEXT:  1      4     1.00                        sqincp	z0.s, p0.s
 # CHECK-NEXT:  1      5     0.50                        sqincw	x0
 # CHECK-NEXT:  1      5     0.50                        sqincw	x0, #14
 # CHECK-NEXT:  1      5     0.50                        sqincw	x0, all, mul #16
@@ -5945,10 +5945,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     0.50                        sqxtunt	z0.b, z31.h
 # CHECK-NEXT:  1      4     0.50                        sqxtunt	z0.h, z31.s
 # CHECK-NEXT:  1      4     0.50                        sqxtunt	z0.s, z31.d
-# CHECK-NEXT:  1      4     0.50                        srhadd	z0.b, p0/m, z0.b, z1.b
-# CHECK-NEXT:  1      4     0.50                        srhadd	z0.h, p0/m, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        srhadd	z29.s, p7/m, z29.s, z30.s
-# CHECK-NEXT:  1      4     0.50                        srhadd	z31.d, p7/m, z31.d, z30.d
+# CHECK-NEXT:  1      3     0.50                        srhadd	z0.b, p0/m, z0.b, z1.b
+# CHECK-NEXT:  1      3     0.50                        srhadd	z0.h, p0/m, z0.h, z1.h
+# CHECK-NEXT:  1      3     0.50                        srhadd	z29.s, p7/m, z29.s, z30.s
+# CHECK-NEXT:  1      3     0.50                        srhadd	z31.d, p7/m, z31.d, z30.d
 # CHECK-NEXT:  1      3     0.50                        sri	z0.b, z0.b, #1
 # CHECK-NEXT:  1      3     0.50                        sri	z0.d, z0.d, #1
 # CHECK-NEXT:  1      3     0.50                        sri	z0.h, z0.h, #1
@@ -6250,27 +6250,27 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      3     0.50                        sub	z31.s, p7/m, z31.s, z31.s
 # CHECK-NEXT:  1      3     0.50                        sub	z31.s, z31.s, #65280
 # CHECK-NEXT:  1      3     0.50                        sub	z31.s, z31.s, z31.s
-# CHECK-NEXT:  1      6     0.50                        subhnb	z0.b, z1.h, z31.h
-# CHECK-NEXT:  1      6     0.50                        subhnb	z0.h, z1.s, z31.s
-# CHECK-NEXT:  1      6     0.50                        subhnb	z0.s, z1.d, z31.d
-# CHECK-NEXT:  1      6     0.50                        subhnt	z0.b, z1.h, z31.h
-# CHECK-NEXT:  1      6     0.50                        subhnt	z0.h, z1.s, z31.s
-# CHECK-NEXT:  1      6     0.50                        subhnt	z0.s, z1.d, z31.d
-# CHECK-NEXT:  1      3     0.50                        subr	z0.b, p0/m, z0.b, z0.b
-# CHECK-NEXT:  1      3     0.50                        subr	z0.b, z0.b, #0
-# CHECK-NEXT:  1      3     0.50                        subr	z0.d, p0/m, z0.d, z0.d
-# CHECK-NEXT:  1      3     0.50                        subr	z0.d, z0.d, #0
-# CHECK-NEXT:  1      3     0.50                        subr	z0.d, z0.d, #0, lsl #8
-# CHECK-NEXT:  1      3     0.50                        subr	z0.h, p0/m, z0.h, z0.h
-# CHECK-NEXT:  1      3     0.50                        subr	z0.h, z0.h, #0
-# CHECK-NEXT:  1      3     0.50                        subr	z0.h, z0.h, #0, lsl #8
-# CHECK-NEXT:  1      3     0.50                        subr	z0.s, p0/m, z0.s, z0.s
-# CHECK-NEXT:  1      3     0.50                        subr	z0.s, z0.s, #0
-# CHECK-NEXT:  1      3     0.50                        subr	z0.s, z0.s, #0, lsl #8
-# CHECK-NEXT:  1      3     0.50                        subr	z31.b, z31.b, #255
-# CHECK-NEXT:  1      3     0.50                        subr	z31.d, z31.d, #65280
-# CHECK-NEXT:  1      3     0.50                        subr	z31.h, z31.h, #65280
-# CHECK-NEXT:  1      3     0.50                        subr	z31.s, z31.s, #65280
+# CHECK-NEXT:  1      4     0.50                        subhnb	z0.b, z1.h, z31.h
+# CHECK-NEXT:  1      4     0.50                        subhnb	z0.h, z1.s, z31.s
+# CHECK-NEXT:  1      4     0.50                        subhnb	z0.s, z1.d, z31.d
+# CHECK-NEXT:  1      4     0.50                        subhnt	z0.b, z1.h, z31.h
+# CHECK-NEXT:  1      4     0.50                        subhnt	z0.h, z1.s, z31.s
+# CHECK-NEXT:  1      4     0.50                        subhnt	z0.s, z1.d, z31.d
+# CHECK-NEXT:  1      4     0.50                        subr	z0.b, p0/m, z0.b, z0.b
+# CHECK-NEXT:  1      4     0.50                        subr	z0.b, z0.b, #0
+# CHECK-NEXT:  1      4     0.50                        subr	z0.d, p0/m, z0.d, z0.d
+# CHECK-NEXT:  1      4     0.50                        subr	z0.d, z0.d, #0
+# CHECK-NEXT:  1      4     0.50                        subr	z0.d, z0.d, #0, lsl #8
+# CHECK-NEXT:  1      4     0.50                        subr	z0.h, p0/m, z0.h, z0.h
+# CHECK-NEXT:  1      4     0.50                        subr	z0.h, z0.h, #0
+# CHECK-NEXT:  1      4     0.50                        subr	z0.h, z0.h, #0, lsl #8
+# CHECK-NEXT:  1      4     0.50                        subr	z0.s, p0/m, z0.s, z0.s
+# CHECK-NEXT:  1      4     0.50                        subr	z0.s, z0.s, #0
+# CHECK-NEXT:  1      4     0.50                        subr	z0.s, z0.s, #0, lsl #8
+# CHECK-NEXT:  1      4     0.50                        subr	z31.b, z31.b, #255
+# CHECK-NEXT:  1      4     0.50                        subr	z31.d, z31.d, #65280
+# CHECK-NEXT:  1      4     0.50                        subr	z31.h, z31.h, #65280
+# CHECK-NEXT:  1      4     0.50                        subr	z31.s, z31.s, #65280
 # CHECK-NEXT:  1      4     0.50                        sunpkhi	z31.d, z31.s
 # CHECK-NEXT:  1      4     0.50                        sunpkhi	z31.h, z31.b
 # CHECK-NEXT:  1      4     0.50                        sunpkhi	z31.s, z31.h
@@ -6354,12 +6354,12 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     1.00                        uaddv	d0, p7, z31.d
 # CHECK-NEXT:  1      4     1.00                        uaddv	d0, p7, z31.h
 # CHECK-NEXT:  1      4     1.00                        uaddv	d0, p7, z31.s
-# CHECK-NEXT:  1      4     0.50                        uaddwb	z0.h, z1.h, z2.b
-# CHECK-NEXT:  1      4     0.50                        uaddwb	z29.s, z30.s, z31.h
-# CHECK-NEXT:  1      4     0.50                        uaddwb	z31.d, z31.d, z31.s
-# CHECK-NEXT:  1      4     0.50                        uaddwt	z0.h, z1.h, z2.b
-# CHECK-NEXT:  1      4     0.50                        uaddwt	z29.s, z30.s, z31.h
-# CHECK-NEXT:  1      4     0.50                        uaddwt	z31.d, z31.d, z31.s
+# CHECK-NEXT:  1      3     0.50                        uaddwb	z0.h, z1.h, z2.b
+# CHECK-NEXT:  1      3     0.50                        uaddwb	z29.s, z30.s, z31.h
+# CHECK-NEXT:  1      3     0.50                        uaddwb	z31.d, z31.d, z31.s
+# CHECK-NEXT:  1      3     0.50                        uaddwt	z0.h, z1.h, z2.b
+# CHECK-NEXT:  1      3     0.50                        uaddwt	z29.s, z30.s, z31.h
+# CHECK-NEXT:  1      3     0.50                        uaddwt	z31.d, z31.d, z31.s
 # CHECK-NEXT:  1      4     0.50                        ucvtf	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      4     0.50                        ucvtf	z0.d, p0/m, z0.s
 # CHECK-NEXT:  1      4     0.50                        ucvtf	z0.h, p0/m, z0.d
@@ -6516,9 +6516,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                        uqdecp	x0, p0.d
 # CHECK-NEXT:  1      2     1.00                        uqdecp	x0, p0.h
 # CHECK-NEXT:  1      2     1.00                        uqdecp	x0, p0.s
-# CHECK-NEXT:  1      3     1.00                        uqdecp	z0.d, p0.d
-# CHECK-NEXT:  1      3     1.00                        uqdecp	z0.h, p0.h
-# CHECK-NEXT:  1      3     1.00                        uqdecp	z0.s, p0.s
+# CHECK-NEXT:  1      4     1.00                        uqdecp	z0.d, p0.d
+# CHECK-NEXT:  1      4     1.00                        uqdecp	z0.h, p0.h
+# CHECK-NEXT:  1      4     1.00                        uqdecp	z0.s, p0.s
 # CHECK-NEXT:  1      5     0.50                        uqdecw	w0
 # CHECK-NEXT:  1      5     0.50                        uqdecw	w0, all, mul #16
 # CHECK-NEXT:  1      5     0.50                        uqdecw	w0, pow2
@@ -6575,9 +6575,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                        uqincp	x0, p0.d
 # CHECK-NEXT:  1      2     1.00                        uqincp	x0, p0.h
 # CHECK-NEXT:  1      2     1.00                        uqincp	x0, p0.s
-# CHECK-NEXT:  1      3     1.00                        uqincp	z0.d, p0.d
-# CHECK-NEXT:  1      3     1.00                        uqincp	z0.h, p0.h
-# CHECK-NEXT:  1      3     1.00                        uqincp	z0.s, p0.s
+# CHECK-NEXT:  1      4     1.00                        uqincp	z0.d, p0.d
+# CHECK-NEXT:  1      4     1.00                        uqincp	z0.h, p0.h
+# CHECK-NEXT:  1      4     1.00                        uqincp	z0.s, p0.s
 # CHECK-NEXT:  1      5     0.50                        uqincw	w0
 # CHECK-NEXT:  1      5     0.50                        uqincw	w0, all, mul #16
 # CHECK-NEXT:  1      5     0.50                        uqincw	w0, pow2
@@ -6669,10 +6669,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     0.50                        uqxtnt	z0.h, z31.s
 # CHECK-NEXT:  1      4     0.50                        uqxtnt	z0.s, z31.d
 # CHECK-NEXT:  1      4     0.50                        urecpe	z31.s, p7/m, z31.s
-# CHECK-NEXT:  1      4     0.50                        urhadd	z0.b, p0/m, z0.b, z1.b
-# CHECK-NEXT:  1      4     0.50                        urhadd	z0.h, p0/m, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        urhadd	z29.s, p7/m, z29.s, z30.s
-# CHECK-NEXT:  1      4     0.50                        urhadd	z31.d, p7/m, z31.d, z30.d
+# CHECK-NEXT:  1      3     0.50                        urhadd	z0.b, p0/m, z0.b, z1.b
+# CHECK-NEXT:  1      3     0.50                        urhadd	z0.h, p0/m, z0.h, z1.h
+# CHECK-NEXT:  1      3     0.50                        urhadd	z29.s, p7/m, z29.s, z30.s
+# CHECK-NEXT:  1      3     0.50                        urhadd	z31.d, p7/m, z31.d, z30.d
 # CHECK-NEXT:  1      4     0.50                        urshl	z0.b, p0/m, z0.b, z1.b
 # CHECK-NEXT:  1      4     0.50                        urshl	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  1      4     0.50                        urshl	z29.s, p7/m, z29.s, z30.s
