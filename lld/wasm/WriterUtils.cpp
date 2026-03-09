@@ -271,26 +271,5 @@ void writeExport(raw_ostream &os, const WasmExport &export_) {
     fatal("unsupported export type: " + Twine(export_.Kind));
   }
 }
-
-void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.componentModelThreadContext) {
-    writeU8(os, WASM_OPCODE_CALL, "call");
-    writeUleb128(os, ctx.sym.contextGet1->getFunctionIndex(), "function index");
-  } else {
-    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_SET");
-    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
-  }
-}
-
-void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.componentModelThreadContext) {
-    writeU8(os, WASM_OPCODE_CALL, "call");
-    writeUleb128(os, ctx.sym.contextSet1->getFunctionIndex(), "function index");
-  } else {
-    writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
-    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
-  }
-}
-
 } // namespace wasm
 } // namespace lld
