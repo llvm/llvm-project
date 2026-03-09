@@ -1817,11 +1817,19 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
         getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
                              (adaptor.getDstIndices()));
 
-    rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
-        op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
-        /*offset=*/rewriter.getI32IntegerAttr(0),
-        /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
-        ArrayAttr{});
+    if (op.getAsync()) {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadAsyncToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    } else {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    }
 
     return success();
   }
@@ -2522,8 +2530,10 @@ struct AMDGPUSwizzleBitModeLowering
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
     unsigned andMask = op.getAndMask();
     unsigned orMask = op.getOrMask();
     unsigned xorMask = op.getXorMask();
@@ -2565,8 +2575,10 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
 
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
 
     SmallVector<Value> permuted;
     for (Value v : decomposed) {
@@ -2608,9 +2620,9 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
 
 // Bit layout of ds_barrier_state (as i64):
 // [63:32] init count (32 bits)
-// [31:28] phase (4 bits)
-// [27:0] pending count (28 bits)
-constexpr int32_t kDsBarrierPendingCountBitWidth = 28;
+// [31:29] phase (3 bits)
+// [28:0] pending count (29 bits)
+constexpr int32_t kDsBarrierPendingCountBitWidth = 29;
 constexpr int32_t kDsBarrierPhasePos = kDsBarrierPendingCountBitWidth;
 constexpr int32_t kDsBarrierInitCountPos = 32;
 constexpr int32_t kDsBarrierPendingCountMask =
@@ -3686,8 +3698,12 @@ struct AMDGPUTensorLoadStoreOpLowering
       return op->emitOpError("is only supported on gfx1250");
 
     ValueRange desc = adaptor.getDesc();
+    // Create a <v8 x i32> 0 as the fifth argument to match llvm intrinsic. It
+    // will move into the TDM descriptor once it becomes relevant for future use
+    auto v8i32 = VectorType::get(8, rewriter.getI32Type());
+    Value dgroup4 = LLVM::ZeroOp::create(rewriter, op.getLoc(), v8i32);
     rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
-                                          desc[3], /*cachePolicy=*/0,
+                                          desc[3], dgroup4, /*cachePolicy=*/0,
                                           /*alias_scopes=*/nullptr,
                                           /*noalias_scopes=*/nullptr,
                                           /*tbaa=*/nullptr);

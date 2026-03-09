@@ -480,46 +480,6 @@ define i32 @test_null-pointer-is-valid2(i32 %i) null_pointer_is_valid {
 ; CHECK-NEXT: ret i32
 }
 
-define i32 @no-infs-fp-math_callee0(i32 %i) "no-infs-fp-math"="false" {
-  ret i32 %i
-; CHECK: @no-infs-fp-math_callee0(i32 %i) [[NO_INFS_FPMATH_FALSE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @no-infs-fp-math_callee1(i32 %i) "no-infs-fp-math"="true" {
-  ret i32 %i
-; CHECK: @no-infs-fp-math_callee1(i32 %i) [[NO_INFS_FPMATH_TRUE:#[0-9]+]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math0(i32 %i) "no-infs-fp-math"="false" {
-  %1 = call i32 @no-infs-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math0(i32 %i) [[NO_INFS_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math1(i32 %i) "no-infs-fp-math"="false" {
-  %1 = call i32 @no-infs-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math1(i32 %i) [[NO_INFS_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math2(i32 %i) "no-infs-fp-math"="true" {
-  %1 = call i32 @no-infs-fp-math_callee0(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math2(i32 %i) [[NO_INFS_FPMATH_FALSE]] {
-; CHECK-NEXT: ret i32
-}
-
-define i32 @test_no-infs-fp-math3(i32 %i) "no-infs-fp-math"="true" {
-  %1 = call i32 @no-infs-fp-math_callee1(i32 %i)
-  ret i32 %1
-; CHECK: @test_no-infs-fp-math3(i32 %i) [[NO_INFS_FPMATH_TRUE]] {
-; CHECK-NEXT: ret i32
-}
-
 define i32 @no-nans-fp-math_callee0(i32 %i) "no-nans-fp-math"="false" {
   ret i32 %i
 ; CHECK: @no-nans-fp-math_callee0(i32 %i) [[NO_NANS_FPMATH_FALSE:#[0-9]+]] {
@@ -646,8 +606,6 @@ define i32 @loader_replaceable_caller() {
 ; CHECK: attributes [[NOIMPLICITFLOAT]] = { noimplicitfloat }
 ; CHECK: attributes [[NOUSEJUMPTABLES]] = { "no-jump-tables"="true" }
 ; CHECK: attributes [[NULLPOINTERISVALID]] = { null_pointer_is_valid }
-; CHECK: attributes [[NO_INFS_FPMATH_FALSE]] = { "no-infs-fp-math"="false" }
-; CHECK: attributes [[NO_INFS_FPMATH_TRUE]] = { "no-infs-fp-math"="true" }
 ; CHECK: attributes [[NO_NANS_FPMATH_FALSE]] = { "no-nans-fp-math"="false" }
 ; CHECK: attributes [[NO_NANS_FPMATH_TRUE]] = { "no-nans-fp-math"="true" }
 ; CHECK: attributes [[NO_SIGNED_ZEROS_FPMATH_FALSE]] = { "no-signed-zeros-fp-math"="false" }

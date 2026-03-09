@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Support/MathOptionsBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -633,6 +634,14 @@ public:
     return complexDivisionToRuntimeFlag;
   }
 
+  /// Setter/getter for fpMaxminBehavior.
+  void setFPMaxminBehavior(Fortran::common::FPMaxminBehavior mode) {
+    fpMaxminBehavior = mode;
+  }
+  Fortran::common::FPMaxminBehavior getFPMaxminBehavior() const {
+    return fpMaxminBehavior;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -692,6 +701,14 @@ private:
   /// FastMathFlags that need to be set for operations that support
   /// mlir::arith::FastMathAttr.
   mlir::arith::FastMathFlags fastMathFlags{};
+
+  /// Controls how max/min idioms should be implemented.
+  /// Right now, it is only used to propagate FPMaxminBehavior
+  /// to the IntrinsicCall lowering. In general, it can be used
+  /// for generating max/min idioms through FirBuilder anywhere
+  /// in the pipeline.
+  Fortran::common::FPMaxminBehavior fpMaxminBehavior{
+      Fortran::common::FPMaxminBehavior::Legacy};
 
   /// IntegerOverflowFlags that need to be set for operations that support
   /// mlir::arith::IntegerOverflowFlagsAttr.

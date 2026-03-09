@@ -876,7 +876,8 @@ let Predicates = [UseIncDec, In64BitMode] in {
   def : Pat<(X86lock_sub addr:$dst, (i64 -1)), (LOCK_INC64m addr:$dst)>;
 }
 
-// Atomic bit test.
+/// LOCK-prefixed arithmetic read-modify-write instructions.
+/// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
 def X86LBTest : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>,
                                      SDTCisVT<2, i8>, SDTCisVT<3, i32>]>;
 def x86bts : SDNode<"X86ISD::LBTS", X86LBTest,
@@ -1349,7 +1350,8 @@ def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
 
 // Tailcall stuff. The TCRETURN instructions execute after the epilog, so they
 // can never use callee-saved registers. That is the purpose of the GR64_TC
-// register classes.
+// register classes. These (GR32_TC, GR64_TC, ..) need to stay in sync with
+// checkTCRetEnoughRegs.
 //
 // The only volatile register that is never used by the calling convention is
 // %r11. This happens when calling a vararg function with 6 arguments.
@@ -1366,8 +1368,7 @@ def : Pat<(X86tcret GR32:$dst, timm:$off),
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
 // callee-saved register.
-// Similar to X86tcret_6regs, here we only have 1 register left
-def : Pat<(X86tcret_1reg (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
           (TCRETURNmi addr:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotPIC, NotUseIndirectThunkCalls]>;
 
@@ -1391,13 +1392,13 @@ def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64_ImpCall ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[In64BitMode, NotUseIndirectThunkCalls, ImportCallOptimizationEnabled]>;
 
-// Don't fold loads into X86tcret requiring more than 6 regs.
+// Don't fold loads into X86tcret requiring too many regs.
 // There wouldn't be enough scratch registers for base+index.
-def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
           (TCRETURNmi64 addr:$dst, timm:$off)>,
           Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
+def : Pat<(X86tcret_enough_regs (load addr:$dst), timm:$off),
           (TCRETURN_WINmi64 addr:$dst, timm:$off)>,
           Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls]>;
 

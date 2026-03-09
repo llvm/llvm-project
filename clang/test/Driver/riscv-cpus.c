@@ -103,6 +103,14 @@
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+svnapot"
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-a100 | FileCheck -check-prefix=MCPU-SPACEMIT-A100 %s
+// MCPU-SPACEMIT-A100: "-target-cpu" "spacemit-a100"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-spacemit-a100.c`
+// MCPU-SPACEMIT-A100-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=spacemit-a100 | FileCheck -check-prefix=MTUNE-SPACEMIT-A100 %s
+// MTUNE-SPACEMIT-A100: "-tune-cpu" "spacemit-a100"
+
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x60 | FileCheck -check-prefix=MCPU-SPACEMIT-X60 %s
 // MCPU-SPACEMIT-X60: "-nostdsysteminc" "-target-cpu" "spacemit-x60"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+m"
@@ -787,3 +795,13 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45mpv | FileCheck -check-prefix=MTUNE-ANDES-AX45MPV %s
 // MTUNE-ANDES-AX45MPV: "-tune-cpu" "andes-ax45mpv"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xt-c910v2 | FileCheck -check-prefix=MCPU-XT-C910V2 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c910v2.c`
+// MCPU-XT-C910V2: "-target-cpu" "xt-c910v2"
+// MCPU-XT-C910V2-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xt-c920v2 | FileCheck -check-prefix=MCPU-XT-C920V2 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c920v2.c`
+// MCPU-XT-C920V2: "-target-cpu" "xt-c920v2"
+// MCPU-XT-C920V2-SAME: "-target-abi" "lp64d"

@@ -42,20 +42,7 @@ enum MemScopeTy {
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 V inc(Ty *Address, V Val, atomic::OrderingTy Ordering,
       MemScopeTy MemScope = MemScopeTy::device) {
-#if defined(__SPIRV__)
-  uint32_t Old;
-  while (true) {
-    Old = load(Address, Ordering, MemScope);
-    if (Old >= Val) {
-      if (cas(Address, Old, 0u, Ordering, Ordering, MemScope))
-        break;
-    } else if (cas(Address, Old, Old + 1, Ordering, Ordering, MemScope))
-      break;
-  }
-  return Old;
-#else
   return __scoped_atomic_fetch_uinc(Address, Val, Ordering, MemScope);
-#endif
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>

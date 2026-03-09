@@ -9,14 +9,17 @@
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -99,26 +102,22 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2UC_L3C:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3C:
-    control = 1;
-    break;
   case LoadCacheControl::L1C_L2UC_L3UC:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3UC:
   case LoadCacheControl::L1C_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::L1S_L2UC_L3UC:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3UC:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 3;
+    control = 2;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -127,16 +126,15 @@ static int32_t getL1CacheControl(LoadCacheControl cc) {
 static int32_t getL1CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2UC_L3WB:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3WB:
-    control = 1;
-    break;
   case StoreCacheControl::L1WT_L2UC_L3UC:
   case StoreCacheControl::L1WT_L2UC_L3WB:
   case StoreCacheControl::L1WT_L2WB_L3UC:
   case StoreCacheControl::L1WT_L2WB_L3WB:
+    control = 1;
+    break;
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
     break;
   case StoreCacheControl::L1S_L2UC_L3UC:
@@ -145,10 +143,7 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
     control = 3;
     break;
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3WB:
-    control = 4;
+  default:
     break;
   }
   return control;
@@ -157,24 +152,18 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
 static int32_t getL3CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1C_L2UC_L3UC:
-  case LoadCacheControl::L1C_L2C_L3UC:
-  case LoadCacheControl::L1S_L2UC_L3UC:
-  case LoadCacheControl::L1S_L2C_L3UC:
-    control = 1;
-    break;
   case LoadCacheControl::L1UC_L2UC_L3C:
   case LoadCacheControl::L1UC_L2C_L3C:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3C:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -183,16 +172,6 @@ static int32_t getL3CacheControl(LoadCacheControl cc) {
 static int32_t getL3CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1WT_L2UC_L3UC:
-  case StoreCacheControl::L1WT_L2WB_L3UC:
-  case StoreCacheControl::L1S_L2UC_L3UC:
-  case StoreCacheControl::L1S_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-    control = 1;
-    break;
   case StoreCacheControl::L1UC_L2UC_L3WB:
   case StoreCacheControl::L1UC_L2WB_L3WB:
   case StoreCacheControl::L1WT_L2UC_L3WB:
@@ -201,6 +180,8 @@ static int32_t getL3CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
   case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
+    break;
+  default:
     break;
   }
   return control;
@@ -265,7 +246,7 @@ static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   if (!getCacheControl(op))
     return {};
-  constexpr int32_t decorationCacheControlArity{4};
+  constexpr int32_t decorationCacheControlArity{3};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
   constexpr bool isLoad = std::is_same_v<OpType, BlockLoad2dOp> ||
@@ -275,9 +256,9 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
                           std::is_same_v<OpType, PrefetchOp>;
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
-      controlKey, 0, getL1CacheControl<OpType>(op), 0};
+      controlKey, 0, getL1CacheControl<OpType>(op)};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL3{
-      controlKey, 1, getL3CacheControl<OpType>(op), 0};
+      controlKey, 1, getL3CacheControl<OpType>(op)};
   auto arrayAttrL1 = rewriter.getI32ArrayAttr(decorationsL1);
   auto arrayAttrL3 = rewriter.getI32ArrayAttr(decorationsL3);
 
@@ -858,6 +839,58 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
   }
 };
 
+class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(LLVM::AllocaOp op, LLVM::AllocaOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto ptrType = cast<LLVM::LLVMPointerType>(op.getType());
+    auto addrSpace = ptrType.getAddressSpace();
+    if (addrSpace != 3)
+      return failure();
+    auto symTable = op->getParentWithTrait<OpTrait::SymbolTable>();
+    if (!symTable)
+      return failure();
+    Block *moduleBody;
+    if (ModuleOp mod = dyn_cast<ModuleOp>(*symTable)) {
+      moduleBody = mod.getBody();
+    } else if (gpu::GPUModuleOp gpuMod =
+                   dyn_cast<gpu::GPUModuleOp>(*symTable)) {
+      moduleBody = gpuMod.getBody();
+    } else {
+      return failure();
+    }
+    auto val = op.getArraySize();
+    APInt cst;
+    if (!matchPattern(val, m_ConstantInt(&cst)))
+      return failure();
+    auto loc = op.getLoc();
+    auto globalType = LLVM::LLVMArrayType::get(
+        rewriter.getContext(), op.getElemType(), cst.getZExtValue());
+    LLVM::GlobalOp globalVar;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(moduleBody);
+      auto alignment = op.getAlignment();
+      globalVar = LLVM::GlobalOp::create(
+          rewriter, loc, globalType, /*isConstant=*/false,
+          /*linkage=*/LLVM::Linkage::Internal,
+          /*name=*/std::string("__global_alloca_") +
+              std::to_string(getNextGlobalIdx()),
+          /*value=*/Attribute(),
+          /*alignment=*/alignment ? *alignment : 0, /*addrSpace=*/addrSpace);
+    }
+    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, globalVar);
+    return success();
+  }
+
+private:
+  static unsigned getNextGlobalIdx() {
+    static unsigned globalIdx = 0;
+    return globalIdx++;
+  }
+};
+
 static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   if (op.getV1() != op.getV2())
     return false;
@@ -1036,8 +1069,20 @@ struct ConvertXeVMToLLVMPass
 
 void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                                                   RewritePatternSet &patterns) {
-  target.addDynamicallyLegalDialect<LLVM::LLVMDialect>(
-      [](Operation *op) { return !op->hasAttr("cache_control"); });
+  // some LLVM operations need to be converted.
+  target.addDynamicallyLegalDialect<LLVM::LLVMDialect>([](Operation *op) {
+    // llvm alloca op with addrspace 3 for OpenCL (Workgroup) is not handled
+    // properly by SPIRV backend. It needs to be rewritten as a sequence with
+    // llvm global.
+    if (isa<LLVM::AllocaOp>(op)) {
+      LLVM::AllocaOp aOp = cast<LLVM::AllocaOp>(op);
+      LLVM::LLVMPointerType pTy = cast<LLVM::LLVMPointerType>(aOp.getType());
+      auto addrSpace = pTy.getAddressSpace();
+      return addrSpace != 3;
+    }
+    // cache_control attribute should be converted.
+    return !op->hasAttr("cache_control");
+  });
   target.addIllegalDialect<XeVMDialect>();
   patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
                LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
@@ -1061,6 +1106,6 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                LaunchConfigOpToOCLPattern<GridDimZOp>,
                SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
-               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>>(
-      patterns.getContext());
+               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
+               AllocaToGlobalPattern>(patterns.getContext());
 }

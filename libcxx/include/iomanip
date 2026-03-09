@@ -413,6 +413,8 @@ inline _LIBCPP_HIDE_FROM_ABI __iom_t10<_CharT> put_time(const tm* __tm, const _C
   return __iom_t10<_CharT>(__tm, __fmt);
 }
 
+#    if _LIBCPP_STD_VER >= 14
+
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& __quoted_output(
     basic_ostream<_CharT, _Traits>& __os,
@@ -501,22 +503,6 @@ struct _LIBCPP_HIDDEN __quoted_proxy {
     return std::__quoted_input(__is, __p.__string_, __p.__delim_, __p.__escape_);
   }
 };
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI __quoted_output_proxy<_CharT, _Traits>
-__quoted(const basic_string<_CharT, _Traits, _Allocator>& __s,
-         _CharT __delim  = _CharT('"'),
-         _CharT __escape = _CharT('\\')) {
-  return __quoted_output_proxy<_CharT, _Traits>(__s.data(), __s.data() + __s.size(), __delim, __escape);
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI __quoted_proxy<_CharT, _Traits, _Allocator>
-__quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
-  return __quoted_proxy<_CharT, _Traits, _Allocator>(__s, __delim, __escape);
-}
-
-#    if _LIBCPP_STD_VER >= 14
 
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI auto quoted(const _CharT* __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {

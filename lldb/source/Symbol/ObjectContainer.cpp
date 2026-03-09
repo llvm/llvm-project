@@ -45,14 +45,11 @@ ObjectContainerSP ObjectContainer::FindPlugin(const lldb::ModuleSP &module_sp,
                      module_sp->GetFileSpec().GetPath().c_str(),
                      static_cast<void *>(process_sp.get()), header_addr);
 
-  ObjectContainerCreateMemoryInstance create_callback;
-  for (size_t idx = 0;
-       (create_callback =
-            PluginManager::GetObjectContainerCreateMemoryCallbackAtIndex(
-                idx)) != nullptr;
-       ++idx) {
-    ObjectContainerSP object_container_sp(
-        create_callback(module_sp, data_sp, process_sp, header_addr));
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    if (!cbs.create_memory_callback)
+      continue;
+    ObjectContainerSP object_container_sp(cbs.create_memory_callback(
+        module_sp, data_sp, process_sp, header_addr));
     if (object_container_sp)
       return object_container_sp;
   }

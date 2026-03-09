@@ -43,9 +43,15 @@ psslai.w a4, a5, 4
 # CHECK-ASM-AND-OBJ: pli.h a5, 5
 # CHECK-ASM: encoding: [0x9b,0x27,0x05,0xb0]
 pli.h a5, 5
+# CHECK-ASM-AND-OBJ: pli.h a5, -215
+# CHECK-ASM: encoding: [0x9b,0xa7,0x29,0xb1]
+pli.h a5, 65321
 # CHECK-ASM-AND-OBJ: pli.w a5, 5
 # CHECK-ASM: encoding: [0x9b,0x27,0x05,0xb2]
 pli.w a5, 5
+# CHECK-ASM-AND-OBJ: pli.w a5, -292
+# CHECK-ASM: encoding: [0x9b,0xa7,0xdc,0xb2]
+pli.w a5, 0xfffffedc
 # CHECK-ASM-AND-OBJ: pli.b a6, 6
 # CHECK-ASM: encoding: [0x1b,0x28,0x06,0xb4]
 pli.b a6, 6
@@ -118,7 +124,7 @@ sha a0, t5, t5
 # CHECK-ASM-AND-OBJ: shar t5, t5, t3
 # CHECK-ASM: encoding: [0x1b,0x2f,0xcf,0xff]
 shar t5, t5, t3
-# CHECK-ASM-AND-OBJ: psrli.b a6, a7
+# CHECK-ASM-AND-OBJ: psrli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xc8,0x88,0x80]
 psrli.b a6, a7, 0
 # CHECK-ASM-AND-OBJ: psrli.h ra, sp, 1
@@ -169,24 +175,36 @@ psrl.hs a6, a7, a1
 # CHECK-ASM-AND-OBJ: psrl.bs a1, a2, a3
 # CHECK-ASM: encoding: [0x9b,0x45,0xd6,0x8c]
 psrl.bs a1, a2, a3
+# CHECK-ASM-AND-OBJ: psrl.ws a4, a5, a6
+# CHECK-ASM: encoding: [0x1b,0xc7,0x07,0x8b]
+psrl.ws a4, a5, a6
 # CHECK-ASM-AND-OBJ: predsum.hs a4, a5, a6
 # CHECK-ASM: encoding: [0x1b,0xc7,0x07,0x99]
 predsum.hs a4, a5, a6
 # CHECK-ASM-AND-OBJ: predsum.bs a7, a1, a1
 # CHECK-ASM: encoding: [0x9b,0xc8,0xb5,0x9c]
 predsum.bs a7, a1, a1
+# CHECK-ASM-AND-OBJ: predsum.ws t0, t1, t2
+# CHECK-ASM: encoding: [0x9b,0x42,0x73,0x9a]
+predsum.ws t0, t1, t2
 # CHECK-ASM-AND-OBJ: predsumu.hs t0, t1, t2
 # CHECK-ASM: encoding: [0x9b,0x42,0x73,0xb8]
 predsumu.hs t0, t1, t2
 # CHECK-ASM-AND-OBJ: predsumu.bs t3, t4, t5
 # CHECK-ASM: encoding: [0x1b,0xce,0xee,0xbd]
 predsumu.bs t3, t4, t5
+# CHECK-ASM-AND-OBJ: predsumu.ws a0, a1, a2
+# CHECK-ASM: encoding: [0x1b,0xc5,0xc5,0xba]
+predsumu.ws a0, a1, a2
 # CHECK-ASM-AND-OBJ: psra.hs ra, a1, a2
 # CHECK-ASM: encoding: [0x9b,0xc0,0xc5,0xc8]
 psra.hs ra, a1, a2
 # CHECK-ASM-AND-OBJ: psra.bs sp, a2, a3
 # CHECK-ASM: encoding: [0x1b,0x41,0xd6,0xcc]
 psra.bs sp, a2, a3
+# CHECK-ASM-AND-OBJ: psra.ws a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x46,0xf7,0xca]
+psra.ws a3, a4, a5
 # CHECK-ASM-AND-OBJ: padd.h t1, t5, s2
 # CHECK-ASM: encoding: [0x3b,0x03,0x2f,0x81]
 padd.h t1, t5, s2

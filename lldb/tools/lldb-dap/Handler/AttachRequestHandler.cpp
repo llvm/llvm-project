@@ -84,7 +84,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
        args.gdbRemotePort == LLDB_DAP_INVALID_PORT) &&
       args.waitFor)
     dap.SendOutput(OutputType::Console,
-                   llvm::formatv("Waiting to attach to \"{0}\"...",
+                   llvm::formatv("Waiting to attach to \"{0}\"...\n",
                                  dap.target.GetExecutable().GetFilename())
                        .str());
 

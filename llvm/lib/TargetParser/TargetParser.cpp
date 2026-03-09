@@ -185,6 +185,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx11-generic"},     {"gfx11-generic"},   GK_GFX11_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx12-generic"},     {"gfx12-generic"},   GK_GFX12_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx9-4-generic"},    {"gfx9-4-generic"},  GK_GFX9_4_GENERIC,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
+    {{"gfx12-5-generic"},   {"gfx12-5-generic"}, GK_GFX12_5_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     // clang-format on
 };
 
@@ -214,6 +215,7 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
   case AMDGPU::GK_GFX11_GENERIC:
     return "gfx11";
   case AMDGPU::GK_GFX12_GENERIC:
+  case AMDGPU::GK_GFX12_5_GENERIC:
     return "gfx12";
   default: {
     StringRef ArchName = getArchNameAMDGCN(AK);
@@ -356,6 +358,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX10_3_GENERIC: return {10, 3, 0};
   case GK_GFX11_GENERIC:   return {11, 0, 3};
   case GK_GFX12_GENERIC:   return {12, 0, 0};
+  case GK_GFX12_5_GENERIC: return {12, 5, 0};
   default:         return {0, 0, 0};
   }
   // clang-format on
@@ -436,6 +439,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX1310:
   case GK_GFX1251:
   case GK_GFX1250:
+  case GK_GFX12_5_GENERIC:
     Features["ci-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
@@ -515,10 +519,37 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["qsad-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["fp8-conversion-insts"] = true;
+    Features["wmma-128b-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
   case GK_GFX1170:
-    // TODO-GFX1170: Update features map for gfx1170
+    Features["ci-insts"] = true;
+    Features["dot7-insts"] = true;
+    Features["dot8-insts"] = true;
+    Features["dot9-insts"] = true;
+    Features["dot10-insts"] = true;
+    Features["dot12-insts"] = true;
+    Features["dl-insts"] = true;
+    Features["16-bit-insts"] = true;
+    Features["dpp"] = true;
+    Features["gfx8-insts"] = true;
+    Features["gfx9-insts"] = true;
+    Features["gfx10-insts"] = true;
+    Features["gfx10-3-insts"] = true;
+    Features["gfx11-insts"] = true;
+    Features["atomic-fadd-rtn-insts"] = true;
+    Features["image-insts"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
+    Features["gws"] = true;
+    Features["dot11-insts"] = true;
+    Features["fp8-conversion-insts"] = true;
+    Features["wmma-128b-insts"] = true;
+    Features["atomic-fmin-fmax-global-f32"] = true;
+    break;
   case GK_GFX1153:
   case GK_GFX1152:
   case GK_GFX1151:
@@ -551,6 +582,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["qsad-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["gws"] = true;
+    Features["wmma-256b-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
   case GK_GFX1036:

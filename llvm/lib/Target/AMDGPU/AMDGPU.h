@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -19,6 +20,7 @@
 namespace llvm {
 
 class AMDGPUTargetMachine;
+class LazyCallGraph;
 class GCNTargetMachine;
 class TargetMachine;
 
@@ -367,6 +369,17 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+class AMDGPUAttributorCGSCCPass
+    : public PassInfoMixin<AMDGPUAttributorCGSCCPass> {
+private:
+  GCNTargetMachine &TM;
+
+public:
+  AMDGPUAttributorCGSCCPass(GCNTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+};
+
 class AMDGPUPreloadKernelArgumentsPass
     : public PassInfoMixin<AMDGPUPreloadKernelArgumentsPass> {
   const TargetMachine &TM;
@@ -535,8 +548,6 @@ ImmutablePass *createAMDGPUAAWrapperPass();
 void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
 ImmutablePass *createAMDGPUExternalAAWrapperPass();
 void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
-
-void initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(PassRegistry &);
 
 ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
 void initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(PassRegistry &);

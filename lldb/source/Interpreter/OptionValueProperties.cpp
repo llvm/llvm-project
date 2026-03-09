@@ -23,14 +23,21 @@ using namespace lldb_private;
 OptionValueProperties::OptionValueProperties(llvm::StringRef name)
     : m_name(name.str()) {}
 
-void OptionValueProperties::Initialize(const PropertyDefinitions &defs) {
-  for (const auto &definition : defs) {
+void OptionValueProperties::Initialize(
+    const PropertyCollectionDefinition &defs) {
+  for (const auto &definition : defs.definitions) {
     Property property(definition);
     assert(property.IsValid());
     m_name_to_index.insert({property.GetName(), m_properties.size()});
     property.GetValue()->SetParent(shared_from_this());
     m_properties.push_back(property);
   }
+  SetExpectedPath(defs.expected_path.str());
+}
+
+void OptionValueProperties::SetExpectedPath(std::string path) {
+  assert(m_expected_path.empty() || m_expected_path == path);
+  m_expected_path = path;
 }
 
 void OptionValueProperties::SetValueChangedCallback(
@@ -47,6 +54,15 @@ void OptionValueProperties::AppendProperty(llvm::StringRef name,
   m_name_to_index.insert({name, m_properties.size()});
   m_properties.push_back(property);
   value_sp->SetParent(shared_from_this());
+
+#ifndef NDEBUG
+  OptionValueProperties *properties = value_sp->GetAsProperties();
+  if (properties) {
+    assert(value_sp->GetName() == name);
+    assert(properties->VerifyPath() &&
+           "Mismatch between parents from TableGen and actual parents");
+  }
+#endif
 }
 
 lldb::OptionValueSP
@@ -488,4 +504,25 @@ OptionValueProperties::GetSubProperty(const ExecutionContext *exe_ctx,
       return ov_properties->shared_from_this();
   }
   return lldb::OptionValuePropertiesSP();
+}
+
+bool OptionValueProperties::VerifyPath() {
+  OptionValueSP parent = GetParent();
+  if (!parent) {
+    // Only the top level value should have an empty path.
+    return m_expected_path.empty();
+  }
+  OptionValueProperties *parent_properties = parent->GetAsProperties();
+  if (!parent_properties)
+    return false;
+
+  auto [prefix, expected_name] = llvm::StringRef(m_expected_path).rsplit('.');
+
+  if (expected_name.empty()) {
+    // There is no dot, so the parent should be the top-level (core properties).
+    return parent_properties->m_expected_path.empty() && GetName() == prefix;
+  }
+
+  return parent_properties->m_expected_path == prefix &&
+         GetName() == expected_name;
 }

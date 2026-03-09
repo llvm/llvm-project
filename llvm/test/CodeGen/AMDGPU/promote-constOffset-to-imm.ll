@@ -2657,7 +2657,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX11-FAKE16-NEXT:  ; %bb.2: ; %end
 ; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
-  %null = select i1 false, ptr %buffer, ptr addrspacecast (ptr addrspace(5) null to ptr)
+  %null = select i1 false, ptr %buffer, ptr addrspacecast (ptr addrspace(5) zeroinitializer to ptr)
   %gep = getelementptr inbounds i8, ptr %null, i64 -1
   %ld = load i8, ptr %gep
   %cmp = icmp eq i8 %ld, 0
@@ -2671,4 +2671,4 @@ end:
 }
 
 
-attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="fiji" "uniform-work-group-size"="false" }
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="fiji" }

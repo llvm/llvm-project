@@ -32,8 +32,8 @@ llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32
 // CHECK-LABEL: llvm.func spir_funccc @_Z41intel_sub_group_2d_block_read_16b_8r16x1cPU3AS1viiiDv2_iPt(
 llvm.func @blockload2d_cache_control(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi16> {
   // CHECK: xevm.DecorationCacheControl =
-  // CHECK-SAME: 6442 : i32, 0 : i32, 1 : i32, 0 : i32
-  // CHECK-SAME: 6442 : i32, 1 : i32, 1 : i32, 0 : i32
+  // CHECK-SAME: 6442 : i32, 0 : i32, 0 : i32
+  // CHECK-SAME: 6442 : i32, 1 : i32, 0 : i32
   %loaded_a = xevm.blockload2d %a, %base_width_a, %base_height_a, %base_pitch_a, %x, %y
     <{elem_size_in_bits=16 : i32, tile_width=16 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false,
       pack_register=false, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
@@ -160,8 +160,8 @@ llvm.func @blockstore2d(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i3
 // CHECK-LABEL: llvm.func spir_funccc @_Z42intel_sub_group_2d_block_write_32b_8r16x1cPU3AS1viiiDv2_iPj(
 llvm.func @blockstore2d_cache_control(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
   // CHECK: xevm.DecorationCacheControl =
-  // CHECK-SAME: 6443 : i32, 0 : i32, 2 : i32, 0 : i32
-  // CHECK-SAME: 6443 : i32, 1 : i32, 2 : i32, 0 : i32
+  // CHECK-SAME: 6443 : i32, 0 : i32, 1 : i32
+  // CHECK-SAME: 6443 : i32, 1 : i32, 2 : i32
   xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted
     <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32, cache_control = #xevm.store_cache_control<L1wt_L2uc_L3wb>}>
     : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
@@ -242,8 +242,8 @@ llvm.func @prefetch(%ptr: !llvm.ptr<1>) {
 // CHECK-LABEL: llvm.func @llvm.load
 llvm.func @llvm.load(%a: !llvm.ptr<1>) -> i32 {
   // CHECK: xevm.DecorationCacheControl =
-  // CHECK-SAME: 6442 : i32, 0 : i32, 1 : i32, 0 : i32
-  // CHECK-SAME: 6442 : i32, 1 : i32, 1 : i32, 0 : i32
+  // CHECK-SAME: 6442 : i32, 0 : i32, 0 : i32
+  // CHECK-SAME: 6442 : i32, 1 : i32, 0 : i32
   %val = llvm.load %a {cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>} : !llvm.ptr<1> -> i32
   llvm.return %val : i32
 }
@@ -252,8 +252,8 @@ llvm.func @llvm.load(%a: !llvm.ptr<1>) -> i32 {
 // CHECK-LABEL: llvm.func @llvm.store
 llvm.func @llvm.store(%a: !llvm.ptr<1>, %val: i32) {
   // CHECK: xevm.DecorationCacheControl =
-  // CHECK-SAME: 6443 : i32, 0 : i32, 2 : i32, 0 : i32
-  // CHECK-SAME: 6443 : i32, 1 : i32, 2 : i32, 0 : i32
+  // CHECK-SAME: 6443 : i32, 0 : i32, 1 : i32
+  // CHECK-SAME: 6443 : i32, 1 : i32, 2 : i32
   llvm.store %val, %a {cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>} : i32, !llvm.ptr<1>
   llvm.return
 }
@@ -266,8 +266,8 @@ llvm.func @blockload_as1(%ptr: !llvm.ptr<1>) -> vector<8xi16> {
   // CHECK-SAME: {function_type = !llvm.func<vector<8xi16> (ptr<1>)>, linkage = #llvm.linkage<external>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z30intel_sub_group_block_read_us8PU3AS1t",
   // CHECK-SAME:  visibility_ = 0 : i64, will_return, xevm.DecorationCacheControl =
-  // CHECK-SAME:    [6442 : i32, 0 : i32, 1 : i32, 0 : i32],
-  // CHECK-SAME:    [6442 : i32, 1 : i32, 1 : i32, 0 : i32]
+  // CHECK-SAME:    [6442 : i32, 0 : i32, 0 : i32],
+  // CHECK-SAME:    [6442 : i32, 1 : i32, 0 : i32]
   %loaded_a = xevm.blockload %ptr <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>) -> vector<8xi16>
   llvm.return %loaded_a : vector<8xi16>
 }
@@ -280,8 +280,8 @@ llvm.func @blockload_as3(%ptr: !llvm.ptr<3>) -> vector<16xi8> {
   // CHECK-SAME: {function_type = !llvm.func<vector<16xi8> (ptr<3>)>, linkage = #llvm.linkage<external>,
   // CHECK-SAME:   no_unwind, sym_name = "_Z31intel_sub_group_block_read_uc16PU3AS3h", visibility_ = 0 : i64,
   // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
-  // CHECK-SAME:    [6442 : i32, 0 : i32, 1 : i32, 0 : i32],
-  // CHECK-SAME:    [6442 : i32, 1 : i32, 1 : i32, 0 : i32]
+  // CHECK-SAME:    [6442 : i32, 0 : i32, 0 : i32],
+  // CHECK-SAME:    [6442 : i32, 1 : i32, 0 : i32]
   %loaded_a = xevm.blockload %ptr <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<3>) -> vector<16xi8>
   llvm.return %loaded_a : vector<16xi8>
 }
@@ -294,8 +294,8 @@ llvm.func @blockload_scalar(%ptr: !llvm.ptr<3>) -> i8 {
   // CHECK-SAME: {function_type = !llvm.func<i8 (ptr<3>)>, linkage = #llvm.linkage<external>,
   // CHECK-SAME:   no_unwind, sym_name = "_Z29intel_sub_group_block_read_ucPU3AS3h", visibility_ = 0 : i64,
   // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
-  // CHECK-SAME:    [6442 : i32, 0 : i32, 1 : i32, 0 : i32],
-  // CHECK-SAME:    [6442 : i32, 1 : i32, 1 : i32, 0 : i32]
+  // CHECK-SAME:    [6442 : i32, 0 : i32, 0 : i32],
+  // CHECK-SAME:    [6442 : i32, 1 : i32, 0 : i32]
   %loaded_a = xevm.blockload %ptr <{cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<3>) -> i8
   llvm.return %loaded_a : i8
 }
@@ -308,8 +308,8 @@ llvm.func @blockstore_as1(%ptr: !llvm.ptr<1>, %data: vector<8xi32>) {
   // CHECK-SAME: {function_type = !llvm.func<void (ptr<1>, vector<8xi32>)>, linkage = #llvm.linkage<external>,
   // CHECK-SAME:   no_unwind, sym_name = "_Z31intel_sub_group_block_write_ui8PU3AS1jDv8_j", visibility_ = 0 : i64,
   // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
-  // CHECK-SAME:    [6443 : i32, 0 : i32, 2 : i32, 0 : i32],
-  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32, 0 : i32]
+  // CHECK-SAME:    [6443 : i32, 0 : i32, 1 : i32],
+  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32]
   xevm.blockstore %ptr, %data <{cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>}> : (!llvm.ptr<1>, vector<8xi32>)
   llvm.return
 }
@@ -322,8 +322,8 @@ llvm.func @blockstore_as3(%ptr: !llvm.ptr<3>, %data: vector<2xi64>) {
   // CHECK-SAME: {function_type = !llvm.func<void (ptr<3>, vector<2xi64>)>, linkage = #llvm.linkage<external>,
   // CHECK-SAME:   no_unwind, sym_name = "_Z31intel_sub_group_block_write_ul2PU3AS3mDv2_m", visibility_ = 0 : i64,
   // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
-  // CHECK-SAME:    [6443 : i32, 0 : i32, 2 : i32, 0 : i32],
-  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32, 0 : i32]
+  // CHECK-SAME:    [6443 : i32, 0 : i32, 1 : i32],
+  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32]
   xevm.blockstore %ptr, %data <{cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>}> : (!llvm.ptr<3>, vector<2xi64>)
   llvm.return
 }
@@ -336,8 +336,8 @@ llvm.func @blockstore_scalar(%ptr: !llvm.ptr<3>, %data: i64) {
   // CHECK-SAME: {function_type = !llvm.func<void (ptr<3>, i64)>, linkage = #llvm.linkage<external>,
   // CHECK-SAME:   no_unwind, sym_name = "_Z30intel_sub_group_block_write_ulPU3AS3mm", visibility_ = 0 : i64,
   // CHECK-SAME:   will_return, xevm.DecorationCacheControl =
-  // CHECK-SAME:    [6443 : i32, 0 : i32, 2 : i32, 0 : i32],
-  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32, 0 : i32]
+  // CHECK-SAME:    [6443 : i32, 0 : i32, 1 : i32],
+  // CHECK-SAME:    [6443 : i32, 1 : i32, 2 : i32]
   xevm.blockstore %ptr, %data <{cache_control=#xevm.store_cache_control<L1wt_L2uc_L3wb>}> : (!llvm.ptr<3>, i64)
   llvm.return
 }

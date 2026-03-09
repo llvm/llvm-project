@@ -32,15 +32,13 @@ static cl::opt<bool>
                         cl::desc("SPIR-V Translator compatibility mode"),
                         cl::Optional, cl::init(false));
 
-static cl::opt<std::set<SPIRV::Extension::Extension>, false,
-               SPIRVExtensionsParser>
+static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
 // Provides access to the cl::opt<...> `Extensions` variable from outside of the
 // module.
-void SPIRVSubtarget::addExtensionsToClOpt(
-    const std::set<SPIRV::Extension::Extension> &AllowList) {
+void SPIRVSubtarget::addExtensionsToClOpt(const ExtensionSet &AllowList) {
   Extensions.insert(AllowList.begin(), AllowList.end());
 }
 
@@ -89,15 +87,18 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   // Set the environment based on the target triple.
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
-  else if (TargetTriple.getEnvironment() == Triple::OpenCL ||
+  else if (TargetTriple.getOS() == Triple::OpenCL ||
            TargetTriple.getVendor() == Triple::AMD)
     Env = Kernel;
   else
     Env = Unknown;
 
   // Set the default extensions based on the target triple.
-  if (TargetTriple.getVendor() == Triple::Intel)
+  if (TargetTriple.getVendor() == Triple::Intel) {
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
+    Extensions.insert(
+        SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+  }
   if (TargetTriple.getVendor() == Triple::AMD)
     Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
@@ -211,9 +212,9 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
 
 // Set available extensions after SPIRVSubtarget is created.
 void SPIRVSubtarget::initAvailableExtensions(
-    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
+    const ExtensionSet &AllowedExtIds) {
   AvailableExtensions.clear();
-  const std::set<SPIRV::Extension::Extension> &ValidExtensions =
+  const ExtensionSet &ValidExtensions =
       SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
   for (const auto &Ext : AllowedExtIds) {

@@ -212,6 +212,9 @@ def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 /// inline=never.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
+/// nooutline
+def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
+
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind", IntersectPreserve, [FnAttr]>;
 
@@ -416,7 +419,6 @@ def AllowDirectAccessInHotPatchFunction
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
-def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
@@ -476,7 +478,6 @@ class MergeRule<string F> {
 }
 
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
-def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;

@@ -9,8 +9,12 @@
 // This file defines the DominanceFrontier class, which calculate and holds the
 // dominance frontier for a function.
 //
-// This should be considered deprecated, don't add any more uses of this data
-// structure.
+// CAUTION: For SSA-construction-like problems there are more efficient ways to
+// do that, take a look at GenericIteratedDominanceFrontier.h/SSAUpdater.h. Also
+// note that that this analysis computes dominance frontiers for *every* block
+// which inherently increases complexity. Unless you do need *all* of them and
+// *without* any modifications to the DomTree/CFG in between queries there
+// should be better alternatives.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,27 +46,18 @@ public:
   // deterministic.
   using DomSetType = SetVector<BlockT *>;
   using DomSetMapType = DenseMap<BlockT *, DomSetType>; // Dom set map
+  using DomTreeT = DominatorTreeBase<BlockT, IsPostDom>;
+  using DomTreeNodeT = DomTreeNodeBase<BlockT>;
 
 protected:
-  using BlockTraits = GraphTraits<BlockT *>;
+  using GraphTy = std::conditional_t<IsPostDom, Inverse<BlockT *>, BlockT *>;
+  using BlockTraits = GraphTraits<GraphTy>;
 
   DomSetMapType Frontiers;
-  // Postdominators can have multiple roots.
-  SmallVector<BlockT *, IsPostDom ? 4 : 1> Roots;
   static constexpr bool IsPostDominators = IsPostDom;
 
 public:
   DominanceFrontierBase() = default;
-
-  /// getRoots - Return the root blocks of the current CFG.  This may include
-  /// multiple blocks if we are computing post dominators.  For forward
-  /// dominators, this will always be a single block (the entry node).
-  const SmallVectorImpl<BlockT *> &getRoots() const { return Roots; }
-
-  BlockT *getRoot() const {
-    assert(Roots.size() == 1 && "Should always have entry node!");
-    return Roots[0];
-  }
 
   /// isPostDominator - Returns true if analysis based of postdoms
   bool isPostDominator() const {
@@ -92,41 +87,17 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
 #endif
+
+  void analyze(const DomTreeT &DT);
 };
 
-//===-------------------------------------
-/// DominanceFrontier Class - Concrete subclass of DominanceFrontierBase that is
-/// used to compute a forward dominator frontiers.
-///
-template <class BlockT>
-class ForwardDominanceFrontierBase
-    : public DominanceFrontierBase<BlockT, false> {
-private:
-  using BlockTraits = GraphTraits<BlockT *>;
-
-public:
-  using DomTreeT = DomTreeBase<BlockT>;
-  using DomTreeNodeT = DomTreeNodeBase<BlockT>;
-  using DomSetType = typename DominanceFrontierBase<BlockT, false>::DomSetType;
-
-  void analyze(DomTreeT &DT) {
-    assert(DT.root_size() == 1 &&
-           "Only one entry block for forward domfronts!");
-    this->Roots = {DT.getRoot()};
-    calculate(DT, DT[this->Roots[0]]);
-  }
-
-  void calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
-};
-
-class DominanceFrontier : public ForwardDominanceFrontierBase<BasicBlock> {
+class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
 public:
   using DomTreeT = DomTreeBase<BasicBlock>;
   using DomTreeNodeT = DomTreeNodeBase<BasicBlock>;
-  using DomSetType = DominanceFrontierBase<BasicBlock, false>::DomSetType;
-  using iterator = DominanceFrontierBase<BasicBlock, false>::iterator;
-  using const_iterator =
-      DominanceFrontierBase<BasicBlock, false>::const_iterator;
+  using DomSetType = DominanceFrontier::DomSetType;
+  using iterator = DominanceFrontier::iterator;
+  using const_iterator = DominanceFrontier::const_iterator;
 
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -157,7 +128,6 @@ public:
 
 extern template class DominanceFrontierBase<BasicBlock, false>;
 extern template class DominanceFrontierBase<BasicBlock, true>;
-extern template class ForwardDominanceFrontierBase<BasicBlock>;
 
 /// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_REGISTER_TYPE_BUILDER_H
-#define LLDB_TARGET_REGISTER_TYPE_BUILDER_H
+#ifndef LLDB_TARGET_REGISTERTYPEBUILDER_H
+#define LLDB_TARGET_REGISTERTYPEBUILDER_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/lldb-private.h"
@@ -32,4 +32,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_REGISTER_TYPE_BUILDER_H
+#endif // LLDB_TARGET_REGISTERTYPEBUILDER_H

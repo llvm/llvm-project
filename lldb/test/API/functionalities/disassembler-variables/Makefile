@@ -27,6 +27,6 @@ all: $(ASM_OBJS) $(EXE)
 
 # Keeping things tidy.
 clean::
-	$(RM) -f $(ASM_OBJS) dummy_main.c
+	$(call RM_RF,$(ASM_OBJS) dummy_main.c)
 
 include Makefile.rules

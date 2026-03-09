@@ -380,7 +380,7 @@ struct less<void> {
 };
 
 template <class _Tp>
-struct __make_transparent<less<_Tp> > {
+struct __make_transparent<_Tp, less<_Tp> > {
   using type _LIBCPP_NODEBUG = less<>;
 };
 
@@ -478,7 +478,7 @@ template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__greater_tag, greater<>, _Tp, _Up> = true;
 
 template <class _Tp>
-struct __make_transparent<greater<_Tp>> {
+struct __make_transparent<_Tp, greater<_Tp>> {
   using type _LIBCPP_NODEBUG = greater<>;
 };
 
