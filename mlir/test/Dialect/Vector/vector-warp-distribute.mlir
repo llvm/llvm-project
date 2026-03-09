@@ -1531,7 +1531,7 @@ func.func @vector_insert_strided_slice_2d_to_2d(%laneid: index) -> (vector<64x1x
 //  CHECK-PROP-SAME:     %[[AR1:[^ :]*]]: memref<1x4x2xi32>,
 //  CHECK-PROP-SAME:     %[[AR2:[^ :]*]]: memref<1x4x1024xf32>)
 //   CHECK-PROP-DAG:   %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-PROP-DAG:   %[[THREADID:.*]] = gpu.thread_id  x
+//   CHECK-PROP-DAG:   %[[THREADID:.*]] = gpu.thread_id x
 //       CHECK-PROP:   %[[W:.*]] = gpu.warp_execute_on_lane_0(%[[THREADID]])[32] args(%[[IN2]]
 //       CHECK-PROP:     %[[GATHER:.*]] = vector.gather %[[AR1]][{{.*}}]
 //       CHECK-PROP:     %[[EXTRACT:.*]] = vector.shape_cast %[[GATHER]] : vector<1x64xi32> to vector<64xi32>
@@ -1542,7 +1542,7 @@ func.func @vector_insert_strided_slice_2d_to_2d(%laneid: index) -> (vector<64x1x
 //       CHECK-PROP:   %[[TRANSFERREAD:.*]] = vector.transfer_read %[[AR2]][%[[C0]], %[[W]], %[[APPLY]]],
 //       CHECK-PROP:   return %[[TRANSFERREAD]]
 func.func @transfer_read_prop_operands(%in2: vector<1x2xindex>, %ar1 :  memref<1x4x2xi32>, %ar2 : memref<1x4x1024xf32>)-> vector<2xf32> {
-  %0 = gpu.thread_id  x
+  %0 = gpu.thread_id x
   %c0_i32 = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0> : vector<1x64xi32>
