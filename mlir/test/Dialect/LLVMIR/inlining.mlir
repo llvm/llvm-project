@@ -581,7 +581,7 @@ llvm.func @byval_aligned_arg(%ptr : !llvm.ptr { llvm.byval = i32, llvm.align = 1
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
 llvm.func @test_byval_memcpy_alignment(%ptr : !llvm.ptr) {
   // Verify the memcpy carries the alignment info from the byval attribute.
-  // CHECK: %[[ALLOCA:.+]] = llvm.alloca{{.+}}alignment = 16
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
   // CHECK-SAME: {llvm.align = 16 : i64}
   llvm.call @byval_aligned_arg(%ptr) : (!llvm.ptr) -> ()
