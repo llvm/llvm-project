@@ -1791,6 +1791,9 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
     return true;
   }
 
+  if (!AR->hasNoSignedWrap())
+    return false;
+
   if (Const == ARConst && SE->isKnownNonZero(ARCoeff)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::LE;
