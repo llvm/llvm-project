@@ -897,25 +897,21 @@ void TypePrinter::printDependentSizedMatrixBefore(
     OS << "matrix<";
     print(T->getElementType(), OS, StringRef());
     OS << ", ";
-    if (T->getRowExpr()) {
+    if (T->getRowExpr())
       T->getRowExpr()->printPretty(OS, nullptr, Policy);
-    }
     OS << ", ";
-    if (T->getColumnExpr()) {
+    if (T->getColumnExpr())
       T->getColumnExpr()->printPretty(OS, nullptr, Policy);
-    }
     OS << ">";
     spaceBeforePlaceHolder(OS);
   } else {
     printBefore(T->getElementType(), OS);
     OS << " __attribute__((matrix_type(";
-    if (T->getRowExpr()) {
+    if (T->getRowExpr())
       T->getRowExpr()->printPretty(OS, nullptr, Policy);
-    }
     OS << ", ";
-    if (T->getColumnExpr()) {
+    if (T->getColumnExpr())
       T->getColumnExpr()->printPretty(OS, nullptr, Policy);
-    }
     OS << ")))";
   }
 }
