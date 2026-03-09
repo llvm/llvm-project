@@ -3575,12 +3575,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
       // (A || B) || C --> A || (B | C)
       Value *LOr = Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal));
-      if (!ProfcheckDisableMetadataFixes) {
-        if (auto *I = dyn_cast<Instruction>(LOr)) {
-          // FIXME 183864: We could improve the profile if P((A || B) || C) <
-          // 0.5
-          setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
-        }
+      if (auto *I = dyn_cast<Instruction>(LOr)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
       }
       return replaceInstUsesWith(SI, LOr);
     }
@@ -3594,19 +3590,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto AndFactorization = [&](Value *Common, Value *InnerCond,
                                   Value *InnerVal,
                                   bool SelFirst = false) -> Instruction * {
-        // FIXME 183864: We could improve the profile if
-        // P((A && B) || (C && B)) < 0.5
-        Value *InnerSel = ProfcheckDisableMetadataFixes
-                              ? Builder.CreateSelect(InnerCond, One, InnerVal)
-                              : Builder.CreateSelectWithUnknownProfile(
-                                    InnerCond, One, InnerVal, DEBUG_TYPE);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, One, InnerVal, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (FalseLogicAnd || (CondLogicAnd && Common == A))
-          return ProfcheckDisableMetadataFixes
-                     ? SelectInst::Create(Common, InnerSel, Zero)
-                     : createSelectInstWithUnknownProfile(Common, InnerSel,
-                                                          Zero);
+          return createSelectInstWithUnknownProfile(Common, InnerSel, Zero);
         else
           return BinaryOperator::CreateAnd(Common, InnerSel);
       };
@@ -3632,12 +3621,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
         impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
       // (A && B) && C --> A && (B & C)
       Value *LAnd = Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal));
-      if (!ProfcheckDisableMetadataFixes) {
-        if (auto *I = dyn_cast<Instruction>(LAnd)) {
-          // FIXME 183864: We could improve the profile if P((A && B) && C) <
-          // 0.5
-          setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
-        }
+      if (auto *I = dyn_cast<Instruction>(LAnd)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
       }
       return replaceInstUsesWith(SI, LAnd);
     }
@@ -3651,19 +3636,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto OrFactorization = [&](Value *Common, Value *InnerCond,
                                  Value *InnerVal,
                                  bool SelFirst = false) -> Instruction * {
-        // FIXME 183864: We could improve the profile if
-        // P((A || B) && (C || B)) < 0.5
-        Value *InnerSel = ProfcheckDisableMetadataFixes
-                              ? Builder.CreateSelect(InnerCond, InnerVal, Zero)
-                              : Builder.CreateSelectWithUnknownProfile(
-                                    InnerCond, InnerVal, Zero, DEBUG_TYPE);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, InnerVal, Zero, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (TrueLogicOr || (CondLogicOr && Common == A))
-          return ProfcheckDisableMetadataFixes
-                     ? SelectInst::Create(Common, One, InnerSel)
-                     : createSelectInstWithUnknownProfile(Common, One,
-                                                          InnerSel);
+          return createSelectInstWithUnknownProfile(Common, One, InnerSel);
         else
           return BinaryOperator::CreateOr(Common, InnerSel);
       };
@@ -3741,11 +3719,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (~a | c), a, b -> select a, (select c, true, b), false
   if (match(CondVal,
             m_OneUse(m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))))) {
-    if (ProfcheckDisableMetadataFixes) {
-      Value *OrV = Builder.CreateSelect(C, One, FalseVal);
-      return SelectInst::Create(TrueVal, OrV, Zero);
-    }
-    // FIXME 183864: We could improve the profile if P(~a | c) < 0.5
+    // TODO(#183864): We could improve the profile if P(~a | c) < 0.5, which
+    // implies strong bounds on both operands (P(a) is high, P(c) is low).
     Value *OrV =
         Builder.CreateSelectWithUnknownProfile(C, One, FalseVal, DEBUG_TYPE);
     return createSelectInstWithUnknownProfile(TrueVal, OrV, Zero);
@@ -3753,11 +3728,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (c & b), a, b -> select b, (select ~c, true, a), false
   if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      if (ProfcheckDisableMetadataFixes) {
-        Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
-        return SelectInst::Create(FalseVal, OrV, Zero);
-      }
-      // FIXME 183864: We could improve the profile if P(c & b) < 0.5
       Value *OrV = Builder.CreateSelectWithUnknownProfile(NotC, One, TrueVal,
                                                           DEBUG_TYPE);
       return createSelectInstWithUnknownProfile(FalseVal, OrV, Zero);
@@ -3766,11 +3736,8 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
   if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      if (ProfcheckDisableMetadataFixes) {
-        Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-        return SelectInst::Create(TrueVal, One, AndV);
-      }
-      // FIXME 183864: We could improve the profile if P(a | c) < 0.5
+      // TODO(#183864): We could improve the profile if P(a | c) < 0.5, which
+      // implies strong bounds on both operands (both P(a) and P(c) are low).
       Value *AndV = Builder.CreateSelectWithUnknownProfile(NotC, FalseVal, Zero,
                                                            DEBUG_TYPE);
       return createSelectInstWithUnknownProfile(TrueVal, One, AndV);
@@ -3779,11 +3746,6 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
   if (match(CondVal,
             m_OneUse(m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))))) {
-    if (ProfcheckDisableMetadataFixes) {
-      Value *AndV = Builder.CreateSelect(C, TrueVal, Zero);
-      return SelectInst::Create(FalseVal, One, AndV);
-    }
-    // FIXME 183864: We could improve the profile if P(c & ~b) < 0.5
     Value *AndV =
         Builder.CreateSelectWithUnknownProfile(C, TrueVal, Zero, DEBUG_TYPE);
     return createSelectInstWithUnknownProfile(FalseVal, One, AndV);
