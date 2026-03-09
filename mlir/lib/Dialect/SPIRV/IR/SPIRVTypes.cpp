@@ -1234,12 +1234,15 @@ Type MatrixType::getElementType() const {
 }
 
 unsigned MatrixType::getNumColumns() const {
-  assert(getImpl()->shape[1] != ShapedType::kDynamic);
+  assert(getImpl()->shape[1] >= 0); // Also includes ShapedType::kDynamic.
+  assert(getImpl()->shape[1] <= std::numeric_limits<unsigned>::max());
   return static_cast<uint32_t>(getImpl()->shape[1]);
 }
 
 unsigned MatrixType::getNumRows() const {
-  return cast<VectorType>(getImpl()->columnType).getShape()[0];
+  assert(getImpl()->shape[0] >= 0); // Also includes ShapedType::kDynamic.
+  assert(getImpl()->shape[0] <= std::numeric_limits<unsigned>::max());
+  return static_cast<uint32_t>(getImpl()->shape[0]);
 }
 
 unsigned MatrixType::getNumElements() const {
