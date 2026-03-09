@@ -249,7 +249,7 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
       vectorType.getShape().drop_while([](auto v) { return v == 1; });
   auto vecRank = vectorShape.size();
 
-  // A scalar is always contiguous.
+  // A single element is always contiguous.
   if (vecRank == 0)
     return true;
 

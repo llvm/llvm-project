@@ -840,8 +840,8 @@ public:
     ArrayRef<int64_t> collapsedVectorShape =
         vectorType.getShape().drop_while([](auto v) { return v == 1; });
     size_t collapsedVecRank = collapsedVectorShape.size();
-    // In case of a multi-dimensional scalar vector, restrict the shape collapse
-    // to a 1D vector.
+    // Limit the collapse of multi-dimensional unit vectors (e.g. <1x1x1xf32>)
+    // to a 1D single-element vector.
     if (collapsedVecRank == 0)
       collapsedVecRank = 1;
 
@@ -952,8 +952,8 @@ public:
     ArrayRef<int64_t> collapsedVectorShape =
         vectorType.getShape().drop_while([](auto v) { return v == 1; });
     size_t collapsedVecRank = collapsedVectorShape.size();
-    // In case of a multi-dimensional scalar vector, restrict the shape collapse
-    // to a 1D vector.
+    // Limit the collapse of multi-dimensional unit vectors (e.g. <1x1x1xf32>)
+    // to a 1D single-element vector.
     if (collapsedVecRank == 0)
       collapsedVecRank = 1;
 

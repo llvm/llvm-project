@@ -386,7 +386,7 @@ func.func @transfer_read_non_contiguous_src(
 
 // -----
 
-func.func @transfer_read_multi_dim_scalar_vector(
+func.func @transfer_read_multi_dim_unit_vector(
     %mem: memref<5x4x3x2xi8>) -> vector<1x1x1xi8> {
 
   %c0 = arith.constant 0 : index
@@ -396,13 +396,13 @@ func.func @transfer_read_multi_dim_scalar_vector(
   return %res : vector<1x1x1xi8>
 }
 
-// CHECK-LABEL: func @transfer_read_multi_dim_scalar_vector
+// CHECK-LABEL: func @transfer_read_multi_dim_unit_vector
 // CHECK-SAME:    %[[MEM:[0-9a-zA-Z]+]]: memref<5x4x3x2xi8
 // CHECK:         %[[READ1D:.+]] = vector.transfer_read %[[MEM]]{{.*}}: memref<5x4x3x2xi8>, vector<1xi8>
 // CHECK:         %[[VEC3D:.+]] = vector.shape_cast %[[READ1D]] : vector<1xi8> to vector<1x1x1xi8>
 // CHECK:         return %[[VEC3D]]
 
-// CHECK-128B-LABEL: func @transfer_read_multi_dim_scalar_vector
+// CHECK-128B-LABEL: func @transfer_read_multi_dim_unit_vector
 //       CHECK-128B:   vector.transfer_read {{.*}}: memref<5x4x3x2xi8>, vector<1xi8>
 //       CHECK-128B:   vector.shape_cast {{.*}}: vector<1xi8> to vector<1x1x1xi8>
 
@@ -810,7 +810,7 @@ func.func @negative_out_of_bound_transfer_write(
 
 // -----
 
-func.func @transfer_write_multi_dim_scalar_vector(
+func.func @transfer_write_multi_dim_unit_vector(
     %mem: memref<5x4x3x2xi8>, %vec: vector<1x1x1xi8>) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem [%c0, %c0, %c0, %c0] :
@@ -818,11 +818,11 @@ func.func @transfer_write_multi_dim_scalar_vector(
   return
 }
 
-// CHECK-LABEL: func @transfer_write_multi_dim_scalar_vector
+// CHECK-LABEL: func @transfer_write_multi_dim_unit_vector
 // CHECK-SAME:    %[[MEM:.+]]: memref<5x4x3x2xi8>, %[[VEC:.+]]: vector<1x1x1xi8>
 // CHECK:         %[[VEC1D:.+]] = vector.shape_cast %[[VEC]] : vector<1x1x1xi8> to vector<1xi8>
 // CHECK:         vector.transfer_write %[[VEC1D]], %[[MEM]]{{.*}}: vector<1xi8>, memref<5x4x3x2xi8>
 
-// CHECK-128B-LABEL: func @transfer_write_multi_dim_scalar_vector
+// CHECK-128B-LABEL: func @transfer_write_multi_dim_unit_vector
 //       CHECK-128B:   vector.shape_cast {{.*}}: vector<1x1x1xi8> to vector<1xi8>
 //       CHECK-128B:   vector.transfer_write {{.*}}: vector<1xi8>, memref<5x4x3x2xi8>
