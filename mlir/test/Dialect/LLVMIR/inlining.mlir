@@ -570,6 +570,33 @@ llvm.func @test_byval_global() {
 
 // -----
 
+// Check that inlining does not hoist byval allocas out of automatic allocation
+// scopes, such as parallel forall regions. Each parallel iteration must have
+// its own private copy of the byval argument.
+
+llvm.func @byval_in_parallel(%ptr : !llvm.ptr { llvm.byval = f32 }) {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_in_parallel_region
+// CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
+llvm.func @test_byval_in_parallel_region(%ptr : !llvm.ptr) {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c1 = arith.constant 1 : index
+  // Verify the alloca is not hoisted out of the parallel region.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: scf.forall
+  scf.forall (%i) = (%c0) to (%c4) step (%c1) {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f32
+    // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
+    llvm.call @byval_in_parallel(%ptr) : (!llvm.ptr) -> ()
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
   llvm.return %ptr : !llvm.ptr
 }
