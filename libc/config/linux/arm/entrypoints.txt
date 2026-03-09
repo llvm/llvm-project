@@ -194,6 +194,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
+    libc.src.wctype.iswdigit
 )
 
 if(LLVM_LIBC_FULL_BUILD)
