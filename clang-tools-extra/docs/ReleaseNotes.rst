@@ -216,6 +216,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by fixing
+  a false positive for constrained template parameters.
+
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
   warning on builtins with custom type checking (e.g., type-generic builtins
@@ -295,8 +299,13 @@ Changes in existing checks
   when a member expression has a non-identifier name.
 
 - Improved :doc:`readability-else-after-return
-  <clang-tidy/checks/readability/else-after-return>` check by fixing missed
-  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels.
+  <clang-tidy/checks/readability/else-after-return>` check:
+
+  - Fixed missed diagnostics when ``if`` statements appear in unbraced
+    ``switch`` case labels.
+
+  - Added support for handling attributed ``if`` then-branches such as
+    ``[[likely]]`` and ``[[unlikely]]``.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message

@@ -269,6 +269,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_DerivedToBaseMemberPointer: {
+    if (CE->containsErrors())
+      return false;
     assert(classifyPrim(CE) == PT_MemberPtr);
     assert(classifyPrim(SubExpr) == PT_MemberPtr);
 
@@ -291,6 +293,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerivedMemberPointer: {
+    if (CE->containsErrors())
+      return false;
     assert(classifyPrim(CE) == PT_MemberPtr);
     assert(classifyPrim(SubExpr) == PT_MemberPtr);
 
@@ -1106,6 +1110,9 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     return this->VisitFixedPointBinOp(BO);
 
   if (BO->isPtrMemOp()) {
+    if (BO->containsErrors())
+      return false;
+
     if (!this->visit(LHS))
       return false;
 
@@ -4136,15 +4143,15 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
-  const Expr *Arg = E->getArgument();
-
+  if (E->containsErrors())
+    return false;
   const FunctionDecl *OperatorDelete = E->getOperatorDelete();
 
   if (!OperatorDelete->isUsableAsGlobalAllocationFunctionInConstantEvaluation())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   // Arg must be an lvalue.
-  if (!this->visit(Arg))
+  if (!this->visit(E->getArgument()))
     return false;
 
   return this->emitFree(E->isArrayForm(), E->isGlobalDelete(), E);

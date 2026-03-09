@@ -228,11 +228,11 @@ sortUsrToInfo(llvm::StringMap<doc::OwnedPtr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info.get());
+      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(getPtr(Info));
       Namespace->Children.sort();
     }
     if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+      auto *Record = static_cast<clang::doc::RecordInfo *>(getPtr(Info));
       Record->Children.sort();
     }
   }
@@ -361,7 +361,7 @@ Example usage for a project using a compile commands database:
           if (FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-          std::vector<doc::OwnedPtr<doc::Info>> Infos;
+          doc::OwningPtrVec<doc::Info> Infos;
           {
             llvm::TimeTraceScope Red("decoding bitcode");
             for (auto &Bitcode : Group.getValue()) {
@@ -400,7 +400,7 @@ Example usage for a project using a compile commands database:
           {
             llvm::TimeTraceScope Merge("addInfoToIndex");
             std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
-            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get());
+            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, getPtr(Reduced));
           }
           // Save in the result map (needs a lock due to threaded access).
           {
