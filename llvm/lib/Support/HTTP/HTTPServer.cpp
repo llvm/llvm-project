@@ -1,4 +1,4 @@
-//===-- llvm/Debuginfod/HTTPServer.cpp - HTTP server library -----*- C++-*-===//
+//===--- HTTPServer.cpp - HTTP server library -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Debuginfod/HTTPServer.h"
+#include "llvm/Support/HTTP/HTTPServer.h"
+
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
@@ -187,12 +188,8 @@ Expected<unsigned> HTTPServer::bind(const char *HostInterface) {
   return make_error<HTTPServerError>("no httplib");
 }
 
-Error HTTPServer::listen() {
-  return make_error<HTTPServerError>("no httplib");
-}
+Error HTTPServer::listen() { return make_error<HTTPServerError>("no httplib"); }
 
-void HTTPServer::stop() {
-  llvm_unreachable("no httplib");
-}
+void HTTPServer::stop() { llvm_unreachable("no httplib"); }
 
 #endif // LLVM_ENABLE_HTTPLIB
