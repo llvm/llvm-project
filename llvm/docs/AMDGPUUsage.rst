@@ -828,7 +828,6 @@ consumed by the AMDGPU backend during code generation.
 
    =================== =========== ===== ================================================
    Flag Name           Type        Merge Description
-                                   Behaviour
    =================== =========== ===== ================================================
    ``amdgpu.oob.mode`` ``i32``     Min   Bitmask controlling relaxation of out-of-bounds
                                          (OOB) buffer access semantics.  When a bit is
