@@ -623,8 +623,19 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
   Value copySize =
       LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
                                builder.getI64IntegerAttr(elementTypeSize));
+  // Preserve the alignment of the destination (alloca) in the memcpy's
+  // arg_attrs.
+  MLIRContext *ctx = builder.getContext();
+  NamedAttribute dstAlignAttr =
+      builder.getNamedAttr(LLVM::LLVMDialect::getAlignAttrName(),
+                           builder.getI64IntegerAttr(targetAlignment));
+  ArrayAttr argAttrs =
+      builder.getArrayAttr({DictionaryAttr::get(ctx, {dstAlignAttr})});
   LLVM::MemcpyOp::create(builder, loc, allocaOp, argument, copySize,
-                         /*isVolatile=*/false);
+                         /*isVolatile=*/false,
+                         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+                         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, argAttrs,
+                         /*res_attrs=*/nullptr);
   return allocaOp;
 }
 
