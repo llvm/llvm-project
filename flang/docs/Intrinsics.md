@@ -1233,6 +1233,19 @@ PROGRAM example_time
 END PROGRAM
 ```
 
+### Non-Standard Intrinsics: TIMEF
+
+#### Description
+`TIMEF` returns the number of seconds that have 
+elapsed since the first time TIMEF was called.
+The first time it is called, TIMEF returns 0.
+
+#### Usage and Info
+
+- **Standard:** Intel extension
+- **Class:** function
+- **Syntax:** `RESULT = TIMEF()`
+
 ### Non-Standard Intrinsics: UNLINK
 
 #### Description
