@@ -353,10 +353,10 @@ void SarifDocumentWriter::createRun(std::string ShortToolName,
 
   json::Object Tool{
       {"driver",
-       json::Object{{"name", ShortToolName},
-                    {"fullName", LongToolName},
+       json::Object{{"name", std::move(ShortToolName)},
+                    {"fullName", std::move(LongToolName)},
                     {"language", "en-US"},
-                    {"version", ToolVersion},
+                    {"version", std::move(ToolVersion)},
                     {"informationUri",
                      "https://clang.llvm.org/docs/UsersManual.html"}}}};
   json::Object TheRun{{"tool", std::move(Tool)},
@@ -454,15 +454,12 @@ ArrayRef<SarifVersion> SarifDocumentWriter::getSupportedVersions() {
        "sarif-schema-2.1.0.json",
        true}};
 
-  ArrayRef<SarifVersion> VersionsArray = Versions;
-  assert(std::count_if(VersionsArray.begin(), VersionsArray.end(),
-                       std::mem_fn(&SarifVersion::isDefault)) == 1);
+  assert(llvm::count_if(Versions, std::mem_fn(&SarifVersion::IsDefault)) == 1);
 
-  return VersionsArray;
+  return Versions;
 }
 
 const SarifVersion &SarifDocumentWriter::getDefaultVersion() {
-  const auto Versions = getSupportedVersions();
-  return *std::find_if(Versions.begin(), Versions.end(),
-                       std::mem_fn(&SarifVersion::isDefault));
+  return *llvm::find_if(getSupportedVersions(),
+                        std::mem_fn(&SarifVersion::IsDefault));
 }
