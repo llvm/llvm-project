@@ -3,7 +3,7 @@
 ; RUN: llc -enable-subreg-liveness -mattr=+sme -force-streaming < %s | FileCheck %s
 ; RUN: llc -enable-subreg-liveness -force-streaming-compatible < %s | FileCheck %s --check-prefix=NONEON-NOSVE
 ; RUN: llc -mattr=+sme -mattr=+fprcvt -mattr=+fullfp16 -force-streaming < %s | FileCheck %s --check-prefix=USE-FPRCVT
-; RUN: llc  -mattr=+sve -mattr=+fprcvt -mattr=+fullfp16  -force-streaming-compatible < %s | FileCheck %s --check-prefix=USE-FPRCVT
+; RUN: llc -mattr=+sve -mattr=+fprcvt -mattr=+fullfp16  -force-streaming-compatible < %s | FileCheck %s --check-prefix=USE-FPRCVT
 
 target triple = "aarch64-unknown-linux-gnu"
 
