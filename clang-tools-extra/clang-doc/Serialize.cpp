@@ -241,7 +241,7 @@ void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
   ConstCommentVisitor<ClangDocCommentVisitor>::visit(C);
   for (comments::Comment *Child :
        llvm::make_range(C->child_begin(), C->child_end())) {
-    CurrentCI.Children.emplace_back(std::make_unique<CommentInfo>());
+    CurrentCI.Children.emplace_back(allocatePtr<CommentInfo>());
     ClangDocCommentVisitor Visitor(*CurrentCI.Children.back());
     Visitor.parseComment(Child);
   }
@@ -349,17 +349,17 @@ static std::string serialize(T &I, DiagnosticsEngine &Diags) {
 std::string serialize(OwnedPtr<Info> &I, DiagnosticsEngine &Diags) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    return serialize(*static_cast<NamespaceInfo *>(I.get()), Diags);
+    return serialize(*static_cast<NamespaceInfo *>(getPtr(I)), Diags);
   case InfoType::IT_record:
-    return serialize(*static_cast<RecordInfo *>(I.get()), Diags);
+    return serialize(*static_cast<RecordInfo *>(getPtr(I)), Diags);
   case InfoType::IT_enum:
-    return serialize(*static_cast<EnumInfo *>(I.get()), Diags);
+    return serialize(*static_cast<EnumInfo *>(getPtr(I)), Diags);
   case InfoType::IT_function:
-    return serialize(*static_cast<FunctionInfo *>(I.get()), Diags);
+    return serialize(*static_cast<FunctionInfo *>(getPtr(I)), Diags);
   case InfoType::IT_concept:
-    return serialize(*static_cast<ConceptInfo *>(I.get()), Diags);
+    return serialize(*static_cast<ConceptInfo *>(getPtr(I)), Diags);
   case InfoType::IT_variable:
-    return serialize(*static_cast<VarInfo *>(I.get()), Diags);
+    return serialize(*static_cast<VarInfo *>(getPtr(I)), Diags);
   case InfoType::IT_friend:
   case InfoType::IT_typedef:
   case InfoType::IT_default:
@@ -491,20 +491,20 @@ template <typename ChildType>
 static OwnedPtr<Info> makeAndInsertIntoParent(ChildType Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
-    auto ParentNS = std::make_unique<NamespaceInfo>();
+    auto ParentNS = allocatePtr<NamespaceInfo>();
     InsertChild(ParentNS->Children, std::forward<ChildType>(Child));
     return ParentNS;
   }
 
   switch (Child.Namespace[0].RefType) {
   case InfoType::IT_namespace: {
-    auto ParentNS = std::make_unique<NamespaceInfo>();
+    auto ParentNS = allocatePtr<NamespaceInfo>();
     ParentNS->USR = Child.Namespace[0].USR;
     InsertChild(ParentNS->Children, std::forward<ChildType>(Child));
     return ParentNS;
   }
   case InfoType::IT_record: {
-    auto ParentRec = std::make_unique<RecordInfo>();
+    auto ParentRec = allocatePtr<RecordInfo>();
     ParentRec->USR = Child.Namespace[0].USR;
     InsertChild(ParentRec->Children, std::forward<ChildType>(Child));
     return ParentRec;
@@ -944,7 +944,7 @@ std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const NamespaceDecl *D,
                                                    const FullComment *FC,
                                                    Location Loc,
                                                    bool PublicOnly) {
-  auto NSI = std::make_unique<NamespaceInfo>();
+  auto NSI = allocatePtr<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*NSI, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
@@ -1017,7 +1017,7 @@ std::pair<OwnedPtr<Info>, OwnedPtr<Info>> emitInfo(const RecordDecl *D,
                                                    Location Loc,
                                                    bool PublicOnly) {
 
-  auto RI = std::make_unique<RecordInfo>();
+  auto RI = allocatePtr<RecordInfo>();
   bool IsInAnonymousNamespace = false;
 
   populateSymbolInfo(*RI, D, FC, Loc, IsInAnonymousNamespace);
