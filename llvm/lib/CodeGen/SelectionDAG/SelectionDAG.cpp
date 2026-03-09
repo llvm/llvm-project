@@ -359,7 +359,7 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
   if (ISD::BUILD_VECTOR != Op.getOpcode() &&
       ISD::SPLAT_VECTOR != Op.getOpcode())
     return false;
-  
+
   if (ISD::SPLAT_VECTOR == Op.getOpcode() && DemandedElts == 0)
     return true;
 
