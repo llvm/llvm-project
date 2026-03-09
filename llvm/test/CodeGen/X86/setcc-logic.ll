@@ -625,6 +625,29 @@ define i1 @and_icmps_const_1bit_diff_common_op(i32 %x, i32 %y) {
 
 ; PR44136 - fold cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
 
+define i1 @or_cmp_eq_i128(i128 %x, i128 %y) {
+; NOBMI-LABEL: or_cmp_eq_i128:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    notq %rsi
+; NOBMI-NEXT:    andq %rcx, %rsi
+; NOBMI-NEXT:    notq %rdi
+; NOBMI-NEXT:    andq %rdx, %rdi
+; NOBMI-NEXT:    orq %rsi, %rdi
+; NOBMI-NEXT:    sete %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: or_cmp_eq_i128:
+; BMI:       # %bb.0:
+; BMI-NEXT:    andnq %rcx, %rsi, %rax
+; BMI-NEXT:    andnq %rdx, %rdi, %rcx
+; BMI-NEXT:    orq %rax, %rcx
+; BMI-NEXT:    sete %al
+; BMI-NEXT:    retq
+  %o = or i128 %x, %y
+  %c = icmp eq i128 %o, %x
+  ret i1 %c
+}
+
 define i1 @or_cmp_eq_i64(i64 %x, i64 %y) {
 ; NOBMI-LABEL: or_cmp_eq_i64:
 ; NOBMI:       # %bb.0:
