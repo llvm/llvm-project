@@ -1411,7 +1411,6 @@ def testGetParentOfType():
                 scf.YieldOp([])
             func.ReturnOp([])
 
-
         # CHECK: get_parent_of_type detached->func.func: None
         detached = Operation.create("custom.detached")
         res = get_parent_of_type(detached, func.FuncOp)
