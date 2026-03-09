@@ -359,11 +359,13 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
   if (ISD::BUILD_VECTOR != Op.getOpcode() &&
       ISD::SPLAT_VECTOR != Op.getOpcode())
     return false;
+  
+  if (ISD::SPLAT_VECTOR == Op.getOpcode() && DemandedElts == 0)
+    return true;
 
   EVT SVT = Op.getValueType().getScalarType();
-  bool IsSplat = ISD::SPLAT_VECTOR == Op.getOpcode();
   for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
-    if (!DemandedElts[IsSplat ? 0 : i])
+    if (!DemandedElts[i])
       continue;
 
     if (AllowUndefs && Op.getOperand(i).isUndef()) {
@@ -404,10 +406,12 @@ bool ISD::matchBinaryPredicate(
        LHS.getOpcode() != ISD::SPLAT_VECTOR))
     return false;
 
+  if (ISD::SPLAT_VECTOR == LHS.getOpcode() && DemandedElts == 0)
+    return true;
+
   EVT SVT = LHS.getValueType().getScalarType();
-  bool IsSplat = ISD::SPLAT_VECTOR == LHS.getOpcode();
   for (unsigned i = 0, e = LHS.getNumOperands(); i != e; ++i) {
-    if (!DemandedElts[IsSplat ? 0 : i])
+    if (!DemandedElts[i])
       continue;
     SDValue LHSOp = LHS.getOperand(i);
     SDValue RHSOp = RHS.getOperand(i);
