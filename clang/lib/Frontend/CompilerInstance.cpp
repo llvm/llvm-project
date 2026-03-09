@@ -353,14 +353,14 @@ static void SetupAdditionalLogs(DiagnosticOptions &DiagOpts,
     PairsString.split(PairStrings, ",", -1, /* KeepEmpty = */ false);
     SmallVector<std::pair<StringRef, StringRef>, 4> Pairs;
     for (const auto &PairString : PairStrings) {
-      std::pair<StringRef, StringRef> Pair = PairString.split("=");
-      if (Pair.second.empty()) {
+      auto [key, value] = PairString.split("=");
+      if (value.empty()) {
         Diags.Report(SourceLocation(), diag::err_diagnostic_output_no_value)
-            << Pair.first;
+            << key;
         break;
       }
 
-      Pairs.push_back(PairString.split("="));
+      Pairs.push_back(std::make_pair(key, value));
     }
 
     std::unique_ptr<DiagnosticConsumer> Consumer;
@@ -403,9 +403,7 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
   if (Client) {
     Diags->setClient(Client, ShouldOwnClient);
   } else if (Opts.getFormat() == DiagnosticOptions::SARIF) {
-    /* TO_UPSTREAM(SARIF) ON */
     Diags->setClient(new SARIFDiagnosticPrinter("", Opts));
-    /* TO_UPSTREAM(SARIF) OFF */
   } else
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
 
@@ -420,9 +418,7 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
   if (!Opts.DiagnosticSerializationFile.empty())
     SetupSerializedDiagnostics(Opts, *Diags, Opts.DiagnosticSerializationFile);
 
-  /* TO_UPSTREAM(SARIF) ON */
   SetupAdditionalLogs(Opts, *Diags);
-  /* TO_UPSTREAM(SARIF) OFF */
 
   // Configure our handling of diagnostics.
   ProcessWarningOptions(*Diags, Opts, VFS);

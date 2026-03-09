@@ -55,6 +55,8 @@ struct SarifVersion {
   StringRef CommandLineVersion;
   StringRef SchemaURI;
   bool IsDefault;
+
+  bool isDefault() const { return IsDefault; }
 };
 
 namespace detail {

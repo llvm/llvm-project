@@ -454,11 +454,15 @@ ArrayRef<SarifVersion> SarifDocumentWriter::getSupportedVersions() {
        "sarif-schema-2.1.0.json",
        true}};
 
-  return Versions;
+  ArrayRef<SarifVersion> VersionsArray = Versions;
+  assert(std::count_if(VersionsArray.begin(), VersionsArray.end(),
+                       std::mem_fn(&SarifVersion::isDefault)) == 1);
+
+  return VersionsArray;
 }
 
 const SarifVersion &SarifDocumentWriter::getDefaultVersion() {
   const auto Versions = getSupportedVersions();
   return *std::find_if(Versions.begin(), Versions.end(),
-                       [](const SarifVersion &V) { return V.IsDefault; });
+                       std::mem_fn(&SarifVersion::isDefault));
 }

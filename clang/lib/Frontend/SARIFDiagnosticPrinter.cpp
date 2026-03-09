@@ -85,10 +85,7 @@ void SARIFDiagnosticPrinter::BeginSourceFile(const LangOptions &LO,
                                              const Preprocessor *PP) {
   // Build the SARIFDiagnostic utility.
   if (!hasSarifWriter() && PP) {
-    // Use the SourceManager from the preprocessor.
-    // REVIEW: Are there cases where we won't have a preprocessor but we will
-    // have a SourceManager? If so, we should pass the SourceManager directly to
-    // the BeginSourceFile call.
+    // Use the SourceManager from the preproces`sor.
     setSarifWriter(
         std::make_unique<SarifDocumentWriter>(PP->getSourceManager()));
   }
