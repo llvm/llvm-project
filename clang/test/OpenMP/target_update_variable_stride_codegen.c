@@ -16,17 +16,14 @@
 // set the OMP_MAP_NON_CONTIG flag. For NON_CONTIG entries, offload_sizes contains
 // dimension count (2 for 1D array section). For non-NON_CONTIG entries,
 // offload_sizes contains byte size (5 elements * 4 bytes = 20).
-extern int get_stride();
 int data[10];
 int stride;
 
 void test_variable_stride_to() {
-  stride = get_stride();
   #pragma omp target update to(data[0:5:stride])
 }
 
 void test_variable_stride_from() {
-  stride = get_stride();
   #pragma omp target update from(data[0:5:stride])
 }
 
@@ -50,8 +47,6 @@ void test_constant_stride_one() {
 // CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[DIMS:%.*]] = alloca [2 x [[STRUCT_DESCRIPTOR_DIM:%.*]]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 (...) @get_stride()
-// CHECK-NEXT:    store i32 [[CALL]], ptr @stride, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @stride, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 4, [[TMP1]]
@@ -90,8 +85,6 @@ void test_constant_stride_one() {
 // CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[DIMS:%.*]] = alloca [2 x [[STRUCT_DESCRIPTOR_DIM_0:%.*]]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 (...) @get_stride()
-// CHECK-NEXT:    store i32 [[CALL]], ptr @stride, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @stride, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 4, [[TMP1]]
