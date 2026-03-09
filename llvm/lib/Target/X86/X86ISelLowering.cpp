@@ -3638,29 +3638,25 @@ bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
 }
 
 bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
-  EVT VT = Y.getValueType();
-
-  if (VT.isVector())
-    return false;
-
-  if (!Subtarget.hasBMI())
-    return false;
-
-  // There are only 32-bit and 64-bit forms for 'andn'.
-  if (VT != MVT::i32 && VT != MVT::i64)
-    return false;
-
-  return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
+  // Scalar integer and-not compares are efficiently handled by NOT+TEST (or
+  // BMI ANDN).
+  return Y.getValueType().isScalarInteger();
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
   EVT VT = Y.getValueType();
 
-  if (!VT.isVector())
-    return hasAndNotCompare(Y);
+  if (!VT.isVector()) {
+    if (!Subtarget.hasBMI())
+      return false;
+
+    // There are only 32-bit and 64-bit forms for 'andn'.
+    if (VT != MVT::i32 && VT != MVT::i64)
+      return false;
+    return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
+  }
 
   // Vector.
-
   if (!Subtarget.hasSSE1() || VT.getSizeInBits() < 128)
     return false;
 
@@ -20032,9 +20028,9 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, GlobalAddressSDNode *GA,
   }
 
   if (!Ret) {
-    X86ISD::NodeType CallType = UseTLSDESC     ? X86ISD::TLSDESC
-                                : LocalDynamic ? X86ISD::TLSBASEADDR
-                                               : X86ISD::TLSADDR;
+    unsigned CallType = UseTLSDESC     ? X86ISD::TLSDESC
+                        : LocalDynamic ? X86ISD::TLSBASEADDR
+                                       : X86ISD::TLSADDR;
 
     Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
     if (LoadGlobalBaseReg) {
@@ -29852,7 +29848,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   // "else" branch.
   APInt PreferredZero = APInt::getZero(SizeInBits);
   APInt OppositeZero = PreferredZero;
-  X86ISD::NodeType MinMaxOp;
+  unsigned MinMaxOp;
   if (IsMaxOp) {
     MinMaxOp = X86ISD::FMAX;
     OppositeZero.setSignBit();
@@ -35761,482 +35757,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   }
-}
-
-const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((X86ISD::NodeType)Opcode) {
-  case X86ISD::FIRST_NUMBER:       break;
-#define NODE_NAME_CASE(NODE) case X86ISD::NODE: return "X86ISD::" #NODE;
-  NODE_NAME_CASE(BSF)
-  NODE_NAME_CASE(BSR)
-  NODE_NAME_CASE(FSHL)
-  NODE_NAME_CASE(FSHR)
-  NODE_NAME_CASE(FAND)
-  NODE_NAME_CASE(FANDN)
-  NODE_NAME_CASE(FOR)
-  NODE_NAME_CASE(FXOR)
-  NODE_NAME_CASE(FILD)
-  NODE_NAME_CASE(FIST)
-  NODE_NAME_CASE(FP_TO_INT_IN_MEM)
-  NODE_NAME_CASE(FLD)
-  NODE_NAME_CASE(FST)
-  NODE_NAME_CASE(CALL)
-  NODE_NAME_CASE(CALL_RVMARKER)
-  NODE_NAME_CASE(IMP_CALL)
-  NODE_NAME_CASE(BT)
-  NODE_NAME_CASE(CMP)
-  NODE_NAME_CASE(FCMP)
-  NODE_NAME_CASE(STRICT_FCMP)
-  NODE_NAME_CASE(STRICT_FCMPS)
-  NODE_NAME_CASE(COMI)
-  NODE_NAME_CASE(UCOMI)
-  NODE_NAME_CASE(COMX)
-  NODE_NAME_CASE(UCOMX)
-  NODE_NAME_CASE(CMPM)
-  NODE_NAME_CASE(CMPMM)
-  NODE_NAME_CASE(STRICT_CMPM)
-  NODE_NAME_CASE(CMPMM_SAE)
-  NODE_NAME_CASE(SETCC)
-  NODE_NAME_CASE(SETCC_CARRY)
-  NODE_NAME_CASE(FSETCC)
-  NODE_NAME_CASE(FSETCCM)
-  NODE_NAME_CASE(FSETCCM_SAE)
-  NODE_NAME_CASE(CMOV)
-  NODE_NAME_CASE(BRCOND)
-  NODE_NAME_CASE(BRCOND_SELF)
-  NODE_NAME_CASE(RET_GLUE)
-  NODE_NAME_CASE(IRET)
-  NODE_NAME_CASE(REP_STOS)
-  NODE_NAME_CASE(REP_MOVS)
-  NODE_NAME_CASE(GlobalBaseReg)
-  NODE_NAME_CASE(Wrapper)
-  NODE_NAME_CASE(WrapperRIP)
-  NODE_NAME_CASE(MOVQ2DQ)
-  NODE_NAME_CASE(MOVDQ2Q)
-  NODE_NAME_CASE(MMX_MOVD2W)
-  NODE_NAME_CASE(MMX_MOVW2D)
-  NODE_NAME_CASE(PEXTRB)
-  NODE_NAME_CASE(PEXTRW)
-  NODE_NAME_CASE(INSERTPS)
-  NODE_NAME_CASE(PINSRB)
-  NODE_NAME_CASE(PINSRW)
-  NODE_NAME_CASE(PSHUFB)
-  NODE_NAME_CASE(ANDNP)
-  NODE_NAME_CASE(BLENDI)
-  NODE_NAME_CASE(BLENDV)
-  NODE_NAME_CASE(HADD)
-  NODE_NAME_CASE(HSUB)
-  NODE_NAME_CASE(HADDS)
-  NODE_NAME_CASE(HSUBS)
-  NODE_NAME_CASE(FHADD)
-  NODE_NAME_CASE(FHSUB)
-  NODE_NAME_CASE(CONFLICT)
-  NODE_NAME_CASE(FMAX)
-  NODE_NAME_CASE(FMAXS)
-  NODE_NAME_CASE(FMAX_SAE)
-  NODE_NAME_CASE(FMAXS_SAE)
-  NODE_NAME_CASE(STRICT_FMAX)
-  NODE_NAME_CASE(FMIN)
-  NODE_NAME_CASE(FMINS)
-  NODE_NAME_CASE(FMIN_SAE)
-  NODE_NAME_CASE(FMINS_SAE)
-  NODE_NAME_CASE(STRICT_FMIN)
-  NODE_NAME_CASE(FMAXC)
-  NODE_NAME_CASE(FMINC)
-  NODE_NAME_CASE(FRSQRT)
-  NODE_NAME_CASE(FRCP)
-  NODE_NAME_CASE(EXTRQI)
-  NODE_NAME_CASE(INSERTQI)
-  NODE_NAME_CASE(TLSADDR)
-  NODE_NAME_CASE(TLSBASEADDR)
-  NODE_NAME_CASE(TLSCALL)
-  NODE_NAME_CASE(TLSDESC)
-  NODE_NAME_CASE(EH_SJLJ_SETJMP)
-  NODE_NAME_CASE(EH_SJLJ_LONGJMP)
-  NODE_NAME_CASE(EH_SJLJ_SETUP_DISPATCH)
-  NODE_NAME_CASE(EH_RETURN)
-  NODE_NAME_CASE(TC_RETURN)
-  NODE_NAME_CASE(FNSTCW16m)
-  NODE_NAME_CASE(FLDCW16m)
-  NODE_NAME_CASE(FNSTENVm)
-  NODE_NAME_CASE(FLDENVm)
-  NODE_NAME_CASE(LCMPXCHG_DAG)
-  NODE_NAME_CASE(LCMPXCHG8_DAG)
-  NODE_NAME_CASE(LCMPXCHG16_DAG)
-  NODE_NAME_CASE(LCMPXCHG16_SAVE_RBX_DAG)
-  NODE_NAME_CASE(LADD)
-  NODE_NAME_CASE(LSUB)
-  NODE_NAME_CASE(LOR)
-  NODE_NAME_CASE(LXOR)
-  NODE_NAME_CASE(LAND)
-  NODE_NAME_CASE(LBTS)
-  NODE_NAME_CASE(LBTC)
-  NODE_NAME_CASE(LBTR)
-  NODE_NAME_CASE(LBTS_RM)
-  NODE_NAME_CASE(LBTC_RM)
-  NODE_NAME_CASE(LBTR_RM)
-  NODE_NAME_CASE(AADD)
-  NODE_NAME_CASE(AOR)
-  NODE_NAME_CASE(AXOR)
-  NODE_NAME_CASE(AAND)
-  NODE_NAME_CASE(VZEXT_MOVL)
-  NODE_NAME_CASE(VZEXT_LOAD)
-  NODE_NAME_CASE(VEXTRACT_STORE)
-  NODE_NAME_CASE(VTRUNC)
-  NODE_NAME_CASE(VTRUNCS)
-  NODE_NAME_CASE(VTRUNCUS)
-  NODE_NAME_CASE(VMTRUNC)
-  NODE_NAME_CASE(VMTRUNCS)
-  NODE_NAME_CASE(VMTRUNCUS)
-  NODE_NAME_CASE(VTRUNCSTORES)
-  NODE_NAME_CASE(VTRUNCSTOREUS)
-  NODE_NAME_CASE(VMTRUNCSTORES)
-  NODE_NAME_CASE(VMTRUNCSTOREUS)
-  NODE_NAME_CASE(VFPEXT)
-  NODE_NAME_CASE(STRICT_VFPEXT)
-  NODE_NAME_CASE(VFPEXT_SAE)
-  NODE_NAME_CASE(VFPEXTS)
-  NODE_NAME_CASE(VFPEXTS_SAE)
-  NODE_NAME_CASE(VFPROUND)
-  NODE_NAME_CASE(VFPROUND2)
-  NODE_NAME_CASE(VFPROUND2_RND)
-  NODE_NAME_CASE(STRICT_VFPROUND)
-  NODE_NAME_CASE(VMFPROUND)
-  NODE_NAME_CASE(VFPROUND_RND)
-  NODE_NAME_CASE(VFPROUNDS)
-  NODE_NAME_CASE(VFPROUNDS_RND)
-  NODE_NAME_CASE(VSHLDQ)
-  NODE_NAME_CASE(VSRLDQ)
-  NODE_NAME_CASE(VSHL)
-  NODE_NAME_CASE(VSRL)
-  NODE_NAME_CASE(VSRA)
-  NODE_NAME_CASE(VSHLI)
-  NODE_NAME_CASE(VSRLI)
-  NODE_NAME_CASE(VSRAI)
-  NODE_NAME_CASE(VSHLV)
-  NODE_NAME_CASE(VSRLV)
-  NODE_NAME_CASE(VSRAV)
-  NODE_NAME_CASE(VROTLI)
-  NODE_NAME_CASE(VROTRI)
-  NODE_NAME_CASE(VPPERM)
-  NODE_NAME_CASE(CMPP)
-  NODE_NAME_CASE(STRICT_CMPP)
-  NODE_NAME_CASE(PCMPEQ)
-  NODE_NAME_CASE(PCMPGT)
-  NODE_NAME_CASE(PHMINPOS)
-  NODE_NAME_CASE(ADD)
-  NODE_NAME_CASE(SUB)
-  NODE_NAME_CASE(ADC)
-  NODE_NAME_CASE(SBB)
-  NODE_NAME_CASE(SMUL)
-  NODE_NAME_CASE(UMUL)
-  NODE_NAME_CASE(OR)
-  NODE_NAME_CASE(XOR)
-  NODE_NAME_CASE(AND)
-  NODE_NAME_CASE(BEXTR)
-  NODE_NAME_CASE(BEXTRI)
-  NODE_NAME_CASE(BZHI)
-  NODE_NAME_CASE(PDEP)
-  NODE_NAME_CASE(PEXT)
-  NODE_NAME_CASE(MUL_IMM)
-  NODE_NAME_CASE(MOVMSK)
-  NODE_NAME_CASE(PTEST)
-  NODE_NAME_CASE(TESTP)
-  NODE_NAME_CASE(KORTEST)
-  NODE_NAME_CASE(KTEST)
-  NODE_NAME_CASE(KADD)
-  NODE_NAME_CASE(KSHIFTL)
-  NODE_NAME_CASE(KSHIFTR)
-  NODE_NAME_CASE(PACKSS)
-  NODE_NAME_CASE(PACKUS)
-  NODE_NAME_CASE(PALIGNR)
-  NODE_NAME_CASE(VALIGN)
-  NODE_NAME_CASE(VSHLD)
-  NODE_NAME_CASE(VSHRD)
-  NODE_NAME_CASE(PSHUFD)
-  NODE_NAME_CASE(PSHUFHW)
-  NODE_NAME_CASE(PSHUFLW)
-  NODE_NAME_CASE(SHUFP)
-  NODE_NAME_CASE(SHUF128)
-  NODE_NAME_CASE(MOVLHPS)
-  NODE_NAME_CASE(MOVHLPS)
-  NODE_NAME_CASE(MOVDDUP)
-  NODE_NAME_CASE(MOVSHDUP)
-  NODE_NAME_CASE(MOVSLDUP)
-  NODE_NAME_CASE(MOVSD)
-  NODE_NAME_CASE(MOVSS)
-  NODE_NAME_CASE(MOVSH)
-  NODE_NAME_CASE(UNPCKL)
-  NODE_NAME_CASE(UNPCKH)
-  NODE_NAME_CASE(VBROADCAST)
-  NODE_NAME_CASE(VBROADCAST_LOAD)
-  NODE_NAME_CASE(VBROADCASTM)
-  NODE_NAME_CASE(SUBV_BROADCAST_LOAD)
-  NODE_NAME_CASE(VPERMILPV)
-  NODE_NAME_CASE(VPERMILPI)
-  NODE_NAME_CASE(VPERM2X128)
-  NODE_NAME_CASE(VPERMV)
-  NODE_NAME_CASE(VPERMV3)
-  NODE_NAME_CASE(VPERMI)
-  NODE_NAME_CASE(VPTERNLOG)
-  NODE_NAME_CASE(FP_TO_SINT_SAT)
-  NODE_NAME_CASE(FP_TO_UINT_SAT)
-  NODE_NAME_CASE(VFIXUPIMM)
-  NODE_NAME_CASE(VFIXUPIMM_SAE)
-  NODE_NAME_CASE(VFIXUPIMMS)
-  NODE_NAME_CASE(VFIXUPIMMS_SAE)
-  NODE_NAME_CASE(VRANGE)
-  NODE_NAME_CASE(VRANGE_SAE)
-  NODE_NAME_CASE(VRANGES)
-  NODE_NAME_CASE(VRANGES_SAE)
-  NODE_NAME_CASE(PMULUDQ)
-  NODE_NAME_CASE(PMULDQ)
-  NODE_NAME_CASE(PSADBW)
-  NODE_NAME_CASE(DBPSADBW)
-  NODE_NAME_CASE(VASTART_SAVE_XMM_REGS)
-  NODE_NAME_CASE(VAARG_64)
-  NODE_NAME_CASE(VAARG_X32)
-  NODE_NAME_CASE(DYN_ALLOCA)
-  NODE_NAME_CASE(MFENCE)
-  NODE_NAME_CASE(SEG_ALLOCA)
-  NODE_NAME_CASE(PROBED_ALLOCA)
-  NODE_NAME_CASE(RDRAND)
-  NODE_NAME_CASE(RDSEED)
-  NODE_NAME_CASE(RDPKRU)
-  NODE_NAME_CASE(WRPKRU)
-  NODE_NAME_CASE(VPMADDUBSW)
-  NODE_NAME_CASE(VPMADDWD)
-  NODE_NAME_CASE(VPSHA)
-  NODE_NAME_CASE(VPSHL)
-  NODE_NAME_CASE(VPCOM)
-  NODE_NAME_CASE(VPCOMU)
-  NODE_NAME_CASE(VPERMIL2)
-  NODE_NAME_CASE(FMSUB)
-  NODE_NAME_CASE(STRICT_FMSUB)
-  NODE_NAME_CASE(FNMADD)
-  NODE_NAME_CASE(STRICT_FNMADD)
-  NODE_NAME_CASE(FNMSUB)
-  NODE_NAME_CASE(STRICT_FNMSUB)
-  NODE_NAME_CASE(FMADDSUB)
-  NODE_NAME_CASE(FMSUBADD)
-  NODE_NAME_CASE(FMADD_RND)
-  NODE_NAME_CASE(FNMADD_RND)
-  NODE_NAME_CASE(FMSUB_RND)
-  NODE_NAME_CASE(FNMSUB_RND)
-  NODE_NAME_CASE(FMADDSUB_RND)
-  NODE_NAME_CASE(FMSUBADD_RND)
-  NODE_NAME_CASE(VFMADDC)
-  NODE_NAME_CASE(VFMADDC_RND)
-  NODE_NAME_CASE(VFCMADDC)
-  NODE_NAME_CASE(VFCMADDC_RND)
-  NODE_NAME_CASE(VFMULC)
-  NODE_NAME_CASE(VFMULC_RND)
-  NODE_NAME_CASE(VFCMULC)
-  NODE_NAME_CASE(VFCMULC_RND)
-  NODE_NAME_CASE(VFMULCSH)
-  NODE_NAME_CASE(VFMULCSH_RND)
-  NODE_NAME_CASE(VFCMULCSH)
-  NODE_NAME_CASE(VFCMULCSH_RND)
-  NODE_NAME_CASE(VFMADDCSH)
-  NODE_NAME_CASE(VFMADDCSH_RND)
-  NODE_NAME_CASE(VFCMADDCSH)
-  NODE_NAME_CASE(VFCMADDCSH_RND)
-  NODE_NAME_CASE(VPMADD52H)
-  NODE_NAME_CASE(VPMADD52L)
-  NODE_NAME_CASE(VRNDSCALE)
-  NODE_NAME_CASE(STRICT_VRNDSCALE)
-  NODE_NAME_CASE(VRNDSCALE_SAE)
-  NODE_NAME_CASE(VRNDSCALES)
-  NODE_NAME_CASE(VRNDSCALES_SAE)
-  NODE_NAME_CASE(VREDUCE)
-  NODE_NAME_CASE(VREDUCE_SAE)
-  NODE_NAME_CASE(VREDUCES)
-  NODE_NAME_CASE(VREDUCES_SAE)
-  NODE_NAME_CASE(VGETMANT)
-  NODE_NAME_CASE(VGETMANT_SAE)
-  NODE_NAME_CASE(VGETMANTS)
-  NODE_NAME_CASE(VGETMANTS_SAE)
-  NODE_NAME_CASE(PCMPESTR)
-  NODE_NAME_CASE(PCMPISTR)
-  NODE_NAME_CASE(XTEST)
-  NODE_NAME_CASE(COMPRESS)
-  NODE_NAME_CASE(EXPAND)
-  NODE_NAME_CASE(SELECTS)
-  NODE_NAME_CASE(ADDSUB)
-  NODE_NAME_CASE(RCP14)
-  NODE_NAME_CASE(RCP14S)
-  NODE_NAME_CASE(RSQRT14)
-  NODE_NAME_CASE(RSQRT14S)
-  NODE_NAME_CASE(FADD_RND)
-  NODE_NAME_CASE(FADDS)
-  NODE_NAME_CASE(FADDS_RND)
-  NODE_NAME_CASE(FSUB_RND)
-  NODE_NAME_CASE(FSUBS)
-  NODE_NAME_CASE(FSUBS_RND)
-  NODE_NAME_CASE(FMUL_RND)
-  NODE_NAME_CASE(FMULS)
-  NODE_NAME_CASE(FMULS_RND)
-  NODE_NAME_CASE(FDIV_RND)
-  NODE_NAME_CASE(FDIVS)
-  NODE_NAME_CASE(FDIVS_RND)
-  NODE_NAME_CASE(FSQRT_RND)
-  NODE_NAME_CASE(FSQRTS)
-  NODE_NAME_CASE(FSQRTS_RND)
-  NODE_NAME_CASE(FGETEXP)
-  NODE_NAME_CASE(FGETEXP_SAE)
-  NODE_NAME_CASE(FGETEXPS)
-  NODE_NAME_CASE(FGETEXPS_SAE)
-  NODE_NAME_CASE(SCALEF)
-  NODE_NAME_CASE(SCALEF_RND)
-  NODE_NAME_CASE(SCALEFS)
-  NODE_NAME_CASE(SCALEFS_RND)
-  NODE_NAME_CASE(MULHRS)
-  NODE_NAME_CASE(SINT_TO_FP_RND)
-  NODE_NAME_CASE(UINT_TO_FP_RND)
-  NODE_NAME_CASE(CVTTP2SI)
-  NODE_NAME_CASE(CVTTP2UI)
-  NODE_NAME_CASE(STRICT_CVTTP2SI)
-  NODE_NAME_CASE(STRICT_CVTTP2UI)
-  NODE_NAME_CASE(MCVTTP2SI)
-  NODE_NAME_CASE(MCVTTP2UI)
-  NODE_NAME_CASE(CVTTP2SI_SAE)
-  NODE_NAME_CASE(CVTTP2UI_SAE)
-  NODE_NAME_CASE(CVTTS2SI)
-  NODE_NAME_CASE(CVTTS2UI)
-  NODE_NAME_CASE(CVTTS2SI_SAE)
-  NODE_NAME_CASE(CVTTS2UI_SAE)
-  NODE_NAME_CASE(CVTSI2P)
-  NODE_NAME_CASE(CVTUI2P)
-  NODE_NAME_CASE(STRICT_CVTSI2P)
-  NODE_NAME_CASE(STRICT_CVTUI2P)
-  NODE_NAME_CASE(MCVTSI2P)
-  NODE_NAME_CASE(MCVTUI2P)
-  NODE_NAME_CASE(VFPCLASS)
-  NODE_NAME_CASE(VFPCLASSS)
-  NODE_NAME_CASE(MULTISHIFT)
-  NODE_NAME_CASE(SCALAR_SINT_TO_FP)
-  NODE_NAME_CASE(SCALAR_SINT_TO_FP_RND)
-  NODE_NAME_CASE(SCALAR_UINT_TO_FP)
-  NODE_NAME_CASE(SCALAR_UINT_TO_FP_RND)
-  NODE_NAME_CASE(CVTPS2PH)
-  NODE_NAME_CASE(STRICT_CVTPS2PH)
-  NODE_NAME_CASE(CVTPS2PH_SAE)
-  NODE_NAME_CASE(MCVTPS2PH)
-  NODE_NAME_CASE(MCVTPS2PH_SAE)
-  NODE_NAME_CASE(CVTPH2PS)
-  NODE_NAME_CASE(STRICT_CVTPH2PS)
-  NODE_NAME_CASE(CVTPH2PS_SAE)
-  NODE_NAME_CASE(CVTP2SI)
-  NODE_NAME_CASE(CVTP2UI)
-  NODE_NAME_CASE(MCVTP2SI)
-  NODE_NAME_CASE(MCVTP2UI)
-  NODE_NAME_CASE(CVTP2SI_RND)
-  NODE_NAME_CASE(CVTP2UI_RND)
-  NODE_NAME_CASE(CVTS2SI)
-  NODE_NAME_CASE(CVTS2UI)
-  NODE_NAME_CASE(CVTS2SI_RND)
-  NODE_NAME_CASE(CVTS2UI_RND)
-  NODE_NAME_CASE(CVTNEPS2BF16)
-  NODE_NAME_CASE(MCVTNEPS2BF16)
-  NODE_NAME_CASE(DPBF16PS)
-  NODE_NAME_CASE(DPFP16PS)
-  NODE_NAME_CASE(MPSADBW)
-  NODE_NAME_CASE(LWPINS)
-  NODE_NAME_CASE(MGATHER)
-  NODE_NAME_CASE(MSCATTER)
-  NODE_NAME_CASE(VPDPBUSD)
-  NODE_NAME_CASE(VPDPBUSDS)
-  NODE_NAME_CASE(VPDPWSSD)
-  NODE_NAME_CASE(VPDPWSSDS)
-  NODE_NAME_CASE(VPSHUFBITQMB)
-  NODE_NAME_CASE(GF2P8MULB)
-  NODE_NAME_CASE(GF2P8AFFINEQB)
-  NODE_NAME_CASE(GF2P8AFFINEINVQB)
-  NODE_NAME_CASE(PCLMULQDQ)
-  NODE_NAME_CASE(NT_CALL)
-  NODE_NAME_CASE(NT_BRIND)
-  NODE_NAME_CASE(UMWAIT)
-  NODE_NAME_CASE(TPAUSE)
-  NODE_NAME_CASE(ENQCMD)
-  NODE_NAME_CASE(ENQCMDS)
-  NODE_NAME_CASE(VP2INTERSECT)
-  NODE_NAME_CASE(VPDPBSUD)
-  NODE_NAME_CASE(VPDPBSUDS)
-  NODE_NAME_CASE(VPDPBUUD)
-  NODE_NAME_CASE(VPDPBUUDS)
-  NODE_NAME_CASE(VPDPBSSD)
-  NODE_NAME_CASE(VPDPBSSDS)
-  NODE_NAME_CASE(VPDPWSUD)
-  NODE_NAME_CASE(VPDPWSUDS)
-  NODE_NAME_CASE(VPDPWUSD)
-  NODE_NAME_CASE(VPDPWUSDS)
-  NODE_NAME_CASE(VPDPWUUD)
-  NODE_NAME_CASE(VPDPWUUDS)
-  NODE_NAME_CASE(VMINMAX)
-  NODE_NAME_CASE(VMINMAX_SAE)
-  NODE_NAME_CASE(VMINMAXS)
-  NODE_NAME_CASE(VMINMAXS_SAE)
-  NODE_NAME_CASE(CVTP2IBS)
-  NODE_NAME_CASE(CVTP2IUBS)
-  NODE_NAME_CASE(CVTP2IBS_RND)
-  NODE_NAME_CASE(CVTP2IUBS_RND)
-  NODE_NAME_CASE(CVTTP2IBS)
-  NODE_NAME_CASE(CVTTP2IUBS)
-  NODE_NAME_CASE(CVTTP2IBS_SAE)
-  NODE_NAME_CASE(CVTTP2IUBS_SAE)
-  NODE_NAME_CASE(VCVT2PH2BF8)
-  NODE_NAME_CASE(VCVT2PH2BF8S)
-  NODE_NAME_CASE(VCVT2PH2HF8)
-  NODE_NAME_CASE(VCVT2PH2HF8S)
-  NODE_NAME_CASE(VCVTBIASPH2BF8)
-  NODE_NAME_CASE(VCVTBIASPH2BF8S)
-  NODE_NAME_CASE(VCVTBIASPH2HF8)
-  NODE_NAME_CASE(VCVTBIASPH2HF8S)
-  NODE_NAME_CASE(VCVTPH2BF8)
-  NODE_NAME_CASE(VCVTPH2BF8S)
-  NODE_NAME_CASE(VCVTPH2HF8)
-  NODE_NAME_CASE(VCVTPH2HF8S)
-  NODE_NAME_CASE(VMCVTBIASPH2BF8)
-  NODE_NAME_CASE(VMCVTBIASPH2BF8S)
-  NODE_NAME_CASE(VMCVTBIASPH2HF8)
-  NODE_NAME_CASE(VMCVTBIASPH2HF8S)
-  NODE_NAME_CASE(VMCVTPH2BF8)
-  NODE_NAME_CASE(VMCVTPH2BF8S)
-  NODE_NAME_CASE(VMCVTPH2HF8)
-  NODE_NAME_CASE(VMCVTPH2HF8S)
-  NODE_NAME_CASE(VCVTHF82PH)
-  NODE_NAME_CASE(AESENC128KL)
-  NODE_NAME_CASE(AESDEC128KL)
-  NODE_NAME_CASE(AESENC256KL)
-  NODE_NAME_CASE(AESDEC256KL)
-  NODE_NAME_CASE(AESENCWIDE128KL)
-  NODE_NAME_CASE(AESDECWIDE128KL)
-  NODE_NAME_CASE(AESENCWIDE256KL)
-  NODE_NAME_CASE(AESDECWIDE256KL)
-  NODE_NAME_CASE(CMPCCXADD)
-  NODE_NAME_CASE(TESTUI)
-  NODE_NAME_CASE(FP80_ADD)
-  NODE_NAME_CASE(STRICT_FP80_ADD)
-  NODE_NAME_CASE(CCMP)
-  NODE_NAME_CASE(CTEST)
-  NODE_NAME_CASE(CLOAD)
-  NODE_NAME_CASE(CSTORE)
-  NODE_NAME_CASE(CVTTS2SIS)
-  NODE_NAME_CASE(CVTTS2UIS)
-  NODE_NAME_CASE(CVTTS2SIS_SAE)
-  NODE_NAME_CASE(CVTTS2UIS_SAE)
-  NODE_NAME_CASE(CVTTP2SIS)
-  NODE_NAME_CASE(MCVTTP2SIS)
-  NODE_NAME_CASE(CVTTP2UIS_SAE)
-  NODE_NAME_CASE(CVTTP2SIS_SAE)
-  NODE_NAME_CASE(CVTTP2UIS)
-  NODE_NAME_CASE(MCVTTP2UIS)
-  NODE_NAME_CASE(POP_FROM_X87_REG)
-  NODE_NAME_CASE(TC_RETURN_GLOBALADDR)
-  NODE_NAME_CASE(CALL_GLOBALADDR)
-  }
-  return nullptr;
-#undef NODE_NAME_CASE
 }
 
 /// Return true if the addressing mode represented by AM is legal for this
@@ -48619,6 +48139,182 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
 }
 
+// If we have SSE[12] support, try to form min/max nodes. SSE min/max
+// instructions match the semantics of the common C idiom x<y?x:y but not
+// x<=y?x:y, because of how they handle negative zero (which can be
+// ignored in unsafe-math mode).
+// We also try to create v2f32 min/max nodes, which we later widen to v4f32.
+static SDValue combineSelectToMinMax(SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget, SDNode *N) {
+  SDLoc DL(N);
+  SDValue Cond = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  EVT VT = LHS.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if ((Cond.getOpcode() != ISD::SETCC &&
+       Cond.getOpcode() != ISD::STRICT_FSETCCS) ||
+      !VT.isFloatingPoint() || VT == MVT::f80 || VT == MVT::f128 ||
+      isSoftF16(VT, Subtarget) || (!TLI.isTypeLegal(VT) && VT != MVT::v2f32) ||
+      ((VT == MVT::v8f16 || VT == MVT::v16f16) && !Subtarget.hasVLX()) ||
+      (!Subtarget.hasSSE2() &&
+       (!Subtarget.hasSSE1() || VT.getScalarType() != MVT::f32)))
+    return SDValue();
+
+  bool IsStrict = Cond->isStrictFPOpcode();
+  ISD::CondCode CC =
+      cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
+  SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
+  SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
+
+  unsigned Opcode = 0;
+  // Check for x CC y ? x : y.
+  if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETULT:
+      // Converting this to a min would handle NaNs incorrectly, and swapping
+      // the operands would cause it to handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETOLE:
+      // Converting this to a min would handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
+        break;
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETULE:
+      // Converting this to a min would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOLT:
+    case ISD::SETLT:
+    case ISD::SETLE:
+      Opcode = X86ISD::FMIN;
+      break;
+
+    case ISD::SETOGE:
+      // Converting this to a max would handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
+        break;
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETUGT:
+      // Converting this to a max would handle NaNs incorrectly, and swapping
+      // the operands would cause it to handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETUGE:
+      // Converting this to a max would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOGT:
+    case ISD::SETGT:
+    case ISD::SETGE:
+      Opcode = X86ISD::FMAX;
+      break;
+    }
+    // Check for x CC y ? y : x -- a min/max with reversed arms.
+  } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETOGE:
+      // Converting this to a min would handle comparisons between positive
+      // and negative zero incorrectly, and swapping the operands would
+      // cause it to handle NaNs incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS))) {
+        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETUGT:
+      // Converting this to a min would handle NaNs incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+        break;
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETUGE:
+      // Converting this to a min would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOGT:
+    case ISD::SETGT:
+    case ISD::SETGE:
+      Opcode = X86ISD::FMIN;
+      break;
+
+    case ISD::SETULT:
+      // Converting this to a max would handle NaNs incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+        break;
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETOLE:
+      // Converting this to a max would handle comparisons between positive
+      // and negative zero incorrectly, and swapping the operands would
+      // cause it to handle NaNs incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS)) {
+        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETULE:
+      // Converting this to a max would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOLT:
+    case ISD::SETLT:
+    case ISD::SETLE:
+      Opcode = X86ISD::FMAX;
+      break;
+    }
+  }
+
+  if (!Opcode)
+    return SDValue();
+
+  // Propagate fast-math-flags.
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
+  if (IsStrict) {
+    SDValue Ret = DAG.getNode(
+        Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN : X86ISD::STRICT_FMAX, DL,
+        {N->getValueType(0), MVT::Other}, {Cond.getOperand(0), LHS, RHS});
+    DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
+    return Ret;
+  }
+  return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
+}
+
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -48716,173 +48412,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we have SSE[12] support, try to form min/max nodes. SSE min/max
-  // instructions match the semantics of the common C idiom x<y?x:y but not
-  // x<=y?x:y, because of how they handle negative zero (which can be
-  // ignored in unsafe-math mode).
-  // We also try to create v2f32 min/max nodes, which we later widen to v4f32.
-  if ((Cond.getOpcode() == ISD::SETCC ||
-       Cond.getOpcode() == ISD::STRICT_FSETCCS) &&
-      VT.isFloatingPoint() && VT != MVT::f80 && VT != MVT::f128 &&
-      !isSoftF16(VT, Subtarget) && (TLI.isTypeLegal(VT) || VT == MVT::v2f32) &&
-      ((VT != MVT::v8f16 && VT != MVT::v16f16) || Subtarget.hasVLX()) &&
-      (Subtarget.hasSSE2() ||
-       (Subtarget.hasSSE1() && VT.getScalarType() == MVT::f32))) {
-    bool IsStrict = Cond->isStrictFPOpcode();
-    ISD::CondCode CC =
-        cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
-    SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
-    SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
-
-    unsigned Opcode = 0;
-    // Check for x CC y ? x : y.
-    if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
-      switch (CC) {
-      default: break;
-      case ISD::SETULT:
-        // Converting this to a min would handle NaNs incorrectly, and swapping
-        // the operands would cause it to handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-          if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-              !(DAG.isKnownNeverZeroFloat(LHS) ||
-                DAG.isKnownNeverZeroFloat(RHS)))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETOLE:
-        // Converting this to a min would handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-          break;
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETULE:
-        // Converting this to a min would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOLT:
-      case ISD::SETLT:
-      case ISD::SETLE:
-        Opcode = X86ISD::FMIN;
-        break;
-
-      case ISD::SETOGE:
-        // Converting this to a max would handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-          break;
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETUGT:
-        // Converting this to a max would handle NaNs incorrectly, and swapping
-        // the operands would cause it to handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-          if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-              !(DAG.isKnownNeverZeroFloat(LHS) ||
-                DAG.isKnownNeverZeroFloat(RHS)))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETUGE:
-        // Converting this to a max would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOGT:
-      case ISD::SETGT:
-      case ISD::SETGE:
-        Opcode = X86ISD::FMAX;
-        break;
-      }
-    // Check for x CC y ? y : x -- a min/max with reversed arms.
-    } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
-      switch (CC) {
-      default: break;
-      case ISD::SETOGE:
-        // Converting this to a min would handle comparisons between positive
-        // and negative zero incorrectly, and swapping the operands would
-        // cause it to handle NaNs incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !(DAG.isKnownNeverZeroFloat(LHS) ||
-              DAG.isKnownNeverZeroFloat(RHS))) {
-          if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETUGT:
-        // Converting this to a min would handle NaNs incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETUGE:
-        // Converting this to a min would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOGT:
-      case ISD::SETGT:
-      case ISD::SETGE:
-        Opcode = X86ISD::FMIN;
-        break;
-
-      case ISD::SETULT:
-        // Converting this to a max would handle NaNs incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETOLE:
-        // Converting this to a max would handle comparisons between positive
-        // and negative zero incorrectly, and swapping the operands would
-        // cause it to handle NaNs incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !DAG.isKnownNeverZeroFloat(LHS) &&
-            !DAG.isKnownNeverZeroFloat(RHS)) {
-          if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETULE:
-        // Converting this to a max would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOLT:
-      case ISD::SETLT:
-      case ISD::SETLE:
-        Opcode = X86ISD::FMAX;
-        break;
-      }
-    }
-
-    if (Opcode) {
-      // Propagate fast-math-flags.
-      SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
-      if (IsStrict) {
-        SDValue Ret = DAG.getNode(Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN
-                                                         : X86ISD::STRICT_FMAX,
-                                  DL, {N->getValueType(0), MVT::Other},
-                                  {Cond.getOperand(0), LHS, RHS});
-        DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
-        return Ret;
-      }
-      return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
-    }
-  }
+  if (SDValue Res = combineSelectToMinMax(DAG, Subtarget, N))
+    return Res;
 
   // Some mask scalar intrinsics rely on checking if only one bit is set
   // and implement it in C code like this:
@@ -55898,6 +55429,41 @@ static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineVTRUNCSAT(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace SDPatternMatch;
+  unsigned Opc = N->getOpcode();
+  EVT VT = N->getValueType(0);
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  assert((Opc == X86ISD::VTRUNCS || Opc == X86ISD::VTRUNCUS) &&
+         "Unexpected VTRUNC node");
+  assert((VT.is128BitVector() || VT.is256BitVector()) &&
+         "Unexpected VTRUNC node type");
+
+  // If the src was concatenated, see if PACKSS/US would be better.
+  SDValue Src;
+  if (EltSizeInBits <= 16 &&
+      (sd_match(N, m_UnaryOp(X86ISD::VTRUNCS, m_Value(Src))) ||
+       sd_match(N, m_UnaryOp(X86ISD::VTRUNCUS,
+                             m_SMaxLike(m_Value(Src), m_Zero())))) &&
+      (EltSizeInBits * 2) == Src.getScalarValueSizeInBits() &&
+      isFreeToSplitVector(Src, DAG)) {
+    SDLoc DL(N);
+    auto [LHS, RHS] = splitVector(Src, DAG, DL);
+    unsigned PackOpc = Opc == X86ISD::VTRUNCS ? X86ISD::PACKSS : X86ISD::PACKUS;
+    SDValue Pack = DAG.getNode(PackOpc, DL, VT, LHS, RHS);
+    if (VT.is128BitVector())
+      return Pack;
+    // Shuffle sub-lanes back to match the vtrunc sequential order.
+    return DAG.getBitcast(
+        VT, DAG.getNode(X86ISD::VPERMI, DL, MVT::v4i64,
+                        DAG.getBitcast(MVT::v4i64, Pack),
+                        getV4X86ShuffleImm8ForMask({0, 2, 1, 3}, DL, DAG)));
+  }
+
+  return SDValue();
+}
+
 /// Returns the negated value if the node \p N flips sign of FP value.
 ///
 /// FP-negation node may have different forms: FNEG(x), FXOR (x, 0x80000000)
@@ -57726,42 +57292,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   }
 
   if ((CC == ISD::SETNE || CC == ISD::SETEQ) && OpVT.isScalarInteger()) {
-    // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
-    // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
-    auto MatchOrCmpEq = [&](SDValue N0, SDValue N1) {
-      if (N0.getOpcode() == ISD::OR && N0->hasOneUse()) {
-        if (N0.getOperand(0) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
-                             N0.getOperand(1));
-        if (N0.getOperand(1) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
-                             N0.getOperand(0));
-      }
-      return SDValue();
-    };
-    if (SDValue AndN = MatchOrCmpEq(LHS, RHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-    if (SDValue AndN = MatchOrCmpEq(RHS, LHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-
-    // cmpeq(and(X,Y),Y) --> cmpeq(and(~X,Y),0)
-    // cmpne(and(X,Y),Y) --> cmpne(and(~X,Y),0)
-    auto MatchAndCmpEq = [&](SDValue N0, SDValue N1) {
-      if (N0.getOpcode() == ISD::AND && N0->hasOneUse()) {
-        if (N0.getOperand(0) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, N1,
-                             DAG.getNOT(DL, N0.getOperand(1), OpVT));
-        if (N0.getOperand(1) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, N1,
-                             DAG.getNOT(DL, N0.getOperand(0), OpVT));
-      }
-      return SDValue();
-    };
-    if (SDValue AndN = MatchAndCmpEq(LHS, RHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-    if (SDValue AndN = MatchAndCmpEq(RHS, LHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-
     // If we're performing a bit test on a larger than legal type, attempt
     // to (aligned) shift down the value to the bottom 32-bits and then
     // perform the bittest on the i32 value.
@@ -62506,6 +62036,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
+  case X86ISD::VTRUNCS:
+  case X86ISD::VTRUNCUS:    return combineVTRUNCSAT(N, DAG, DCI);
   case X86ISD::ANDNP:       return combineAndnp(N, DAG, DCI, Subtarget);
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);
