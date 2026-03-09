@@ -68,11 +68,27 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
-struct CommentState {
+/// Writer for writing comments to a table cell in MD.
+///
+/// The writer traverses the comments recursively and outputs the
+/// comments into a stream.
+/// The formatter inserts single/double line breaks to retain the comment
+/// structure.
+///
+/// Usage :
+/// Initialize an object with a llvm::raw_ostream to output into.
+/// Call the write(C) function with an array of Comments 'C'.
+class MDCommentWriter {
+private:
+  llvm::raw_ostream &OS;
   bool Started = false;
   bool NeedsParagraphBreak = false;
 
-  void insertSeparator(llvm::raw_ostream &OS) {
+  /// This function inserts breaks into the stream.
+  ///
+  /// We add a double break in between paragraphs.
+  /// Inside a paragraph, a single break between lines is maintained.
+  void insertSeparator() {
     if (!Started)
       return;
     if (NeedsParagraphBreak) {
@@ -82,48 +98,49 @@ struct CommentState {
       OS << "<br>";
     }
   }
-};
 
-static void writeTableSafeComment(const CommentInfo &I, llvm::raw_ostream &OS,
-                                  CommentState &State) {
-  switch (I.Kind) {
-  case CommentKind::CK_FullComment:
-    for (const auto &Child : I.Children)
-      writeTableSafeComment(*Child, OS, State);
-    break;
+  /// This function processes every comment and its children recursively.
+  void writeTableSafeComment(const CommentInfo &I) {
+    switch (I.Kind) {
+    case CommentKind::CK_FullComment:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(*Child);
+      break;
 
-  case CommentKind::CK_ParagraphComment:
-    for (const auto &Child : I.Children)
-      writeTableSafeComment(*Child, OS, State);
-    State.NeedsParagraphBreak =
-        true; // Next content after a paragraph needs a break
-    break;
+    case CommentKind::CK_ParagraphComment:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(*Child);
+      // Next content after a paragraph needs a break
+      NeedsParagraphBreak = true;
+      break;
 
-  case CommentKind::CK_TextComment:
-    if (!I.Text.empty()) {
-      State.insertSeparator(OS);
-      OS << I.Text;
-      State.Started = true;
+    case CommentKind::CK_TextComment:
+      if (!I.Text.empty()) {
+        insertSeparator();
+        OS << I.Text;
+        Started = true;
+      }
+      break;
+
+    // Handle other comment types (BlockCommand, InlineCommand, etc.)
+    default:
+      for (const auto &Child : I.Children)
+        writeTableSafeComment(*Child);
+      break;
     }
-    break;
-
-  // Handle other comment types (BlockCommand, InlineCommand, etc.)
-  default:
-    for (const auto &Child : I.Children)
-      writeTableSafeComment(*Child, OS, State);
-    break;
   }
-}
 
-static void genMDComment(llvm::ArrayRef<CommentInfo> Comments,
-                         llvm::raw_ostream &OS) {
-  CommentState State;
-  for (const auto &C : Comments)
-    writeTableSafeComment(C, OS, State);
+public:
+  explicit MDCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
 
-  if (!State.Started)
-    OS << "--";
-}
+  void write(llvm::ArrayRef<CommentInfo> Comments) {
+    for (const auto &C : Comments)
+      writeTableSafeComment(C);
+
+    if (!Started)
+      OS << "--";
+  }
+};
 
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
                                     const ClangDocContext &CDCtx,
@@ -233,8 +250,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
         break;
       }
     }
-    OS << "\n";
-    OS << "|---|---|";
+    OS << "\n|---|---|";
     if (HasComments)
       OS << "---|";
     OS << "\n";
@@ -244,7 +260,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
         OS << "| " << N.Value << " ";
       if (HasComments) {
         OS << "| ";
-        genMDComment(ArrayRef(N.Description), OS);
+        MDCommentWriter CommentWriter(OS);
+        CommentWriter.write(N.Description);
         OS << " ";
       }
       OS << "|\n";
