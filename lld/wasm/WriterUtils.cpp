@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WriterUtils.h"
-#include "Config.h"
-#include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -271,5 +269,6 @@ void writeExport(raw_ostream &os, const WasmExport &export_) {
     fatal("unsupported export type: " + Twine(export_.Kind));
   }
 }
+
 } // namespace wasm
 } // namespace lld

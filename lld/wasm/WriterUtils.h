@@ -65,6 +65,7 @@ void writeImport(raw_ostream &os, const llvm::wasm::WasmImport &import);
 void writeCompactImport(raw_ostream &os, const llvm::wasm::WasmImport &import);
 
 void writeExport(raw_ostream &os, const llvm::wasm::WasmExport &export_);
+
 } // namespace wasm
 
 std::string toString(llvm::wasm::ValType type);
