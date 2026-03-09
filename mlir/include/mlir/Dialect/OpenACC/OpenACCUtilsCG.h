@@ -15,8 +15,8 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSCG_H_
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include <optional>
 
 namespace mlir {

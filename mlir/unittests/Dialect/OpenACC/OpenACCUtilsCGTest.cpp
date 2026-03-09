@@ -104,10 +104,9 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionEmpty) {
   YieldOp::create(srcBuilder, loc);
 
   IRMapping mapping;
-  auto cr =
-      buildComputeRegion(loc, /*launchArgs=*/{}, /*inputArgs=*/{},
-                        SerialOp::getOperationName(), sourceRegion, rewriter,
-                        mapping);
+  auto cr = buildComputeRegion(loc, /*launchArgs=*/{}, /*inputArgs=*/{},
+                               SerialOp::getOperationName(), sourceRegion,
+                               rewriter, mapping);
 
   EXPECT_EQ(cr.getOrigin(), SerialOp::getOperationName());
   EXPECT_EQ(cr.getLaunchArgs().size(), 0u);
@@ -140,8 +139,8 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithLaunchArgs) {
 
   IRMapping mapping;
   auto cr = buildComputeRegion(loc, {pw}, /*inputArgs=*/{},
-                              ParallelOp::getOperationName(), sourceRegion,
-                              rewriter, mapping);
+                               ParallelOp::getOperationName(), sourceRegion,
+                               rewriter, mapping);
 
   EXPECT_EQ(cr.getOrigin(), ParallelOp::getOperationName());
   EXPECT_EQ(cr.getLaunchArgs().size(), 1u);

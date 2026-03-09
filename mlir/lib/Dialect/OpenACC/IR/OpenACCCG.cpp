@@ -219,8 +219,9 @@ void KernelEnvironmentOp::getCanonicalizationPatterns(
 }
 
 template <typename ComputeConstructT>
-KernelEnvironmentOp KernelEnvironmentOp::createAndPopulate(
-    ComputeConstructT computeConstruct, OpBuilder &builder) {
+KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate(ComputeConstructT computeConstruct,
+                                       OpBuilder &builder) {
   auto kernelEnvironment = KernelEnvironmentOp::create(
       builder, computeConstruct->getLoc(),
       computeConstruct.getDataClauseOperands(),
