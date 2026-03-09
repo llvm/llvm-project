@@ -828,6 +828,72 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
   }
 };
 
+/// Distribute a vector::StepOp with a sliced result layout.
+/// The sliced layout must have exactly 1 effective lane dimension.
+/// We completely resolve the vector::StepOp by computing the lane_data-sized
+/// subranges.
+struct SgToWiVectorStep : public OpConversionPattern<vector::StepOp> {
+  using OpConversionPattern<vector::StepOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::StepOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getResult(0));
+    if (!resultLayout || !resultLayout.isForSubgroup())
+      return rewriter.notifyMatchFailure(
+          op, "the result vector of the step op lacks subgroup layout");
+    auto sliceLayout = dyn_cast<xegpu::SliceAttr>(resultLayout);
+    if (!sliceLayout)
+      return rewriter.notifyMatchFailure(
+          op, "the result layout must be a slice layout");
+    if (sliceLayout.getEffectiveLaneLayoutAsInt().size() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "expecting 1 dim in the effective result layout");
+
+    auto loc = op.getLoc();
+    auto stepResultVecTy = op.getResult().getType();
+    auto wiShapeOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, stepResultVecTy);
+    if (failed(wiShapeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute workitem vector type from the layout");
+    VectorType newVecTy = wiShapeOrFailure.value();
+
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    auto laneDataBlockCoords = resultLayout.computeDistributedCoords(
+        rewriter, loc, laneId, stepResultVecTy.getShape());
+    if (failed(laneDataBlockCoords))
+      return rewriter.notifyMatchFailure(
+          op, "failed to compute lane data block coordinates");
+
+    auto laneDataBlockCoordsVec = laneDataBlockCoords.value();
+    auto laneDataBlockLength = resultLayout.getEffectiveLaneDataAsInt()[0];
+    assert(static_cast<int64_t>(laneDataBlockCoordsVec.size()) ==
+           newVecTy.getNumElements() / laneDataBlockLength);
+    SmallVector<Value> stepVals;
+    // For each lane_data block, reconstruct its sub-range
+    // from the range of SG-level vector.step.
+    for (auto &laneDataBlockCoords : laneDataBlockCoordsVec) {
+      auto laneDataBlockStartCoord = laneDataBlockCoords[0];
+      stepVals.push_back(laneDataBlockStartCoord);
+      for (int i = 1; i < laneDataBlockLength; ++i) {
+        auto offset = arith::ConstantIndexOp::create(rewriter, loc, i);
+        stepVals.push_back(arith::AddIOp::create(
+            rewriter, loc, laneDataBlockStartCoord, offset));
+      }
+    }
+    assert(static_cast<int64_t>(stepVals.size()) == newVecTy.getNumElements() &&
+           "Expecting the number of step values to match the number of "
+           "elements in the vector");
+    auto stepOpVal =
+        vector::FromElementsOp::create(rewriter, loc, newVecTy, stepVals);
+    rewriter.replaceOp(op, stepOpVal);
+    return success();
+  }
+};
+
 struct XeGPUSgToWiDistributeExperimentalPass
     : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
           XeGPUSgToWiDistributeExperimentalPass> {
@@ -1029,10 +1095,14 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](vector::MultiDimReductionOp op) -> bool {
         return !isValidSubgroupMultiReductionOp(op);
       });
+  // vector::StepOp is legal only if its result has no temporary layout.
+  target.addDynamicallyLegalOp<vector::StepOp>([=](vector::StepOp op) -> bool {
+    return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getResult()));
+  });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
                SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
-               SgToWiMultiDimReduction, SgToWiLoadMatrix, SgToWiStoreMatrix>(
-      typeConverter, patterns.getContext());
+               SgToWiMultiDimReduction, SgToWiLoadMatrix, SgToWiStoreMatrix,
+               SgToWiVectorStep>(typeConverter, patterns.getContext());
 }

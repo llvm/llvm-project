@@ -525,3 +525,46 @@ gpu.func @load_store_matrix_3(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layou
   gpu.return
 }
 }
+
+// -----
+// vector.step with a simple slice layout (16 elements, 1 per lane)
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_step_slice
+// CHECK:         %[[LANE_ID:.*]] = gpu.lane_id
+// CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
+// CHECK:         %[[REM:.*]] = arith.remui %[[LANE_ID]], %[[C16]] : index
+// CHECK:         %[[REM2:.*]] = arith.remui %[[REM]], %[[C16]]{{.*}} : index
+// CHECK:         %[[VEC:.*]] = vector.from_elements %[[REM2]] : vector<1xindex>
+gpu.func @vector_step_slice() {
+  %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 2]>} : vector<16xindex>
+  gpu.return
+}
+}
+
+// -----
+// vector.step with unit-size vector (1 element, always 0)
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_step_slice_unit
+// CHECK:         %[[VEC:.*]] = vector.from_elements %{{.*}} : vector<1xindex>
+gpu.func @vector_step_slice_unit() {
+  %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 3]>} : vector<1xindex>
+  gpu.return
+}
+}
+
+// -----
+// vector.step with multi-distribution (lane_layout=[2,4,2], lane_data=[1,2,1])
+// Each lane holds 4 elements as 2 blocks of 2 elements (lane_data=2 in dim 1).
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_step_slice_multi_dist
+// CHECK:         %[[LANE_ID:.*]] = gpu.lane_id
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK:         %[[VEC:.*]] = vector.from_elements %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : vector<4xindex>
+gpu.func @vector_step_slice_multi_dist() {
+  %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1, 2, 1]>, dims = [0, 2]>} : vector<16xindex>
+  gpu.return
+}
+}
