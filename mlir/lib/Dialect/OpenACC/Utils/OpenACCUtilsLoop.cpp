@@ -224,8 +224,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     mapping.map(iv, forOp.getInductionVar());
   }
 
-  // Set insertion point inside the innermost loop for IV casts and body
-  // cloning
+  // Set insertion point inside the innermost loop for IV casts and body cloning
   rewriter.setInsertionPointToStart(forOps.back().getBody());
 
   // Handle IV type conversion (index -> original type)
