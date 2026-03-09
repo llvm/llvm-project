@@ -776,6 +776,8 @@ def FeatureStdExtZvbc32e
                                  "Vector Carryless Multiplication with 32-bits elements",
                                  [FeatureStdExtZve32x]>;
 
+def HasStdExtZvbc32e : Predicate<"Subtarget->hasStdExtZvbc32e()">;
+
 def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget->hasStdExtZvbc32e()">,
                              AssemblerPredicate<(any_of FeatureStdExtZvbc, FeatureStdExtZvbc32e),
                              "'Zvbc' or 'Zvbc32e' (Vector Carryless Multiplication)">;

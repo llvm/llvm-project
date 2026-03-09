@@ -462,14 +462,6 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
 }
 
-// TODO: Consider using LLVM-IR metadata to identify globals of interest
-bool isKernel(const Function &F) {
-  const llvm::CallingConv::ID CC = F.getCallingConv();
-  return CC == llvm::CallingConv::SPIR_KERNEL ||
-         CC == llvm::CallingConv::AMDGPU_KERNEL ||
-         CC == llvm::CallingConv::PTX_Kernel;
-}
-
 /// Performs the following steps:
 /// 1. Link input device code (user code and SYCL device library code).
 /// 2. Run SPIR-V code generation.
@@ -500,7 +492,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
 
     SmallString<0> SymbolData;
     for (Function &F : **ModOrErr) {
-      if (isKernel(F)) {
+      // TODO: Consider using LLVM-IR metadata to identify globals of interest
+      if (F.hasKernelCallingConv()) {
         SymbolData.append(F.getName());
         SymbolData.push_back('\0');
       }

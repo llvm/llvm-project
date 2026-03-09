@@ -156,6 +156,7 @@ private:
   void materializeLoadStoreOperands(Address &Addr);
   void addLoadStoreOperands(const Address &Addr, const MachineInstrBuilder &MIB,
                             MachineMemOperand *MMO);
+  bool emitLoad(Register ResultReg, unsigned Opc, const LoadInst *LoadInst);
   unsigned maskI1Value(unsigned Reg, const Value *V);
   unsigned getRegForI1Value(const Value *V, const BasicBlock *BB, bool &Not);
   unsigned zeroExtendToI32(unsigned Reg, const Value *V,
@@ -428,6 +429,20 @@ void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
     MIB.addFrameIndex(Addr.getFI());
 
   MIB.addMemOperand(MMO);
+}
+
+bool WebAssemblyFastISel::emitLoad(Register ResultReg, unsigned Opc,
+                                   const LoadInst *Load) {
+  Address Addr;
+  if (!computeAddress(Load->getPointerOperand(), Addr))
+    return false;
+
+  materializeLoadStoreOperands(Addr);
+  auto MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
+  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
+
+  return true;
 }
 
 unsigned WebAssemblyFastISel::maskI1Value(unsigned Reg, const Value *V) {
@@ -1302,14 +1317,10 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
       WebAssembly::INSTRUCTION_LIST_END)
     return false;
 
-  Address Addr;
-  if (!computeAddress(LI->getPointerOperand(), Addr))
+  Register ResultReg = MI->getOperand(0).getReg();
+  if (!emitLoad(ResultReg, NewOpc, LI))
     return false;
 
-  Register ResultReg = MI->getOperand(0).getReg();
-  MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                                    TII.get(NewOpc), ResultReg);
-  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(LI));
   MachineBasicBlock::iterator Iter(MI);
   removeDeadCode(Iter, std::next(Iter));
   return true;
@@ -1322,10 +1333,6 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   if (!WebAssembly::isDefaultAddressSpace(Load->getPointerAddressSpace()))
     return false;
   if (!Subtarget->hasSIMD128() && Load->getType()->isVectorTy())
-    return false;
-
-  Address Addr;
-  if (!computeAddress(Load->getPointerOperand(), Addr))
     return false;
 
   // TODO: Fold a following sign-/zero-extend into the load instruction.
@@ -1363,13 +1370,9 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
     return false;
   }
 
-  materializeLoadStoreOperands(Addr);
-
   Register ResultReg = createResultReg(RC);
-  auto MIB =
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
-
-  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
+  if (!emitLoad(ResultReg, Opc, Load))
+    return false;
 
   updateValueMap(Load, ResultReg);
   return true;

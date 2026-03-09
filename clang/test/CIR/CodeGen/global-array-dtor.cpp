@@ -92,7 +92,7 @@ ArrayDtor arrDtor[16];
 // OGCG:   store ptr %[[ARG]], ptr %[[UNUSED_ADDR]]
 // OGCG:   br label %[[LOOP_BODY:.*]]
 // OGCG: [[LOOP_BODY]]:
-// OGCG:   %[[PREV:.*]] = phi ptr [ getelementptr inbounds (%struct.ArrayDtor, ptr @arrDtor, i64 16), %entry ], [ %[[CUR:.*]], %[[LOOP_BODY]] ]
+// OGCG:   %[[PREV:.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arrDtor, i64 16), %entry ], [ %[[CUR:.*]], %[[LOOP_BODY]] ]
 // OGCG:   %[[CUR]] = getelementptr inbounds %struct.ArrayDtor, ptr %[[PREV]], i64 -1
 // OGCG:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
 // OGCG:   %[[DONE:.*]] = icmp eq ptr %[[CUR]], @arrDtor

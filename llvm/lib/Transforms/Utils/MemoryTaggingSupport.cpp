@@ -76,17 +76,15 @@ bool isSupportedLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
   SmallVector<BasicBlock *, 2> LastEndBlocks;
   SmallPtrSet<const BasicBlock *, 2> FirstEndBlocks;
   SmallPtrSet<BasicBlock *, 2> StartBlocks;
-  if (any_of(AInfo.BBInfos, [&](const auto &It) {
-        const auto &[BB, BBI] = It;
-        if (BBI.Last == Intrinsic::lifetime_end)
-          LastEndBlocks.append(succ_begin(BB), succ_end(BB));
-        else
-          StartBlocks.insert(BB);
-        if (BBI.First == Intrinsic::lifetime_end)
-          FirstEndBlocks.insert(BB);
-        return BBI.DoubleEnd;
-      }))
-    return false;
+  for_each(AInfo.BBInfos, [&](const auto &It) {
+    const auto &[BB, BBI] = It;
+    if (BBI.Last == Intrinsic::lifetime_end)
+      LastEndBlocks.append(succ_begin(BB), succ_end(BB));
+    else
+      StartBlocks.insert(BB);
+    if (BBI.First == Intrinsic::lifetime_end)
+      FirstEndBlocks.insert(BB);
+  });
   if (LastEndBlocks.empty() || FirstEndBlocks.empty())
     return true;
   return !isManyPotentiallyReachableFromMany(LastEndBlocks, FirstEndBlocks,
@@ -156,13 +154,10 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     auto &AInfo = Info.AllocasToInstrument[AI];
     auto &BBInfo = AInfo.BBInfos[II->getParent()];
 
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       AInfo.LifetimeStart.push_back(II);
-    } else {
+    else if (BBInfo.Last != Intrinsic::lifetime_end)
       AInfo.LifetimeEnd.push_back(II);
-      if (BBInfo.Last == Intrinsic::lifetime_end)
-        BBInfo.DoubleEnd = true;
-    }
 
     BBInfo.Last = II->getIntrinsicID();
     if (BBInfo.First == Intrinsic::not_intrinsic)
