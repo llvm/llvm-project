@@ -170,6 +170,8 @@ static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
 static void convertCalledGlobals(yaml::MachineFunction &YMF,
                                  const MachineFunction &MF,
                                  MachineModuleSlotTracker &MST);
+static void convertPrefetchTargets(yaml::MachineFunction &YMF,
+                                   const MachineFunction &MF);
 
 static void printMF(raw_ostream &OS, MFGetterFnT Fn,
                     const MachineFunction &MF) {
@@ -241,6 +243,8 @@ static void printMF(raw_ostream &OS, MFGetterFnT Fn,
   convertMachineMetadataNodes(YamlMF, MF, MST);
 
   convertCalledGlobals(YamlMF, MF, MST);
+
+  convertPrefetchTargets(YamlMF, MF);
 
   yaml::Output Out(OS);
   if (!SimplifyMIR)
@@ -597,6 +601,19 @@ static void convertCalledGlobals(yaml::MachineFunction &YMF,
                return std::tie(A.CallSite.BlockNum, A.CallSite.Offset) <
                       std::tie(B.CallSite.BlockNum, B.CallSite.Offset);
              });
+}
+
+static void convertPrefetchTargets(yaml::MachineFunction &YMF,
+                                   const MachineFunction &MF) {
+  for (const auto &[BBID, CallsiteIndexes] : MF.getPrefetchTargets()) {
+    for (auto CallsiteIndex : CallsiteIndexes) {
+      std::string Str;
+      raw_string_ostream StrOS(Str);
+      StrOS << "bb_id " << BBID.BaseID << ", " << BBID.CloneID << ", "
+            << CallsiteIndex;
+      YMF.PrefetchTargets.push_back(yaml::FlowStringValue(Str));
+    }
+  }
 }
 
 static void convertMCP(yaml::MachineFunction &MF,

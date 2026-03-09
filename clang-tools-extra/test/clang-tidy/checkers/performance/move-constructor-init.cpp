@@ -1,8 +1,6 @@
 // RUN: %check_clang_tidy %s performance-move-constructor-init,modernize-pass-by-value %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  {modernize-pass-by-value.ValuesOnly: true}}' \
-// RUN: -- -isystem %clang_tidy_headers
-
+// RUN:  {modernize-pass-by-value.ValuesOnly: true}}'
 #include <s.h>
 
 // CHECK-FIXES: #include <utility>
@@ -31,8 +29,8 @@ struct D : B {
   D() : B() {}
   D(const D &RHS) : B(RHS) {}
   // CHECK-NOTES: :[[@LINE+3]]:16: warning: move constructor initializes base class by calling a copy constructor [performance-move-constructor-init]
-  // CHECK-NOTES: 26:3: note: copy constructor being called
-  // CHECK-NOTES: 27:3: note: candidate move constructor here
+  // CHECK-NOTES: 24:3: note: copy constructor being called
+  // CHECK-NOTES: 25:3: note: candidate move constructor here
   D(D &&RHS) : B(RHS) {}
 };
 
@@ -77,8 +75,8 @@ struct M {
   B Mem;
   // CHECK-NOTES: :[[@LINE+1]]:16: warning: move constructor initializes class member by calling a copy constructor [performance-move-constructor-init]
   M(M &&RHS) : Mem(RHS.Mem) {}
-  // CHECK-NOTES: 26:3: note: copy constructor being called
-  // CHECK-NOTES: 27:3: note: candidate move constructor here
+  // CHECK-NOTES: 24:3: note: copy constructor being called
+  // CHECK-NOTES: 25:3: note: candidate move constructor here
 };
 
 struct N {

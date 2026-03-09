@@ -534,6 +534,11 @@ Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
   return Builder.CreateAShr(Vec, Shift, name);
 }
 
+//===----------------------------------------------------------------------===//
+//  Intrinsics maps
+//
+//  Maps that help automate code-generation.
+//===----------------------------------------------------------------------===//
 enum {
   AddRetType = (1 << 0),
   Add1ArgType = (1 << 1),
@@ -555,6 +560,12 @@ enum {
   FpCmpzModifiers =
       AddRetType | VectorizeRetType | Add1ArgType | InventFloatType
 };
+
+//===----------------------------------------------------------------------===//
+//  Intrinsic maps
+//
+//  Maps that help automate code-generation.
+//===----------------------------------------------------------------------===//
 
 namespace {
 struct ARMVectorIntrinsicInfo {
@@ -1654,6 +1665,8 @@ static bool AArch64SISDIntrinsicsProvenSorted = false;
 static bool AArch64SVEIntrinsicsProvenSorted = false;
 static bool AArch64SMEIntrinsicsProvenSorted = false;
 
+// Check if Builtin `BuiltinId` is present in `IntrinsicMap`. If yes, returns
+// the corresponding info struct.
 static const ARMVectorIntrinsicInfo *
 findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
                             unsigned BuiltinID, bool &MapProvenSorted) {
@@ -1783,7 +1796,10 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     const char *NameHint, unsigned Modifier, const CallExpr *E,
     SmallVectorImpl<llvm::Value *> &Ops, Address PtrOp0, Address PtrOp1,
     llvm::Triple::ArchType Arch) {
-  // Get the last argument, which specifies the vector type.
+
+  // Extract the trailing immediate argument that encodes the type discriminator
+  // for this overloaded intrinsic.
+  // TODO: Move to the parent code that takes care of argument processing.
   const Expr *Arg = E->getArg(E->getNumArgs() - 1);
   std::optional<llvm::APSInt> NeonTypeConst =
       Arg->getIntegerConstantExpr(getContext());
@@ -5272,6 +5288,33 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                      : Intrinsic::aarch64_st64bv0);
     Function *F = CGM.getIntrinsic(Intr);
     return Builder.CreateCall(F, Args);
+  }
+
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_atomic_store_with_stshh) {
+    Value *StoreAddr = EmitScalarExpr(E->getArg(0));
+    Value *StoreValue = EmitScalarExpr(E->getArg(1));
+
+    auto *OrderC = cast<ConstantInt>(EmitScalarExpr(E->getArg(2)));
+    auto *PolicyC = cast<ConstantInt>(EmitScalarExpr(E->getArg(3)));
+
+    // Compute pointee bit-width from arg0 and create as i32 constant
+    QualType ValQT =
+        E->getArg(0)->getType()->castAs<PointerType>()->getPointeeType();
+    unsigned SizeBits = getContext().getTypeSize(ValQT);
+    auto *SizeC = llvm::ConstantInt::get(Int32Ty, SizeBits);
+
+    Value *StoreValue64 = Builder.CreateIntCast(StoreValue, Int64Ty,
+                                                ValQT->isSignedIntegerType());
+
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
+                                   {StoreAddr->getType()});
+
+    // Emit a single intrinsic so backend can expand to STSHH followed by
+    // atomic store, to guarantee STSHH immediately precedes STR insn
+    return Builder.CreateCall(
+        F, {StoreAddr, StoreValue64,
+            ConstantInt::get(Int32Ty, OrderC->getZExtValue()),
+            ConstantInt::get(Int32Ty, PolicyC->getZExtValue()), SizeC});
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
