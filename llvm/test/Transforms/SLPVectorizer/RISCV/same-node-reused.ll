@@ -6,21 +6,14 @@ define void @test(ptr %dest, ptr %p) {
 ; CHECK-SAME: ptr [[DEST:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[INC0:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 1
-; CHECK-NEXT:    [[INC1:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[INC2:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 3
 ; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[INC0]], align 2
 ; CHECK-NEXT:    [[E3:%.*]] = load i16, ptr [[INC2]], align 2
-; CHECK-NEXT:    [[INC5:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 2
-; CHECK-NEXT:    [[INC6:%.*]] = getelementptr inbounds i16, ptr [[DEST]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <3 x i16> @llvm.masked.load.v3i16.p0(ptr align 4 [[P]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x i16> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[E2:%.*]] = load i16, ptr [[INC1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i16> [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[A2:%.*]] = add i16 [[E2]], [[E2]]
-; CHECK-NEXT:    [[A3:%.*]] = add i16 [[E2]], [[E2]]
-; CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr [[DEST]], align 4
-; CHECK-NEXT:    store i16 [[A2]], ptr [[INC5]], align 2
-; CHECK-NEXT:    store i16 [[A3]], ptr [[INC6]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <4 x i32> <i32 0, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[DEST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
