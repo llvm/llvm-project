@@ -873,9 +873,7 @@ public:
 
   /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
-  void buildDependenceSets() {
-    processMemAccesses();
-  }
+  void buildDependenceSets();
 
   /// Initial processing of memory accesses determined that we need to
   /// perform dependency checking.
@@ -920,10 +918,6 @@ private:
 
     return ScopeList;
   }
-
-  /// Go over all memory access and check whether runtime pointer checks
-  /// are needed and build sets of dependency check candidates.
-  void processMemAccesses();
 
   /// Map of all accesses. Values are the types used to access memory pointed to
   /// by the pointer.
@@ -1527,7 +1521,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   return CanDoRTIfNeeded;
 }
 
-void AccessAnalysis::processMemAccesses() {
+void AccessAnalysis::buildDependenceSets() {
   // We process the set twice: first we process read-write pointers, last we
   // process read-only pointers. This allows us to skip dependence tests for
   // read-only pointers.
