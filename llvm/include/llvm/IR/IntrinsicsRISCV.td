@@ -1952,9 +1952,9 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
   class RISCVVDOTA4UnMasked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                [LLVMMatchType<0>, llvm_anyvector_ty,
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
-                                 llvm_anyint_ty, LLVMMatchType<3>],
+                                 llvm_anyint_ty, LLVMMatchType<2>],
                                 [ImmArg<ArgIndex<4>>, IntrNoMem]>,
                                 RISCVVIntrinsic {
     let ScalarOperand = 2;
@@ -1963,10 +1963,10 @@ let TargetPrefix = "riscv" in {
   // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
   class RISCVVDOTA4Masked<bit HasVV>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                [LLVMMatchType<0>, llvm_anyvector_ty,
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
                                  !if(HasVV, llvm_any_ty, llvm_anyint_ty),
                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                 llvm_anyint_ty, LLVMMatchType<3>],
+                                 llvm_anyint_ty, LLVMMatchType<2>],
                                 [ImmArg<ArgIndex<5>>, IntrNoMem]>,
                                 RISCVVIntrinsic {
     let ScalarOperand = 2;
