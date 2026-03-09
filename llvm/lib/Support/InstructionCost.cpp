@@ -11,6 +11,7 @@
 /// instructions.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Format.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -18,10 +19,13 @@ using namespace llvm;
 
 void InstructionCost::print(raw_ostream &OS) const {
   if (isValid()) {
-    if (Value % CostGranularity)
-      OS << Value << "/" << CostGranularity;
-    else
+    if (Value % CostGranularity) {
+      double DecimalValue = static_cast<double>(Value) / CostGranularity;
+      OS << format("%.2f", DecimalValue) << " (" << Value << "/" << CostGranularity << ")";
+    } else {
       OS << (Value / CostGranularity);
-  } else
+    }
+  } else {
     OS << "Invalid";
+  }
 }
