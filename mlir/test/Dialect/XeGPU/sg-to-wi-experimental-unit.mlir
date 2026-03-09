@@ -527,7 +527,6 @@ gpu.func @load_store_matrix_3(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layou
 }
 
 // -----
-// vector.step with a simple slice layout (16 elements, 1 per lane)
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @vector_step_slice
 // CHECK:         %[[LANE_ID:.*]] = gpu.lane_id
@@ -542,7 +541,6 @@ gpu.func @vector_step_slice() {
 }
 
 // -----
-// vector.step with unit-size vector (1 element, always 0)
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @vector_step_slice_unit
 // CHECK:         %[[VEC:.*]] = vector.from_elements %{{.*}} : vector<1xindex>
@@ -553,8 +551,6 @@ gpu.func @vector_step_slice_unit() {
 }
 
 // -----
-// vector.step with multi-distribution (lane_layout=[2,4,2], lane_data=[1,2,1])
-// Each lane holds 4 elements as 2 blocks of 2 elements (lane_data=2 in dim 1).
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @vector_step_slice_multi_dist
 // CHECK:         %[[LANE_ID:.*]] = gpu.lane_id
@@ -565,6 +561,60 @@ gpu.module @xevm_module {
 // CHECK:         %[[VEC:.*]] = vector.from_elements %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : vector<4xindex>
 gpu.func @vector_step_slice_multi_dist() {
   %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1, 2, 1]>, dims = [0, 2]>} : vector<16xindex>
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_shapecast_rank_increasing
+// CHECK:         %[[SC:.*]] = vector.shape_cast %{{.*}} : vector<1xf32> to vector<1x1xf32>
+gpu.func @vector_shapecast_rank_increasing() {
+  %cst = "some_op"()
+    {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+    : () -> (vector<16xf32>)
+  %cast = vector.shape_cast %cst
+    {
+      layout_operand_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }
+    : vector<16xf32> to vector<1x16xf32>
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_shapecast_rank_reducing
+// CHECK:         %[[SC:.*]] = vector.shape_cast %{{.*}} : vector<1x1xf32> to vector<1xf32>
+gpu.func @vector_shapecast_rank_reducing() {
+  %cst = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : () -> (vector<1x16xf32>)
+  %cast = vector.shape_cast %cst
+    {
+      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+    }
+    : vector<1x16xf32> to vector<16xf32>
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_shapecast_rank_increasing_without_slicing_layout
+// CHECK:         %[[SC:.*]] = vector.shape_cast %{{.*}} : vector<1xf32> to vector<1x1xf32>
+gpu.func @vector_shapecast_rank_increasing_without_slicing_layout() {
+  %cst = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : () -> (vector<16xf32>)
+  %cast = vector.shape_cast %cst
+    {
+      layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }
+    : vector<16xf32> to vector<1x16xf32>
   gpu.return
 }
 }
