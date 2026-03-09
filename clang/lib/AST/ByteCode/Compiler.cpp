@@ -269,6 +269,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_DerivedToBaseMemberPointer: {
+    if (CE->containsErrors())
+      return false;
     assert(classifyPrim(CE) == PT_MemberPtr);
     assert(classifyPrim(SubExpr) == PT_MemberPtr);
 
@@ -291,6 +293,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerivedMemberPointer: {
+    if (CE->containsErrors())
+      return false;
     assert(classifyPrim(CE) == PT_MemberPtr);
     assert(classifyPrim(SubExpr) == PT_MemberPtr);
 
@@ -1106,6 +1110,9 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     return this->VisitFixedPointBinOp(BO);
 
   if (BO->isPtrMemOp()) {
+    if (BO->containsErrors())
+      return false;
+
     if (!this->visit(LHS))
       return false;
 
