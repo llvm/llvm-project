@@ -1810,16 +1810,31 @@ double4 min(double4, double4);
 // directly to HLSL.
 
 // Case 6: vector * matrix -> vector
+template <int R, int C>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul) vector<half, C> mul(vector<half, R>,
+                                                            matrix<half, R, C>);
+
 template <typename T, int R, int C>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
 vector<T, C> mul(vector<T, R>, matrix<T, R, C>);
 
 // Case 8: matrix * vector -> vector
+template <int R, int C>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul) vector<half, R> mul(matrix<half, R, C>,
+                                                            vector<half, C>);
+
 template <typename T, int R, int C>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
 vector<T, R> mul(matrix<T, R, C>, vector<T, C>);
 
 // Case 9: matrix * matrix -> matrix
+template <int R, int K, int C>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul) matrix<half, R, C> mul(
+    matrix<half, R, K>, matrix<half, K, C>);
+
 template <typename T, int R, int K, int C>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
 matrix<T, R, C> mul(matrix<T, R, K>, matrix<T, K, C>);

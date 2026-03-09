@@ -826,33 +826,72 @@ fwidth(__detail::HLSL_FIXED_VECTOR<float, N> input) {
 
 // Case 1: scalar * scalar -> scalar
 template <typename T>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<T>::Value, T> mul(T x,
-                                                                          T y) {
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+constexpr __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                    __detail::is_same<half, T>::value,
+                                T> mul(T x, T y) {
+  return x * y;
+}
+
+template <typename T>
+constexpr __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && !__detail::is_same<half, T>::value, T>
+mul(T x, T y) {
   return x * y;
 }
 
 // Case 2: scalar * vector -> vector
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+constexpr vector<half, N> mul(half x, vector<half, N> y) {
+  return x * y;
+}
+
 template <typename T, int N> constexpr vector<T, N> mul(T x, vector<T, N> y) {
   return x * y;
 }
 
 // Case 3: scalar * matrix -> matrix
+template <int R, int C>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+constexpr matrix<half, R, C> mul(half x, matrix<half, R, C> y) {
+  return x * y;
+}
+
 template <typename T, int R, int C>
 constexpr matrix<T, R, C> mul(T x, matrix<T, R, C> y) {
   return x * y;
 }
 
 // Case 4: vector * scalar -> vector
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+constexpr vector<half, N> mul(vector<half, N> x, half y) {
+  return x * y;
+}
+
 template <typename T, int N> constexpr vector<T, N> mul(vector<T, N> x, T y) {
   return x * y;
 }
 
 // Case 5: vector * vector -> scalar (dot product)
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+half mul(vector<half, N> x, vector<half, N> y) {
+  return __detail::mul_vec_impl(x, y);
+}
+
 template <typename T, int N> T mul(vector<T, N> x, vector<T, N> y) {
   return __detail::mul_vec_impl(x, y);
 }
 
 // Case 7: matrix * scalar -> matrix
+template <int R, int C>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+constexpr matrix<half, R, C> mul(matrix<half, R, C> x, half y) {
+  return x * y;
+}
+
 template <typename T, int R, int C>
 constexpr matrix<T, R, C> mul(matrix<T, R, C> x, T y) {
   return x * y;
