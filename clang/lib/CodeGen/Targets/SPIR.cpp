@@ -146,11 +146,12 @@ void CommonSPIRABIInfo::setCCs() {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().isTargetDevice()) {
+  if (getContext().getLangOpts().isTargetDevice() ||
+      getTarget().getTriple().getVendor() == llvm::Triple::Intel) {
     // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for target devices as default address space kernel arguments
-    // are not allowed. We use the opencl_global language address space which
-    // always maps to CrossWorkGroup.
+    // pointers for target/Intel devices as default address space kernel
+    // arguments are not allowed. We use the opencl_global language address
+    // space which always maps to CrossWorkGroup.
     llvm::Type *LTy = CGT.ConvertType(Ty);
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
     auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
