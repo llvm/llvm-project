@@ -69,7 +69,7 @@ enum Color {
 // HTML-INDEX-NEXT:           <p> For specifying RGB colors</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-46]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-47]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX-NEXT:   </div>
 
 /**
@@ -124,7 +124,7 @@ enum class Shapes {
 // HTML-INDEX-NEXT:           <p> Shape Types</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
-// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-49]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-50]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-INDEX-NEXT:   </div>
 
 typedef unsigned char uint8_t;
