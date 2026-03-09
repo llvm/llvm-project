@@ -83,7 +83,8 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     bool IsFileInRootDir;
     llvm::SmallString<128> File =
         getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
-    CP = serialize::emitInfo(D, getComment(D, D->getASTContext()),
+    serialize::Serializer Serializer;
+    CP = Serializer.emitInfo(D, getComment(D, D->getASTContext()),
                              getDeclLocation(D), CDCtx.PublicOnly);
   }
 
