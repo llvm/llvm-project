@@ -280,7 +280,7 @@ private:
   bool tryParseNeonVectorRegister(OperandVector &Operands);
   ParseStatus tryParseVectorIndex(OperandVector &Operands);
   ParseStatus tryParseGPRSeqPair(OperandVector &Operands);
-  ParseStatus tryParseSyspXzrPair(OperandVector &Operands);
+  ParseStatus tryParseSyspPair(OperandVector &Operands);
   template <bool ParseShiftExtend,
             RegConstraintEqualityTy EqTy = RegConstraintEqualityTy::EqualsReg>
   ParseStatus tryParseGPROperand(OperandVector &Operands);
@@ -1452,9 +1452,7 @@ public:
                .contains(Reg.Reg);
   }
 
-  bool isSyspXzrPair() const {
-    return isGPR64<AArch64::GPR64RegClassID>() && Reg.Reg == AArch64::XZR;
-  }
+  bool isSyspPair() const { return isGPR64<AArch64::GPR64RegClassID>(); }
 
   template<int64_t Angle, int64_t Remainder>
   DiagnosticPredicate isComplexRotation() const {
@@ -2273,21 +2271,6 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm = getShiftExtendAmount();
     Inst.addOperand(MCOperand::createImm(Imm));
-  }
-
-  void addSyspXzrPairOperand(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-
-    if (!isScalarReg())
-      return;
-
-    const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    MCRegister Reg = RI->getRegClass(AArch64::GPR64RegClassID)
-                         .getRegister(RI->getEncodingValue(getReg()));
-    if (Reg != AArch64::XZR)
-      llvm_unreachable("wrong register");
-
-    Inst.addOperand(MCOperand::createReg(AArch64::XZR));
   }
 
   void addExtendOperands(MCInst &Inst, unsigned N) const {
@@ -3322,18 +3305,20 @@ ParseStatus AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
+ParseStatus AArch64AsmParser::tryParseSyspPair(OperandVector &Operands) {
   SMLoc StartLoc = getLoc();
 
-  MCRegister RegNum;
-
-  // The case where xzr, xzr is not present is handled by an InstAlias.
+  MCRegister FirstReg;
+  MCRegister SecondReg;
+  const MCRegisterInfo *RI = getContext().getRegisterInfo();
+  const MCRegisterClass &XRegClass =
+      AArch64MCRegisterClasses[AArch64::GPR64RegClassID];
 
   auto RegTok = getTok(); // in case we need to backtrack
-  if (!tryParseScalarRegister(RegNum).isSuccess())
+  if (!tryParseScalarRegister(FirstReg).isSuccess())
     return ParseStatus::NoMatch;
 
-  if (RegNum != AArch64::XZR) {
+  if (!XRegClass.contains(FirstReg)) {
     getLexer().UnLex(RegTok);
     return ParseStatus::NoMatch;
   }
@@ -3341,16 +3326,26 @@ ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
   if (parseComma())
     return ParseStatus::Failure;
 
-  if (!tryParseScalarRegister(RegNum).isSuccess())
+  if (!tryParseScalarRegister(SecondReg).isSuccess())
     return TokError("expected register operand");
 
-  if (RegNum != AArch64::XZR)
-    return TokError("xzr must be followed by xzr");
+  if (FirstReg == AArch64::XZR) {
+    if (SecondReg != AArch64::XZR)
+      return TokError("xzr must be followed by xzr");
+    // The SYSP alias is UNDEFINED if Rt<0> == '1' && Rt != '11111'.
+  } else if (RI->getEncodingValue(FirstReg) & 1) {
+    return TokError("first register must be even-numbered or xzr");
+  } else if (!XRegClass.contains(SecondReg) ||
+             RI->getEncodingValue(SecondReg) !=
+                 RI->getEncodingValue(FirstReg) + 1) {
+    return TokError(
+        "second register must be the next consecutive register after the "
+        "first register");
+  }
 
-  // We need to push something, since we claim this is an operand in .td.
-  // See also AArch64AsmParser::parseKeywordOperand.
+  // SYSP encodes only the first register; the second is implied as Rt+1.
   Operands.push_back(AArch64Operand::CreateReg(
-      RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext()));
+      FirstReg, RegKind::Scalar, StartLoc, getLoc(), getContext()));
 
   return ParseStatus::Success;
 }
@@ -4286,9 +4281,7 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
 
   if (Tok.isNot(AsmToken::Identifier))
     return TokError("expected register identifier");
-  auto Result = tryParseSyspXzrPair(Operands);
-  if (Result.isNoMatch())
-    Result = tryParseGPRSeqPair(Operands);
+  auto Result = tryParseSyspPair(Operands);
   if (!Result.isSuccess())
     return TokError("specified " + Mnemonic +
                     " op requires a pair of registers");

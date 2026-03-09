@@ -13368,7 +13368,7 @@ class BaseSYSPEncoding<bit L, string asm, string operands, dag outputs, dag inpu
 class SystemPXtI<bit L, string asm> :
   BaseSYSPEncoding<L, asm, "\t$op1, $Cn, $Cm, $op2, $Rt", (outs),
   (ins imm0_6:$op1, sysp_crn_op:$Cn, sysp_crm_op:$Cm, imm0_7:$op2,
-       XSeqPairClassOperand:$Rt)>;
+       SyspPairOperand:$Rt)>;
 
 //----------------------------------------------------------------------------
 // 2023 Armv9.5 Extensions

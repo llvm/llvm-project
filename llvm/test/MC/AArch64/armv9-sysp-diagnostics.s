@@ -8,13 +8,23 @@
 // For sysp, op0 is 0
 
 sysp #0, c8, c0, #0, x0, x2
-// ERRORS: error: expected second odd register of a consecutive same-size even/odd register pair
-sysp #0, c8, c0, #0, x1, x2
-// ERRORS: error: expected first even register of a consecutive same-size even/odd register pair
+// ERRORS: error: second register must be the next consecutive register after the first register
+sysp #4, c8, c4, #1, x1, x2
+// ERRORS: error: first register must be even-numbered or xzr
+sysp #4, c8, c4, #1, x2, x4
+// ERRORS: error: second register must be the next consecutive register after the first register
+sysp #0, c8, c0, #0, x29, x31
+// ERRORS: error: first register must be even-numbered or xzr
+sysp #0, c8, c0, #0, x30, x30
+// ERRORS: error: second register must be the next consecutive register after the first register
 sysp #0, c8, c0, #0, x31, x0
+// ERRORS: error: xzr must be followed by xzr
+sysp #4, c8, c4, #1, xzr, x1
 // ERRORS: error: xzr must be followed by xzr
 sysp #0, c8, c0, #0, xzr, x30
 // ERRORS: error: xzr must be followed by xzr
+sysp #0, c8, c0, #0, w0, w1
+// ERRORS: error: invalid operand for instruction
 sysp #7, c8, c0, #0, x0, x1
 // ERRORS: error: immediate must be an integer in range [0, 6].
 sysp #0, c7, c0, #0, x0, x1

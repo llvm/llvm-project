@@ -90,11 +90,25 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
-  if (Opcode == AArch64::SYSPxt || Opcode == AArch64::SYSPxt_XZR)
+  if (Opcode == AArch64::SYSPxt) {
     if (printSyspAlias(MI, STI, O)) {
       printAnnotation(O, Annot);
       return;
     }
+
+    // Ok, so we should preserve compatibility when printing with the historic
+    // SYSP short form, when Rt encodes XZR (no explicit pair operand)
+    if (MI->getOperand(4).getReg() == AArch64::XZR) {
+      O << "\tsysp\t";
+      markup(O, Markup::Immediate) << "#" << MI->getOperand(0).getImm();
+      O << ", c" << MI->getOperand(1).getImm();
+      O << ", c" << MI->getOperand(2).getImm();
+      O << ", ";
+      markup(O, Markup::Immediate) << "#" << MI->getOperand(3).getImm();
+      printAnnotation(O, Annot);
+      return;
+    }
+  }
 
   // RPRFM overlaps PRFM (reg), so try to print it as RPRFM here.
   if ((Opcode == AArch64::PRFMroX) || (Opcode == AArch64::PRFMroW)) {
@@ -371,7 +385,12 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  if (!PrintAliases || !printAliasInstr(MI, Address, STI, O))
+  // SYSP alias printing is handled explicitly by printSyspAlias above.
+  // Skip the generic alias printer for SYSPxt, because its XSeqPair aliases
+  // are only valid for a subset of SYSP register pairs and can misprint
+  // odd-started regs or xzr,xzr encodings.
+  if (!PrintAliases || Opcode == AArch64::SYSPxt ||
+      !printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
 
   printAnnotation(O, Annot);
@@ -1128,8 +1147,7 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
                                         raw_ostream &O) {
 #ifndef NDEBUG
   unsigned Opcode = MI->getOpcode();
-  assert((Opcode == AArch64::SYSPxt || Opcode == AArch64::SYSPxt_XZR) &&
-         "Invalid opcode for SYSP alias!");
+  assert(Opcode == AArch64::SYSPxt && "Invalid opcode for SYSP alias!");
 #endif
 
   const MCOperand &Op1 = MI->getOperand(0);
@@ -1168,10 +1186,8 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
 
   O << '\t' << Str;
   O << ", ";
-  if (MI->getOperand(4).getReg() == AArch64::XZR)
-    printSyspXzrPair(MI, 4, STI, O);
-  else
-    printGPRSeqPairsClassOperand<64>(MI, 4, STI, O);
+  // TLBIP alias keeps SYSP's pair formatting rules for the trailing operand.
+  printSyspPair(MI, 4, STI, O);
 
   return true;
 }
@@ -2253,13 +2269,24 @@ void AArch64InstPrinter::printGPR64x8(const MCInst *MI, unsigned OpNum,
   printRegName(O, MRI.getSubReg(Reg, AArch64::x8sub_0));
 }
 
-void AArch64InstPrinter::printSyspXzrPair(const MCInst *MI, unsigned OpNum,
-                                          const MCSubtargetInfo &STI,
-                                          raw_ostream &O) {
+void AArch64InstPrinter::printSyspPair(const MCInst *MI, unsigned OpNum,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
   MCRegister Reg = MI->getOperand(OpNum).getReg();
-  assert(Reg == AArch64::XZR &&
-         "MC representation of SyspXzrPair should be XZR");
-  O << getRegisterName(Reg) << ", " << getRegisterName(Reg);
+  printRegName(O, Reg);
+  O << ", ";
+  if (Reg == AArch64::XZR) {
+    printRegName(O, AArch64::XZR);
+    return;
+  }
+
+  const MCRegisterClass &XRegClass =
+      AArch64MCRegisterClasses[AArch64::GPR64RegClassID];
+  // SYSP textual form prints the implied second register as Rt+1.
+  unsigned NextRegNo = MRI.getEncodingValue(Reg) + 1;
+  assert(NextRegNo < XRegClass.getNumRegs() &&
+         "SYSP pair starts from an invalid GPR64 register");
+  printRegName(O, XRegClass.getRegister(NextRegNo));
 }
 
 void AArch64InstPrinter::printPHintOp(const MCInst *MI, unsigned OpNum,

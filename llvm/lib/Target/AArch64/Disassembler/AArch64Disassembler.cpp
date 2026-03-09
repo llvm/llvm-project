@@ -1387,31 +1387,6 @@ DecodeXSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
       Inst, AArch64::XSeqPairsClassRegClassID, RegNo, Addr, Decoder);
 }
 
-static DecodeStatus DecodeSyspXzrInstruction(MCInst &Inst, uint32_t insn,
-                                             uint64_t Addr,
-                                             const MCDisassembler *Decoder) {
-  unsigned op1 = fieldFromInstruction(insn, 16, 3);
-  unsigned CRn = fieldFromInstruction(insn, 12, 4);
-  unsigned CRm = fieldFromInstruction(insn, 8, 4);
-  unsigned op2 = fieldFromInstruction(insn, 5, 3);
-  unsigned Rt = fieldFromInstruction(insn, 0, 5);
-
-  if (op1 > 6 || (CRn != 8 && CRn != 9) || CRm > 7 || op2 > 7)
-    return Fail;
-
-  if (Rt != 0b11111)
-    return Fail;
-
-  Inst.addOperand(MCOperand::createImm(op1));
-  Inst.addOperand(MCOperand::createImm(CRn));
-  Inst.addOperand(MCOperand::createImm(CRm));
-  Inst.addOperand(MCOperand::createImm(op2));
-  DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rt, Addr,
-                                                             Decoder);
-
-  return Success;
-}
-
 static DecodeStatus DecodeSyspInstruction(MCInst &Inst, uint32_t insn,
                                           uint64_t Addr,
                                           const MCDisassembler *Decoder) {
@@ -1424,11 +1399,18 @@ static DecodeStatus DecodeSyspInstruction(MCInst &Inst, uint32_t insn,
   if (op1 > 6 || (CRn != 8 && CRn != 9) || CRm > 7 || op2 > 7)
     return Fail;
 
+  // SYSP register pairs follow the same encoding constraints as XSeqPairsClass:
+  // the first register must be even-numbered, except for the XZR/XZR case.
+  if (Rt != 31 && (Rt & 0x1))
+    return Fail;
+
   Inst.addOperand(MCOperand::createImm(op1));
   Inst.addOperand(MCOperand::createImm(CRn));
   Inst.addOperand(MCOperand::createImm(CRm));
   Inst.addOperand(MCOperand::createImm(op2));
-  DecodeXSeqPairsClassRegisterClass(Inst, Rt, Addr, Decoder);
+  // SYSP just encodes Rt. Print Rt and Rt+1 as a pair.
+  DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rt, Addr,
+                                                             Decoder);
 
   return Success;
 }
