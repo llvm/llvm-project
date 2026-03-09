@@ -386,7 +386,7 @@ Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
                                     MapVector<StringRef, StringRef> &MetaData) {
   using namespace object;
 
-  // Create inner OffloadBinary containing the raw image
+  // Create inner OffloadBinary containing the raw image.
   OffloadBinary::OffloadingImage InnerImage;
   InnerImage.TheImageKind = ImageKind;
   InnerImage.TheOffloadKind = OffloadKind;
@@ -395,17 +395,13 @@ Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
   for (const auto &KV : MetaData)
     InnerImage.StringData[KV.first] = KV.second;
 
-  // Wrap the raw SPIR-V binary
   InnerImage.Image = std::move(Img);
 
-  // Serialize inner OffloadBinary
   SmallVector<OffloadBinary::OffloadingImage> Images;
   Images.push_back(std::move(InnerImage));
   SmallString<0> InnerBinaryData = OffloadBinary::write(Images);
 
-  // Replace the buffer with the inner OffloadBinary
   Img = MemoryBuffer::getMemBufferCopy(InnerBinaryData);
-
   return Error::success();
 }
 
