@@ -125,6 +125,23 @@ def testArrayType():
     assert typ == arr
 
 
+# CHECK-LABEL: testArrayTypeOps
+@constructAndPrintInModule
+def testArrayTypeOps():
+    i32 = IntegerType.get_signless(32)
+    arr_t = llvm.ArrayType.get(i32, 4)
+
+    undef = llvm.UndefOp(arr_t)
+    c_42 = llvm.mlir_constant(IntegerAttr.get(i32, 42))
+    inserted = llvm.InsertValueOp(arr_t, undef, c_42, [0])
+    extracted = llvm.ExtractValueOp(i32, inserted, [0])
+
+    # CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<4 x i32>
+    # CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i32) : i32
+    # CHECK: %[[INS:.*]] = llvm.insertvalue %[[C42]], %[[UNDEF]][0] : !llvm.array<4 x i32>
+    # CHECK: %{{.*}} = llvm.extractvalue %[[INS]][0] : !llvm.array<4 x i32>
+
+
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
 def testSmoke():
