@@ -4795,7 +4795,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
       uint64_t FPTestInt =
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(NoFPClassMD->getOperand(0))->getValue())
-              ->getSExtValue();
+              ->getZExtValue();
       SDValue FPTestConst = DAG.getTargetConstant(FPTestInt, SDLoc(), MVT::i32);
       if (FPTestInt != fcNone)
         L = DAG.getNode(ISD::AssertNoFPClass, dl, L.getValueType(), L,
