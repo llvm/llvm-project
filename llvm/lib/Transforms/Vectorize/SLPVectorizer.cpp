@@ -18496,7 +18496,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           TE->ReuseShuffleIndices.size() == VL.size() &&
           (*It)->isSame(TE->Scalars)))) {
       Entries.push_back(*It);
-      if ((*It)->getVectorFactor() == VL.size()) {
+      if (IsReusedNodeFound || (*It)->getVectorFactor() == VL.size()) {
         std::iota(std::next(Mask.begin(), Part * VL.size()),
                   std::next(Mask.begin(), (Part + 1) * VL.size()), 0);
       } else {
