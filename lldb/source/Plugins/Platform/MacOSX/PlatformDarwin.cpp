@@ -90,8 +90,6 @@ PlatformDarwin::~PlatformDarwin() = default;
 static uint32_t g_initialize_count = 0;
 
 void PlatformDarwin::Initialize() {
-  Platform::Initialize();
-
   if (g_initialize_count++ == 0) {
     PluginManager::RegisterPlugin(PlatformDarwin::GetPluginNameStatic(),
                                   PlatformDarwin::GetDescriptionStatic(),
@@ -106,8 +104,6 @@ void PlatformDarwin::Terminate() {
       PluginManager::UnregisterPlugin(PlatformDarwin::CreateInstance);
     }
   }
-
-  Platform::Terminate();
 }
 
 llvm::StringRef PlatformDarwin::GetDescriptionStatic() {
@@ -200,7 +196,7 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
+FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
   FileSpecList file_list;
