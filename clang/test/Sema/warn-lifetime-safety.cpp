@@ -1858,4 +1858,11 @@ namespace lambda_captures {
     auto outer = [inner]() { return inner(); };
     return outer; // expected-note {{returned here}}
   }
+
+  auto return_copied_lambda() {
+    int local = 1;
+    auto lambda = [&local]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+    auto lambda_copy = lambda;
+    return lambda_copy; // expected-note {{returned here}}
+  }
 } // namespace lambda_captures
