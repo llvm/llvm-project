@@ -31,8 +31,7 @@ define i64 @predicated_udiv_scalarized_operand(ptr %a, i64 %x) {
 ; CHECK:       pred.udiv.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; CHECK:       pred.udiv.continue:
@@ -42,8 +41,7 @@ define i64 @predicated_udiv_scalarized_operand(ptr %a, i64 %x) {
 ; CHECK:       pred.udiv.if1:
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP11]], [[X]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP14:%.*]] = udiv i64 [[TMP13]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = udiv i64 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP14]], i64 1
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE2]]
 ; CHECK:       pred.udiv.continue2:

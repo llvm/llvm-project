@@ -786,10 +786,20 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   // single-scalar.
   convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry, VF);
 
+  // For scalar VF, just wire the blocks and return; no cloning or packing
+  // needed.
+  if (VF.isScalar()) {
+    VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
+    VPBlockUtils::connectBlocks(FirstLaneExiting, Successor);
+    return;
+  }
+
   // Clone converted blocks for remaining lanes and process each in reverse
   // order, connecting each lane's Exiting block to the subsequent lane's entry.
   VPBlockBase *NextLaneEntry = Successor;
   unsigned NumLanes = VF.getFixedValue();
+  SmallVector<VPBasicBlock *> ExitingBlocks(NumLanes);
+  ExitingBlocks[0] = cast<VPBasicBlock>(FirstLaneExiting);
   for (int Lane = NumLanes - 1; Lane > 0; --Lane) {
     const auto &[CurrentLaneEntry, CurrentLaneExiting] =
         VPBlockUtils::cloneFrom(FirstLaneEntry);
@@ -798,6 +808,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     processLaneForReplicateRegion(Plan, IdxTy, Lane,
                                   cast<VPBasicBlock>(FirstLaneEntry),
                                   cast<VPBasicBlock>(CurrentLaneEntry));
+    ExitingBlocks[Lane] = cast<VPBasicBlock>(CurrentLaneExiting);
     VPBlockUtils::connectBlocks(CurrentLaneExiting, NextLaneEntry);
     NextLaneEntry = CurrentLaneEntry;
   }
@@ -808,6 +819,73 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   // FirstLaneExiting.
   VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
   VPBlockUtils::connectBlocks(FirstLaneExiting, NextLaneEntry);
+
+  // Collect per-lane predicated scalar phis and create InsertElement chains or
+  // BuildStructVector to pack them into a vector result. Phis are in the same
+  // order across all cloned exit blocks, so we can match them by position.
+  SmallVector<SmallVector<VPValue *, 4>> PhisByLane;
+  for (VPBasicBlock *Exit : ExitingBlocks) {
+    auto &Phis = PhisByLane.emplace_back();
+    for (auto &Phi : Exit->phis())
+      Phis.push_back(Phi.getVPSingleValue());
+  }
+
+  VPTypeAnalysis TypeInfo(Plan);
+  SmallVector<VPValue *> LaneValues;
+  for (unsigned I = 0; I < PhisByLane[0].size(); ++I) {
+    LaneValues.clear();
+    for (auto &LanePhis : PhisByLane)
+      LaneValues.push_back(LanePhis[I]);
+
+    // If only the first lane is used, no need to pack into a vector.
+    // The lane-0 scalar phi can be used directly. Only lane 0 has external
+    // users; the other lane phis are clones without downstream users.
+    if (vputils::onlyFirstLaneUsed(LaneValues[0])) {
+      assert(all_of(drop_begin(LaneValues),
+                    [](VPValue *V) { return V->getNumUsers() == 0; }) &&
+             "cloned lane phis should have no users");
+      continue;
+    }
+
+    Type *ScalarTy = TypeInfo.inferScalarType(LaneValues[0]);
+
+    // Struct types need BuildStructVector as InsertElement doesn't apply.
+    if (isa<StructType>(ScalarTy)) {
+      auto *LastExit = ExitingBlocks.back();
+      VPBuilder Builder(LastExit, LastExit->end());
+      auto *BV =
+          Builder.createNaryOp(VPInstruction::BuildStructVector, LaneValues);
+      LaneValues[0]->replaceUsesWithIf(
+          BV, [BV](VPUser &U, unsigned) { return &U != BV; });
+      continue;
+    }
+
+    // Convert chain of scalar phis to InsertElement + VPWidenPHIRecipe chains.
+    VPValue *RunningVec = Plan.getOrAddLiveIn(PoisonValue::get(ScalarTy));
+    for (auto [Lane, LaneVal] : enumerate(LaneValues)) {
+      auto *LanePhi = cast<VPPhi>(LaneVal);
+      assert(LanePhi->getNumOperands() == 2 &&
+             match(LanePhi->getOperand(0), m_Poison()) &&
+             "expected predicated phi");
+      auto *MergeBB = LanePhi->getParent();
+      VPValue *PredVal = LanePhi->getOperand(1);
+      auto *ThenBB = PredVal->getDefiningRecipe()->getParent();
+
+      VPBuilder ThenBuilder(
+          ThenBB, std::next(PredVal->getDefiningRecipe()->getIterator()));
+      VPValue *Idx = Plan.getConstantInt(IdxTy, Lane);
+      auto *Insert = ThenBuilder.createNaryOp(Instruction::InsertElement,
+                                              {RunningVec, PredVal, Idx},
+                                              LanePhi->getDebugLoc());
+
+      auto *VecPhi =
+          new VPWidenPHIRecipe(nullptr, RunningVec, LanePhi->getDebugLoc());
+      VecPhi->addOperand(Insert);
+      VecPhi->insertBefore(*MergeBB, MergeBB->getFirstNonPhi());
+      RunningVec = VecPhi;
+    }
+    LaneValues[0]->replaceAllUsesWith(RunningVec);
+  }
 }
 
 /// Collect and dissolve all replicate regions in the vector loop, replicating
@@ -818,10 +896,7 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
   SmallVector<VPRegionBlock *> ReplicateRegions;
   for (VPRegionBlock *Region : VPBlockUtils::blocksOnly<VPRegionBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
-    // Skip regions with live-outs when vectorizing as packing scalar results
-    // back into vectors is not yet implemented.
-    if (Region->isReplicator() &&
-        (VF.isScalar() || Region->getExitingBasicBlock()->empty()))
+    if (Region->isReplicator())
       ReplicateRegions.push_back(Region);
   }
 

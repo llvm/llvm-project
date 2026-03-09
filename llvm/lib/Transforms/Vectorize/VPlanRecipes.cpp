@@ -482,6 +482,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::CalculateTripCountMinusVF:
     return 2;
   case Instruction::Select:
+  case Instruction::InsertElement:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ReductionStartVector:
     return 3;
@@ -570,6 +571,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Vec = State.get(getOperand(0));
     Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
     return Builder.CreateExtractElement(Vec, Idx, Name);
+  }
+  case Instruction::InsertElement: {
+    Value *Vec = State.get(getOperand(0));
+    Value *Elt = State.get(getOperand(1), /*IsScalar=*/true);
+    Value *Idx = State.get(getOperand(2), /*IsScalar=*/true);
+    return Builder.CreateInsertElement(Vec, Elt, Idx, Name);
   }
   case Instruction::Freeze: {
     Value *Op = State.get(getOperand(0), vputils::onlyFirstLaneUsed(this));
@@ -1333,6 +1340,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   switch (getOpcode()) {
   case Instruction::GetElementPtr:
   case Instruction::ExtractElement:
+  case Instruction::InsertElement:
   case Instruction::Freeze:
   case Instruction::FCmp:
   case Instruction::ICmp:
@@ -1386,6 +1394,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return false;
   case Instruction::ExtractElement:
     return Op == getOperand(1);
+  case Instruction::InsertElement:
+    return Op != getOperand(0);
   case Instruction::PHI:
     return true;
   case Instruction::FCmp:
@@ -2590,10 +2600,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
 
   unsigned StartLane = 0;
   unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
-  if (State.Lane) {
-    StartLane = State.Lane->getKnownLane();
-    EndLane = StartLane + 1;
-  }
+  assert(!State.Lane && "replicate regions must be dissolved before ::execute");
   Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
                                      : Constant::getNullValue(BaseIVTy);
 
@@ -3308,28 +3315,11 @@ static void scalarizeInstruction(const Instruction *Instr,
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
+  assert(!State.Lane && "replicate regions must be dissolved before ::execute");
   Instruction *UI = getUnderlyingInstr();
-
-  if (!State.Lane) {
-    assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions "
-                             "must have already been unrolled");
-    scalarizeInstruction(UI, this, VPLane(0), State);
-    return;
-  }
-
-  assert((State.VF.isScalar() || !isSingleScalar()) &&
-         "uniform recipe shouldn't be predicated");
-  assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-  scalarizeInstruction(UI, this, *State.Lane, State);
-  // Insert scalar instance packing it into a vector.
-  if (State.VF.isVector() && shouldPack()) {
-    Value *WideValue =
-        State.Lane->isFirstLane()
-            ? PoisonValue::get(toVectorizedTy(UI->getType(), State.VF))
-            : State.get(this);
-    State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
-                                                        *State.Lane));
-  }
+  assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions "
+                           "must have already been unrolled");
+  scalarizeInstruction(UI, this, VPLane(0), State);
 }
 
 bool VPReplicateRecipe::shouldPack() const {
@@ -3695,20 +3685,7 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
-  assert(State.Lane && "Branch on Mask works only on single instance.");
-
-  VPValue *BlockInMask = getOperand(0);
-  Value *ConditionBit = State.get(BlockInMask, *State.Lane);
-
-  // Replace the temporary unreachable terminator with a new conditional branch,
-  // whose two destinations will be set later when they are created.
-  auto *CurrentTerminator = State.CFG.PrevBB->getTerminator();
-  assert(isa<UnreachableInst>(CurrentTerminator) &&
-         "Expected to replace unreachable terminator with conditional branch.");
-  auto CondBr =
-      State.Builder.CreateCondBr(ConditionBit, State.CFG.PrevBB, nullptr);
-  CondBr->setSuccessor(0, nullptr);
-  CurrentTerminator->eraseFromParent();
+  llvm_unreachable("recipe must be removed when dissolving replicate region");
 }
 
 InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
@@ -3720,62 +3697,7 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
-  assert(State.Lane && "Predicated instruction PHI works per instance.");
-  Instruction *ScalarPredInst =
-      cast<Instruction>(State.get(getOperand(0), *State.Lane));
-  BasicBlock *PredicatedBB = ScalarPredInst->getParent();
-  BasicBlock *PredicatingBB = PredicatedBB->getSinglePredecessor();
-  assert(PredicatingBB && "Predicated block has no single predecessor.");
-  assert(isa<VPReplicateRecipe>(getOperand(0)) &&
-         "operand must be VPReplicateRecipe");
-
-  // By current pack/unpack logic we need to generate only a single phi node: if
-  // a vector value for the predicated instruction exists at this point it means
-  // the instruction has vector users only, and a phi for the vector value is
-  // needed. In this case the recipe of the predicated instruction is marked to
-  // also do that packing, thereby "hoisting" the insert-element sequence.
-  // Otherwise, a phi node for the scalar value is needed.
-  if (State.hasVectorValue(getOperand(0))) {
-    auto *VecI = cast<Instruction>(State.get(getOperand(0)));
-    assert((isa<InsertElementInst, InsertValueInst>(VecI)) &&
-           "Packed operands must generate an insertelement or insertvalue");
-
-    // If VectorI is a struct, it will be a sequence like:
-    // %1       = insertvalue %unmodified, %x, 0
-    // %2       = insertvalue %1, %y, 1
-    // %VectorI = insertvalue %2, %z, 2
-    // To get the unmodified vector we need to look through the chain.
-    if (auto *StructTy = dyn_cast<StructType>(VecI->getType()))
-      for (unsigned I = 0; I < StructTy->getNumContainedTypes() - 1; I++)
-        VecI = cast<InsertValueInst>(VecI->getOperand(0));
-
-    PHINode *VPhi = State.Builder.CreatePHI(VecI->getType(), 2);
-    VPhi->addIncoming(VecI->getOperand(0), PredicatingBB); // Unmodified vector.
-    VPhi->addIncoming(VecI, PredicatedBB); // New vector with inserted element.
-    if (State.hasVectorValue(this))
-      State.reset(this, VPhi);
-    else
-      State.set(this, VPhi);
-    // NOTE: Currently we need to update the value of the operand, so the next
-    // predicated iteration inserts its generated value in the correct vector.
-    State.reset(getOperand(0), VPhi);
-  } else {
-    if (vputils::onlyFirstLaneUsed(this) && !State.Lane->isFirstLane())
-      return;
-
-    Type *PredInstType = State.TypeAnalysis.inferScalarType(getOperand(0));
-    PHINode *Phi = State.Builder.CreatePHI(PredInstType, 2);
-    Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()),
-                     PredicatingBB);
-    Phi->addIncoming(ScalarPredInst, PredicatedBB);
-    if (State.hasScalarValue(this, *State.Lane))
-      State.reset(this, Phi, *State.Lane);
-    else
-      State.set(this, Phi, *State.Lane);
-    // NOTE: Currently we need to update the value of the operand, so the next
-    // predicated iteration inserts its generated value in the correct vector.
-    State.reset(getOperand(0), Phi, *State.Lane);
-  }
+  llvm_unreachable("recipe must be removed when dissolving replicate region");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
