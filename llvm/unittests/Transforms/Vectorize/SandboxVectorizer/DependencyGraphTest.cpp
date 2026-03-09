@@ -1256,14 +1256,31 @@ define void @foo(i8 %v0) {
   auto *Add0N = DAG.getNode(Add0);
   auto *Add1N = DAG.getNode(Add1);
   // Mark Add0N and Add1N as scheduled.
+#ifndef NDEBUG
+  EXPECT_TRUE(Add0N->validUnscheduledSuccs());
+#endif
   Add0N->setScheduled(true);
+#ifndef NDEBUG
+  EXPECT_FALSE(Add0N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add0N->getNumUnscheduledSuccs(), ".*");
+#endif
+
+#ifndef NDEBUG
+  EXPECT_TRUE(Add1N->validUnscheduledSuccs());
+#endif
   Add1N->setScheduled(true);
-  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
-  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+#ifndef NDEBUG
+  EXPECT_FALSE(Add1N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add1N->getNumUnscheduledSuccs(), ".*");
+#endif
 
   // Change Modify's operand and make sure we won't update Add0N's or Add1N's
   // unscheduled succs.
   Modify->setOperand(0, Add1);
-  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
-  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+#ifndef NDEBUG
+  EXPECT_FALSE(Add0N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add0N->getNumUnscheduledSuccs(), ".*");
+  EXPECT_FALSE(Add1N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add1N->getNumUnscheduledSuccs(), ".*");
+#endif
 }
