@@ -1118,6 +1118,11 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;
 
+  if (isImplicitTemplateInstantiation(&ND)) {
+    Symbols.insert(S);
+    return Symbols.find(S.ID);
+  }
+
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
   assert(ASTCtx && PP && "ASTContext and Preprocessor must be set.");
