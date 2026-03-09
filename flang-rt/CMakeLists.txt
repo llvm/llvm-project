@@ -179,11 +179,10 @@ if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
 endif ()
 
 
-set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile Flang-RT with GPU support (CUDA or OpenMP)")
+set(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile Flang-RT with GPU support (CUDA)")
 set_property(CACHE FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT PROPERTY STRINGS
     ""
     CUDA
-    OpenMP
   )
 if (NOT FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT)
   # Support for GPUs disabled
@@ -191,30 +190,8 @@ elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   # Support for CUDA
   set(FLANG_RT_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
   option(FLANG_RT_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS "Do not compile global variables' definitions when producing PTX library" OFF)
-elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-  # Support for OpenMP offloading
-  set(FLANG_RT_DEVICE_ARCHITECTURES "all" CACHE STRING
-      "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')"
-    )
-
-  if (FLANG_RT_DEVICE_ARCHITECTURES STREQUAL "all")
-    # TODO: support auto detection on the build system.
-    set(all_amdgpu_architectures
-      "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
-      "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
-      "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
-      "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151"
-      "gfx1152;gfx1153;gfx1170")
-    set(all_nvptx_architectures
-      "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-      "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
-    set(all_gpu_architectures
-      "${all_amdgpu_architectures};${all_nvptx_architectures}")
-      set(FLANG_RT_DEVICE_ARCHITECTURES ${all_gpu_architectures})
-  endif()
-  list(REMOVE_DUPLICATES FLANG_RT_DEVICE_ARCHITECTURES)
 else ()
-  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
+  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty or 'CUDA'")
 endif ()
 
 
@@ -286,7 +263,7 @@ find_package(Threads)
 # FIXME: The NVPTX target will erroneously report it has backtrace support. This
 #        is caused by using "-c -flto" in the required flags to suppress CUDA
 #        tools from being required for the CMake flag checks to succeed.
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+if (NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
   find_package(Backtrace)
 endif()
 set(HAVE_BACKTRACE ${Backtrace_FOUND})

@@ -471,10 +471,10 @@ void foo7() {
 // OGCG: %[[C_REAL:.*]] = fsub float %[[MUL_BR_AR]], %[[MUL_BI_AI]]
 // OGCG: %[[C_IMAG:.*]] = fadd float %[[MUL_BR_AI]], %[[MUL_BI_AR]]
 // OGCG: %[[IS_C_REAL_NAN:.*]] = fcmp uno float %[[C_REAL]], %[[C_REAL]]
-// OGCG: br i1 %[[IS_C_REAL_NAN]], label %[[COMPLEX_IS_IMAG_NAN:.*]], label %[[END_LABEL:.*]], !prof !2
+// OGCG: br i1 %[[IS_C_REAL_NAN]], label %[[COMPLEX_IS_IMAG_NAN:.*]], label %[[END_LABEL:[^,]*]]
 // OGCG: [[COMPLEX_IS_IMAG_NAN]]:
 // OGCG:  %[[IS_C_IMAG_NAN:.*]] = fcmp uno float %[[C_IMAG]], %[[C_IMAG]]
-// OGCG:  br i1 %[[IS_C_IMAG_NAN]], label %[[COMPLEX_LIB_CALL:.*]], label %[[END_LABEL]], !prof !2
+// OGCG:  br i1 %[[IS_C_IMAG_NAN]], label %[[COMPLEX_LIB_CALL:.*]], label %[[END_LABEL]]
 // OGCG: [[COMPLEX_LIB_CALL]]:
 // OGCG:  %[[CALL_RESULT:.*]] = call{{.*}} <2 x float> @__mulsc3(float noundef %[[B_REAL]], float noundef %[[B_IMAG]], float noundef %[[A_REAL]], float noundef %[[A_IMAG]])
 // OGCG:  store <2 x float> %[[CALL_RESULT]], ptr %[[COMPLEX_CALL_ADDR]], align 4

@@ -143,6 +143,15 @@
 // TAIL-CALL: #define __wasm_tail_call__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mwide-arithmetic \
+// RUN:   | FileCheck %s -check-prefix=WIDE-ARITHMETIC
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mwide-arithmetic \
+// RUN:   | FileCheck %s -check-prefix=WIDE-ARITHMETIC
+//
+// WIDE-ARITHMETIC: #define __wasm_wide_arithmetic__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=mvp \
 // RUN:   | FileCheck %s -check-prefix=MVP
 // RUN: %clang -E -dM %s -o - 2>&1 \

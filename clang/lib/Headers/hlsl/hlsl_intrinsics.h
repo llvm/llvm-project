@@ -790,5 +790,73 @@ fwidth(__detail::HLSL_FIXED_VECTOR<float, N> input) {
   return __detail::fwidth_impl(input);
 }
 
+//===----------------------------------------------------------------------===//
+// mul builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn R mul(X x, Y y)
+/// \brief Multiplies x and y using matrix math.
+/// \param x [in] The first input value. If x is a vector, it is treated as a
+///   row vector.
+/// \param y [in] The second input value. If y is a vector, it is treated as a
+///   column vector.
+///
+/// The inner dimension x-columns and y-rows must be equal. The result has the
+/// dimension x-rows x y-columns. When both x and y are vectors, the result is
+/// a dot product (scalar). Scalar operands are multiplied element-wise.
+///
+/// This function supports 9 overloaded forms:
+///   1. scalar * scalar -> scalar
+///   2. scalar * vector -> vector
+///   3. scalar * matrix -> matrix
+///   4. vector * scalar -> vector
+///   5. vector * vector -> scalar (dot product)
+///   6. vector * matrix -> vector
+///   7. matrix * scalar -> matrix
+///   8. matrix * vector -> vector
+///   9. matrix * matrix -> matrix
+
+// Cases 1, 2, 3, 4, 5, and 7 of mul are defined below as
+// header-only implementations because they are elementwise operations and dot
+// products easily expressed in HLSL.
+
+// Cases 6, 8, and 9 are defined in hlsl_alias_intrinsics.h to alias the mul
+// builtin so that they can be lowered to the llvm.matrix.multiply intrinsic
+// which is not exposed directly to HLSL.
+
+// Case 1: scalar * scalar -> scalar
+template <typename T>
+constexpr __detail::enable_if_t<__detail::is_arithmetic<T>::Value, T> mul(T x,
+                                                                          T y) {
+  return x * y;
+}
+
+// Case 2: scalar * vector -> vector
+template <typename T, int N> constexpr vector<T, N> mul(T x, vector<T, N> y) {
+  return x * y;
+}
+
+// Case 3: scalar * matrix -> matrix
+template <typename T, int R, int C>
+constexpr matrix<T, R, C> mul(T x, matrix<T, R, C> y) {
+  return x * y;
+}
+
+// Case 4: vector * scalar -> vector
+template <typename T, int N> constexpr vector<T, N> mul(vector<T, N> x, T y) {
+  return x * y;
+}
+
+// Case 5: vector * vector -> scalar (dot product)
+template <typename T, int N> T mul(vector<T, N> x, vector<T, N> y) {
+  return __detail::mul_vec_impl(x, y);
+}
+
+// Case 7: matrix * scalar -> matrix
+template <typename T, int R, int C>
+constexpr matrix<T, R, C> mul(matrix<T, R, C> x, T y) {
+  return x * y;
+}
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

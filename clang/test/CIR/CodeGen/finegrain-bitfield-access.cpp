@@ -60,7 +60,7 @@ unsigned read8_1() {
 // LLVM:  ret i32 [[RET]]
 
 // OGCG-LABEL: @_Z7read8_1v
-// OGCG: [[BFLOAD:%.*]] = load i8, ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 1), align 1
+// OGCG: [[BFLOAD:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 1), align 1
 // OGCG-NEXT: [[BFCAST:%.*]] = zext i8 [[BFLOAD]] to i32
 // OGCG-NEXT: ret i32 [[BFCAST]]
 
@@ -78,7 +78,7 @@ void write8_1() {
 // LLVM:  ret void
 
 // OGCG-LABEL: @_Z8write8_1v
-// OGCG: store i8 3, ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 1), align 1
+// OGCG: store i8 3, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 1), align 1
 // OGCG-NEXT: ret void
 
 unsigned read8_2() {
@@ -103,7 +103,7 @@ unsigned read8_2() {
 // LLVM:  ret i32 [[RET]]
 
 // OGCG-LABEL: @_Z7read8_2v
-// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 2), align 2
+// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // OGCG-NEXT: [[BFLSHR:%.*]] = lshr i16 [[BFLOAD]], 4
 // OGCG-NEXT: [[BFCLEAR:%.*]] = and i16 [[BFLSHR]], 255
 // OGCG-NEXT: [[BFCAST:%.*]] = zext i16 [[BFCLEAR]] to i32
@@ -126,10 +126,10 @@ void write8_2() {
 // LLVM:  ret void
 
 // OGCG-LABEL: @_Z8write8_2v
-// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 2), align 2
+// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // OGCG-NEXT: [[BFCLEAR:%.*]] = and i16 [[BFLOAD]], -4081
 // OGCG-NEXT: [[BFSET:%.*]] = or i16 [[BFCLEAR]], 48
-// OGCG-NEXT: store i16 [[BFSET]], ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 2), align 2
+// OGCG-NEXT: store i16 [[BFSET]], ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // OGCG-NEXT: ret void
 
 unsigned read16_1() {
@@ -179,7 +179,7 @@ unsigned read16_2() {
 // LLVM:  ret i32 [[RET]]
 
 // OGCG-LABEL: @_Z8read16_2v
-// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (%struct.S2, ptr {{.*}}, i32 0, i32 1), align 2
+// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // OGCG-NEXT: [[BFCAST:%.*]] = zext i16 [[BFLOAD]] to i64
 // OGCG-NEXT: [[RET:%.*]] = trunc i64 [[BFCAST]] to i32
 // OGCG-NEXT: ret i32 [[RET]]
@@ -218,7 +218,7 @@ void write16_2() {
 // LLVM: ret void
 
 // OGCG-LABEL: @_Z9write16_2v
-// OGCG: store i16 5, ptr getelementptr inbounds nuw (%struct.S2, ptr {{.*}}, i32 0, i32 1), align 2
+// OGCG: store i16 5, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
 // OGCG-NEXT: ret void
 
 unsigned read32_1() {
@@ -242,7 +242,7 @@ unsigned read32_1() {
 // LLVM: ret i32 [[RET]]
 
 // OGCG-LABEL: @_Z8read32_1v
-// OGCG: [[BFLOAD:%.*]] = load i32, ptr getelementptr inbounds nuw (%struct.S3, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: [[BFLOAD:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 // OGCG-NEXT: [[BFCAST:%.*]] = zext i32 %bf.load to i64
 // OGCG-NEXT: [[RET:%.*]] = trunc i64 %bf.cast to i32
 // OGCG-NEXT: ret i32 [[RET]]
@@ -262,5 +262,5 @@ void write32_1() {
 // LLVM:  ret void
 
 // OGCG-LABEL: @_Z9write32_1v
-// OGCG: store i32 5, ptr getelementptr inbounds nuw (%struct.S3, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: store i32 5, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 4), align 4
 // OGCG-NEXT: ret void

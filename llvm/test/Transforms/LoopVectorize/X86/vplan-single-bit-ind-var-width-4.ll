@@ -11,15 +11,13 @@ define void @copy_bitcast_fusion(ptr noalias %foo, ptr noalias %bar) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 false, i64 1, i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 true, i64 1, i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 false, i64 1, i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 true, i64 1, i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr { float, float }, ptr [[FOO]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr { float, float }, ptr [[FOO]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr { float, float }, ptr [[FOO]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr { float, float }, ptr [[FOO]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[FOO]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP8]], align 4

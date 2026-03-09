@@ -1651,8 +1651,8 @@ void GCNTTIImpl::collectKernelLaunchBounds(
 
 GCNTTIImpl::KnownIEEEMode
 GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
-  if (!ST->hasIEEEMode()) // Only mode on gfx12
-    return KnownIEEEMode::On;
+  if (!ST->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
+    return KnownIEEEMode::On; // Only mode on gfx1170+
 
   const Function *F = I.getFunction();
   if (!F)
