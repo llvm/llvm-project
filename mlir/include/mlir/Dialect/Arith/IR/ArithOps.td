@@ -1530,6 +1530,7 @@ def Arith_UIToFPOp :
     $in (`nneg` $nonNeg^)? attr-dict `:` type($in) `to` type($out)
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1545,6 +1546,7 @@ def Arith_SIToFPOp : Arith_IToFCastOp<"sitofp"> {
     elementwise.
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
