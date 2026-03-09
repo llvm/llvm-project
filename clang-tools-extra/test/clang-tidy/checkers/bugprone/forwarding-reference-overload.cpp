@@ -53,11 +53,11 @@ public:
   // Guarded with enable_if.
   template <typename T>
   Test2(T &&n, int i = 5,
-        std::enable_if_t<sizeof(int) < sizeof(long), int> a = 5, ...);
+        std::enable_if_t<sizeof(int) < sizeof(long long), int> a = 5, ...);
 
   // Guarded with enable_if.
   template <typename T, typename X = typename std::enable_if<
-                            sizeof(int) < sizeof(long), double>::type &>
+                            sizeof(int) < sizeof(long long), double>::type &>
   Test2(T &&n);
 
   // Guarded with enable_if.
