@@ -301,7 +301,6 @@ def dispRI34_pcrel : Operand<iPTR> {
   let EncoderMethod = "getDispRI34PCRelEncoding";
   let DecoderMethod = "decodeSImmOperand<34>";
 }
-
 def PPCDispRIOperand : AsmOperandClass {
  let Name = "DispRI"; let PredicateMethod = "isS16Imm";
  let RenderMethod = "addS16ImmOperands";
@@ -336,7 +335,6 @@ def dispRIX16 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIX16Operand;
   let EncoderMethod = "getDispRIX16Encoding";
   let DecoderMethod = "decodeDispRIX16Operand";
-
 }
 def PPCDispSPE8Operand : AsmOperandClass {
  let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
@@ -365,4 +363,3 @@ def dispSPE2 : Operand<iPTR> {
   let DecoderMethod = "decodeDispSPE2Operand";
   let EncoderMethod = "getDispSPE2Encoding";
 }
-

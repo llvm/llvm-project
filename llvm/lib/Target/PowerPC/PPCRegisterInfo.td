@@ -107,7 +107,7 @@ class CR<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
 }
 
 // CRBIT - One of the 32 1-bit condition register fields
-class CRBIT<bits<5> num, string n> : PPCReg<n> {
+class CRBIT<bits<5> num> : PPCReg<!cast<string>(num)> {
   let HWEncoding{4-0} = num;
 }
 
@@ -241,38 +241,12 @@ def BP   : GPR<0 /* arbitrary */, "**BASE POINTER**">;
 def BP8  : GP8<BP, "**BASE POINTER**">;
 
 // Condition register bits
-def CR0LT : CRBIT< 0, "0">;
-def CR0GT : CRBIT< 1, "1">;
-def CR0EQ : CRBIT< 2, "2">;
-def CR0UN : CRBIT< 3, "3">;
-def CR1LT : CRBIT< 4, "4">;
-def CR1GT : CRBIT< 5, "5">;
-def CR1EQ : CRBIT< 6, "6">;
-def CR1UN : CRBIT< 7, "7">;
-def CR2LT : CRBIT< 8, "8">;
-def CR2GT : CRBIT< 9, "9">;
-def CR2EQ : CRBIT<10, "10">;
-def CR2UN : CRBIT<11, "11">;
-def CR3LT : CRBIT<12, "12">;
-def CR3GT : CRBIT<13, "13">;
-def CR3EQ : CRBIT<14, "14">;
-def CR3UN : CRBIT<15, "15">;
-def CR4LT : CRBIT<16, "16">;
-def CR4GT : CRBIT<17, "17">;
-def CR4EQ : CRBIT<18, "18">;
-def CR4UN : CRBIT<19, "19">;
-def CR5LT : CRBIT<20, "20">;
-def CR5GT : CRBIT<21, "21">;
-def CR5EQ : CRBIT<22, "22">;
-def CR5UN : CRBIT<23, "23">;
-def CR6LT : CRBIT<24, "24">;
-def CR6GT : CRBIT<25, "25">;
-def CR6EQ : CRBIT<26, "26">;
-def CR6UN : CRBIT<27, "27">;
-def CR7LT : CRBIT<28, "28">;
-def CR7GT : CRBIT<29, "29">;
-def CR7EQ : CRBIT<30, "30">;
-def CR7UN : CRBIT<31, "31">;
+foreach Index = 0-7 in {
+  foreach CmpIdx = 0-3 in {
+    def CR#Index#["LT", "GT", "EQ", "UN"][CmpIdx] :
+          CRBIT<!add(!mul(Index, 4), CmpIdx)>;
+  }
+}
 
 // Condition registers
 let SubRegIndices = [sub_lt, sub_gt, sub_eq, sub_un] in {
