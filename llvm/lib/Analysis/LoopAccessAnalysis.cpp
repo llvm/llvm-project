@@ -813,9 +813,8 @@ namespace {
 /// dependence checking.
 class AccessAnalysis {
 public:
-  /// Read or write access location.
-  typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
-  typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
+  typedef PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>
+      MemAccessInfo;
 
   AccessAnalysis(const Loop *TheLoop, AAResults *AA, const LoopInfo *LI,
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
@@ -888,7 +887,7 @@ public:
     DepChecker.clearDependences();
   }
 
-  const MemAccessInfoList &getDependenciesToCheck() const { return CheckDeps; }
+  ArrayRef<MemAccessInfo> getDependenciesToCheck() const { return CheckDeps; }
 
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
@@ -927,7 +926,7 @@ private:
   const Loop *TheLoop;
 
   /// List of accesses that need a further dependence check.
-  MemAccessInfoList CheckDeps;
+  SmallVector<MemAccessInfo, 8> CheckDeps;
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
@@ -2393,7 +2392,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 }
 
 bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
-                                   const MemAccessInfoList &CheckDeps) {
+                                   ArrayRef<MemAccessInfo> CheckDeps) {
 
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;

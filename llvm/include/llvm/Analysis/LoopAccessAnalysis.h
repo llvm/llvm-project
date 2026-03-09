@@ -90,8 +90,8 @@ struct VectorizerParams {
 ///
 class MemoryDepChecker {
 public:
-  typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
-  typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
+  typedef PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>
+      MemAccessInfo;
   /// Set of potential dependent memory accesses.
   typedef EquivalenceClasses<MemAccessInfo> DepCandidates;
 
@@ -203,7 +203,7 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   LLVM_ABI bool areDepsSafe(const DepCandidates &AccessSets,
-                            const MemAccessInfoList &CheckDeps);
+                            ArrayRef<MemAccessInfo> CheckDeps);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
