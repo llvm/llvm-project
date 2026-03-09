@@ -460,6 +460,20 @@ bool PragmaIncludes::shouldKeep(const FileEntry *FE) const {
          NonSelfContainedFiles.contains(FE->getUniqueID());
 }
 
+bool isUsedAsMainFile(FileID FID, const SourceManager &SM,
+                      const PragmaIncludes *PI) {
+  if (FID == SM.getMainFileID() || FID == SM.getPreambleFileID())
+    return true;
+  SourceLocation IncludeLoc = SM.getIncludeLoc(FID);
+  if (IncludeLoc.isInvalid())
+    return false;
+  if (PI) {
+    if (auto FE = SM.getFileEntryRefForID(FID); FE && !PI->isSelfContained(*FE))
+      return isUsedAsMainFile(SM.getFileID(IncludeLoc), SM, PI);
+  }
+  return false;
+}
+
 namespace {
 template <typename T> bool isImplicitTemplateSpecialization(const Decl *D) {
   if (const auto *TD = dyn_cast<T>(D))
@@ -476,10 +490,7 @@ std::unique_ptr<ASTConsumer> RecordedAST::record() {
     Recorder(RecordedAST *Out) : Out(Out) {}
     void Initialize(ASTContext &Ctx) override { Out->Ctx = &Ctx; }
     bool HandleTopLevelDecl(DeclGroupRef DG) override {
-      const auto &SM = Out->Ctx->getSourceManager();
       for (Decl *D : DG) {
-        if (!SM.isWrittenInMainFile(SM.getExpansionLoc(D->getLocation())))
-          continue;
         if (isImplicitTemplateSpecialization<FunctionDecl>(D) ||
             isImplicitTemplateSpecialization<CXXRecordDecl>(D) ||
             isImplicitTemplateSpecialization<VarDecl>(D))
@@ -487,7 +498,18 @@ std::unique_ptr<ASTConsumer> RecordedAST::record() {
         // FIXME: Filter out certain Obj-C as well.
         Out->Roots.push_back(D);
       }
-      return ASTConsumer::HandleTopLevelDecl(DG);
+      return true;
+    }
+
+    void HandleTranslationUnit(ASTContext &Ctx) override {
+      auto NotMain = [&](Decl *D) {
+        const auto &SM = Out->Ctx->getSourceManager();
+        return !isUsedAsMainFile(
+            SM.getFileID(SM.getExpansionLoc(D->getLocation())), SM, Out->PI);
+      };
+      Out->Roots.erase(
+          std::remove_if(Out->Roots.begin(), Out->Roots.end(), NotMain),
+          Out->Roots.end());
     }
   };
 

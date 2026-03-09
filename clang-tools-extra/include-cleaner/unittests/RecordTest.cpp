@@ -55,6 +55,10 @@ MATCHER_P(named, N, "") {
   return false;
 }
 
+std::string guard(llvm::StringRef Code) {
+  return "#pragma once\n" + Code.str();
+}
+
 MATCHER_P(FileNamed, N, "") {
   llvm::StringRef ActualName =
       llvm::sys::path::remove_leading_dotslash(arg.getName());
@@ -72,18 +76,25 @@ protected:
   RecordASTTest() {
     struct RecordAction : public ASTFrontendAction {
       RecordedAST &Out;
-      RecordAction(RecordedAST &Out) : Out(Out) {}
+      PragmaIncludes &PI;
+      RecordAction(RecordedAST &Out, PragmaIncludes &PI) : Out(Out), PI(PI) {}
+      bool BeginSourceFileAction(CompilerInstance &CI) override {
+        PI.record(CI);
+        Out.PI = &PI;
+        return true;
+      }
       std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                      StringRef) override {
         return Out.record();
       }
     };
     Inputs.MakeAction = [this] {
-      return std::make_unique<RecordAction>(Recorded);
+      return std::make_unique<RecordAction>(Recorded, PI);
     };
   }
 
   TestAST build() { return TestAST(Inputs); }
+  PragmaIncludes PI;
 };
 
 // Top-level decl from the main file is a root, nested ones aren't.
@@ -103,13 +114,23 @@ TEST_F(RecordASTTest, Namespace) {
 
 // Decl in included file is not a root.
 TEST_F(RecordASTTest, Inclusion) {
-  Inputs.ExtraFiles["header.h"] = "void headerFunc();";
+  Inputs.ExtraFiles["header.h"] = "#pragma once\nvoid headerFunc();";
   Inputs.Code = R"cpp(
     #include "header.h"
     void mainFunc();
   )cpp";
   auto AST = build();
   EXPECT_THAT(Recorded.Roots, testing::ElementsAre(named("mainFunc")));
+}
+
+// Decl in non-self-contained included file is a root.
+TEST_F(RecordASTTest, NonSelfContainedInclusion) {
+  Inputs.ExtraFiles["header.inc"] = "void headerFunc();";
+  Inputs.Code = R"cpp(
+    #include "header.inc"
+  )cpp";
+  auto AST = build();
+  EXPECT_THAT(Recorded.Roots, testing::ElementsAre(named("headerFunc")));
 }
 
 // Decl from macro expanded into the main file is a root.
