@@ -2801,6 +2801,8 @@ Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     bool useOnlyFiniteValue) {
   auto attr =
       getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue);
+  if (!attr)
+    return {};
   return arith::ConstantOp::create(builder, loc, attr);
 }
 
