@@ -164,7 +164,7 @@ private:
 
   Error readAsInt(uint64_t *I) {
     read();
-    if (Tok.K != Identifier || Tok.Value.getAsInteger(10, *I))
+    if (Tok.K != Identifier || Tok.Value.getAsInteger(0, *I))
       return createError("integer expected");
     return Error::success();
   }

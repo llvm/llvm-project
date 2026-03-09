@@ -59,13 +59,10 @@ class BssSection;
 class GdbIndexSection;
 class GotPltSection;
 class GotSection;
-class IBTPltSection;
 class IgotPltSection;
 class InputSection;
 class IpltSection;
 class MipsGotSection;
-class MipsRldMapSection;
-class PPC32Got2Section;
 class PPC64LongBranchTargetSection;
 class PltSection;
 class RelocationBaseSection;
@@ -486,11 +483,6 @@ struct Config {
   // if that's true.)
   bool isMips64EL;
 
-  // True if we need to set the DF_STATIC_TLS flag to an output file, which
-  // works as a hint to the dynamic loader that the shared object contains code
-  // compiled with the initial-exec TLS model.
-  bool hasTlsIe = false;
-
   // Holds set of ELF header flags for the target.
   uint32_t eflags = 0;
 
@@ -586,13 +578,13 @@ struct InStruct {
   std::unique_ptr<MipsGotSection> mipsGot;
   std::unique_ptr<SyntheticSection> mipsOptions;
   std::unique_ptr<SyntheticSection> mipsReginfo;
-  std::unique_ptr<MipsRldMapSection> mipsRldMap;
+  std::unique_ptr<SyntheticSection> mipsRldMap;
   std::unique_ptr<SyntheticSection> partEnd;
   std::unique_ptr<SyntheticSection> partIndex;
   std::unique_ptr<PltSection> plt;
   std::unique_ptr<IpltSection> iplt;
-  std::unique_ptr<PPC32Got2Section> ppc32Got2;
-  std::unique_ptr<IBTPltSection> ibtPlt;
+  std::unique_ptr<SyntheticSection> ppc32Got2;
+  std::unique_ptr<SyntheticSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
   // Non-SHF_ALLOC sections
   std::unique_ptr<SyntheticSection> debugNames;

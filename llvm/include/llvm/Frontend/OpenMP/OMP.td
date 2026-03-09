@@ -159,6 +159,9 @@ def OMPC_Depobj : Clause<[Spelling<"depobj">]> {
   let clangClass = "OMPDepobjClause";
   let isImplicit = true;
 }
+def OMPC_Depth : Clause<[Spelling<"depth">]> {
+  let flangClass = "ScalarIntConstantExpr";
+}
 def OMPC_Destroy : Clause<[Spelling<"destroy">]> {
   let clangClass = "OMPDestroyClause";
   let flangClass = "OmpDestroyClause";
@@ -966,7 +969,10 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
   let languages = [L_C, L_Fortran];
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
-  let allowedOnceClauses = [VersionedClause<OMPC_LoopRange, 60>];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Depth, 61>,
+    VersionedClause<OMPC_LoopRange, 60>,
+  ];
   let association = AS_LoopSeq;
   let category = CA_Executable;
 }

@@ -193,6 +193,11 @@ public:
     return FromPtrBits.anyextOrTrunc(ToASBitSize);
   }
 
+  virtual APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                                 unsigned DstAS) const {
+    return {DL.getPointerSizeInBits(SrcAS), 0};
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
@@ -273,8 +278,7 @@ public:
     return false;
   }
 
-  virtual TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
+  virtual TailFoldingStyle getPreferredTailFoldingStyle() const {
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
@@ -639,7 +643,6 @@ public:
   virtual std::optional<unsigned> getVScaleForTuning() const {
     return std::nullopt;
   }
-  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
 
   virtual bool
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
@@ -1141,7 +1144,11 @@ public:
 
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
-  virtual bool preferEpilogueVectorization() const { return true; }
+  virtual bool preferEpilogueVectorization(ElementCount Iters) const {
+    // We consider epilogue vectorization unprofitable for targets that
+    // don't consider interleaving beneficial (eg. MVE).
+    return getMaxInterleaveFactor(Iters) > 1;
+  }
 
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 

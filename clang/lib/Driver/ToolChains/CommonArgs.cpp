@@ -2966,11 +2966,12 @@ void tools::addMachineOutlinerArgs(const Driver &D,
         D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
       }
     } else {
-      // Disable all outlining behaviour.
-      //
-      // FIXME: This should probably use the `nooutline` attribute rather than
-      // tweaking Pipeline Pass flags, so `-mno-outline` and `-moutline` objects
-      // can be combined correctly during LTO.
+      if (!IsLTO)
+        // Disable all outlining behaviour using `nooutline` attribute, in case
+        // Linker Invocation lacks `-mno-outline`.
+        CmdArgs.push_back("-mno-outline");
+
+      // Disable Pass in Pipeline
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }

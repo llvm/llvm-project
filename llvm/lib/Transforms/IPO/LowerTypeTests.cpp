@@ -644,11 +644,8 @@ void LowerTypeTestsModule::allocateByteArrays() {
 
   for (unsigned I = 0; I != ByteArrayInfos.size(); ++I) {
     ByteArrayInfo *BAI = &ByteArrayInfos[I];
-
-    Constant *Idxs[] = {ConstantInt::get(IntPtrTy, 0),
-                        ConstantInt::get(IntPtrTy, ByteArrayOffsets[I])};
-    Constant *GEP = ConstantExpr::getInBoundsGetElementPtr(
-        ByteArrayConst->getType(), ByteArray, Idxs);
+    Constant *GEP = ConstantExpr::getInBoundsPtrAdd(
+        ByteArray, ConstantInt::get(IntPtrTy, ByteArrayOffsets[I]));
 
     // Create an alias instead of RAUW'ing the gep directly. On x86 this ensures
     // that the pc-relative displacement is folded into the lea instead of the

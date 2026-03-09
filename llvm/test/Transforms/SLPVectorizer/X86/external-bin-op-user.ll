@@ -11,13 +11,13 @@ define void @test(ptr %0, ptr %1, double %2) {
 ; CHECK-NEXT:    br i1 false, label %[[DOT_CRIT_EDGE384_US_US_US_US]], label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul double [[TMP5]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd double [[TMP2]], 0.000000e+00
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul double [[TMP5]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP6]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd double [[TMP2]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP13]], i32 1

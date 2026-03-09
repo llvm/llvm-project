@@ -47,7 +47,7 @@
 ; SPIRV-O0-NEXT:    SPIRV emit intrinsics
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIRV legalize bitcast pass
-; SPIRV-O0-NEXT:      Prepare callbr
+; SPIRV-O0-NEXT:      Prepare inline asm insts
 ; SPIRV-O0-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-O0-NEXT:      Insert stack protectors
 ; SPIRV-O0-NEXT:      Analysis containing CSE Info
@@ -160,7 +160,7 @@
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; SPIRV-Opt-NEXT:      Function Alias Analysis Results
 ; SPIRV-Opt-NEXT:      ObjC ARC contraction
-; SPIRV-Opt-NEXT:      Prepare callbr
+; SPIRV-Opt-NEXT:      Prepare inline asm insts
 ; SPIRV-Opt-NEXT:      Safe Stack instrumentation pass
 ; SPIRV-Opt-NEXT:      Insert stack protectors
 ; SPIRV-Opt-NEXT:      Analysis containing CSE Info

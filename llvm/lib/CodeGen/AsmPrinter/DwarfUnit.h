@@ -350,7 +350,7 @@ protected:
   void emitCommonHeader(bool UseOffsets, dwarf::UnitType UT);
 
   bool shouldPlaceInUnitDIE(const DISubprogram *SP, bool Minimal) {
-    // Add subprogram declarations to the CU die directly.
+    // Add subprogram definitions to the CU die directly.
     return Minimal || SP->getDeclaration();
   }
 

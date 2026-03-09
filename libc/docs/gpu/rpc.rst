@@ -117,7 +117,6 @@ done. It can be omitted if asynchronous execution is desired.
       buffer->data[0] = reinterpret_cast<uintptr_t>(fn);
     });
     port.recv([](rpc::Buffer *, uint32_t) {});
-    port.close();
   }
 
 Server Example
@@ -162,7 +161,6 @@ data.
       port->recv([](rpc::Buffer *) {});
       break;
     }
-    port->close();
   }
 
 Function Dispatch
@@ -199,7 +197,6 @@ than submitting asynchronously.
       port->recv([](rpc::Buffer *) {});
       break;
     }
-    port->close();
   }
 
 
@@ -275,7 +272,6 @@ but the following example shows how it can be used by a standard user.
 
       // Only available in-tree from the 'libc' sources.
       handle_libc_opcodes(*port, warp_size);
-      port->close();
     } while (cudaStreamQuery(stream) == cudaErrorNotReady);
   }
 

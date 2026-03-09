@@ -296,6 +296,10 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   if constexpr (std::is_same_v<T, FixedPoint>)
     return handleFixedPointOverflow(S, OpPC, Result);
 
+  // If wrapping is enabled, the new value is fine.
+  if (S.Current->getExpr(OpPC)->getType().isWrapType())
+    return true;
+
   // Slow path - compute the result using another bit of precision.
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
 
@@ -708,6 +712,9 @@ bool Neg(InterpState &S, CodePtr OpPC) {
            "don't expect other types to fail at constexpr negation");
     S.Stk.push<T>(Result);
 
+    if (S.Current->getExpr(OpPC)->getType().isWrapType())
+      return true;
+
     APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
     if (S.checkingForUndefinedBehavior()) {
       const Expr *E = S.Current->getExpr(OpPC);
@@ -775,6 +782,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     }
   }
   assert(CanOverflow);
+
+  if (S.Current->getExpr(OpPC)->getType().isWrapType()) {
+    Ptr.deref<T>() = Result;
+    return true;
+  }
 
   // Something went wrong with the previous operation. Compute the
   // result with another bit of precision.
@@ -3486,8 +3498,8 @@ inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID(),
-                                DynamicAllocator::Form::NonArray);
+  Block *B =
+      Allocator.allocate(Desc, S.EvalID, DynamicAllocator::Form::NonArray);
   assert(B);
   S.Stk.push<Pointer>(B);
   return true;
@@ -3522,9 +3534,8 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B =
-      Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
-                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
+  Block *B = Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
+                                S.EvalID, DynamicAllocator::Form::Array);
   assert(B);
   if (NumElements.isZero())
     S.Stk.push<Pointer>(B);
@@ -3558,9 +3569,8 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B =
-      Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
-                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
+  Block *B = Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
+                                S.EvalID, DynamicAllocator::Form::Array);
   assert(B);
   if (NumElements.isZero())
     S.Stk.push<Pointer>(B);

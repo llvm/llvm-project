@@ -1417,6 +1417,11 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       ConsumeToken();
     }
 
+    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
+    // above.
+    if (HasParentheses)
+      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
+
     SourceLocation FunLocalRangeEnd = DeclEndLoc;
 
     // Parse trailing-return-type[opt].
@@ -1444,11 +1449,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       /*DeclsInPrototype=*/{}, LParenLoc, FunLocalRangeEnd, D,
                       TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attributes), DeclEndLoc);
-
-    // We have called ActOnLambdaClosureQualifiers for parentheses-less cases
-    // above.
-    if (HasParentheses)
-      Actions.ActOnLambdaClosureQualifiers(Intro, MutableLoc);
 
     if (HasParentheses && Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);
