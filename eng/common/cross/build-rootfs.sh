@@ -9,6 +9,7 @@ usage()
     echo "CodeName - optional, Code name for Linux, can be: xenial(default), zesty, bionic, alpine"
     echo "                               for alpine can be specified with version: alpineX.YY or alpineedge"
     echo "                               for FreeBSD can be: freebsd13, freebsd14"
+    echo "                               for OpenBSD can be: openbsd"
     echo "                               for illumos can be: illumos"
     echo "                               for Haiku can be: haiku."
     echo "lldbx.y - optional, LLDB version, can be: lldb3.9(default), lldb4.0, lldb5.0, lldb6.0 no-lldb. Ignored for alpine and FreeBSD"
@@ -27,6 +28,8 @@ __BuildArch=arm
 __AlpineArch=armv7
 __FreeBSDArch=arm
 __FreeBSDMachineArch=armv7
+__OpenBSDArch=arm
+__OpenBSDMachineArch=armv7
 __IllumosArch=arm7
 __HaikuArch=arm
 __QEMUArch=arm
@@ -81,6 +84,12 @@ __FreeBSDPackages+=" libinotify"
 __FreeBSDPackages+=" openssl"
 __FreeBSDPackages+=" krb5"
 __FreeBSDPackages+=" terminfo-db"
+
+__OpenBSDVersion="7.8"
+__OpenBSDPackages+=" icu4c"
+__OpenBSDPackages+=" inotify-tools"
+__OpenBSDPackages+=" openssl"
+__OpenBSDPackages+=" heimdal-libs"
 
 __IllumosPackages="icu"
 __IllumosPackages+=" mit-krb5"
@@ -160,6 +169,8 @@ while :; do
             __QEMUArch=aarch64
             __FreeBSDArch=arm64
             __FreeBSDMachineArch=aarch64
+            __OpenBSDArch=arm64
+            __OpenBSDMachineArch=aarch64
             ;;
         armel)
             __BuildArch=armel
@@ -235,6 +246,8 @@ while :; do
             __UbuntuArch=amd64
             __FreeBSDArch=amd64
             __FreeBSDMachineArch=amd64
+            __OpenBSDArch=amd64
+            __OpenBSDMachineArch=amd64
             __illumosArch=x86_64
             __HaikuArch=x86_64
             __UbuntuRepo="http://archive.ubuntu.com/ubuntu/"
@@ -383,6 +396,10 @@ while :; do
             __CodeName=freebsd
             __FreeBSDBase="14.3-RELEASE"
             __FreeBSDABI="14"
+            __SkipUnmount=1
+            ;;
+        openbsd)
+            __CodeName=openbsd
             __SkipUnmount=1
             ;;
         illumos)
@@ -593,6 +610,41 @@ elif [[ "$__CodeName" == "freebsd" ]]; then
     INSTALL_AS_USER=$(whoami) "$__RootfsDir"/host/sbin/pkg -r "$__RootfsDir" -C "$__RootfsDir"/usr/local/etc/pkg.conf update
     # shellcheck disable=SC2086
     INSTALL_AS_USER=$(whoami) "$__RootfsDir"/host/sbin/pkg -r "$__RootfsDir" -C "$__RootfsDir"/usr/local/etc/pkg.conf install --yes $__FreeBSDPackages
+elif [[ "$__CodeName" == "openbsd" ]]; then
+    # determine mirrors
+    OPENBSD_MIRROR="https://cdn.openbsd.org/pub/OpenBSD/$__OpenBSDVersion/$__OpenBSDMachineArch"
+
+    # download base system sets
+    ensureDownloadTool
+
+    BASE_SETS=(base comp)
+    for set in "${BASE_SETS[@]}"; do
+        FILE="${set}${__OpenBSDVersion//./}.tgz"
+        echo "Downloading $FILE..."
+        if [[ "$__hasWget" == 1 ]]; then
+            wget -O- "$OPENBSD_MIRROR/$FILE" | tar -C "$__RootfsDir" -xzpf -
+        else
+            curl -SL "$OPENBSD_MIRROR/$FILE" | tar -C "$__RootfsDir" -xzpf -
+        fi
+    done
+
+    PKG_MIRROR="https://cdn.openbsd.org/pub/OpenBSD/${__OpenBSDVersion}/packages/${__OpenBSDMachineArch}"
+
+    echo "Installing packages into sysroot..."
+
+    for pkg in $__OpenBSDPackages; do
+        echo "Resolving package filename for $pkg..."
+
+        if [[ "$__hasWget" == 1 ]]; then
+            PKG_FILE=$(wget -qO- "$PKG_MIRROR/" | grep -Eo "${pkg}-[0-9][^\" ]*\.tgz" | head -n1)
+            [[ -z "$PKG_FILE" ]] && { echo "ERROR: Package $pkg not found"; exit 1; }
+            wget -O- "$PKG_MIRROR/$PKG_FILE" | tar -C "$__RootfsDir" -xzpf -
+        else
+            PKG_FILE=$(curl -s "$PKG_MIRROR/" | grep -Eo "${pkg}-[0-9][^\" ]*\.tgz" | head -n1)
+            [[ -z "$PKG_FILE" ]] && { echo "ERROR: Package $pkg not found"; exit 1; }
+            curl -SL "$PKG_MIRROR/$PKG_FILE" | tar -C "$__RootfsDir" -xzpf -
+        fi
+    done
 elif [[ "$__CodeName" == "illumos" ]]; then
     mkdir "$__RootfsDir/tmp"
     pushd "$__RootfsDir/tmp"
