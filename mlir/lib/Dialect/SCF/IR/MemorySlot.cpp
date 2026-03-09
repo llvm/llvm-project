@@ -21,11 +21,11 @@ using namespace mlir::scf;
 template <typename TermTy>
 static void
 updateTerminator(Block *block, Value defaultReachingDef,
-                 llvm::DenseMap<Block *, Value> &reachingAtBlockEnd) {
+                 const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd) {
   Operation *terminator = block->getTerminator();
   if (!isa<TermTy>(terminator))
     return;
-  Value blockReachingDef = reachingAtBlockEnd[block];
+  Value blockReachingDef = reachingAtBlockEnd.lookup(block);
   if (!blockReachingDef) {
     // Block is dead code or the region is not using the slot, so we use the
     // default provided reaching definition.
@@ -72,7 +72,8 @@ void ExecuteRegionOp::setupPromotion(
 
 Value ExecuteRegionOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   if (!hasValueStores)
     return reachingDef;
 
@@ -115,7 +116,8 @@ void ForOp::setupPromotion(
 
 Value ForOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   if (!hasValueStores)
     return reachingDef;
 
@@ -152,7 +154,8 @@ void ForallOp::setupPromotion(
 
 Value ForallOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   assert(!hasValueStores && "ForallOp does not support stores");
   return reachingDef;
 }
@@ -175,7 +178,8 @@ void IfOp::setupPromotion(
 
 Value IfOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   if (!hasValueStores)
     return reachingDef;
 
@@ -221,7 +225,8 @@ void IndexSwitchOp::setupPromotion(
 
 Value IndexSwitchOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   if (!hasValueStores)
     return reachingDef;
 
@@ -263,7 +268,8 @@ void ParallelOp::setupPromotion(
 
 Value ParallelOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   assert(!hasValueStores && "ParallelOp does not support stores");
   return reachingDef;
 }
@@ -289,7 +295,8 @@ void ReduceOp::setupPromotion(
 
 Value ReduceOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   assert(!hasValueStores && "ReduceOp does not support stores");
   return reachingDef;
 }
@@ -325,7 +332,8 @@ void WhileOp::setupPromotion(
 
 Value WhileOp::finalizePromotion(
     const MemorySlot &slot, Value reachingDef, bool hasValueStores,
-    llvm::DenseMap<Block *, Value> &reachingAtBlockEnd, OpBuilder &builder) {
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
   if (!hasValueStores)
     return reachingDef;
 

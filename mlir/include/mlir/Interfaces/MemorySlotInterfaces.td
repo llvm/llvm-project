@@ -343,7 +343,7 @@ def PromotableRegionOpInterface
         "const ::mlir::MemorySlot &":$slot,
         "::mlir::Value":$entryReachingDef,
         "bool":$hasValueStores,
-        "::llvm::DenseMap<::mlir::Block *, ::mlir::Value> &":$reachingAtBlockEnd,
+        "const ::llvm::DenseMap<::mlir::Block *, ::mlir::Value> &":$reachingAtBlockEnd,
         "::mlir::OpBuilder &":$builder
       )
     >,

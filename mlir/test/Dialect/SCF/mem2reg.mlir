@@ -296,6 +296,75 @@ func.func @execute_region_cfg_with_store(%cond0: i1, %cond1: i1) -> i32 {
 
 // -----
 
+// Check promotion through an execute_region with multiple yield terminators
+// having different reaching definitions.
+
+// CHECK-LABEL: func.func @execute_region_multiple_yields
+// CHECK-SAME: (%[[COND:.*]]: i1)
+// CHECK-DAG: %[[C7:.*]] = arith.constant 7 : i32
+// CHECK-DAG: %[[C9:.*]] = arith.constant 9 : i32
+// CHECK: %[[RES:.*]] = scf.execute_region -> i32 {
+// CHECK:   cf.cond_br %[[COND]], ^[[BB1:.*]], ^[[BB2:.*]]
+// CHECK: ^[[BB1]]:
+// CHECK:   scf.yield %[[C7]] : i32
+// CHECK: ^[[BB2]]:
+// CHECK:   scf.yield %[[C9]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @execute_region_multiple_yields(%cond: i1) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %c7 = arith.constant 7 : i32
+  %c9 = arith.constant 9 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.execute_region {
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    memref.store %c7, %alloca[] : memref<i32>
+    scf.yield
+  ^bb2:
+    memref.store %c9, %alloca[] : memref<i32>
+    scf.yield
+  }
+  %load = memref.load %alloca[] : memref<i32>
+  return %load : i32
+}
+
+// -----
+
+// Check promotion when both yield terminators share the same reaching
+// definition from a store in the entry block.
+
+// CHECK-LABEL: func.func @execute_region_same_reaching_def
+// CHECK-SAME: (%[[COND:.*]]: i1)
+// CHECK: %[[C7:.*]] = arith.constant 7 : i32
+// CHECK: %[[RES:.*]] = scf.execute_region -> i32 {
+// CHECK:   cf.cond_br %[[COND]], ^[[BB1:.*]], ^[[BB2:.*]]
+// CHECK: ^[[BB1]]:
+// CHECK:   scf.yield %[[C7]] : i32
+// CHECK: ^[[BB2]]:
+// CHECK:   scf.yield %[[C7]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @execute_region_same_reaching_def(%cond: i1) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %c7 = arith.constant 7 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.execute_region {
+    memref.store %c7, %alloca[] : memref<i32>
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    scf.yield
+  ^bb2:
+    scf.yield
+  }
+  %load = memref.load %alloca[] : memref<i32>
+  return %load : i32
+}
+
+// -----
+
 // Check promotion through a for loop with a load and store in the body.
 
 // CHECK-LABEL: func.func @for_load_and_store

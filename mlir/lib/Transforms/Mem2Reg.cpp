@@ -515,7 +515,6 @@ MemorySlotPromotionAnalyzer::computeInfo() {
 }
 
 Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
-  llvm::SmallMapVector<Region *, Value, 2> regionsToProcess;
   SmallVector<Operation *> blockOps;
   for (Operation &op : block->getOperations())
     blockOps.push_back(&op);
@@ -558,7 +557,7 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
       }
 
       if (needsPromotion) {
-        regionsToProcess.clear();
+        llvm::SmallMapVector<Region *, Value, 2> regionsToProcess;
 
         // To not expose default value creation to the interfaces, if we have
         // no reaching definition by now, we set it to the default value.
@@ -578,12 +577,8 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
 #endif // NDEBUG
 
         for (auto &[region, reachingDef] : regionsToProcess) {
-#ifndef NDEBUG
-          Region *regionCapture = region;
-          assert(llvm::any_of(op->getRegions(),
-                              [&](Region &r) { return &r == regionCapture; }) &&
+          assert(region->getParentOp() == op &&
                  "region must be part of the operation");
-#endif // NDEBUG
           if (!info.regionsToPromote.contains(region))
             continue;
           promoteInRegion(region, reachingDef);
