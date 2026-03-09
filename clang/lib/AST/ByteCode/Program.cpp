@@ -483,5 +483,15 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                               IsTemporary, IsMutable);
   }
 
+  // Same with constant matrix types.
+  if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+    OptPrimType ElemTy = Ctx.classify(MT->getElementType());
+    if (!ElemTy)
+      return nullptr;
+
+    return allocateDescriptor(D, *ElemTy, MDSize, MT->getNumElementsFlattened(),
+                              IsConst, IsTemporary, IsMutable);
+  }
+
   return nullptr;
 }

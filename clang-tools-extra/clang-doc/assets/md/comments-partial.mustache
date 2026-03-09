@@ -1,0 +1,23 @@
+{{#HasBriefComments}}
+{{#BriefComments}}
+**brief**{{#.}}{{TextComment}}{{/.}}
+{{/BriefComments}}
+{{/HasBriefComments}}
+
+{{#ParagraphComments}}
+{{#.}}{{TextComment}}{{/.}}
+{{/ParagraphComments}}
+
+{{#HasParamComments}}
+{{#ParamComments}}
+**{{ParamName}}** {{#Children}}{{TextComment}}{{/Children}}
+{{/ParamComments}}
+{{/HasParamComments}}
+
+{{#ReturnComments}}
+**return** {{#.}}{{TextComment}}{{/.}}
+{{/ReturnComments}}
+
+{{#ThrowsComments}}
+**throw** {{#Children}}{{TextComment}}{{/Children}}
+{{/ThrowsComments}}

@@ -7694,6 +7694,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fmax_tokens_EQ);
 
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_extract_summaries);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_tu_summary_file);
+
   // Handle serialized diagnostics.
   if (Arg *A = Args.getLastArg(options::OPT__serialize_diags)) {
     CmdArgs.push_back("-serialize-diagnostic-file");
@@ -9335,6 +9338,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_save_temps_EQ,
       OPT_mcode_object_version_EQ,
       OPT_load,
+      OPT_no_canonical_prefixes,
       OPT_fno_lto,
       OPT_flto,
       OPT_flto_partitions_EQ,
@@ -9561,6 +9565,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
   }
+
+  // Propagate -no-canonical-prefixes.
+  if (Args.hasArg(options::OPT_no_canonical_prefixes))
+    CmdArgs.push_back("--no-canonical-prefixes");
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));

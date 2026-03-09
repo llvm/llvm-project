@@ -7,15 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -828,4 +832,220 @@ brfalse: ; preds = %brtrue, %entry
   DTU.splitCriticalEdge(BBEntry, BBFalse, SplitB);
   DominatorTree NewDT(*F);
   ASSERT_FALSE(NewDT.compare(DTU.getDomTree()));
+}
+
+TEST(DomTreeUpdater, BlockStillReachable) {
+  StringRef ModuleString = R"(
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @the_caller(i1 %arg) personality ptr null {
+bb:
+  br i1 %arg, label %bb9, label %bb1
+
+bb1:                                              ; preds = %bb
+  br i1 %arg, label %bb2, label %bb10
+
+bb2:                                              ; preds = %bb1
+  br i1 %arg, label %bb3, label %bb6
+
+bb3:                                              ; preds = %bb2
+  invoke void @the_callee(ptr null)
+          to label %bb4 unwind label %bb5
+
+bb4:                                              ; preds = %bb3
+  unreachable
+
+bb5:                                              ; preds = %bb3
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  br label %bb8
+
+bb6:                                              ; preds = %bb2
+  br label %bb8
+
+bb8:                                              ; preds = %bb6, %bb5
+  br label %bb12
+
+bb9:                                              ; preds = %bb
+  ret i32 0
+
+bb10:                                             ; preds = %bb1
+  br label %bb12
+
+bb12:                                             ; preds = %bb10, %bb8
+  resume { ptr, i32 } zeroinitializer
+}
+
+
+define void @the_callee(ptr %arg) alwaysinline personality ptr null {
+bb:
+  invoke void @foo(ptr null, ptr null)
+          to label %bb1 unwind label %bb2
+
+bb1:                                              ; preds = %bb
+  unreachable
+
+bb2:                                              ; preds = %bb
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } zeroinitializer
+}
+
+declare void @foo(ptr, ptr)
+
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *Caller = M->getFunction("the_caller");
+  Function *Callee = M->getFunction("the_callee");
+  ASSERT_NE(Caller, nullptr);
+  ASSERT_NE(Callee, nullptr);
+  InvokeInst *CallWombat1 = [&]() -> InvokeInst * {
+    for (auto &BB : *Caller)
+      for (auto &I : BB)
+        if (auto *Inv = dyn_cast<InvokeInst>(&I))
+          if (Inv->getCalledFunction() && (Inv->getCalledFunction() == Callee))
+            return Inv;
+    return nullptr;
+  }();
+  ASSERT_NE(CallWombat1, nullptr);
+  DominatorTree DT(*Caller);
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
+
+  InlineFunctionInfo IFI;
+  InlineFunction(*CallWombat1, IFI);
+
+  auto GetBBByName = [&](StringRef Name) -> BasicBlock * {
+    for (auto &BB : *Caller)
+      if (BB.getName() == Name)
+        return &BB;
+    return nullptr;
+  };
+  SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb1.i")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb2.i")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb4")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb5")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb5"), GetBBByName("bb8")});
+
+  DT.applyUpdates(DomTreeUpdates);
+
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
+}
+
+TEST(DomTreeUpdater, BlockStillReachableStepByStep) {
+  StringRef ModuleString = R"(
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @the_caller(i1 %arg) personality ptr null {
+bb:
+  br i1 %arg, label %bb9, label %bb1
+
+bb1:                                              ; preds = %bb
+  br i1 %arg, label %bb2, label %bb10
+
+bb2:                                              ; preds = %bb1
+  br i1 %arg, label %bb3, label %bb6
+
+bb3:                                              ; preds = %bb2
+  invoke void @the_callee(ptr null)
+          to label %bb4 unwind label %bb5
+
+bb4:                                              ; preds = %bb3
+  unreachable
+
+bb5:                                              ; preds = %bb3
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  br label %bb8
+
+bb6:                                              ; preds = %bb2
+  br label %bb8
+
+bb8:                                              ; preds = %bb6, %bb5
+  br label %bb12
+
+bb9:                                              ; preds = %bb
+  ret i32 0
+
+bb10:                                             ; preds = %bb1
+  br label %bb12
+
+bb12:                                             ; preds = %bb10, %bb8
+  resume { ptr, i32 } zeroinitializer
+}
+
+
+define void @the_callee(ptr %arg) alwaysinline personality ptr null {
+bb:
+  invoke void @foo(ptr null, ptr null)
+          to label %bb1 unwind label %bb2
+
+bb1:                                              ; preds = %bb
+  unreachable
+
+bb2:                                              ; preds = %bb
+  %landingpad = landingpad { ptr, i32 }
+          cleanup
+  resume { ptr, i32 } zeroinitializer
+}
+
+declare void @foo(ptr, ptr)
+
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *Caller = M->getFunction("the_caller");
+  Function *Callee = M->getFunction("the_callee");
+  ASSERT_NE(Caller, nullptr);
+  ASSERT_NE(Callee, nullptr);
+  InvokeInst *CallWombat1 = [&]() -> InvokeInst * {
+    for (auto &BB : *Caller)
+      for (auto &I : BB)
+        if (auto *Inv = dyn_cast<InvokeInst>(&I))
+          if (Inv->getCalledFunction() && (Inv->getCalledFunction() == Callee))
+            return Inv;
+    return nullptr;
+  }();
+  ASSERT_NE(CallWombat1, nullptr);
+  DominatorTree DT(*Caller);
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
+
+  InlineFunctionInfo IFI;
+  InlineFunction(*CallWombat1, IFI);
+
+  auto GetBBByName = [&](StringRef Name) -> BasicBlock * {
+    for (auto &BB : *Caller)
+      if (BB.getName() == Name)
+        return &BB;
+    return nullptr;
+  };
+  SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb1.i")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Insert,
+                            GetBBByName("bb3"), GetBBByName("bb2.i")});
+
+  DT.applyUpdates(DomTreeUpdates);
+
+  ASSERT_NE(DT.getNode(GetBBByName("bb5.body")), nullptr);
+
+  DomTreeUpdates.clear();
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb4")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb3"), GetBBByName("bb5")});
+  DomTreeUpdates.push_back({DominatorTree::UpdateKind::Delete,
+                            GetBBByName("bb5"), GetBBByName("bb8")});
+
+  DT.applyUpdates(DomTreeUpdates);
+
+  ASSERT_TRUE(DT.verify(DominatorTree::VerificationLevel::Full));
 }

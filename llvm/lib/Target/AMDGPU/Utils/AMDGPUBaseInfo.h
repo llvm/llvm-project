@@ -217,9 +217,18 @@ public:
   void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
 
+  /// Write string representation to \p OS
+  void print(raw_ostream &OS) const;
+
   /// \returns String representation of an object.
   std::string toString() const;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const AMDGPUTargetID &TargetID) {
+  TargetID.print(OS);
+  return OS;
+}
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
