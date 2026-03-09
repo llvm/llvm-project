@@ -411,7 +411,7 @@ Error offloading::intel::containerizeOpenMPSPIRVImage(
   MapVector<StringRef, StringRef> MetaData;
   MetaData["version"] = "1.0";
   MetaData["format"] = "spirv";
-  MetaData["triple"] = "spirv64-openmp";
+  MetaData["triple"] = "spirv64-intel";
   if (!CompileOpts.empty())
     MetaData["compile-opts"] = CompileOpts;
   if (!LinkOpts.empty())
