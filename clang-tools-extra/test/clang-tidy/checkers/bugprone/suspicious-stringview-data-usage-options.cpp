@@ -2,7 +2,7 @@
 // RUN:   -config="{CheckOptions: { \
 // RUN:     bugprone-suspicious-stringview-data-usage.StringViewTypes: '::custom::StrView', \
 // RUN:     bugprone-suspicious-stringview-data-usage.AllowedCallees: '::safe_func;SafeClass' \
-// RUN:   }}" -- -isystem %clang_tidy_headers
+// RUN:   }}"
 #include <string>
 
 namespace custom {
