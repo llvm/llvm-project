@@ -243,8 +243,7 @@ void ExecutionPartIterator::step() {
     } else if (auto *loop{GetDoConstruct(*where)}) {
       stack_.emplace_back(std::get<Block>(loop->t), &*where);
     } else {
-      stack_.back().range =
-          IteratorRange(std::next(where), stack_.back().range.end());
+      ++stack_.back().location.at;
     }
     adjust();
   }
@@ -254,8 +253,7 @@ void ExecutionPartIterator::next() {
   // Advance the iterator to the next legal position. If the current
   // position is a DO-loop or a loop construct, step over it.
   if (valid()) {
-    stack_.back().range =
-        IteratorRange(std::next(at()), stack_.back().range.end());
+    ++stack_.back().location.at;
     adjust();
   }
 }
@@ -264,11 +262,10 @@ void ExecutionPartIterator::adjust() {
   // If the iterator is not at a legal location, keep advancing it until
   // it lands at a legal location or becomes invalid.
   while (valid()) {
-    if (stack_.back().range.empty()) {
+    if (stack_.back().location.atEnd()) {
       stack_.pop_back();
       if (valid()) {
-        stack_.back().range =
-            IteratorRange(std::next(at()), stack_.back().range.end());
+        ++stack_.back().location.at;
       }
     } else if (auto *block{GetFortranBlockConstruct(*at())}) {
       stack_.emplace_back(std::get<Block>(block->t), &*at());

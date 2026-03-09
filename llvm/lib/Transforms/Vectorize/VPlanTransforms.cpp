@@ -2246,6 +2246,15 @@ static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
       VPValue *Trunc = VPBuilder(&R).createScalarZExtOrTrunc(
           AVL, Type::getInt32Ty(Plan.getContext()), AVLSCEV->getType(),
           R.getDebugLoc());
+      if (Trunc != AVL) {
+        auto *TruncR = cast<VPSingleDefRecipe>(Trunc);
+        const DataLayout &DL =
+            Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+        VPTypeAnalysis TypeInfo(Plan);
+        if (VPValue *Folded =
+                tryToFoldLiveIns(*TruncR, TruncR->operands(), DL, TypeInfo))
+          Trunc = Folded;
+      }
       R.getVPSingleValue()->replaceAllUsesWith(Trunc);
       return true;
     }
@@ -5669,6 +5678,10 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
     if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
                      PhiR->getRecurrenceKind()))
+      continue;
+
+    Type *PhiTy = VPTypeAnalysis(Plan).inferScalarType(PhiR);
+    if (PhiTy->isPointerTy() || PhiTy->isFloatingPointTy())
       continue;
 
     // If there's a header mask, the backedge select will not be the find-last
