@@ -110,11 +110,10 @@ _LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, fo
 #        endif // _LIBCPP_HAS_EXCEPTIONS
     ostream::sentry __s(__os);
     if (__s) {
-#        if _LIBCPP_HAS_WIDE_CHARACTERS
-      __print::__vprint_unicode_windows(__file, __fmt, __args, __write_nl);
-#        else
-#          error "Windows builds with wchar_t disabled are not supported."
-#        endif
+      auto __result = std::vformat(__fmt, __args);
+      if (__write_nl)
+        __result.push_back('\n');
+      __print::__output_unicode_windows(__file, __result);
     }
 
 #        if _LIBCPP_HAS_EXCEPTIONS
