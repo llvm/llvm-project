@@ -1543,11 +1543,6 @@ void AccessAnalysis::buildDependenceSets() {
   // only need to check for potential pointer dependencies within each alias
   // set.
   for (const auto &AS : AST) {
-    // Note that both the alias-set tracker and the alias sets themselves used
-    // ordered collections internally and so the iteration order here is
-    // deterministic.
-    auto ASPointers = AS.getPointers();
-
     bool AliasSetHasWrite = false;
 
     // Map of (pointer to underlying objects, accessed address space) to last
@@ -1561,20 +1556,21 @@ void AccessAnalysis::buildDependenceSets() {
 
     // Iterate over each alias set twice, once to process read/write pointers,
     // and then to process read-only pointers.
-    for (int SetIteration = 0; SetIteration < 2; ++SetIteration) {
-      bool UseDeferred = SetIteration > 0;
+
+    auto ProcessAccesses = [&](bool UseDeferred) {
       PtrAccessMap &S = UseDeferred ? DeferredAccesses : Accesses;
 
-      for (const Value *ConstPtr : ASPointers) {
+      // Note that both the alias-set tracker and the alias sets themselves used
+      // ordered collections internally and so the iteration order here is
+      // deterministic.
+      for (const Value *ConstPtr : AS.getPointers()) {
         Value *Ptr = const_cast<Value *>(ConstPtr);
 
         // For a single memory access in AliasSetTracker, Accesses may contain
         // both read and write, and they both need to be handled for CheckDeps.
-        for (const auto &[AC, _] : S) {
-          if (AC.getPointer() != Ptr)
+        for (auto [AccessPtr, IsWrite] : S.keys()) {
+          if (AccessPtr != Ptr)
             continue;
-
-          bool IsWrite = AC.getInt();
 
           // If we're using the deferred access set, then it contains only
           // reads.
@@ -1643,7 +1639,10 @@ void AccessAnalysis::buildDependenceSets() {
           }
         }
       }
-    }
+    };
+
+    ProcessAccesses(false);
+    ProcessAccesses(true);
   }
 }
 
