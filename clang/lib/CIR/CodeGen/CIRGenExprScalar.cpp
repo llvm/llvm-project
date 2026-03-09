@@ -700,8 +700,9 @@ public:
       if (mlir::isa<cir::SingleType, cir::DoubleType>(value.getType())) {
         // Create the inc/dec operation.
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        assert(kind == cir::UnaryOpKind::Inc ||
-               kind == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind");
+        assert(
+            (kind == cir::UnaryOpKind::Inc || kind == cir::UnaryOpKind::Dec) &&
+            "Invalid UnaryOp kind");
         value = emitUnaryOp(e, kind, value);
       } else {
         cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fp type");
@@ -733,8 +734,8 @@ public:
   mlir::Value emitIncDecConsiderOverflowBehavior(const UnaryOperator *e,
                                                  mlir::Value inVal,
                                                  cir::UnaryOpKind kind) {
-    assert(kind == cir::UnaryOpKind::Inc ||
-           kind == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind");
+    assert((kind == cir::UnaryOpKind::Inc || kind == cir::UnaryOpKind::Dec) &&
+           "Invalid UnaryOp kind");
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
       return emitUnaryOp(e, kind, inVal, /*nsw=*/false);
@@ -1192,16 +1193,25 @@ public:
             mlir::isa<cir::PointerType>(rhs.getType())) {
           cgf.cgm.errorNYI(loc, "strict vtable pointer comparisons");
         }
-
-        cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
         result = builder.createCompare(loc, kind, lhs, rhs);
       }
     } else {
       // Complex Comparison: can only be an equality comparison.
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
-
       BinOpInfo boInfo = emitBinOps(e);
-      result = cir::CmpOp::create(builder, loc, kind, boInfo.lhs, boInfo.rhs);
+      mlir::Value lhs = boInfo.lhs;
+      if (!lhsTy->isAnyComplexType()) {
+        lhs = builder.createComplexCreate(
+            loc, lhs, builder.getNullValue(lhs.getType(), loc));
+      }
+
+      mlir::Value rhs = boInfo.rhs;
+      if (!rhsTy->isAnyComplexType()) {
+        rhs = builder.createComplexCreate(
+            loc, rhs, builder.getNullValue(rhs.getType(), loc));
+      }
+
+      result = builder.createCompare(loc, kind, lhs, rhs);
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
@@ -2515,9 +2525,9 @@ mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
 
 mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
                                              QualType promotionTy) {
-  assert(e->getOpcode() == clang::UO_Real ||
-         e->getOpcode() == clang::UO_Imag &&
-             "Invalid UnaryOp kind for ComplexType Real or Imag");
+  assert(
+      (e->getOpcode() == clang::UO_Real || e->getOpcode() == clang::UO_Imag) &&
+      "Invalid UnaryOp kind for ComplexType Real or Imag");
 
   Expr *op = e->getSubExpr();
   mlir::Location loc = cgf.getLoc(e->getExprLoc());
@@ -2612,12 +2622,12 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
       }
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
-    cgf.getCIRGenModule().errorNYI(
-        e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
-        e->getStmtClassName());
-    return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
-                               llvm::APSInt(llvm::APInt(64, 1), true)));
+    clang::CharUnits::QuantityType alignment =
+        cgf.getContext()
+            .toCharUnitsFromBits(cgf.getContext().getOpenMPDefaultSimdAlign(
+                e->getTypeOfArgument()->getPointeeType()))
+            .getQuantity();
+    return builder.getConstantInt(loc, cgf.cgm.sizeTy, alignment);
   } else if (e->getKind() == UETT_VectorElements) {
     auto vecTy = cast<cir::VectorType>(convertType(e->getTypeOfArgument()));
     if (vecTy.getIsScalable()) {

@@ -794,18 +794,20 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       if (isTypeFoldingSupported(Def->getOpcode()) &&
           Def->getOpcode() != TargetOpcode::G_CONSTANT &&
           Def->getOpcode() != TargetOpcode::G_FCONSTANT) {
-        bool Res = false;
         if (Def->getOpcode() == TargetOpcode::G_SELECT) {
           Register SelectDstReg = Def->getOperand(0).getReg();
-          Res = selectSelect(SelectDstReg, GR.getSPIRVTypeForVReg(SelectDstReg),
-                             *Def);
+          bool SuccessToSelectSelect [[maybe_unused]] = selectSelect(
+              SelectDstReg, GR.getSPIRVTypeForVReg(SelectDstReg), *Def);
+          assert(SuccessToSelectSelect);
           GR.invalidateMachineInstr(Def);
-          Def->removeFromParent();
+          Def->eraseFromParent();
           MRI->replaceRegWith(DstReg, SelectDstReg);
           GR.invalidateMachineInstr(&I);
-          I.removeFromParent();
-        } else
-          Res = selectImpl(I, *CoverageInfo);
+          I.eraseFromParent();
+          return true;
+        }
+
+        bool Res = selectImpl(I, *CoverageInfo);
         LLVM_DEBUG({
           if (!Res && Def->getOpcode() != TargetOpcode::G_CONSTANT) {
             dbgs() << "Unexpected pattern in ASSIGN_TYPE.\nInstruction: ";
@@ -822,7 +824,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
       GR.invalidateMachineInstr(&I);
-      I.removeFromParent();
+      I.eraseFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
       // Make all vregs 64 bits (for SPIR-V IDs).
@@ -837,6 +839,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     // erase it
     LLVM_DEBUG(dbgs() << "Instruction is folded and dead.\n");
     removeDeadInstruction(I);
+    DeadMIs.erase(&I);
     return true;
   }
 
@@ -5407,7 +5410,6 @@ bool SPIRVInstructionSelector::selectGlobalValue(
     MachineBasicBlock &BB = *I.getParent();
     Register NewReg = GR.find(ConstVal, GR.CurMF);
     if (!NewReg.isValid()) {
-      Register NewReg = ResVReg;
       const Function *GVFun =
           STI.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
               ? dyn_cast<Function>(GV)
@@ -5425,6 +5427,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         Register FuncVReg =
             MRI->createGenericVirtualRegister(GR.getRegType(ResType));
         MRI->setRegClass(FuncVReg, &SPIRV::pIDRegClass);
+        GR.assignSPIRVTypeToVReg(ResType, FuncVReg, *GR.CurMF);
         MachineInstrBuilder MIB1 =
             BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUndef))
                 .addDef(FuncVReg)
@@ -5432,19 +5435,20 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         MachineInstrBuilder MIB2 =
             BuildMI(BB, I, I.getDebugLoc(),
                     TII.get(SPIRV::OpConstantFunctionPointerINTEL))
-                .addDef(NewReg)
+                .addDef(ResVReg)
                 .addUse(ResTypeReg)
                 .addUse(FuncVReg);
         GR.add(ConstVal, MIB2);
         // mapping the function pointer to the used Function
         GR.recordFunctionPointer(&MIB2.getInstr()->getOperand(2), GVFun);
+        GR.assignSPIRVTypeToVReg(ResType, ResVReg, *GR.CurMF);
         MIB1.constrainAllUses(TII, TRI, RBI);
         MIB2.constrainAllUses(TII, TRI, RBI);
         return true;
       }
       MachineInstrBuilder MIB3 =
           BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
-              .addDef(NewReg)
+              .addDef(ResVReg)
               .addUse(GR.getSPIRVTypeID(ResType));
       GR.add(ConstVal, MIB3);
       MIB3.constrainAllUses(TII, TRI, RBI);

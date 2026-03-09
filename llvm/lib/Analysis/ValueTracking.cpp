@@ -5058,6 +5058,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     return;
   }
 
+  if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
+    // TODO: Handle complex aggregates
+    Known.KnownFPClasses = fcNone;
+    for (const Use &Op : CA->operands()) {
+      auto *CFP = dyn_cast<ConstantFP>(Op.get());
+      if (!CFP) {
+        Known = KnownFPClass();
+        return;
+      }
+
+      Known |= CFP->getValueAPF().classify();
+    }
+
+    return;
+  }
+
   FPClassTest KnownNotFromFlags = fcNone;
   if (const auto *CB = dyn_cast<CallBase>(V))
     KnownNotFromFlags |= CB->getRetNoFPClass();
@@ -5978,8 +5994,28 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         !Src->getType()->isIntOrIntVectorTy())
       break;
 
-    const Type *Ty = Op->getType()->getScalarType();
-    KnownBits Bits(Ty->getScalarSizeInBits());
+    const Type *Ty = Op->getType();
+
+    Value *CastLHS, *CastRHS;
+
+    // Match bitcast(umax(bitcast(a), bitcast(b)))
+    if (match(Src, m_c_MaxOrMin(m_BitCast(m_Value(CastLHS)),
+                                m_BitCast(m_Value(CastRHS)))) &&
+        CastLHS->getType() == Ty && CastRHS->getType() == Ty) {
+      KnownFPClass KnownLHS, KnownRHS;
+      computeKnownFPClass(CastRHS, DemandedElts, InterestedClasses, KnownRHS, Q,
+                          Depth + 1);
+      if (!KnownRHS.isUnknown()) {
+        computeKnownFPClass(CastLHS, DemandedElts, InterestedClasses, KnownLHS,
+                            Q, Depth + 1);
+        Known = KnownLHS | KnownRHS;
+      }
+
+      return;
+    }
+
+    const Type *EltTy = Ty->getScalarType();
+    KnownBits Bits(EltTy->getPrimitiveSizeInBits());
     computeKnownBits(Src, DemandedElts, Bits, Q, Depth + 1);
 
     // Transfer information from the sign bit.
@@ -5988,7 +6024,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     else if (Bits.isNegative())
       Known.signBitMustBeOne();
 
-    if (Ty->isIEEELikeFPTy()) {
+    if (EltTy->isIEEELikeFPTy()) {
       // IEEE floats are NaN when all bits of the exponent plus at least one of
       // the fraction bits are 1. This means:
       //   - If we assume unknown bits are 0 and the value is NaN, it will
@@ -5996,15 +6032,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       //   - If we assume unknown bits are 1 and the value is not NaN, it can
       //     never be NaN
       // Note: They do not hold for x86_fp80 format.
-      if (APFloat(Ty->getFltSemantics(), Bits.One).isNaN())
+      if (APFloat(EltTy->getFltSemantics(), Bits.One).isNaN())
         Known.KnownFPClasses = fcNan;
-      else if (!APFloat(Ty->getFltSemantics(), ~Bits.Zero).isNaN())
+      else if (!APFloat(EltTy->getFltSemantics(), ~Bits.Zero).isNaN())
         Known.knownNot(fcNan);
 
       // Build KnownBits representing Inf and check if it must be equal or
       // unequal to this value.
       auto InfKB = KnownBits::makeConstant(
-          APFloat::getInf(Ty->getFltSemantics()).bitcastToAPInt());
+          APFloat::getInf(EltTy->getFltSemantics()).bitcastToAPInt());
       InfKB.Zero.clearSignBit();
       if (const auto InfResult = KnownBits::eq(Bits, InfKB)) {
         assert(!InfResult.value());
@@ -6016,7 +6052,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // Build KnownBits representing Zero and check if it must be equal or
       // unequal to this value.
       auto ZeroKB = KnownBits::makeConstant(
-          APFloat::getZero(Ty->getFltSemantics()).bitcastToAPInt());
+          APFloat::getZero(EltTy->getFltSemantics()).bitcastToAPInt());
       ZeroKB.Zero.clearSignBit();
       if (const auto ZeroResult = KnownBits::eq(Bits, ZeroKB)) {
         assert(!ZeroResult.value());

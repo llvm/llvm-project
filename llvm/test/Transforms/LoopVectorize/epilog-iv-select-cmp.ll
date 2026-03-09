@@ -454,11 +454,10 @@ define i64 @select_argmin_iv_not_canonical(i64 %num, ptr %src) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i8> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP4]]

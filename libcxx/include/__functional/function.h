@@ -684,7 +684,7 @@ public:
 template <class _Rp, class... _Ap>
 function(_Rp (*)(_Ap...)) -> function<_Rp(_Ap...)>;
 
-template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
+template <class _Fp, class _Stripped = __strip_signature_t<decltype(&_Fp::operator())>>
 function(_Fp) -> function<_Stripped>;
 #  endif // _LIBCPP_STD_VER >= 17
 

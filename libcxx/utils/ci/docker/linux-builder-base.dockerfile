@@ -91,42 +91,42 @@ RUN <<EOF
   sudo locale-gen
 EOF
 
-# Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
-# We also install <latest-2> because we need to support the "latest-1" of the
-# current LLVM release branch, which is effectively the <latest-2> of the
-# tip-of-trunk LLVM. For example, after branching LLVM 14 but before branching
-# LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
-# 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
-# though.
 RUN <<EOF
-  set -e
-  sudo apt-get update
-  wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-  chmod +x /tmp/llvm.sh
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) all  # for CI transitions
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) all  # previous release
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) all  # latest release
-  sudo /tmp/llvm.sh $LLVM_HEAD_VERSION          all  # current ToT
-  sudo rm -rf /var/lib/apt/lists/*
-EOF
+  # Install the most recent GCC as well as the previous version to ease transitions.
+  install_gcc() {
+    sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $1.1.0
+    sudo ln -s /opt/compiler-explorer/gcc-$1.1.0/bin/gcc /usr/bin/gcc-$1
+    sudo ln -s /opt/compiler-explorer/gcc-$1.1.0/bin/g++ /usr/bin/g++-$1
+  }
 
-# Install the most recent GCC, like clang install the previous version as a transition.
-RUN <<EOF
   set -e
   sudo git clone https://github.com/compiler-explorer/infra.git /tmp/ce-infra
   (cd /tmp/ce-infra && sudo make ce)
-  # Current ToT, we do not guarantee any support in our support matrix.
+
+  # GCC trunk needs special handling due to it being a nightly build
   sudo /tmp/ce-infra/bin/ce_install --enable nightly install compilers/c++/nightly/gcc trunk
   sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/gcc /usr/bin/gcc-$GCC_HEAD_VERSION
   sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/g++ /usr/bin/g++-$GCC_HEAD_VERSION
-  # The latest release.
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 1)).1.0
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 1))
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 1))
-  # For CI transitions.
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 2)).1.0
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 2))
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 2))
+
+  install_gcc $((GCC_HEAD_VERSION - 1)) # The latest release. The only supported version.
+  install_gcc $((GCC_HEAD_VERSION - 2)) # This version is not supported by the library anymore, but is used for CI transitions.
+
+  install_clang() {
+    sudo /tmp/ce-infra/bin/ce_install install compilers/c++/clang $1.1.0
+    sudo ln -s /opt/compiler-explorer/clang-$1.1.0/bin/clang   /usr/bin/clang-$1
+    sudo ln -s /opt/compiler-explorer/clang-$1.1.0/bin/clang++ /usr/bin/clang++-$1
+  }
+
+  # Install the various Clang versions we need
+  # Clang trunk needs special handling due to it being a nightly build
+  sudo /tmp/ce-infra/bin/ce_install --enable nightly install compilers/c++/nightly/clang trunk
+  sudo ln -s /opt/compiler-explorer/clang-trunk/bin/clang /usr/bin/clang-$LLVM_HEAD_VERSION
+  sudo ln -s /opt/compiler-explorer/clang-trunk/bin/clang++ /usr/bin/clang++-$LLVM_HEAD_VERSION
+
+  install_clang $((LLVM_HEAD_VERSION - 1)) # Latest release
+  install_clang $((LLVM_HEAD_VERSION - 2)) # Previous release, still supported
+  install_clang $((LLVM_HEAD_VERSION - 3)) # This version is not supported by the library anymore, but is used for CI transitions.
+
   sudo rm -rf /tmp/ce-infra
 EOF
 
