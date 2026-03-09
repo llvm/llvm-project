@@ -26,4 +26,5 @@ add_entrypoint_object(
     iswlower.h
   DEPENDS
     libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
 )

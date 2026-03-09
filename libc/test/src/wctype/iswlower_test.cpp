@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
 #include "src/wctype/iswlower.h"
-
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibciswlower, SimpleTest) {
