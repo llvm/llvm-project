@@ -39,17 +39,17 @@ TEST(BuiltinDialectVersionTest, RejectFutureVersion) {
 
   EXPECT_NE(bytecode, bytecodeWithFutureVersion);
 
-  std::string warning;
+  std::string error;
   ScopedDiagnosticHandler handler(&ctx, [&](Diagnostic &diag) {
-    if (diag.getSeverity() == DiagnosticSeverity::Warning)
-      warning = diag.str();
+    if (diag.getSeverity() == DiagnosticSeverity::Error)
+      error = diag.str();
     return success();
   });
 
   auto parsed =
       parseSourceString(StringRef(bytecodeWithFutureVersion),
                         ParserConfig(&ctx, /*verifyAfterParse=*/true));
-  EXPECT_TRUE(warning.find("reading newer builtin dialect version") !=
+  EXPECT_TRUE(error.find("reading newer builtin dialect version") !=
               std::string::npos);
 
   module->erase();
