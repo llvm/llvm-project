@@ -334,7 +334,6 @@ static std::optional<size_t> CountGeneratedNests(const parser::Block &block) {
   // messages about a potentially incorrect loop count.
   // In such cases reset the count to nullopt. Once it becomes nullopt,
   // keep it that way.
-  using LoopRange = parser::omp::LoopRange;
   std::optional<size_t> numLoops{0};
   for (auto &epc : LoopRange(block, LoopRange::Step::Over)) {
     if (auto genCount{CountGeneratedNests(epc)}) {
@@ -371,7 +370,6 @@ void OmpStructureChecker::CheckNestedConstruct(
 
   // Check constructs contained in the body of the loop construct.
   auto &body{std::get<parser::Block>(x.t)};
-  using BlockRange = parser::omp::BlockRange;
   for (auto &stmt : BlockRange(body, BlockRange::Step::Over)) {
     if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(dir->source,
@@ -495,7 +493,6 @@ void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
 
 void OmpStructureChecker::CheckIterationVariableType(
     const parser::OpenMPLoopConstruct &x) {
-  using LoopRange = parser::omp::LoopRange;
   auto &body{std::get<parser::Block>(x.t)};
   for (auto &construct : LoopRange(body, LoopRange::Step::Into)) {
     // 'construct' can also be OpenMPLoopConstruct
