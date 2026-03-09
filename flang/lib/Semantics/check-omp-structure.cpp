@@ -1800,16 +1800,8 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
     return true;
   }};
 
-  const auto *allocator{[&]() {
-    // Can't use FindClause in Enter (because clauses haven't been visited
-    // yet).
-    for (const parser::OmpClause &c : beginSpec.Clauses().v) {
-      if (c.Id() == llvm::omp::Clause::OMPC_allocator) {
-        return &c;
-      }
-    }
-    return static_cast<const parser::OmpClause *>(nullptr);
-  }()};
+  const auto *allocator{
+      parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_allocator)};
 
   if (InTargetRegion()) {
     bool hasDynAllocators{
@@ -4674,11 +4666,9 @@ void OmpStructureChecker::CheckDoacross(const parser::OmpDoacross &doa) {
       const parser::OmpDirectiveSpecification &beginSpec{(*loopc)->BeginDir()};
       llvm::omp::Directive loopDir{beginSpec.DirId()};
       if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
-        auto IsOrdered{[](const parser::OmpClause &c) {
-          return c.Id() == llvm::omp::OMPC_ordered;
-        }};
         // If it has ORDERED clause, stop the traversal.
-        if (llvm::any_of(beginSpec.Clauses().v, IsOrdered)) {
+        if (parser::omp::FindClause(
+                beginSpec, llvm::omp::Clause::OMPC_ordered)) {
           break;
         }
       }

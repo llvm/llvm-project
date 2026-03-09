@@ -26,3 +26,21 @@ func.func @block_arg_memref(%arg0: !fir.ref<!fir.array<32xi32>>) {
 // CHECK:       memref.store {{%.+}}, [[BASE]][[[IDX]]] : memref<32xi32>
 // CHECK-NOT:   fir.array_coor
 
+// Verify fir.array_coor lowering when the base is a boxed function argument.
+// The pass must materialize fir.box_addr
+// first and must not emit an illegal direct box->memref fir.convert.
+func.func @block_arg_boxed_array(%arg0: !fir.box<!fir.array<?xi32>>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c1_i64 = arith.constant 1 : i64
+  %elt = fir.array_coor %arg0 %c1_i64 : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
+  fir.store %c1_i32 to %elt : !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL: func.func @block_arg_boxed_array
+// CHECK:         [[BOXADDR:%.+]] = fir.box_addr %arg0
+// CHECK:           [[BASE:%.+]] = fir.convert [[BOXADDR]] : (!fir.ref<!fir.array<?xi32>>) -> memref<?xi32{{.*}}>
+// CHECK-NOT:       fir.convert %arg0 : (!fir.box<!fir.array<?xi32>>) -> memref
+// CHECK:           memref.store {{%.+}}, {{%.+}}[{{%.+}}] : memref<?xi32, strided<[?], offset: ?>>
+// CHECK-NOT:       fir.array_coor
+
