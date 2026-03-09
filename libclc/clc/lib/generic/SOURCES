@@ -15,6 +15,7 @@ atomic/clc_atomic_inc.cl
 atomic/clc_atomic_load.cl
 atomic/clc_atomic_store.cl
 collective/clc_work_group_any_all.cl
+collective/clc_work_group_broadcast.cl
 common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
