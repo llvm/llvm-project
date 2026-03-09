@@ -24812,23 +24812,18 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
           // (musttail guarantees matching prototypes, so types match).
           // The pointer survives the tail call since it points to the
           // caller's caller's frame.
-          SDValue IncomingPtr =
-              RVFI->getIncomingIndirectArg(CallArgIdx);
-          MemOpChains.push_back(
-              DAG.getStore(Chain, DL, ArgValue, IncomingPtr,
-                           MachinePointerInfo()));
+          SDValue IncomingPtr = RVFI->getIncomingIndirectArg(CallArgIdx);
+          MemOpChains.push_back(DAG.getStore(Chain, DL, ArgValue, IncomingPtr,
+                                             MachinePointerInfo()));
           // Store any split parts at their respective offsets.
           unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
-          while (i + 1 != e &&
-                 Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
+          while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
             SDValue PartValue = OutVals[OutIdx + 1];
-            unsigned PartOffset =
-                Outs[OutIdx + 1].PartOffset - ArgPartOffset;
+            unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
             SDValue Addr = DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr,
                                        DAG.getIntPtrConstant(PartOffset, DL));
             MemOpChains.push_back(
-                DAG.getStore(Chain, DL, PartValue, Addr,
-                             MachinePointerInfo()));
+                DAG.getStore(Chain, DL, PartValue, Addr, MachinePointerInfo()));
             ++i;
             ++OutIdx;
           }
