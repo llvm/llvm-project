@@ -203,6 +203,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["fp16"] = true;
     Features["gc"] = true;
     Features["multimemory"] = true;
+    Features["relaxed-atomics"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
