@@ -3679,6 +3679,9 @@ bool VectorCombine::foldFragmentedLoads(Instruction &I) {
   }
 
   for (Value *Base : Bases) {
+    if (!isSafeToLoadUnconditionally(Base, VT, Align, *DL, FirstLI, &AC, &DT))
+      return false;
+
     MemoryLocation Loc(Base, LocationSize::precise(VTySize / 8));
     if (isMemModifiedBetween(FirstLI->getIterator(), I.getIterator(), Loc,
                              AA)) {

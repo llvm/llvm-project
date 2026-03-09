@@ -232,8 +232,10 @@ define <4 x i64> @test_i64_3_to_1_success(ptr dereferenceable(24) align 16 %p) {
 ;
 ; AVX-LABEL: define <4 x i64> @test_i64_3_to_1_success(
 ; AVX-SAME: ptr align 16 dereferenceable(24) [[P:%.*]]) #[[ATTR0]] {
-; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[P]], align 8
-; AVX-NEXT:    [[RES:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP1]], <4 x i32> <i32 1, i32 1, i32 3, i32 2>
+; AVX-NEXT:    [[PB:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; AVX-NEXT:    [[L2:%.*]] = load <2 x i64>, ptr [[PB]], align 8
+; AVX-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P]], align 8
+; AVX-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[L2]], <4 x i32> <i32 1, i32 1, i32 3, i32 2>
 ; AVX-NEXT:    ret <4 x i64> [[RES]]
 ;
   %L0 = load <2 x i64>, ptr %p, align 8
@@ -586,8 +588,13 @@ define <8 x i32> @test_alias_fail_mod_at_end_avx(ptr dereferenceable(32) align 6
 define <8 x i16> @test_not_enough_memory(ptr dereferenceable(7) align 4 %p) {
 ; CHECK-LABEL: define <8 x i16> @test_not_enough_memory(
 ; CHECK-SAME: ptr align 4 dereferenceable(7) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> [[TMP1]], <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+; CHECK-NEXT:    [[L0:%.*]] = load <2 x i16>, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[L1:%.*]] = load <2 x i16>, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[L2:%.*]] = load <4 x i16>, ptr [[P2]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i16> [[L0]], <2 x i16> [[L1]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[V1]], <4 x i16> [[L2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 4, i32 7, i32 6>
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
   %L0 = load <2 x i16>, ptr %p, align 4
@@ -604,8 +611,13 @@ define <8 x i16> @test_not_enough_memory(ptr dereferenceable(7) align 4 %p) {
 define <8 x i16> @test_align_mismatch(ptr dereferenceable(16) align 2 %p) {
 ; CHECK-LABEL: define <8 x i16> @test_align_mismatch(
 ; CHECK-SAME: ptr align 2 dereferenceable(16) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P]], align 4
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> [[TMP1]], <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+; CHECK-NEXT:    [[L0:%.*]] = load <2 x i16>, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[L1:%.*]] = load <2 x i16>, ptr [[P1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[L2:%.*]] = load <4 x i16>, ptr [[P2]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = shufflevector <2 x i16> [[L0]], <2 x i16> [[L1]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[V1]], <4 x i16> [[L2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 4, i32 7, i32 6>
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
   %L0 = load <2 x i16>, ptr %p, align 4
