@@ -29,6 +29,8 @@ TEST(TargetMachineCTest, TargetMachineOptions) {
   LLVMTargetMachineOptionsSetCodeGenOptLevel(Options, LLVMCodeGenLevelNone);
   LLVMTargetMachineOptionsSetRelocMode(Options, LLVMRelocStatic);
   LLVMTargetMachineOptionsSetCodeModel(Options, LLVMCodeModelKernel);
+  LLVMTargetMachineOptionsSetEmulatedTLS(Options, true);
+  LLVMTargetMachineOptionsSetEnableTLSDESC(Options, true);
 
   LLVMDisposeTargetMachineOptions(Options);
 }
