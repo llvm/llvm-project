@@ -153,7 +153,7 @@ TEST_F(PlatformDarwinTest, LocateExecutableScriptingResourcesFromDSYM) {
   ASSERT_FALSE(llvm::sys::fs::create_directory(dsym_resource_dir))
       << "Failed to create test dSYM root directory.";
 
-  // Create .dSYM/Contents/Resources/DWARF
+  // Create <test-root>/.dSYM/Contents/Resources/DWARF
   llvm::SmallString<128> dwarf_dir(dsym_resource_dir);
   llvm::sys::path::append(dwarf_dir, "DWARF");
   ASSERT_FALSE(llvm::sys::fs::create_directory(dwarf_dir))
@@ -164,7 +164,7 @@ TEST_F(PlatformDarwinTest, LocateExecutableScriptingResourcesFromDSYM) {
   FileSpec dsym_module_fpec(CreateFile("TestModule.o", dwarf_dir));
   ASSERT_TRUE(dsym_module_fpec);
 
-  // Create .dSYM/Contents/Resources/Python
+  // Create <test-root>/.dSYM/Contents/Resources/Python
   llvm::SmallString<128> python_dir(dsym_resource_dir);
   llvm::sys::path::append(python_dir, "Python");
   ASSERT_FALSE(llvm::sys::fs::create_directory(python_dir))
