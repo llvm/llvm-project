@@ -206,12 +206,17 @@ public:
 static void dumpModuleFileInputs(serialization::ModuleFile &Mod,
                                  ASTReader &Reader,
                                  raw_ostream &OS) {
+  SmallString<0> PathBuf;
+  PathBuf.reserve(256);
   OS << "---- Module Inputs ----\n";
-  Reader.visitInputFiles(Mod, /*IncludeSystem=*/true, /*Complain=*/false,
-                        [&](const serialization::InputFile &IF, bool isSystem) {
-    OS << (isSystem ? "system" : "user") << " | ";
-    OS << IF.getFile()->getName() << '\n';
-  });
+  Reader.visitInputFileInfos(
+      Mod, /*IncludeSystem=*/true,
+      [&](const serialization::InputFileInfo &IFI, bool isSystem) {
+        OS << (isSystem ? "system" : "user") << " | ";
+        auto Filename = ASTReader::ResolveImportedPath(
+            PathBuf, IFI.UnresolvedImportedFilenameAsRequested, Mod);
+        OS << *Filename << '\n';
+      });
 }
 
 static bool printSourceSymbols(const char *Executable,

@@ -213,11 +213,11 @@ func.func @test_reverse(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
 
 // -----
 func.func @test_slice(%arg0: tensor<13x21x3xbf16>) -> tensor<4x11x1xbf16> {
-  %0 = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %1 = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op illegal: requires [bf16] but not enabled in target}}
-  %2 = tosa.slice %arg0, %0, %1 : (tensor<13x21x3xbf16>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xbf16>
-  return %2 : tensor<4x11x1xbf16>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xbf16>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xbf16>
+  return %0 : tensor<4x11x1xbf16>
 }
 
 // -----

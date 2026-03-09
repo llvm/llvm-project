@@ -167,6 +167,11 @@ def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     let cppFunctionName = "isAnyIntegerOrFloatingPointType";
 }
 
+def CIR_AnyIntOrBoolType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType], "integer or boolean type"> {
+  let cppFunctionName = "isIntOrBoolType";
+}
+
 def CIR_AnyIntOrBoolOrFloatType
     : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyFloatType, CIR_AnyIntType],
                 "integer, boolean or floating point type"> {
@@ -330,6 +335,19 @@ def CIR_AnyFloatOrVecOfFloatType
         "floating point or vector of floating point type"> {
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
+
+// Types valid for arithmetic ops (add/sub/mul/div/rem):
+// scalar or vector of integer or floating-point. 
+def CIR_AnyArithType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType,
+                 CIR_VectorOfIntType, CIR_VectorOfFloatType],
+                "integer, floating-point, or vector of integer/float">;
+
+// Types valid for bitwise ops (and/or/xor):
+// integer, boolean, or vector of integer (no floating-point).
+def CIR_AnyBitwiseType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntType],
+                "integer, boolean, or vector of integer">;
 
 //===----------------------------------------------------------------------===//
 // Data member type predicates

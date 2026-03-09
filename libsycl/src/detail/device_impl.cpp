@@ -22,9 +22,7 @@ bool DeviceImpl::has(aspect Aspect) const {
   case (aspect::accelerator):
     return isAccelerator();
   case (aspect::custom):
-    return false;
   case (aspect::emulated):
-    return false;
   case (aspect::host_debuggable):
     return false;
   default:
@@ -49,7 +47,9 @@ bool DeviceImpl::isAccelerator() const {
   return getDeviceType() == info::device_type::accelerator;
 }
 
-backend DeviceImpl::getBackend() const { return MPlatform.getBackend(); }
+backend DeviceImpl::getBackend() const noexcept {
+  return MPlatform.getBackend();
+}
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

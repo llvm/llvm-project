@@ -686,253 +686,13 @@ exit:
 ; Test for https://github.com/llvm/llvm-project/issues/129236.
 define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
 ; CHECK-LABEL: @cost_ashr_with_op_known_invariant_via_scev(
-; CHECK-NEXT:  iter.check:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i16 0, 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = sext i16 0 to i32
 ; CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
-; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i1> poison, i1 [[CMP_I]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i1> [[BROADCAST_SPLATINSERT]], <32 x i1> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP60:%.*]] = xor <32 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    br label [[LOOP_HEADER1:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UREM_CONTINUE62:%.*]] ]
-; CHECK-NEXT:    [[TMP61:%.*]] = extractelement <32 x i1> [[TMP60]], i32 0
-; CHECK-NEXT:    br i1 [[TMP61]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
-; CHECK:       pred.urem.if:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE]]
-; CHECK:       pred.urem.continue:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <32 x i1> [[TMP60]], i32 1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_UREM_IF1:%.*]], label [[PRED_UREM_CONTINUE2:%.*]]
-; CHECK:       pred.urem.if1:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE2]]
-; CHECK:       pred.urem.continue2:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <32 x i1> [[TMP60]], i32 2
-; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_UREM_IF3:%.*]], label [[PRED_UREM_CONTINUE4:%.*]]
-; CHECK:       pred.urem.if3:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE4]]
-; CHECK:       pred.urem.continue4:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <32 x i1> [[TMP60]], i32 3
-; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_UREM_IF5:%.*]], label [[PRED_UREM_CONTINUE6:%.*]]
-; CHECK:       pred.urem.if5:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE6]]
-; CHECK:       pred.urem.continue6:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <32 x i1> [[TMP60]], i32 4
-; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_UREM_IF7:%.*]], label [[PRED_UREM_CONTINUE8:%.*]]
-; CHECK:       pred.urem.if7:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE8]]
-; CHECK:       pred.urem.continue8:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <32 x i1> [[TMP60]], i32 5
-; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_UREM_IF9:%.*]], label [[PRED_UREM_CONTINUE10:%.*]]
-; CHECK:       pred.urem.if9:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE10]]
-; CHECK:       pred.urem.continue10:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <32 x i1> [[TMP60]], i32 6
-; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_UREM_IF11:%.*]], label [[PRED_UREM_CONTINUE12:%.*]]
-; CHECK:       pred.urem.if11:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE12]]
-; CHECK:       pred.urem.continue12:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <32 x i1> [[TMP60]], i32 7
-; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_UREM_IF13:%.*]], label [[PRED_UREM_CONTINUE14:%.*]]
-; CHECK:       pred.urem.if13:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE14]]
-; CHECK:       pred.urem.continue14:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <32 x i1> [[TMP60]], i32 8
-; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_UREM_IF15:%.*]], label [[PRED_UREM_CONTINUE16:%.*]]
-; CHECK:       pred.urem.if15:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE16]]
-; CHECK:       pred.urem.continue16:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <32 x i1> [[TMP60]], i32 9
-; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_UREM_IF17:%.*]], label [[PRED_UREM_CONTINUE18:%.*]]
-; CHECK:       pred.urem.if17:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE18]]
-; CHECK:       pred.urem.continue18:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <32 x i1> [[TMP60]], i32 10
-; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_UREM_IF19:%.*]], label [[PRED_UREM_CONTINUE20:%.*]]
-; CHECK:       pred.urem.if19:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE20]]
-; CHECK:       pred.urem.continue20:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <32 x i1> [[TMP60]], i32 11
-; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_UREM_IF21:%.*]], label [[PRED_UREM_CONTINUE22:%.*]]
-; CHECK:       pred.urem.if21:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE22]]
-; CHECK:       pred.urem.continue22:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <32 x i1> [[TMP60]], i32 12
-; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_UREM_IF23:%.*]], label [[PRED_UREM_CONTINUE24:%.*]]
-; CHECK:       pred.urem.if23:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE24]]
-; CHECK:       pred.urem.continue24:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <32 x i1> [[TMP60]], i32 13
-; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_UREM_IF25:%.*]], label [[PRED_UREM_CONTINUE26:%.*]]
-; CHECK:       pred.urem.if25:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE26]]
-; CHECK:       pred.urem.continue26:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <32 x i1> [[TMP60]], i32 14
-; CHECK-NEXT:    br i1 [[TMP15]], label [[PRED_UREM_IF27:%.*]], label [[PRED_UREM_CONTINUE28:%.*]]
-; CHECK:       pred.urem.if27:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE28]]
-; CHECK:       pred.urem.continue28:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <32 x i1> [[TMP60]], i32 15
-; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_UREM_IF29:%.*]], label [[PRED_UREM_CONTINUE30:%.*]]
-; CHECK:       pred.urem.if29:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE30]]
-; CHECK:       pred.urem.continue30:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <32 x i1> [[TMP60]], i32 16
-; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_UREM_IF31:%.*]], label [[PRED_UREM_CONTINUE32:%.*]]
-; CHECK:       pred.urem.if31:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE32]]
-; CHECK:       pred.urem.continue32:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <32 x i1> [[TMP60]], i32 17
-; CHECK-NEXT:    br i1 [[TMP18]], label [[PRED_UREM_IF33:%.*]], label [[PRED_UREM_CONTINUE34:%.*]]
-; CHECK:       pred.urem.if33:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE34]]
-; CHECK:       pred.urem.continue34:
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <32 x i1> [[TMP60]], i32 18
-; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_UREM_IF35:%.*]], label [[PRED_UREM_CONTINUE36:%.*]]
-; CHECK:       pred.urem.if35:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE36]]
-; CHECK:       pred.urem.continue36:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <32 x i1> [[TMP60]], i32 19
-; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_UREM_IF37:%.*]], label [[PRED_UREM_CONTINUE38:%.*]]
-; CHECK:       pred.urem.if37:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE38]]
-; CHECK:       pred.urem.continue38:
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <32 x i1> [[TMP60]], i32 20
-; CHECK-NEXT:    br i1 [[TMP21]], label [[PRED_UREM_IF39:%.*]], label [[PRED_UREM_CONTINUE40:%.*]]
-; CHECK:       pred.urem.if39:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE40]]
-; CHECK:       pred.urem.continue40:
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <32 x i1> [[TMP60]], i32 21
-; CHECK-NEXT:    br i1 [[TMP22]], label [[PRED_UREM_IF41:%.*]], label [[PRED_UREM_CONTINUE42:%.*]]
-; CHECK:       pred.urem.if41:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE42]]
-; CHECK:       pred.urem.continue42:
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <32 x i1> [[TMP60]], i32 22
-; CHECK-NEXT:    br i1 [[TMP23]], label [[PRED_UREM_IF43:%.*]], label [[PRED_UREM_CONTINUE44:%.*]]
-; CHECK:       pred.urem.if43:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE44]]
-; CHECK:       pred.urem.continue44:
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <32 x i1> [[TMP60]], i32 23
-; CHECK-NEXT:    br i1 [[TMP24]], label [[PRED_UREM_IF45:%.*]], label [[PRED_UREM_CONTINUE46:%.*]]
-; CHECK:       pred.urem.if45:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE46]]
-; CHECK:       pred.urem.continue46:
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <32 x i1> [[TMP60]], i32 24
-; CHECK-NEXT:    br i1 [[TMP25]], label [[PRED_UREM_IF47:%.*]], label [[PRED_UREM_CONTINUE48:%.*]]
-; CHECK:       pred.urem.if47:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE48]]
-; CHECK:       pred.urem.continue48:
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <32 x i1> [[TMP60]], i32 25
-; CHECK-NEXT:    br i1 [[TMP26]], label [[PRED_UREM_IF49:%.*]], label [[PRED_UREM_CONTINUE50:%.*]]
-; CHECK:       pred.urem.if49:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE50]]
-; CHECK:       pred.urem.continue50:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <32 x i1> [[TMP60]], i32 26
-; CHECK-NEXT:    br i1 [[TMP27]], label [[PRED_UREM_IF51:%.*]], label [[PRED_UREM_CONTINUE52:%.*]]
-; CHECK:       pred.urem.if51:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE52]]
-; CHECK:       pred.urem.continue52:
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <32 x i1> [[TMP60]], i32 27
-; CHECK-NEXT:    br i1 [[TMP28]], label [[PRED_UREM_IF53:%.*]], label [[PRED_UREM_CONTINUE54:%.*]]
-; CHECK:       pred.urem.if53:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE54]]
-; CHECK:       pred.urem.continue54:
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <32 x i1> [[TMP60]], i32 28
-; CHECK-NEXT:    br i1 [[TMP29]], label [[PRED_UREM_IF55:%.*]], label [[PRED_UREM_CONTINUE56:%.*]]
-; CHECK:       pred.urem.if55:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE56]]
-; CHECK:       pred.urem.continue56:
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <32 x i1> [[TMP60]], i32 29
-; CHECK-NEXT:    br i1 [[TMP30]], label [[PRED_UREM_IF57:%.*]], label [[PRED_UREM_CONTINUE58:%.*]]
-; CHECK:       pred.urem.if57:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE58]]
-; CHECK:       pred.urem.continue58:
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <32 x i1> [[TMP60]], i32 30
-; CHECK-NEXT:    br i1 [[TMP31]], label [[PRED_UREM_IF59:%.*]], label [[PRED_UREM_CONTINUE60:%.*]]
-; CHECK:       pred.urem.if59:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE60]]
-; CHECK:       pred.urem.continue60:
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <32 x i1> [[TMP60]], i32 31
-; CHECK-NEXT:    br i1 [[TMP32]], label [[PRED_UREM_IF61:%.*]], label [[PRED_UREM_CONTINUE62]]
-; CHECK:       pred.urem.if61:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE62]]
-; CHECK:       pred.urem.continue62:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[CMP_I]], <32 x i32> zeroinitializer, <32 x i32> poison
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <32 x i32> [[PREDPHI]], i32 0
-; CHECK-NEXT:    [[TMP34:%.*]] = ashr i32 [[CONV5_I]], [[TMP33]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT63:%.*]] = insertelement <32 x i32> poison, i32 [[TMP34]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT64:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT63]], <32 x i32> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
-; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
-; CHECK-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP_HEADER1]], !llvm.loop [[LOOP10:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP36:%.*]] = select <32 x i1> [[TMP60]], <32 x i1> poison, <32 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP37:%.*]] = or <32 x i1> [[TMP36]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq <32 x i32> [[BROADCAST_SPLAT64]], zeroinitializer
-; CHECK-NEXT:    [[TMP39:%.*]] = shl <32 x i32> [[PREDPHI]], splat (i32 24)
-; CHECK-NEXT:    [[TMP40:%.*]] = ashr exact <32 x i32> [[TMP39]], splat (i32 24)
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <32 x i1> [[TMP38]], i32 0
-; CHECK-NEXT:    [[TMP42:%.*]] = select i1 [[TMP41]], <32 x i32> [[TMP40]], <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI65:%.*]] = select <32 x i1> [[TMP37]], <32 x i32> [[TMP42]], <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <32 x i32> [[PREDPHI65]], i32 31
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
-; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
-; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 96, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT66:%.*]] = insertelement <4 x i1> poison, i1 [[CMP_I]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT67:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT66]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP44:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT67]], splat (i1 true)
-; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
-; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX68:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT78:%.*]], [[PRED_UREM_CONTINUE76:%.*]] ]
-; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i1> [[TMP44]], i32 0
-; CHECK-NEXT:    br i1 [[TMP45]], label [[PRED_UREM_IF69:%.*]], label [[PRED_UREM_CONTINUE70:%.*]]
-; CHECK:       pred.urem.if69:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE70]]
-; CHECK:       pred.urem.continue70:
-; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <4 x i1> [[TMP44]], i32 1
-; CHECK-NEXT:    br i1 [[TMP46]], label [[PRED_UREM_IF71:%.*]], label [[PRED_UREM_CONTINUE72:%.*]]
-; CHECK:       pred.urem.if71:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE72]]
-; CHECK:       pred.urem.continue72:
-; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[TMP44]], i32 2
-; CHECK-NEXT:    br i1 [[TMP47]], label [[PRED_UREM_IF73:%.*]], label [[PRED_UREM_CONTINUE74:%.*]]
-; CHECK:       pred.urem.if73:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE74]]
-; CHECK:       pred.urem.continue74:
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP44]], i32 3
-; CHECK-NEXT:    br i1 [[TMP48]], label [[PRED_UREM_IF75:%.*]], label [[PRED_UREM_CONTINUE76]]
-; CHECK:       pred.urem.if75:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE76]]
-; CHECK:       pred.urem.continue76:
-; CHECK-NEXT:    [[PREDPHI77:%.*]] = select i1 [[CMP_I]], <4 x i32> zeroinitializer, <4 x i32> poison
-; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[PREDPHI77]], i32 0
-; CHECK-NEXT:    [[TMP50:%.*]] = ashr i32 [[CONV5_I]], [[TMP49]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT79:%.*]] = insertelement <4 x i32> poison, i32 [[TMP50]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT80:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT79]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDEX_NEXT78]] = add nuw i32 [[INDEX68]], 4
-; CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i32 [[INDEX_NEXT78]], 100
-; CHECK-NEXT:    br i1 [[TMP51]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
-; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP52:%.*]] = select <4 x i1> [[TMP44]], <4 x i1> poison, <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP53:%.*]] = or <4 x i1> [[TMP52]], [[BROADCAST_SPLAT67]]
-; CHECK-NEXT:    [[TMP54:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT80]], zeroinitializer
-; CHECK-NEXT:    [[TMP55:%.*]] = shl <4 x i32> [[PREDPHI77]], splat (i32 24)
-; CHECK-NEXT:    [[TMP56:%.*]] = ashr exact <4 x i32> [[TMP55]], splat (i32 24)
-; CHECK-NEXT:    [[TMP57:%.*]] = extractelement <4 x i1> [[TMP54]], i32 0
-; CHECK-NEXT:    [[TMP58:%.*]] = select i1 [[TMP57]], <4 x i32> [[TMP56]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI81:%.*]] = select <4 x i1> [[TMP53]], <4 x i32> [[TMP58]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP59:%.*]] = extractelement <4 x i32> [[PREDPHI81]], i32 3
-; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
-; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 4, [[VEC_EPILOG_ITER_CHECK]] ], [ 100, [[ITER_CHECK:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 100, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ [[REM_I:%.*]], [[ELSE]] ], [ 0, [[LOOP_HEADER]] ]
@@ -950,9 +710,9 @@ define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
 ; CHECK-NEXT:    [[P_2:%.*]] = phi i32 [ 0, [[ELSE]] ], [ [[TMP1]], [[THEN]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P_2_LCSSA:%.*]] = phi i32 [ [[P_2]], [[LOOP_LATCH]] ], [ [[TMP43]], [[MIDDLE_BLOCK]] ], [ [[TMP59]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[P_2_LCSSA:%.*]] = phi i32 [ [[P_2]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i32 [[P_2_LCSSA]]
 ;
 entry:
@@ -1078,7 +838,7 @@ define void @sdiv_by_zero(ptr noalias %src, ptr noalias %dst, i32 %d) #2 {
 ; CHECK-NEXT:    store <8 x i32> [[PREDPHI]], ptr [[TMP42]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP43:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP43]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
@@ -1098,7 +858,7 @@ define void @sdiv_by_zero(ptr noalias %src, ptr noalias %dst, i32 %d) #2 {
 ; CHECK-NEXT:    store i32 [[MERGE]], ptr [[GEP_DST]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV]], 16
-; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_HEADER]], label [[EXIT:%.*]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_HEADER]], label [[EXIT:%.*]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1435,14 +1195,14 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i32> [[VEC_IND]], splat (i32 32)
 ; CHECK-NEXT:    [[TMP163:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP163]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP163]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP207:%.*]] = zext <32 x i32> [[TMP161]] to <32 x i64>
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <32 x i64> zeroinitializer, <32 x i64> [[TMP207]]
 ; CHECK-NEXT:    [[TMP164:%.*]] = extractelement <32 x i64> [[PREDPHI]], i32 31
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF17:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF13:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 992, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT63:%.*]] = insertelement <8 x i1> poison, i1 [[C]], i64 0
@@ -1531,7 +1291,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    [[INDEX_NEXT86]] = add nuw i32 [[INDEX67]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT87]] = add <8 x i32> [[VEC_IND68]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP208:%.*]] = icmp eq i32 [[INDEX_NEXT86]], 1000
-; CHECK-NEXT:    br i1 [[TMP208]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP208]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[TMP210:%.*]] = zext <8 x i32> [[TMP206]] to <8 x i64>
 ; CHECK-NEXT:    [[PREDPHI85:%.*]] = select i1 [[C]], <8 x i64> zeroinitializer, <8 x i64> [[TMP210]]
@@ -1552,7 +1312,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    [[MERGE:%.*]] = phi i64 [ [[ZEXT]], [[THEN]] ], [ 0, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[MERGE_LCSSA:%.*]] = phi i64 [ [[MERGE]], [[LOOP_LATCH]] ], [ [[TMP164]], [[MIDDLE_BLOCK]] ], [ [[TMP209]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[MERGE_LCSSA]]

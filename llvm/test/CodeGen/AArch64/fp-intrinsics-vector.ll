@@ -717,8 +717,7 @@ define <1 x i32> @fptoui_v1i32_v1f64(<1 x double> %x) #0 {
 define <1 x i64> @fptosi_v1i64_v1f64(<1 x double> %x) #0 {
 ; CHECK-LABEL: fptosi_v1i64_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %val = call <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f64(<1 x double> %x, metadata !"fpexcept.strict") #0
   ret <1 x i64> %val
@@ -727,8 +726,7 @@ define <1 x i64> @fptosi_v1i64_v1f64(<1 x double> %x) #0 {
 define <1 x i64> @fptoui_v1i64_v1f64(<1 x double> %x) #0 {
 ; CHECK-LABEL: fptoui_v1i64_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzu d0, d0
 ; CHECK-NEXT:    ret
   %val = call <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f64(<1 x double> %x, metadata !"fpexcept.strict") #0
   ret <1 x i64> %val

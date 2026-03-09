@@ -115,8 +115,6 @@ public:
 
   bool hasMadMacF32Insts() const override { return HasMadMacF32Insts; }
 
-  bool enablePromoteAlloca() const override { return EnablePromoteAlloca; }
-
   bool hasFP64() const override { return HasFP64; }
 
   bool hasCFALUBug() const { return HasCFALUBug; }
