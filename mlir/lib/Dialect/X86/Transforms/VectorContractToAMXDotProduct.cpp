@@ -1,4 +1,4 @@
-//===- VectorContractToPackedTypeTiledDotProduct.cpp ----------------------===//
+//===- VectorContractToAMXDotProduct.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -295,7 +295,7 @@ static SmallVector<Value> createTileZeros(OpBuilder &rewriter, Location loc,
 //   amx.tile_muli !amx.tile<16x64xi8> -> !amx.tile<16x16xi32>
 //   amx.tile_store %arg2{{.}*} : memref<32x32xi32>, !amx.tile<16x16xi32>
 // ```
-struct VectorContractToPackedTypeTiledDotProduct
+struct VectorContractToAMXDotProduct
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
 
@@ -676,8 +676,7 @@ struct VectorContractToPackedTypeTiledDotProduct
 
 } // namespace
 
-void x86::populateVectorContractToPackedTypeTiledDotProductPatterns(
+void x86::populateVectorContractToAMXDotProductPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<VectorContractToPackedTypeTiledDotProduct>(
-      patterns.getContext());
+  patterns.add<VectorContractToAMXDotProduct>(patterns.getContext());
 }

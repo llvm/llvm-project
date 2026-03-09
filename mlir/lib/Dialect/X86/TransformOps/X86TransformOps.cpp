@@ -47,9 +47,9 @@ void mlir::transform::ApplyShuffleVectorFMAOpsPatternsOp::populatePatterns(
   x86::populateShuffleVectorFMAOpsPatterns(patterns);
 }
 
-void mlir::transform::ApplyVectorContractToPackedTypeTiledDotProductPatternsOp::
+void mlir::transform::ApplyVectorContractToAMXDotProductPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
-  x86::populateVectorContractToPackedTypeTiledDotProductPatterns(patterns);
+  x86::populateVectorContractToAMXDotProductPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

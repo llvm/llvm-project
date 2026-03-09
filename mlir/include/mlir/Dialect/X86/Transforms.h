@@ -108,8 +108,7 @@ void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
 // to their corresponding packed-type tiled dot-product operations, using
 // AMX ultimately targeting the relevant x86 LLVM intrinsics (e.g., BF16 and
 // Int8).
-void populateVectorContractToPackedTypeTiledDotProductPatterns(
-    RewritePatternSet &patterns);
+void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
