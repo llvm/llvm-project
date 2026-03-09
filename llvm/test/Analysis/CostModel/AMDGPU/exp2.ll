@@ -11,14 +11,14 @@
 
 define void @exp2_f16() {
 ; BASE-LABEL: 'exp2_f16'
-; BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp2.f16(half undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.exp2.v2f16(<2 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp2.v3f16(<3 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.exp2.v4f16(<4 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.exp2.v5f16(<5 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.exp2.v8f16(<8 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.exp2.v16f16(<16 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.exp2.v17f16(<17 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = call half @llvm.exp2.f16(half undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = call <2 x half> @llvm.exp2.v2f16(<2 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = call <3 x half> @llvm.exp2.v3f16(<3 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = call <4 x half> @llvm.exp2.v4f16(<4 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = call <5 x half> @llvm.exp2.v5f16(<5 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f16 = call <8 x half> @llvm.exp2.v8f16(<8 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16f16 = call <16 x half> @llvm.exp2.v16f16(<16 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v17f16 = call <17 x half> @llvm.exp2.v17f16(<17 x half> undef)
 ; BASE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8-LABEL: 'exp2_f16'
@@ -62,7 +62,7 @@ define void @exp2_f16() {
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.exp2.v5f16(<5 x half> undef)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.exp2.v8f16(<8 x half> undef)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.exp2.v16f16(<16 x half> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.exp2.v17f16(<17 x half> undef)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v17f16 = call <17 x half> @llvm.exp2.v17f16(<17 x half> undef)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8-SIZE-LABEL: 'exp2_f16'
@@ -111,14 +111,14 @@ define void @exp2_f16() {
 
 define void @exp2_bf16() {
 ; BASE-LABEL: 'exp2_bf16'
-; BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.exp2.bf16(bfloat undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp2.v3bf16(<3 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp2.v4bf16(<4 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp2.v5bf16(<5 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp2.v8bf16(<8 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp2.v16bf16(<16 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp2.v17bf16(<17 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bf16 = call bfloat @llvm.exp2.bf16(bfloat undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp2.v2bf16(<2 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp2.v3bf16(<3 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp2.v4bf16(<4 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp2.v5bf16(<5 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp2.v8bf16(<8 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp2.v16bf16(<16 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp2.v17bf16(<17 x bfloat> undef)
 ; BASE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8-LABEL: 'exp2_bf16'
@@ -162,7 +162,7 @@ define void @exp2_bf16() {
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp2.v5bf16(<5 x bfloat> undef)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp2.v8bf16(<8 x bfloat> undef)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp2.v16bf16(<16 x bfloat> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp2.v17bf16(<17 x bfloat> undef)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp2.v17bf16(<17 x bfloat> undef)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8-SIZE-LABEL: 'exp2_bf16'
@@ -211,14 +211,14 @@ define void @exp2_bf16() {
 
 define void @exp2_f32() {
 ; ALL-LABEL: 'exp2_f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.exp2.f32(float undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.exp2.v2f32(<2 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.exp2.v3f32(<3 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.exp2.v4f32(<4 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.exp2.v5f32(<5 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.exp2.v8f32(<8 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.exp2.v16f32(<16 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f32 = call <17 x float> @llvm.exp2.v17f32(<17 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = call float @llvm.exp2.f32(float undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = call <2 x float> @llvm.exp2.v2f32(<2 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = call <3 x float> @llvm.exp2.v3f32(<3 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = call <4 x float> @llvm.exp2.v4f32(<4 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = call <5 x float> @llvm.exp2.v5f32(<5 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f32 = call <8 x float> @llvm.exp2.v8f32(<8 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v16f32 = call <16 x float> @llvm.exp2.v16f32(<16 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v17f32 = call <17 x float> @llvm.exp2.v17f32(<17 x float> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'exp2_f32'
@@ -228,8 +228,8 @@ define void @exp2_f32() {
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.exp2.v4f32(<4 x float> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.exp2.v5f32(<5 x float> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.exp2.v8f32(<8 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.exp2.v16f32(<16 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f32 = call <17 x float> @llvm.exp2.v17f32(<17 x float> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v16f32 = call <16 x float> @llvm.exp2.v16f32(<16 x float> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v17f32 = call <17 x float> @llvm.exp2.v17f32(<17 x float> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = call float @llvm.exp2.f32(float undef)

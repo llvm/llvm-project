@@ -755,6 +755,20 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first * NElts * NumOps * get64BitInstrCost(CostKind);
     }
 
+    if (SLT == MVT::f32) {
+      unsigned NElts =
+          LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+
+      // exp2 lowers to v_exp_f32 (quarter rate), scalarized for vectors.
+      // exp and exp10 need an additional v_mul_f32 (full rate) for base
+      // conversion.
+      InstructionCost Cost = getQuarterRateInstrCost(CostKind);
+      if (IID == Intrinsic::exp || IID == Intrinsic::exp10)
+        Cost += getFullRateInstrCost();
+
+      return LT.first * NElts * Cost;
+    }
+
     break;
   }
   default:
