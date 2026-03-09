@@ -45,15 +45,17 @@ static StringRef getImageName(const OffloadBinary &OB) {
 }
 
 static void printOffloadBinaryMetadata(const OffloadBinary &OB,
-                                       uint64_t justifaction) {
-  outs() << left_justify("kind", justifaction) << getImageName(OB) << "\n";
-  outs() << left_justify("arch", justifaction) << OB.getArch() << "\n";
-  outs() << left_justify("triple", justifaction) << OB.getTriple() << "\n";
-  outs() << left_justify("producer", justifaction)
+                                       uint64_t level) {
+  const std::string Indent(level * 2, ' ');
+
+  outs() << Indent << left_justify("kind", 16) << getImageName(OB) << "\n";
+  outs() << Indent << left_justify("arch", 16) << OB.getArch() << "\n";
+  outs() << Indent << left_justify("triple", 16) << OB.getTriple() << "\n";
+  outs() << Indent << left_justify("producer", 16)
          << getOffloadKindName(OB.getOffloadKind()) << "\n";
 
   StringRef InnerImage = OB.getImage();
-  outs() << left_justify("    image size", justifaction) << InnerImage.size()
+  outs() << Indent << left_justify("image size", 16) << InnerImage.size()
          << " bytes\n";
 }
 
@@ -89,13 +91,13 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
     if (InnerBinaries.size() > 1)
       outs() << "  Inner image [" << I << "]:\n";
 
-    printOffloadBinaryMetadata(*InnerOB, 20);
+    printOffloadBinaryMetadata(*InnerOB, 1);
   }
 }
 
 static void printBinary(const OffloadBinary &OB, uint64_t Index) {
   outs() << "\nOFFLOADING IMAGE [" << Index << "]:\n";
-  printOffloadBinaryMetadata(OB, 16);
+  printOffloadBinaryMetadata(OB, 0);
 
   StringRef ImageData = OB.getImage();
   // Check for nested OffloadBinary format
