@@ -8,21 +8,21 @@ define void @extracter0([4 x <4 x i1>] %matrix) nounwind {
 ; CHECK-NEXT:    push r14
 ; CHECK-NEXT:    push rbx
 ; CHECK-NEXT:    vpslld xmm0, xmm0, 31
-; CHECK-NEXT:    vmovmskps edi, xmm0
-; CHECK-NEXT:    mov ebx, edi
-; CHECK-NEXT:    shr bl, 3
-; CHECK-NEXT:    mov ebp, edi
+; CHECK-NEXT:    vmovmskps ebx, xmm0
+; CHECK-NEXT:    mov ebp, ebx
 ; CHECK-NEXT:    and bpl, 4
 ; CHECK-NEXT:    shr bpl, 2
-; CHECK-NEXT:    mov r14d, edi
+; CHECK-NEXT:    mov r14d, ebx
 ; CHECK-NEXT:    and r14b, 2
 ; CHECK-NEXT:    shr r14b
+; CHECK-NEXT:    mov edi, ebx
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r14b
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, bpl
 ; CHECK-NEXT:    call print_i1@PLT
-; CHECK-NEXT:    movzx edi, bl
+; CHECK-NEXT:    shr ebx, 3
+; CHECK-NEXT:    mov edi, ebx
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    pop rbx
 ; CHECK-NEXT:    pop r14
@@ -52,9 +52,6 @@ define void @extracter1([4 x <4 x i1>] %matrix) nounwind {
 ; CHECK-NEXT:    push rax
 ; CHECK-NEXT:    vpslld xmm1, xmm1, 31
 ; CHECK-NEXT:    vmovmskps ebx, xmm1
-; CHECK-NEXT:    mov eax, ebx
-; CHECK-NEXT:    shr al, 3
-; CHECK-NEXT:    mov byte ptr [rsp + 7], al # 1-byte Spill
 ; CHECK-NEXT:    mov r14d, ebx
 ; CHECK-NEXT:    and r14b, 4
 ; CHECK-NEXT:    shr r14b, 2
@@ -62,21 +59,21 @@ define void @extracter1([4 x <4 x i1>] %matrix) nounwind {
 ; CHECK-NEXT:    and r15b, 2
 ; CHECK-NEXT:    shr r15b
 ; CHECK-NEXT:    vpslld xmm0, xmm0, 31
-; CHECK-NEXT:    vmovmskps edi, xmm0
-; CHECK-NEXT:    mov r12d, edi
-; CHECK-NEXT:    shr r12b, 3
-; CHECK-NEXT:    mov r13d, edi
-; CHECK-NEXT:    and r13b, 4
-; CHECK-NEXT:    shr r13b, 2
-; CHECK-NEXT:    mov ebp, edi
-; CHECK-NEXT:    and bpl, 2
-; CHECK-NEXT:    shr bpl
-; CHECK-NEXT:    call print_i1@PLT
-; CHECK-NEXT:    movzx edi, bpl
+; CHECK-NEXT:    vmovmskps ebp, xmm0
+; CHECK-NEXT:    mov r12d, ebp
+; CHECK-NEXT:    and r12b, 4
+; CHECK-NEXT:    shr r12b, 2
+; CHECK-NEXT:    mov r13d, ebp
+; CHECK-NEXT:    and r13b, 2
+; CHECK-NEXT:    shr r13b
+; CHECK-NEXT:    mov edi, ebp
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r13b
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r12b
+; CHECK-NEXT:    call print_i1@PLT
+; CHECK-NEXT:    shr ebp, 3
+; CHECK-NEXT:    mov edi, ebp
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    mov edi, ebx
 ; CHECK-NEXT:    call print_i1@PLT
@@ -84,7 +81,8 @@ define void @extracter1([4 x <4 x i1>] %matrix) nounwind {
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r14b
 ; CHECK-NEXT:    call print_i1@PLT
-; CHECK-NEXT:    movzx edi, byte ptr [rsp + 7] # 1-byte Folded Reload
+; CHECK-NEXT:    shr ebx, 3
+; CHECK-NEXT:    mov edi, ebx
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    add rsp, 8
 ; CHECK-NEXT:    pop rbx

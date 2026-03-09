@@ -727,7 +727,8 @@ define <8 x double> @load_v8f64_i8(i8 %trigger, ptr %addr, <8 x double> %dst) {
 ; AVX1-NEXT:    shrb $6, %al
 ; AVX1-NEXT:    andb $1, %al
 ; AVX1-NEXT:    vpinsrb $12, %eax, %xmm3, %xmm3
-; AVX1-NEXT:    shrb $7, %dil
+; AVX1-NEXT:    shrl $7, %edi
+; AVX1-NEXT:    andl $1, %edi
 ; AVX1-NEXT:    vpinsrb $14, %edi, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX1-NEXT:    vpslld $31, %xmm2, %xmm2
@@ -776,7 +777,8 @@ define <8 x double> @load_v8f64_i8(i8 %trigger, ptr %addr, <8 x double> %dst) {
 ; AVX2-NEXT:    shrb $6, %al
 ; AVX2-NEXT:    andb $1, %al
 ; AVX2-NEXT:    vpinsrb $12, %eax, %xmm3, %xmm3
-; AVX2-NEXT:    shrb $7, %dil
+; AVX2-NEXT:    shrl $7, %edi
+; AVX2-NEXT:    andl $1, %edi
 ; AVX2-NEXT:    vpinsrb $14, %edi, %xmm3, %xmm3
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
 ; AVX2-NEXT:    vpslld $31, %xmm2, %xmm2

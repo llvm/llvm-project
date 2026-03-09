@@ -57472,6 +57472,29 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
+  // (zext (srl (trunc X), amt)) -> (and (srl X, amt), (TruncMask >> amt))
+  // Restricted to VT == i32
+  if (N0->getOpcode() == ISD::SRL) {
+    SDValue N00 = N0->getOperand(0);
+    if (N00->getOpcode() == ISD::TRUNCATE) {
+      SDValue OriginalVal = N00->getOperand(0);
+      EVT TruncVT = N00.getValueType();
+
+      if (VT == MVT::i32 && OriginalVal.getValueType() == VT) {
+        auto *ShiftC = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+        if (!ShiftC)
+          return SDValue();
+        APInt TruncMask = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
+                                               TruncVT.getScalarSizeInBits());
+        SDValue NewShift =
+            DAG.getNode(ISD::SRL, dl, VT, OriginalVal, N0->getOperand(1));
+        APInt ShiftedMask = TruncMask.lshr(ShiftC->getAPIntValue());
+        return DAG.getNode(ISD::AND, dl, VT, NewShift,
+                           DAG.getConstant(ShiftedMask, dl, VT));
+      }
+    }
+  }
+
   // (i32 (aext (i8 (x86isd::setcc_carry)))) -> (i32 (x86isd::setcc_carry))
   // FIXME: Is this needed? We don't seem to have any tests for it.
   if (!DCI.isBeforeLegalizeOps() && N->getOpcode() == ISD::ANY_EXTEND &&

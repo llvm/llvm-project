@@ -172,9 +172,9 @@ define i8 @test8(i8 %x) nounwind {
 ;
 ; X64-LABEL: test8:
 ; X64:       # %bb.0:
-; X64-NEXT:    shrb %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    imull $211, %eax, %eax
+; X64-NEXT:    shrl %edi
+; X64-NEXT:    andl $127, %edi
+; X64-NEXT:    imull $211, %edi, %eax
 ; X64-NEXT:    shrl $13, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -195,9 +195,9 @@ define i8 @test9(i8 %x) nounwind {
 ;
 ; X64-LABEL: test9:
 ; X64:       # %bb.0:
-; X64-NEXT:    shrb $2, %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    imull $71, %eax, %eax
+; X64-NEXT:    shrl $2, %edi
+; X64-NEXT:    andl $63, %edi
+; X64-NEXT:    imull $71, %edi, %eax
 ; X64-NEXT:    shrl $11, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

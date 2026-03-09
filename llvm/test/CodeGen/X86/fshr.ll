@@ -493,10 +493,12 @@ define i16 @const_shift_i16(i16 %x, i16 %y) nounwind {
 ;
 ; X64-SLOW-LABEL: const_shift_i16:
 ; X64-SLOW:       # %bb.0:
-; X64-SLOW-NEXT:    movzwl %si, %eax
+; X64-SLOW-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-SLOW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-SLOW-NEXT:    shll $9, %edi
-; X64-SLOW-NEXT:    shrl $7, %eax
-; X64-SLOW-NEXT:    orl %edi, %eax
+; X64-SLOW-NEXT:    shrl $7, %esi
+; X64-SLOW-NEXT:    andl $511, %esi # imm = 0x1FF
+; X64-SLOW-NEXT:    leal (%rsi,%rdi), %eax
 ; X64-SLOW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-SLOW-NEXT:    retq
   %tmp = tail call i16 @llvm.fshr.i16(i16 %x, i16 %y, i16 7)
