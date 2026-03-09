@@ -133,8 +133,8 @@ def testArrayTypeOps():
 
     undef = llvm.UndefOp(arr_t)
     c_42 = llvm.mlir_constant(IntegerAttr.get(i32, 42))
-    inserted = llvm.InsertValueOp(arr_t, undef, c_42, [0])
-    extracted = llvm.ExtractValueOp(i32, inserted, [0])
+    inserted = llvm.insertvalue(undef, c_42, [0])
+    llvm.extractvalue(i32, inserted, [0])
 
     # CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<4 x i32>
     # CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i32) : i32
