@@ -205,3 +205,4 @@ synchronization/work_group_barrier.cl
 workitem/get_enqueued_local_size.cl
 workitem/get_global_id.cl
 workitem/get_global_size.cl
+workitem/get_num_groups.cl
