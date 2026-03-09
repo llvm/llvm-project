@@ -6,6 +6,8 @@ libclc_configure_source_list(OPENCL_SPIRV_SOURCES
   ${_gen}
   async/async_work_group_strided_copy.cl
   async/wait_group_events.cl
+  collective/work_group_any_all.cl
+  collective/work_group_broadcast.cl
   common/degrees.cl
   common/mix.cl
   common/radians.cl
@@ -73,6 +75,12 @@ libclc_configure_source_list(OPENCL_SPIRV_SOURCES
   math/tanh.cl
   math/tanpi.cl
   math/tgamma.cl
+  mem_fence/fence.cl
   shared/vload.cl
   shared/vstore.cl
+  subgroup/subgroup.cl
+  synchronization/sub_group_barrier.cl
+  synchronization/work_group_barrier.cl
+  workitem/get_global_offset.cl
+  workitem/get_work_dim.cl
 )
