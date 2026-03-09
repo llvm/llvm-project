@@ -101,7 +101,7 @@ class AMDGPULowerVGPREncoding {
 
     void print(raw_ostream &OS) const {
       static const char *FieldNames[] = {"src0", "src1", "src2", "dst"};
-      OS << "{";
+      OS << '{';
       for (const auto &[I, Op] : enumerate(Ops)) {
         if (I)
           OS << ", ";
@@ -111,7 +111,7 @@ class AMDGPULowerVGPREncoding {
         else
           OS << "?";
       }
-      OS << "}";
+      OS << '}';
     }
 
     // Check if this mode is compatible with required \p NewMode without
