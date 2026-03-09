@@ -478,10 +478,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if ((Subtarget.hasStdExtP() || Subtarget.hasVendorXqcia()) &&
       !Subtarget.is64Bit()) {
-    // FIXME: Support i32 on RV64+P by inserting into a v2i32 vector, doing
-    // the vector operation and extracting.
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
                        MVT::i32, Legal);
+  } else if (Subtarget.hasStdExtP() && Subtarget.is64Bit()) {
+    setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
+                       MVT::i32, Custom);
   } else if (!Subtarget.hasStdExtZbb() && Subtarget.is64Bit()) {
     setOperationAction({ISD::SADDSAT, ISD::SSUBSAT, ISD::UADDSAT, ISD::USUBSAT},
                        MVT::i32, Custom);
@@ -572,9 +573,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SADDSAT, VTs, Legal);
     setOperationAction(ISD::USUBSAT, VTs, Legal);
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
-    setOperationAction(ISD::SSHLSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
-    setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
+    for (MVT VT : VTs) {
+      if (VT != MVT::v2i32)
+        setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU}, VT, Legal);
+      if (VT.getVectorElementType() != MVT::i8)
+        setOperationAction(ISD::SSHLSAT, VT, Custom);
+    }
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BUILD_VECTOR, VTs, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, VTs, Legal);
@@ -1116,8 +1121,21 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
       }
 
-      if (Subtarget.hasStdExtZvbc() && VT.getVectorElementType() == MVT::i64)
-        setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
+      if (VT.getVectorElementType() == MVT::i64) {
+        if (Subtarget.hasStdExtZvbc())
+          setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
+      } else {
+        if (Subtarget.hasStdExtZvbc32e()) {
+          setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
+        } else if (Subtarget.hasStdExtZvbc()) {
+          // Promote to i64 if the lmul is small enough.
+          // FIXME: Split if necessary to widen.
+          // FIXME: Promote clmulh directly without legalizing to clmul first.
+          MVT I64VecVT = MVT::getVectorVT(MVT::i64, VT.getVectorElementCount());
+          if (isTypeLegal(I64VecVT))
+            setOperationAction(ISD::CLMUL, VT, Custom);
+        }
+      }
 
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
     }
@@ -2702,7 +2720,6 @@ bool RISCVTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
-  // TODO: We can extract index 0 from a mask vector without a slide.
   if (EltVT == MVT::i1)
     return false;
 
@@ -8841,14 +8858,32 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRA:
     if (Op.getSimpleValueType().isFixedLengthVector()) {
       if (Subtarget.hasStdExtP()) {
-        // We have patterns for scalar/immediate shift amount, so no lowering
-        // needed.
-        if (Op.getOperand(1)->getOpcode() == ISD::SPLAT_VECTOR)
-          return Op;
+        SDValue ShAmtVec = Op.getOperand(1);
+        SDValue SplatVal;
+        if (ShAmtVec.getOpcode() == ISD::SPLAT_VECTOR)
+          SplatVal = ShAmtVec.getOperand(0);
+        else if (ShAmtVec.getOpcode() == ISD::BUILD_VECTOR)
+          SplatVal = cast<BuildVectorSDNode>(ShAmtVec)->getSplatValue();
 
-        // There's no vector-vector version of shift instruction in P extension
-        // so we need to unroll to scalar computation and pack them back.
-        return DAG.UnrollVectorOp(Op.getNode());
+        if (!SplatVal)
+          return DAG.UnrollVectorOp(Op.getNode());
+
+        unsigned Opc;
+        switch (Op.getOpcode()) {
+        default:
+          llvm_unreachable("Unexpected opcode");
+        case ISD::SHL:
+          Opc = RISCVISD::PSHL;
+          break;
+        case ISD::SRL:
+          Opc = RISCVISD::PSRL;
+          break;
+        case ISD::SRA:
+          Opc = RISCVISD::PSRA;
+          break;
+        }
+        return DAG.getNode(Opc, SDLoc(Op), Op.getValueType(), Op.getOperand(0),
+                           SplatVal);
       }
       return lowerToScalableOp(Op, DAG);
     }
@@ -8856,6 +8891,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     return SDValue();
+  case ISD::SSHLSAT: {
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.isFixedLengthVector() && Subtarget.hasStdExtP() &&
+           "Unexptect custom legalisation");
+    APInt Splat;
+    if (!ISD::isConstantSplatVector(Op.getOperand(1).getNode(), Splat))
+      return SDValue();
+    uint64_t ShAmt = Splat.getZExtValue();
+    if (ShAmt >= VT.getVectorElementType().getSizeInBits())
+      return SDValue();
+    SDLoc DL(Op);
+    return DAG.getNode(RISCVISD::PSSLAI, DL, VT, Op.getOperand(0),
+                       DAG.getTargetConstant(ShAmt, DL, Subtarget.getXLenVT()));
+  }
   case ISD::FABS:
   case ISD::FNEG:
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
@@ -8920,6 +8969,18 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return lowerToScalableOp(Op, DAG);
     assert(Op.getOpcode() != ISD::CTTZ);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
+  case ISD::CLMUL: {
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.isScalableVector() && Subtarget.hasStdExtZvbc() &&
+           "Unexpected custom legalisation");
+    // Promote to i64 vector.
+    MVT I64VecVT = VT.changeVectorElementType(MVT::i64);
+    SDLoc DL(Op);
+    SDValue Op0 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(0));
+    SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(1));
+    SDValue CLMUL = DAG.getNode(ISD::CLMUL, DL, I64VecVT, Op0, Op1);
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, CLMUL);
+  }
   case ISD::FCOPYSIGN:
     if (Op.getValueType() == MVT::f16 || Op.getValueType() == MVT::bf16)
       return lowerFCOPYSIGN(Op, DAG, Subtarget);
@@ -15371,6 +15432,26 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
              "Unexpected custom legalisation");
 
+      SDValue LHS = N->getOperand(0);
+      SDValue ShAmt = N->getOperand(1);
+
+      unsigned WideOpc = 0;
+      APInt HighMask = APInt::getHighBitsSet(64, 32);
+      if (DAG.MaskedValueIsZero(LHS, HighMask))
+        WideOpc = RISCVISD::WSLL;
+      else if (DAG.ComputeMaxSignificantBits(LHS) <= 32)
+        WideOpc = RISCVISD::WSLA;
+
+      if (WideOpc) {
+        SDValue Res =
+            DAG.getNode(WideOpc, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                        DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, LHS),
+                        DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, ShAmt));
+        Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, N->getValueType(0),
+                                      Res, Res.getValue(1)));
+        return;
+      }
+
       // Only handle constant shifts < 32. Non-constant shifts are handled by
       // lowerShiftLeftParts/lowerShiftRightParts, and shifts >= 32 use default
       // legalization.
@@ -15378,22 +15459,22 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (!ShAmtC || ShAmtC->getZExtValue() >= 32)
         break;
 
-      auto [Lo, Hi] = DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
+      auto [Lo, Hi] = DAG.SplitScalar(LHS, DL, MVT::i32, MVT::i32);
 
       SDValue LoRes, HiRes;
       if (N->getOpcode() == ISD::SHL) {
         // Lo = slli Lo, shamt
         // Hi = nsrli {Hi, Lo}, (32 - shamt)
         uint64_t ShAmtVal = ShAmtC->getZExtValue();
-        LoRes = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, N->getOperand(1));
+        LoRes = DAG.getNode(ISD::SHL, DL, MVT::i32, Lo, ShAmt);
         HiRes = DAG.getNode(RISCVISD::NSRL, DL, MVT::i32, Lo, Hi,
                             DAG.getConstant(32 - ShAmtVal, DL, MVT::i32));
       } else {
         bool IsSRA = N->getOpcode() == ISD::SRA;
         LoRes = DAG.getNode(IsSRA ? RISCVISD::NSRA : RISCVISD::NSRL, DL,
-                            MVT::i32, Lo, Hi, N->getOperand(1));
-        HiRes = DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL, DL, MVT::i32, Hi,
-                            N->getOperand(1));
+                            MVT::i32, Lo, Hi, ShAmt);
+        HiRes =
+            DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL, DL, MVT::i32, Hi, ShAmt);
       }
       SDValue Res = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, LoRes, HiRes);
       Results.push_back(Res);
@@ -15575,18 +15656,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::UADDSAT:
-  case ISD::USUBSAT: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-           !Subtarget.hasStdExtZbb() && "Unexpected custom legalisation");
-    // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
-    // promotion for UADDO/USUBO.
-    Results.push_back(expandAddSubSat(N, DAG));
-    return;
-  }
+  case ISD::USUBSAT:
   case ISD::SADDSAT:
   case ISD::SSUBSAT: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
+
+    if (Subtarget.hasStdExtP()) {
+      // On RV64, map scalar i32 saturating add/sub through lane 0 of a packed
+      // v2i32 operation so we can select ps*.w instructions.
+      SDValue LHS = DAG.getNode(
+          ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0)));
+      SDValue RHS = DAG.getNode(
+          ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1)));
+      SDValue VecRes = DAG.getNode(N->getOpcode(), DL, MVT::v2i32, LHS, RHS);
+      SDValue Zero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+      Results.push_back(
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, VecRes, Zero));
+      return;
+    }
+
+    assert(!Subtarget.hasStdExtZbb() && "Unexpected custom legalisation");
     Results.push_back(expandAddSubSat(N, DAG));
     return;
   }
@@ -25180,6 +25272,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &RISCV::FPR16RegClass);
         if (Subtarget.hasStdExtZhinxmin())
           return std::make_pair(0U, &RISCV::GPRF16NoX0RegClass);
+      } else if (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
+        return std::make_pair(0U, &RISCV::FPR16RegClass);
       } else if (VT == MVT::f32) {
         if (Subtarget.hasStdExtF())
           return std::make_pair(0U, &RISCV::FPR32RegClass);
@@ -25277,6 +25371,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &RISCV::FPR16CRegClass);
       if (Subtarget.hasStdExtZhinxmin())
         return std::make_pair(0U, &RISCV::GPRF16CRegClass);
+    } else if (VT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) {
+      return std::make_pair(0U, &RISCV::FPR16CRegClass);
     } else if (VT == MVT::f32) {
       if (Subtarget.hasStdExtF())
         return std::make_pair(0U, &RISCV::FPR32CRegClass);

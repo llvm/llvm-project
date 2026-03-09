@@ -130,6 +130,7 @@ copy("Headers") {
     "adxintrin.h",
     "altivec.h",
     "amdgpuintrin.h",
+    "amdhsa_abi.h",
     "ammintrin.h",
     "amo.h",
     "amxavx512intrin.h",

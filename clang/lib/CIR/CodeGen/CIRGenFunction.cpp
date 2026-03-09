@@ -113,9 +113,14 @@ mlir::Location CIRGenFunction::getLoc(SourceLocation srcLoc) {
     return mlir::FileLineColLoc::get(builder.getStringAttr(filename),
                                      pLoc.getLine(), pLoc.getColumn());
   }
-  // Do our best...
+  // We expect to have a currSrcLoc set, so we assert here, but it isn't
+  // critical for the correctness of compilation, so in non-assert builds
+  // we fallback on using an unknown location.
   assert(currSrcLoc && "expected to inherit some source location");
-  return *currSrcLoc;
+  if (currSrcLoc)
+    return *currSrcLoc;
+  // We're brave, but time to give up.
+  return builder.getUnknownLoc();
 }
 
 mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
@@ -128,9 +133,12 @@ mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
     mlir::Attribute metadata;
     return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
   }
-  if (currSrcLoc) {
+  // We expect to have a currSrcLoc set, so we assert here, but it isn't
+  // critical for the correctness of compilation, so in non-assert builds
+  // we fallback on using an unknown location.
+  assert(currSrcLoc && "expected to inherit some source location");
+  if (currSrcLoc)
     return *currSrcLoc;
-  }
   // We're brave, but time to give up.
   return builder.getUnknownLoc();
 }
@@ -387,6 +395,30 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
   return returnType.isTriviallyCopyableType(astContext);
 }
 
+static bool previousOpIsNonYieldingCleanup(mlir::Block *block) {
+  if (block->empty())
+    return false;
+  mlir::Operation *op = &block->back();
+  auto cleanupScopeOp = mlir::dyn_cast<cir::CleanupScopeOp>(op);
+  if (!cleanupScopeOp)
+    return false;
+
+  // Check whether the body region of the cleanup scope exits via cir.yield.
+  // Exits via cir.return or cir.goto do not fall through to the operation
+  // following the cleanup scope, and exits via break, continue, and resume
+  // are not expected here.
+  for (mlir::Block &bodyBlock : cleanupScopeOp.getBodyRegion()) {
+    if (bodyBlock.mightHaveTerminator()) {
+      if (mlir::isa<cir::YieldOp>(bodyBlock.getTerminator()))
+        return false;
+      assert(!mlir::isa<cir::BreakOp>(bodyBlock.getTerminator()) &&
+             !mlir::isa<cir::ContinueOp>(bodyBlock.getTerminator()) &&
+             !mlir::isa<cir::ResumeOp>(bodyBlock.getTerminator()));
+    }
+  }
+  return true;
+}
+
 void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   LexicalScope *localScope = cgf.curLexScope;
@@ -400,7 +432,8 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   // return.
   if (cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
       !cgf.sawAsmBlock && !fd->getReturnType()->isVoidType() &&
-      builder.getInsertionBlock()) {
+      builder.getInsertionBlock() &&
+      !previousOpIsNonYieldingCleanup(builder.getInsertionBlock())) {
     bool shouldEmitUnreachable =
         cgf.cgm.getCodeGenOpts().StrictReturn ||
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
@@ -504,7 +537,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   didCallStackSave = false;
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
-  curFuncDecl = d->getNonClosureContext();
+  curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
   prologueCleanupDepth = ehStack.stable_begin();
 
@@ -1067,6 +1100,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     CXXDefaultArgExprScope scope(*this, dae);
     return emitLValue(dae->getExpr());
   }
+  case Expr::CXXTypeidExprClass:
+    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:

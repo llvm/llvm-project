@@ -6816,6 +6816,11 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   const unsigned SVTBits = SVT.getSizeInBits();
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
+  const bool HasWideVT64MULHU =
+      isOperationLegalOrCustom(ISD::MULHU, MVT::i64, IsAfterLegalization);
+  const bool HasWideVT64UMUL_LOHI =
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i64, IsAfterLegalization);
+  bool UseWiden = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](ConstantSDNode *C) {
@@ -6833,11 +6838,20 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       PreShift = PostShift = DAG.getUNDEF(ShSVT);
       MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
     } else {
+      const bool AllowWiden = (EltBits == 32 && !VT.isVector() &&
+                               (HasWideVT64MULHU || HasWideVT64UMUL_LOHI));
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
-              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
+              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
+              /*AllowEvenDivisorOptimization=*/true,
+              /*AllowWidenOptimization=*/AllowWiden);
 
-      MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+      if (magics.Widen) {
+        UseWiden = true;
+        MagicFactor = DAG.getConstant(magics.Magic, dl, MVT::i64);
+      } else {
+        MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
+      }
 
       assert(magics.PreShift < Divisor.getBitWidth() &&
              "We shouldn't generate an undefined shift!");
@@ -6887,6 +6901,25 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     PreShift = PreShifts[0];
     MagicFactor = MagicFactors[0];
     PostShift = PostShifts[0];
+  }
+
+  if (UseWiden) {
+    // Compute: (i64(x) * MagicFactor) >> 64
+    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, N0);
+
+    // Perform 64x64 -> 128 multiplication and extract high 64 bits
+    SDValue High;
+    if (HasWideVT64MULHU) {
+      High = DAG.getNode(ISD::MULHU, dl, MVT::i64, X64, MagicFactor);
+    } else {
+      SDValue LoHi =
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(MVT::i64, MVT::i64),
+                      X64, MagicFactor);
+      High = SDValue(LoHi.getNode(), 1);
+    }
+
+    Created.push_back(High.getNode());
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, High);
   }
 
   SDValue Q = N0;
@@ -8464,10 +8497,6 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   unsigned BW = VT.getScalarSizeInBits();
   unsigned Opcode = Node->getOpcode();
 
-  // Scalarize if the vector multiplication is unlikely to work.
-  if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
-    return DAG.UnrollVectorOp(Node);
-
   switch (Opcode) {
   case ISD::CLMUL: {
     // NOTE: If you change this expansion, please update the cost model
@@ -8520,8 +8549,13 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
         *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), 2 * BW));
     // For example, ExtVT = i64 based operations aren't legal on a 32-bit
     // target; use bitreverse-based lowering in this case.
+    // Also prefer bitreverse-based lowering when CLMUL is legal on VT but
+    // not on ExtVT, to avoid expanding CLMUL on the wider type (e.g. v8i8
+    // on AArch64 where CLMUL v8i8 is legal via PMUL but CLMUL v8i16 is not).
     if (!isOperationLegalOrCustom(ISD::ZERO_EXTEND, ExtVT) ||
-        !isOperationLegalOrCustom(ISD::SRL, ExtVT)) {
+        !isOperationLegalOrCustom(ISD::SRL, ExtVT) ||
+        (!isOperationLegalOrCustom(ISD::CLMUL, ExtVT) &&
+         isOperationLegalOrCustom(ISD::CLMUL, VT))) {
       SDValue XRev = DAG.getNode(ISD::BITREVERSE, DL, VT, X);
       SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
       SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
