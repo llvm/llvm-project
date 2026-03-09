@@ -1201,7 +1201,7 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
     return std::nullopt;
 
   if (GV.isDeclarationForLinker()) {
-    // Interface variables mustn't not get Import linkage.
+    // Interface variables must not get Import linkage.
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
       auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
       if (SC == SPIRV::StorageClass::Input ||
