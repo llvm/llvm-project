@@ -9,6 +9,13 @@
 //
 // Tests for unconstrained intrinsics that require the fullfp16 extension.
 //
+// This file contains tests that were originally located in
+//  *  clang/test/CodeGen/AArch64/v8.2a-fp16-intrinsics.c
+// The main difference is the use of RUN lines that enable ClangIR lowering;
+// therefore only builtins currently supported by ClangIR are tested here.
+// Once ClangIR support is complete, this file is intended to replace the
+// original test file.
+//
 // These intrinsics expand to code containing multiple compound and declaration
 // statements rather than just plain function calls, which leads to:
 //  * "scopes" at the CIR level, and then
@@ -19,10 +26,6 @@
 //
 // TODO: Remove `-simplifycfg` once CIR lowering includes the relevant
 //       optimizations to reduce the CFG.
-//
-// TODO: Merge this file with
-//        * clang/test/CodeGen/AArch64/v8.2a-fp16-intrinsics.c
-//       (the source of these tests).
 //=============================================================================
 
 #include <arm_fp16.h>
