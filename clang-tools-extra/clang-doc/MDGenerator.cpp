@@ -78,12 +78,19 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
 /// Usage :
 /// Initialize an object with a llvm::raw_ostream to output into.
 /// Call the write(C) function with an array of Comments 'C'.
-class MDCommentWriter {
-private:
-  llvm::raw_ostream &OS;
-  bool Started = false;
-  bool NeedsParagraphBreak = false;
+class TableCommentWriter {
+public:
+  explicit TableCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
 
+  void write(llvm::ArrayRef<CommentInfo> Comments) {
+    for (const auto &C : Comments)
+      writeTableSafeComment(C);
+
+    if (!Started)
+      OS << "--";
+  }
+
+private:
   /// This function inserts breaks into the stream.
   ///
   /// We add a double break in between paragraphs.
@@ -130,16 +137,9 @@ private:
     }
   }
 
-public:
-  explicit MDCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
-
-  void write(llvm::ArrayRef<CommentInfo> Comments) {
-    for (const auto &C : Comments)
-      writeTableSafeComment(C);
-
-    if (!Started)
-      OS << "--";
-  }
+  llvm::raw_ostream &OS;
+  bool Started = false;
+  bool NeedsParagraphBreak = false;
 };
 
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
@@ -260,7 +260,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
         OS << "| " << N.Value << " ";
       if (HasComments) {
         OS << "| ";
-        MDCommentWriter CommentWriter(OS);
+        TableCommentWriter CommentWriter(OS);
         CommentWriter.write(N.Description);
         OS << " ";
       }
