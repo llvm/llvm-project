@@ -15,7 +15,7 @@ file(MAKE_DIRECTORY "${_test_dir}")
 message(STATUS "Check for working CLC compiler: ${CMAKE_CLC_COMPILER}")
 
 execute_process(
-  COMMAND "${CMAKE_CLC_COMPILER}" -x cl -c -flto
+  COMMAND "${CMAKE_CLC_COMPILER}" -target spir64-unknown-unknown -x cl -c -flto
           -o "${_test_out}" "${_test_file}"
   RESULT_VARIABLE _clc_result
   ERROR_VARIABLE _clc_error
