@@ -383,7 +383,8 @@ protected:
       const C &clause, const parser::ScalarIntConstantExpr &i);
 
   void RequiresPositiveParameter(const C &clause,
-      const parser::ScalarIntExpr &i, llvm::StringRef paramName = "parameter");
+      const parser::ScalarIntExpr &i, llvm::StringRef paramName = "parameter",
+      bool allowZero = true);
 
   void OptionalConstantPositiveParameter(
       const C &clause, const std::optional<parser::ScalarIntConstantExpr> &o);
@@ -657,9 +658,9 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::SayNotMatching(
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
     ClauseEnumSize>::RequiresPositiveParameter(const C &clause,
-    const parser::ScalarIntExpr &i, llvm::StringRef paramName) {
+    const parser::ScalarIntExpr &i, llvm::StringRef paramName, bool allowZero) {
   if (const auto v{GetIntValue(i)}) {
-    if (*v < 0) {
+    if (*v < (allowZero ? 0 : 1)) {
       context_.Say(GetContext().clauseSource,
           "The %s of the %s clause must be "
           "a positive integer expression"_err_en_US,

@@ -31,7 +31,7 @@ subroutine loop_test
     a(i,j,k) = a(i,j,k) + 1
   enddo
 
-  ! CHECK-COUNT-3: fir.do_loop {{[^un]*}} -> (index, i32)
+  ! CHECK-COUNT-3: fir.do_loop {{[^un]*}} -> (i32)
   asum = 0
   do i=1,5
     do j=1,5
@@ -90,7 +90,6 @@ subroutine lis(n)
   ! CHECK-DAG: fir.alloca !fir.array<?x?x?xi32>, %{{.*}}, %{{.*}}, %{{.*}} {bindc_name = "a", fir.target, uniq_name = "_QFlisEa"}
   ! CHECK-DAG: fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = "r", uniq_name = "_QFlisEr"}
   ! CHECK-DAG: fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = "s", uniq_name = "_QFlisEs"}
-  ! CHECK-DAG: fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = "t", uniq_name = "_QFlisEt"}
   integer, target    :: a(n,n,n) ! operand via p
   integer            :: r(n,n)   ! result, unspecified locality
   integer            :: s(n,n)   ! shared locality
@@ -120,7 +119,7 @@ subroutine lis(n)
   ! CHECK:           %[[V_95:[0-9]+]] = fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = "t", pinned, uniq_name = "_QFlisEt"}
   ! CHECK:           %[[V_96:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?x?xi32>>> {bindc_name = "p", pinned, uniq_name = "_QFlisEp"}
   ! CHECK:           fir.store %{{.*}} to %[[V_96]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
-  ! CHECK:           fir.do_loop %arg3 = %{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%arg4 = %{{.*}}) -> (index, i32) {
+  ! CHECK:           fir.do_loop %arg3 = %{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%arg4 = %{{.*}}) -> (i32) {
   ! CHECK:             fir.do_concurrent {
   ! CHECK:               fir.alloca i32 {bindc_name = "m"}
   ! CHECK:               fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {

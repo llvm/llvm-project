@@ -2,7 +2,7 @@
 // Enable all supported extensions to focus the verification of expected profile requirement errors.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-validate="profile=pro_fp extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="profiles=pro_fp extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround" -tosa-validate="strict-op-spec-alignment"
 
 // -----
 func.func @test_const_i1() -> tensor<3x11x11x3xi1> {
@@ -212,10 +212,10 @@ func.func @test_reverse(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
 
 // -----
 func.func @test_slice(%arg0: tensor<13x21x3xi8>) -> tensor<4x11x1xi8> {
-  %0 = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %1 = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op illegal: requires [pro_int] but not enabled in target}}
-  %2 = tosa.slice %arg0, %0, %1 : (tensor<13x21x3xi8>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi8>
+  %2 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xi8>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi8>
   return %2 : tensor<4x11x1xi8>
 }
 

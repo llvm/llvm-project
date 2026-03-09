@@ -111,7 +111,7 @@ namespace {
    friend raw_ostream &operator<< (raw_ostream &OS, const DepChain &D);
   };
 
-  LLVM_ATTRIBUTE_UNUSED
+  [[maybe_unused]]
   raw_ostream &operator<<(raw_ostream &OS, const DepChain &D) {
     const ChainOfDependences &CD = D.Chain;
     int ChainSize = CD.size();
@@ -144,7 +144,7 @@ namespace {
     bool isDefined() { return Inst2Replace != nullptr; }
   };
 
-  LLVM_ATTRIBUTE_UNUSED
+  [[maybe_unused]]
   raw_ostream &operator<<(raw_ostream &OS, const ReuseValue &RU) {
     OS << "** ReuseValue ***\n";
     OS << "Instruction to Replace: " << *(RU.Inst2Replace) << "\n";
@@ -486,7 +486,7 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
           LLVM_DEBUG(dbgs() << "Found Value for reuse.\n");
           ReuseCandidate.Inst2Replace = I;
           ReuseCandidate.BackedgeInst = BEUser;
-          ReuseCandidate.DepChains = DepChains;
+          ReuseCandidate.DepChains = std::move(DepChains);
           ReuseCandidate.Iterations = Iters;
           return;
         }

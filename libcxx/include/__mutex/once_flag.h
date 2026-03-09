@@ -86,12 +86,10 @@ class __call_once_param {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __call_once_param(_Fp& __f) : __f_(__f) {}
 
-  _LIBCPP_HIDE_FROM_ABI void operator()() { __execute(__make_index_sequence<tuple_size<_Fp>::value>()); }
-
-private:
-  template <size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI void __execute(__index_sequence<_Indices...>) {
-    std::__invoke(std::get<_Indices>(std::move(__f_))...);
+  _LIBCPP_HIDE_FROM_ABI void operator()() {
+    [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> void {
+      std::__invoke(std::get<_Indices>(std::move(__f_))...);
+    }(__make_index_sequence<tuple_size<_Fp>::value>());
   }
 };
 

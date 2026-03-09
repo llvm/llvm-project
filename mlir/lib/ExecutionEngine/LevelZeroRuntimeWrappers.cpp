@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Twine.h"
-
 #include "level_zero/ze_api.h"
 #include <cassert>
 #include <deque>
@@ -19,6 +17,8 @@
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <stdexcept>
 #include <unordered_set>
 #include <vector>
 
@@ -71,10 +71,9 @@ static ze_driver_handle_t getDriver(uint32_t idx = 0) {
   drivers.resize(driverCount);
   L0_SAFE_CALL(zeInitDrivers(&driverCount, drivers.data(), &driver_type));
   if (idx >= driverCount)
-    throw std::runtime_error((llvm::Twine("Requested driver idx out-of-bound, "
-                                          "number of availabe drivers: ") +
-                              std::to_string(driverCount))
-                                 .str());
+    throw std::runtime_error(std::string("Requested driver idx out-of-bound, "
+                                         "number of availabe drivers: ") +
+                             std::to_string(driverCount));
   isDriverInitialised = true;
   return drivers[idx];
 }
@@ -328,12 +327,12 @@ struct DynamicEventPool {
   }
 };
 
-L0RTContextWrapper &getRtContext() {
+static L0RTContextWrapper &getRtContext() {
   thread_local static L0RTContextWrapper rtContext(0);
   return rtContext;
 }
 
-DynamicEventPool &getDynamicEventPool() {
+static DynamicEventPool &getDynamicEventPool() {
   thread_local static DynamicEventPool dynEventPool{&getRtContext()};
   return dynEventPool;
 }
@@ -492,8 +491,8 @@ extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
 }
 
 template <typename PATTERN_TYPE>
-void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
-                StreamWrapper *stream) {
+static void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
+                       StreamWrapper *stream) {
   L0RTContextWrapper &rtContext = getRtContext();
   auto listType =
       rtContext.copyEngineMaxMemoryFillPatternSize >= sizeof(PATTERN_TYPE)

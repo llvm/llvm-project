@@ -16,7 +16,7 @@ to fill out in order to produce Dockerfiles for a new docker image.
 Why?
 ----
 Docker images provide a way to produce binary distributions of
-software inside a controlled environment. Having Dockerfiles to builds docker images
+software inside a controlled environment. Having Dockerfiles to build docker images
 inside LLVM repo makes them much more discoverable than putting them into any other
 place.
 
@@ -35,7 +35,7 @@ A snapshot of a docker container filesystem is called a *docker image*.
 One can start a container from a prebuilt docker image.
 
 Docker images are built from a so-called *Dockerfile*, a source file written in
-a specialized language that defines instructions to be used when build
+a specialized language that defines instructions to be used when building
 the docker image (see `official
 documentation <https://docs.docker.com/engine/reference/builder/>`_ for more
 details). A minimal Dockerfile typically contains a base image and a number

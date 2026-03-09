@@ -7,11 +7,7 @@ define void @vadda_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vneg.b $vr2, $vr0
-; CHECK-NEXT:    vmax.b $vr0, $vr0, $vr2
-; CHECK-NEXT:    vneg.b $vr2, $vr1
-; CHECK-NEXT:    vmax.b $vr1, $vr1, $vr2
-; CHECK-NEXT:    vadd.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vadda.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -33,11 +29,7 @@ define void @vadda_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vneg.h $vr2, $vr0
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr2
-; CHECK-NEXT:    vneg.h $vr2, $vr1
-; CHECK-NEXT:    vmax.h $vr1, $vr1, $vr2
-; CHECK-NEXT:    vadd.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vadda.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -59,11 +51,7 @@ define void @vadda_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vneg.w $vr2, $vr0
-; CHECK-NEXT:    vmax.w $vr0, $vr0, $vr2
-; CHECK-NEXT:    vneg.w $vr2, $vr1
-; CHECK-NEXT:    vmax.w $vr1, $vr1, $vr2
-; CHECK-NEXT:    vadd.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vadda.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -85,11 +73,7 @@ define void @vadda_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vneg.d $vr2, $vr0
-; CHECK-NEXT:    vmax.d $vr0, $vr0, $vr2
-; CHECK-NEXT:    vneg.d $vr2, $vr1
-; CHECK-NEXT:    vmax.d $vr1, $vr1, $vr2
-; CHECK-NEXT:    vadd.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vadda.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

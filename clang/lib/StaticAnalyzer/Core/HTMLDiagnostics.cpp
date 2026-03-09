@@ -37,6 +37,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -257,6 +258,9 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
 
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   // Create the HTML directory if it is missing.
   if (!createdDir) {
     createdDir = true;

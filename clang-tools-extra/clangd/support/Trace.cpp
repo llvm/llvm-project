@@ -289,7 +289,7 @@ makeSpanContext(llvm::Twine Name, const Metric &LatencyMetric) {
     return std::make_pair(Context::current().clone(), nullptr);
   std::optional<WithContextValue> WithLatency;
   using Clock = std::chrono::high_resolution_clock;
-  WithLatency.emplace(llvm::make_scope_exit(
+  WithLatency.emplace(llvm::scope_exit(
       [StartTime = Clock::now(), Name = Name.str(), &LatencyMetric] {
         LatencyMetric.record(
             std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() -

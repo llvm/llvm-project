@@ -299,6 +299,7 @@ public:
   template <typename T> llvm::ArrayRef<T> getDataAs() const {
     size_t s = content().size();
     assert(s % sizeof(T) == 0);
+    assert(reinterpret_cast<uintptr_t>(content().data()) % alignof(T) == 0);
     return llvm::ArrayRef<T>((const T *)content().data(), s / sizeof(T));
   }
 
@@ -394,7 +395,7 @@ public:
                  StringRef name);
   static bool classof(const SectionBase *s) { return s->kind() == EHFrame; }
   template <class ELFT> void split();
-  template <class ELFT, class RelTy> void split(ArrayRef<RelTy> rels);
+  template <class ELFT, class RelTy> void preprocessRelocs(Relocs<RelTy> rels);
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
@@ -402,6 +403,10 @@ public:
 
   SyntheticSection *getParent() const;
   uint64_t getParentOffset(uint64_t offset) const;
+
+  // Preprocessed relocations in uniform format to avoid REL/RELA/CREL
+  // relocation format handling throughout the codebase.
+  SmallVector<Relocation, 0> rels;
 };
 
 // This is a section that is added directly to an output section

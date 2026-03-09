@@ -659,7 +659,8 @@ static void printQualifier(llvm::raw_ostream &Out, const LangOptions &LangOpts,
   PO.SuppressTagKeyword = true;
   PO.SuppressUnwrittenScope = true;
   PO.ConstantArraySizeAsWritten = false;
-  PO.AnonymousTagLocations = false;
+  PO.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   NNS.print(Out, PO);
 }
 
@@ -911,11 +912,10 @@ void USRGenerator::VisitType(QualType T) {
     }
     if (const TagType *TT = T->getAs<TagType>()) {
       if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TT)) {
-        T = ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
-            Ctx);
+        T = ICNT->getDecl()->getCanonicalTemplateSpecializationType(Ctx);
       } else {
         Out << '$';
-        VisitTagDecl(TT->getOriginalDecl());
+        VisitTagDecl(TT->getDecl());
         return;
       }
     }

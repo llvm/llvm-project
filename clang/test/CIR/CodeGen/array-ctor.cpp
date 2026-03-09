@@ -14,28 +14,28 @@ void foo() {
     S s[42];
 }
 
-// CIR-BEFORE-LPP: cir.func dso_local @_Z3foov()
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z3foov()
 // CIR-BEFORE-LPP:   %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init]
 // CIR-BEFORE-LPP:   cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>> {
 // CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
-// CIR-BEFORE-LPP:      cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR-BEFORE-LPP:      cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
 // CIR-BEFORE-LPP:      cir.yield
 // CIR-BEFORE-LPP:    }
 // CIR-BEFORE-LPP:   cir.return
 // CIR-BEFORE-LPP: }
 
-// CIR: cir.func dso_local @_Z3foov()
+// CIR: cir.func {{.*}} @_Z3foov()
 // CIR:   %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init]
 // CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !u64i
-// CIR:   %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>>), !cir.ptr<!rec_S>
-// CIR:   %[[END_PTR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_S>, %[[CONST42]] : !u64i), !cir.ptr<!rec_S>
+// CIR:   %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>> -> !cir.ptr<!rec_S>
+// CIR:   %[[END_PTR:.*]] = cir.ptr_stride %[[DECAY]], %[[CONST42]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
 // CIR:   %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
 // CIR:   cir.store %[[DECAY]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   cir.do {
 // CIR:     %[[CURRENT:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:     cir.call @_ZN1SC1Ev(%[[CURRENT]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR:     cir.call @_ZN1SC1Ev(%[[CURRENT]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
 // CIR:     %[[CONST1:.*]] = cir.const #cir.int<1> : !u64i
-// CIR:     %[[NEXT:.*]] = cir.ptr_stride(%[[CURRENT]] : !cir.ptr<!rec_S>, %[[CONST1]] : !u64i), !cir.ptr<!rec_S>
+// CIR:     %[[NEXT:.*]] = cir.ptr_stride %[[CURRENT]], %[[CONST1]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
 // CIR:     cir.store %[[NEXT]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:     cir.yield
 // CIR:   } while {
@@ -59,7 +59,7 @@ void foo() {
 // LLVM: br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[LOOP]]:
 // LLVM: %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
-// LLVM: call void @_ZN1SC1Ev(ptr %[[CURRENT]])
+// LLVM: call void @_ZN1SC1Ev(ptr{{.*}} %[[CURRENT]])
 // LLVM: %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 1
 // LLVM: store ptr %[[NEXT]], ptr %[[ITER]]
 // LLVM: br label %[[COND]]
@@ -84,12 +84,12 @@ void zero_sized() {
     S s[0];
 }
 
-// CIR-BEFORE-LPP:     cir.func dso_local @_Z10zero_sizedv()
+// CIR-BEFORE-LPP:     cir.func {{.*}} @_Z10zero_sizedv()
 // CIR-BEFORE-LPP:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
 // CIR-BEFORE-LPP-NOT:   cir.array.ctor
 // CIR-BEFORE-LPP:       cir.return
 
-// CIR:     cir.func dso_local @_Z10zero_sizedv()
+// CIR:     cir.func {{.*}} @_Z10zero_sizedv()
 // CIR:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
 // CIR-NOT:   cir.do
 // CIR-NOT:   cir.call @_ZN1SC1Ev
@@ -111,10 +111,10 @@ void multi_dimensional() {
 
 // CIR-BEFORE-LPP:     cir.func{{.*}} @_Z17multi_dimensionalv()
 // CIR-BEFORE-LPP:       %[[S:.*]] = cir.alloca !cir.array<!cir.array<!rec_S x 5> x 3>, !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>>, ["s", init]
-// CIR-BEFORE-LPP:       %[[FLAT:.*]] = cir.cast(bitcast, %[[S]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>>), !cir.ptr<!cir.array<!rec_S x 15>>
+// CIR-BEFORE-LPP:       %[[FLAT:.*]] = cir.cast bitcast %[[S]] : !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>> -> !cir.ptr<!cir.array<!rec_S x 15>>
 // CIR-BEFORE-LPP:       cir.array.ctor %[[FLAT]] : !cir.ptr<!cir.array<!rec_S x 15>> {
 // CIR-BEFORE-LPP:        ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
-// CIR-BEFORE-LPP:          cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR-BEFORE-LPP:          cir.call @_ZN1SC1Ev(%[[ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
 // CIR-BEFORE-LPP:          cir.yield
 // CIR-BEFORE-LPP:       }
 // CIR-BEFORE-LPP:       cir.return
@@ -122,15 +122,15 @@ void multi_dimensional() {
 // CIR:     cir.func{{.*}} @_Z17multi_dimensionalv()
 // CIR:       %[[S:.*]] = cir.alloca !cir.array<!cir.array<!rec_S x 5> x 3>, !cir.ptr<!cir.array<!cir.array<!rec_S x 5> x 3>>, ["s", init]
 // CIR:       %[[CONST15:.*]] = cir.const #cir.int<15> : !u64i
-// CIR:       %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, {{.*}} : !cir.ptr<!cir.array<!rec_S x 15>>), !cir.ptr<!rec_S>
-// CIR:       %[[END_PTR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_S>, %[[CONST15]] : !u64i), !cir.ptr<!rec_S>
+// CIR:       %[[DECAY:.*]] = cir.cast array_to_ptrdecay {{.*}} : !cir.ptr<!cir.array<!rec_S x 15>> -> !cir.ptr<!rec_S>
+// CIR:       %[[END_PTR:.*]] = cir.ptr_stride %[[DECAY]], %[[CONST15]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
 // CIR:       %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
 // CIR:       cir.store %[[DECAY]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:       cir.do {
 // CIR:         %[[CURRENT:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:         cir.call @_ZN1SC1Ev(%[[CURRENT]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR:         cir.call @_ZN1SC1Ev(%[[CURRENT]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
 // CIR:         %[[CONST1:.*]] = cir.const #cir.int<1> : !u64i
-// CIR:         %[[NEXT:.*]] = cir.ptr_stride(%[[CURRENT]] : !cir.ptr<!rec_S>, %[[CONST1]] : !u64i), !cir.ptr<!rec_S>
+// CIR:         %[[NEXT:.*]] = cir.ptr_stride %[[CURRENT]], %[[CONST1]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
 // CIR:         cir.store %[[NEXT]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:         cir.yield
 // CIR:       } while {
@@ -153,7 +153,7 @@ void multi_dimensional() {
 // LLVM:       br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM:     [[LOOP]]:
 // LLVM:       %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:       call void @_ZN1SC1Ev(ptr %[[CURRENT]])
+// LLVM:       call void @_ZN1SC1Ev(ptr{{.*}} %[[CURRENT]])
 // LLVM:       %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 1
 // LLVM:       store ptr %[[NEXT]], ptr %[[ITER]]
 // LLVM:       br label %[[COND]]

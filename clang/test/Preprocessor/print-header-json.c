@@ -22,6 +22,7 @@
 #include "system2.h"
 
 // RUN: rm %t.txt
+// RUN: rm -rf %t
 // RUN: env CC_PRINT_HEADERS_FORMAT=json CC_PRINT_HEADERS_FILTERING=direct-per-file CC_PRINT_HEADERS_FILE=%t.txt %clang -fsyntax-only -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system -fmodules -fimplicit-module-maps -fmodules-cache-path=%t %s -o /dev/null
 // RUN: cat %t.txt | FileCheck %s --check-prefix=SUPPORTED_PERFILE_MODULES
 

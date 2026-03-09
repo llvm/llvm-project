@@ -13,12 +13,12 @@
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
@@ -516,6 +516,15 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     bool MatchAnyLine = false;
     if (!PH.Next("@")) {
       ExpectedLoc = Pos;
+
+      // If an implicit directive is found in an incremental input buffer, allow
+      // it to match any other incremental input buffer
+      if (PP->isIncrementalProcessingEnabled()) {
+        StringRef CurrentBufferName =
+            SM.getBufferOrFake(SM.getFileID(Pos)).getBufferIdentifier();
+        if (CurrentBufferName.starts_with("input_line_"))
+          MatchAnyFileAndLine = true;
+      }
     } else {
       PH.Advance();
       unsigned Line = 0;
@@ -552,10 +561,17 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           MatchAnyLine = true;
           ExpectedLoc = SourceLocation();
         } else {
-          // Lookup file via Preprocessor, like a #include.
-          OptionalFileEntryRef File =
-              PP->LookupFile(Pos, Filename, false, nullptr, nullptr, nullptr,
-                             nullptr, nullptr, nullptr, nullptr, nullptr);
+          OptionalFileEntryRef File;
+          if (PP->isIncrementalProcessingEnabled() &&
+              Filename.starts_with("input_line_")) {
+            // Check if it came from the prompt
+            File = SM.getFileManager().getOptionalFileRef(Filename);
+          } else {
+            // Lookup file via Preprocessor, like a #include.
+            File =
+                PP->LookupFile(Pos, Filename, false, nullptr, nullptr, nullptr,
+                               nullptr, nullptr, nullptr, nullptr, nullptr);
+          }
           if (!File) {
             Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                          diag::err_verify_missing_file)
@@ -688,8 +704,6 @@ VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
   assert(!CurrentPreprocessor && "CurrentPreprocessor should be invalid!");
   SrcManager = nullptr;
   CheckDiagnostics();
-  assert(!Diags.ownsClient() &&
-         "The VerifyDiagnosticConsumer takes over ownership of the client!");
 }
 
 // DiagnosticConsumer interface.

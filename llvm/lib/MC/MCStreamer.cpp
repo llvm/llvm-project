@@ -13,7 +13,6 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -21,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCRegister.h"
@@ -97,6 +97,10 @@ MCStreamer::MCStreamer(MCContext &Ctx)
 
 MCStreamer::~MCStreamer() = default;
 
+void MCStreamer::setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter) {
+  LFIRewriter = std::move(Rewriter);
+}
+
 void MCStreamer::reset() {
   DwarfFrameInfos.clear();
   CurrentWinFrameInfo = nullptr;
@@ -120,12 +124,6 @@ void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
 void MCStreamer::addExplicitComment(const Twine &T) {}
 void MCStreamer::emitExplicitComments() {}
-
-void MCStreamer::generateCompactUnwindEncodings(MCAsmBackend *MAB) {
-  for (auto &FI : DwarfFrameInfos)
-    FI.CompactUnwindEncoding =
-        (MAB ? MAB->generateCompactUnwindEncoding(&FI, &Context) : 0);
-}
 
 /// EmitIntValue - Special case of EmitValue that avoids the client having to
 /// pass in a MCExpr for constant integers.
@@ -405,6 +403,9 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
 
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
+
+  if (LFIRewriter)
+    LFIRewriter->onLabel(Symbol);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -749,13 +750,23 @@ void MCStreamer::emitWinCFIEndProc(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    getContext().reportError(Loc, "Not all chained regions terminated!");
+  CurrentWinFrameInfo = nullptr;
 
   MCSymbol *Label = emitCFILabel();
   CurFrame->End = Label;
-  if (!CurFrame->FuncletOrFuncEnd)
-    CurFrame->FuncletOrFuncEnd = CurFrame->End;
+  const MCSymbol **FuncletOrFuncEndPtr =
+      CurFrame->ChainedParent ? &CurFrame->ChainedParent->FuncletOrFuncEnd
+                              : &CurFrame->FuncletOrFuncEnd;
+  if (!*FuncletOrFuncEndPtr)
+    *FuncletOrFuncEndPtr = CurFrame->End;
+
+  if (CurrentWinEpilog) {
+    // Set End to... something... to prevent crashes later.
+    CurrentWinEpilog->End = emitCFILabel();
+    CurrentWinEpilog = nullptr;
+    getContext().reportError(Loc, "Missing .seh_endepilogue in " +
+                                      CurFrame->Function->getName());
+  }
 
   for (size_t I = CurrentProcWinFrameInfoStartIndex, E = WinFrameInfos.size();
        I != E; ++I)
@@ -767,38 +778,38 @@ void MCStreamer::emitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    getContext().reportError(Loc, "Not all chained regions terminated!");
 
   MCSymbol *Label = emitCFILabel();
-  CurFrame->FuncletOrFuncEnd = Label;
+  const MCSymbol **FuncletOrFuncEndPtr =
+      CurFrame->ChainedParent ? &CurFrame->ChainedParent->FuncletOrFuncEnd
+                              : &CurFrame->FuncletOrFuncEnd;
+  *FuncletOrFuncEndPtr = Label;
 }
 
-void MCStreamer::emitWinCFIStartChained(SMLoc Loc) {
+void MCStreamer::emitWinCFISplitChained(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
 
-  MCSymbol *StartProc = emitCFILabel();
+  if (!CurFrame->PrologEnd)
+    return getContext().reportError(
+        Loc, "can't split into a new chained region (.seh_splitchained) in the "
+             "middle of a prolog in " +
+                 CurFrame->Function->getName());
+
+  MCSymbol *Label = emitCFILabel();
+
+  // Complete the current frame before starting a new, chained one.
+  CurFrame->End = Label;
+
+  // All chained frames point to the same parent.
+  WinEH::FrameInfo *ChainedParent =
+      CurFrame->ChainedParent ? CurFrame->ChainedParent : CurFrame;
 
   WinFrameInfos.emplace_back(std::make_unique<WinEH::FrameInfo>(
-      CurFrame->Function, StartProc, CurFrame));
+      CurFrame->Function, Label, ChainedParent));
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
-}
-
-void MCStreamer::emitWinCFIEndChained(SMLoc Loc) {
-  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
-  if (!CurFrame)
-    return;
-  if (!CurFrame->ChainedParent)
-    return getContext().reportError(
-        Loc, "End of a chained region outside a chained region!");
-
-  MCSymbol *Label = emitCFILabel();
-
-  CurFrame->End = Label;
-  CurrentWinFrameInfo = const_cast<WinEH::FrameInfo *>(CurFrame->ChainedParent);
 }
 
 void MCStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
@@ -806,9 +817,10 @@ void MCStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    return getContext().reportError(
-        Loc, "Chained unwind areas can't have handlers!");
+
+  // Handlers are always associated with the parent frame.
+  CurFrame = CurFrame->ChainedParent ? CurFrame->ChainedParent : CurFrame;
+
   CurFrame->ExceptionHandler = Sym;
   if (!Except && !Unwind)
     getContext().reportError(Loc, "Don't know what kind of handler this is!");
@@ -822,8 +834,6 @@ void MCStreamer::emitWinEHHandlerData(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->ChainedParent)
-    getContext().reportError(Loc, "Chained unwind areas can't have handlers!");
 }
 
 void MCStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
@@ -876,7 +886,7 @@ MCSection *MCStreamer::getAssociatedXDataSection(const MCSection *TextSec) {
                           TextSec);
 }
 
-void MCStreamer::emitSyntaxDirective() {}
+void MCStreamer::emitSyntaxDirective(StringRef Syntax, StringRef Options) {}
 
 static unsigned encodeSEHRegNum(MCContext &Ctx, MCRegister Reg) {
   return Ctx.getRegisterInfo()->getSEHRegNum(Reg);
@@ -994,13 +1004,15 @@ void MCStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
   if (!CurFrame)
     return;
 
-  if (!CurFrame->PrologEnd)
-    return getContext().reportError(
+  MCSymbol *Label = emitCFILabel();
+
+  if (!CurFrame->PrologEnd) {
+    CurFrame->PrologEnd = Label;
+    getContext().reportError(
         Loc, "starting epilogue (.seh_startepilogue) before prologue has ended "
              "(.seh_endprologue) in " +
                  CurFrame->Function->getName());
-
-  MCSymbol *Label = emitCFILabel();
+  }
   CurrentWinEpilog =
       &CurFrame->EpilogMap.insert_or_assign(Label, WinEH::FrameInfo::Epilog())
            .first->second;
@@ -1017,9 +1029,12 @@ void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
     return getContext().reportError(Loc, "Stray .seh_endepilogue in " +
                                              CurFrame->Function->getName());
 
-  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start)
-    return getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
-                                             CurFrame->Function->getName());
+  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start) {
+    // Set UnwindV2Start to... something... to prevent crashes later.
+    CurrentWinEpilog->UnwindV2Start = CurrentWinEpilog->Start;
+    getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
+                                      CurFrame->Function->getName());
+  }
 
   CurrentWinEpilog->End = emitCFILabel();
   CurrentWinEpilog = nullptr;
@@ -1339,6 +1354,7 @@ void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
 void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
+void MCStreamer::emitPrefAlign(Align A) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,

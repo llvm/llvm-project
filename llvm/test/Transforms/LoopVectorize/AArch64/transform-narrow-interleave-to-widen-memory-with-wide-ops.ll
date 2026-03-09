@@ -736,27 +736,26 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i32>, ptr [[TMP2]], align 8
 ; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[WIDE_VEC]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP0]], i32 0
+; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 0
 ; VF2-NEXT:    [[WIDE_VEC1:%.*]] = load <6 x i32>, ptr [[TMP8]], align 8
 ; VF2-NEXT:    [[TMP13:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; VF2-NEXT:    [[TMP22:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 1, i32 4>
 ; VF2-NEXT:    [[TMP14:%.*]] = mul <2 x i32> [[TMP7]], [[TMP13]]
 ; VF2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP14]], i32 0
-; VF2-NEXT:    store i32 [[TMP15]], ptr [[TMP8]], align 8
 ; VF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP14]], i32 1
+; VF2-NEXT:    store i32 [[TMP15]], ptr [[TMP8]], align 8
 ; VF2-NEXT:    store i32 [[TMP16]], ptr [[TMP9]], align 8
-; VF2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP0]], i32 1
+; VF2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 1
 ; VF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 1
 ; VF2-NEXT:    [[TMP23:%.*]] = mul <2 x i32> [[TMP7]], [[TMP22]]
 ; VF2-NEXT:    [[TMP24:%.*]] = extractelement <2 x i32> [[TMP23]], i32 0
-; VF2-NEXT:    store i32 [[TMP24]], ptr [[TMP17]], align 8
 ; VF2-NEXT:    [[TMP25:%.*]] = extractelement <2 x i32> [[TMP23]], i32 1
+; VF2-NEXT:    store i32 [[TMP24]], ptr [[TMP17]], align 8
 ; VF2-NEXT:    store i32 [[TMP25]], ptr [[TMP18]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 98
@@ -773,14 +772,13 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; VF4-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP4]], align 8
 ; VF4-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP0]], i32 0
+; VF4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 0
 ; VF4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP2]], i32 0
 ; VF4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP3]], i32 0
@@ -789,25 +787,25 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[TMP44:%.*]] = shufflevector <12 x i32> [[WIDE_VEC1]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; VF4-NEXT:    [[TMP28:%.*]] = mul <4 x i32> [[TMP15]], [[TMP27]]
 ; VF4-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP28]], i32 0
-; VF4-NEXT:    store i32 [[TMP29]], ptr [[TMP16]], align 8
 ; VF4-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP28]], i32 1
-; VF4-NEXT:    store i32 [[TMP30]], ptr [[TMP17]], align 8
 ; VF4-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP28]], i32 2
-; VF4-NEXT:    store i32 [[TMP31]], ptr [[TMP18]], align 8
 ; VF4-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP28]], i32 3
+; VF4-NEXT:    store i32 [[TMP29]], ptr [[TMP16]], align 8
+; VF4-NEXT:    store i32 [[TMP30]], ptr [[TMP17]], align 8
+; VF4-NEXT:    store i32 [[TMP31]], ptr [[TMP18]], align 8
 ; VF4-NEXT:    store i32 [[TMP32]], ptr [[TMP19]], align 8
-; VF4-NEXT:    [[TMP33:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP0]], i32 1
+; VF4-NEXT:    [[TMP33:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 1
 ; VF4-NEXT:    [[TMP34:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 1
 ; VF4-NEXT:    [[TMP35:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP2]], i32 1
 ; VF4-NEXT:    [[TMP36:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP3]], i32 1
 ; VF4-NEXT:    [[TMP45:%.*]] = mul <4 x i32> [[TMP15]], [[TMP44]]
 ; VF4-NEXT:    [[TMP46:%.*]] = extractelement <4 x i32> [[TMP45]], i32 0
-; VF4-NEXT:    store i32 [[TMP46]], ptr [[TMP33]], align 8
 ; VF4-NEXT:    [[TMP47:%.*]] = extractelement <4 x i32> [[TMP45]], i32 1
-; VF4-NEXT:    store i32 [[TMP47]], ptr [[TMP34]], align 8
 ; VF4-NEXT:    [[TMP48:%.*]] = extractelement <4 x i32> [[TMP45]], i32 2
-; VF4-NEXT:    store i32 [[TMP48]], ptr [[TMP35]], align 8
 ; VF4-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[TMP45]], i32 3
+; VF4-NEXT:    store i32 [[TMP46]], ptr [[TMP33]], align 8
+; VF4-NEXT:    store i32 [[TMP47]], ptr [[TMP34]], align 8
+; VF4-NEXT:    store i32 [[TMP48]], ptr [[TMP35]], align 8
 ; VF4-NEXT:    store i32 [[TMP49]], ptr [[TMP36]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96

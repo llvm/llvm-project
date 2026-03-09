@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++14-or-later %s bugprone-move-forwarding-reference %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++14-or-later %s bugprone-move-forwarding-reference %t -- -- -fno-delayed-template-parsing
 
 namespace std {
 template <typename> struct remove_reference;
@@ -121,5 +121,5 @@ template <typename T, typename U> void f11(U &&SomeU) {
 template <typename T> void f12() {
   [] (auto&& x) { T SomeT(std::move(x)); };
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: forwarding reference passed to
-  // CHECK-FIXES: [] (auto&& x) { T SomeT(std::forward<decltype(x)>(x)); }
+  // CHECK-FIXES: [] (auto&& x) { T SomeT(std::forward<decltype(x)>(x)); };
 }

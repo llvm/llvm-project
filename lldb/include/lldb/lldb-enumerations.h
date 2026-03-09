@@ -130,6 +130,8 @@ FLAGS_ENUM(LaunchFlags){
     eLaunchFlagInheritTCCFromParent =
         (1u << 12), ///< Don't make the inferior responsible for its own TCC
                     ///< permissions but instead inherit them from its parent.
+    eLaunchFlagMemoryTagging =
+        (1u << 13), ///< Launch process with memory tagging explicitly enabled.
 };
 
 /// Thread Run Modes.
@@ -540,6 +542,7 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
   eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
+  eInstrumentationRuntimeTypeBoundsSafety = 0x0006,
   eNumInstrumentationRuntimeTypes
 };
 
@@ -668,6 +671,8 @@ enum CommandArgumentType {
   eArgTypeCPUFeatures,
   eArgTypeManagedPlugin,
   eArgTypeProtocol,
+  eArgTypeExceptionStage,
+  eArgTypeNameMatchStyle,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -921,7 +926,8 @@ FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionHideNames = (1u << 6),
                         eTypeOptionNonCacheable = (1u << 7),
                         eTypeOptionHideEmptyAggregates = (1u << 8),
-                        eTypeOptionFrontEndWantsDereference = (1u << 9)};
+                        eTypeOptionFrontEndWantsDereference = (1u << 9),
+                        eTypeOptionCustomSubscripting = (1u << 10)};
 
 /// This is the return value for frame comparisons.  If you are comparing frame
 /// A to frame B the following cases arise:
@@ -1348,6 +1354,13 @@ enum SymbolDownload {
   eSymbolDownloadForeground = 2,
 };
 
+enum SymbolSharedCacheUse {
+  eSymbolSharedCacheUseHostLLDBMemory = 1,
+  eSymbolSharedCacheUseHostSharedCache = 2,
+  eSymbolSharedCacheUseHostAndInferiorSharedCache = 3,
+  eSymbolSharedCacheUseInferiorSharedCacheOnly = 4,
+};
+
 /// Used in the SBProcess AddressMask/FixAddress methods.
 enum AddressMaskType {
   eAddressMaskTypeCode = 0,
@@ -1397,6 +1410,35 @@ enum StopDisassemblyType {
   eStopDisassemblyTypeNoDebugInfo,
   eStopDisassemblyTypeNoSource,
   eStopDisassemblyTypeAlways
+};
+
+enum ExceptionStage {
+  eExceptionStageCreate = (1 << 0),
+  eExceptionStageThrow = (1 << 1),
+  eExceptionStageReThrow = (1 << 2),
+  eExceptionStageCatch = (1 << 3)
+};
+
+enum NameMatchStyle {
+  eNameMatchStyleAuto = eFunctionNameTypeAuto,
+  eNameMatchStyleFull = eFunctionNameTypeFull,
+  eNameMatchStyleBase = eFunctionNameTypeBase,
+  eNameMatchStyleMethod = eFunctionNameTypeMethod,
+  eNameMatchStyleSelector = eFunctionNameTypeSelector,
+  eNameMatchStyleRegex = eFunctionNameTypeSelector << 1
+};
+
+/// Data Inspection Language (DIL) evaluation modes.
+/// DIL will only attempt evaluating expressions that contain tokens
+/// allowed by a selected mode.
+enum DILMode {
+  /// Allowed: identifiers, operators: '.'.
+  eDILModeSimple,
+  /// Allowed: identifiers, integers, operators: '.', '->', '*', '&', '[]'.
+  eDILModeLegacy,
+  /// Allowed: everything supported by DIL.
+  /// \see lldb/docs/dil-expr-lang.ebnf
+  eDILModeFull
 };
 
 } // namespace lldb

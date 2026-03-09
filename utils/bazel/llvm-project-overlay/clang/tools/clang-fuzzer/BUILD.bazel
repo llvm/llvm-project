@@ -1,0 +1,70 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "clang-fuzzer-dictionary",
+    srcs = ["dictionary/dictionary.c"],
+    deps = ["//clang:basic"],
+)
+
+genrule(
+    name = "fuzzer-dictionary",
+    outs = ["fuzzer-dictionary.txt"],
+    cmd = "$(location :clang-fuzzer-dictionary) > $@",
+    tools = [":clang-fuzzer-dictionary"],
+)
+
+cc_library(
+    name = "handle-cxx",
+    srcs = ["handle-cxx/handle_cxx.cpp"],
+    hdrs = ["handle-cxx/handle_cxx.h"],
+    deps = [
+        "//clang:codegen",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:tooling",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+proto_library(
+    name = "cxx-proto",
+    srcs = ["cxx_proto.proto"],
+)
+
+cc_proto_library(
+    name = "cxx_cc_proto",
+    deps = [":cxx-proto"],
+)
+
+cc_library(
+    name = "proto-to-cxx-lib",
+    srcs = ["proto-to-cxx/proto_to_cxx.cpp"],
+    hdrs = ["proto-to-cxx/proto_to_cxx.h"],
+    includes = ["."],
+    deps = [":cxx_cc_proto"],
+)
+
+cc_binary(
+    name = "clang-proto-to-cxx",
+    srcs = ["proto-to-cxx/proto_to_cxx_main.cpp"],
+    deps = [":proto-to-cxx-lib"],
+)
+
+cc_library(
+    name = "clang-fuzzer-initialize",
+    srcs = ["fuzzer-initialize/fuzzer_initialize.cpp"],
+    hdrs = ["fuzzer-initialize/fuzzer_initialize.h"],
+    deps = [
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)

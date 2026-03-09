@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
 
 // NOLINTBEGIN
 namespace std {
@@ -19,4 +19,4 @@ template <typename T, typename = std::enable_if_t<T::some_value>>
 void first_greatergreater_is_enable_if() {
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:23: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
-// CHECK-FIXES: {{^}}void first_greatergreater_is_enable_if() requires T::some_value {{{$}}
+// CHECK-FIXES: void first_greatergreater_is_enable_if() requires T::some_value {

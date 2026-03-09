@@ -45,6 +45,12 @@ tablegen("MipsGenRegisterBank") {
   td_file = "Mips.td"
 }
 
+tablegen("MipsGenSDNodeInfo") {
+  visibility = [ ":LLVMMipsCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "Mips.td"
+}
+
 static_library("LLVMMipsCodeGen") {
   deps = [
     ":MipsGenCallingConv",
@@ -54,6 +60,7 @@ static_library("LLVMMipsCodeGen") {
     ":MipsGenMCPseudoLowering",
     ":MipsGenPostLegalizeGICombiner",
     ":MipsGenRegisterBank",
+    ":MipsGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",

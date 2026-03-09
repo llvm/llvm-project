@@ -392,7 +392,7 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
                                      /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"uint64_t">:$sizeInBits,
     LLVM_DIEncodingParameter:$encoding
   );
@@ -520,6 +520,7 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"uint64_t">:$offsetInBits,
     OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
+    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
     OptionalParameter<"DINodeAttr">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
@@ -912,7 +913,7 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
                                      /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"DIVariableAttr">:$stringLength,
@@ -931,17 +932,27 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
-  let parameters = (ins
-    "ModRefInfo":$other,
-    "ModRefInfo":$argMem,
-    "ModRefInfo":$inaccessibleMem
-  );
+  let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$argMem,
+      "ModRefInfo":$inaccessibleMem, "ModRefInfo":$errnoMem,
+      "ModRefInfo":$targetMem0, "ModRefInfo":$targetMem1);
   let extraClassDeclaration = [{
     bool isReadWrite();
   }];
   let builders = [
     TypeBuilder<(ins "ArrayRef<ModRefInfo>":$memInfoArgs)>
   ];
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DenormalFPEnvAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DenormalFPEnvAttr : LLVM_Attr<"DenormalFPEnv", "denormal_fpenv"> {
+  let parameters = (ins "DenormalModeKind":$default_output_mode,
+                        "DenormalModeKind":$default_input_mode,
+                        "DenormalModeKind":$float_output_mode,
+                        "DenormalModeKind":$float_input_mode);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 

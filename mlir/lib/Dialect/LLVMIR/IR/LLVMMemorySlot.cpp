@@ -1096,10 +1096,8 @@ static Value memsetGetStored(MemsetIntr op, const MemorySlot &slot,
         Value intVal = buildMemsetValue(type.getWidth());
         return LLVM::BitcastOp::create(builder, op.getLoc(), type, intVal);
       })
-      .Default([](Type) -> Value {
-        llvm_unreachable(
-            "getStored should not be called on memset to unsupported type");
-      });
+      .DefaultUnreachable(
+          "getStored should not be called on memset to unsupported type");
 }
 
 template <class MemsetIntr>
@@ -1113,7 +1111,7 @@ memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
           .Case<IntegerType, FloatType>([](auto type) {
             return type.getWidth() % 8 == 0 && type.getWidth() > 0;
           })
-          .Default([](Type) { return false; });
+          .Default(false);
   if (!canConvertType)
     return false;
 
@@ -1587,6 +1585,9 @@ DeletionKind LLVM::MemmoveOp::rewire(const DestructurableMemorySlot &slot,
 
 std::optional<DenseMap<Attribute, Type>>
 LLVM::LLVMStructType::getSubelementIndexMap() const {
+  // Empty structs have no sub-elements and cannot be destructured.
+  if (getBody().empty())
+    return std::nullopt;
   Type i32 = IntegerType::get(getContext(), 32);
   DenseMap<Attribute, Type> destructured;
   for (const auto &[index, elemType] : llvm::enumerate(getBody()))

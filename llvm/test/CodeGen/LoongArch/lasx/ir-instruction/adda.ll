@@ -7,11 +7,7 @@ define void @vadda_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvneg.b $xr2, $xr0
-; CHECK-NEXT:    xvmax.b $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvneg.b $xr2, $xr1
-; CHECK-NEXT:    xvmax.b $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvadd.b $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvadda.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -33,11 +29,7 @@ define void @vadda_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvneg.h $xr2, $xr0
-; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvneg.h $xr2, $xr1
-; CHECK-NEXT:    xvmax.h $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvadd.h $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvadda.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -59,11 +51,7 @@ define void @vadda_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvneg.w $xr2, $xr0
-; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvneg.w $xr2, $xr1
-; CHECK-NEXT:    xvmax.w $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvadd.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvadda.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -85,11 +73,7 @@ define void @vadda_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvneg.d $xr2, $xr0
-; CHECK-NEXT:    xvmax.d $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvneg.d $xr2, $xr1
-; CHECK-NEXT:    xvmax.d $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvadd.d $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvadda.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

@@ -109,7 +109,7 @@ static cl::opt<float> MinRegionSizeRatio(
              "outline candidate and original function"));
 // Used to tune the minimum number of execution counts needed in the predecessor
 // block to the cold edge. ie. confidence interval.
-static cl::opt<unsigned>
+cl::opt<unsigned>
     MinBlockCounterExecution("min-block-execution", cl::init(100), cl::Hidden,
                              cl::desc("Minimum block executions to consider "
                                       "its BranchProbabilityInfo valid"));

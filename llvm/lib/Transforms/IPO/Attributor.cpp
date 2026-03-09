@@ -272,6 +272,9 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
   }
 
   if (RangePtr && !RangePtr->offsetOrSizeAreUnknown()) {
+    int64_t StorageSize = DL.getTypeStoreSize(&Ty);
+    if (StorageSize != RangePtr->Size)
+      return nullptr;
     APInt Offset = APInt(64, RangePtr->Offset);
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
@@ -3337,9 +3340,9 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
+  assert(!F.isDeclaration());
+
   if (!VisitedFunctions.insert(&F).second)
-    return;
-  if (F.isDeclaration())
     return;
 
   // In non-module runs we need to look at the call sites of a function to
@@ -3873,6 +3876,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   }
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else
@@ -3928,13 +3934,17 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
        &AANoFree::ID, &AANoReturn::ID, &AAMemoryLocation::ID,
        &AAMemoryBehavior::ID, &AAUnderlyingObjects::ID, &AANoCapture::ID,
        &AAInterFnReachability::ID, &AAIntraFnReachability::ID, &AACallEdges::ID,
-       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID});
+       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID,
+       &AADenormalFPMath::ID});
   AC.Allowed = &Allowed;
   AC.UseLiveness = false;
 
   Attributor A(Functions, InfoCache, AC);
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else

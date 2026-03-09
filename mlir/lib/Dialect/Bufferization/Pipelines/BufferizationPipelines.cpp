@@ -17,6 +17,10 @@
 // Pipeline implementation.
 //===----------------------------------------------------------------------===//
 
+void mlir::bufferization::buildBufferDeallocationPipeline(OpPassManager &pm) {
+  buildBufferDeallocationPipeline(pm, BufferDeallocationPipelineOptions());
+}
+
 void mlir::bufferization::buildBufferDeallocationPipeline(
     OpPassManager &pm, const BufferDeallocationPipelineOptions &options) {
   memref::ExpandReallocPassOptions expandAllocPassOptions{
@@ -44,5 +48,7 @@ void mlir::bufferization::registerBufferizationPipelines() {
       "The default pipeline for automatically inserting deallocation "
       "operations after one-shot bufferization. Deallocation operations "
       "(except `memref.realloc`) may not be present already.",
-      buildBufferDeallocationPipeline);
+      [](OpPassManager &pm, const BufferDeallocationPipelineOptions &options) {
+        buildBufferDeallocationPipeline(pm, options);
+      });
 }

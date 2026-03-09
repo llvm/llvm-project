@@ -85,7 +85,7 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
       return "REAL(KIND="s + std::to_string(*kind) + ")";
   } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
-      return "COMPLEX(KIND+"s + std::to_string(*kind) + ")";
+      return "COMPLEX(KIND="s + std::to_string(*kind) + ")";
   } else if (type.isUnsignedInteger()) {
     if (type.isInteger(8))
       return "UNSIGNED(KIND=1)";
@@ -199,6 +199,12 @@ lookupTypeInfoOp(llvm::StringRef name, mlir::ModuleOp module,
 std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
     fir::RecordType recordType, llvm::StringRef component,
     mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
+
+/// Indicate if a derived type has final routine. Returns std::nullopt if that
+/// information is not in the IR;
+std::optional<bool>
+isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
+                         const mlir::SymbolTable *symbolTable = nullptr);
 
 /// Generate a LLVM constant value of type `ity`, using the provided offset.
 mlir::LLVM::ConstantOp

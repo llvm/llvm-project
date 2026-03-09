@@ -286,7 +286,7 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
-  DenseMap<std::pair<const SCEV *, Type *>,
+  DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
     return PointerBounds;
@@ -370,7 +370,7 @@ private:
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
-  DenseMap<std::pair<const SCEV *, Type *>,
+  DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
@@ -413,30 +413,29 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    /// TypeByteSize is a pair of alloc sizes of the source and sink.
-    std::pair<uint64_t, uint64_t> TypeByteSize;
-
-    // HasSameSize is a boolean indicating whether the store sizes of the source
-    // and sink are equal.
-    // TODO: Remove this.
-    bool HasSameSize;
+    /// TypeByteSize is either the common store size of both accesses, or 0 when
+    /// store sizes mismatch.
+    uint64_t TypeByteSize;
 
     bool AIsWrite;
     bool BIsWrite;
 
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
-                                 std::pair<uint64_t, uint64_t> TypeByteSize,
-                                 bool HasSameSize, bool AIsWrite, bool BIsWrite)
+                                 uint64_t TypeByteSize, bool AIsWrite,
+                                 bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          TypeByteSize(TypeByteSize), HasSameSize(HasSameSize),
-          AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+          TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
   /// Get the dependence distance, strides, type size and whether it is a write
-  /// for the dependence between A and B. Returns either a DepType, the
-  /// dependence result, if it could already be determined, or a
-  /// DepDistanceStrideAndSizeInfo struct.
+  /// for the dependence between A and B. Returns a DepType, if we can prove
+  /// there's no dependence or the analysis fails. Outlined to lambda to limit
+  /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
+  /// others. Returns either the dependence result, if it could already be
+  /// determined, or a DepDistanceStrideAndSizeInfo struct, noting that
+  /// TypeByteSize could be 0 when store sizes mismatch, and this should be
+  /// checked in the caller.
   std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
@@ -563,8 +562,7 @@ public:
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
-  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
-                               bool UseDependencies);
+  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -631,10 +629,8 @@ public:
 private:
   /// Groups pointers such that a single memcheck is required
   /// between two different groups. This will clear the CheckingGroups vector
-  /// and re-compute it. We will only group dependecies if \p UseDependencies
-  /// is true, otherwise we will create a separate group for each pointer.
-  void groupChecks(MemoryDepChecker::DepCandidates &DepCands,
-                   bool UseDependencies);
+  /// and re-compute it.
+  void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();
@@ -725,8 +721,9 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  LLVM_ABI static bool blockNeedsPredication(BasicBlock *BB, Loop *TheLoop,
-                                             DominatorTree *DT);
+  LLVM_ABI static bool blockNeedsPredication(const BasicBlock *BB,
+                                             const Loop *TheLoop,
+                                             const DominatorTree *DT);
 
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;
@@ -893,7 +890,7 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// result of this function is undefined.
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-             const Loop *Lp,
+             const Loop *Lp, const DominatorTree &DT,
              const DenseMap<Value *, const SCEV *> &StridesMap =
                  DenseMap<Value *, const SCEV *>(),
              bool Assume = false, bool ShouldCheckWrap = true);
@@ -946,7 +943,14 @@ LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
-    DenseMap<std::pair<const SCEV *, Type *>,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
+LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+    const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards);

@@ -93,7 +93,8 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
     MIB.addUse(PhysReg, RegState::Implicit);
@@ -114,7 +115,7 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
       };
 
       if (Thunk) {
-        *Thunk = assignFunc;
+        *Thunk = std::move(assignFunc);
         return 1;
       }
 
@@ -155,7 +156,7 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     };
 
     if (Thunk) {
-      *Thunk = assignFunc;
+      *Thunk = std::move(assignFunc);
       return 2;
     }
 
@@ -231,7 +232,8 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     markPhysRegUsed(PhysReg);
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
@@ -334,7 +336,7 @@ static bool isLegalElementTypeForRVV(Type *EltTy,
   if (EltTy->isIntegerTy(64))
     return Subtarget.hasVInstructionsI64();
   if (EltTy->isHalfTy())
-    return Subtarget.hasVInstructionsF16();
+    return Subtarget.hasVInstructionsF16Minimal();
   if (EltTy->isBFloatTy())
     return Subtarget.hasVInstructionsBF16Minimal();
   if (EltTy->isFloatTy())
@@ -438,18 +440,6 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
                  MF.getFunction().getContext());
-
-  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-
-  std::optional<unsigned> FirstMaskArgument = std::nullopt;
-  // Preassign the first mask argument.
-  if (Subtarget.hasVInstructions()) {
-    for (const auto &ArgIdx : enumerate(Outs)) {
-      MVT ArgVT = MVT::getVT(ArgIdx.value().Ty);
-      if (ArgVT.isVector() && ArgVT.getVectorElementType() == MVT::i1)
-        FirstMaskArgument = ArgIdx.index();
-    }
-  }
 
   for (unsigned I = 0, E = Outs.size(); I < E; ++I) {
     MVT VT = MVT::getVT(Outs[I].Ty);

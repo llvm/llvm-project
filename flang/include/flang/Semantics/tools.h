@@ -107,6 +107,7 @@ bool IsBindCProcedure(const Scope &);
 // Returns a pointer to the function's symbol when true, else null
 const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
+bool IsOrContainsNotifyComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol &);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
 // =>target in its declaration (but not in a DATA statement)? (Being
@@ -332,9 +333,6 @@ const Symbol *FindExternallyVisibleObject(
 // Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
-
-// Given a cray pointee symbol, returns the related cray pointer symbol.
-const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 
@@ -652,6 +650,8 @@ using PotentialAndPointerComponentIterator =
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
+    const DerivedTypeSpec &, bool ignoreCoarrays = false);
 PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
     const DerivedTypeSpec &);
 PotentialAndPointerComponentIterator::const_iterator
@@ -739,12 +739,6 @@ const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &);
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
     parser::CharBlock at, const char *what);
 
-inline const parser::Name *getDesignatorNameIfDataRef(
-    const parser::Designator &designator) {
-  const auto *dataRef{std::get_if<parser::DataRef>(&designator.u)};
-  return dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
-}
-
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
 template <typename R, typename T>
@@ -769,6 +763,8 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
+
+bool AreSameModuleSymbol(const Symbol &, const Symbol &);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

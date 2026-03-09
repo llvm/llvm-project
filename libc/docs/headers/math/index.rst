@@ -88,17 +88,21 @@ Implementation Status
 
   - `darwin-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/x86_64/entrypoints.txt>`_
 
-  - `darwin-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/arm/entrypoints.txt>`_
+  - `darwin-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/aarch64/entrypoints.txt>`_
 
 * To check math functions enabled for GPU:
 
-  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_
+  - `amdgpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/amdgpu/entrypoints.txt>`_
+
+  - `nvptx-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/nvptx/entrypoints.txt>`_
 
 * To check math functions enabled for embedded system:
 
+  - `baremetal-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/aarch64/entrypoints.txt>`_
+
   - `baremetal-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_
 
-  - baremetal-riscv32 - to be added
+  - `baremetal-riscv32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/riscv/entrypoints.txt>`_
 
 
 Basic Operations
@@ -269,7 +273,7 @@ Higher Math Functions
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | asinh     | |check|          |                 |                        | |check|              |                        |                        | 7.12.5.2               | F.10.2.2                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
-| asinpi    |                  |                 |                        | |check|              |                        |                        | 7.12.4.9               | F.10.1.9                   |
+| asinpi    | |check|          |                 |                        | |check|              |                        |                        | 7.12.4.9               | F.10.1.9                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | atan      | |check|          | 1 ULP           |                        | |check|              |                        |                        | 7.12.4.3               | F.10.1.3                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
@@ -343,7 +347,7 @@ Higher Math Functions
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | rootn     |                  |                 |                        |                      |                        |                        | 7.12.7.8               | F.10.4.8                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
-| rsqrt     |                  |                 |                        | |check|              |                        |                        | 7.12.7.9               | F.10.4.9                   |
+| rsqrt     | |check|          |                 |                        | |check|              |                        |                        | 7.12.7.9               | F.10.4.9                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | sin       | |check|          | |check|         |                        | |check|              |                        |                        | 7.12.4.6               | F.10.1.6                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+

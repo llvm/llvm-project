@@ -2,7 +2,7 @@
 // Enable all supported extensions to focus the verification of expected profile requirement errors.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-validate="extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround" -tosa-validate="strict-op-spec-alignment"
 
 // -----
 func.func @test_add_i32(%arg0: tensor<13x21x1xi32>, %arg1: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
@@ -215,11 +215,11 @@ func.func @test_reverse(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
 // -----
 func.func @test_slice(%arg0: tensor<13x21x3xi1>) -> tensor<4x11x1xi1> {
   // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
-  %0 = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
-  %1 = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
-  %2 = tosa.slice %arg0, %0, %1 : (tensor<13x21x3xi1>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi1>
+  %2 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xi1>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi1>
   return %2 : tensor<4x11x1xi1>
 }
 
@@ -283,12 +283,12 @@ func.func @test_reverse(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
 // -----
 func.func @test_slice(%arg0: tensor<13x21x3xi1>) -> tensor<4x11x1xi1> {
   // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
-  %0 = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
-  %1 = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
-  %2 = tosa.slice %arg0, %0, %1 : (tensor<13x21x3xi1>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi1>
-  return %2 : tensor<4x11x1xi1>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xi1>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi1>
+  return %0 : tensor<4x11x1xi1>
 }
 
 // -----

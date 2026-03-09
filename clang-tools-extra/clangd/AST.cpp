@@ -18,7 +18,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -31,8 +30,8 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -216,7 +215,8 @@ std::string printQualifiedName(const NamedDecl &ND) {
   Policy.SuppressScope = true;
   // (unnamed struct), not (unnamed struct at /path/to/foo.cc:42:1).
   // In clangd, context is usually available and paths are mostly noise.
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   ND.printQualifiedName(OS, Policy);
   assert(!StringRef(QName).starts_with("::"));
   return QName;
@@ -1038,6 +1038,81 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth) {
 
 bool isExpandedFromParameterPack(const ParmVarDecl *D) {
   return getUnderlyingPackType(D) != nullptr;
+}
+
+bool isLikelyForwardingFunction(const FunctionTemplateDecl *FT) {
+  const auto *FD = FT->getTemplatedDecl();
+  const auto NumParams = FD->getNumParams();
+  // Check whether its last parameter is a parameter pack...
+  if (NumParams > 0) {
+    const auto *LastParam = FD->getParamDecl(NumParams - 1);
+    if (const auto *PET = dyn_cast<PackExpansionType>(LastParam->getType())) {
+      // ... of the type T&&... or T...
+      const auto BaseType = PET->getPattern().getNonReferenceType();
+      if (const auto *TTPT =
+              dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
+        // ... whose template parameter comes from the function directly
+        if (FT->getTemplateParameters()->getDepth() == TTPT->getDepth()) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
+public:
+  ForwardingToConstructorVisitor(
+      llvm::DenseSet<const FunctionDecl *> &SeenFunctions,
+      SmallVector<const CXXConstructorDecl *, 1> &Output)
+      : SeenFunctions(SeenFunctions), Constructors(Output) {}
+
+  bool VisitCallExpr(CallExpr *E) {
+    // Adjust if recurison not deep enough
+    if (SeenFunctions.size() >= 10)
+      return true;
+    if (auto *FD = E->getDirectCallee()) {
+      // Check if we already visited this function to prevent endless recursion
+      if (SeenFunctions.contains(FD))
+        return true;
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT && isLikelyForwardingFunction(PT)) {
+        SeenFunctions.insert(FD);
+        ForwardingToConstructorVisitor Visitor{SeenFunctions, Constructors};
+        Visitor.TraverseStmt(FD->getBody());
+        SeenFunctions.erase(FD);
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (auto *CE = E->getConstructExpr())
+      if (auto *Callee = CE->getConstructor()) {
+        auto *Adjusted = &adjustDeclToTemplate(*Callee);
+        if (auto *Template = dyn_cast<TemplateDecl>(Adjusted))
+          Adjusted = Template->getTemplatedDecl();
+        if (auto *Constructor = dyn_cast<CXXConstructorDecl>(Adjusted))
+          Constructors.push_back(Constructor);
+      }
+    return true;
+  }
+
+  // Stack of seen functions
+  llvm::DenseSet<const FunctionDecl *> &SeenFunctions;
+  // Output of this visitor
+  SmallVector<const CXXConstructorDecl *, 1> &Constructors;
+};
+
+SmallVector<const CXXConstructorDecl *, 1>
+searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
+  SmallVector<const CXXConstructorDecl *, 1> Result;
+  llvm::DenseSet<const FunctionDecl *> SeenFunctions{FD};
+  ForwardingToConstructorVisitor Visitor{SeenFunctions, Result};
+  Visitor.TraverseStmt(FD->getBody());
+  return Result;
 }
 
 } // namespace clangd

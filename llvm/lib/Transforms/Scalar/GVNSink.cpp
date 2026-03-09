@@ -73,23 +73,16 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::GVNExpression;
 
 #define DEBUG_TYPE "gvn-sink"
 
 STATISTIC(NumRemoved, "Number of instructions removed");
 
-namespace llvm {
-namespace GVNExpression {
-
 LLVM_DUMP_METHOD void Expression::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
-
-} // end namespace GVNExpression
-} // end namespace llvm
-
-namespace {
 
 static bool isMemoryInst(const Instruction *I) {
   return isa<LoadInst>(I) || isa<StoreInst>(I) ||
@@ -98,6 +91,8 @@ static bool isMemoryInst(const Instruction *I) {
 }
 
 //===----------------------------------------------------------------------===//
+
+namespace {
 
 /// Candidate solution for sinking. There may be different ways to
 /// sink instructions, differing in the number of instructions sunk,
@@ -125,14 +120,6 @@ struct SinkingInstructionCandidate {
   }
 };
 
-#ifndef NDEBUG
-raw_ostream &operator<<(raw_ostream &OS, const SinkingInstructionCandidate &C) {
-  OS << "<Candidate Cost=" << C.Cost << " #Blocks=" << C.NumBlocks
-     << " #Insts=" << C.NumInstructions << " #PHIs=" << C.NumPHIs << ">";
-  return OS;
-}
-#endif
-
 //===----------------------------------------------------------------------===//
 
 /// Describes a PHI node that may or may not exist. These track the PHIs
@@ -155,7 +142,7 @@ public:
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
 
-    auto ComesBefore = [BlockOrder](OpsType O1, OpsType O2) {
+    auto ComesBefore = [&](OpsType O1, OpsType O2) {
       return BlockOrder.lookup(O1.first) < BlockOrder.lookup(O2.first);
     };
     // Sort in a deterministic order.
@@ -180,8 +167,8 @@ public:
   verifyModelledPHI(const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
     assert(Values.size() > 1 && Blocks.size() > 1 &&
            "Modelling PHI with less than 2 values");
-    auto ComesBefore = [BlockOrder](const BasicBlock *BB1,
-                                    const BasicBlock *BB2) {
+    [[maybe_unused]] auto ComesBefore = [&](const BasicBlock *BB1,
+                                            const BasicBlock *BB2) {
       return BlockOrder.lookup(BB1) < BlockOrder.lookup(BB2);
     };
     assert(llvm::is_sorted(Blocks, ComesBefore));
@@ -256,8 +243,18 @@ public:
     return Values == Other.Values && Blocks == Other.Blocks;
   }
 };
+} // namespace
 
-template <typename ModelledPHI> struct DenseMapInfo {
+#ifndef NDEBUG
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const SinkingInstructionCandidate &C) {
+  OS << "<Candidate Cost=" << C.Cost << " #Blocks=" << C.NumBlocks
+     << " #Insts=" << C.NumInstructions << " #PHIs=" << C.NumPHIs << ">";
+  return OS;
+}
+#endif
+
+template <> struct llvm::DenseMapInfo<ModelledPHI> {
   static inline ModelledPHI &getEmptyKey() {
     static ModelledPHI Dummy = ModelledPHI::createDummy(0);
     return Dummy;
@@ -275,7 +272,9 @@ template <typename ModelledPHI> struct DenseMapInfo {
   }
 };
 
-using ModelledPHISet = DenseSet<ModelledPHI, DenseMapInfo<ModelledPHI>>;
+using ModelledPHISet = DenseSet<ModelledPHI>;
+
+namespace {
 
 //===----------------------------------------------------------------------===//
 //                             ValueTable
@@ -290,7 +289,7 @@ using ModelledPHISet = DenseSet<ModelledPHI, DenseMapInfo<ModelledPHI>>;
 ///
 /// This class also contains fields for discriminators used when determining
 /// equivalence of instructions with sideeffects.
-class InstructionUseExpr : public GVNExpression::BasicExpression {
+class InstructionUseExpr : public BasicExpression {
   unsigned MemoryUseOrder = -1;
   bool Volatile = false;
   ArrayRef<int> ShuffleMask;
@@ -298,7 +297,7 @@ class InstructionUseExpr : public GVNExpression::BasicExpression {
 public:
   InstructionUseExpr(Instruction *I, ArrayRecycler<Value *> &R,
                      BumpPtrAllocator &A)
-      : GVNExpression::BasicExpression(I->getNumUses()) {
+      : BasicExpression(I->getNumUses()) {
     allocateOperands(R, A);
     setOpcode(I->getOpcode());
     setType(I->getType());
@@ -315,8 +314,8 @@ public:
   void setVolatile(bool V) { Volatile = V; }
 
   hash_code getHashValue() const override {
-    return hash_combine(GVNExpression::BasicExpression::getHashValue(),
-                        MemoryUseOrder, Volatile, ShuffleMask);
+    return hash_combine(BasicExpression::getHashValue(), MemoryUseOrder,
+                        Volatile, ShuffleMask);
   }
 
   template <typename Function> hash_code getHashValue(Function MapFn) {
@@ -332,7 +331,7 @@ using BasicBlocksSet = SmallPtrSet<const BasicBlock *, 32>;
 
 class ValueTable {
   DenseMap<Value *, uint32_t> ValueNumbering;
-  DenseMap<GVNExpression::Expression *, uint32_t> ExpressionNumbering;
+  DenseMap<Expression *, uint32_t> ExpressionNumbering;
   DenseMap<size_t, uint32_t> HashNumbering;
   BumpPtrAllocator Allocator;
   ArrayRecycler<Value *> Recycler;
@@ -431,6 +430,7 @@ public:
     case Instruction::FPTrunc:
     case Instruction::FPExt:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::BitCast:
     case Instruction::AddrSpaceCast:
@@ -514,7 +514,7 @@ public:
 
 class GVNSink {
 public:
-  GVNSink() {}
+  GVNSink() = default;
 
   bool run(Function &F) {
     LLVM_DEBUG(dbgs() << "GVNSink: running on function @" << F.getName()
@@ -594,6 +594,7 @@ private:
     }
   }
 };
+} // namespace
 
 std::optional<SinkingInstructionCandidate>
 GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
@@ -850,8 +851,6 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
 
   NumRemoved += Insts.size() - 1;
 }
-
-} // end anonymous namespace
 
 PreservedAnalyses GVNSinkPass::run(Function &F, FunctionAnalysisManager &AM) {
   GVNSink G;

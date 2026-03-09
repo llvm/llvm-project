@@ -16,6 +16,8 @@
 namespace clang {
 namespace doc {
 
+class SerializeTest : public ClangDocContextTest {};
+
 class ClangDocSerializeTestVisitor
     : public RecursiveASTVisitor<ClangDocSerializeTestVisitor> {
 
@@ -32,12 +34,14 @@ class ClangDocSerializeTestVisitor
   }
 
 public:
-  ClangDocSerializeTestVisitor(EmittedInfoList &EmittedInfos, bool Public)
+  ClangDocSerializeTestVisitor(EmittedInfoList &EmittedInfos, bool Public,
+                               DiagnosticsEngine &Diags)
       : EmittedInfos(EmittedInfos), Public(Public) {}
 
   template <typename T> bool mapDecl(const T *D) {
     Location Loc(0, 0, "test.cpp");
-    auto [Child, Parent] = serialize::emitInfo(D, getComment(D), Loc, Public);
+    serialize::Serializer S;
+    auto [Child, Parent] = S.emitInfo(D, getComment(D), Loc, Public);
     if (Child)
       EmittedInfos.emplace_back(std::move(Child));
     if (Parent)
@@ -49,7 +53,7 @@ public:
 
   bool VisitFunctionDecl(const FunctionDecl *D) {
     // Don't visit CXXMethodDecls twice
-    if (dyn_cast<CXXMethodDecl>(D))
+    if (isa<CXXMethodDecl>(D))
       return true;
     return mapDecl(D);
   }
@@ -65,21 +69,24 @@ public:
   bool VisitTypeAliasDecl(const TypeAliasDecl *D) { return mapDecl(D); }
 };
 
-void ExtractInfosFromCode(StringRef Code, size_t NumExpectedInfos, bool Public,
-                          EmittedInfoList &EmittedInfos) {
+static void extractInfosFromCode(StringRef Code, size_t NumExpectedInfos,
+                                 bool Public, EmittedInfoList &EmittedInfos,
+                                 DiagnosticsEngine &Diags) {
   auto ASTUnit = clang::tooling::buildASTFromCode(Code);
-  auto TU = ASTUnit->getASTContext().getTranslationUnitDecl();
-  ClangDocSerializeTestVisitor Visitor(EmittedInfos, Public);
+  TranslationUnitDecl *TU = ASTUnit->getASTContext().getTranslationUnitDecl();
+  ClangDocSerializeTestVisitor Visitor(EmittedInfos, Public, Diags);
   Visitor.TraverseTranslationUnitDecl(TU);
   ASSERT_EQ(NumExpectedInfos, EmittedInfos.size());
 }
 
-void ExtractInfosFromCodeWithArgs(StringRef Code, size_t NumExpectedInfos,
-                                  bool Public, EmittedInfoList &EmittedInfos,
-                                  std::vector<std::string> &Args) {
+static void extractInfosFromCodeWithArgs(StringRef Code,
+                                         size_t NumExpectedInfos, bool Public,
+                                         EmittedInfoList &EmittedInfos,
+                                         std::vector<std::string> &Args,
+                                         DiagnosticsEngine &Diags) {
   auto ASTUnit = clang::tooling::buildASTFromCodeWithArgs(Code, Args);
-  auto TU = ASTUnit->getASTContext().getTranslationUnitDecl();
-  ClangDocSerializeTestVisitor Visitor(EmittedInfos, Public);
+  TranslationUnitDecl *TU = ASTUnit->getASTContext().getTranslationUnitDecl();
+  ClangDocSerializeTestVisitor Visitor(EmittedInfos, Public, Diags);
   Visitor.TraverseTranslationUnitDecl(TU);
   ASSERT_EQ(NumExpectedInfos, EmittedInfos.size());
 }
@@ -90,12 +97,12 @@ void ExtractInfosFromCodeWithArgs(StringRef Code, size_t NumExpectedInfos,
 CommentInfo MakeOneLineCommentInfo(const std::string &Text) {
   CommentInfo TopComment;
   TopComment.Kind = "FullComment";
-  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  TopComment.Children.emplace_back(allocatePtr<CommentInfo>());
 
   CommentInfo *Brief = TopComment.Children.back().get();
   Brief->Kind = "ParagraphComment";
 
-  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.emplace_back(allocatePtr<CommentInfo>());
   Brief->Children.back()->Kind = "TextComment";
   Brief->Children.back()->Name = "ParagraphComment";
   Brief->Children.back()->Text = Text;
@@ -105,10 +112,10 @@ CommentInfo MakeOneLineCommentInfo(const std::string &Text) {
 */
 
 // Test serialization of namespace declarations.
-TEST(SerializeTest, emitNamespaceInfo) {
+TEST_F(SerializeTest, emitNamespaceInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("namespace A { namespace B { void f() {} } }", 5,
-                       /*Public=*/false, Infos);
+  extractInfosFromCode("namespace A { namespace B { void f() {} } }", 5,
+                       /*Public=*/false, Infos, this->Diags);
 
   NamespaceInfo *A = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedA(EmptySID, "A");
@@ -132,9 +139,10 @@ TEST(SerializeTest, emitNamespaceInfo) {
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
-TEST(SerializeTest, emitAnonymousNamespaceInfo) {
+TEST_F(SerializeTest, emitAnonymousNamespaceInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("namespace { }", 2, /*Public=*/false, Infos);
+  extractInfosFromCode("namespace { }", 2, /*Public=*/false, Infos,
+                       this->Diags);
 
   NamespaceInfo *A = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedA(EmptySID);
@@ -142,10 +150,9 @@ TEST(SerializeTest, emitAnonymousNamespaceInfo) {
   CheckNamespaceInfo(&ExpectedA, A);
 }
 
-// Test serialization of record declarations.
-TEST(SerializeTest, emitRecordInfo) {
+TEST_F(SerializeTest, emitRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode(R"raw(class E {
+  extractInfosFromCode(R"raw(class E {
 public:
   E() {}
 
@@ -161,7 +168,7 @@ struct F {
 template <>
 void F<int>::TemplateMethod();
 typedef struct {} G;)raw",
-                       10, /*Public=*/false, Infos);
+                       10, /*Public=*/false, Infos, this->Diags);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
@@ -259,10 +266,10 @@ typedef struct {} G;)raw",
 }
 
 // Test serialization of enum declarations.
-TEST(SerializeTest, emitEnumInfo) {
+TEST_F(SerializeTest, emitEnumInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("enum E { X, Y }; enum class G { A, B };", 2,
-                       /*Public=*/false, Infos);
+  extractInfosFromCode("enum E { X, Y }; enum class G { A, B };", 2,
+                       /*Public=*/false, Infos, this->Diags);
 
   NamespaceInfo *NamespaceWithEnum = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedNamespaceWithEnum(EmptySID);
@@ -286,9 +293,9 @@ TEST(SerializeTest, emitEnumInfo) {
   CheckNamespaceInfo(&ExpectedNamespaceWithScopedEnum, NamespaceWithScopedEnum);
 }
 
-TEST(SerializeTest, emitUndefinedRecordInfo) {
+TEST_F(SerializeTest, emitUndefinedRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("class E;", 2, /*Public=*/false, Infos);
+  extractInfosFromCode("class E;", 2, /*Public=*/false, Infos, this->Diags);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
@@ -299,9 +306,10 @@ TEST(SerializeTest, emitUndefinedRecordInfo) {
   CheckRecordInfo(&ExpectedE, E);
 }
 
-TEST(SerializeTest, emitRecordMemberInfo) {
+TEST_F(SerializeTest, emitRecordMemberInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("struct E { int I; };", 2, /*Public=*/false, Infos);
+  extractInfosFromCode("struct E { int I; };", 2, /*Public=*/false, Infos,
+                       this->Diags);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
@@ -314,9 +322,10 @@ TEST(SerializeTest, emitRecordMemberInfo) {
   CheckRecordInfo(&ExpectedE, E);
 }
 
-TEST(SerializeTest, emitInternalRecordInfo) {
+TEST_F(SerializeTest, emitInternalRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("class E { class G {}; };", 4, /*Public=*/false, Infos);
+  extractInfosFromCode("class E { class G {}; };", 4, /*Public=*/false, Infos,
+                       this->Diags);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
@@ -338,15 +347,16 @@ TEST(SerializeTest, emitInternalRecordInfo) {
   CheckRecordInfo(&ExpectedG, G);
 }
 
-TEST(SerializeTest, emitPublicAnonymousNamespaceInfo) {
+TEST_F(SerializeTest, emitPublicAnonymousNamespaceInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("namespace { class A; }", 0, /*Public=*/true, Infos);
+  extractInfosFromCode("namespace { class A; }", 0, /*Public=*/true, Infos,
+                       this->Diags);
 }
 
-TEST(SerializeTest, emitPublicFunctionInternalInfo) {
+TEST_F(SerializeTest, emitPublicFunctionInternalInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("int F() { class G {}; return 0; };", 1, /*Public=*/true,
-                       Infos);
+  extractInfosFromCode("int F() { class G {}; return 0; };", 1, /*Public=*/true,
+                       Infos, this->Diags);
 
   NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
@@ -359,9 +369,10 @@ TEST(SerializeTest, emitPublicFunctionInternalInfo) {
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
-TEST(SerializeTest, emitInlinedFunctionInfo) {
+TEST_F(SerializeTest, emitInlinedFunctionInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("inline void F(int I) { };", 1, /*Public=*/true, Infos);
+  extractInfosFromCode("inline void F(int I) { };", 1, /*Public=*/true, Infos,
+                       this->Diags);
 
   NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
@@ -375,16 +386,16 @@ TEST(SerializeTest, emitInlinedFunctionInfo) {
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
-TEST(SerializeTest, emitInheritedRecordInfo) {
+TEST_F(SerializeTest, emitInheritedRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode(R"raw(class F { protected: void set(int N); };
+  extractInfosFromCode(R"raw(class F { protected: void set(int N); };
 class G { public: int get() { return 1; } protected: int I; };
 class E : public F, virtual private G {};
 class H : private E {};
 template <typename T>
 class I {} ;
 class J : public I<int> {} ;)raw",
-                       14, /*Public=*/false, Infos);
+                       14, /*Public=*/false, Infos, this->Diags);
 
   RecordInfo *F = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedF(EmptySID, /*Name=*/"F", /*Path=*/"GlobalNamespace");
@@ -517,15 +528,15 @@ class J : public I<int> {} ;)raw",
   CheckRecordInfo(&ExpectedJ, J);
 }
 
-TEST(SerializeTest, emitModulePublicLFunctions) {
+TEST_F(SerializeTest, emitModulePublicLFunctions) {
   EmittedInfoList Infos;
   std::vector<std::string> Args;
   Args.push_back("-fmodules-ts");
-  ExtractInfosFromCodeWithArgs(R"raw(export module M;
+  extractInfosFromCodeWithArgs(R"raw(export module M;
 int moduleFunction(int x, double d = 3.2 - 1.0);
 static int staticModuleFunction(int x);
 export double exportedModuleFunction(double y);)raw",
-                               2, /*Public=*/true, Infos, Args);
+                               2, /*Public=*/true, Infos, Args, this->Diags);
 
   NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
@@ -555,10 +566,10 @@ export double exportedModuleFunction(double y);)raw",
 }
 
 // Test serialization of child records in namespaces and other records
-TEST(SerializeTest, emitChildRecords) {
+TEST_F(SerializeTest, emitChildRecords) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("class A { class B {}; }; namespace { class C {}; } ", 8,
-                       /*Public=*/false, Infos);
+  extractInfosFromCode("class A { class B {}; }; namespace { class C {}; } ", 8,
+                       /*Public=*/false, Infos, this->Diags);
 
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
@@ -582,10 +593,10 @@ TEST(SerializeTest, emitChildRecords) {
 }
 
 // Test serialization of child namespaces
-TEST(SerializeTest, emitChildNamespaces) {
+TEST_F(SerializeTest, emitChildNamespaces) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("namespace A { namespace B { } }", 4, /*Public=*/false,
-                       Infos);
+  extractInfosFromCode("namespace A { namespace B { } }", 4, /*Public=*/false,
+                       Infos, this->Diags);
 
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
@@ -600,10 +611,10 @@ TEST(SerializeTest, emitChildNamespaces) {
   CheckNamespaceInfo(&ExpectedParentB, ParentB);
 }
 
-TEST(SerializeTests, emitTypedefs) {
+TEST_F(SerializeTest, emitTypedefs) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("typedef int MyInt; using MyDouble = double;", 2,
-                       /*Public=*/false, Infos);
+  extractInfosFromCode("typedef int MyInt; using MyDouble = double;", 2,
+                       /*Public=*/false, Infos, this->Diags);
 
   // First info will be the global namespace with the typedef in it.
   NamespaceInfo *GlobalNS1 = InfoAsNamespace(Infos[0].get());
@@ -627,13 +638,13 @@ TEST(SerializeTests, emitTypedefs) {
   EXPECT_EQ("double", SecondTD.Underlying.Type.Name);
 }
 
-TEST(SerializeTests, emitFunctionTemplate) {
+TEST_F(SerializeTest, emitFunctionTemplate) {
   EmittedInfoList Infos;
   // A template and a specialization.
-  ExtractInfosFromCode("template<typename T = int> bool GetFoo(T);\n"
+  extractInfosFromCode("template<typename T = int> bool GetFoo(T);\n"
                        "template<> bool GetFoo<bool>(bool);",
                        2,
-                       /*Public=*/false, Infos);
+                       /*Public=*/false, Infos, this->Diags);
 
   // First info will be the global namespace.
   NamespaceInfo *GlobalNS1 = InfoAsNamespace(Infos[0].get());
@@ -669,18 +680,18 @@ TEST(SerializeTests, emitFunctionTemplate) {
   EXPECT_EQ("bool", Func2.ReturnType.Type.Name);
 }
 
-TEST(SerializeTests, emitClassTemplate) {
+TEST_F(SerializeTest, emitClassTemplate) {
   EmittedInfoList Infos;
   // This will generate 2x the number of infos: each Record will be followed by
   // a copy of the global namespace containing it (this test checks the data
   // pre-merge).
-  ExtractInfosFromCode(
+  extractInfosFromCode(
       "template<int I> class MyTemplate { int i[I]; };\n"
       "template<> class MyTemplate<0> {};\n"
       "template<typename T, int U = 1> class OtherTemplate {};\n"
       "template<int U> class OtherTemplate<MyTemplate<0>, U> {};",
       8,
-      /*Public=*/false, Infos);
+      /*Public=*/false, Infos, this->Diags);
 
   // First record.
   const RecordInfo *Rec1 = InfoAsRecord(Infos[0].get());

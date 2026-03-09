@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -check-suffixes=,STRICT                       \
-// RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
+// RUN:   -std=c++20-or-later %s modernize-use-std-format %t --                  \
 // RUN:   -config="{CheckOptions: {                                     \
 // RUN:              modernize-use-std-format.StrictMode: true,         \
 // RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
@@ -8,7 +8,7 @@
 // RUN:            }}"                                                  \
 // RUN:   -- -isystem %clang_tidy_headers
 // RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT                    \
-// RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
+// RUN:   -std=c++20-or-later %s modernize-use-std-format %t --                  \
 // RUN:   -config="{CheckOptions: {                                     \
 // RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2; any_format_type_strprintf', \
 // RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
@@ -44,7 +44,7 @@ std::string StrFormat_strict_conversion() {
   // CHECK-FIXES-STRICT: return fmt::format("Integer {} from unsigned char\n", static_cast<signed char>(uc));
 }
 
-// Ensure that MatchesAnyListedNameMatcher::NameMatcher::match() can cope with a
+// Ensure that MatchesAnyListedRegexNameMatcher::NameMatcher::match() can cope with a
 // NamedDecl that has no name when we're trying to match unqualified_strprintf.
 std::string A(const std::string &in)
 {

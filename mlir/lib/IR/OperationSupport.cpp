@@ -406,15 +406,13 @@ OperandRangeRange::OperandRangeRange(OperandRange operands,
 OperandRange OperandRangeRange::join() const {
   const OwnerT &owner = getBase();
   ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(owner.second);
-  return OperandRange(owner.first,
-                      std::accumulate(sizeData.begin(), sizeData.end(), 0));
+  return OperandRange(owner.first, llvm::sum_of(sizeData));
 }
 
 OperandRange OperandRangeRange::dereference(const OwnerT &object,
                                             ptrdiff_t index) {
   ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(object.second);
-  uint32_t startIndex =
-      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  uint32_t startIndex = llvm::sum_of(sizeData.take_front(index));
   return OperandRange(object.first + startIndex, *(sizeData.begin() + index));
 }
 
@@ -565,8 +563,7 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
                                                           ptrdiff_t index) {
   ArrayRef<int32_t> sizeData =
       llvm::cast<DenseI32ArrayAttr>(object.second.getValue());
-  uint32_t startIndex =
-      std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
+  uint32_t startIndex = llvm::sum_of(sizeData.take_front(index));
   return object.first.slice(
       startIndex, *(sizeData.begin() + index),
       MutableOperandRange::OperandSegment(index, object.second));
@@ -692,7 +689,8 @@ llvm::hash_code OperationEquivalence::computeHash(
     hash = llvm::hash_combine(hash, op->getLoc());
 
   //   - Operands
-  if (op->hasTrait<mlir::OpTrait::IsCommutative>() &&
+  if (!(flags & Flags::IgnoreCommutativity) &&
+      op->hasTrait<mlir::OpTrait::IsCommutative>() &&
       op->getNumOperands() > 0) {
     size_t operandHash = hashOperands(op->getOperand(0));
     for (auto operand : op->getOperands().drop_front())
@@ -857,7 +855,7 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
     return false;
 
   // 2. Compare operands.
-  if (checkCommutativeEquivalent &&
+  if (!(flags & IgnoreCommutativity) && checkCommutativeEquivalent &&
       lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
     auto lhsRange = lhs->getOperands();
     auto rhsRange = rhs->getOperands();

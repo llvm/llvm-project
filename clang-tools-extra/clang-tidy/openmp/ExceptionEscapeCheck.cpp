@@ -23,7 +23,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   llvm::SmallVector<StringRef, 8> IgnoredExceptionsVec;
 
   llvm::StringSet<> IgnoredExceptions;
-  StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
+  RawIgnoredExceptions.split(IgnoredExceptionsVec, ",", -1, false);
   llvm::transform(IgnoredExceptionsVec, IgnoredExceptionsVec.begin(),
                   [](StringRef S) { return S.trim(); });
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);

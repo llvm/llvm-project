@@ -54,7 +54,7 @@ define double @denormal2(double %x) {
 
 ; Deleting the negates does not require unsafe-fp-math.
 
-define float @double_negative(float %x, float %y) #0 {
+define float @double_negative(float %x, float %y) {
 ; CHECK-LABEL: double_negative:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    divss %xmm1, %xmm0
@@ -65,7 +65,7 @@ define float @double_negative(float %x, float %y) #0 {
   ret float %div
 }
 
-define <4 x float> @double_negative_vector(<4 x float> %x, <4 x float> %y) #0 {
+define <4 x float> @double_negative_vector(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: double_negative_vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    divps %xmm1, %xmm0
@@ -80,7 +80,7 @@ define <4 x float> @double_negative_vector(<4 x float> %x, <4 x float> %y) #0 {
 ; clang/gcc), due to order of argument evaluation not being well defined. We
 ; ended up hitting llvm_unreachable in getNegatedExpression when building with
 ; gcc. Just make sure that we get a deterministic result.
-define float @fdiv_fneg_combine(float %a0, float %a1, float %a2) #0 {
+define float @fdiv_fneg_combine(float %a0, float %a1, float %a2) {
 ; CHECK-LABEL: fdiv_fneg_combine:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
@@ -99,6 +99,3 @@ define float @fdiv_fneg_combine(float %a0, float %a1, float %a2) #0 {
   %div5 = fdiv fast float %mul2, %sub4
   ret float %div5
 }
-
-attributes #0 = { "unsafe-fp-math"="false" }
-

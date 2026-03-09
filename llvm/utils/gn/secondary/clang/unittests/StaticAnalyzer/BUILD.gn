@@ -33,6 +33,7 @@ unittest("StaticAnalysisTests") {
     "StoreTest.cpp",
     "SymbolReaperTest.cpp",
     "TestReturnValueUnderConstruction.cpp",
+    "UnsignedStatDemo.cpp",
     "Z3CrosscheckOracleTest.cpp",
   ]
 }

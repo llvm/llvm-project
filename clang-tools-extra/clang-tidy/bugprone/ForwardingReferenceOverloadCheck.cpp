@@ -29,9 +29,8 @@ AST_MATCHER(QualType, isEnableIf) {
   };
   const Type *BaseType = Node.getTypePtr();
   // Case: pointer or reference to enable_if.
-  while (BaseType->isPointerType() || BaseType->isReferenceType()) {
+  while (BaseType->isPointerType() || BaseType->isReferenceType())
     BaseType = BaseType->getPointeeType().getTypePtr();
-  }
   // Case: type parameter dependent (enable_if<is_integral<T>>).
   if (const auto *Dependent = BaseType->getAs<DependentNameType>())
     BaseType = Dependent->getQualifier().getAsType();
@@ -40,7 +39,7 @@ AST_MATCHER(QualType, isEnableIf) {
   if (CheckTemplate(BaseType->getAs<TemplateSpecializationType>()))
     return true; // Case: enable_if_t< >.
   if (const auto *TT = BaseType->getAs<TypedefType>())
-    if (NestedNameSpecifier Q = TT->getQualifier();
+    if (const NestedNameSpecifier Q = TT->getQualifier();
         Q.getKind() == NestedNameSpecifier::Kind::Type)
       if (CheckTemplate(Q.getAsType()->getAs<TemplateSpecializationType>()))
         return true; // Case: enable_if< >::type.
@@ -67,7 +66,7 @@ void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
                            unless(references(isConstQualified())))))
           .bind("parm-var");
 
-  DeclarationMatcher FindOverload =
+  const DeclarationMatcher FindOverload =
       cxxConstructorDecl(
           hasParameter(0, ForwardingRefParm), unless(isDeleted()),
           unless(hasAnyParameter(
@@ -114,10 +113,9 @@ void ForwardingReferenceOverloadCheck::check(
 
   // Every parameter after the first must have a default value.
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  for (const auto *Param : llvm::drop_begin(Ctor->parameters())) {
+  for (const auto *Param : llvm::drop_begin(Ctor->parameters()))
     if (!Param->hasDefaultArg())
       return;
-  }
   bool EnabledCopy = false, DisabledCopy = false, EnabledMove = false,
        DisabledMove = false;
   for (const auto *OtherCtor : Ctor->getParent()->ctors()) {
@@ -128,8 +126,9 @@ void ForwardingReferenceOverloadCheck::check(
         (OtherCtor->isCopyConstructor() ? EnabledCopy : EnabledMove) = true;
     }
   }
-  bool Copy = (!EnabledMove && !DisabledMove && !DisabledCopy) || EnabledCopy;
-  bool Move = !DisabledMove || EnabledMove;
+  const bool Copy =
+      (!EnabledMove && !DisabledMove && !DisabledCopy) || EnabledCopy;
+  const bool Move = !DisabledMove || EnabledMove;
   if (!Copy && !Move)
     return;
   diag(Ctor->getLocation(),

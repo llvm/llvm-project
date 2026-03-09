@@ -59,3 +59,37 @@ namespace TypeidPtrInEvaluationResult {
   consteval const std::type_info *ftype_info() { return &typeid(c); }
   const std::type_info *T1 = ftype_info();
 }
+
+// Regression test for crash in ArrayElemPtrPop with typeid pointers. GH-163127
+namespace TypeidPtrRegression {
+  void dontcrash() {
+    constexpr auto res = ((void**)&typeid(int))[0]; // both-error {{must be initialized by a constant expression}} \
+                                                    // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  }
+  void dontcrash2() {
+    constexpr auto res = ((void**)&typeid(int))[1]; // both-error {{must be initialized by a constant expression}} \
+                                                    // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  }
+}
+
+namespace GH173950 {
+  struct A {
+    virtual void f();
+  };
+
+  static A &a = *new A;
+  extern A &a;
+
+  // This used to crash with: Assertion `IsInitialized' failed in invokeDtor()
+  const std::type_info &a_ti = typeid(a);
+}
+
+namespace MissingInitalizer {
+  struct Item {
+    const std::type_info &ti;
+  };
+  extern constexpr Item items[] = ; // both-error {{expected expression}} \
+                                    // both-note {{declared here}}
+  constexpr auto &x = items[0].ti; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{initializer of 'items' is unknown}}
+}

@@ -57,26 +57,6 @@ define amdgpu_kernel void @fneg_fabsf_free_f32(ptr addrspace(1) %out, i32 %in) {
   ret void
 }
 
-define amdgpu_kernel void @fneg_fabsf_fn_free_f32(ptr addrspace(1) %out, i32 %in) {
-; R600-LABEL: fneg_fabsf_fn_free_f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 4, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     MOV * T0.W, KC0[2].Z,
-; R600-NEXT:     MOV * T0.W, |PV.W|,
-; R600-NEXT:     MOV T0.X, -PV.W,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %bc = bitcast i32 %in to float
-  %fabs = call float @fabsf(float %bc)
-  %fsub = fsub float -0.000000e+00, %fabs
-  store float %fsub, ptr addrspace(1) %out
-  ret void
-}
-
 define amdgpu_kernel void @fneg_fabsf_f32(ptr addrspace(1) %out, float %in) {
 ; R600-LABEL: fneg_fabsf_f32:
 ; R600:       ; %bb.0:
@@ -171,7 +151,6 @@ define amdgpu_kernel void @fneg_fabsf_v4f32(ptr addrspace(1) %out, <4 x float> %
   ret void
 }
 
-declare float @fabsf(float) readnone
 declare float @llvm.fabs.f32(float) readnone
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>) readnone
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>) readnone

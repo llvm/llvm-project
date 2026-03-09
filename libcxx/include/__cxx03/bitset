@@ -612,7 +612,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bitset& flip(size_t __pos);
 
   // element access:
-#ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
+#ifndef _LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF
   _LIBCPP_HIDE_FROM_ABI bool operator[](size_t __p) const { return __base::__make_ref(__p); }
 #else
   _LIBCPP_HIDE_FROM_ABI __const_reference operator[](size_t __p) const { return __base::__make_ref(__p); }

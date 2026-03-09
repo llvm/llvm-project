@@ -31,8 +31,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
   const TagType *TagTy = dyn_cast<TagType>(T->getCanonicalTypeInternal());
   if (!isa_and_present<RecordType, InjectedClassNameType>(TagTy))
     return nullptr;
-  auto *RD =
-      cast<CXXRecordDecl>(TagTy->getOriginalDecl())->getDefinitionOrSelf();
+  auto *RD = cast<CXXRecordDecl>(TagTy->getDecl())->getDefinitionOrSelf();
   if (isa<InjectedClassNameType>(TagTy) ||
       RD->isCurrentInstantiation(CurContext))
     return RD;
@@ -121,7 +120,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
         }
       } else if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
         // The nested name specifier refers to a member of a class template.
-        return RecordT->getOriginalDecl()->getDefinitionOrSelf();
+        return RecordT->getDecl()->getDefinitionOrSelf();
       }
     }
 
@@ -382,11 +381,17 @@ namespace {
 class NestedNameSpecifierValidatorCCC final
     : public CorrectionCandidateCallback {
 public:
-  explicit NestedNameSpecifierValidatorCCC(Sema &SRef)
-      : SRef(SRef) {}
+  explicit NestedNameSpecifierValidatorCCC(Sema &SRef, bool HasQualifier)
+      : SRef(SRef), HasQualifier(HasQualifier) {}
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
-    return SRef.isAcceptableNestedNameSpecifier(candidate.getCorrectionDecl());
+    const NamedDecl *ND = candidate.getCorrectionDecl();
+    if (!SRef.isAcceptableNestedNameSpecifier(ND))
+      return false;
+    // A template type parameter cannot have a nested name specifier.
+    if (HasQualifier && isa<TemplateTypeParmDecl>(ND))
+      return false;
+    return true;
   }
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
@@ -395,6 +400,7 @@ public:
 
  private:
   Sema &SRef;
+  bool HasQualifier;
 };
 
 }
@@ -597,7 +603,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     // different kind of error, so look for typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    NestedNameSpecifierValidatorCCC CCC(*this);
+    NestedNameSpecifierValidatorCCC CCC(*this, /*HasQualifier=*/!SS.isEmpty());
     if (TypoCorrection Corrected = CorrectTypo(
             Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, CCC,
             CorrectTypoKind::ErrorRecovery, LookupCtx, EnteringContext)) {
@@ -781,7 +787,13 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 
   if (!Found.empty()) {
     const auto *ND = Found.getAsSingle<NamedDecl>();
-    if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
+    if (!ND) {
+      Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
+          << IdInfo.Identifier << getLangOpts().CPlusPlus;
+      return true;
+    }
+    if (Found.getLookupKind() == LookupNestedNameSpecifierName &&
+        ::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
                                     IdInfo.CCLoc)) {
       const Type *T = SS.getScopeRep().getAsType();
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)

@@ -14,7 +14,9 @@
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVPushConstantAccess.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
@@ -31,6 +33,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -50,8 +53,10 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
   initializeSPIRVCBufferAccessLegacyPass(PR);
+  initializeSPIRVPushConstantAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
   initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
   initializeSPIRVRegularizerPass(PR);
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
@@ -59,6 +64,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVEmitIntrinsicsPass(PR);
   initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVPrepareGlobalsPass(PR);
   initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
@@ -69,7 +75,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 }
 
 // Pin SPIRVTargetObjectFile's vtables to this file.
-SPIRVTargetObjectFile::~SPIRVTargetObjectFile() {}
+SPIRVTargetObjectFile::~SPIRVTargetObjectFile() = default;
 
 SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
@@ -168,10 +174,20 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
   TargetPassConfig::addIRPasses();
+
+  // Variadic function calls aren't supported in shader code.
+  // This needs to come before SPIRVPrepareFunctions because this
+  // may introduce intrinsic calls.
+  if (!TM.getSubtargetImpl()->isShader()) {
+    addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+  }
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
+  addPass(createSPIRVPrepareGlobalsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {
@@ -205,13 +221,15 @@ void SPIRVPassConfig::addISelPrepare() {
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
   }
-
+  SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
-  addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
+  addPass(createSPIRVEmitIntrinsicsPass(&TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
-    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
+    addPass(createSPIRVLegalizePointerCastPass(&TM));
   TargetPassConfig::addISelPrepare();
 }
 
@@ -244,7 +262,8 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     cl::Optional, cl::init(false));
 
 void SPIRVPassConfig::addPreEmitPass() {
-  if (SPVEnableNonSemanticDI) {
+  if (SPVEnableNonSemanticDI ||
+      getSPIRVTargetMachine().getTargetTriple().getVendor() == Triple::AMD) {
     addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
   }
 }

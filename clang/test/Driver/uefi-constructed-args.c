@@ -12,3 +12,8 @@
 // CHECK-SAME: "/entry:EfiMain"
 // CHECK-SAME: "/tsaware:no"
 // CHECK-SAME: "/debug"
+
+// RUN: %clang -### --target=x86_64-unknown-uefi -print-search-dirs 2>&1 \
+// RUN:     | FileCheck -check-prefixes=PROGPATH %s
+// PROGPATH: InstalledDir: [[DRIVER_INSTALLED_DIR:.*]]
+// PROGPATH: programs: =[[DRIVER_INSTALLED_DIR]]

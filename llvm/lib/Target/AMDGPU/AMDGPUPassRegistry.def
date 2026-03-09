@@ -29,6 +29,7 @@ MODULE_PASS("amdgpu-perf-hint",
 MODULE_PASS("amdgpu-preload-kernel-arguments", AMDGPUPreloadKernelArgumentsPass(*this))
 MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
 MODULE_PASS("amdgpu-remove-incompatible-functions", AMDGPURemoveIncompatibleFunctionsPass(*this))
+MODULE_PASS("amdgpu-lower-exec-sync", AMDGPULowerExecSyncPass())
 MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 #undef MODULE_PASS
 
@@ -68,6 +69,7 @@ FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
               AMDGPUUnifyDivergentExitNodesPass())
 FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
 FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
+FUNCTION_PASS("amdgpu-uniform-intrinsic-combine", AMDGPUUniformIntrinsicCombinePass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_ANALYSIS

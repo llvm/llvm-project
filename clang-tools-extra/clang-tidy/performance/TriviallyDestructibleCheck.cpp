@@ -23,12 +23,9 @@ namespace {
 AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
 
 AST_MATCHER_P(CXXRecordDecl, hasBase, Matcher<QualType>, InnerMatcher) {
-  for (const CXXBaseSpecifier &BaseSpec : Node.bases()) {
-    QualType BaseType = BaseSpec.getType();
-    if (InnerMatcher.matches(BaseType, Finder, Builder))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Node.bases(), [&](const CXXBaseSpecifier &BaseSpec) {
+    return InnerMatcher.matches(BaseSpec.getType(), Finder, Builder);
+  });
 }
 
 } // namespace
@@ -50,7 +47,7 @@ void TriviallyDestructibleCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXDestructorDecl>("decl");
 
   // Get locations of both first and out-of-line declarations.
-  SourceManager &SM = *Result.SourceManager;
+  const SourceManager &SM = *Result.SourceManager;
   const auto *FirstDecl = cast<CXXMethodDecl>(MatchedDecl->getFirstDecl());
   const SourceLocation FirstDeclEnd = utils::lexer::findNextTerminator(
       FirstDecl->getEndLoc(), SM, getLangOpts());

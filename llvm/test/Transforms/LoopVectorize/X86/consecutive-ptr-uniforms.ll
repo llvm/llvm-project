@@ -41,14 +41,14 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <80 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 0, <16 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[D]], <16 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x ptr> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <80 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <16 x float> [[STRIDED_VEC2]], [[TMP1]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> [[TMP4]], <16 x ptr> [[TMP2]], i32 4, <16 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> [[TMP4]], <16 x ptr> align 4 [[TMP2]], <16 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 80)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <16 x i64> [[VEC_IND]], splat (i64 80)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6384
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -66,7 +66,6 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE:       [[VECTOR_BODY]]:
 ; FORCE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
-; FORCE-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; FORCE-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 5
 ; FORCE-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 10
 ; FORCE-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 15
@@ -74,7 +73,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 25
 ; FORCE-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 30
 ; FORCE-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 35
-; FORCE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 3, i64 [[TMP0]]
+; FORCE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 3, i64 [[OFFSET_IDX]]
 ; FORCE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP2]]
 ; FORCE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP4]]
 ; FORCE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 3, i64 [[TMP6]]
@@ -90,7 +89,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC2]]
 ; FORCE-NEXT:    [[TMP14:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC4]]
 ; FORCE-NEXT:    [[TMP15:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC6]]
-; FORCE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP0]]
+; FORCE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[OFFSET_IDX]]
 ; FORCE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP1]]
 ; FORCE-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP2]]
 ; FORCE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[DATA]], ptr [[D]], i64 0, i32 0, i64 [[TMP3]]
@@ -107,24 +106,24 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[WIDE_VEC13:%.*]] = load <10 x float>, ptr [[TMP22]], align 4
 ; FORCE-NEXT:    [[STRIDED_VEC14:%.*]] = shufflevector <10 x float> [[WIDE_VEC13]], <10 x float> poison, <2 x i32> <i32 0, i32 5>
 ; FORCE-NEXT:    [[TMP24:%.*]] = fadd <2 x float> [[STRIDED_VEC8]], [[TMP12]]
-; FORCE-NEXT:    [[TMP25:%.*]] = fadd <2 x float> [[STRIDED_VEC10]], [[TMP13]]
-; FORCE-NEXT:    [[TMP26:%.*]] = fadd <2 x float> [[STRIDED_VEC12]], [[TMP14]]
-; FORCE-NEXT:    [[TMP27:%.*]] = fadd <2 x float> [[STRIDED_VEC14]], [[TMP15]]
 ; FORCE-NEXT:    [[TMP28:%.*]] = extractelement <2 x float> [[TMP24]], i32 0
-; FORCE-NEXT:    store float [[TMP28]], ptr [[TMP16]], align 4
 ; FORCE-NEXT:    [[TMP29:%.*]] = extractelement <2 x float> [[TMP24]], i32 1
-; FORCE-NEXT:    store float [[TMP29]], ptr [[TMP17]], align 4
+; FORCE-NEXT:    [[TMP25:%.*]] = fadd <2 x float> [[STRIDED_VEC10]], [[TMP13]]
 ; FORCE-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP25]], i32 0
-; FORCE-NEXT:    store float [[TMP30]], ptr [[TMP18]], align 4
 ; FORCE-NEXT:    [[TMP31:%.*]] = extractelement <2 x float> [[TMP25]], i32 1
-; FORCE-NEXT:    store float [[TMP31]], ptr [[TMP19]], align 4
+; FORCE-NEXT:    [[TMP26:%.*]] = fadd <2 x float> [[STRIDED_VEC12]], [[TMP14]]
 ; FORCE-NEXT:    [[TMP32:%.*]] = extractelement <2 x float> [[TMP26]], i32 0
-; FORCE-NEXT:    store float [[TMP32]], ptr [[TMP20]], align 4
 ; FORCE-NEXT:    [[TMP33:%.*]] = extractelement <2 x float> [[TMP26]], i32 1
-; FORCE-NEXT:    store float [[TMP33]], ptr [[TMP21]], align 4
+; FORCE-NEXT:    [[TMP27:%.*]] = fadd <2 x float> [[STRIDED_VEC14]], [[TMP15]]
 ; FORCE-NEXT:    [[TMP34:%.*]] = extractelement <2 x float> [[TMP27]], i32 0
-; FORCE-NEXT:    store float [[TMP34]], ptr [[TMP22]], align 4
 ; FORCE-NEXT:    [[TMP35:%.*]] = extractelement <2 x float> [[TMP27]], i32 1
+; FORCE-NEXT:    store float [[TMP28]], ptr [[TMP16]], align 4
+; FORCE-NEXT:    store float [[TMP29]], ptr [[TMP17]], align 4
+; FORCE-NEXT:    store float [[TMP30]], ptr [[TMP18]], align 4
+; FORCE-NEXT:    store float [[TMP31]], ptr [[TMP19]], align 4
+; FORCE-NEXT:    store float [[TMP32]], ptr [[TMP20]], align 4
+; FORCE-NEXT:    store float [[TMP33]], ptr [[TMP21]], align 4
+; FORCE-NEXT:    store float [[TMP34]], ptr [[TMP22]], align 4
 ; FORCE-NEXT:    store float [[TMP35]], ptr [[TMP23]], align 4
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCE-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6392
@@ -166,7 +165,6 @@ attributes #0 = { "target-cpu"="knl" }
 ; CHECK:     LV: Found uniform instruction:   {{%.*}} = icmp eq i32 {{%.*}}, 0
 ; CHECK-NOT: LV: Found uniform instruction:   {{%.*}} = load i32, ptr {{%.*}}, align 1
 ; CHECK:     LV: Found not uniform due to requiring predication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
-; CHECK:     LV: Found scalar instruction:   {{%.*}} = getelementptr inbounds [3 x i32], ptr @a, i32 0, i32 {{%.*}}
 ;
 ;
 @a = internal constant [3 x i32] [i32 7, i32 7, i32 0], align 1
@@ -215,8 +213,9 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:
-; FORCE-NEXT:    br [[RETURN:label %.*]]
-; FORCE:       [[SCALAR_PH:.*:]]
+; FORCE-NEXT:    br label %[[RETURN:.*]]
+; FORCE:       [[RETURN]]:
+; FORCE-NEXT:    ret void
 ;
 entry:
   br label %for.body

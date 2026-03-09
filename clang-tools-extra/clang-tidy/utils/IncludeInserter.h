@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H
 
 #include "IncludeSorter.h"
 #include "clang/Basic/Diagnostic.h"
@@ -100,4 +100,4 @@ private:
 
 } // namespace tidy::utils
 } // namespace clang
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_INCLUDEINSERTER_H

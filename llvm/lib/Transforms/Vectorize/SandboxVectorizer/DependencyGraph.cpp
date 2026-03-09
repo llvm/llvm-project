@@ -92,7 +92,7 @@ void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
   DGNode::print(OS, false);
   if (PrintDeps) {
     // Print memory preds.
-    static constexpr const unsigned Indent = 4;
+    static constexpr unsigned Indent = 4;
     for (auto *Pred : MemPreds)
       OS.indent(Indent) << "<-" << *Pred->getInstruction() << "\n";
   }
@@ -523,8 +523,18 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
 }
 
 void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
-  // Update the UnscheduledSuccs counter for both the current source and NewSrc
-  // if needed.
+  // If U.User is not in the DAG, then we should not attempt to decrement
+  // CurrSrcN's unscheduled successors.
+  //  -------   -------   -
+  //  CurrSrc             | DAG interval
+  //     |       NewSrc   |
+  //  ---|---   ---|---   -
+  //  U.User     U.User
+  auto *UserI = dyn_cast_or_null<Instruction>(U.getUser());
+  if (UserI == nullptr || !getNode(UserI))
+    return;
+  // Update the UnscheduledSuccs counter for both the current source and
+  // NewSrc if needed.
   if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
       CurrSrcN->decrUnscheduledSuccs();

@@ -15,7 +15,7 @@ subroutine privatize_predetermined_when_defined_by_eval
       enddo
     enddo
 
-    !$omp do 
+    !$omp do
     do j=1,ii
     enddo
   !$omp end parallel

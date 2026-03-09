@@ -23,13 +23,18 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -40,7 +45,11 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-#define DEBUG_TYPE "lower-amx-intrinsics"
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
+
+#define DEBUG_TYPE "x86-lower-amx-intrinsics"
 
 #ifndef NDEBUG
 static bool isV256I32Ty(Type *Ty) {
@@ -68,7 +77,7 @@ private:
   DomTreeUpdater &DTU;
   LoopInfo *LI;
   BasicBlock *createLoop(BasicBlock *Preheader, BasicBlock *Exit, Value *Bound,
-                         Value *Step, StringRef Name, IRBuilderBase &B,
+                         ConstantInt *Step, StringRef Name, IRBuilderBase &B,
                          Loop *L);
   template <bool IsTileLoad>
   Value *createTileLoadStoreLoops(BasicBlock *Start, BasicBlock *End,
@@ -100,7 +109,7 @@ private:
 
 BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
                                               BasicBlock *Exit, Value *Bound,
-                                              Value *Step, StringRef Name,
+                                              ConstantInt *Step, StringRef Name,
                                               IRBuilderBase &B, Loop *L) {
   LLVMContext &Ctx = Preheader->getContext();
   BasicBlock *Header =
@@ -120,7 +129,19 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   B.SetInsertPoint(Latch);
   Value *Inc = B.CreateAdd(IV, Step, Name + ".step");
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
-  BranchInst::Create(Header, Exit, Cond, Latch);
+  auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
+  if (!ProfcheckDisableMetadataFixes) {
+    if (auto *BoundInt = dyn_cast<ConstantInt>(Bound)) {
+      assert(Step->getZExtValue() != 0 &&
+             "Expected a non-zero step size. This is chosen by the pass and "
+             "should always be non-zero to imply a finite loop.");
+      MDBuilder MDB(Preheader->getContext());
+      setFittedBranchWeights(
+          *BR, {BoundInt->getZExtValue() / Step->getZExtValue(), 1}, false);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+    }
+  }
   IV->addIncoming(Inc, Latch);
 
   BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
@@ -627,6 +648,37 @@ bool X86LowerAMXIntrinsics::visit() {
 }
 
 namespace {
+bool shouldRunLowerAMXIntrinsics(const Function &F, const TargetMachine *TM) {
+  return X86ScalarizeAMX && (F.hasFnAttribute(Attribute::OptimizeNone) ||
+                             TM->getOptLevel() == CodeGenOptLevel::None);
+}
+
+bool runLowerAMXIntrinsics(Function &F, DominatorTree *DT, LoopInfo *LI) {
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
+  X86LowerAMXIntrinsics LAT(F, DTU, LI);
+  return LAT.visit();
+}
+} // namespace
+
+PreservedAnalyses X86LowerAMXIntrinsicsPass::run(Function &F,
+                                                 FunctionAnalysisManager &FAM) {
+  if (!shouldRunLowerAMXIntrinsics(F, TM))
+    return PreservedAnalyses::all();
+
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
+  bool Changed = runLowerAMXIntrinsics(F, &DT, &LI);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  return PA;
+}
+
+namespace {
 class X86LowerAMXIntrinsicsLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -634,21 +686,15 @@ public:
   X86LowerAMXIntrinsicsLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
-    if (!X86ScalarizeAMX)
-      return false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
-        TM->getOptLevel() != CodeGenOptLevel::None)
+    if (!shouldRunLowerAMXIntrinsics(F, TM))
       return false;
 
     auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
     auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-
-    X86LowerAMXIntrinsics LAT(F, DTU, LI);
-    return LAT.visit();
+    return runLowerAMXIntrinsics(F, DT, LI);
   }
   StringRef getPassName() const override { return "Lower AMX intrinsics"; }
 
@@ -668,6 +714,6 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(X86LowerAMXIntrinsicsLegacyPass, DEBUG_TYPE, PassName,
                     false, false)
 
-FunctionPass *llvm::createX86LowerAMXIntrinsicsPass() {
+FunctionPass *llvm::createX86LowerAMXIntrinsicsLegacyPass() {
   return new X86LowerAMXIntrinsicsLegacyPass();
 }
