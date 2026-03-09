@@ -75,6 +75,8 @@ cc_test(
         "//mlir:InferIntRangeInterface",
         "//mlir:InferTypeOpInterface",
         "//mlir:Parser",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:Support",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

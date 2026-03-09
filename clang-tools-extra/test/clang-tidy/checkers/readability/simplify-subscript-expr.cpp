@@ -1,8 +1,7 @@
 // RUN: %check_clang_tidy %s readability-simplify-subscript-expr %t \
 // RUN: -config="{CheckOptions: \
 // RUN: {readability-simplify-subscript-expr.Types: \
-// RUN:    '::std::basic_string;::std::basic_string_view;MyVector'}}" \
-// RUN: -- -isystem %clang_tidy_headers
+// RUN:    '::std::basic_string;::std::basic_string_view;MyVector'}}"
 #include <string>
 
 template <class T>
