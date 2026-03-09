@@ -29,6 +29,43 @@ define i64 @abs_i64(i64 %x) {
   ret i64 %abs
 }
 
+; Test scalar saturating add/sub operations for i32
+define i32 @test_scalar_psadd_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psadd_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psadd.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_psaddu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psaddu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psaddu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.uadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssub_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssub_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssub.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.ssub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssubu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssubu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssubu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.usub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 define i64 @pack_i64_imm() {
 ; CHECK-LABEL: pack_i64_imm:
 ; CHECK:       # %bb.0:

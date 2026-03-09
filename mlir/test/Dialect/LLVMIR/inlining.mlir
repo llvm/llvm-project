@@ -570,6 +570,32 @@ llvm.func @test_byval_global() {
 
 // -----
 
+// Check that inlining does not hoist byval allocas out of automatic allocation
+// scopes, such as parallel forall regions. Each parallel iteration must have
+// its own private copy of the byval argument.
+
+llvm.func @byval_in_parallel(%ptr : !llvm.ptr { llvm.byval = f32 }) {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_in_parallel_region
+// CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
+llvm.func @test_byval_in_parallel_region(%ptr : !llvm.ptr) {
+  %c0 = arith.constant 0 : index
+  // Verify the alloca is not hoisted out of the allocation scope.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.alloca_scope_region
+  test.alloca_scope_region {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f32
+    // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
+    llvm.call @byval_in_parallel(%ptr) : (!llvm.ptr) -> ()
+    test.region_yield %c0 : index
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
   llvm.return %ptr : !llvm.ptr
 }
@@ -708,4 +734,43 @@ func.func @llvm_ret(%arg0 : i32) -> i32 {
   %res = call @func(%arg0) : (i32) -> (i32)
   // CHECK: return %[[R]]
   return %res : i32
+}
+
+// -----
+// Regression test for https://github.com/llvm/llvm-project/issues/118766
+// A callee whose body block ends with an unregistered (non-terminator) op used
+// to crash the inliner. The inliner should skip such callees instead.
+
+llvm.func @callee_malformed_terminator() -> i64 attributes {llvm.emit_c_interface} {
+  // Unregistered op acting as a fake terminator -- the function has no llvm.return.
+  "test.foo"() : () -> ()
+}
+
+// CHECK-LABEL: @caller_malformed_terminator
+llvm.func @caller_malformed_terminator() -> i64 attributes {llvm.emit_c_interface} {
+  // CHECK: llvm.call @callee_malformed_terminator
+  %0 = llvm.call @callee_malformed_terminator() : () -> i64
+  llvm.return %0 : i64
+}
+
+// -----
+// Complement to the above: a callee whose block ends with a registered
+// non-LLVM terminator that genuinely has the IsTerminator trait (cf.br) does
+// NOT trigger the guard. The call is inlined normally via the multi-block path
+// (handleTerminator uses dyn_cast for non-llvm.return ops, so cf.br is left
+// as-is and control flow reaches the llvm.return in the successor block).
+
+llvm.func @callee_cf_br_terminator(%arg0 : i64) -> i64 {
+  cf.br ^exit(%arg0 : i64)
+^exit(%val : i64):
+  llvm.return %val : i64
+}
+
+// CHECK-LABEL: @caller_cf_br_terminator
+llvm.func @caller_cf_br_terminator(%arg0 : i64) -> i64 {
+  // cf.br has IsTerminator, so isLegalToInline allows inlining.
+  // CHECK-NOT: llvm.call @callee_cf_br_terminator
+  // CHECK: llvm.return %arg0
+  %0 = llvm.call @callee_cf_br_terminator(%arg0) : (i64) -> i64
+  llvm.return %0 : i64
 }

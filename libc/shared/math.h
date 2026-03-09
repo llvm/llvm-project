@@ -125,6 +125,7 @@
 #include "math/fdimf16.h"
 #include "math/fdiml.h"
 #include "math/ffma.h"
+#include "math/ffmaf128.h"
 #include "math/ffmal.h"
 #include "math/floor.h"
 #include "math/floorbf16.h"

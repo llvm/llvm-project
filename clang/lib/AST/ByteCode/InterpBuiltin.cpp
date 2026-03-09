@@ -2333,12 +2333,8 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
   bool UseFieldDesc = (Kind & 1u);
   bool ReportMinimum = (Kind & 2u);
   if (!UseFieldDesc || DetermineForCompleteObject) {
-    // Lower bound, so we can't fall back to this.
-    if (ReportMinimum && UseFieldDesc && !DetermineForCompleteObject)
-      return std::nullopt;
-
     // Can't read beyond the pointer decl desc.
-    if (!UseFieldDesc && !ReportMinimum && DeclDesc->getType()->isPointerType())
+    if (!ReportMinimum && DeclDesc->getType()->isPointerType())
       return std::nullopt;
 
     if (InvalidBase)
@@ -5971,6 +5967,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
                        ArrayRef<int64_t> ArrayIndices, int64_t &IntResult) {
+  S.getASTContext().recordOffsetOfEvaluation(E);
   CharUnits Result;
   unsigned N = E->getNumComponents();
   assert(N > 0);

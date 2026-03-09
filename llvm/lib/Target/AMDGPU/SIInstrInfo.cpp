@@ -5302,7 +5302,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
     if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
-        Opcode != AMDGPU::V_MOV_B64_PSEUDO) {
+        Opcode != AMDGPU::V_MOV_B64_PSEUDO && !isSpill(MI)) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -7199,11 +7199,11 @@ emitLoadScalarOpsFromVGPRLoop(const SIInstrInfo &TII,
 // with SGPRs by iterating over all unique values across all lanes.
 // Returns the loop basic block that now contains \p MI.
 static MachineBasicBlock *
-loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
-                               ArrayRef<MachineOperand *> ScalarOps,
-                               MachineDominatorTree *MDT,
-                               MachineBasicBlock::iterator Begin = nullptr,
-                               MachineBasicBlock::iterator End = nullptr) {
+loadScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
+                           ArrayRef<MachineOperand *> ScalarOps,
+                           MachineDominatorTree *MDT,
+                           MachineBasicBlock::iterator Begin = nullptr,
+                           MachineBasicBlock::iterator End = nullptr) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -7478,13 +7478,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
                                     : AMDGPU::OpName::srsrc;
     MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
-      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
+      CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
 
     AMDGPU::OpName SampOpName =
         isMIMG(MI) ? AMDGPU::OpName::ssamp : AMDGPU::OpName::samp;
     MachineOperand *SSamp = getNamedOperand(MI, SampOpName);
     if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg())))
-      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SSamp}, MDT);
+      CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {SSamp}, MDT);
 
     return CreatedBB;
   }
@@ -7513,7 +7513,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
              MI.definesRegister(End->getOperand(1).getReg(), /*TRI=*/nullptr))
         ++End;
       CreatedBB =
-          loadMBUFScalarOperandsFromVGPR(*this, MI, {Dest}, MDT, Start, End);
+          loadScalarOperandsFromVGPR(*this, MI, {Dest}, MDT, Start, End);
     }
   }
 
@@ -7530,12 +7530,12 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return nullptr;
   }
 
-  // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
-  // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
-  if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||
-      MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_D2 ||
-      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS ||
-      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_D2) {
+  // Legalize TENSOR_LOAD_TO_LDS_d2/_d4, TENSOR_STORE_FROM_LDS_d2/_d4. All their
+  // operands are scalar.
+  if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_d2 ||
+      MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_d4 ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_d2 ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_d4) {
     for (MachineOperand &Src : MI.explicit_operands()) {
       if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
         Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
@@ -7695,11 +7695,10 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
       // Legalize a VGPR Rsrc and soffset together.
       if (!isSoffsetLegal) {
         MachineOperand *Soffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
-        CreatedBB =
-            loadMBUFScalarOperandsFromVGPR(*this, MI, {Rsrc, Soffset}, MDT);
+        CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {Rsrc, Soffset}, MDT);
         return CreatedBB;
       }
-      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {Rsrc}, MDT);
+      CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {Rsrc}, MDT);
       return CreatedBB;
     }
   }
@@ -7707,7 +7706,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // Legalize a VGPR soffset.
   if (!isSoffsetLegal) {
     MachineOperand *Soffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
-    CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {Soffset}, MDT);
+    CreatedBB = loadScalarOperandsFromVGPR(*this, MI, {Soffset}, MDT);
     return CreatedBB;
   }
   return CreatedBB;
@@ -10280,7 +10279,7 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX10:
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
-    return SIEncodingFamily::GFX11;
+    return ST.isGFX1170() ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
@@ -10379,6 +10378,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.isGFX1170())
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
