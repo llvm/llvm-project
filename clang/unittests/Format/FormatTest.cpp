@@ -3158,7 +3158,7 @@ TEST_F(FormatTest, FormatsLabels) {
                "}");
 
   FormatStyle Style = getLLVMStyle();
-  Style.IndentGotoLabels = false;
+  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
   verifyFormat("void f() {\n"
                "  some_code();\n"
                "test_label:\n"
@@ -3196,6 +3196,115 @@ TEST_F(FormatTest, FormatsLabels) {
                "  }\n"
                "}",
                Style);
+  verifyFormat("void f() {\n"
+               "L1:\n"
+               "  a();\n"
+               "  {\n"
+               "L2:\n"
+               "    b();\n"
+               "    {\n"
+               "L3:\n"
+               "      c();\n"
+               "      {\n"
+               "L4:\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+  Style.IndentGotoLabels = FormatStyle::IGLS_OuterIndent;
+  verifyFormat("void f() {\n"
+               "  some_code();\n"
+               "test_label:\n"
+               "  some_other_code();\n"
+               "  {\n"
+               "    some_more_code();\n"
+               "  another_label:\n"
+               "    some_more_code();\n"
+               "  }\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "L1:\n"
+               "  a();\n"
+               "  {\n"
+               "  L2:\n"
+               "    b();\n"
+               "    {\n"
+               "    L3:\n"
+               "      c();\n"
+               "      {\n"
+               "      L4:\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+  Style.IndentGotoLabels = FormatStyle::IGLS_InnerIndent;
+  verifyFormat("void f() {\n"
+               "  some_code();\n"
+               "  test_label:\n"
+               "  some_other_code();\n"
+               "  {\n"
+               "    some_more_code();\n"
+               "    another_label:\n"
+               "    some_more_code();\n"
+               "  }\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               "  L1:\n"
+               "  a();\n"
+               "  {\n"
+               "    L2:\n"
+               "    b();\n"
+               "    {\n"
+               "      L3:\n"
+               "      c();\n"
+               "      {\n"
+               "        L4:\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+  Style.IndentGotoLabels = FormatStyle::IGLS_HalfIndent;
+  verifyFormat("void f() {\n"
+               "  some_code();\n"
+               " test_label:\n"
+               "  some_other_code();\n"
+               "  {\n"
+               "    some_more_code();\n"
+               "   another_label:\n"
+               "    some_more_code();\n"
+               "  }\n"
+               "}",
+               Style);
+  verifyFormat("void f() {\n"
+               " L1:\n"
+               "  a();\n"
+               "  {\n"
+               "   L2:\n"
+               "    b();\n"
+               "    {\n"
+               "     L3:\n"
+               "      c();\n"
+               "      {\n"
+               "       L4:\n"
+               "      }\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+  Style.IndentWidth = 3;
+  verifyFormat("void f() {\n"
+               "   some_code();\n"
+               "  test_label:\n"
+               "   some_other_code();\n"
+               "}",
+               Style);
+  Style.IndentWidth = 2;
+  Style.IndentGotoLabels = FormatStyle::IGLS_NoIndent;
 
   Style.ColumnLimit = 15;
   verifyFormat("#define FOO   \\\n"
@@ -17334,6 +17443,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("void f(int a, T b) {}", SpaceFuncDecl);
   verifyFormat("void __attribute__((asdf)) f(int a, T b) {}", SpaceFuncDecl);
   verifyFormat("A::A() : a(1) {}", SpaceFuncDecl);
+  verifyFormat("template <> void A<C> (C x);", SpaceFuncDecl);
+  verifyFormat("template <> void A<C>(C x) {}", SpaceFuncDecl);
   verifyFormat("void f () __attribute__((asdf));", SpaceFuncDecl);
   verifyFormat("void __attribute__((asdf)) f ();", SpaceFuncDecl);
   verifyFormat("#define A(x) x", SpaceFuncDecl);
@@ -17370,6 +17481,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
   verifyFormat("void __attribute__((asdf)) f (int a, T b) {}", SpaceFuncDef);
   verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
+  verifyFormat("template <> void A<C>(C x);", SpaceFuncDef);
+  verifyFormat("template <> void A<C> (C x) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("void __attribute__((asdf)) f();", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
@@ -27321,6 +27434,23 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "    int i;\n"
                "};",
                Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("struct S\n"
+               "  {\n"
+               "  public:\n"
+               "    int i;\n"
+               "\n"
+               "  private:\n"
+               "    class C\n"
+               "      {\n"
+               "      private:\n"
+               "        int j;\n"
+               "      };\n"
+               "  };",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
   // Enumerations are not records and should be unaffected.
   Style.AllowShortEnumsOnASingleLine = false;
   verifyFormat("enum class E {\n"

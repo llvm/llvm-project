@@ -126,11 +126,14 @@ void transform::ApplyMaterializeMasksPatternsOp::populatePatterns(
                                             /*force32BitVectorIndices=*/false);
 }
 
-void transform::ApplyReorderAndExpandMultiReductionPatternsOp::populatePatterns(
+//===----------------------------------------------------------------------===//
+// Multi-reduction patterns
+//===----------------------------------------------------------------------===//
+void transform::ApplyReorderMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;
   vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
-  vector::populateVectorMultiReductionReorderAndExpandPatterns(
+  vector::populateVectorMultiReductionReorderPatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 

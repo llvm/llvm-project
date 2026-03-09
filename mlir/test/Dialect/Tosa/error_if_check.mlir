@@ -86,6 +86,38 @@ func.func @test_resize_invalid_boarder_x(%arg0: tensor<1x8x8x8xf32>) -> tensor<?
 
 // -----
 
+// CHECK-LABEL: test_reshape_inferable_dim
+func.func @test_reshape_inferable_dim(%arg0: tensor<4xf32>) -> tensor<?x2xf32> {
+  %shape = tosa.const_shape { values = dense<[-1, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op shape input contains inferable dimension (-1) which does not conform to the TOSA specification}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<4xf32>, !tosa.shape<2>) -> tensor<?x2xf32>
+  return %0 : tensor<?x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_slice_inferable_start
+func.func @test_slice_inferable_start(%arg0: tensor<4x4xf32>) -> tensor<2x2xf32> {
+  %start = tosa.const_shape { values = dense<[-1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %size = tosa.const_shape { values = dense<[2, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.slice' op start input contains inferable dimension (-1) which does not conform to the TOSA specification}}
+  %0 = tosa.slice %arg0, %start, %size : (tensor<4x4xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<2x2xf32>
+  return %0 : tensor<2x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_slice_inferable_size
+func.func @test_slice_inferable_size(%arg0: tensor<4x4xf32>) -> tensor<?x2xf32> {
+  %start = tosa.const_shape { values = dense<[0, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %size = tosa.const_shape { values = dense<[-1, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.slice' op size input contains inferable dimension (-1) which does not conform to the TOSA specification}}
+  %0 = tosa.slice %arg0, %start, %size : (tensor<4x4xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x2xf32>
+  return %0 : tensor<?x2xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_mul_negative_shift
 func.func @test_mul_negative_shift(%arg0: tensor<1x8x8x8xi32>, %arg1: tensor<1x8x8x8xi32>) -> tensor<1x8x8x8xi32> {
   %shift = "tosa.const" () { values = dense<-1> : tensor<1xi8> } : () -> tensor<1xi8>

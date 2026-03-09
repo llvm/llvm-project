@@ -1908,6 +1908,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"v8.1a", "crc", "fp-armv8", "lse", "rdm", "neon"},
          {}},
         {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
+        {AArch64::ARMV9_7A, {}, {"v9.7a", "f16f32dot"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},
@@ -2023,6 +2024,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve", "nofp16"}, {}, {"fullfp16", "sve"}},
         {AArch64::ARMV9_7A, {"nofp16", "f16mm"}, {"fullfp16", "f16mm"}, {}},
         {AArch64::ARMV9_7A, {"f16mm", "nofp16"}, {}, {"fullfp16", "f16mm"}},
+        {AArch64::ARMV9_7A, {"nosimd", "f16mm"}, {"neon", "f16mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16mm", "nosimd"}, {}, {"neon", "f16mm"}},
         {AArch64::ARMV9_7A,
          {"nofp16", "f16f32mm"},
          {"fullfp16", "f16f32mm"},

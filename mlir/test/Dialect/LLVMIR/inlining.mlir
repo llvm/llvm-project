@@ -709,3 +709,42 @@ func.func @llvm_ret(%arg0 : i32) -> i32 {
   // CHECK: return %[[R]]
   return %res : i32
 }
+
+// -----
+// Regression test for https://github.com/llvm/llvm-project/issues/118766
+// A callee whose body block ends with an unregistered (non-terminator) op used
+// to crash the inliner. The inliner should skip such callees instead.
+
+llvm.func @callee_malformed_terminator() -> i64 attributes {llvm.emit_c_interface} {
+  // Unregistered op acting as a fake terminator -- the function has no llvm.return.
+  "test.foo"() : () -> ()
+}
+
+// CHECK-LABEL: @caller_malformed_terminator
+llvm.func @caller_malformed_terminator() -> i64 attributes {llvm.emit_c_interface} {
+  // CHECK: llvm.call @callee_malformed_terminator
+  %0 = llvm.call @callee_malformed_terminator() : () -> i64
+  llvm.return %0 : i64
+}
+
+// -----
+// Complement to the above: a callee whose block ends with a registered
+// non-LLVM terminator that genuinely has the IsTerminator trait (cf.br) does
+// NOT trigger the guard. The call is inlined normally via the multi-block path
+// (handleTerminator uses dyn_cast for non-llvm.return ops, so cf.br is left
+// as-is and control flow reaches the llvm.return in the successor block).
+
+llvm.func @callee_cf_br_terminator(%arg0 : i64) -> i64 {
+  cf.br ^exit(%arg0 : i64)
+^exit(%val : i64):
+  llvm.return %val : i64
+}
+
+// CHECK-LABEL: @caller_cf_br_terminator
+llvm.func @caller_cf_br_terminator(%arg0 : i64) -> i64 {
+  // cf.br has IsTerminator, so isLegalToInline allows inlining.
+  // CHECK-NOT: llvm.call @callee_cf_br_terminator
+  // CHECK: llvm.return %arg0
+  %0 = llvm.call @callee_cf_br_terminator(%arg0) : (i64) -> i64
+  llvm.return %0 : i64
+}

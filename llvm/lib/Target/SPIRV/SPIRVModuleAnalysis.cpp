@@ -2668,6 +2668,10 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
     MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
+    if (MF->getFunction()
+            .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+            .isValid())
+      continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
     for (auto &MBB : *MF) {
       if (!MBB.hasName() || MBB.empty())

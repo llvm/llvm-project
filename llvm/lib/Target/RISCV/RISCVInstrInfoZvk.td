@@ -527,7 +527,7 @@ let Predicates = [HasStdExtZvbb] in {
   defm PseudoVWSLL : VPseudoVWSLL;
 } // Predicates = [HasStdExtZvbb]
 
-let Predicates = [HasStdExtZvbc] in {
+let Predicates = [HasStdExtZvbcOrZvbc32e] in {
   defm PseudoVCLMUL  : VPseudoVCLMUL_VV_VX;
   defm PseudoVCLMULH : VPseudoVCLMUL_VV_VX;
 } // Predicates = [HasStdExtZvbc]
@@ -716,8 +716,16 @@ foreach vtiToWti = AllWidenableIntVectors in {
   }
 }
 
-defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
-defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", I64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", I64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc]>;
+
+defvar NonI64IntegerVectors = !filter(vti, AllIntegerVectors, !le(vti.SEW, 32));
+defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", NonI64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc32e]>;
+defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", NonI64IntegerVectors,
+                              ExtraPreds=[HasStdExtZvbc32e]>;
 
 //===----------------------------------------------------------------------===//
 // VL patterns
