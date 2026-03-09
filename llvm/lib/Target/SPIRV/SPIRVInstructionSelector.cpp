@@ -794,18 +794,20 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       if (isTypeFoldingSupported(Def->getOpcode()) &&
           Def->getOpcode() != TargetOpcode::G_CONSTANT &&
           Def->getOpcode() != TargetOpcode::G_FCONSTANT) {
-        bool Res = false;
         if (Def->getOpcode() == TargetOpcode::G_SELECT) {
           Register SelectDstReg = Def->getOperand(0).getReg();
-          Res = selectSelect(SelectDstReg, GR.getSPIRVTypeForVReg(SelectDstReg),
-                             *Def);
+          bool SuccessToSelectSelect [[maybe_unused]] = selectSelect(
+              SelectDstReg, GR.getSPIRVTypeForVReg(SelectDstReg), *Def);
+          assert(SuccessToSelectSelect);
           GR.invalidateMachineInstr(Def);
-          Def->removeFromParent();
+          Def->eraseFromParent();
           MRI->replaceRegWith(DstReg, SelectDstReg);
           GR.invalidateMachineInstr(&I);
-          I.removeFromParent();
-        } else
-          Res = selectImpl(I, *CoverageInfo);
+          I.eraseFromParent();
+          return true;
+        }
+
+        bool Res = selectImpl(I, *CoverageInfo);
         LLVM_DEBUG({
           if (!Res && Def->getOpcode() != TargetOpcode::G_CONSTANT) {
             dbgs() << "Unexpected pattern in ASSIGN_TYPE.\nInstruction: ";
@@ -822,7 +824,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
       GR.invalidateMachineInstr(&I);
-      I.removeFromParent();
+      I.eraseFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
       // Make all vregs 64 bits (for SPIR-V IDs).
@@ -837,6 +839,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
     // erase it
     LLVM_DEBUG(dbgs() << "Instruction is folded and dead.\n");
     removeDeadInstruction(I);
+    DeadMIs.erase(&I);
     return true;
   }
 

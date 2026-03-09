@@ -231,7 +231,7 @@ unsigned char test_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[OR:.*]] = cir.or %[[LHS]], %[[RHS]] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u8i, !cir.bool
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[OR_INT]], %[[ALL_ONES]] : !u8i
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
   // CIR: cir.cast integral {{.*}} : !s32i -> !u8i
 
