@@ -127,6 +127,7 @@ add_entrypoint_object(
   HDRS
     iswprint.h
   DEPENDS
+    libc.hdr.types.wint_t
     libc.src.__support.wctype_utils
     libc.hdr.types.wint_t
 )
