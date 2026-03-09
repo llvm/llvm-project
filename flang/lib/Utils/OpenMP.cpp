@@ -156,6 +156,13 @@ void cloneOrMapRegionOutsiders(
   }
 }
 
+/// Gets or generates a default declare mapper for a given record type.
+///
+/// \param firOpBuilder The builder to use for generating the mapper.
+/// \param loc The location to use for the generated operations.
+/// \param recordType The record type to generate the mapper for.
+/// \param mapperNameStr The name of the mapper to generate.
+/// \param mangler A function to mangle the mapper name for nested types.
 mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr,

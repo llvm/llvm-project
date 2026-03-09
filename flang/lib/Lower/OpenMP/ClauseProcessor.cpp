@@ -1589,12 +1589,7 @@ void ClauseProcessor::processMapObjects(
     return utils::openmp::getOrGenImplicitDefaultDeclareMapper(
         converter.getFirOpBuilder(), clauseLocation, recordType, mapperIdName,
         [&](std::string &mapperIdName, llvm::StringRef memberName) {
-          if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
-            mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-          else if (auto *memberSym =
-                       converter.getCurrentScope().FindSymbol(memberName.str()))
-            mapperIdName =
-                converter.mangleName(mapperIdName, memberSym->owner());
+          defaultMangler(converter, mapperIdName, memberName);
         });
   };
 

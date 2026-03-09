@@ -995,6 +995,15 @@ bool hasIteratorIVReference(
   return false;
 }
 
+void defaultMangler(Fortran::lower::AbstractConverter &converter,
+                    std::string &mapperIdName, llvm::StringRef memberName) {
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+    mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+  else if (auto *memberSym =
+               converter.getCurrentScope().FindSymbol(memberName.str()))
+    mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
+}
+
 // Build the array coordinate for an object that uses iterator variables.
 // If the object is a section, use the first element of that section
 // as the coordinate. Currently only support top-level ArrayRef designators.
