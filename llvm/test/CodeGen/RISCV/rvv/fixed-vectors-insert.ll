@@ -574,6 +574,31 @@ define <8 x i64> @insertelt_v8i64_0(<8 x i64> %a, ptr %x) {
   ret <8 x i64> %b
 }
 
+define <8 x i64> @insertelt_v8i64_sext_0(<8 x i64> %a, ptr %x, i32 signext %elt) {
+; RV32-LABEL: insertelt_v8i64_sext_0:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a1, 31
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_v8i64_sext_0:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; RV64-NEXT:    vmv.s.x v8, a1
+; RV64-NEXT:    ret
+;
+; VISNI-LABEL: insertelt_v8i64_sext_0:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; VISNI-NEXT:    vmv.s.x v8, a1
+; VISNI-NEXT:    ret
+  %sext = sext i32 %elt to i64
+  %b = insertelement <8 x i64> %a, i64 %sext, i32 0
+  ret <8 x i64> %b
+}
+
 define void @insertelt_v8i64_0_store(ptr %x) {
 ; RV32-LABEL: insertelt_v8i64_0_store:
 ; RV32:       # %bb.0:
