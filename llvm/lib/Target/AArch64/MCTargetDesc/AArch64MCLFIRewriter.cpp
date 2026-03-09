@@ -30,32 +30,34 @@ static cl::opt<bool>
                    cl::desc("Disable LFI guard elimination optimization"),
                    cl::init(false));
 
-namespace {
 // LFI reserved registers.
-constexpr MCRegister LFIBaseReg = AArch64::X27;
-constexpr MCRegister LFIAddrReg = AArch64::X28;
-constexpr MCRegister LFIScratchReg = AArch64::X26;
-constexpr MCRegister LFICtxReg = AArch64::X25;
+static constexpr MCRegister LFIBaseReg = AArch64::X27;
+static constexpr MCRegister LFIAddrReg = AArch64::X28;
+static constexpr MCRegister LFIScratchReg = AArch64::X26;
+static constexpr MCRegister LFICtxReg = AArch64::X25;
 
 // Offset into the context register block (pointed to by LFICtxReg) where the
 // thread pointer is stored. This is a scaled offset (multiplied by 8 for
 // 64-bit loads), so a value of 4 means an actual byte offset of 32.
-constexpr unsigned LFITPOffset = 4;
+static constexpr unsigned LFITPOffset = 4;
 
-unsigned convertUiToRoW(unsigned Op);
-unsigned convertPreToRoW(unsigned Op);
-unsigned convertPostToRoW(unsigned Op);
-unsigned convertRoXToRoW(unsigned Op, unsigned &Shift);
-bool getRoWShift(unsigned Op, unsigned &Shift);
-unsigned getPrePostScale(unsigned Op);
-unsigned convertPrePostToBase(unsigned Op, bool &IsPre, bool &IsNoOffset);
-int getSIMDNaturalOffset(unsigned Op);
+static unsigned convertUiToRoW(unsigned Op);
+static unsigned convertPreToRoW(unsigned Op);
+static unsigned convertPostToRoW(unsigned Op);
+static unsigned convertRoXToRoW(unsigned Op, unsigned &Shift);
+static bool getRoWShift(unsigned Op, unsigned &Shift);
+static unsigned getPrePostScale(unsigned Op);
+static unsigned convertPrePostToBase(unsigned Op, bool &IsPre,
+                                     bool &IsNoOffset);
+static int getSIMDNaturalOffset(unsigned Op);
 
-bool isSyscall(const MCInst &Inst) { return Inst.getOpcode() == AArch64::SVC; }
+static bool isSyscall(const MCInst &Inst) {
+  return Inst.getOpcode() == AArch64::SVC;
+}
 
 // Instructions that have mayLoad/mayStore set in TableGen but don't actually
 // perform memory accesses (barriers, hints, waits).
-bool isNotMemAccess(const MCInst &Inst) {
+static bool isNotMemAccess(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
   case AArch64::DMB:
   case AArch64::DSB:
@@ -67,17 +69,17 @@ bool isNotMemAccess(const MCInst &Inst) {
   }
 }
 
-bool isTLSRead(const MCInst &Inst) {
+static bool isTLSRead(const MCInst &Inst) {
   return Inst.getOpcode() == AArch64::MRS &&
          Inst.getOperand(1).getImm() == AArch64SysReg::TPIDR_EL0;
 }
 
-bool isTLSWrite(const MCInst &Inst) {
+static bool isTLSWrite(const MCInst &Inst) {
   return Inst.getOpcode() == AArch64::MSR &&
          Inst.getOperand(0).getImm() == AArch64SysReg::TPIDR_EL0;
 }
 
-bool mayPrefetch(const MCInst &Inst) {
+static bool mayPrefetch(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
   case AArch64::PRFMl:
   case AArch64::PRFMroW:
@@ -90,13 +92,13 @@ bool mayPrefetch(const MCInst &Inst) {
   }
 }
 
-bool isPACIASP(const MCInst &Inst) {
+static bool isPACIASP(const MCInst &Inst) {
   return Inst.getOpcode() == AArch64::PACIASP ||
          (Inst.getOpcode() == AArch64::HINT &&
           Inst.getOperand(0).getImm() == 25);
 }
 
-bool isDCZVA(const MCInst &Inst) {
+static bool isDCZVA(const MCInst &Inst) {
   // DC ZVA is encoded as SYSxt with op1=3, Cn=7, Cm=4, op2=1
   if (Inst.getOpcode() != AArch64::SYSxt)
     return false;
@@ -106,7 +108,7 @@ bool isDCZVA(const MCInst &Inst) {
          Inst.getOperand(3).getImm() == 1;   // op2
 }
 
-bool isAuthenticatedBranch(unsigned Opcode) {
+static bool isAuthenticatedBranch(unsigned Opcode) {
   switch (Opcode) {
   case AArch64::BRAA:
   case AArch64::BRAAZ:
@@ -118,7 +120,7 @@ bool isAuthenticatedBranch(unsigned Opcode) {
   }
 }
 
-bool isAuthenticatedCall(unsigned Opcode) {
+static bool isAuthenticatedCall(unsigned Opcode) {
   switch (Opcode) {
   case AArch64::BLRAA:
   case AArch64::BLRAAZ:
@@ -130,7 +132,7 @@ bool isAuthenticatedCall(unsigned Opcode) {
   }
 }
 
-bool isAuthenticatedReturn(unsigned Opcode) {
+static bool isAuthenticatedReturn(unsigned Opcode) {
   switch (Opcode) {
   case AArch64::RETAA:
   case AArch64::RETAB:
@@ -140,7 +142,7 @@ bool isAuthenticatedReturn(unsigned Opcode) {
   }
 }
 
-bool isExceptionReturn(unsigned Opcode) {
+static bool isExceptionReturn(unsigned Opcode) {
   switch (Opcode) {
   case AArch64::ERET:
   case AArch64::ERETAA:
@@ -150,8 +152,6 @@ bool isExceptionReturn(unsigned Opcode) {
     return false;
   }
 }
-
-} // anonymous namespace
 
 bool AArch64MCLFIRewriter::mayModifyStack(const MCInst &Inst) const {
   return mayModifyRegister(Inst, AArch64::SP);
@@ -866,8 +866,6 @@ bool AArch64MCLFIRewriter::rewriteInst(const MCInst &Inst, MCStreamer &Out,
   return true;
 }
 
-namespace {
-
 // RoW (Register-offset-W) Opcode Conversion Tables
 //
 // These tables convert various load/store addressing modes to the
@@ -876,7 +874,7 @@ namespace {
 
 // Convert indexed (ui) load/store to RoW form.
 // Example: LDRXui -> LDRXroW
-unsigned convertUiToRoW(unsigned Op) {
+static unsigned convertUiToRoW(unsigned Op) {
   switch (Op) {
   case AArch64::LDRBBui:
     return AArch64::LDRBBroW;
@@ -932,7 +930,7 @@ unsigned convertUiToRoW(unsigned Op) {
 }
 
 // Convert pre-index load/store to RoW form.
-unsigned convertPreToRoW(unsigned Op) {
+static unsigned convertPreToRoW(unsigned Op) {
   switch (Op) {
   case AArch64::LDRBBpre:
     return AArch64::LDRBBroW;
@@ -986,7 +984,7 @@ unsigned convertPreToRoW(unsigned Op) {
 }
 
 // Convert post-index load/store to RoW form.
-unsigned convertPostToRoW(unsigned Op) {
+static unsigned convertPostToRoW(unsigned Op) {
   switch (Op) {
   case AArch64::LDRBBpost:
     return AArch64::LDRBBroW;
@@ -1040,7 +1038,7 @@ unsigned convertPostToRoW(unsigned Op) {
 }
 
 // Convert register-offset-X to RoW form, also returns the shift amount.
-unsigned convertRoXToRoW(unsigned Op, unsigned &Shift) {
+static unsigned convertRoXToRoW(unsigned Op, unsigned &Shift) {
   Shift = 0;
   switch (Op) {
   case AArch64::LDRBBroX:
@@ -1116,7 +1114,7 @@ unsigned convertRoXToRoW(unsigned Op, unsigned &Shift) {
 
 // Check if Op is a register-offset-W instruction and return its shift amount.
 // Returns true if recognized, false otherwise.
-bool getRoWShift(unsigned Op, unsigned &Shift) {
+static bool getRoWShift(unsigned Op, unsigned &Shift) {
   Shift = 0;
   switch (Op) {
   case AArch64::LDRBBroW:
@@ -1164,7 +1162,7 @@ bool getRoWShift(unsigned Op, unsigned &Shift) {
 
 // Get the scaling factor for pair instruction pre/post-index immediates.
 // LDP/STP encode scaled offsets, so we need to multiply by this factor.
-unsigned getPrePostScale(unsigned Op) {
+static unsigned getPrePostScale(unsigned Op) {
   switch (Op) {
   case AArch64::LDPDpost:
   case AArch64::LDPDpre:
@@ -1199,7 +1197,8 @@ unsigned getPrePostScale(unsigned Op) {
 // Convert pre/post-index opcode to its base indexed form.
 // Also sets IsPre to true if it's a pre-index instruction.
 // Sets IsNoOffset to true if the base form has no offset operand.
-unsigned convertPrePostToBase(unsigned Op, bool &IsPre, bool &IsNoOffset) {
+static unsigned convertPrePostToBase(unsigned Op, bool &IsPre,
+                                     bool &IsNoOffset) {
   IsPre = false;
   IsNoOffset = false;
   switch (Op) {
@@ -1786,7 +1785,7 @@ unsigned convertPrePostToBase(unsigned Op, bool &IsPre, bool &IsNoOffset) {
 // Get the natural offset for SIMD post-index instructions.
 // These instructions have XZR as the register operand when using the
 // natural (implicit) offset.
-int getSIMDNaturalOffset(unsigned Op) {
+static int getSIMDNaturalOffset(unsigned Op) {
   switch (Op) {
   // LD1/ST1 single structure.
   case AArch64::LD1i8_POST:
@@ -2066,5 +2065,3 @@ int getSIMDNaturalOffset(unsigned Op) {
     return -1;
   }
 }
-
-} // anonymous namespace
