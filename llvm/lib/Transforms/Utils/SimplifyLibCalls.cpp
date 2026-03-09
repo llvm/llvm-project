@@ -3061,8 +3061,7 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   }
 }
 
-Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin,
-                                           IRBuilderBase &B) {
+Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B) {
   // Make sure the prototype is as expected, otherwise the rest of the
   // function is probably invalid and likely to abort.
   if (!isTrigLibCall(CI))
