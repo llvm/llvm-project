@@ -839,8 +839,10 @@ public:
 
   void VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *Node) {
     Visit(Node->getOriginalStmt());
-    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+    if (Traversal != TK_IgnoreUnlessSpelledInSource) {
+      Visit(Node->getKernelLaunchStmt());
       Visit(Node->getOutlinedFunctionDecl());
+    }
   }
 
   void VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {

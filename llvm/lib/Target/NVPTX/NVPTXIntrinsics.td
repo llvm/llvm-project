@@ -4926,6 +4926,14 @@ def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
 def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
 def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
 
+// Reserved shared memory special register reads
+foreach suffix = ["begin", "end", "cap", "0", "1"] in {
+  defvar regname = "reserved_smem_offset_" # suffix;
+  defvar intr = !cast<Intrinsic>("int_nvvm_read_ptx_sreg_" # regname);
+  def "INT_PTX_SREG_RESERVED_SMEM_OFFSET_" # !toupper(suffix) :
+      PTX_READ_SREG_R32<regname, intr, [hasPTX<76>, hasSM<80>]>;
+}
+
 // TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
 // handle the constant.
 def INT_PTX_SREG_WARPSIZE :
@@ -4936,7 +4944,8 @@ def INT_PTX_SREG_WARPSIZE :
 // In addition to target-independent fields provided by WMMA_REGS, it adds
 // the fields commonly used to implement specific PTX instruction -- register
 // types and names, constraints, parts of assembly, etc.
-class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "">
+class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "",
+                   string kind = "", string stype = "", string scale = "">
       : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type,
                   !or(!eq(op, "mma.sp"), !eq(op, "mma.sp.block_scale"))> {
   // NVPTX register types used to carry fragment data.
@@ -4978,6 +4987,18 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
   // longer the case, we can concat all per-fragment predicates to enforce that
   // all fragments of the instruction are viable.
   list<Predicate> Predicates = !cond(
+    !and(!eq(op, "mma.block_scale"),
+         !eq(kind, "mxf4nvf4"),
+         !eq(stype, "ue8m0"),
+         !eq(scale, ".scale_4x"))
+      : [callSubtarget<"hasMMAWithMXF4NVF4Scale4xE8M0">],
+
+    !and(!eq(op, "mma.sp.block_scale"),
+         !eq(kind, "mxf4nvf4"),
+         !eq(stype, "ue8m0"),
+         !eq(scale, ".scale_4x"))
+      : [callSubtarget<"hasMMASparseWithMXF4NVF4Scale4xE8M0">],
+
     !and(!eq(op, "mma.sp.block_scale"),
         !eq(kind, "mxf4nvf4"),
         !eq(kind, "mxf4")) : [callSubtarget<"hasMMASparseBlockScaleF4">],
@@ -5396,10 +5417,14 @@ defset list<WMMA_INSTR> MMA_BLOCK_SCALEs  = {
       foreach stype = ["ue8m0", "ue4m3"] in {
         foreach op = NVVM_MMA_OPS.all_mma_block_scale_ops in {
           if NVVM_MMA_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
-            def : MMA_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.block_scale", "", kind>,
-                                  WMMA_REGINFO<op[1], "mma.block_scale", "", kind>,
-                                  WMMA_REGINFO<op[2], "mma.block_scale", "", kind>,
-                                  WMMA_REGINFO<op[3], "mma.block_scale", "", kind>,
+            def : MMA_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
+                                  WMMA_REGINFO<op[1], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
+                                  WMMA_REGINFO<op[2], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
+                                  WMMA_REGINFO<op[3], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
                                   kind, stype, scale_vec_size>;
           }
         } // op
@@ -5518,10 +5543,14 @@ defset list<WMMA_INSTR> MMA_SP_BLOCK_SCALEs = {
       foreach stype = ["ue8m0", "ue4m3"] in {
       foreach op = NVVM_MMA_OPS.all_mma_sp_block_scale_ops in {
         if NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
-          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[1], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[2], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[3], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                                stype, scale_vec_size>,
+                       WMMA_REGINFO<op[1], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                    stype, scale_vec_size>,
+                       WMMA_REGINFO<op[2], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                    stype, scale_vec_size>,
+                       WMMA_REGINFO<op[3], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                    stype, scale_vec_size>,
                        kind, stype, scale_vec_size>;
         }
       } // op

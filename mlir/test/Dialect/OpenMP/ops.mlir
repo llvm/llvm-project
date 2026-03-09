@@ -454,7 +454,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   }) {operandSegmentSizes = array<i32: 0,0,0,0,0,0,0>, ordered = 1} :
     () -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static) {
+  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) schedule(static) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %linear_var) ({
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
@@ -463,7 +463,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0,0>, schedule_kind = #omp<schedulekind static>,
      linear_var_types = [i32]} : (memref<i32>, i32) -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>, %{{.*}} = %{{.*}} : memref<i32>) schedule(static) {
+  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32, %{{.*}} : memref<i32> = %{{.*}} : i32) schedule(static) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %data_var, %linear_var, %linear_var) ({
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
@@ -473,7 +473,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
      linear_var_types = [i32,i32]} :
     (memref<i32>, memref<i32>, i32, i32) -> ()
 
-  // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(dynamic = %{{.*}}) {
+  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) ordered(2) schedule(dynamic = %{{.*}}) {
   // CHECK-NEXT: omp.loop_nest
   "omp.wsloop" (%data_var, %linear_var, %chunk_var) ({
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
@@ -516,33 +516,33 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     }
   }
 
-  // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static) {
+  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) schedule(static) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop schedule(static) linear(%data_var = %linear_var : memref<i32>) {
+  omp.wsloop schedule(static) linear(%data_var : memref<i32> = %linear_var : i32) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   } { linear_var_types = [i32] }
 
-  // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(static = %{{.*}} : i32) {
+  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) ordered(2) schedule(static = %{{.*}} : i32) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var = %linear_var : memref<i32>) schedule(static = %chunk_var : i32) {
+  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) schedule(static = %chunk_var : i32) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
   } { linear_var_types = [i32] }
 
-  // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(dynamic = %{{.*}} : i32, nonmonotonic) {
+  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) ordered(2) schedule(dynamic = %{{.*}} : i32, nonmonotonic) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var = %linear_var : memref<i32>) schedule(dynamic = %chunk_var : i32, nonmonotonic) {
+  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) schedule(dynamic = %chunk_var : i32, nonmonotonic) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step)  {
       omp.yield
     }
   } { linear_var_types = [i32] }
 
-  // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) ordered(2) schedule(dynamic = %{{.*}} : i16, monotonic) {
+  // CHECK: omp.wsloop linear(%{{.*}} : memref<i32> = %{{.*}} : i32) ordered(2) schedule(dynamic = %{{.*}} : i16, monotonic) {
   // CHECK-NEXT: omp.loop_nest
-  omp.wsloop ordered(2) linear(%data_var = %linear_var : memref<i32>) schedule(dynamic = %chunk_var2 : i16, monotonic) {
+  omp.wsloop ordered(2) linear(%data_var : memref<i32> = %linear_var : i32) schedule(dynamic = %chunk_var2 : i16, monotonic) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -3447,8 +3447,8 @@ func.func @omp_declare_simd_aligned_list_generic(%arg0: f64, %arg1: f64,
 // CHECK-LABEL: func.func @omp_declare_simd_linear
 func.func @omp_declare_simd_linear(%a: f64, %b: f64, %iv: i32, %step: i32) -> () {
   // CHECK: omp.declare_simd
-  // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
-  omp.declare_simd linear(%iv = %step : i32)
+  // CHECK-SAME: linear(%{{.*}} : i32 = %{{.*}} : i32)
+  omp.declare_simd linear(%iv : i32 = %step : i32)
   return
 }
 
@@ -3507,7 +3507,7 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
   // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
   // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
   // CHECK-SAME: inbranch
-  // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
+  // CHECK-SAME: linear(%{{.*}} : i32 = %{{.*}} : i32)
   // CHECK-SAME: simdlen(8)
   // CHECK-SAME: uniform(
   // CHECK-SAME: %{{.*}} : memref<i32>,
@@ -3515,38 +3515,142 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
   omp.declare_simd simdlen(8)
     aligned(%p0 : memref<i32> -> 32 : i64,
             %p1 : memref<i32> -> 128 : i64)
-    linear(%iv = %step : i32)
+    linear(%iv : i32 = %step : i32)
     uniform(%p0 : memref<i32>, %p1 : memref<i32>)
     inbranch
   return
 }
 
 // CHECK-LABEL: func.func @task_affinity_single
-func.func @task_affinity_single() {
-  // CHECK:       %[[A:.*]] = memref.alloca() : memref<100xi32>
-  // CHECK:       omp.task affinity(%[[A]] : memref<100xi32>) {
-  // CHECK:         omp.terminator
-  // CHECK:       }
-  // CHECK:       return
-  %a = memref.alloca() : memref<100xi32>
-  omp.task affinity(%a : memref<100xi32>) {
+func.func @task_affinity_single(%ptr: !llvm.ptr) {
+  // CHECK:         %[[LEN:.*]] = llvm.mlir.constant(400 : i64) : i64
+  // CHECK:         %[[AE:.*]] = omp.affinity_entry %{{.*}}, %[[LEN]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:         omp.task affinity(%[[AE]] : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
+  // CHECK:           omp.terminator
+  // CHECK:         }
+  // CHECK:         return
+  %len = llvm.mlir.constant(400 : i64) : i64
+  %ae = omp.affinity_entry %ptr, %len 
+    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  omp.task affinity(%ae : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
     omp.terminator
   }
   return
 }
 
 // CHECK-LABEL: func.func @task_affinity_multi
-func.func @task_affinity_multi() {
-  // CHECK:       %[[A:.*]] = memref.alloca() : memref<64xi32>
-  // CHECK:       %[[B:.*]] = memref.alloca() : memref<8xf64>
-  // CHECK:       omp.task affinity(%[[A]] : memref<64xi32>, %[[B]] : memref<8xf64>) {
-  // CHECK:         omp.terminator
-  // CHECK:       }
-  // CHECK:       return
-  %a = memref.alloca() : memref<64xi32>
-  %b = memref.alloca() : memref<8xf64>
-  omp.task affinity(%a : memref<64xi32>, %b : memref<8xf64>) {
+func.func @task_affinity_multi(%ptr1: !llvm.ptr, %ptr2: !llvm.ptr) {
+  // CHECK:         %[[LEN1:.*]] = llvm.mlir.constant(400 : i64) : i64
+  // CHECK:         %[[AE1:.*]] = omp.affinity_entry %{{.*}}, %[[LEN1]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:         %[[LEN2:.*]] = llvm.mlir.constant(800 : i64) : i64
+  // CHECK:         %[[AE2:.*]] = omp.affinity_entry %{{.*}}, %[[LEN2]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:         omp.task affinity(%[[AE1]] : !omp.affinity_entry_ty<!llvm.ptr, i64>, %[[AE2]] : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
+  // CHECK:           omp.terminator
+  // CHECK:         }
+  // CHECK:         return
+  %len1 = llvm.mlir.constant(400 : i64) : i64
+  %ae1 = omp.affinity_entry %ptr1, %len1
+    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+  %len2 = llvm.mlir.constant(800 : i64) : i64
+  %ae2 = omp.affinity_entry %ptr2, %len2
+    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+  omp.task affinity(%ae1 : !omp.affinity_entry_ty<!llvm.ptr, i64>,
+                    %ae2 : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
     omp.terminator
   }
+  return
+}
+
+// CHECK-LABEL: func.func @omp_iterator
+func.func @omp_iterator(%s2 : !llvm.struct<(ptr, i64)>) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.struct<(ptr, i64)>)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
+  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  return
+}
+
+// CHECK-LABEL: func.func @omp_iterator_2d
+func.func @omp_iterator_2d(%s2 : !llvm.struct<(ptr, i64)>) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) =
+  // CHECK-SAME: ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.struct<(ptr, i64)>)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+
+  %lb0 = arith.constant 1 : index
+  %ub0 = arith.constant 4 : index
+  %st0 = arith.constant 1 : index
+  %lb1 = arith.constant 2 : index
+  %ub1 = arith.constant 10 : index
+  %st1 = arith.constant 2 : index
+
+  %0 = omp.iterator(%iv0: index, %iv1: index) =
+        (%lb0 to %ub0 step %st0,
+         %lb1 to %ub1 step %st1) {
+    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
+  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+
+  return
+}
+
+// CHECK-LABEL: func.func @omp_task_affinity_iterator_1d
+func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
+                                       %addr : !llvm.ptr, %len : i64) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%[[LB:.*]] to %[[UB:.*]] step %[[ST:.*]]) {
+  // CHECK:   %[[E:.*]] = omp.affinity_entry %[[ADDR:.*]], %[[LEN:.*]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:   omp.yield(%[[E]] : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  // CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+  // CHECK: omp.task affinity(%[[IT]] : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+  // CHECK: }
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %step) {
+    %e = omp.affinity_entry %addr, %len
+      : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+    omp.yield(%e : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+
+  omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+    omp.terminator
+  }
+
+  return
+}
+
+// CHECK-LABEL: func.func @omp_task_affinity_iterator_2d
+func.func @omp_task_affinity_iterator_2d(%lb0 : index, %ub0 : index, %st0 : index,
+                                          %lb1 : index, %ub1 : index, %st1 : index,
+                                          %addr0 : !llvm.ptr, %addr1 : !llvm.ptr,
+                                          %len0 : i64, %len1 : i64) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[I:.*]]: index, %[[J:.*]]: index) = (%[[LB0:.*]] to %[[UB0:.*]] step %[[ST0:.*]], %[[LB1:.*]] to %[[UB1:.*]] step %[[ST1:.*]]) {
+  // CHECK:   %[[E0:.*]] = omp.affinity_entry %[[A0:.*]], %[[L0:.*]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:   %[[E1:.*]] = omp.affinity_entry %[[A1:.*]], %[[L1:.*]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:   omp.yield(%[[E1]] : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  // CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+  // CHECK: omp.task affinity(%[[IT]] : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+  // CHECK: }
+  %it = omp.iterator(%i: index, %j: index) = (%lb0 to %ub0 step %st0, %lb1 to %ub1 step %st1) {
+    %use_i = arith.addi %i, %lb0 : index
+    %use_j = arith.addi %j, %lb1 : index
+    %_ = arith.cmpi ult, %use_i, %use_j : index
+
+    %e0 = omp.affinity_entry %addr0, %len0
+      : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+    %e1 = omp.affinity_entry %addr1, %len1
+      : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+    omp.yield(%e1 : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+
+  omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+    omp.terminator
+  }
+
   return
 }

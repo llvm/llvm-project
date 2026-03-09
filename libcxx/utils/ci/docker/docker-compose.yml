@@ -15,7 +15,7 @@ services:
       dockerfile: libcxx/utils/ci/docker/linux-builder-base.dockerfile
       args:
         GCC_HEAD_VERSION: 16
-        LLVM_HEAD_VERSION: 22
+        LLVM_HEAD_VERSION: 23
 
   libcxx-linux-builder:
     image: ghcr.io/llvm/libcxx-linux-builder:${TAG:-latest}

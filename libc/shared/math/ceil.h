@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_CEIL_H
 #define LLVM_LIBC_SHARED_MATH_CEIL_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/ceil.h"
 
 namespace LIBC_NAMESPACE_DECL {

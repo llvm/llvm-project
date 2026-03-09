@@ -168,3 +168,10 @@ namespace GH101394 {
     // expected-note@#B  {{passing argument to parameter here}}
   } // namespace t2
 } // namespace GH101394
+
+namespace GH181166 {
+  template <template <class...> class> struct A;
+  template <template <class...> class... TT1> A<TT1...> f();
+  template <class ...Ts> struct B {};
+  using T = decltype(f<B>());
+} // namespace GH181166

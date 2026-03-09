@@ -1776,6 +1776,55 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double4 min(double4, double4);
 
 //===----------------------------------------------------------------------===//
+// mul builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn R mul(X x, Y y)
+/// \brief Multiplies x and y using matrix math.
+/// \param x [in] The first input value. If x is a vector, it is treated as a
+///   row vector.
+/// \param y [in] The second input value. If y is a vector, it is treated as a
+///   column vector.
+///
+/// The inner dimension x-columns and y-rows must be equal. The result has the
+/// dimension x-rows x y-columns. When both x and y are vectors, the result is
+/// a dot product (scalar). Scalar operands are multiplied element-wise.
+///
+/// This function supports 9 overloaded forms:
+///   1. scalar * scalar -> scalar
+///   2. scalar * vector -> vector
+///   3. scalar * matrix -> matrix
+///   4. vector * scalar -> vector
+///   5. vector * vector -> scalar (dot product)
+///   6. vector * matrix -> vector
+///   7. matrix * scalar -> matrix
+///   8. matrix * vector -> vector
+///   9. matrix * matrix -> matrix
+
+// Cases 1, 2, 3, 4, 5, and 7 of mul are defined in hlsl_intrinsics.h as
+// header-only implementations because they are elementwise operations and dot
+// products easily expressed in HLSL.
+
+// Cases 6, 8, and 9 are defined below to alias the mul builtin so that they can
+// be lowered to the llvm.matrix.multiply intrinsic which is not exposed
+// directly to HLSL.
+
+// Case 6: vector * matrix -> vector
+template <typename T, int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
+vector<T, C> mul(vector<T, R>, matrix<T, R, C>);
+
+// Case 8: matrix * vector -> vector
+template <typename T, int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
+vector<T, R> mul(matrix<T, R, C>, vector<T, C>);
+
+// Case 9: matrix * matrix -> matrix
+template <typename T, int R, int K, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
+matrix<T, R, C> mul(matrix<T, R, K>, matrix<T, K, C>);
+
+//===----------------------------------------------------------------------===//
 // normalize builtins
 //===----------------------------------------------------------------------===//
 
@@ -2412,6 +2461,130 @@ float4 trunc(float4);
 //===----------------------------------------------------------------------===//
 // Wave* builtins
 //===----------------------------------------------------------------------===//
+
+/// \brief Evaluates a value for all active invocations in the group. The
+/// result is true if Value is equal for all active invocations in the
+/// group. Otherwise, the result is false.
+/// \param Value The value to compare with
+/// \return True if all values across all lanes are equal, false otherwise
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(int);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(uint64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(float);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(float2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(float3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(float4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool WaveActiveAllEqual(double);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool2 WaveActiveAllEqual(double2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool3 WaveActiveAllEqual(double3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
+__attribute__((convergent)) bool4 WaveActiveAllEqual(double4);
 
 /// \brief Returns true if the expression is true in all active lanes in the
 /// current wave.

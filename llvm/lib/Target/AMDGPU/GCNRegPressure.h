@@ -255,8 +255,20 @@ public:
     RP.inc(Reg, Mask, LaneBitmask::getNone(), MRI);
   }
 
+  /// Returns the benefit towards achieving the RP target that saving \p SaveRP
+  /// represents, in total number of registers saved across all classes.
+  unsigned getNumRegsBenefit(const GCNRegPressure &SaveRP) const;
+
+  /// Saves a total pressure of \p SaveRP.
+  void saveRP(const GCNRegPressure &SaveRP) {
+    assert(!RP.less(MF, SaveRP) && "saving beyond current RP");
+    RP -= SaveRP;
+  }
+
+  /// Whether \p TestRP is at or below the defined pressure target.
+  bool satisfied(const GCNRegPressure &TestRP) const;
   /// Whether the current RP is at or below the defined pressure target.
-  bool satisfied() const;
+  bool satisfied() const { return satisfied(RP); }
   bool hasVectorRegisterExcess() const;
 
   unsigned getMaxSGPRs() const { return MaxSGPRs; }

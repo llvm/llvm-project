@@ -549,6 +549,8 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
     return failure();
   }
   uint64_t tripCountValue = tripCount->getZExtValue();
+  if (tripCountValue == 0)
+    return success();
   if (unrollJamFactor > tripCountValue) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
@@ -957,7 +959,8 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
 
-  rewriter.setInsertionPointToStart(innermost.getBody());
+  // Insert delinearization at the start of the outermost loop body.
+  rewriter.setInsertionPointToStart(outermost.getBody());
   auto [delinearizeIvs, preservedUsers] = delinearizeInductionVariable(
       rewriter, loc, outermost.getInductionVar(), upperBounds);
   rewriter.replaceAllUsesExcept(outermost.getInductionVar(), delinearizeIvs[0],

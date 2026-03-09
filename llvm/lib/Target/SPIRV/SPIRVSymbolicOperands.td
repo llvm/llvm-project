@@ -237,6 +237,7 @@ def Extension : GenericEnum, Operand<i32> {
   let NameField = "Name";
   let ValueField = "Value";
   let PrintMethod = "printExtension";
+  let UnderlyingType = "uint32_t";
 }
 
 class Extension<string name, bits<32> value> {
@@ -1690,7 +1691,7 @@ multiclass MemoryOperandOperand<bits<32> value, bits<32> minVersion, bits<32> ma
 
 defm None : MemoryOperandOperand<0x0, 0, 0, [], []>;
 defm Volatile : MemoryOperandOperand<0x1, 0, 0, [], []>;
-defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], []>;
+defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], [Kernel]>;
 defm Nontemporal : MemoryOperandOperand<0x4, 0, 0, [], []>;
 defm MakePointerAvailableKHR : MemoryOperandOperand<0x8, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakePointerVisibleKHR : MemoryOperandOperand<0x10, 0, 0, [], [VulkanMemoryModelKHR]>;

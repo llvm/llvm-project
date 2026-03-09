@@ -36,13 +36,11 @@ interface cudaforsetdefaultstream
   end function
 end interface
 
-interface cudaStreamSynchronize
-  integer function cudastreamsynchronize(stream)
+interface cudastreamdestroy
+  integer function cudastreamdestroy(stream)
     import cuda_stream_kind
     !DIR$ IGNORE_TKR (K) stream
     integer(kind=cuda_stream_kind), value :: stream
-  end function
-  integer function cudastreamsynchronizenull()
   end function
 end interface
 

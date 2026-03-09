@@ -69,14 +69,14 @@ static void test_c() {
   namespace cr = std::chrono;
 
   assert(stream_c_locale<CharT>(cr::gps_time<cr::nanoseconds>{946'688'523'123'456'789ns}) ==
-         SV("2010-01-05 01:01:48.123456789"));
+         SV("2010-01-05 01:02:03.123456789"));
   assert(stream_c_locale<CharT>(cr::gps_time<cr::microseconds>{946'688'523'123'456us}) ==
-         SV("2010-01-05 01:01:48.123456"));
+         SV("2010-01-05 01:02:03.123456"));
 
-  assert(stream_c_locale<CharT>(cr::gps_time<cr::milliseconds>{946'684'822'123ms}) == SV("2010-01-05 00:00:07.123"));
-  assert(stream_c_locale<CharT>(cr::gps_seconds{1'234'567'890s}) == SV("2019-02-18 23:31:12"));
-  assert(stream_c_locale<CharT>(cr::gps_time<cr::minutes>{20'576'131min}) == SV("2019-02-18 23:30:42"));
-  assert(stream_c_locale<CharT>(cr::gps_time<cr::hours>{342'935h}) == SV("2019-02-18 22:59:42"));
+  assert(stream_c_locale<CharT>(cr::gps_time<cr::milliseconds>{946'684'822'123ms}) == SV("2010-01-05 00:00:22.123"));
+  assert(stream_c_locale<CharT>(cr::gps_seconds{1'234'567'890s}) == SV("2019-02-18 23:31:30"));
+  assert(stream_c_locale<CharT>(cr::gps_time<cr::minutes>{20'576'131min}) == SV("2019-02-18 23:31:00"));
+  assert(stream_c_locale<CharT>(cr::gps_time<cr::hours>{342'935h}) == SV("2019-02-18 23:00:00"));
 
   assert(stream_c_locale<CharT>(cr::gps_time<cr::duration<signed char, std::ratio<2, 1>>>{
              cr::duration<signed char, std::ratio<2, 1>>{60}}) == SV("1980-01-06 00:02:00"));
@@ -84,10 +84,10 @@ static void test_c() {
              cr::duration<short, std::ratio<1, 2>>{3600}}) == SV("1980-01-06 00:30:00.0"));
   assert(stream_c_locale<CharT>(cr::gps_time<cr::duration<int, std::ratio<1, 4>>>{
              cr::duration<int, std::ratio<1, 4>>{3600}}) == SV("1980-01-06 00:15:00.00"));
-  assert(stream_c_locale<CharT>(cr::gps_time<cr::duration<long, std::ratio<1, 10>>>{
-             cr::duration<long, std::ratio<1, 10>>{36611}}) == SV("1980-01-06 01:01:01.1"));
+  assert(stream_c_locale<CharT>(cr::gps_time<cr::duration<long long, std::ratio<1, 10>>>{
+             cr::duration<long long, std::ratio<1, 10>>{36611}}) == SV("1980-01-06 01:01:01.1"));
   assert(stream_c_locale<CharT>(cr::gps_time<cr::duration<long long, std::ratio<1, 100>>>{
-             cr::duration<long long, std::ratio<1, 100>>{123'456'789'010}}) == SV("2019-02-18 23:31:12.10"));
+             cr::duration<long long, std::ratio<1, 100>>{123'456'789'010}}) == SV("2019-02-18 23:31:30.10"));
 }
 
 template <class CharT>
@@ -96,15 +96,15 @@ static void test_fr_FR() {
   namespace cr = std::chrono;
 
   assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::nanoseconds>{946'688'523'123'456'789ns}) ==
-         SV("2010-01-05 01:01:48,123456789"));
+         SV("2010-01-05 01:02:03,123456789"));
   assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::microseconds>{946'688'523'123'456us}) ==
-         SV("2010-01-05 01:01:48,123456"));
+         SV("2010-01-05 01:02:03,123456"));
 
   assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::milliseconds>{946'684'822'123ms}) ==
-         SV("2010-01-05 00:00:07,123"));
-  assert(stream_fr_FR_locale<CharT>(cr::gps_seconds{1'234'567'890s}) == SV("2019-02-18 23:31:12"));
-  assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::minutes>{20'576'131min}) == SV("2019-02-18 23:30:42"));
-  assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::hours>{342'935h}) == SV("2019-02-18 22:59:42"));
+         SV("2010-01-05 00:00:22,123"));
+  assert(stream_fr_FR_locale<CharT>(cr::gps_seconds{1'234'567'890s}) == SV("2019-02-18 23:31:30"));
+  assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::minutes>{20'576'131min}) == SV("2019-02-18 23:31:00"));
+  assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::hours>{342'935h}) == SV("2019-02-18 23:00:00"));
 
   assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::duration<signed char, std::ratio<2, 1>>>{
              cr::duration<signed char, std::ratio<2, 1>>{60}}) == SV("1980-01-06 00:02:00"));
@@ -112,10 +112,10 @@ static void test_fr_FR() {
              cr::duration<short, std::ratio<1, 2>>{3600}}) == SV("1980-01-06 00:30:00,0"));
   assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::duration<int, std::ratio<1, 4>>>{
              cr::duration<int, std::ratio<1, 4>>{3600}}) == SV("1980-01-06 00:15:00,00"));
-  assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::duration<long, std::ratio<1, 10>>>{
-             cr::duration<long, std::ratio<1, 10>>{36611}}) == SV("1980-01-06 01:01:01,1"));
+  assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::duration<long long, std::ratio<1, 10>>>{
+             cr::duration<long long, std::ratio<1, 10>>{36611}}) == SV("1980-01-06 01:01:01,1"));
   assert(stream_fr_FR_locale<CharT>(cr::gps_time<cr::duration<long long, std::ratio<1, 100>>>{
-             cr::duration<long long, std::ratio<1, 100>>{123'456'789'010}}) == SV("2019-02-18 23:31:12,10"));
+             cr::duration<long long, std::ratio<1, 100>>{123'456'789'010}}) == SV("2019-02-18 23:31:30,10"));
 }
 
 template <class CharT>
@@ -124,15 +124,15 @@ static void test_ja_JP() {
   namespace cr = std::chrono;
 
   assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::nanoseconds>{946'688'523'123'456'789ns}) ==
-         SV("2010-01-05 01:01:48.123456789"));
+         SV("2010-01-05 01:02:03.123456789"));
   assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::microseconds>{946'688'523'123'456us}) ==
-         SV("2010-01-05 01:01:48.123456"));
+         SV("2010-01-05 01:02:03.123456"));
 
   assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::milliseconds>{946'684'822'123ms}) ==
-         SV("2010-01-05 00:00:07.123"));
-  assert(stream_ja_JP_locale<CharT>(cr::gps_seconds{1'234'567'890s}) == SV("2019-02-18 23:31:12"));
-  assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::minutes>{20'576'131min}) == SV("2019-02-18 23:30:42"));
-  assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::hours>{342'935h}) == SV("2019-02-18 22:59:42"));
+         SV("2010-01-05 00:00:22.123"));
+  assert(stream_ja_JP_locale<CharT>(cr::gps_seconds{1'234'567'890s}) == SV("2019-02-18 23:31:30"));
+  assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::minutes>{20'576'131min}) == SV("2019-02-18 23:31:00"));
+  assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::hours>{342'935h}) == SV("2019-02-18 23:00:00"));
 
   assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::duration<signed char, std::ratio<2, 1>>>{
              cr::duration<signed char, std::ratio<2, 1>>{60}}) == SV("1980-01-06 00:02:00"));
@@ -140,10 +140,10 @@ static void test_ja_JP() {
              cr::duration<short, std::ratio<1, 2>>{3600}}) == SV("1980-01-06 00:30:00.0"));
   assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::duration<int, std::ratio<1, 4>>>{
              cr::duration<int, std::ratio<1, 4>>{3600}}) == SV("1980-01-06 00:15:00.00"));
-  assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::duration<long, std::ratio<1, 10>>>{
-             cr::duration<long, std::ratio<1, 10>>{36611}}) == SV("1980-01-06 01:01:01.1"));
+  assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::duration<long long, std::ratio<1, 10>>>{
+             cr::duration<long long, std::ratio<1, 10>>{36611}}) == SV("1980-01-06 01:01:01.1"));
   assert(stream_ja_JP_locale<CharT>(cr::gps_time<cr::duration<long long, std::ratio<1, 100>>>{
-             cr::duration<long long, std::ratio<1, 100>>{123'456'789'010}}) == SV("2019-02-18 23:31:12.10"));
+             cr::duration<long long, std::ratio<1, 100>>{123'456'789'010}}) == SV("2019-02-18 23:31:30.10"));
 }
 
 template <class CharT>
