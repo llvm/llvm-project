@@ -18,6 +18,7 @@
 #include "lf_config.h"
 #include "lf_interface.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_mutex.h"
@@ -157,8 +158,11 @@ void *Allocate(uptr size) {
   uptr region_end = GetRegionStart(class_index) + kRegionSize;
   uptr addr = region_next_alloc[class_index];
 
-  if (addr + alloc_size > region_end)
-    return nullptr;
+  if (addr + alloc_size > region_end) {
+    // Region exhausted: fall back to standard libc-style allocation.
+    // The resulting pointer will not be a LowFat pointer (wide-bounds).
+    return (void *)InternalAlloc(size);
+  }
 
   region_next_alloc[class_index] = addr + alloc_size;
   return (void *)addr;
@@ -173,8 +177,10 @@ void Deallocate(void *ptr) {
   uptr addr = (uptr)ptr;
 
   // Validate this is a LowFat pointer
-  if (!IsLowFatPointer(addr))
+  if (!IsLowFatPointer(addr)) {
+    InternalFree(ptr);
     return;
+  }
 
   uptr region = GetRegionIndex(addr);
 
@@ -258,6 +264,23 @@ uptr __lf_get_base(uptr ptr) {
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __lf_get_size(uptr ptr) {
   return __lowfat::GetSize(ptr);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+uptr __lf_get_offset(uptr ptr) {
+  uptr base = __lowfat::GetBase(ptr);
+  if (base == 0)
+    return 0;
+  return ptr - base;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+uptr __lf_get_usable_size(uptr ptr) {
+  uptr base = __lowfat::GetBase(ptr);
+  uptr size = __lowfat::GetSize(ptr);
+  if (base == 0)
+    return (uptr)-1;
+  return size - (ptr - base);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

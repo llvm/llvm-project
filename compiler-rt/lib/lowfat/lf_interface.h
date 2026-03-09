@@ -49,8 +49,16 @@ SANITIZER_INTERFACE_ATTRIBUTE void __lf_warn_oob(uptr ptr, uptr base,
 SANITIZER_INTERFACE_ATTRIBUTE uptr __lf_get_base(uptr ptr);
 
 // Get the size (bound) of an allocation from a pointer.
-// Returns the allocation size, or 0 if the pointer is not within a LowFat region.
+// Returns the allocation size, or (uptr)-1 if the pointer is not within a LowFat region.
 SANITIZER_INTERFACE_ATTRIBUTE uptr __lf_get_size(uptr ptr);
+
+// Get the offset from the base address of an allocation.
+// Returns the offset, or 0 if the pointer is not within a LowFat region.
+SANITIZER_INTERFACE_ATTRIBUTE uptr __lf_get_offset(uptr ptr);
+
+// Get the remaining usable size in the allocation from a pointer.
+// Returns (size - offset), or (uptr)-1 if the pointer is not within a LowFat region.
+SANITIZER_INTERFACE_ATTRIBUTE uptr __lf_get_usable_size(uptr ptr);
 
 // Allocate/Deallocate from LowFat regions.
 SANITIZER_INTERFACE_ATTRIBUTE void *__lf_malloc(uptr size);
