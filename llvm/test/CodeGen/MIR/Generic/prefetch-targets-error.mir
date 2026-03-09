@@ -15,7 +15,6 @@ name:            test
 prefetch-targets: [ '0, 0, 1' ]
 body:             |
   bb.0:
-    RET 0
 ...
 #--- missing-comma.mir
 ---
@@ -23,7 +22,6 @@ name:            test
 prefetch-targets: [ 'bb_id 0, 0 1' ]
 body:             |
   bb.0:
-    RET 0
 ...
 #--- missing-index.mir
 ---
@@ -31,7 +29,6 @@ name:            test
 prefetch-targets: [ 'bb_id 0, 0,' ]
 body:             |
   bb.0:
-    RET 0
 ...
 #--- invalid-index.mir
 ---
@@ -39,5 +36,4 @@ name:            test
 prefetch-targets: [ 'bb_id 0, 0, a' ]
 body:             |
   bb.0:
-    RET 0
 ...
