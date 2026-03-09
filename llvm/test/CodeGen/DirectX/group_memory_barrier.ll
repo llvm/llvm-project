@@ -2,7 +2,7 @@
 
 define void @test_group_memory_barrier() {
 entry:
-  ; CHECK: call void @dx.op.barrier(i32 80, i32 9)
+  ; CHECK: call void @dx.op.barrier(i32 80, i32 8)
   call void @llvm.dx.group.memory.barrier()
   ret void
 }

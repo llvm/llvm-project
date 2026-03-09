@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <fstream>
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -2810,11 +2811,15 @@ bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
       buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
   Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(BarrierType))
-      .addUse(ScopeReg)
-      .addUse(ScopeReg)
-      .addUse(MemSemReg)
-      .constrainAllUses(TII, TRI, RBI);
+  auto MI =
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(BarrierType)).addUse(ScopeReg);
+
+  // OpControlBarrier needs to also set Execution Scope
+  if (WithGroupSync) {
+    MI.addUse(ScopeReg);
+  }
+
+  MI.addUse(MemSemReg).constrainAllUses(TII, TRI, RBI);
   return true;
 }
 
@@ -4181,7 +4186,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_firstbitlow: // There is no CL equivlent of FindILsb
     return selectFirstBitLow(ResVReg, ResType, I);
   case Intrinsic::spv_group_memory_barrier:
-    return selectBarrierInst(I, SPIRV::Scope::Device, false);
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup, false);
   case Intrinsic::spv_group_memory_barrier_with_group_sync:
     return selectBarrierInst(I, SPIRV::Scope::Workgroup, true);
   case Intrinsic::spv_generic_cast_to_ptr_explicit: {
