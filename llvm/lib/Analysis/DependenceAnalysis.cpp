@@ -1801,19 +1801,19 @@ bool DependenceInfo::weakZeroSIVtestImpl(const SCEVAddRecExpr *AR,
   if (!ConstCoeff)
     return false;
 
-  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
-  // TODO: Bail out if it's a signed minimum value.
-  const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
-                             ? SE->getNegativeSCEV(ConstCoeff)
-                             : ConstCoeff;
   const SCEV *NewDelta =
       SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
 
   if (const SCEV *UpperBound =
           collectUpperBound(AR->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
+    bool OverlapAtLast = [&] {
+      if (!SE->isKnownNonZero(ConstCoeff))
+        return false;
+      const SCEV *Last = AR->evaluateAtIteration(UpperBound, *SE);
+      return Last == Const;
+    }();
+    if (OverlapAtLast) {
       // dependences caused by last iteration
       if (Level < CommonLevels) {
         Result.DV[Level].Direction &= Dependence::DVEntry::GE;
