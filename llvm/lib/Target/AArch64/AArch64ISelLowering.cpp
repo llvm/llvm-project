@@ -23358,7 +23358,7 @@ static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDValue SBC = N->getOperand(0);
   SDValue C = N->getOperand(1);
-  // ADD is commutative; constant may be on either side.
+  // ADD is commutative; operands may be on either side.
   if (SBC.getOpcode() != AArch64ISD::SBC)
     std::swap(SBC, C);
   if (SBC.getOpcode() != AArch64ISD::SBC || !SBC.hasOneUse())
@@ -23366,13 +23366,9 @@ static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
   if (!isNullConstant(SBC.getOperand(1)))
     return SDValue();
   // AArch64 SBC (non-flag-setting) has only one output; no flags guard needed.
-  auto *CC = dyn_cast<ConstantSDNode>(C);
-  if (!CC)
-    return SDValue();
-
   SDLoc DL(N);
   return DAG.getNode(AArch64ISD::SBC, DL, VT, SBC.getOperand(0),
-                     DAG.getConstant(-CC->getAPIntValue(), DL, VT),
+                     DAG.getNegative(C, DL, VT),
                      SBC.getOperand(2));
 }
 
