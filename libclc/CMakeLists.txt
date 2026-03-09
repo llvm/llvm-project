@@ -281,9 +281,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     FOLDER "libclc/Device IR/OpenCL"
   )
 
-  # Link the final library.
+  # Link and install the final library.
   set(builtins_tgt libclc-${t})
-  link_libclc(${builtins_tgt}
+  link_libclc_builtin_library(${builtins_tgt}
     ARCH ${ARCH}
     TRIPLE ${clang_triple}
     LIBRARIES ${opencl_lib}
@@ -291,20 +291,13 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     OPT_FLAGS ${opt_flags}
     FOLDER "libclc/Device IR/Library"
   )
-  add_dependencies(libclc-opencl-builtins ${builtins_tgt})
-  add_dependencies(libclc libclc-opencl-builtins)
-  set(builtins_lib $<TARGET_PROPERTY:${builtins_tgt},TARGET_FILE>)
-
-  install(FILES ${builtins_lib}
-    DESTINATION ${LIBCLC_INSTALL_DIR}/${clang_triple}
-    COMPONENT libclc-opencl-builtins
-  )
 
   # Verify there are no unresolved external functions in the library.
   if(NOT ARCH MATCHES "^(nvptx|clspv)(64)?$" AND
      NOT ARCH MATCHES "^spirv(64)?$")
     add_test(NAME external-funcs-${t}
-      COMMAND ./check_external_funcs.sh ${builtins_lib} ${LLVM_TOOLS_BINARY_DIR}
+      COMMAND ./check_external_funcs.sh
+              $<TARGET_PROPERTY:${builtins_tgt},TARGET_FILE> ${LLVM_TOOLS_BINARY_DIR}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endif()
 endforeach()

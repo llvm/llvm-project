@@ -71,7 +71,7 @@ endfunction()
 
 # Links one or more libclc builtin libraries together, optionally
 # internalizing dependencies, then produces a final .bc or .spv file.
-function(link_libclc target_name)
+function(link_libclc_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
     "ARCH;TRIPLE;FOLDER"
@@ -136,5 +136,13 @@ function(link_libclc target_name)
   set_target_properties(${target_name} PROPERTIES
     TARGET_FILE ${builtins_lib}
     FOLDER ${ARG_FOLDER}
+  )
+
+  add_dependencies(libclc-opencl-builtins ${builtins_tgt})
+  set(builitins_file $<TARGET_PROPERTY:${builtins_tgt},TARGET_FILE>)
+
+  install(FILES ${builitins_file}
+    DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
+    COMPONENT libclc-opencl-builtins
   )
 endfunction()
