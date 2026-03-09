@@ -9,6 +9,7 @@
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "hdr/types/struct_timeval.h"
+#include "hdr/types/time_t.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/remove.h"
 #include "src/sys/stat/stat.h"
@@ -50,7 +51,7 @@ TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   // seconds
   ASSERT_EQ(statbuf.st_atim.tv_sec, times[0].tv_sec);
   ASSERT_EQ(statbuf.st_mtim.tv_sec, times[1].tv_sec);
-  ASSERT_GT(statbuf.st_ctim.tv_sec, 0L);
+  ASSERT_GT(statbuf.st_ctim.tv_sec, static_cast<time_t>(0));
 
   // microseconds
   ASSERT_EQ(statbuf.st_atim.tv_nsec,
@@ -61,7 +62,7 @@ TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   // legacy way to check seconds
   ASSERT_EQ(statbuf.st_atime, times[0].tv_sec);
   ASSERT_EQ(statbuf.st_mtime, times[1].tv_sec);
-  ASSERT_GT(statbuf.st_ctime, 0L);
+  ASSERT_GT(statbuf.st_ctime, static_cast<time_t>(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
 }
