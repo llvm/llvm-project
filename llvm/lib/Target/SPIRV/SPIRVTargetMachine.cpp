@@ -61,6 +61,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
   initializeSPIRVMergeRegionExitTargetsPass(PR);
+  initializeSPIRVConvertMaskedMemIntrinsicsPass(PR);
   initializeSPIRVEmitIntrinsicsPass(PR);
   initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
@@ -175,6 +176,7 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void SPIRVPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
+  addPass(createSPIRVConvertMaskedMemIntrinsicsPass(&TM));
 
   TargetPassConfig::addIRPasses();
 

@@ -300,6 +300,10 @@ private:
   bool selectGEP(Register ResVReg, SPIRVTypeInst ResType,
                  MachineInstr &I) const;
 
+  bool selectMaskedGather(Register ResVReg, SPIRVTypeInst ResType,
+                          MachineInstr &I) const;
+  bool selectMaskedScatter(MachineInstr &I) const;
+
   bool selectFrameIndex(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
   bool selectAllocaArray(Register ResVReg, SPIRVTypeInst ResType,
@@ -1718,6 +1722,60 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
     MachineIRBuilder MIRBuilder(I);
     addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectMaskedGather(Register ResVReg,
+                                                  SPIRVTypeInst ResType,
+                                                  MachineInstr &I) const {
+  assert(I.getNumExplicitDefs() == 1 && "Expected single def for gather");
+  // Operand indices (after explicit defs):
+  // 0: intrinsic ID
+  // 1: vector of pointers
+  // 2: alignment (i32 immediate)
+  // 3: mask (vector of i1)
+  // 4: passthru/fill value
+  Register PtrsReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
+  uint32_t Alignment = I.getOperand(I.getNumExplicitDefs() + 2).getImm();
+  Register MaskReg = I.getOperand(I.getNumExplicitDefs() + 3).getReg();
+  Register PassthruReg = I.getOperand(I.getNumExplicitDefs() + 4).getReg();
+  Register AlignmentReg = buildI32Constant(Alignment, I);
+
+  MachineBasicBlock &BB = *I.getParent();
+  auto MIB =
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMaskedGatherINTEL))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(PtrsReg)
+          .addUse(AlignmentReg)
+          .addUse(MaskReg)
+          .addUse(PassthruReg);
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectMaskedScatter(MachineInstr &I) const {
+  assert(I.getNumExplicitDefs() == 0 && "Expected no defs for scatter");
+  // Operand indices (no explicit defs):
+  // 0: intrinsic ID
+  // 1: value vector
+  // 2: vector of pointers
+  // 3: alignment (i32 immediate)
+  // 4: mask (vector of i1)
+  Register ValuesReg = I.getOperand(1).getReg();
+  Register PtrsReg = I.getOperand(2).getReg();
+  uint32_t Alignment = I.getOperand(3).getImm();
+  Register MaskReg = I.getOperand(4).getReg();
+  Register AlignmentReg = buildI32Constant(Alignment, I);
+  MachineBasicBlock &BB = *I.getParent();
+
+  auto MIB =
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMaskedScatterINTEL))
+          .addUse(PtrsReg)
+          .addUse(AlignmentReg)
+          .addUse(MaskReg)
+          .addUse(ValuesReg);
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
 }
@@ -4319,6 +4377,16 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdyFine);
   case Intrinsic::spv_fwidth:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpFwidth);
+  case Intrinsic::spv_masked_gather:
+    if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
+      return selectMaskedGather(ResVReg, ResType, I);
+    report_fatal_error(
+        "llvm.masked.gather requires SPV_INTEL_masked_gather_scatter");
+  case Intrinsic::spv_masked_scatter:
+    if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
+      return selectMaskedScatter(I);
+    report_fatal_error(
+        "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
