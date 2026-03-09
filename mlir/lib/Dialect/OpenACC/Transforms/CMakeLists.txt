@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIROpenACCTransforms
+  ACCComputeLowering.cpp
   ACCDeclareGPUModuleInsertion.cpp
   ACCIfClauseLowering.cpp
   ACCImplicitData.cpp
@@ -27,6 +28,8 @@ add_mlir_dialect_library(MLIROpenACCTransforms
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRArithDialect
+  MLIRArithUtils
   MLIROpenACCAnalysis
   MLIROpenACCDialect
   MLIROpenACCUtils
