@@ -363,3 +363,22 @@ def dispSPE2 : Operand<iPTR> {
   let DecoderMethod = "decodeDispSPE2Operand";
   let EncoderMethod = "getDispSPE2Encoding";
 }
+
+//===----------------------------------------------------------------------===//
+// TLS operands
+//===----------------------------------------------------------------------===//
+
+def PPCTLSRegOperand : AsmOperandClass {
+  let Name = "TLSReg"; let PredicateMethod = "isTLSReg";
+  let RenderMethod = "addTLSRegOperands";
+}
+def tlsreg32 : Operand<i32> {
+  let EncoderMethod = "getTLSRegEncoding";
+  let ParserMatchClass = PPCTLSRegOperand;
+}
+def tlsgd32 : Operand<i32> {}
+def tlscall32 : Operand<i32> {
+  let PrintMethod = "printTLSCall";
+  let MIOperandInfo = (ops calltarget:$func, tlsgd32:$sym);
+  let EncoderMethod = "getTLSCallEncoding";
+}
