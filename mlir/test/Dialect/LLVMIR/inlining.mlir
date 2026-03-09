@@ -582,15 +582,14 @@ llvm.func @byval_in_parallel(%ptr : !llvm.ptr { llvm.byval = f32 }) {
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
 llvm.func @test_byval_in_parallel_region(%ptr : !llvm.ptr) {
   %c0 = arith.constant 0 : index
-  %c4 = arith.constant 4 : index
-  %c1 = arith.constant 1 : index
-  // Verify the alloca is not hoisted out of the parallel region.
+  // Verify the alloca is not hoisted out of the allocation scope.
   // CHECK-NOT: llvm.alloca
-  // CHECK: scf.forall
-  scf.forall (%i) = (%c0) to (%c4) step (%c1) {
+  // CHECK: test.alloca_scope_region
+  test.alloca_scope_region {
     // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f32
     // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
     llvm.call @byval_in_parallel(%ptr) : (!llvm.ptr) -> ()
+    test.region_yield %c0 : index
   }
   llvm.return
 }

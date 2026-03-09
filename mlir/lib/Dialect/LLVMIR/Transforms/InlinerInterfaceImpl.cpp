@@ -609,20 +609,10 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
     // out, while still landing at the function entry block for the common
     // non-parallel case.
     OpBuilder::InsertionGuard insertionGuard(builder);
-    Block *entryBlock = nullptr;
-    Block *cursor = builder.getInsertionBlock();
-    while (cursor) {
-      Operation *parentOp = cursor->getParentOp();
-      if (!parentOp)
-        break;
-      if (parentOp->hasTrait<OpTrait::AutomaticAllocationScope>()) {
-        entryBlock = &cursor->getParent()->front();
-        break;
-      }
-      cursor = parentOp->getBlock();
-    }
-    if (!entryBlock)
-      entryBlock = &(*argument.getParentRegion()->begin());
+    Operation *scope = builder.getInsertionBlock()->getParentOp();
+    if (!scope->mightHaveTrait<OpTrait::AutomaticAllocationScope>())
+      scope = scope->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+    Block *entryBlock = &scope->getRegion(0).front();
     builder.setInsertionPointToStart(entryBlock);
     Value one = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
                                          builder.getI64IntegerAttr(1));
