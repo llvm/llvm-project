@@ -599,7 +599,7 @@ test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
 //===----------------------------------------------------------------------===//
 
 mlir::AffineMap TestMemRefLayoutAttr::getAffineMap() const {
-  // Construct a non-identity AffineMap to prevent it from being folded. 
+  // Construct a non-identity AffineMap to prevent it from being folded.
   return mlir::AffineMap::get(1, 0, {getAffineConstantExpr(0, getContext())});
 }
 

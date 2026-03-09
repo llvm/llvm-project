@@ -3013,8 +3013,7 @@ MemRefType SubViewOp::inferRankReducedResultType(
   }
   return MemRefType::get(resultShape, inferredType.getElementType(),
                          StridedLayoutAttr::get(inferredType.getContext(),
-                                                offset,
-                                                rankReducedStrides),
+                                                offset, rankReducedStrides),
                          inferredType.getMemorySpace());
 }
 
@@ -3334,10 +3333,10 @@ static MemRefType getCanonicalSubViewResultType(
     strides.push_back(stride);
   }
 
-  return MemRefType::get(shape, nonRankReducedType.getElementType(),
-                         StridedLayoutAttr::get(sourceType.getContext(),
-                                                offset, strides),
-                         nonRankReducedType.getMemorySpace());
+  return MemRefType::get(
+      shape, nonRankReducedType.getElementType(),
+      StridedLayoutAttr::get(sourceType.getContext(), offset, strides),
+      nonRankReducedType.getMemorySpace());
 }
 
 Value mlir::memref::createCanonicalRankReducingSubViewOp(

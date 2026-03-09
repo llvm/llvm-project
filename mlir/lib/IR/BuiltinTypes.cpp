@@ -567,7 +567,7 @@ unsigned MemRefType::getMemorySpaceAsInt() const {
 }
 
 static int64_t getNumContiguousTrailingDimsImpl(ArrayRef<int64_t> shape,
-                                             ArrayRef<int64_t> strides) {
+                                                ArrayRef<int64_t> strides) {
   const int64_t n = shape.size();
   // A memref with dimensions `d0, d1, ..., dn-1` and strides
   // `s0, s1, ..., sn-1` is contiguous up to dimension `k`
