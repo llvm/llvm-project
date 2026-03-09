@@ -1890,4 +1890,10 @@ namespace lambda_captures {
     auto lambda = [=]() { return v; };
     return lambda; // expected-note {{returned here}}
   }
+
+  auto* pointer_to_lambda_outlives() {
+    auto lambda = []() { return 42; };
+    return &lambda; // expected-warning {{address of stack memory is returned later}} \
+                    // expected-note {{returned here}}
+  }
 } // namespace lambda_captures
