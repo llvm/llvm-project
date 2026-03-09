@@ -1962,8 +1962,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           // for simple 32-bit aligned cases and use unmerge/merge.
           const LLT BigTy = Query.Types[BigTyIdx];
           const LLT LitTy = Query.Types[LitTyIdx];
-          return !BigTy.isVector() &&
-                 BigTy.getSizeInBits() % 32 == 0 &&
+          return !BigTy.isVector() && BigTy.getSizeInBits() % 32 == 0 &&
                  LitTy.getSizeInBits() % 32 == 0;
         })
         .lower();
