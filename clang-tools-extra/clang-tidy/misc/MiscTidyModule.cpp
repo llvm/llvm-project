@@ -15,6 +15,7 @@
 #include "DefinitionsInHeadersCheck.h"
 #include "HeaderIncludeCycleCheck.h"
 #include "IncludeCleanerCheck.h"
+#include "MakeSmartPtrCheck.h"
 #include "MisleadingBidirectionalCheck.h"
 #include "MisleadingIdentifierCheck.h"
 #include "MisplacedConstCheck.h"
@@ -56,6 +57,7 @@ public:
     CheckFactories.registerCheck<HeaderIncludeCycleCheck>(
         "misc-header-include-cycle");
     CheckFactories.registerCheck<IncludeCleanerCheck>("misc-include-cleaner");
+    CheckFactories.registerCheck<MakeSmartPtrCheck>("misc-make-smart-ptr");
     CheckFactories.registerCheck<MisleadingBidirectionalCheck>(
         "misc-misleading-bidirectional");
     CheckFactories.registerCheck<MisleadingIdentifierCheck>(
