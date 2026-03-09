@@ -647,6 +647,7 @@ static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
       rewriter.splitBlock(callBlock, std::next(callOp->getIterator()));
 
   // Build the try_call to replace the original call.
+  // TODO(cir): Preserve function and argument attributes.
   rewriter.setInsertionPoint(callOp);
   cir::TryCallOp tryCallOp;
   if (callOp.isIndirect()) {
