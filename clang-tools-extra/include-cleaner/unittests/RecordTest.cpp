@@ -55,10 +55,6 @@ MATCHER_P(named, N, "") {
   return false;
 }
 
-std::string guard(llvm::StringRef Code) {
-  return "#pragma once\n" + Code.str();
-}
-
 MATCHER_P(FileNamed, N, "") {
   llvm::StringRef ActualName =
       llvm::sys::path::remove_leading_dotslash(arg.getName());
