@@ -21,9 +21,7 @@ from ._mlir_libs import (
 )
 
 
-def get_parent_of_type(
-    op: OpView | Operation, op_class: type[OpView]
-) -> OpView | None:
+def get_parent_of_type(op: OpView | Operation, op_class: type[OpView]) -> OpView | None:
     """Return the closest enclosing parent operation of the given type.
 
     Walks the parent chain of *op* and returns the first ancestor that is an instance of *op_class*.
