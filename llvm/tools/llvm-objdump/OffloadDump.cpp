@@ -68,7 +68,7 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
   MemoryBufferRef InnerBuffer(ImageData, "inner-offload-binary");
   auto InnerBinariesOrErr = OffloadBinary::create(InnerBuffer);
   if (!InnerBinariesOrErr) {
-    reportWarning("Failed to parse nested OffloadBinary: " +
+    reportWarning("failed to parse nested OffloadBinary: " +
                       toString(InnerBinariesOrErr.takeError()),
                   OuterOB.getFileName());
     return;
@@ -76,7 +76,7 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
 
   auto &InnerBinaries = *InnerBinariesOrErr;
   if (InnerBinaries.empty()) {
-    reportWarning("Nested OffloadBinary contains no entries",
+    reportWarning("nested OffloadBinary contains no entries",
                   OuterOB.getFileName());
     return;
   }
