@@ -1,0 +1,67 @@
+llvm-extract-bundle-entry - object stripping tool
+==================================
+
+.. program:: llvm-extract-bundle-entry
+
+SYNOPSIS
+--------
+
+:program:`llvm-extract-bundle-entry` [*options*] *URI*
+
+DESCRIPTION
+-----------
+
+:program: The `llvm-extract-offload-entry` command takes a URI argument, and generates a code 
+object file based on the details of the URI given, such as <executable_name>-[pid<number>]-offset<number>-size<number>.co.
+
+The URI syntax is defined as:
+ 
+code_object_uri ::== file_uri | memory_uri
+file_uri        ::== file:// extract_file [ range_specifier ]
+memory_uri      ::== memory:// process_id range_specifier
+range_specifier ::== [ # | ? ] offset= number & size= number
+extract_file    ::== URI_ENCODED_OS_FILE_PATH
+process_id      ::== DECIMAL_NUMBER
+number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
+ 
+The `llvm-extract-offload-entry` command reads its input from standard input if the URI is omitted 
+or if the URI argument is -.  
+
+The output is always written to a file, whose name is generated from the URI input given, 
+unless the -o option is specified.
+
+
+OPTIONS
+----------------------------------
+
+The following options are either agnostic of the file format, or apply to
+multiple file formats.
+
+.. option:: --help, -h
+
+ Print a summary of command line options.
+
+.. option::  -o <file>
+
+ Write output to <file>. Multiple input files cannot be used in combination
+ with -o.
+
+.. option:: --version, -V
+
+ Display the version of the :program:`llvm-extract-bundle-entry` executable.
+
+EXIT STATUS
+-----------
+
+:program:`llvm-extract-bundle-entry` exits with a non-zero exit code if there is an error.
+Otherwise, it exits with code 0.
+
+BUGS
+----
+
+To report bugs, please visit <https://github.com/llvm/llvm-project/labels/tools:llvm-objcopy%2Fextract-offload-entry>.
+
+SEE ALSO
+--------
+
+:manpage:`llvm-objcopy(1)`

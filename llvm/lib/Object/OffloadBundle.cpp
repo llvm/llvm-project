@@ -224,15 +224,16 @@ Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(OutputFileName, Size);
 
-  if (Error Err = BufferOrErr.takeError())
-    return Err;
+  if (!BufferOrErr)
+    return BufferOrErr.takeError();
+  ;
 
   Expected<MemoryBufferRef> InputBuffOrErr = Source.getMemoryBufferRef();
   if (Error Err = InputBuffOrErr.takeError())
     return createFileError(OutputFileName, std::move(Err));
 
   if (Size > InputBuffOrErr->getBufferSize())
-    return createStringError("size in URI(%llu) is larger than source (%llu)",
+    return createStringError("size in URI (%llu) is larger than source (%llu)",
                              Size, InputBuffOrErr->getBufferSize());
 
   if (Offset > InputBuffOrErr->getBufferSize())

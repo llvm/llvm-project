@@ -1717,8 +1717,8 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
   return std::move(DC);
 }
 
-Expected<DriverConfig> objcopy::parseExtractBundleEntryOptions(
-    ArrayRef<const char *> ArgsArr, function_ref<Error(Error)> ErrorCallback) {
+Expected<DriverConfig>
+objcopy::parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr) {
   DriverConfig DC;
   ExtractBundleEntryOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
@@ -1736,7 +1736,7 @@ Expected<DriverConfig> objcopy::parseExtractBundleEntryOptions(
   }
 
   if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_version)) {
-    outs() << "llvm-extract-bundle-entry, compatible with roc-obj-ls\n";
+    outs() << "llvm-extract-bundle-entry\n";
     cl::PrintVersionMessage();
     exit(0);
   }

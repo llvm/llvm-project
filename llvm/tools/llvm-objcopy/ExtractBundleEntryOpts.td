@@ -12,7 +12,7 @@
 
 include "llvm/Option/OptParser.td"
 
-def help : Flag<["--"], "Help">,
+def help : Flag<["--"], "help">,
            HelpText<"URIs can be read from STDIN, one per line.\n"
                     "From the URIs specified, extracts code objects into files named:\n"
                     "\t<executable_name>-[pid<number>]-offset<number>-size<number>.co\n\n"
