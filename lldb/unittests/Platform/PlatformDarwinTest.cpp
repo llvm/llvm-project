@@ -51,6 +51,10 @@ public:
 
   static void Terminate() {}
 
+  bool IsReservedWord(const char *word) override {
+    return llvm::is_contained({"import"}, llvm::StringRef(word));
+  }
+
   static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger) {
     return std::make_shared<MockScriptInterpreterPython>(debugger);
   }
@@ -171,14 +175,19 @@ TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
   EXPECT_EQ(llvm::VersionTuple(3, 4, 5), V);
 }
 
-TEST_F(PlatformDarwinLocateTest, LocateExecutableScriptingResourcesFromDSYM) {
-  // Create dummy module file at <test-root>/TestModule.o
-  FileSpec module_fspec(CreateFile("TestModule.o", m_tmp_root_dir));
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_StripExtensions) {
+  // Tests that LocateExecutableScriptingResourcesFromDSYM will strip module
+  // names until the basename matches the Python script.
+
+  // Create dummy module file at <test-root>/TestModule.1.o.ext
+  FileSpec module_fspec(CreateFile("TestModule.o.1.ext", m_tmp_root_dir));
   ASSERT_TRUE(module_fspec);
 
   // Create dummy module file at
-  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule.o
-  FileSpec dsym_module_fpec(CreateFile("TestModule.o", m_tmp_dsym_dwarf_dir));
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule.o.1.ext
+  FileSpec dsym_module_fpec(
+      CreateFile("TestModule.o.1.ext", m_tmp_dsym_dwarf_dir));
   ASSERT_TRUE(dsym_module_fpec);
 
   CreateFile("TestModule.py", m_tmp_dsym_python_dir);
@@ -192,4 +201,293 @@ TEST_F(PlatformDarwinLocateTest, LocateExecutableScriptingResourcesFromDSYM) {
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 1u);
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_ModuleNoExtension) {
+  // Tests case where module has no file extension.
+
+  // Create dummy module file at <test-root>/TestModule
+  FileSpec module_fspec(CreateFile("TestModule", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule
+  FileSpec dsym_module_fpec(CreateFile("TestModule", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("TestModule.py", m_tmp_dsym_python_dir);
+  CreateFile("TestModule.txt", m_tmp_dsym_python_dir);
+  CreateFile("TestModule.sh", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_StripExtension_NoMatch) {
+  // Tests case where stripping the module's file extensions still doesn't
+  // result in a match.
+
+  // Create dummy module file at <test-root>/TestModule.dylib
+  FileSpec module_fspec(CreateFile("TestModule.dylib", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule
+  FileSpec dsym_module_fpec(
+      CreateFile("TestModule.dylib", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("TestModule.1.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 0u);
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_NestedDir) {
+  // Tests case where a nested directory within the dSYM Python directory
+  // contains Python scripts. LLDB shouldn't pick those.
+
+  // Create dummy module file at <test-root>/TestModule.o
+  FileSpec module_fspec(CreateFile("TestModule.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule.o
+  FileSpec dsym_module_fpec(CreateFile("TestModule.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  // Create nested directory at
+  // <test-root>/.dSYM/Contents/Resources/Python/nested_dir
+  llvm::SmallString<128> nested_dir(m_tmp_dsym_python_dir);
+  llvm::sys::path::append(nested_dir, "nested_dir");
+  ASSERT_FALSE(llvm::sys::fs::create_directory(nested_dir))
+      << "Failed to create test nested directory in dSYM Python directory.";
+
+  CreateFile("TestModule.py", nested_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 0u);
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_KeywordInModuleNameIsKeyword) {
+  // Tests case where the module name has a Python reserved keyword in its name.
+  // That should resolve fine.
+
+  // Create dummy module file at <test-root>/TestModule_import.o
+  FileSpec module_fspec(CreateFile("TestModule_import.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule_import.o
+  FileSpec dsym_module_fpec(
+      CreateFile("TestModule_import.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  // Keywords are not permitted in module names.
+  // See MockScriptInterpreterPython::IsReservedWord
+  CreateFile("TestModule_import.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_import.py");
+  EXPECT_TRUE(ss.Empty());
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeyword_NoMatch) {
+  // Tests case where the module name is a Python reserved keyword. That isn't
+  // supported.
+
+  // Create dummy module file at <test-root>/import
+  FileSpec module_fspec(CreateFile("import", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/import
+  FileSpec dsym_module_fpec(CreateFile("import", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  // Keywords are not permitted in module names.
+  // See MockScriptInterpreterPython::IsReservedWord
+  CreateFile("import.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 0u);
+  EXPECT_TRUE(ss.GetString().contains(
+      "its name conflicts with a keyword and as such cannot be loaded"));
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeyword_Match) {
+  // Tests case where the module name is a Python reserved keyword but we are
+  // able to match a script.
+
+  // Create dummy module file at <test-root>/import
+  FileSpec module_fspec(CreateFile("import", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/import
+  FileSpec dsym_module_fpec(CreateFile("import", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  // Keywords are not permitted in module names.
+  // See MockScriptInterpreterPython::IsReservedWord
+  CreateFile("_import.py", m_tmp_dsym_python_dir);
+  CreateFile("import.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
+  EXPECT_TRUE(
+      ss.GetString().contains("Consider removing the file with the malformed "
+                              "name to eliminate this warning."));
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeyword_Match_NoWarning) {
+  // Tests case where the module name is a Python reserved keyword but we are
+  // able to match a script but don't print a warning.
+
+  // Create dummy module file at <test-root>/import
+  FileSpec module_fspec(CreateFile("import", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/import
+  FileSpec dsym_module_fpec(CreateFile("import", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  // Keywords are not permitted in module names.
+  // See MockScriptInterpreterPython::IsReservedWord
+  CreateFile("_import.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
+  EXPECT_TRUE(ss.GetString().empty());
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_SpecialCharactersInModuleName_NoMatch) {
+  // Tests case where the module name contains "special characters" that the
+  // Python ScriptInterpreter can't handle when importing modules.
+
+  // Create dummy module file at <test-root>/TestModule-1.1 1.o
+  FileSpec module_fspec(CreateFile("TestModule-1.1 1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule-1.1 1.o
+  FileSpec dsym_module_fpec(
+      CreateFile("TestModule-1.1 1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("TestModule-1.1 1.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 0u);
+  EXPECT_TRUE(ss.GetString().contains(
+      "its name contains reserved characters and as such cannot be loaded"));
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_SpecialCharactersInModuleName_Match_Warning) {
+  // Tests case where the module name contains "special characters" that the
+  // Python ScriptInterpreter can't handle when importing modules. LLDB can
+  // still match a script but it warns when two scripts conflict in naming.
+
+  // Create dummy module file at <test-root>/TestModule-1.1 1.o
+  FileSpec module_fspec(CreateFile("TestModule-1.1 1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule-1.1 1.o
+  FileSpec dsym_module_fpec(
+      CreateFile("TestModule-1.1 1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("TestModule-1.1 1.py", m_tmp_dsym_python_dir);
+  CreateFile("TestModule_1_1_1.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_1_1_1.py");
+  EXPECT_TRUE(
+      ss.GetString().contains("Consider removing the file with the malformed "
+                              "name to eliminate this warning."));
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_SpecialCharactersInModuleName_Match_NoWarning) {
+  // Tests case where the module name contains "special characters" that the
+  // Python ScriptInterpreter can't handle when importing modules. We can still
+  // match appropriately named scripts.
+
+  // Create dummy module file at <test-root>/TestModule-1.1 1.o
+  FileSpec module_fspec(CreateFile("TestModule-1.1 1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule-1.1 1.o
+  FileSpec dsym_module_fpec(
+      CreateFile("TestModule-1.1 1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("TestModule_1_1_1.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_1_1_1.py");
+  EXPECT_TRUE(ss.GetString().empty());
 }
