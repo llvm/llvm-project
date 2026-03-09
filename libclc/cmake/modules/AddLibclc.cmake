@@ -137,12 +137,52 @@ function(link_libclc_builtin_library target_name)
     TARGET_FILE ${builtins_lib}
     FOLDER ${ARG_FOLDER}
   )
+endfunction()
 
-  add_dependencies(libclc-opencl-builtins ${builtins_tgt})
-  set(builitins_file $<TARGET_PROPERTY:${builtins_tgt},TARGET_FILE>)
+# Builds an OpenCL builtins library from sources, links it with any
+# internalized dependencies via link_libclc_builtin_library, and adds
+# a verification test for unresolved symbols.
+function(add_libclc_opencl_library target_name)
+  cmake_parse_arguments(ARG
+    ""
+    "ARCH;TRIPLE;TARGET_TRIPLE"
+    "SOURCES;COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS;INTERNALIZE_LIBRARIES;OPT_FLAGS"
+    ${ARGN}
+  )
 
-  install(FILES ${builitins_file}
+  set(opencl_lib ${target_name}_opencl_builtins)
+  add_libclc_builtin_library(${opencl_lib}
+    SOURCES ${ARG_SOURCES}
+    COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
+    INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
+    COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
+    FOLDER "libclc/Device IR/OpenCL"
+  )
+
+  link_libclc_builtin_library(${target_name}
+    ARCH ${ARG_ARCH}
+    TRIPLE ${ARG_TRIPLE}
+    LIBRARIES ${opencl_lib}
+    INTERNALIZE_LIBRARIES ${ARG_INTERNALIZE_LIBRARIES}
+    OPT_FLAGS ${ARG_OPT_FLAGS}
+    FOLDER "libclc/Device IR/Library"
+  )
+
+  add_dependencies(libclc-opencl-builtins ${target_name})
+  set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
+
+  install(FILES ${builtins_file}
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
     COMPONENT libclc-opencl-builtins
   )
+
+  # Verify there are no unresolved external functions in the library.
+  if(NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" AND
+     NOT ARG_ARCH MATCHES "^spirv(64)?$")
+    set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
+    add_test(NAME external-funcs-${ARG_TARGET_TRIPLE}
+      COMMAND ./check_external_funcs.sh
+              ${builtins_file} ${LLVM_TOOLS_BINARY_DIR}
+      WORKING_DIRECTORY ${LIBCLC_SOURCE_DIR})
+  endif()
 endfunction()
