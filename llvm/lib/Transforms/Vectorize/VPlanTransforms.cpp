@@ -6185,8 +6185,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     if (!UpdateR || !Instruction::isBinaryOp(UpdateR->getOpcode()))
       return std::nullopt;
 
-    VPValue *Op = UpdateR->getOperand(0);
-    VPValue *PrevValue = UpdateR->getOperand(1);
+    VPValue *Op = UpdateR->getOperand(1);
+    VPValue *PrevValue = UpdateR->getOperand(0);
 
     // Find the extended operand. The other operand (PrevValue) is the next link
     // in the reduction chain.
