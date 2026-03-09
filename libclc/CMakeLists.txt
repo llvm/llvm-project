@@ -282,56 +282,18 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   )
 
   # Link the final library.
-  set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${clang_triple})
-  file(MAKE_DIRECTORY ${library_dir})
-
-  set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${t}.linked.bc)
-
-  add_custom_command(OUTPUT ${linked_bc}
-    COMMAND ${llvm-link_exe}
-      $<TARGET_FILE:${opencl_lib}>
-      --internalize --only-needed
-      $<TARGET_FILE:${clc_lib}>
-      -o ${linked_bc}
-    DEPENDS ${llvm-link_target} ${opencl_lib} ${clc_lib}
-  )
-
-  if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
-    # SPIR-V targets produce a .spv file from the linked bitcode.
-    set(builtins_lib ${library_dir}/libclc.spv)
-    if(LIBCLC_USE_SPIRV_BACKEND)
-      add_custom_command(OUTPUT ${builtins_lib}
-        COMMAND ${CMAKE_CLC_COMPILER} -c --target=${clang_triple}
-                -mllvm --spirv-ext=+SPV_KHR_fma
-                -x ir -o ${builtins_lib} ${linked_bc}
-        DEPENDS ${linked_bc}
-      )
-    else()
-      add_custom_command(OUTPUT ${builtins_lib}
-        COMMAND ${llvm-spirv_exe}
-                --spirv-max-version=1.1
-                --spirv-ext=+SPV_KHR_fma
-                -o ${builtins_lib} ${linked_bc}
-        DEPENDS ${llvm-spirv_target} ${linked_bc}
-      )
-    endif()
-  else()
-    # All other targets produce an optimized .bc file.
-    set(builtins_lib ${library_dir}/libclc.bc)
-    add_custom_command(OUTPUT ${builtins_lib}
-      COMMAND ${opt_exe} ${opt_flags} -o ${builtins_lib} ${linked_bc}
-      DEPENDS ${opt_target} ${linked_bc}
-    )
-  endif()
-
-  # Target to build this library.
   set(builtins_tgt libclc-${t})
-  add_custom_target(${builtins_tgt} ALL DEPENDS ${builtins_lib})
-  set_target_properties(${builtins_tgt} PROPERTIES
-    TARGET_FILE ${builtins_lib}
+  link_libclc(${builtins_tgt}
+    ARCH ${ARCH}
+    TRIPLE ${clang_triple}
+    LIBRARIES ${opencl_lib}
+    INTERNALIZE_LIBRARIES ${clc_lib}
+    OPT_FLAGS ${opt_flags}
     FOLDER "libclc/Device IR/Library"
   )
   add_dependencies(libclc-opencl-builtins ${builtins_tgt})
+  add_dependencies(libclc libclc-opencl-builtins)
+  set(builtins_lib $<TARGET_PROPERTY:${builtins_tgt},TARGET_FILE>)
 
   install(FILES ${builtins_lib}
     DESTINATION ${LIBCLC_INSTALL_DIR}/${clang_triple}

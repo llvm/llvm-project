@@ -68,3 +68,73 @@ function(add_libclc_builtin_library target_name)
     FOLDER ${ARG_FOLDER}
   )
 endfunction()
+
+# Links one or more libclc builtin libraries together, optionally
+# internalizing dependencies, then produces a final .bc or .spv file.
+function(link_libclc target_name)
+  cmake_parse_arguments(ARG
+    ""
+    "ARCH;TRIPLE;FOLDER"
+    "LIBRARIES;INTERNALIZE_LIBRARIES;OPT_FLAGS"
+    ${ARGN}
+  )
+
+  set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE})
+  file(MAKE_DIRECTORY ${library_dir})
+
+  set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
+
+  set(link_cmd ${llvm-link_exe})
+  foreach(lib ${ARG_LIBRARIES})
+    list(APPEND link_cmd $<TARGET_FILE:${lib}>)
+  endforeach()
+  if(ARG_INTERNALIZE_LIBRARIES)
+    list(APPEND link_cmd --internalize --only-needed)
+    foreach(lib ${ARG_INTERNALIZE_LIBRARIES})
+      list(APPEND link_cmd $<TARGET_FILE:${lib}>)
+    endforeach()
+  endif()
+  list(APPEND link_cmd -o ${linked_bc})
+
+  set(link_deps ${llvm-link_target}
+    ${ARG_LIBRARIES} ${ARG_INTERNALIZE_LIBRARIES}
+  )
+  add_custom_command(OUTPUT ${linked_bc}
+    COMMAND ${link_cmd}
+    DEPENDS ${link_deps}
+  )
+
+  if(ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64)
+    # SPIR-V targets produce a .spv file from the linked bitcode.
+    set(builtins_lib ${library_dir}/libclc.spv)
+    if(LIBCLC_USE_SPIRV_BACKEND)
+      add_custom_command(OUTPUT ${builtins_lib}
+        COMMAND ${CMAKE_CLC_COMPILER} -c --target=${ARG_TRIPLE}
+                -mllvm --spirv-ext=+SPV_KHR_fma
+                -x ir -o ${builtins_lib} ${linked_bc}
+        DEPENDS ${linked_bc}
+      )
+    else()
+      add_custom_command(OUTPUT ${builtins_lib}
+        COMMAND ${llvm-spirv_exe}
+                --spirv-max-version=1.1
+                --spirv-ext=+SPV_KHR_fma
+                -o ${builtins_lib} ${linked_bc}
+        DEPENDS ${llvm-spirv_target} ${linked_bc}
+      )
+    endif()
+  else()
+    # All other targets produce an optimized .bc file.
+    set(builtins_lib ${library_dir}/libclc.bc)
+    add_custom_command(OUTPUT ${builtins_lib}
+      COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_lib} ${linked_bc}
+      DEPENDS ${opt_target} ${linked_bc}
+    )
+  endif()
+
+  add_custom_target(${target_name} ALL DEPENDS ${builtins_lib})
+  set_target_properties(${target_name} PROPERTIES
+    TARGET_FILE ${builtins_lib}
+    FOLDER ${ARG_FOLDER}
+  )
+endfunction()
