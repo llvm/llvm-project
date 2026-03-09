@@ -1901,6 +1901,17 @@ let Command = "target stop_hook list" in {
         Desc<"Show debugger ${i}nternal stop hooks.">;
 }
 
+let Command = "target module_hook add" in {
+  def target_module_hook_add_one_liner
+      : Option<"one-liner", "o">,
+        Arg<"OneLiner">,
+        Desc<"Add a command for the module hook. Can be specified more than "
+             "once, and commands will be run in the order they appear.">;
+  def target_module_hook_add_on_unload
+      : Option<"on-unload", "u">,
+        Desc<"Also fire the hook when modules are ${u}nloaded.">;
+}
+
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">,
                                Group<1>,

@@ -5291,6 +5291,331 @@ public:
   ~CommandObjectMultiwordTargetStopHooks() override = default;
 };
 
+#pragma mark CommandObjectTargetModuleHookAdd
+
+#define LLDB_OPTIONS_target_module_hook_add
+#include "CommandOptions.inc"
+
+class CommandObjectTargetModuleHookAdd : public CommandObjectParsed,
+                                         public IOHandlerDelegateMultiline {
+public:
+  class CommandOptions : public OptionGroup {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_module_hook_add_options);
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option =
+          g_target_module_hook_add_options[option_idx].short_option;
+      switch (short_option) {
+      case 'o':
+        m_use_one_liner = true;
+        m_one_liner.push_back(std::string(option_arg));
+        break;
+      case 'u':
+        m_on_unload = true;
+        break;
+      default:
+        llvm_unreachable("unhandled option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_use_one_liner = false;
+      m_one_liner.clear();
+      m_on_unload = false;
+    }
+
+    std::vector<std::string> m_one_liner;
+    bool m_use_one_liner = false;
+    bool m_on_unload = false;
+  };
+
+  CommandObjectTargetModuleHookAdd(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target module-hook add",
+            "Add a hook to be executed whenever modules are loaded into the "
+            "target.",
+            "target module-hook add"),
+        IOHandlerDelegateMultiline("DONE",
+                                   IOHandlerDelegate::Completion::LLDBCommand),
+        m_python_class_options("scripted module hook", false, 'P') {
+    SetHelpLong(R"help(
+Command-based module hooks allow running LLDB commands every time modules are
+loaded into the target. For example:
+
+    target module-hook add -o "script print('module loaded')"
+
+Use --on-unload (-u) to also fire the hook when modules are unloaded:
+
+    target module-hook add -u -o "script print('module event')"
+
+Python-based module hooks allow running a Python class:
+
+    target module-hook add -P MyHook
+
+The Python class should implement:
+
+    class MyHook:
+        def __init__(self, target, extra_args, internal_dict):
+            self.target = target
+        def handle_module_loaded(self, stream):
+            pass
+        def handle_module_unloaded(self, stream):
+            pass
+
+handle_module_loaded is required. handle_module_unloaded is optional and only
+called when --on-unload is specified.
+)help");
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_2);
+    m_all_options.Append(&m_options);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectTargetModuleHookAdd() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+protected:
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(
+            "Enter your module hook command(s). Type 'DONE' to end.\n");
+      }
+    }
+  }
+
+  void IOHandlerInputComplete(IOHandler &io_handler,
+                              std::string &line) override {
+    if (m_module_hook_sp) {
+      if (line.empty()) {
+        if (lldb::LockableStreamFileSP error_sp =
+                io_handler.GetErrorStreamFileSP()) {
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("error: module hook #%" PRIu64
+                               " aborted, no commands.\n",
+                               m_module_hook_sp->GetID());
+        }
+        GetTarget().UndoCreateModuleHook(m_module_hook_sp->GetID());
+      } else {
+        auto *hook = static_cast<Target::ModuleHookCommandLine *>(
+            m_module_hook_sp.get());
+        hook->SetActionFromString(line);
+        if (lldb::LockableStreamFileSP output_sp =
+                io_handler.GetOutputStreamFileSP()) {
+          LockedStreamFile locked_stream = output_sp->Lock();
+          locked_stream.Printf("Module hook #%" PRIu64 " added.\n",
+                               m_module_hook_sp->GetID());
+        }
+      }
+      m_module_hook_sp.reset();
+    }
+    io_handler.SetIsDone(true);
+  }
+
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    m_module_hook_sp.reset();
+    Target &target = GetTarget();
+
+    Target::ModuleHook::ModuleHookKind hook_kind;
+    if (m_python_class_options.GetName().empty())
+      hook_kind = Target::ModuleHook::ModuleHookKind::CommandBased;
+    else
+      hook_kind = Target::ModuleHook::ModuleHookKind::ScriptBased;
+
+    Target::ModuleHookSP new_hook_sp = target.CreateModuleHook(hook_kind);
+
+    if (m_options.m_on_unload)
+      new_hook_sp->SetFireOnUnload(true);
+
+    if (m_options.m_use_one_liner) {
+      auto *hook =
+          static_cast<Target::ModuleHookCommandLine *>(new_hook_sp.get());
+      hook->SetActionFromStrings(m_options.m_one_liner);
+      result.AppendMessageWithFormat("Module hook #%" PRIu64 " added.\n",
+                                     new_hook_sp->GetID());
+    } else if (!m_python_class_options.GetName().empty()) {
+      auto *hook = static_cast<Target::ModuleHookScripted *>(new_hook_sp.get());
+      Status callback_error =
+          hook->SetScriptCallback(m_python_class_options.GetName(),
+                                  m_python_class_options.GetStructuredData());
+      if (callback_error.Fail()) {
+        result.AppendErrorWithFormat("error: couldn't add module hook: %s\n",
+                                     callback_error.AsCString());
+        target.UndoCreateModuleHook(new_hook_sp->GetID());
+        return;
+      }
+      result.AppendMessageWithFormat("Module hook #%" PRIu64 " added.\n",
+                                     new_hook_sp->GetID());
+    } else {
+      m_module_hook_sp = new_hook_sp;
+      m_interpreter.GetLLDBCommandsFromIOHandler("> ",   // prompt
+                                                 *this); // delegate
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  CommandOptions m_options;
+  OptionGroupPythonClassWithDict m_python_class_options;
+  OptionGroupOptions m_all_options;
+  Target::ModuleHookSP m_module_hook_sp;
+};
+
+#pragma mark CommandObjectTargetModuleHookDelete
+
+class CommandObjectTargetModuleHookDelete : public CommandObjectParsed {
+public:
+  CommandObjectTargetModuleHookDelete(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target module-hook delete",
+                            "Delete a module-hook.",
+                            "target module-hook delete [<id>]") {
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
+  }
+
+  ~CommandObjectTargetModuleHookDelete() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+    if (command.GetArgumentCount() == 0) {
+      target.RemoveAllModuleHooks();
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return;
+    }
+
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      lldb::user_id_t user_id;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
+        result.AppendErrorWithFormat("invalid module hook id: \"%s\".\n",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+      if (!target.RemoveModuleHookByID(user_id)) {
+        result.AppendErrorWithFormat("unknown module hook id: \"%s\".\n",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+};
+
+#pragma mark CommandObjectTargetModuleHookEnableDisable
+
+class CommandObjectTargetModuleHookEnableDisable : public CommandObjectParsed {
+public:
+  CommandObjectTargetModuleHookEnableDisable(CommandInterpreter &interpreter,
+                                             bool enable, const char *name,
+                                             const char *help,
+                                             const char *syntax)
+      : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable) {
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
+  }
+
+  ~CommandObjectTargetModuleHookEnableDisable() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+    if (command.GetArgumentCount() == 0) {
+      target.SetAllModuleHooksActiveState(m_enable);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return;
+    }
+
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      lldb::user_id_t user_id;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
+        result.AppendErrorWithFormat("invalid module hook id: \"%s\".\n",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+      if (!target.SetModuleHookActiveStateByID(user_id, m_enable)) {
+        result.AppendErrorWithFormat("unknown module hook id: \"%s\".\n",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  bool m_enable;
+};
+
+#pragma mark CommandObjectTargetModuleHookList
+
+class CommandObjectTargetModuleHookList : public CommandObjectParsed {
+public:
+  CommandObjectTargetModuleHookList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target module-hook list",
+                            "List all module-hooks.",
+                            "target module-hook list") {}
+
+  ~CommandObjectTargetModuleHookList() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+    size_t num_hooks = target.GetNumModuleHooks();
+    if (num_hooks == 0) {
+      result.GetOutputStream().PutCString("No module hooks.\n");
+    } else {
+      for (size_t i = 0; i < num_hooks; i++) {
+        Target::ModuleHookSP hook_sp = target.GetModuleHookAtIndex(i);
+        if (hook_sp)
+          hook_sp->GetDescription(result.GetOutputStream(),
+                                  eDescriptionLevelFull);
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+#pragma mark CommandObjectMultiwordTargetModuleHooks
+
+class CommandObjectMultiwordTargetModuleHooks : public CommandObjectMultiword {
+public:
+  CommandObjectMultiwordTargetModuleHooks(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target module-hook",
+            "Commands for operating on debugger target module-hooks.",
+            "target module-hook <subcommand> [<subcommand-options>]") {
+    LoadSubCommand("add", CommandObjectSP(new CommandObjectTargetModuleHookAdd(
+                              interpreter)));
+    LoadSubCommand(
+        "delete",
+        CommandObjectSP(new CommandObjectTargetModuleHookDelete(interpreter)));
+    LoadSubCommand(
+        "disable",
+        CommandObjectSP(new CommandObjectTargetModuleHookEnableDisable(
+            interpreter, false, "target module-hook disable [<id>]",
+            "Disable a module-hook.", "target module-hook disable")));
+    LoadSubCommand(
+        "enable",
+        CommandObjectSP(new CommandObjectTargetModuleHookEnableDisable(
+            interpreter, true, "target module-hook enable [<id>]",
+            "Enable a module-hook.", "target module-hook enable")));
+    LoadSubCommand(
+        "list",
+        CommandObjectSP(new CommandObjectTargetModuleHookList(interpreter)));
+  }
+
+  ~CommandObjectMultiwordTargetModuleHooks() override = default;
+};
+
 #pragma mark CommandObjectTargetDumpTypesystem
 
 /// Dumps the TypeSystem of the selected Target.
@@ -5584,6 +5909,9 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
   LoadSubCommand(
       "stop-hook",
       CommandObjectSP(new CommandObjectMultiwordTargetStopHooks(interpreter)));
+  LoadSubCommand("module-hook",
+                 CommandObjectSP(
+                     new CommandObjectMultiwordTargetModuleHooks(interpreter)));
   LoadSubCommand("modules",
                  CommandObjectSP(new CommandObjectTargetModules(interpreter)));
   LoadSubCommand("symbols",

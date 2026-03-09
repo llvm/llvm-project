@@ -1657,6 +1657,106 @@ public:
 
   typedef std::shared_ptr<StopHook> StopHookSP;
 
+  // Target Module Hooks
+  //
+  // Module hooks fire whenever modules are loaded or unloaded from the
+  // target (via ModulesDidLoad / ModulesDidUnload).
+  class ModuleHook : public UserID {
+  public:
+    ModuleHook(const ModuleHook &rhs);
+    virtual ~ModuleHook() = default;
+
+    enum class ModuleHookKind : uint32_t { CommandBased = 0, ScriptBased };
+
+    lldb::TargetSP &GetTarget() { return m_target_sp; }
+
+    bool IsActive() { return m_active; }
+    void SetIsActive(bool is_active) { m_active = is_active; }
+
+    bool GetFireOnUnload() const { return m_fire_on_unload; }
+    void SetFireOnUnload(bool fire) { m_fire_on_unload = fire; }
+
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
+    virtual void GetSubclassDescription(Stream &s,
+                                        lldb::DescriptionLevel level) const = 0;
+
+    virtual void HandleModuleLoaded(lldb::StreamSP output) = 0;
+    virtual void HandleModuleUnloaded(lldb::StreamSP output) = 0;
+
+  protected:
+    lldb::TargetSP m_target_sp;
+    bool m_active = true;
+    bool m_fire_on_unload = false;
+
+    ModuleHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
+  };
+
+  class ModuleHookCommandLine : public ModuleHook {
+  public:
+    ~ModuleHookCommandLine() override = default;
+
+    StringList &GetCommands() { return m_commands; }
+    void SetActionFromString(const std::string &string);
+    void SetActionFromStrings(const std::vector<std::string> &strings);
+
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+    void GetSubclassDescription(Stream &s,
+                                lldb::DescriptionLevel level) const override;
+
+  private:
+    StringList m_commands;
+
+    ModuleHookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : ModuleHook(target_sp, uid) {}
+    friend class Target;
+  };
+
+  class ModuleHookScripted : public ModuleHook {
+  public:
+    ~ModuleHookScripted() override = default;
+
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
+
+    Status SetScriptCallback(std::string class_name,
+                             StructuredData::ObjectSP extra_args_sp);
+
+    void GetSubclassDescription(Stream &s,
+                                lldb::DescriptionLevel level) const override;
+
+  private:
+    std::string m_class_name;
+    StructuredDataImpl m_extra_args;
+    lldb::ScriptedModuleHookInterfaceSP m_interface_sp;
+
+    ModuleHookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : ModuleHook(target_sp, uid) {}
+    friend class Target;
+  };
+
+  typedef std::shared_ptr<ModuleHook> ModuleHookSP;
+
+  ModuleHookSP CreateModuleHook(ModuleHook::ModuleHookKind kind);
+
+  void UndoCreateModuleHook(lldb::user_id_t uid);
+
+  bool RemoveModuleHookByID(lldb::user_id_t uid);
+
+  void RemoveAllModuleHooks();
+
+  ModuleHookSP GetModuleHookByID(lldb::user_id_t uid);
+
+  bool SetModuleHookActiveStateByID(lldb::user_id_t uid, bool active_state);
+
+  void SetAllModuleHooksActiveState(bool active_state);
+
+  size_t GetNumModuleHooks() const { return m_module_hooks.size(); }
+
+  ModuleHookSP GetModuleHookAtIndex(size_t index);
+
+  void RunModuleHooks(bool is_load);
+
   /// Add an empty stop hook to the Target's stop hook list, and returns a
   /// shared pointer to the new hook.
   StopHookSP CreateStopHook(StopHook::StopHookKind kind, bool internal = false);
@@ -1844,6 +1944,10 @@ protected:
   bool m_valid;
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
+
+  typedef std::map<lldb::user_id_t, ModuleHookSP> ModuleHookCollection;
+  ModuleHookCollection m_module_hooks;
+  lldb::user_id_t m_module_hook_next_id = 0;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
       LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; ///< The globally unique ID

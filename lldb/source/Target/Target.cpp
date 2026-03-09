@@ -38,6 +38,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedModuleHookInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
@@ -1859,6 +1860,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
+    RunModuleHooks(/*is_load=*/true);
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
     BroadcastEvent(eBroadcastBitModulesLoaded, data_sp);
@@ -1918,6 +1920,8 @@ void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
 
     if (should_flush_type_systems)
       m_scratch_type_system_map.Clear();
+
+    RunModuleHooks(/*is_load=*/false);
   }
 }
 
@@ -4246,6 +4250,271 @@ void Target::StopHookScripted::GetSubclassDescription(
   };
 
   as_dict->ForEach(print_one_element);
+}
+
+// ModuleHook
+
+Target::ModuleHook::ModuleHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
+    : UserID(uid), m_target_sp(std::move(target_sp)) {}
+
+Target::ModuleHook::ModuleHook(const ModuleHook &rhs)
+    : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp), m_active(rhs.m_active),
+      m_fire_on_unload(rhs.m_fire_on_unload) {}
+
+void Target::ModuleHook::GetDescription(Stream &s,
+                                        lldb::DescriptionLevel level) const {
+  s.Printf("Hook: %" PRIu64 "\n", GetID());
+  if (level == eDescriptionLevelBrief)
+    return;
+  s.IndentMore();
+  s.Indent();
+  s.Printf("State: %s\n", m_active ? "enabled" : "disabled");
+  if (m_fire_on_unload) {
+    s.Indent();
+    s.PutCString("Fires on: load, unload\n");
+  }
+  GetSubclassDescription(s, level);
+  s.IndentLess();
+}
+
+// ModuleHookCommandLine
+
+void Target::ModuleHookCommandLine::SetActionFromString(
+    const std::string &string) {
+  GetCommands().SplitIntoLines(string);
+}
+
+void Target::ModuleHookCommandLine::SetActionFromStrings(
+    const std::vector<std::string> &strings) {
+  for (const auto &string : strings)
+    GetCommands().AppendString(string.c_str());
+}
+
+void Target::ModuleHookCommandLine::GetSubclassDescription(
+    Stream &s, lldb::DescriptionLevel level) const {
+  if (level == eDescriptionLevelBrief) {
+    if (m_commands.GetSize() == 1)
+      s.PutCString(m_commands.GetStringAtIndex(0));
+    else
+      s.Printf("%" PRIu64 " commands", (uint64_t)m_commands.GetSize());
+    return;
+  }
+
+  s.Indent("Commands: \n");
+  s.IndentMore();
+  for (uint32_t i = 0; i < m_commands.GetSize(); i++) {
+    s.Indent(m_commands.GetStringAtIndex(i));
+    s.PutCString("\n");
+  }
+  s.IndentLess();
+}
+
+void Target::ModuleHookCommandLine::HandleModuleLoaded(StreamSP output_sp) {
+  if (!m_commands.GetSize())
+    return;
+
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
+  CommandReturnObject result(false);
+  result.SetImmediateOutputStream(output_sp);
+  result.SetInteractive(false);
+  Debugger &debugger = target_sp->GetDebugger();
+
+  ExecutionContext exe_ctx;
+  if (target_sp->GetProcessSP())
+    exe_ctx.SetContext(target_sp->GetProcessSP());
+  else
+    exe_ctx.SetContext(target_sp, false);
+
+  CommandInterpreterRunOptions options;
+  options.SetStopOnContinue(true);
+  options.SetStopOnError(true);
+  options.SetEchoCommands(false);
+  options.SetPrintResults(true);
+  options.SetPrintErrors(true);
+  options.SetAddToHistory(false);
+
+  bool old_async = debugger.GetAsyncExecution();
+  debugger.SetAsyncExecution(true);
+  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), exe_ctx,
+                                                  options, result);
+  debugger.SetAsyncExecution(old_async);
+}
+
+void Target::ModuleHookCommandLine::HandleModuleUnloaded(StreamSP output_sp) {
+  // Command-based hooks run the same commands on unload as on load.
+  HandleModuleLoaded(output_sp);
+}
+
+// ModuleHookScripted
+
+Status Target::ModuleHookScripted::SetScriptCallback(
+    std::string class_name, StructuredData::ObjectSP extra_args_sp) {
+  ScriptInterpreter *script_interp =
+      GetTarget()->GetDebugger().GetScriptInterpreter();
+  if (!script_interp)
+    return Status::FromErrorString("No script interpreter installed.");
+
+  m_interface_sp = script_interp->CreateScriptedModuleHookInterface();
+  if (!m_interface_sp)
+    return Status::FromErrorStringWithFormat(
+        "ScriptedModuleHook::%s () - ERROR: %s", __FUNCTION__,
+        "Script interpreter couldn't create Scripted Module Hook Interface");
+
+  m_class_name = std::move(class_name);
+  m_extra_args.SetObjectSP(extra_args_sp);
+
+  auto obj_or_err = m_interface_sp->CreatePluginObject(
+      m_class_name, GetTarget(), m_extra_args);
+  if (!obj_or_err)
+    return Status::FromError(obj_or_err.takeError());
+
+  StructuredData::ObjectSP object_sp = *obj_or_err;
+  if (!object_sp || !object_sp->IsValid())
+    return Status::FromErrorStringWithFormat(
+        "ScriptedModuleHook::%s () - ERROR: %s", __FUNCTION__,
+        "Failed to create valid script object");
+
+  return {};
+}
+
+void Target::ModuleHookScripted::HandleModuleLoaded(StreamSP output_sp) {
+  if (!m_interface_sp)
+    return;
+
+  StreamSP stream = std::make_shared<StreamString>();
+  m_interface_sp->HandleModuleLoaded(stream);
+  output_sp->PutCString(
+      reinterpret_cast<StreamString *>(stream.get())->GetData());
+}
+
+void Target::ModuleHookScripted::HandleModuleUnloaded(StreamSP output_sp) {
+  if (!m_interface_sp)
+    return;
+
+  StreamSP stream = std::make_shared<StreamString>();
+  m_interface_sp->HandleModuleUnloaded(stream);
+  output_sp->PutCString(
+      reinterpret_cast<StreamString *>(stream.get())->GetData());
+}
+
+void Target::ModuleHookScripted::GetSubclassDescription(
+    Stream &s, lldb::DescriptionLevel level) const {
+  if (level == eDescriptionLevelBrief) {
+    s.PutCString(m_class_name);
+    return;
+  }
+  s.Indent("Class:");
+  s.Printf("%s\n", m_class_name.c_str());
+
+  if (!m_extra_args.IsValid())
+    return;
+  StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
+  if (!object_sp || !object_sp->IsValid())
+    return;
+
+  StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
+  if (!as_dict || !as_dict->IsValid())
+    return;
+
+  uint32_t num_keys = as_dict->GetSize();
+  if (num_keys == 0)
+    return;
+
+  s.Indent("Args:\n");
+  s.IndentMore();
+
+  auto print_one_element = [&s](llvm::StringRef key,
+                                StructuredData::Object *object) {
+    s.Indent();
+    s.Format("{0} : {1}\n", key, object->GetStringValue());
+    return true;
+  };
+
+  as_dict->ForEach(print_one_element);
+  s.IndentLess();
+}
+
+// Module Hook management methods
+
+Target::ModuleHookSP Target::CreateModuleHook(ModuleHook::ModuleHookKind kind) {
+  lldb::user_id_t new_uid = ++m_module_hook_next_id;
+  ModuleHookSP hook_sp;
+  switch (kind) {
+  case ModuleHook::ModuleHookKind::CommandBased:
+    hook_sp.reset(new ModuleHookCommandLine(shared_from_this(), new_uid));
+    break;
+  case ModuleHook::ModuleHookKind::ScriptBased:
+    hook_sp.reset(new ModuleHookScripted(shared_from_this(), new_uid));
+    break;
+  }
+  m_module_hooks[new_uid] = hook_sp;
+  return hook_sp;
+}
+
+void Target::UndoCreateModuleHook(lldb::user_id_t uid) {
+  if (!RemoveModuleHookByID(uid))
+    return;
+  if (uid > 0)
+    --m_module_hook_next_id;
+}
+
+bool Target::RemoveModuleHookByID(lldb::user_id_t uid) {
+  size_t num_removed = m_module_hooks.erase(uid);
+  return (num_removed != 0);
+}
+
+void Target::RemoveAllModuleHooks() { m_module_hooks.clear(); }
+
+Target::ModuleHookSP Target::GetModuleHookByID(lldb::user_id_t uid) {
+  auto iter = m_module_hooks.find(uid);
+  if (iter == m_module_hooks.end())
+    return {};
+  return iter->second;
+}
+
+Target::ModuleHookSP Target::GetModuleHookAtIndex(size_t index) {
+  if (index >= m_module_hooks.size())
+    return {};
+  auto iter = m_module_hooks.begin();
+  std::advance(iter, index);
+  return iter->second;
+}
+
+bool Target::SetModuleHookActiveStateByID(lldb::user_id_t uid,
+                                          bool active_state) {
+  auto iter = m_module_hooks.find(uid);
+  if (iter == m_module_hooks.end())
+    return false;
+  iter->second->SetIsActive(active_state);
+  return true;
+}
+
+void Target::SetAllModuleHooksActiveState(bool active_state) {
+  for (auto &[_, hook] : m_module_hooks)
+    hook->SetIsActive(active_state);
+}
+
+void Target::RunModuleHooks(bool is_load) {
+  if (m_module_hooks.empty())
+    return;
+
+  StreamSP output_sp = m_debugger.GetAsyncOutputStream();
+
+  for (auto &[_, hook_sp] : m_module_hooks) {
+    if (!hook_sp->IsActive())
+      continue;
+    if (!is_load && !hook_sp->GetFireOnUnload())
+      continue;
+    if (is_load)
+      hook_sp->HandleModuleLoaded(output_sp);
+    else
+      hook_sp->HandleModuleUnloaded(output_sp);
+  }
+
+  output_sp->Flush();
 }
 
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
