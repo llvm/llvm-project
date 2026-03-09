@@ -18,7 +18,7 @@
 ; CHECK: OpAtomicFMinEXT %[[TyBF16]] %[[BF16Ptr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[ConstBF16]]
 ; CHECK: OpAtomicFMaxEXT %[[TyBF16]] %[[BF16Ptr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[ConstBF16]]
 
-@f = common dso_local local_unnamed_addr addrspace(1) global bfloat 0.000000e+00, align 8
+@f = private addrspace(1) global bfloat 0.000000e+00
 
 define spir_func void @test1() {
 entry:

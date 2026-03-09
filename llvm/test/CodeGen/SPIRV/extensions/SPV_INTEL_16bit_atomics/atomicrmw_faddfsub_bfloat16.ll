@@ -24,9 +24,9 @@
 ; CHECK: OpAtomicFAddEXT %[[TyBF16]] %[[BF16Ptr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[NegatedConstBF16]]
 
 
-@f = common dso_local local_unnamed_addr addrspace(1) global bfloat 0.000000e+00, align 8
+@f = private addrspace(1) global bfloat 0.000000e+00
 
-define dso_local spir_func void @test1() local_unnamed_addr {
+define spir_func void @test1() {
 entry:
   %addval = atomicrmw fadd ptr addrspace(1) @f, bfloat 42.000000e+00 seq_cst
   %subval = atomicrmw fsub ptr addrspace(1) @f, bfloat 42.000000e+00 seq_cst
