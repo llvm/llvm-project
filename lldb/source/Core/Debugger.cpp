@@ -2077,6 +2077,30 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
   m_forward_listener_sp.reset();
 }
 
+/// Conservative heuristic to detect whether OSC 9;4 progress is supported by
+/// the current terminal.
+static bool TerminalSupportsOSCProgress() {
+  static std::once_flag g_once_flag;
+  static bool g_supports_osc_progress = false;
+
+  std::call_once(g_once_flag, []() {
+    std::array<const char *, 4> g_known_env_vars = {
+        "WT_SESSION",            // Windows Terminal
+        "ConEmuPID",             // ConEmu
+        "GHOSTTY_RESOURCES_DIR", // Ghostty
+        "OSC_PROGRESS",          // Override
+    };
+    for (const char *env_var : g_known_env_vars) {
+      if (std::getenv(env_var)) {
+        g_supports_osc_progress = true;
+        return;
+      }
+    }
+  });
+
+  return g_supports_osc_progress;
+}
+
 bool Debugger::IsEscapeCodeCapableTTY() {
   if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
     File &file = stream_sp->GetUnlockedFile();
@@ -2305,7 +2329,8 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
     }
 
     // Show progress using Operating System Command (OSC) sequences.
-    if (GetShowProgress() && IsEscapeCodeCapableTTY()) {
+    if (GetShowProgress() && IsEscapeCodeCapableTTY() &&
+        TerminalSupportsOSCProgress()) {
       if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
 
         // Clear progress if this was the last progress event.

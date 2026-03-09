@@ -184,7 +184,7 @@ let Definition = "debugger", Path = "" in {
   def ShowProgress
       : Property<"show-progress", "Boolean">,
         Global,
-        DefaultFalse,
+        DefaultTrue,
         Desc<"Whether to show progress using Operating System Command (OSC) "
              "Sequences in supporting terminal emulators.">;
   def ShowProgressAnsiPrefix: Property<"show-progress-ansi-prefix", "String">,
