@@ -360,7 +360,8 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
-  OwningPtr<Descriptor> cmdMsg{CharDescriptor("cmd msg buffer XXXXXXXX")};
+  // Use longer character string to check padding
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("Command cannot be executed with exit code: XXXXXXXXXXX.")};
 
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
@@ -373,7 +374,7 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 4);
   CheckDescriptorEqStr(cmdMsg.get(),
-      GetPaddedStr("Command cannot be execu", cmdMsg->ElementBytes()));
+      GetPaddedStr("Command cannot be executed with exit code: 126.", cmdMsg->ElementBytes()));
   // removing the file only on Linux (file is not created on Win)
   OwningPtr<Descriptor> commandClean{
       CharDescriptor("rm -f NotExecutedCommandFile")};
