@@ -52,6 +52,26 @@ HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
                              0/*PC*/, HwMode) {}
 
+bool HexagonRegisterInfo::isGlobalReg(MCPhysReg Reg) const {
+  switch (Reg) {
+  case Hexagon::R29:
+  case Hexagon::R30:
+  case Hexagon::R31:
+    return true;
+  }
+  return false;
+}
+
+bool HexagonRegisterInfo::isFakeReg(MCPhysReg Reg) const {
+  // VF0-VF31 are fake registers used as sub-registers in HVX vector pairs
+  if (Reg >= Hexagon::VF0 && Reg <= Hexagon::VF31)
+    return true;
+  // VFR0-VFR31 are fake registers used for reversed vector pairs
+  if (Reg >= Hexagon::VFR0 && Reg <= Hexagon::VFR31)
+    return true;
+  return false;
+}
+
 bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(Register R) const {
   return R == Hexagon::R0 || R == Hexagon::R1 || R == Hexagon::R2 ||
          R == Hexagon::R3 || R == Hexagon::D0 || R == Hexagon::D1;

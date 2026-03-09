@@ -322,8 +322,8 @@ namespace llvm {
     /// Construct a MutableArrayRef from a range.
     MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
 
-    /// Construct a MutableArrayRef from a type that has a data() method that
-    /// returns a pointer convertible to T *.
+    /// Construct a MutableArrayRef from a type that has data() and size(),
+    /// where data() returns a pointer convertible to T *const *.
     template <typename C,
               typename = std::enable_if_t<
                   std::conjunction_v<
@@ -331,7 +331,7 @@ namespace llvm {
                           decltype(std::declval<C &>().data()) *, T *const *>,
                       std::is_integral<decltype(std::declval<C &>().size())>>,
                   void>>
-    /*implicit*/ constexpr MutableArrayRef(C &V) : ArrayRef<T>(V) {}
+    /*implicit*/ constexpr MutableArrayRef(C &&V) : ArrayRef<T>(V) {}
 
     /// Construct a MutableArrayRef from a C array.
     template <size_t N>

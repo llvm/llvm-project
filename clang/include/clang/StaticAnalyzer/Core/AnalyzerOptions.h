@@ -292,9 +292,9 @@ public:
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
   bool isUnknownAnalyzerConfig(llvm::StringRef Name) {
-    static std::vector<llvm::StringLiteral> AnalyzerConfigCmdFlags = []() {
+    static const auto AnalyzerConfigCmdFlags = []() {
       // Create an array of all -analyzer-config command line options.
-      std::vector<llvm::StringLiteral> AnalyzerConfigCmdFlags = {
+      std::array AnalyzerConfigCmdFlags{
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
   ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)

@@ -258,8 +258,9 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@used_before_default_def.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@used_before_default_def.resolver
+// CHECK-SAME: () #[[ATTR5:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -273,8 +274,9 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @used_before_default_def.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@used_after_default_def.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@used_after_default_def.resolver
+// CHECK-SAME: () #[[ATTR5]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -288,8 +290,9 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @used_after_default_def.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@not_used_with_default.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@not_used_with_default.resolver
+// CHECK-SAME: () #[[ATTR5]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -303,8 +306,9 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @not_used_with_default.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@indirect_use.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@indirect_use.resolver
+// CHECK-SAME: () #[[ATTR5]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -332,8 +336,9 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@internal_func.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER]] {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@internal_func.resolver
+// CHECK-SAME: () #[[ATTR5]] {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -361,8 +366,9 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@linkonce_func.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@linkonce_func.resolver
+// CHECK-SAME: () #[[ATTR5]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -376,8 +382,9 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @linkonce_func.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@clones_with_default.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@clones_with_default.resolver
+// CHECK-SAME: () #[[ATTR5]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -390,8 +397,6 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @clones_with_default.default
 //
-// CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

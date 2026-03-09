@@ -894,6 +894,8 @@ __m128d test_mm_max_sd(__m128d A, __m128d B) {
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.max.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_max_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_max_sd((__m128d){+1.0, +2.0}, (__m128d){+4.0, +1.0}), +4.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_max_sd((__m128d){+0.0, -0.0}, (__m128d){-0.0, +0.0}), -0.0, -0.0));
 
 void test_mm_mfence(void) {
   // CHECK-LABEL: test_mm_mfence
@@ -931,6 +933,8 @@ __m128d test_mm_min_sd(__m128d A, __m128d B) {
   // CHECK: call {{.*}}<2 x double> @llvm.x86.sse2.min.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}})
   return _mm_min_sd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(_mm_min_sd((__m128d){+1.0, +2.0}, (__m128d){+4.0, +1.0}), +1.0, +2.0));
+TEST_CONSTEXPR(match_m128d(_mm_min_sd((__m128d){+0.0, -0.0}, (__m128d){-0.0, +0.0}), -0.0, -0.0));
 
 __m64 test_mm_movepi64_pi64(__m128i A) {
   // CHECK-LABEL: test_mm_movepi64_pi64

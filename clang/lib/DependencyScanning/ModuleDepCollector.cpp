@@ -481,7 +481,7 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules, bool IgnoreCWD,
+                                        bool EagerLoadModules,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
@@ -491,7 +491,7 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
   llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
-  if (CWD && !IgnoreCWD)
+  if (CWD && !MD.IgnoreCWD)
     HashBuilder.add(*CWD);
 
   // Hash the BuildInvocation without any input files.
@@ -523,10 +523,10 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 }
 
 void ModuleDepCollector::associateWithContextHash(
-    const CowCompilerInvocation &CI, bool IgnoreCWD, ModuleDeps &Deps) {
+    const CowCompilerInvocation &CI, ModuleDeps &Deps) {
   Deps.ID.ContextHash =
       getModuleContextHash(Deps, CI, Service.getOpts().EagerLoadModules,
-                           IgnoreCWD, ScanInstance.getVirtualFileSystem());
+                           ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
@@ -664,6 +664,16 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     MDC.Consumer.handlePrebuiltModuleDependency(I.second);
 }
 
+static StringRef makeAbsoluteAndCanonicalize(CompilerInstance &CI,
+                                             StringRef Path,
+                                             SmallVectorImpl<char> &Storage) {
+  // FIXME: Consider skipping if path is already absolute & canonicalized.
+
+  Storage.assign(Path.begin(), Path.end());
+  CI.getFileManager().makeAbsolutePath(Storage, /*Canonicalize=*/true);
+  return StringRef(Storage.data(), Storage.size());
+}
+
 std::optional<ModuleID>
 ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
@@ -707,7 +717,10 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
           *M->getASTFile());
-  MD.FileDepsBaseDir = MF->BaseDirectory;
+
+  llvm::SmallString<256> Storage;
+  MD.FileDepsBaseDir =
+      makeAbsoluteAndCanonicalize(MDC.ScanInstance, MF->BaseDirectory, Storage);
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
@@ -784,7 +797,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
     MD.IsInStableDirectories =
         areOptionsInStableDir(MDC.StableDirs, CI.getHeaderSearchOpts());
 
-  MDC.associateWithContextHash(CI, IgnoreCWD, MD);
+  MD.IgnoreCWD = IgnoreCWD;
+  MDC.associateWithContextHash(CI, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
@@ -948,27 +962,14 @@ void ModuleDepCollector::addVisibleModules() {
     InsertVisibleModules(Import);
 }
 
-static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
-                                          SmallVectorImpl<char> &Storage) {
-  if (llvm::sys::path::is_absolute(Path) &&
-      !llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
-    return Path;
-  Storage.assign(Path.begin(), Path.end());
-  CI.getFileManager().makeAbsolutePath(Storage);
-  llvm::sys::path::make_preferred(Storage);
-  return StringRef(Storage.data(), Storage.size());
-}
-
 void ModuleDepCollector::addFileDep(StringRef Path) {
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689) {
-    // Within P1689 format, we don't want all the paths to be absolute path
-    // since it may violate the traditional make style dependencies info.
+  if (!Service.getOpts().ReportAbsolutePaths) {
     FileDeps.emplace_back(Path);
     return;
   }
 
   llvm::SmallString<256> Storage;
-  Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
+  Path = makeAbsoluteAndCanonicalize(ScanInstance, Path, Storage);
   FileDeps.emplace_back(Path);
 }
 

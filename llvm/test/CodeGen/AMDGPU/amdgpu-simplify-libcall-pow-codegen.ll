@@ -34,8 +34,10 @@ define float @test_pow_fast_f32(float %x, float %y) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
-; CHECK-NEXT:    s_add_u32 s16, s16, _Z3powff@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3powff@rel32@hi+12
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10__pow_fastff@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10__pow_fastff@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[16:17]
   %pow = tail call fast float @_Z3powff(float %x, float %y)
   ret float %pow

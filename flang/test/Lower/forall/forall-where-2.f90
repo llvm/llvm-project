@@ -1,7 +1,6 @@
 ! Test forall lowering
 
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
-
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Test a FORALL construct with a nested WHERE construct where the mask
 ! contains temporary array expressions.
@@ -26,51 +25,38 @@ subroutine test_nested_forall_where_with_temp_in_mask(a,b)
   end forall
 end subroutine
 
-! CHECK:  func @_QPtest_nested_forall_where_with_temp_in_mask({{.*}}) {
+! CHECK-LABEL:  func.func @_QPtest_nested_forall_where_with_temp_in_mask({{.*}}) {
 ! CHECK:   %[[tempResultBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = ".result"}
-           ! Where condition pre-evaluation
-! CHECK:   fir.do_loop {{.*}} {
-! CHECK:      fir.do_loop {{.*}} {
-                ! Evaluation of mask for iteration (i,j) into ragged array temp
-! CHECK:        %[[tempResult:.*]] = fir.call @_QPtemp_foo
-! CHECK:        fir.save_result %[[tempResult]] to %[[tempResultBox]] : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-! CHECK:        fir.if {{.*}} {
-! CHECK:          @_FortranARaggedArrayAllocate
-! CHECK:        }
-! CHECK:        fir.do_loop {{.*}} {
-                  ! store into ragged array temp element
-! CHECK:        }
-! CHECK:        %[[box:.*]] = fir.load %[[tempResultBox]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-! CHECK:        %[[tempAddr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-                ! local temps that were generated during the evaluation are cleaned-up after the value were stored
-                ! into the ragged array temp.
-! CHECK:        fir.freemem %[[tempAddr]] : !fir.heap<!fir.array<?xf32>>
-! CHECK:      }
-! CHECK:    }
-            ! Where assignment
-! CHECK:    fir.do_loop {{.*}} {
-! CHECK:      fir.do_loop {{.*}} {
-                ! Array assignment at iteration (i, j)
-! CHECK:        fir.do_loop {{.*}} {
-! CHECK:          fir.if {{.*}} {
-! CHECK:            arith.divf
-! CHECK:          } else {
-! CHECK:          }
-! CHECK:        }
-! CHECK:      }
-! CHECK:    }
-            ! Elsewhere assignment
-! CHECK:    fir.do_loop {{.*}} {
-! CHECK:      fir.do_loop {{.*}} {
-                ! Array assignment at iteration (i, j)
-! CHECK:        fir.do_loop {{.*}} {
-! CHECK:          fir.if {{.*}} {
-! CHECK:          } else {
-! CHECK:            arith.negf
-! CHECK:          }
-! CHECK:        }
-! CHECK:      }
-! CHECK:    }
-            ! Ragged array clean-up
-! CHECK:    fir.call @_FortranARaggedArrayDeallocate
-! CHECK:  }
+! CHECK:   hlfir.forall
+! CHECK:   (%[[arg2:.*]]: i32) {
+! CHECK:     %[[i:.*]] = hlfir.forall_index "i" %[[arg2]] : (i32) -> !fir.ref<i32>
+! CHECK:     hlfir.forall
+! CHECK:     (%[[arg3:.*]]: i32) {
+! CHECK:       %[[j:.*]] = hlfir.forall_index "j" %[[arg3]] : (i32) -> !fir.ref<i32>
+! CHECK:       hlfir.where {
+! CHECK:         %[[tempResult:.*]] = fir.call @_QPtemp_foo(%[[i]], %[[j]])
+! CHECK:         fir.save_result %[[tempResult]] to {{.*}}
+! CHECK:         %[[mask:.*]] = hlfir.elemental {{.*}} {
+! CHECK:           arith.cmpf ogt, {{.*}}
+! CHECK:         }
+! CHECK:         hlfir.yield %[[mask]]
+! CHECK:       } do {
+! CHECK:         hlfir.region_assign {
+! CHECK:           %[[res:.*]] = hlfir.elemental {{.*}} {
+! CHECK:             arith.divf {{.*}}
+! CHECK:           }
+! CHECK:           hlfir.yield %[[res]]
+! CHECK:         } to {
+! CHECK:         }
+! CHECK:       hlfir.elsewhere do {
+! CHECK:         hlfir.region_assign {
+! CHECK:           %[[res:.*]] = hlfir.elemental {{.*}} {
+! CHECK:             arith.negf {{.*}}
+! CHECK:           }
+! CHECK:           hlfir.yield %[[res]]
+! CHECK:         } to {
+! CHECK:         }
+! CHECK:       }
+! CHECK:     }
+! CHECK:   }
+! CHECK: }

@@ -310,6 +310,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           // Already diagnosed.
           break;
         }
+        // libpthreads is required for -fopenmp.
+        CmdArgs.push_back("-lpthreads");
       }
 
       // Support POSIX threads if "-pthreads" or "-pthread" is present.
@@ -350,6 +352,10 @@ AIX::AIX(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   ParseInlineAsmUsingAsmParser = Args.hasFlag(
       options::OPT_fintegrated_as, options::OPT_fno_integrated_as, true);
   getLibraryPaths().push_back(getDriver().SysRoot + "/usr/lib");
+
+  // FilePaths gets System Paths for -print-search-dirs
+  getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
+  getFilePaths().push_back(getDriver().SysRoot + "/lib");
 }
 
 // Returns the effective header sysroot path to use.
@@ -445,6 +451,19 @@ void AIX::AddClangCXXStdlibIncludeArgs(
   }
 
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+}
+
+void AIX::AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs) const {
+  // AIX linker searches /usr/lib and /lib by default. Don't add them as -L
+  // flags to avoid duplicates. But keep them in FilePaths for
+  // -print-search-dirs
+  for (const auto &LibPath : getFilePaths()) {
+    if (LibPath.length() > 0 && LibPath != getDriver().SysRoot + "/usr/lib" &&
+        LibPath != getDriver().SysRoot + "/lib") {
+      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+    }
+  }
 }
 
 void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,

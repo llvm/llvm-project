@@ -651,6 +651,27 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp: {
+    static const CostTblEntry BitreverseTbl[] = {
+        {Intrinsic::scmp, MVT::i32, 3},   // cmp+cset+csinv
+        {Intrinsic::scmp, MVT::i64, 3},   // cmp+cset+csinv
+        {Intrinsic::scmp, MVT::v8i8, 3},  // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v16i8, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v4i16, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v8i16, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v2i32, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v4i32, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v1i64, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v2i64, 3}, // cmgt+cmgt+sub
+    };
+    const auto LT = getTypeLegalizationCost(RetTy);
+    const auto *Entry =
+        CostTableLookup(BitreverseTbl, Intrinsic::scmp, LT.second);
+    if (Entry)
+      return Entry->Cost * LT.first;
+    break;
+  }
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
@@ -675,9 +696,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::abs: {
-    static const auto ValidAbsTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
-                                     MVT::v8i16, MVT::v2i32, MVT::v4i32,
-                                     MVT::v2i64};
+    static const auto ValidAbsTys = {MVT::v8i8,    MVT::v16i8,   MVT::v4i16,
+                                     MVT::v8i16,   MVT::v2i32,   MVT::v4i32,
+                                     MVT::v2i64,   MVT::nxv16i8, MVT::nxv8i16,
+                                     MVT::nxv4i32, MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
     if (any_of(ValidAbsTys, equal_to(LT.second)))
       return LT.first;
@@ -1086,6 +1108,32 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LegalCost;
     }
     break;
+  case Intrinsic::pow: {
+    EVT VT = getTLI()->getValueType(DL, RetTy);
+    RTLIB::Libcall LC = RTLIB::getPOW(VT);
+    if (getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported)
+      return getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
+    break;
+  }
+  case Intrinsic::sqrt:
+  case Intrinsic::fabs:
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::rint:
+  case Intrinsic::roundeven:
+  case Intrinsic::trunc:
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum: {
+    if (isa<ScalableVectorType>(RetTy) && ST->isSVEorStreamingSVEAvailable()) {
+      auto LT = getTypeLegalizationCost(RetTy);
+      return LT.first;
+    }
+    break;
+  }
   default:
     break;
   }

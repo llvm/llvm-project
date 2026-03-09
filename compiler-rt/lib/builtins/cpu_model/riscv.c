@@ -337,6 +337,8 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
   for (i = 0; i < RISCV_FEATURE_BITS_LENGTH; i++)
     __riscv_feature_bits.features[i] = features[i];
+
+  __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
 }
 
 #endif // defined(__linux__)
@@ -363,8 +365,6 @@ void __init_riscv_feature_bits(void *PlatformArgs) {
 
   if (FeaturesBitCached)
     return;
-
-  __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
 
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {
