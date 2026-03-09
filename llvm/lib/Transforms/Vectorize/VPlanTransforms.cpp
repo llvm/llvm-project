@@ -5680,6 +5680,10 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                      PhiR->getRecurrenceKind()))
       continue;
 
+    Type *PhiTy = VPTypeAnalysis(Plan).inferScalarType(PhiR);
+    if (PhiTy->isPointerTy() || PhiTy->isFloatingPointTy())
+      continue;
+
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
