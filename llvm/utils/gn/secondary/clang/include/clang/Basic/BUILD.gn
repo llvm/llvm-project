@@ -68,11 +68,11 @@ foreach(diag_group, diag_groups) {
   }
 }
 group("diags_tablegen") {
-  # DiagnosticGroups, DiagnosticIndexName, DiagnosticAllCompatIDs are
-  # intentionally not part of this group.  Much of clang depends on the
-  # DiagKinds.inc files transitively, but almost nothing needs
-  # DiagnosticGroups.inc, DiagnosticIndexName.inc, or
-  # DiagnosticAllCompatIDs.inc.
+  # DiagnosticGroups, DiagnosticIndexName, DiagnosticStableIDs,
+  # DiagnosticAllCompatIDs are intentionally not part of this group.
+  # Much of clang depends on the DiagKinds.inc files transitively, but almost
+  # nothing needs DiagnosticGroups.inc, DiagnosticIndexName.inc,
+  # DiagnosticStableIDs.inc, or DiagnosticAllCompatIDs.inc.
   public_deps = []
   foreach(diag_group, diag_groups) {
     public_deps += [
@@ -91,6 +91,11 @@ clang_tablegen("DiagnosticGroups") {
 
 clang_tablegen("DiagnosticIndexName") {
   args = [ "-gen-clang-diags-index-name" ]
+  td_file = "Diagnostic.td"
+}
+
+clang_tablegen("DiagnosticStableIDs") {
+  args = [ "-gen-clang-diags-stable-ids" ]
   td_file = "Diagnostic.td"
 }
 

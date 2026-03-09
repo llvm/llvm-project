@@ -15,6 +15,7 @@
 #define CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONFORMATIMPL_H
 
 #include "../../ModelStringConversions.h"
+#include "clang/Analysis/Scalable/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
@@ -108,6 +109,30 @@ inline constexpr const char *FailedToDeserializeLinkageTableMissingId =
     "failed to deserialize LinkageTable: missing '{0}' present in IdTable";
 
 } // namespace ErrorMessages
+
+//----------------------------------------------------------------------------
+// JSONEntitySummaryEncoding
+//
+// Concrete EntitySummaryEncoding used by JSONFormat for both TUSummaryEncoding
+// and LUSummaryEncoding. Stores the raw EntitySummary JSON value opaquely so
+// the linker can patch and emit it without knowing the analysis schema.
+//----------------------------------------------------------------------------
+
+class JSONEntitySummaryEncoding final : public EntitySummaryEncoding {
+  friend JSONFormat;
+
+public:
+  void
+  patch(const std::map<EntityId, EntityId> &EntityResolutionTable) override {
+    ErrorBuilder::fatal("will be implemented in the future");
+  }
+
+private:
+  explicit JSONEntitySummaryEncoding(llvm::json::Value Data)
+      : Data(std::move(Data)) {}
+
+  llvm::json::Value Data;
+};
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer

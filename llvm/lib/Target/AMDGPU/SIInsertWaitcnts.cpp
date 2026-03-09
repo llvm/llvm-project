@@ -1614,16 +1614,8 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
 }
 
 void WaitcntBrackets::applyWaitcnt(const AMDGPU::Waitcnt &Wait) {
-  applyWaitcnt(Wait, LOAD_CNT);
-  applyWaitcnt(Wait, EXP_CNT);
-  applyWaitcnt(Wait, DS_CNT);
-  applyWaitcnt(Wait, STORE_CNT);
-  applyWaitcnt(Wait, SAMPLE_CNT);
-  applyWaitcnt(Wait, BVH_CNT);
-  applyWaitcnt(Wait, KM_CNT);
-  applyWaitcnt(Wait, X_CNT);
-  applyWaitcnt(Wait, VA_VDST);
-  applyWaitcnt(Wait, VM_VSRC);
+  for (InstCounterType T : inst_counter_types())
+    applyWaitcnt(Wait, T);
 }
 
 void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
@@ -2021,8 +2013,6 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       continue;
     }
 
-    MachineInstr **UpdatableInstr;
-
     // Update required wait count. If this is a soft waitcnt (= it was added
     // by an earlier pass), it may be entirely removed.
 
@@ -2042,7 +2032,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         Wait = Wait.combined(OldWait);
       else
         RequiredWait = RequiredWait.combined(OldWait);
-      UpdatableInstr = &CombinedLoadDsCntInstr;
+      // Keep the first wait_loadcnt, erase the rest.
+      if (CombinedLoadDsCntInstr == nullptr) {
+        CombinedLoadDsCntInstr = &II;
+      } else {
+        II.eraseFromParent();
+        Modified = true;
+      }
     } else if (Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT) {
       unsigned OldEnc =
           TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
@@ -2051,7 +2047,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         Wait = Wait.combined(OldWait);
       else
         RequiredWait = RequiredWait.combined(OldWait);
-      UpdatableInstr = &CombinedStoreDsCntInstr;
+      // Keep the first wait_storecnt, erase the rest.
+      if (CombinedStoreDsCntInstr == nullptr) {
+        CombinedStoreDsCntInstr = &II;
+      } else {
+        II.eraseFromParent();
+        Modified = true;
+      }
     } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
       unsigned OldEnc =
           TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
@@ -2061,12 +2063,33 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
-      UpdatableInstr = &WaitcntDepctrInstr;
+      if (WaitcntDepctrInstr == nullptr) {
+        WaitcntDepctrInstr = &II;
+      } else {
+        // S_WAITCNT_DEPCTR requires special care. Don't remove a
+        // duplicate if it is waiting on things other than VA_VDST or
+        // VM_VSRC. If that is the case, just make sure the VA_VDST and
+        // VM_VSRC subfields of the operand are set to the "no wait"
+        // values.
+
+        unsigned Enc =
+            TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+        Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, ~0u);
+        Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, ~0u);
+
+        if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST)) {
+          Modified |= updateOperandIfDifferent(II, AMDGPU::OpName::simm16, Enc);
+          Modified |= promoteSoftWaitCnt(&II);
+        } else {
+          II.eraseFromParent();
+          Modified = true;
+        }
+      }
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       // Architectures higher than GFX10 do not have direct loads to
       // LDS, so no work required here yet.
       II.eraseFromParent();
-      continue;
+      Modified = true;
     } else if (Opcode == AMDGPU::WAIT_ASYNCMARK) {
       reportFatalUsageError("WAIT_ASYNCMARK is not ready for GFX12 yet");
     } else {
@@ -2078,33 +2101,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         addWait(Wait, CT.value(), OldCnt);
       else
         addWait(RequiredWait, CT.value(), OldCnt);
-      UpdatableInstr = &WaitInstrs[CT.value()];
-    }
-
-    // Merge consecutive waitcnt of the same type by erasing multiples.
-    if (!*UpdatableInstr) {
-      *UpdatableInstr = &II;
-    } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
-      // S_WAITCNT_DEPCTR requires special care. Don't remove a
-      // duplicate if it is waiting on things other than VA_VDST or
-      // VM_VSRC. If that is the case, just make sure the VA_VDST and
-      // VM_VSRC subfields of the operand are set to the "no wait"
-      // values.
-
-      unsigned Enc = TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-      Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, ~0u);
-      Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, ~0u);
-
-      if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST)) {
-        Modified |= updateOperandIfDifferent(II, AMDGPU::OpName::simm16, Enc);
-        Modified |= promoteSoftWaitCnt(&II);
+      // Keep the first wait of its kind, erase the rest.
+      if (WaitInstrs[CT.value()] == nullptr) {
+        WaitInstrs[CT.value()] = &II;
       } else {
         II.eraseFromParent();
         Modified = true;
       }
-    } else {
-      II.eraseFromParent();
-      Modified = true;
     }
   }
 
@@ -3255,17 +3258,21 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     if (Block.getFirstTerminator() == Inst)
       FlushFlags = isPreheaderToFlush(Block, ScoreBrackets);
 
-    if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
-      // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-      assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
-      ScoreBrackets.recordAsyncMark(Inst);
-      continue;
-    }
-
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
                                           FlushFlags);
     OldWaitcntInstr = nullptr;
+
+    if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
+      // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
+      //
+      // Asyncmarks record the current wait state and so should not allow
+      // waitcnts that occur after them to be merged into waitcnts that occur
+      // before.
+      assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
+      ScoreBrackets.recordAsyncMark(Inst);
+      continue;
+    }
 
     if (TII->isSMRD(Inst)) {
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
@@ -3397,15 +3404,11 @@ bool SIInsertWaitcnts::isDSRead(const MachineInstr &MI) const {
 // Check if instruction is a store to LDS that is counted via DSCNT
 // (where that counter exists).
 bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
-  if (!MI.mayStore())
-    return false;
-  if (SIInstrInfo::isDS(MI))
-    return true;
-  return false;
+  return MI.mayStore() && SIInstrInfo::isDS(MI);
 }
 
 // Return flags indicating which counters should be flushed in the preheader of
-// the given loop. We currently decide to flush in a few situations:
+// the given loop. We currently decide to flush in the following situations:
 // For VMEM (FlushVmCnt):
 // 1. The loop contains vmem store(s), no vmem load and at least one use of a
 //    vgpr containing a value that is loaded outside of the loop. (Only on
@@ -3415,26 +3418,45 @@ bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
 //    outside of the loop.
 // For DS (FlushDsCnt, GFX12+ only):
 // 3. The loop contains no DS reads, and at least one use of a vgpr containing
-//    a value that is DS loaded outside of the loop.
+//    a value that is DS read outside of the loop.
 // 4. The loop contains DS read(s), loaded values are not used in the same
 //    iteration but in the next iteration (prefetch pattern), and at least one
-//    use of a vgpr containing a value that is DS loaded outside of the loop.
+//    use of a vgpr containing a value that is DS read outside of the loop.
 //    Flushing in preheader reduces wait overhead if the wait requirement in
-//    iteration 1 would otherwise be more strict.
+//    iteration 1 would otherwise be more strict (but unfortunately preheader
+//    flush decision is taken before knowing that).
+// 5. (Single-block loops only) The loop has DS prefetch reads with flush point
+//    tracking. Some DS reads may be used in the same iteration (creating
+//    "flush points"), but others remain unflushed at the backedge. When a DS
+//    read is consumed in the same iteration, it and all prior reads are
+//    "flushed" (FIFO order). No DS writes are allowed in the loop.
+//    TODO: Find a way to extend to multi-block loops.
 PreheaderFlushFlags
 SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
                                          const WaitcntBrackets &Brackets) {
   PreheaderFlushFlags Flags;
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
-  bool UsesVgprLoadedOutsideVMEM = false;
-  bool UsesVgprLoadedOutsideDS = false;
+  bool UsesVgprVMEMLoadedOutside = false;
+  bool UsesVgprDSReadOutside = false;
   bool VMemInvalidated = false;
   // DS optimization only applies to GFX12+ where DS_CNT is separate.
-  bool DSInvalidated = !ST->hasExtendedWaitCounts();
+  // Tracking status for "no DS read in loop" or "pure DS prefetch
+  // (use only in next iteration)".
+  bool TrackSimpleDSOpt = ST->hasExtendedWaitCounts();
   DenseSet<MCRegUnit> VgprUse;
   DenseSet<MCRegUnit> VgprDefVMEM;
   DenseSet<MCRegUnit> VgprDefDS;
+
+  // Track DS reads for prefetch pattern with flush points (single-block only).
+  // Keeps track of the last DS read (position counted from the top of the loop)
+  // to each VGPR. Read is considered consumed (and thus needs flushing) if
+  // the dest register has a use or is overwritten (by any later opertions).
+  DenseMap<MCRegUnit, unsigned> LastDSReadPositionMap;
+  unsigned DSReadPosition = 0;
+  bool IsSingleBlock = ML->getNumBlocks() == 1;
+  bool TrackDSFlushPoint = ST->hasExtendedWaitCounts() && IsSingleBlock;
+  unsigned LastDSFlushPosition = 0;
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
@@ -3445,12 +3467,30 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
       // TODO: Can we relax DSStore check? There may be cases where
       // these DS stores are drained prior to the end of MBB (or loop).
       if (mayStoreIncrementingDSCNT(MI)) {
-        // Early exit if both optimizations are invalidated.
-        // Otherwise, set invalid status and continue.
+        // Early exit if none of the optimizations are feasible.
+        // Otherwise, set tracking status appropriately and continue.
         if (VMemInvalidated)
           return Flags;
-        DSInvalidated = true;
+        TrackSimpleDSOpt = false;
+        TrackDSFlushPoint = false;
       }
+      bool IsDSRead = isDSRead(MI);
+      if (IsDSRead)
+        ++DSReadPosition;
+
+      // Helper: if RU has a pending DS read, update LastDSFlushPosition
+      auto updateDSReadFlushTracking = [&](MCRegUnit RU) {
+        if (!TrackDSFlushPoint)
+          return;
+        if (auto It = LastDSReadPositionMap.find(RU);
+            It != LastDSReadPositionMap.end()) {
+          // RU defined by DSRead is used or overwritten. Need to complete
+          // the read, if not already implied by a later DSRead (to any RU)
+          // needing to complete in FIFO order.
+          LastDSFlushPosition = std::max(LastDSFlushPosition, It->second);
+        }
+      };
+
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
@@ -3461,13 +3501,16 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
           if (VgprDefVMEM.contains(RU))
             VMemInvalidated = true;
 
-          // Check for DS loads used inside the loop
+          // Check for DS reads used inside the loop
           if (VgprDefDS.contains(RU))
-            DSInvalidated = true;
+            TrackSimpleDSOpt = false;
 
-          // Early exit if both optimizations are invalidated
-          if (VMemInvalidated && DSInvalidated)
+          // Early exit if all optimizations are invalidated
+          if (VMemInvalidated && !TrackSimpleDSOpt && !TrackDSFlushPoint)
             return Flags;
+
+          // Check for flush points (DS read used in same iteration)
+          updateDSReadFlushTracking(RU);
 
           VgprUse.insert(RU);
           // Check if this register has a pending VMEM load from outside the
@@ -3476,12 +3519,12 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
           if (Brackets.hasPendingVMEM(ID, LOAD_CNT) ||
               Brackets.hasPendingVMEM(ID, SAMPLE_CNT) ||
               Brackets.hasPendingVMEM(ID, BVH_CNT))
-            UsesVgprLoadedOutsideVMEM = true;
+            UsesVgprVMEMLoadedOutside = true;
           // Check if loaded outside the loop via DS (not VMEM/FLAT).
-          // Only consider it a DS load if there's no pending VMEM load for
+          // Only consider it a DS read if there's no pending VMEM load for
           // this register, since FLAT can set both counters.
           else if (Brackets.hasPendingVMEM(ID, DS_CNT))
-            UsesVgprLoadedOutsideDS = true;
+            UsesVgprDSReadOutside = true;
         }
       }
 
@@ -3496,22 +3539,31 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
             VgprDefVMEM.insert(RU);
           }
         }
-        // Early exit if both optimizations are invalidated
-        if (VMemInvalidated && DSInvalidated)
+        // Early exit if all optimizations are invalidated
+        if (VMemInvalidated && !TrackSimpleDSOpt && !TrackDSFlushPoint)
           return Flags;
       }
 
       // DS read vgpr def
       // Note: Unlike VMEM, we DON'T invalidate when VgprUse.contains(RegNo).
       // If USE comes before DEF, it's the prefetch pattern (use value from
-      // previous iteration, load for next iteration). We should still flush
+      // previous iteration, read for next iteration). We should still flush
       // in preheader so iteration 1 doesn't need to wait inside the loop.
       // Only invalidate when DEF comes before USE (same-iteration consumption,
       // checked above when processing uses).
-      if (isDSRead(MI)) {
+      if (IsDSRead || TrackDSFlushPoint) {
         for (const MachineOperand &Op : MI.all_defs()) {
+          if (!TRI->isVectorRegister(*MRI, Op.getReg()))
+            continue;
           for (MCRegUnit RU : TRI->regunits(Op.getReg().asMCReg())) {
-            VgprDefDS.insert(RU);
+            // Check for overwrite of pending DS read (flush point) by any
+            // instruction
+            updateDSReadFlushTracking(RU);
+            if (IsDSRead) {
+              VgprDefDS.insert(RU);
+              if (TrackDSFlushPoint)
+                LastDSReadPositionMap[RU] = DSReadPosition;
+            }
           }
         }
       }
@@ -3519,17 +3571,23 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   }
 
   // VMEM flush decision
-  if (!VMemInvalidated && UsesVgprLoadedOutsideVMEM &&
+  if (!VMemInvalidated && UsesVgprVMEMLoadedOutside &&
       ((!ST->hasVscnt() && HasVMemStore && !HasVMemLoad) ||
        (HasVMemLoad && ST->hasVmemWriteVgprInOrder())))
     Flags.FlushVmCnt = true;
 
-  // DS flush decision: flush if loop uses DS-loaded values from outside
+  // DS flush decision:
+  // Simple DS Opt: flush if loop uses DS read values from outside
   // and either has no DS reads in the loop, or DS reads whose results
   // are not used in the loop.
-  // DSInvalidated is pre-set to true on non-GFX12+ targets where DS_CNT
-  // is LGKM_CNT which also tracks FLAT/SMEM.
-  if (!DSInvalidated && UsesVgprLoadedOutsideDS)
+  bool SimpleDSOpt = TrackSimpleDSOpt && UsesVgprDSReadOutside;
+  // Prefetch with flush points: some DS reads used in same iteration,
+  // but unflushed reads remain at backedge
+  bool HasUnflushedDSReads = DSReadPosition > LastDSFlushPosition;
+  bool DSFlushPointPrefetch =
+      TrackDSFlushPoint && UsesVgprDSReadOutside && HasUnflushedDSReads;
+
+  if (SimpleDSOpt || DSFlushPointPrefetch)
     Flags.FlushDsCnt = true;
 
   return Flags;

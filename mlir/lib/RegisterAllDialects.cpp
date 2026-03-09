@@ -14,7 +14,6 @@
 #include "mlir/InitAllDialects.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMX/AMXDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -111,7 +110,6 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   registry.insert<acc::OpenACCDialect,
                   affine::AffineDialect,
                   amdgpu::AMDGPUDialect,
-                  amx::AMXDialect,
                   arith::ArithDialect,
                   arm_neon::ArmNeonDialect,
                   arm_sme::ArmSMEDialect,

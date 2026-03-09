@@ -454,8 +454,27 @@ bool isPtrConversion(const FunctionDecl *F) {
   return false;
 }
 
-bool isNoDeleteFunction(const FunctionDecl *F) {
+static bool isNoDeleteFunctionDecl(const FunctionDecl *F) {
   return typeAnnotationForReturnType(F) == WebKitAnnotation::NoDelete;
+}
+
+bool isNoDeleteFunction(const FunctionDecl *F) {
+  if (llvm::any_of(F->redecls(), isNoDeleteFunctionDecl))
+    return true;
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(F);
+  if (!MD || !MD->isVirtual())
+    return false;
+
+  auto Overriders = llvm::to_vector(MD->overridden_methods());
+  while (!Overriders.empty()) {
+    const auto *Fn = Overriders.pop_back_val();
+    llvm::append_range(Overriders, Fn->overridden_methods());
+    if (isNoDeleteFunctionDecl(Fn))
+      return true;
+  }
+
+  return false;
 }
 
 bool isTrivialBuiltinFunction(const FunctionDecl *F) {
@@ -865,10 +884,6 @@ public:
 
     // Recursively descend into the callee to confirm that it's trivial.
     return IsFunctionTrivial(CE->getConstructor());
-  }
-
-  bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-    return CanTriviallyDestruct(DE->getDestroyedType());
   }
 
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {

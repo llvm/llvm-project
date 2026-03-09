@@ -307,6 +307,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.h"
     PATTERN "*.inc"
     PATTERN "*.td"
+    PATTERN "*.pdll"
     PATTERN "LICENSE.TXT"
     )
 
