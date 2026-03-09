@@ -1633,6 +1633,13 @@ def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
 
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
+def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,
+                                                      SDTCisSameAs<0, 1>,
+                                                      SDTCisSameAs<0, 2>,
+                                                      SDTCisSameAs<0, 3>]>;
+def riscv_wsll : RVSDNode<"WSLL", SDT_RISCVWideningShiftLeft>;
+def riscv_wsla : RVSDNode<"WSLA", SDT_RISCVWideningShiftLeft>;
+
 // Narrowing shift: res = nsrl(lo, hi, shamt) is equivalent to
 // res = truncate (srl (build_pair lo, hi), shamt), XLenVT
 def SDT_RISCVNarrowingShift : SDTypeProfile<1, 3, [SDTCisVT<0, i32>,
