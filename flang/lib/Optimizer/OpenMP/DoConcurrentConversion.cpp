@@ -585,12 +585,8 @@ private:
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
     auto asRecordType = [&](mlir::Type eleType) {
-      fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(eleType);
-
-      if (auto seqType = mlir::dyn_cast<fir::SequenceType>(eleType))
-        recordType = mlir::dyn_cast<fir::RecordType>(seqType.getElementType());
-
-      return recordType;
+      return mlir::dyn_cast<fir::RecordType>(
+          fir::getDerivedType(fir::unwrapRefType(eleType)));
     };
 
     fir::RecordType recordType = asRecordType(eleType);
