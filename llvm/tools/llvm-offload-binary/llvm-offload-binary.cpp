@@ -137,127 +137,64 @@ static Error bundleImages() {
   return Error::success();
 }
 
-// Extract SPIR-V binaries from an ELF image with triple "spirv64-intel" or
-// "spirv32-intel". These ELF images contain SPIR-V binaries in sections named
-// "__openmp_offload_spirv_*".
-static Expected<SmallVector<StringRef>>
-extractSPIRVFromELF(StringRef ImageData) {
-  SmallVector<StringRef> SPIRVBinaries;
+// Recursively unwrap nested OffloadBinaries to get the actual device image.
+static Expected<StringRef> unwrapImage(StringRef ImageData) {
+  // Check if the image contains a nested OffloadBinary.
+  if (identify_magic(ImageData) == file_magic::offload_binary) {
+    // Parse nested OffloadBinary.
+    MemoryBufferRef InnerBuffer(ImageData, "nested-offload-binary");
+    auto InnerBinaries = OffloadBinary::create(InnerBuffer);
+    if (!InnerBinaries)
+      return InnerBinaries.takeError();
 
-  // Try to parse as ELF object file.
-  Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
-      ObjectFile::createObjectFile(MemoryBufferRef(ImageData, "spirv-elf"));
-  if (!ObjOrErr)
-    return ObjOrErr.takeError();
+    // For single entry, recursively unwrap.
+    if (InnerBinaries->size() == 1)
+      return unwrapImage((*InnerBinaries)[0]->getImage());
 
-  ObjectFile &Obj = *ObjOrErr->get();
-  if (!Obj.isELF())
-    return createStringError("expected ELF format for Intel SPIR-V image");
-
-  // Extract all sections with name matching "__openmp_offload_spirv_*".
-  for (const SectionRef &Sec : Obj.sections()) {
-    Expected<StringRef> NameOrErr = Sec.getName();
-    if (!NameOrErr) {
-      // Consume error and skip this section.
-      consumeError(NameOrErr.takeError());
-      continue;
-    }
-
-    if (!NameOrErr->starts_with("__openmp_offload_spirv_"))
-      continue;
-
-    Expected<StringRef> ContentsOrErr = Sec.getContents();
-    if (!ContentsOrErr)
-      return ContentsOrErr.takeError();
-
-    SPIRVBinaries.push_back(*ContentsOrErr);
+    // Multiple entries not supported for single file extraction.
+    return createStringError(inconvertibleErrorCode(),
+                             "nested OffloadBinary contains multiple entries");
   }
 
-  if (SPIRVBinaries.empty())
-    return createStringError("no SPIR-V sections found in ELF image");
-
-  return SPIRVBinaries;
+  // Base case: return the actual device image.
+  return ImageData;
 }
 
-// Extract a SPIR-V binary image (spirv64-intel or spirv32-intel).
-static Error extractSPIRVBinary(const OffloadBinary *Binary,
-                                StringRef InputFile, uint64_t Idx,
-                                StringSaver &Saver) {
+// Extract a single OffloadBinary, recursively handling nested OffloadBinaries.
+static Error extractBinary(const OffloadBinary *Binary, StringRef InputFile,
+                           uint64_t &Idx, StringSaver &Saver) {
   StringRef ImageData = Binary->getImage();
-  std::string BaseFilename =
-      sys::path::stem(InputFile).str() + "-" + Binary->getTriple().str();
-  StringRef Arch = Binary->getArch();
-  if (!Arch.empty())
-    BaseFilename += "-" + Arch.str();
-  BaseFilename += "." + std::to_string(Idx);
 
-  // Check if the image is already raw SPIR-V (not ELF-wrapped).
-  if (identify_magic(ImageData) == file_magic::spirv_object) {
-    // Image is already SPIR-V, just extract it with .spv extension.
-    StringRef Filename = Saver.save(BaseFilename + ".spv");
-    if (Error E = writeFile(Filename, ImageData))
-      return E;
-    outs() << "Extracted SPIR-V: " << Filename << "\n";
+  // Check if the image contains a nested OffloadBinary.
+  if (identify_magic(ImageData) == file_magic::offload_binary) {
+    // Parse nested OffloadBinary.
+    MemoryBufferRef InnerBuffer(ImageData, "nested-offload-binary");
+    auto InnerBinaries = OffloadBinary::create(InnerBuffer);
+    if (!InnerBinaries)
+      return InnerBinaries.takeError();
+
+    // Recursively extract each nested binary.
+    for (const auto &InnerBinary : *InnerBinaries) {
+      if (Error E = extractBinary(InnerBinary.get(), InputFile, Idx, Saver))
+        return E;
+    }
     return Error::success();
   }
 
-  // Try to parse as ELF and extract SPIR-V from sections.
-  auto SPIRVBinariesOrErr = extractSPIRVFromELF(ImageData);
-  if (!SPIRVBinariesOrErr) {
-    // Not ELF or no SPIR-V sections, extract as-is with .bin extension.
-    StringRef Filename = Saver.save(BaseFilename + ".bin");
-    if (Error E = writeFile(Filename, ImageData))
-      return E;
-    outs() << "Extracted (unknown format): " << Filename << "\n";
-    return Error::success();
-  }
-
-  // Successfully extracted SPIR-V from ELF.
-  // Extract the ELF wrapper.
-  StringRef ELFFilename = Saver.save(BaseFilename + ".elf");
-  if (Error E = writeFile(ELFFilename, ImageData))
-    return E;
-  outs() << "Extracted (ELF wrapper): " << ELFFilename << "\n";
-
-  // Extract each SPIR-V binary found in the ELF.
-  uint64_t SPIRVIdx = 0;
-  for (StringRef SPIRVBinary : *SPIRVBinariesOrErr) {
-    StringRef Filename =
-        Saver.save(BaseFilename + "_" + std::to_string(SPIRVIdx++) + ".spv");
-    if (Error E = writeFile(Filename, SPIRVBinary))
-      return E;
-    outs() << "Extracted SPIR-V: " << Filename << "\n";
-  }
-
-  return Error::success();
-}
-
-// Extract a regular (non-SPIR-V) binary image.
-static Error extractRegularBinary(const OffloadBinary *Binary,
-                                  StringRef InputFile, uint64_t Idx,
-                                  StringSaver &Saver) {
+  // Base case: extract the actual device image.
   std::string Filename =
       sys::path::stem(InputFile).str() + "-" + Binary->getTriple().str();
   StringRef Arch = Binary->getArch();
   if (!Arch.empty())
     Filename += "-" + Arch.str();
-  Filename += "." + std::to_string(Idx) + "." +
+  Filename += "." + std::to_string(Idx++) + "." +
               getImageKindName(Binary->getImageKind()).str();
 
-  if (Error E = writeFile(Saver.save(Filename), Binary->getImage()))
+  if (Error E = writeFile(Saver.save(Filename), ImageData))
     return E;
+
   outs() << "Extracted: " << Filename << "\n";
   return Error::success();
-}
-
-// Helper function to extract a single binary image, with SPIR-V support.
-// Returns Error on failure.
-static Error extractBinary(const OffloadBinary *Binary, StringRef InputFile,
-                           uint64_t Idx, StringSaver &Saver) {
-  // Check if this is a SPIR-V image that needs special handling.
-  if (Binary->getTriple().starts_with("spirv64-intel"))
-    return extractSPIRVBinary(Binary, InputFile, Idx, Saver);
-  return extractRegularBinary(Binary, InputFile, Idx, Saver);
 }
 
 static Error unbundleImages() {
@@ -277,13 +214,13 @@ static Error unbundleImages() {
   if (Error Err = extractOffloadBinaries(*Buffer, Binaries))
     return Err;
 
-  // If no filters specified, extract all images
+  // If no filters specified, extract all images.
   if (DeviceImages.empty()) {
     BumpPtrAllocator Alloc;
     StringSaver Saver(Alloc);
     uint64_t Idx = 0;
     for (const OffloadFile &File : Binaries) {
-      if (Error E = extractBinary(File.getBinary(), InputFile, Idx++, Saver))
+      if (Error E = extractBinary(File.getBinary(), InputFile, Idx, Saver))
         return E;
     }
     return Error::success();
@@ -334,12 +271,17 @@ static Error unbundleImages() {
         WithColor::warning(errs(), PackagerExecutable)
             << "Multiple inputs match to a single file, '" << It->second
             << "'\n";
-      if (Error E = writeFile(It->second, Extracted.back()->getImage()))
+      const OffloadBinary *Binary = Extracted.back();
+      // Recursively unwrap any nested OffloadBinaries.
+      auto ImageOrErr = unwrapImage(Binary->getImage());
+      if (!ImageOrErr)
+        return ImageOrErr.takeError();
+      if (Error E = writeFile(It->second, *ImageOrErr))
         return E;
     } else {
       uint64_t Idx = 0;
       for (const OffloadBinary *Binary : Extracted) {
-        if (Error E = extractBinary(Binary, InputFile, Idx++, Saver))
+        if (Error E = extractBinary(Binary, InputFile, Idx, Saver))
           return E;
       }
     }

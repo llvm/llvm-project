@@ -21,6 +21,11 @@ When extracting images, if no :option:`--image` filters are specified, all
 offload images are automatically extracted with descriptive filenames. When
 :option:`--image` filters are provided, only matching images are extracted.
 
+The tool supports nested OffloadBinary format, where device images can be wrapped
+in an inner OffloadBinary container. When extracting, the tool automatically
+detects and unwraps nested OffloadBinary images, making the format transparent
+to users.
+
 The binary format begins with the magic bytes ``0x10FF10AD``, followed by a
 version and size. Each binary contains its own header, allowing tools to locate
 offloading sections even when merged by a linker. Each offload entry includes
@@ -40,14 +45,12 @@ EXAMPLE
   $ llvm-offload-binary in.bin
   # Output:
   # Extracted: in-nvptx64-nvidia-cuda-sm_70.0.bc
-  # Extracted (ELF wrapper): in-spirv64-intel.0.elf
-  # Extracted SPIR-V: in-spirv64-intel.0_0.spv
+  # Extracted: in-spirv64-intel-unknown.0.spv
 
   # Extract only SPIR-V images using filters:
   $ llvm-offload-binary in.bin --image=triple=spirv64-intel
   # Output:
-  # Extracted (ELF wrapper): in-spirv64-intel.0.elf
-  # Extracted SPIR-V: in-spirv64-intel.0_0.spv
+  # Extracted: in-spirv64-intel-unknown.0.spv
 
   # Extract filtered images to a specific file:
   $ llvm-offload-binary in.bin --image=file=output.bc,arch=sm_70
@@ -214,8 +217,7 @@ Extract all embedded offload images to see what's inside:
   $ llvm-offload-binary myapp
   # Output:
   # Extracted: myapp-nvptx64-nvidia-cuda-sm_70.0.bc
-  # Extracted (ELF wrapper): myapp-spirv64-intel.1.elf
-  # Extracted SPIR-V: myapp-spirv64-intel.1_0.spv
+  # Extracted: myapp-spirv64-intel-unknown.1.spv
 
 **Workflow 2: Extract Specific Target**
 
@@ -225,8 +227,7 @@ Extract only images for a specific target:
 
   $ llvm-offload-binary myapp --image=triple=spirv64-intel
   # Output:
-  # Extracted (ELF wrapper): myapp-spirv64-intel.0.elf
-  # Extracted SPIR-V: myapp-spirv64-intel.0_0.spv
+  # Extracted: myapp-spirv64-intel-unknown.0.spv
 
 **Workflow 3: Create Device Image Archive**
 
@@ -245,8 +246,8 @@ Extract and validate SPIR-V binaries:
 .. code-block:: console
 
   $ llvm-offload-binary myapp --image=triple=spirv64-intel
-  $ spirv-val myapp-spirv64-intel.0_0.spv
-  $ spirv-dis myapp-spirv64-intel.0_0.spv -o kernel.spvasm
+  $ spirv-val myapp-spirv64-intel-unknown.0.spv
+  $ spirv-dis myapp-spirv64-intel-unknown.0.spv -o kernel.spvasm
 
 **Workflow 5: Bundle Multiple Targets**
 
