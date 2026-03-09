@@ -214,7 +214,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   }
 
   for (auto [idx, iv] : llvm::enumerate(loopOp.getBody().getArguments())) {
-    // For nested loops, insert inside the previous loop's body.
+    // For nested loops, insert inside the previous loop's body
     if (idx > 0)
       rewriter.setInsertionPointToStart(forOps.back().getBody());
 
@@ -225,20 +225,20 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   }
 
   // Set insertion point inside the innermost loop for IV casts and body
-  // cloning.
+  // cloning
   rewriter.setInsertionPointToStart(forOps.back().getBody());
 
-  // Handle IV type conversion (index -> original type).
+  // Handle IV type conversion (index -> original type)
   SmallVector<Value> scfIVs;
   for (scf::ForOp forOp : forOps)
     scfIVs.push_back(forOp.getInductionVar());
   mapACCLoopIVsToSCFIVs(loopOp, scfIVs, rewriter, mapping);
 
-  // Clone the loop body into the innermost scf.for.
+  // Clone the loop body into the innermost scf.for
   cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
                             rewriter.getInsertionPoint(), mapping, rewriter);
 
-  // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb.
+  // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb
   for (size_t idx = 0; idx < forOps.size(); ++idx) {
     Value iv = forOps[idx].getInductionVar();
     if (!iv.use_empty()) {
@@ -248,7 +248,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     }
   }
 
-  // Optionally collapse nested loops.
+  // Optionally collapse nested loops
   if (enableCollapse && forOps.size() > 1)
     if (failed(coalesceLoops(rewriter, forOps)))
       loopOp.emitError("failed to collapse acc.loop");
