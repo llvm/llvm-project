@@ -1035,7 +1035,7 @@ def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
-  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA">,
+  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA || (LangOpts->OpenCL && LangOpts->OpenCLVersion <= 120)">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
@@ -6483,6 +6483,10 @@ def std_EQ : Joined<["-", "--"], "std=">,
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
+def cstdlib_EQ : Joined<["--"], "cstdlib=">,
+  Visibility<[ClangOption]>,
+  HelpText<"C standard library to use">,
+  Values<"newlib,picolibc,llvm-libc,system">;
 def stdlibxx_isystem : JoinedOrSeparate<["-"], "stdlib++-isystem">,
   Group<clang_i_Group>,
   HelpText<"Use directory as the C++ standard library include path">,
@@ -6735,6 +6739,7 @@ def _version : Flag<["--"], "version">,
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;
 def _stdlib : Separate<["--"], "stdlib">, Alias<stdlib_EQ>;
+def _cstdlib : Separate<["--"], "cstdlib">, Alias<cstdlib_EQ>;
 def _target_help : Flag<["--"], "target-help">;
 def _trace_includes : Flag<["--"], "trace-includes">, Alias<H>;
 def _undefine_macro_EQ : Joined<["--"], "undefine-macro=">, Alias<U>;
@@ -7645,6 +7650,17 @@ def J : JoinedOrSeparate<["-"], "J">,
 //===----------------------------------------------------------------------===//
 
 let Visibility = [FC1Option] in {
+
+def ffp_maxmin_behavior_EQ
+    : Joined<["-"], "ffp-maxmin-behavior=">,
+      Flags<[HelpHidden]>,
+      Group<f_Group>,
+      Values<"legacy,portable,extremum,extremenum">,
+      HelpText<"Control max/min and [max|min][loc|val] behavior: "
+               "legacy (cmp+select), portable (same as legacy, "
+               " but may use max/minNum when -fno-signed-zeros "
+               "-fno-honor-nans), extremum (IEEE-754-2019 maximum/minimum), "
+               "extremenum (IEEE-754-2008 max/minNum)">;
 
 def fget_definition : MultiArg<["-"], "fget-definition", 3>,
   HelpText<"Get the symbol definition from <line> <start-column> <end-column>">,

@@ -272,14 +272,15 @@ __gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
   for (uint64_t __active_mask = __lane_mask; __active_mask;
        __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint32_t __first = __gpu_read_first_lane_u32(__active_mask, __x);
+      uint32_t __first = __gpu_shuffle_idx_u32(
+          __active_mask, __builtin_ctzg(__active_mask), __x, __gpu_num_lanes());
+      uint64_t __ballot = __gpu_ballot(__active_mask, __first == __x);
       if (__first == __x) {
-        __match_mask = __gpu_lane_mask();
+        __match_mask = __ballot;
         __done = 1;
       }
     }
   }
-  __gpu_sync_lane(__lane_mask);
   return __match_mask;
 }
 
@@ -292,33 +293,34 @@ __gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x) {
   for (uint64_t __active_mask = __lane_mask; __active_mask;
        __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint64_t __first = __gpu_read_first_lane_u64(__active_mask, __x);
+      uint64_t __first = __gpu_shuffle_idx_u64(
+          __active_mask, __builtin_ctzg(__active_mask), __x, __gpu_num_lanes());
+      uint64_t __ballot = __gpu_ballot(__active_mask, __first == __x);
       if (__first == __x) {
-        __match_mask = __gpu_lane_mask();
+        __match_mask = __ballot;
         __done = 1;
       }
     }
   }
-  __gpu_sync_lane(__lane_mask);
   return __match_mask;
 }
 
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u32_impl(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
+  uint32_t __first = __gpu_shuffle_idx_u32(
+      __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  __gpu_sync_lane(__lane_mask);
-  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+  return __ballot == __lane_mask ? __lane_mask : 0ull;
 }
 
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x) {
-  uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint64_t __first = __gpu_shuffle_idx_u64(
+      __lane_mask, __builtin_ctzg(__lane_mask), __x, __gpu_num_lanes());
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  __gpu_sync_lane(__lane_mask);
-  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+  return __ballot == __lane_mask ? __lane_mask : 0ull;
 }
 
 _Pragma("omp end declare variant");
