@@ -175,6 +175,7 @@ math/tanh.cl
 math/tanpi.cl
 math/tgamma.cl
 math/trunc.cl
+mem_fence/fence.cl
 misc/shuffle.cl
 misc/shuffle2.cl
 relational/all.cl
