@@ -330,6 +330,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improve :doc:`readability-identifier-length
+  <clang-tidy/checks/readability/readability-identifier-length>` check by adding
+  a new option to silence warnings for short-lived variables, based on distance
+  between declaration and last use.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
