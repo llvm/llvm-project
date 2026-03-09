@@ -78,7 +78,11 @@ bool PPCDispatchGroupSBHazardRecognizer::isBCTRAfterSet(SUnit *SU) {
 }
 
 // FIXME: Remove this when we don't need this:
-namespace llvm { namespace PPC { extern int getNonRecordFormOpcode(uint16_t); } }
+namespace llvm {
+namespace PPC {
+extern int32_t getNonRecordFormOpcode(uint32_t);
+}
+} // namespace llvm
 
 // FIXME: A lot of code in PPCDispatchGroupSBHazardRecognizer is P7 specific.
 

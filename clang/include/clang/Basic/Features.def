@@ -387,5 +387,8 @@ EXTENSION(cuda_implicit_host_device_templates, LangOpts.CUDA && LangOpts.Offload
 // C++2d type-aware allocators
 EXTENSION(cxx_type_aware_allocators, true)
 
+// Overflow behavior types
+EXTENSION(overflow_behavior_types, LangOpts.OverflowBehaviorTypes)
+
 #undef EXTENSION
 #undef FEATURE

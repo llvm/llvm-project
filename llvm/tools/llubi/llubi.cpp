@@ -74,6 +74,19 @@ static cl::opt<unsigned>
     VScale("vscale", cl::desc("The value of llvm.vscale (default = 4)"),
            cl::value_desc("N"), cl::init(4), cl::cat(InterpreterCategory));
 
+static cl::opt<unsigned>
+    Seed("seed",
+         cl::desc("Random seed for non-deterministic behavior (default = 0)"),
+         cl::value_desc("N"), cl::init(0), cl::cat(InterpreterCategory));
+
+cl::opt<ubi::UndefValueBehavior> UndefBehavior(
+    "", cl::desc("Choose undef value behavior:"),
+    cl::values(clEnumVal(ubi::UndefValueBehavior::NonDeterministic,
+                         "Each load of an uninitialized byte yields a freshly "
+                         "random value."),
+               clEnumVal(ubi::UndefValueBehavior::Zero,
+                         "All uses of an uninitialized byte yield zero.")));
+
 class VerboseEventHandler : public ubi::EventHandler {
 public:
   bool onInstructionExecuted(Instruction &I,
@@ -91,9 +104,12 @@ public:
     errs() << "Immediate UB detected: " << Msg << '\n';
   }
 
+  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
+
   bool onBBJump(Instruction &I, BasicBlock &To) override {
     errs() << I << " jump to ";
     To.printAsOperand(errs(), /*PrintType=*/false);
+    errs() << '\n';
     return true;
   }
 
@@ -161,6 +177,14 @@ int main(int argc, char **argv) {
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+  Ctx.setUndefValueBehavior(UndefBehavior);
+  Ctx.reseed(Seed);
+
+  if (!Ctx.initGlobalValues()) {
+    WithColor::error() << "Failed to initialize global values (e.g., the "
+                          "memory limit may be too low).\n";
+    return 1;
+  }
 
   // Call the main function from M as if its signature were:
   //   int main (int argc, char **argv)
@@ -173,8 +197,8 @@ int main(int argc, char **argv) {
   }
   TargetLibraryInfo TLI(Ctx.getTLIImpl());
   Type *IntTy = IntegerType::get(Ctx.getContext(), TLI.getIntSize());
-  auto *MainFuncTy = FunctionType::get(
-      IntTy, {IntTy, PointerType::getUnqual(Ctx.getContext())}, false);
+  Type *PtrTy = PointerType::getUnqual(Ctx.getContext());
+  auto *MainFuncTy = FunctionType::get(IntTy, {IntTy, PtrTy}, false);
   SmallVector<ubi::AnyValue> Args;
   if (EntryFn->getFunctionType() == MainFuncTy) {
     Args.push_back(
@@ -197,8 +221,8 @@ int main(int argc, char **argv) {
         return 1;
       }
       ubi::Pointer ArgPtr = Ctx.deriveFromMemoryObject(ArgvStrMem);
-      ArgvStrMem->writeRawBytes(0, Arg.c_str(), Arg.length());
-      ArgvPtrsMem->writePointer(Idx * PtrSize, ArgPtr, Ctx.getDataLayout());
+      Ctx.storeRawBytes(*ArgvStrMem, 0, Arg.c_str(), Arg.length());
+      Ctx.store(*ArgvPtrsMem, Idx * PtrSize, ArgPtr, PtrTy);
     }
     Args.push_back(Ctx.deriveFromMemoryObject(ArgvPtrsMem));
   } else if (!EntryFn->arg_empty()) {

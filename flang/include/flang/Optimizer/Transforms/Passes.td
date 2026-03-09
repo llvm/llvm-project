@@ -260,7 +260,10 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "dwarf version">,
     Option<"splitDwarfFile", "split-dwarf-file",
            "std::string", /*default=*/"std::string{}",
-           "Name of the split dwarf file">
+           "Name of the split dwarf file">,
+    Option<"dwarfDebugFlags", "dwarf-debug-flags",
+           "std::string", /*default=*/"std::string{}",
+           "Command-line flags to append to DWARF producer">
 
   ];
 }
@@ -426,7 +429,8 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::None, "None", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf, "NonLeaf", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", "")
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", ""),
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve, "NonLeafNoReserve", "")
           )}]>,
        Option<"instrumentFunctionEntry", "instrument-function-entry",
               "std::string", /*default=*/"",

@@ -876,6 +876,20 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 // TestWithBoundsOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult TestWithBoundsOp::verify() {
+  Type type = getElementTypeOrSelf(getResult().getType());
+  unsigned expectedWidth = 0;
+  if (type.isIndex())
+    expectedWidth = IndexType::kInternalStorageBitWidth;
+  else if (auto intTy = llvm::dyn_cast<IntegerType>(type))
+    expectedWidth = intTy.getWidth();
+  if (expectedWidth != 0 && getUmin().getBitWidth() != expectedWidth)
+    return emitOpError("bound attribute width (")
+           << getUmin().getBitWidth() << ") does not match result type width ("
+           << expectedWidth << ")";
+  return success();
+}
+
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
@@ -1014,6 +1028,9 @@ mlir::presburger::BoundType ReifyBoundOp::getBoundType() {
 }
 
 LogicalResult ReifyBoundOp::verify() {
+  if (getType() != "EQ" && getType() != "LB" && getType() != "UB")
+    return emitOpError("invalid bound type '")
+           << getType() << "', expected 'EQ', 'LB', or 'UB'";
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
@@ -1285,6 +1302,24 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestCrashingReturnOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCrashingReturnOp::verify() {
+  if (!getValid())
+    return emitOpError("requires 'valid' unit attribute");
+  return success();
+}
+
+MutableOperandRange
+TestCrashingReturnOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (!getValid())
+    llvm::report_fatal_error("getMutableSuccessorOperands called on unverified "
+                             "test.crashing_return");
+  return getArgsMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // SwitchWithNoBreakOp
 //===----------------------------------------------------------------------===//
 
@@ -1396,6 +1431,82 @@ ValueRange
 TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isParent() ? ValueRange(getOperation()->getResults())
                               : ValueRange(getBody().front().getArguments());
+}
+
+//===----------------------------------------------------------------------===//
+// TestRegionTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestRegionTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
+}
+
+//===----------------------------------------------------------------------===//
+// TestLoopTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestLoopTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getInitArgs();
+}
+
+ValueRange
+TestLoopTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+MutableArrayRef<OpOperand> TestLoopTypesCompatOp::getInitsMutable() {
+  return getInitArgsMutable();
+}
+
+Block::BlockArgListType TestLoopTypesCompatOp::getRegionIterArgs() {
+  return getBody().getArguments();
+}
+
+std::optional<MutableArrayRef<OpOperand>>
+TestLoopTypesCompatOp::getYieldedValuesMutable() {
+  return cast<TestTypesCompatYieldOp>(getBody().front().getTerminator())
+      .getArgsMutable();
+}
+
+std::optional<ResultRange> TestLoopTypesCompatOp::getLoopResults() {
+  return getResults();
+}
+
+SmallVector<Region *> TestLoopTypesCompatOp::getLoopRegions() {
+  return {&getBody()};
+}
+
+bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
 }
 
 //===----------------------------------------------------------------------===//

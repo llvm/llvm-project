@@ -33,8 +33,6 @@ class TensorDescType;
 
 namespace xegpu {
 
-enum class LayoutKind { Lane, InstData, Subgroup };
-
 LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
                                LayoutKind layoutKind, bool printOnly = false);
 
@@ -82,6 +80,11 @@ DistributeLayoutAttr inferBroadcastSourceLayout(DistributeLayoutAttr resLayout,
 DistributeLayoutAttr
 inferMultiReductionSourceLayout(DistributeLayoutAttr resLayout,
                                 SmallVector<int64_t> reduceDims);
+
+/// Infers the source layout attribute for a transpose operation given the
+/// result layout attribute and permutation.
+DistributeLayoutAttr inferTransposeSourceLayout(DistributeLayoutAttr resLayout,
+                                                ArrayRef<int64_t> permutation);
 
 /// Infers the source layout attribute for a bitcast operation given the
 /// result layout attribute, result element type bitwidth, and source element
@@ -160,6 +163,19 @@ DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   const uArch::uArch *uArch);
+
+/// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
+/// The numSg and consumerLayout (optional) are only used by sg layout creation.
+std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
+                         DistributeLayoutAttr>>
+setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
+                VectorType cdTy, DistributeLayoutAttr consumerLayout,
+                const uArch::uArch *uArch, int numSg);
+
+/// Gets the expected layout for a given consumer operand. This will check if
+/// the owning operation of the consumer operand is one of the special layout
+/// users and determine the expected layout accordingly.
+xegpu::DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
 
 } // namespace xegpu
 

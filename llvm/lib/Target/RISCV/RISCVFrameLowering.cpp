@@ -486,9 +486,26 @@ bool RISCVFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-         MFI.isFrameAddressTaken();
+  if (MF.getTarget().Options.DisableFramePointerElim(MF) ||
+      RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
+      MFI.isFrameAddressTaken())
+    return true;
+
+  // With large callframes around we may need to use FP to access the scavenging
+  // emergency spillslot.
+  //
+  // We calculate the MaxCallFrameSize at the end of isel so this value should
+  // be stable for the whole post-isel MIR pipeline.
+  //
+  // NOTE: The idea of forcing a frame pointer is copied from AArch64, but they
+  // conservatively return true when the call frame size hasd not been
+  // computed yet. On RISC-V that caused MachineOutliner tests to fail the
+  // MachineVerifier due to outlined functions not computing max call frame
+  // size thus the frame pointer would always be reserved.
+  if (MFI.isMaxCallFrameSizeComputed() && MFI.getMaxCallFrameSize() > 2047)
+    return true;
+
+  return false;
 }
 
 bool RISCVFrameLowering::hasBP(const MachineFunction &MF) const {
@@ -2151,14 +2168,13 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     MachineInstrBuilder NewMI =
         BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoCALLReg), RISCV::X5)
             .addExternalSymbol(SpillLibCall, RISCVII::MO_CALL)
-            .setMIFlag(MachineInstr::FrameSetup);
+            .setMIFlag(MachineInstr::FrameSetup)
+            .addUse(RISCV::X2, RegState::Implicit)
+            .addDef(RISCV::X2, RegState::ImplicitDefine);
 
-    for (auto &CS : CSI) {
-      // Add registers spilled as implicit used.
+    // Add registers spilled as implicit used.
+    for (auto &CS : CSI)
       NewMI.addUse(CS.getReg(), RegState::Implicit);
-      // Add registers spilled in libcall as liveins.
-      MBB.addLiveIn(CS.getReg());
-    }
   }
 
   // Manually spill values not spilled by libcall & Push/Pop.
@@ -2300,7 +2316,8 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     MachineInstrBuilder NewMI =
         BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoTAIL))
             .addExternalSymbol(RestoreLibCall, RISCVII::MO_CALL)
-            .setMIFlag(MachineInstr::FrameDestroy);
+            .setMIFlag(MachineInstr::FrameDestroy)
+            .addDef(RISCV::X2, RegState::ImplicitDefine);
 
     // Add registers restored as implicit defined.
     for (auto &CS : CSI)

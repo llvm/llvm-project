@@ -14,6 +14,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Module.h"
 #include <map>
+#include <random>
 
 namespace llvm::ubi {
 
@@ -41,6 +42,11 @@ enum class MemoryObjectState {
   Freed,
 };
 
+enum class UndefValueBehavior {
+  NonDeterministic, // Each use of the undef value can yield different results.
+  Zero,             // All uses of the undef value yield zero.
+};
+
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
@@ -65,17 +71,20 @@ public:
   StringRef getName() const { return Name; }
   unsigned getAddressSpace() const { return AS; }
   MemoryObjectState getState() const { return State; }
+  void setState(MemoryObjectState S) { State = S; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
+
+  bool inBounds(const APInt &NewAddr) const {
+    return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
+  }
 
   Byte &operator[](uint64_t Offset) {
     assert(Offset < Size && "Offset out of bounds");
     return Bytes[Offset];
   }
-  void writeRawBytes(uint64_t Offset, const void *Data, uint64_t Length);
-  void writeInteger(uint64_t Offset, const APInt &Int, const DataLayout &DL);
-  void writeFloat(uint64_t Offset, const APFloat &Float, const DataLayout &DL);
-  void writePointer(uint64_t Offset, const Pointer &Ptr, const DataLayout &DL);
+  ArrayRef<Byte> getBytes() const { return Bytes; }
+  MutableArrayRef<Byte> getBytes() { return Bytes; }
 
   void markAsFreed();
 };
@@ -90,6 +99,7 @@ public:
   virtual bool onInstructionExecuted(Instruction &I, const AnyValue &Result) {
     return true;
   }
+  virtual void onError(StringRef Msg) {}
   virtual void onUnrecognizedInstruction(Instruction &I) {}
   virtual void onImmediateUB(StringRef Msg) {}
   virtual bool onBBJump(Instruction &I, BasicBlock &To) { return true; }
@@ -121,6 +131,9 @@ class Context {
   uint32_t VScale = 4;
   uint32_t MaxSteps = 0;
   uint32_t MaxStackDepth = 256;
+  UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
+
+  std::mt19937_64 Rng;
 
   // Memory
   uint64_t UsedMem = 0;
@@ -128,11 +141,28 @@ class Context {
   // For now we don't model the behavior of address reuse, which is common
   // with stack coloring.
   uint64_t AllocationBase = 8;
+  // Maintains a global list of 'exposed' provenances. This is used to form a
+  // pointer with an exposed provenance.
+  // FIXME: Currently all the allocations are considered exposed, regardless of
+  // their interaction with ptrtoint. That is, ptrtoint is allowed to recover
+  // the provenance of any allocation. We may track the exposed provenances more
+  // precisely after we make ptrtoint have the implicit side-effect of exposing
+  // the provenance.
   std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
+  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty, uint32_t &OffsetInBits,
+                     bool CheckPaddingBits);
+  void toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
+               MutableArrayRef<Byte> Bytes, bool PaddingBits);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
   std::map<Constant *, AnyValue> ConstCache;
+  DenseMap<Function *, Pointer> FuncAddrMap;
+  DenseMap<BasicBlock *, Pointer> BlockAddrMap;
+  DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>
+      ValidFuncTargets;
+  DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
+      ValidBlockTargets;
   AnyValue getConstantValueImpl(Constant *C);
 
   // TODO: errno and fpenv
@@ -153,25 +183,59 @@ public:
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
   uint32_t getMaxStackDepth() const { return MaxStackDepth; }
+  void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
+  void reseed(uint32_t Seed) { Rng.seed(Seed); }
 
   LLVMContext &getContext() const { return Ctx; }
   const DataLayout &getDataLayout() const { return DL; }
   const TargetLibraryInfoImpl &getTLIImpl() const { return TLIImpl; }
+  /// Get the effective vector length for a vector type.
   uint32_t getEVL(ElementCount EC) const {
     if (EC.isScalable())
       return VScale * EC.getKnownMinValue();
     return EC.getFixedValue();
   }
+  /// The result is multiplied by VScale for scalable type sizes.
+  uint64_t getEffectiveTypeSize(TypeSize Size) const {
+    if (Size.isScalable())
+      return VScale * Size.getKnownMinValue();
+    return Size.getFixedValue();
+  }
+  /// Returns DL.getTypeAllocSize/getTypeStoreSize for the given type.
+  /// An exception to this is that for scalable vector types, the size is
+  /// computed as if the vector has getEVL(ElementCount) elements.
+  uint64_t getEffectiveTypeAllocSize(Type *Ty);
+  uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
   const AnyValue &getConstantValue(Constant *C);
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind);
   bool free(uint64_t Address);
-  // Derive a pointer from a memory object with offset 0.
-  // Please use Pointer's interface for further manipulations.
+  /// Derive a pointer from a memory object with offset 0.
+  /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
+  /// Convert byte sequence to a value of the given type. Uninitialized bits are
+  /// flushed according to the options.
+  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty);
+  /// Convert a value to byte sequence. Padding bits are set to zero.
+  void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
+  /// Direct memory load without checks.
+  AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy);
+  /// Direct memory store without checks.
+  void store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,
+             Type *ValTy);
+  void storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
+                     uint64_t Size);
 
+  Function *getTargetFunction(const Pointer &Ptr);
+  BasicBlock *getTargetBlock(const Pointer &Ptr);
+
+  /// Initialize global variables and function/block objects. This function
+  /// should be called before executing any function. Returns false if the
+  /// initialization fails (e.g., the memory limit is exceeded during
+  /// initialization).
+  bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.
   /// Returns true if the function executed successfully. False indicates an

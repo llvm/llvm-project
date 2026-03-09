@@ -6588,10 +6588,27 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // Force declaration of implicit members so they can inherit the attribute.
   ForceDeclarationOfImplicitMembers(Class);
 
+  // Inherited constructors are created lazily; force their creation now so the
+  // loop below can propagate the DLL attribute to them.
+  if (ClassExported) {
+    SmallVector<ConstructorUsingShadowDecl *, 4> Shadows;
+    for (Decl *D : Class->decls())
+      if (auto *S = dyn_cast<ConstructorUsingShadowDecl>(D))
+        Shadows.push_back(S);
+    for (ConstructorUsingShadowDecl *S : Shadows)
+      if (auto *BC = dyn_cast<CXXConstructorDecl>(S->getTargetDecl());
+          BC && !BC->isDeleted())
+        findInheritingConstructor(Class->getLocation(), BC, S);
+  }
+
   // FIXME: MSVC's docs say all bases must be exportable, but this doesn't
   // seem to be true in practice?
 
   for (Decl *Member : Class->decls()) {
+    if (isTemplateInstantiation(TSK) &&
+        Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+      continue;
+
     VarDecl *VD = dyn_cast<VarDecl>(Member);
     CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Member);
 
@@ -6604,13 +6621,52 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       if (MD->isDeleted())
         continue;
 
+      // Don't export inherited constructors whose parameters prevent ABI-
+      // compatible forwarding. When canEmitDelegateCallArgs (in CodeGen)
+      // returns false, Clang inlines the constructor body instead of
+      // emitting a forwarding thunk, producing code that is not ABI-
+      // compatible with MSVC. Suppress the export and warn so the user
+      // gets a linker error rather than a silent runtime mismatch.
+      if (ClassExported) {
+        if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
+          if (CD->getInheritedConstructor()) {
+            if (CD->isVariadic()) {
+              Diag(CD->getLocation(),
+                   diag::warn_dllexport_inherited_ctor_unsupported)
+                  << /*variadic=*/0;
+              continue;
+            }
+            if (Context.getTargetInfo()
+                    .getCXXABI()
+                    .areArgsDestroyedLeftToRightInCallee()) {
+              bool HasCalleeCleanupParam = false;
+              for (const auto *P : CD->parameters())
+                if (P->needsDestruction(Context)) {
+                  HasCalleeCleanupParam = true;
+                  break;
+                }
+              if (HasCalleeCleanupParam) {
+                Diag(CD->getLocation(),
+                     diag::warn_dllexport_inherited_ctor_unsupported)
+                    << /*callee-cleanup=*/1;
+                continue;
+              }
+            }
+          }
+        }
+      }
+
       if (MD->isInlined()) {
         // MinGW does not import or export inline methods. But do it for
-        // template instantiations.
+        // template instantiations and inherited constructors (which are
+        // marked inline but must be exported to match MSVC behavior).
         if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
             TSK != TSK_ExplicitInstantiationDeclaration &&
-            TSK != TSK_ExplicitInstantiationDefinition)
-          continue;
+            TSK != TSK_ExplicitInstantiationDefinition) {
+          if (auto *CD = dyn_cast<CXXConstructorDecl>(MD);
+              !CD || !CD->getInheritedConstructor())
+            continue;
+        }
 
         // MSVC versions before 2015 don't export the move assignment operators
         // and move constructor, so don't attempt to import/export them if
@@ -6643,8 +6699,13 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
       // Do not export/import inline function when -fno-dllexport-inlines is
       // passed. But add attribute for later local static var check.
+      // Inherited constructors are marked inline but must still be exported
+      // to match MSVC behavior, so exclude them from this override.
+      bool IsInheritedCtor = false;
+      if (auto *CD = dyn_cast_or_null<CXXConstructorDecl>(MD))
+        IsInheritedCtor = (bool)CD->getInheritedConstructor();
       if (!getLangOpts().DllExportInlines && MD && MD->isInlined() &&
-          TSK != TSK_ExplicitInstantiationDeclaration &&
+          !IsInheritedCtor && TSK != TSK_ExplicitInstantiationDeclaration &&
           TSK != TSK_ExplicitInstantiationDefinition) {
         if (ClassExported) {
           NewAttr = ::new (getASTContext())
@@ -19119,8 +19180,20 @@ bool Sema::DefineUsedVTables() {
         }
       }
 
-      if (IsExplicitInstantiationDeclaration)
-        DefineVTable = false;
+      if (IsExplicitInstantiationDeclaration) {
+        const bool HasExcludeFromExplicitInstantiation =
+            llvm::any_of(Class->methods(), [](CXXMethodDecl *method) {
+              // If the class has a member function declared with
+              // `__attribute__((exclude_from_explicit_instantiation))`, the
+              // explicit instantiation declaration should not suppress emitting
+              // the vtable, since the corresponding explicit instantiation
+              // definition might not emit the vtable if a triggering method is
+              // excluded.
+              return method->hasAttr<ExcludeFromExplicitInstantiationAttr>();
+            });
+        if (!HasExcludeFromExplicitInstantiation)
+          DefineVTable = false;
+      }
     }
 
     // The exception specifications for all virtual members may be needed even

@@ -349,7 +349,7 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   // zve32x is broken for partial_reduce_umla, but let's make sure we
   // don't generate them.
-  if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
+  if (!ST->hasStdExtZvdot4a8i() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
       !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
@@ -357,9 +357,9 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-  // Note: Asuming all vqdot* variants are equal cost
+  // Note: Asuming all vdota4* variants are equal cost
   return LT.first *
-         getRISCVInstructionCost(RISCV::VQDOT_VV, LT.second, CostKind);
+         getRISCVInstructionCost(RISCV::VDOTA4_VV, LT.second, CostKind);
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
@@ -1001,7 +1001,7 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
   // to avoid crashes in getMinRVVVectorSizeInBits()
-  if (ST->enablePExtSIMDCodeGen() && isa<FixedVectorType>(Ty)) {
+  if (ST->hasStdExtP() && isa<FixedVectorType>(Ty)) {
     return 1; // Treat as single instruction cost for now
   }
 
@@ -1702,6 +1702,51 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                CmpInst::FCMP_UNO, CostKind);
     return Cost;
   }
+  case Intrinsic::experimental_vector_extract_last_active: {
+    auto *ValTy = cast<VectorType>(ICA.getArgTypes()[0]);
+    auto *MaskTy = cast<VectorType>(ICA.getArgTypes()[1]);
+
+    auto ValLT = getTypeLegalizationCost(ValTy);
+    auto MaskLT = getTypeLegalizationCost(MaskTy);
+
+    // TODO: Return cheaper cost when the entire lane is inactive.
+    // The expected asm sequence is:
+    // vcpop.m a0, v0
+    // beqz a0, exit # Return passthru when the entire lane is inactive.
+    // vid v10, v0.t
+    // vredmaxu.vs v10, v10, v10
+    // vmv.x.s a0, v10
+    // zext.b a0, a0
+    // vslidedown.vx v8, v8, a0
+    // vmv.x.s a0, v8
+    // exit:
+    //   ...
+
+    // Find a suitable type for a stepvector.
+    ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
+    unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
+        MaskTy->getScalarType(), MaskTy->getElementCount(),
+        /*ZeroIsPoison=*/true, &VScaleRange);
+    EltWidth = std::max(EltWidth, MaskTy->getScalarSizeInBits());
+    Type *StepTy = Type::getIntNTy(MaskTy->getContext(), EltWidth);
+    auto *StepVecTy = VectorType::get(StepTy, ValTy->getElementCount());
+    auto StepLT = getTypeLegalizationCost(StepVecTy);
+    InstructionCost Cost = 0;
+    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
+
+    Cost += MaskLT.first *
+            getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second, CostKind);
+    Cost += getCFInstrCost(Instruction::Br, CostKind, nullptr);
+    Cost += StepLT.first *
+            getRISCVInstructionCost(Opcodes, StepLT.second, CostKind);
+    Cost += getCastInstrCost(Instruction::ZExt,
+                             Type::getInt64Ty(ValTy->getContext()), StepTy,
+                             TTI::CastContextHint::None, CostKind, nullptr);
+    Cost += ValLT.first *
+            getRISCVInstructionCost({RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S},
+                                    ValLT.second, CostKind);
+    return Cost;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1741,7 +1786,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
   // to avoid crashes in getMinRVVVectorSizeInBits()
-  if (ST->enablePExtSIMDCodeGen() &&
+  if (ST->hasStdExtP() &&
       (isa<FixedVectorType>(Dst) || isa<FixedVectorType>(Src))) {
     return 1; // Treat as single instruction cost for now
   }
@@ -2445,7 +2490,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
   // to avoid crashes in getMinRVVVectorSizeInBits()
-  if (ST->enablePExtSIMDCodeGen() && isa<FixedVectorType>(Val)) {
+  if (ST->hasStdExtP() && isa<FixedVectorType>(Val)) {
     return 1; // Treat as single instruction cost for now
   }
 

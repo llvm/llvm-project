@@ -165,8 +165,6 @@ public:
     return ST->getVScaleForTuning();
   }
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
-
   bool shouldMaximizeVectorBandwidth(
       TargetTransformInfo::RegisterKind K) const override;
 
@@ -404,7 +402,7 @@ public:
     //
     // Coordinated with LDNP and STNP constraints in
     // `llvm/lib/Target/AArch64/AArch64InstrInfo.td` and
-    // `AArch64TargetLowering`
+    // `AArch64ISelLowering.cpp`
     if (!ST->isLittleEndian())
       return false;
 
@@ -466,14 +464,9 @@ public:
     return ST->hasSVE() ? 5 : 0;
   }
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
-    if (ST->hasSVE())
-      return IVUpdateMayOverflow
-                 ? TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck
-                 : TailFoldingStyle::DataAndControlFlow;
-
-    return TailFoldingStyle::DataWithoutLaneMask;
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
+    return ST->hasSVE() ? TailFoldingStyle::DataAndControlFlow
+                        : TailFoldingStyle::DataWithoutLaneMask;
   }
 
   bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;

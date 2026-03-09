@@ -104,8 +104,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  using iterator       = __bounded_iter<__wrap_iter<pointer> >;
-  using const_iterator = __bounded_iter<__wrap_iter<const_pointer> >;
+  using iterator       = __bounded_iter<pointer>;
+  using const_iterator = __bounded_iter<const_pointer>;
 #else
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
@@ -483,7 +483,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void append_range(_Range&& __range) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __len = ranges::distance(__range);
-      if (__len < __cap_ - __end_) {
+      if (__len <= __cap_ - __end_) {
         __construct_at_end(ranges::begin(__range), ranges::end(__range), __len);
       } else {
         _SplitBuffer __buffer(__recommend(size() + __len), size(), __alloc_);
@@ -676,10 +676,7 @@ private:
     // current implementation, there is no connection between a bounded iterator and its associated container, so we
     // don't have a way to update existing valid iterators when the container is resized and thus have to go with
     // a laxer approach.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<pointer>(__p),
-        std::__wrap_iter<pointer>(this->__begin_),
-        std::__wrap_iter<pointer>(this->__cap_));
+    return std::__make_bounded_iter(__p, this->__begin_, this->__cap_);
 #else
     return iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -688,10 +685,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator __make_iter(const_pointer __p) const _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // Bound the iterator according to the capacity, rather than the size.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<const_pointer>(__p),
-        std::__wrap_iter<const_pointer>(this->__begin_),
-        std::__wrap_iter<const_pointer>(this->__cap_));
+    return std::__make_bounded_iter(__p, const_pointer(this->__begin_), const_pointer(this->__cap_));
 #else
     return const_iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -1048,9 +1042,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
-    if (__new_size > size()) {
-      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), size(), this->__begin_).first;
-      __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
+    auto const __size = size();
+    if (__new_size > __size) {
+      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__begin_).first;
+      __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
     } else {
       pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
       this->__destruct_at_end(__m);

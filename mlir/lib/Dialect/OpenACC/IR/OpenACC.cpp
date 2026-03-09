@@ -465,16 +465,6 @@ ValueRange SerialOp::getSuccessorInputs(RegionSuccessor successor) {
   return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
-void KernelEnvironmentOp::getSuccessorRegions(
-    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
-                                    regions);
-}
-
-ValueRange KernelEnvironmentOp::getSuccessorInputs(RegionSuccessor successor) {
-  return getSingleRegionSuccessorInputs(getOperation(), successor);
-}
-
 void DataOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
@@ -790,11 +780,14 @@ static ParseResult parseVarPtrType(mlir::OpAsmParser &parser,
       return failure();
   } else {
     // Set `varType` from the element type of the type of `varPtr`.
-    if (mlir::isa<mlir::acc::PointerLikeType>(varPtrType))
-      varTypeAttr = mlir::TypeAttr::get(
-          mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType());
-    else
+    if (auto ptrTy = dyn_cast<acc::PointerLikeType>(varPtrType)) {
+      Type elementType = ptrTy.getElementType();
+      // Opaque pointers (e.g. !llvm.ptr) have no element type; fall back to
+      // using varPtrType itself so that the attribute is always valid.
+      varTypeAttr = mlir::TypeAttr::get(elementType ? elementType : varPtrType);
+    } else {
       varTypeAttr = mlir::TypeAttr::get(varPtrType);
+    }
   }
 
   return success();
@@ -812,6 +805,10 @@ static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
       mlir::isa<mlir::acc::PointerLikeType>(varPtrType)
           ? mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType()
           : varPtrType;
+  // Opaque pointers (e.g. !llvm.ptr) have no element type; use varPtrType as
+  // the baseline so that the inferred varType is not redundantly printed.
+  if (!typeToCheckAgainst)
+    typeToCheckAgainst = varPtrType;
   if (typeToCheckAgainst != varType) {
     p << " varType(";
     p.printType(varType);
@@ -872,20 +869,6 @@ LogicalResult acc::FirstprivateOp::verify() {
     return failure();
   if (failed(checkRecipe<acc::FirstprivateOp, acc::FirstprivateRecipeOp>(
           *this, "firstprivate")))
-    return failure();
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// FirstprivateMapInitialOp
-//===----------------------------------------------------------------------===//
-LogicalResult acc::FirstprivateMapInitialOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_firstprivate)
-    return emitError("data clause associated with firstprivate operation must "
-                     "match its intent");
-  if (failed(checkVarAndVarType(*this)))
-    return failure();
-  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -1233,13 +1216,7 @@ bool acc::CacheOp::isCacheReadonly() {
 // It is quite alike acc::getEnclosingComputeOp() utility,
 // but we cannot use it here.
 static bool isEnclosedIntoComputeOp(mlir::Operation *op) {
-  mlir::Operation *parentOp = op->getParentOp();
-  while (parentOp) {
-    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp))
-      return true;
-    parentOp = parentOp->getParentOp();
-  }
-  return false;
+  return op->getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS>();
 }
 
 /// Helper to add an effect on an operand, referenced by its mutable range.
@@ -1285,16 +1262,6 @@ void acc::FirstprivateOp::getEffects(
   if (!isEnclosedIntoComputeOp(getOperation()))
     effects.emplace_back(MemoryEffects::Read::get(),
                          acc::CurrentDeviceIdResource::get());
-  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
-  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
-}
-
-// FirstprivateMapInitialOp: var read, accVar result write.
-void acc::FirstprivateMapInitialOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(),
-                       acc::CurrentDeviceIdResource::get());
   addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
   addResultEffect<MemoryEffects::Write>(effects, getAccVar());
 }
@@ -1503,10 +1470,6 @@ static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
   return success();
 }
 
-static bool isComputeOperation(Operation *op) {
-  return isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(op);
-}
-
 namespace {
 /// Pattern to remove operation without region that have constant false `ifCond`
 /// and remove the condition from the operation if the `ifCond` is a true
@@ -1568,65 +1531,6 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
       rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       replaceOpWithRegion(rewriter, op, op.getRegion());
-
-    return success();
-  }
-};
-
-/// Remove empty acc.kernel_environment operations. If the operation has wait
-/// operands, create a acc.wait operation to preserve synchronization.
-struct RemoveEmptyKernelEnvironment
-    : public OpRewritePattern<acc::KernelEnvironmentOp> {
-  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
-                                PatternRewriter &rewriter) const override {
-    assert(op->getNumRegions() == 1 && "expected op to have one region");
-
-    Block &block = op.getRegion().front();
-    if (!block.empty())
-      return failure();
-
-    // Conservatively disable canonicalization of empty acc.kernel_environment
-    // operations if the wait operands in the kernel_environment cannot be fully
-    // represented by acc.wait operation.
-
-    // Disable canonicalization if device type is not the default
-    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
-      for (auto attr : deviceTypeAttr) {
-        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
-          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if any wait segment has a devnum
-    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
-      for (auto attr : hasDevnumAttr) {
-        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
-          if (boolAttr.getValue())
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if there are multiple wait segments
-    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
-      if (segmentsAttr.size() > 1)
-        return failure();
-    }
-
-    // Remove empty kernel environment.
-    // Preserve synchronization by creating acc.wait operation if needed.
-    if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
-      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
-                                               /*asyncOperand=*/Value(),
-                                               /*waitDevnum=*/Value(),
-                                               /*async=*/nullptr,
-                                               /*ifCond=*/Value());
-    else
-      rewriter.eraseOp(op);
 
     return success();
   }
@@ -3219,15 +3123,6 @@ LogicalResult acc::HostDataOp::verify() {
 void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RemoveConstantIfConditionWithRegion<HostDataOp>>(context);
-}
-
-//===----------------------------------------------------------------------===//
-// KernelEnvironmentOp
-//===----------------------------------------------------------------------===//
-
-void acc::KernelEnvironmentOp::getCanonicalizationPatterns(
-    RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4919,10 +4814,8 @@ void RoutineOp::addBindIDName(MLIRContext *context,
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::InitOp::verify() {
-  Operation *currOp = *this;
-  while ((currOp = currOp->getParentOp()))
-    if (isComputeOperation(currOp))
-      return emitOpError("cannot be nested in a compute operation");
+  if (getOperation()->getParentOfType<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>())
+    return emitOpError("cannot be nested in a compute operation");
   return success();
 }
 
@@ -4941,10 +4834,8 @@ void acc::InitOp::addDeviceType(MLIRContext *context,
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::ShutdownOp::verify() {
-  Operation *currOp = *this;
-  while ((currOp = currOp->getParentOp()))
-    if (isComputeOperation(currOp))
-      return emitOpError("cannot be nested in a compute operation");
+  if (getOperation()->getParentOfType<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>())
+    return emitOpError("cannot be nested in a compute operation");
   return success();
 }
 
@@ -4963,10 +4854,8 @@ void acc::ShutdownOp::addDeviceType(MLIRContext *context,
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::SetOp::verify() {
-  Operation *currOp = *this;
-  while ((currOp = currOp->getParentOp()))
-    if (isComputeOperation(currOp))
-      return emitOpError("cannot be nested in a compute operation");
+  if (getOperation()->getParentOfType<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>())
+    return emitOpError("cannot be nested in a compute operation");
   if (!getDeviceTypeAttr() && !getDefaultAsync() && !getDeviceNum())
     return emitOpError("at least one default_async, device_num, or device_type "
                        "operand must appear");

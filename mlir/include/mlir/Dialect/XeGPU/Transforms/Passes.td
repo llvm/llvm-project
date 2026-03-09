@@ -11,15 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def XeGPUFoldAliasOps : Pass<"xegpu-fold-alias-ops"> {
-  let summary = "Fold alias ops into XeGPU ops";
-  let description = [{
-    The pass folds aliasing ops into XeGPU ops that they operate on the original
-    source references.
-  }];
-  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect"];
-}
-
 def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   let summary = "Distribute XeGPU ops to work items";
   let description = [{

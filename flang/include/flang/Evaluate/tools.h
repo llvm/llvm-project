@@ -1349,6 +1349,11 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
+  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
+      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Managed arrays initialization is performed on the device.
+  }
+
   // Special cases performed on the host:
   // - Only managed or unifed symbols are involved on RHS and LHS.
   // - LHS is managed or unified and the RHS is host only.

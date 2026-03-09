@@ -212,6 +212,9 @@ def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 /// inline=never.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
+/// nooutline
+def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
+
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind", IntersectPreserve, [FnAttr]>;
 

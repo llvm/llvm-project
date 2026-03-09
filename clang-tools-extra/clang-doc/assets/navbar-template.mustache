@@ -12,6 +12,7 @@
                 </li>
             </ul>
         </div>
+        <button id="themeToggle"><span class="material-symbols-rounded">routine</span></button>
     </div>
     {{#HasContexts}}
     <div class="navbar-breadcrumb-container">
@@ -21,3 +22,12 @@
     </div>
     {{/HasContexts}}
 </nav>
+<script>
+    themeToggle.onclick = () => {
+      const currentTheme = root.getAttribute("color-scheme");
+      const next = currentTheme === "dark" ? "light" : "dark";
+      changeHighlightJS(next);
+      root.setAttribute("color-scheme", next);
+      localStorage.setItem("theme", next);
+    };
+</script>
