@@ -603,10 +603,16 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
   // Allocate the new value on the stack.
   Value allocaOp;
   {
-    // Since this is a static alloca, we can put it directly in the entry block,
-    // so they can be absorbed into the prologue/epilogue at code generation.
+    // Walk up from the call site to find the innermost AutomaticAllocationScope
+    // (e.g. an llvm.func or scf.forall). Placing the alloca at the entry block
+    // of that scope keeps it inside parallel regions rather than hoisting it
+    // out, while still landing at the function entry block for the common
+    // non-parallel case.
     OpBuilder::InsertionGuard insertionGuard(builder);
-    Block *entryBlock = &(*argument.getParentRegion()->begin());
+    Operation *scope = builder.getInsertionBlock()->getParentOp();
+    if (!scope->mightHaveTrait<OpTrait::AutomaticAllocationScope>())
+      scope = scope->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+    Block *entryBlock = &scope->getRegion(0).front();
     builder.setInsertionPointToStart(entryBlock);
     Value one = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
                                          builder.getI64IntegerAttr(1));

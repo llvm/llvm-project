@@ -3357,7 +3357,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 
     Record.push_back(FileIDAndFile.second.StateTransitions.size());
     for (auto &StatePoint : FileIDAndFile.second.StateTransitions) {
-      Record.push_back(getAdjustedOffset(StatePoint.Offset));
+      Record.push_back(StatePoint.Offset);
       AddDiagState(StatePoint.State, false);
     }
   }
