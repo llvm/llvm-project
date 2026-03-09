@@ -270,13 +270,25 @@ public:
   static StringRef getAuxPassArg(StringRef Args) {
     if (Args.empty())
       return Args;
-    if (Args[0] != AuxArgBeginToken)
+    if (Args[0] != AuxArgBeginToken) {
+      // Check that none of the aux tokens exist in the string.
+      if (Args.find(AuxArgBeginToken) != StringRef::npos ||
+          Args.find(AuxArgEndToken) != StringRef::npos) {
+        std::string ErrStr;
+        llvm::raw_string_ostream ErrSS(ErrStr);
+        ErrSS << "Spurious '" << AuxArgBeginToken << "' or '" << AuxArgEndToken
+              << "' in '" << Args << "'!\n";
+        reportFatalUsageError(ErrStr.c_str());
+      }
       return StringRef();
+    }
     // We found the Begin token, so look for the End token.
     size_t EndIdx = Args.find(AuxArgEndToken);
     if (EndIdx == StringRef::npos) {
-      errs() << "Missing '" << AuxArgEndToken << "' in '" << Args << "' !\n";
-      exit(1);
+      std::string ErrStr;
+      llvm::raw_string_ostream ErrSS(ErrStr);
+      ErrSS << "Missing '" << AuxArgEndToken << "' in '" << Args << "' !\n";
+      reportFatalUsageError(ErrStr.c_str());
     }
     assert(EndIdx >= 1 && "Expected at index 1 or later!");
     return Args.substr(1, EndIdx - 1);
