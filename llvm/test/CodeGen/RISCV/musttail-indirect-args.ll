@@ -350,3 +350,362 @@ define void @caller_musttail_nine_indirect_swap_first_last(fp128 %a, fp128 %b, f
   musttail call void @callee_musttail_nine_indirect(fp128 %i, fp128 %b, fp128 %c, fp128 %d, fp128 %e, fp128 %f, fp128 %g, fp128 %h, fp128 %a)
   ret void
 }
+
+; Test musttail where the indirect arg is a computed value, not a forwarded
+; formal parameter. The computed value must be stored into the incoming
+; indirect pointer before tail calling.
+define i32 @caller_musttail_computed(fp128 %a) nounwind {
+; RV32-LABEL: caller_musttail_computed:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -64
+; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    lw a3, 0(a0)
+; RV32-NEXT:    lw a4, 4(a0)
+; RV32-NEXT:    lw a5, 8(a0)
+; RV32-NEXT:    lw a6, 12(a0)
+; RV32-NEXT:    sw a3, 8(sp)
+; RV32-NEXT:    sw a4, 12(sp)
+; RV32-NEXT:    sw a5, 16(sp)
+; RV32-NEXT:    sw a6, 20(sp)
+; RV32-NEXT:    addi a0, sp, 40
+; RV32-NEXT:    addi a1, sp, 24
+; RV32-NEXT:    addi a2, sp, 8
+; RV32-NEXT:    sw a3, 24(sp)
+; RV32-NEXT:    sw a4, 28(sp)
+; RV32-NEXT:    sw a5, 32(sp)
+; RV32-NEXT:    sw a6, 36(sp)
+; RV32-NEXT:    call __addtf3
+; RV32-NEXT:    lw a0, 40(sp)
+; RV32-NEXT:    lw a1, 44(sp)
+; RV32-NEXT:    lw a2, 48(sp)
+; RV32-NEXT:    lw a3, 52(sp)
+; RV32-NEXT:    sw a0, 0(s0)
+; RV32-NEXT:    sw a1, 4(s0)
+; RV32-NEXT:    sw a2, 8(s0)
+; RV32-NEXT:    sw a3, 12(s0)
+; RV32-NEXT:    mv a0, s0
+; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 64
+; RV32-NEXT:    tail callee_musttail_indirect
+;
+; RV64-LABEL: caller_musttail_computed:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    mv a3, a1
+; RV64-NEXT:    call __addtf3
+; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    tail callee_musttail_indirect
+  %sum = fadd fp128 %a, %a
+  %r = musttail call i32 @callee_musttail_indirect(fp128 %sum)
+  ret i32 %r
+}
+
+; Test musttail with a computed i128 on RV32 (split indirect). The add result
+; must be stored back into the incoming pointer.
+define i64 @caller_musttail_computed_i128(i128 %a) nounwind {
+; RV32-LABEL: caller_musttail_computed_i128:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a2, 4(a0)
+; RV32-NEXT:    lw a3, 8(a0)
+; RV32-NEXT:    lw a4, 12(a0)
+; RV32-NEXT:    addi a1, a1, 1
+; RV32-NEXT:    seqz a5, a1
+; RV32-NEXT:    add a2, a2, a5
+; RV32-NEXT:    or a5, a1, a2
+; RV32-NEXT:    seqz a5, a5
+; RV32-NEXT:    add a5, a3, a5
+; RV32-NEXT:    sltu a3, a5, a3
+; RV32-NEXT:    add a3, a4, a3
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    sw a5, 8(a0)
+; RV32-NEXT:    sw a3, 12(a0)
+; RV32-NEXT:    tail callee_musttail_i128
+;
+; RV64-LABEL: caller_musttail_computed_i128:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi a0, a0, 1
+; RV64-NEXT:    seqz a2, a0
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    tail callee_musttail_i128
+  %sum = add i128 %a, 1
+  %r = musttail call i64 @callee_musttail_i128(i128 %sum)
+  ret i64 %r
+}
+
+; Test musttail with one computed and one forwarded indirect arg.
+; Position 0 gets the fadd result (stored into %a's incoming pointer),
+; position 1 gets %b's incoming pointer forwarded directly.
+define i32 @caller_musttail_computed_and_forwarded(fp128 %a, fp128 %b) nounwind {
+; RV32-LABEL: caller_musttail_computed_and_forwarded:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -64
+; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; RV32-NEXT:    mv s0, a1
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    lw a3, 0(a0)
+; RV32-NEXT:    lw a4, 4(a0)
+; RV32-NEXT:    lw a5, 8(a0)
+; RV32-NEXT:    lw a6, 12(a0)
+; RV32-NEXT:    lw a0, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
+; RV32-NEXT:    lw a2, 8(s0)
+; RV32-NEXT:    lw a7, 12(s0)
+; RV32-NEXT:    sw a0, 0(sp)
+; RV32-NEXT:    sw a1, 4(sp)
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a7, 12(sp)
+; RV32-NEXT:    addi a0, sp, 32
+; RV32-NEXT:    addi a1, sp, 16
+; RV32-NEXT:    mv a2, sp
+; RV32-NEXT:    sw a3, 16(sp)
+; RV32-NEXT:    sw a4, 20(sp)
+; RV32-NEXT:    sw a5, 24(sp)
+; RV32-NEXT:    sw a6, 28(sp)
+; RV32-NEXT:    call __addtf3
+; RV32-NEXT:    lw a0, 32(sp)
+; RV32-NEXT:    lw a1, 36(sp)
+; RV32-NEXT:    lw a2, 40(sp)
+; RV32-NEXT:    lw a3, 44(sp)
+; RV32-NEXT:    sw a0, 0(s1)
+; RV32-NEXT:    sw a1, 4(s1)
+; RV32-NEXT:    sw a2, 8(s1)
+; RV32-NEXT:    sw a3, 12(s1)
+; RV32-NEXT:    mv a0, s1
+; RV32-NEXT:    mv a1, s0
+; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 64
+; RV32-NEXT:    tail callee_musttail_two_indirect
+;
+; RV64-LABEL: caller_musttail_computed_and_forwarded:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    mv s0, a3
+; RV64-NEXT:    mv s1, a2
+; RV64-NEXT:    call __addtf3
+; RV64-NEXT:    mv a2, s1
+; RV64-NEXT:    mv a3, s0
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    tail callee_musttail_two_indirect
+  %sum = fadd fp128 %a, %b
+  %r = musttail call i32 @callee_musttail_two_indirect(fp128 %sum, fp128 %b)
+  ret i32 %r
+}
+
+; Test musttail with one forwarded and one computed indirect arg (reversed).
+; Position 0 forwards %a, position 1 gets the computed value.
+define i32 @caller_musttail_forwarded_and_computed(fp128 %a, fp128 %b) nounwind {
+; RV32-LABEL: caller_musttail_forwarded_and_computed:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -64
+; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; RV32-NEXT:    mv s0, a1
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    lw a3, 0(a0)
+; RV32-NEXT:    lw a4, 4(a0)
+; RV32-NEXT:    lw a5, 8(a0)
+; RV32-NEXT:    lw a6, 12(a0)
+; RV32-NEXT:    lw a0, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
+; RV32-NEXT:    lw a2, 8(s0)
+; RV32-NEXT:    lw a7, 12(s0)
+; RV32-NEXT:    sw a0, 0(sp)
+; RV32-NEXT:    sw a1, 4(sp)
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a7, 12(sp)
+; RV32-NEXT:    addi a0, sp, 32
+; RV32-NEXT:    addi a1, sp, 16
+; RV32-NEXT:    mv a2, sp
+; RV32-NEXT:    sw a3, 16(sp)
+; RV32-NEXT:    sw a4, 20(sp)
+; RV32-NEXT:    sw a5, 24(sp)
+; RV32-NEXT:    sw a6, 28(sp)
+; RV32-NEXT:    call __addtf3
+; RV32-NEXT:    lw a0, 32(sp)
+; RV32-NEXT:    lw a1, 36(sp)
+; RV32-NEXT:    lw a2, 40(sp)
+; RV32-NEXT:    lw a3, 44(sp)
+; RV32-NEXT:    sw a0, 0(s0)
+; RV32-NEXT:    sw a1, 4(s0)
+; RV32-NEXT:    sw a2, 8(s0)
+; RV32-NEXT:    sw a3, 12(s0)
+; RV32-NEXT:    mv a0, s1
+; RV32-NEXT:    mv a1, s0
+; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 64
+; RV32-NEXT:    tail callee_musttail_two_indirect
+;
+; RV64-LABEL: caller_musttail_forwarded_and_computed:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    mv s0, a1
+; RV64-NEXT:    mv s1, a0
+; RV64-NEXT:    call __addtf3
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    mv a3, a1
+; RV64-NEXT:    mv a0, s1
+; RV64-NEXT:    mv a1, s0
+; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    tail callee_musttail_two_indirect
+  %sum = fadd fp128 %a, %b
+  %r = musttail call i32 @callee_musttail_two_indirect(fp128 %a, fp128 %sum)
+  ret i32 %r
+}
+
+; Test musttail with both args computed. Neither can be zero-copy forwarded.
+define i32 @caller_musttail_both_computed(fp128 %a, fp128 %b) nounwind {
+; RV32-LABEL: caller_musttail_both_computed:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -160
+; RV32-NEXT:    sw ra, 156(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 152(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 148(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 144(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 140(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s4, 136(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s5, 132(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s6, 128(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s7, 124(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s8, 120(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s9, 116(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s10, 112(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s11, 108(sp) # 4-byte Folded Spill
+; RV32-NEXT:    mv s0, a1
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    lw s2, 0(a0)
+; RV32-NEXT:    lw s3, 4(a0)
+; RV32-NEXT:    lw s4, 8(a0)
+; RV32-NEXT:    lw s5, 12(a0)
+; RV32-NEXT:    lw s6, 0(a1)
+; RV32-NEXT:    lw s7, 4(a1)
+; RV32-NEXT:    lw s8, 8(a1)
+; RV32-NEXT:    lw s9, 12(a1)
+; RV32-NEXT:    sw s6, 56(sp)
+; RV32-NEXT:    sw s7, 60(sp)
+; RV32-NEXT:    sw s8, 64(sp)
+; RV32-NEXT:    sw s9, 68(sp)
+; RV32-NEXT:    addi a0, sp, 88
+; RV32-NEXT:    addi a1, sp, 72
+; RV32-NEXT:    addi a2, sp, 56
+; RV32-NEXT:    sw s2, 72(sp)
+; RV32-NEXT:    sw s3, 76(sp)
+; RV32-NEXT:    sw s4, 80(sp)
+; RV32-NEXT:    sw s5, 84(sp)
+; RV32-NEXT:    call __addtf3
+; RV32-NEXT:    lw s10, 88(sp)
+; RV32-NEXT:    lw s11, 92(sp)
+; RV32-NEXT:    lw a0, 96(sp)
+; RV32-NEXT:    sw a0, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    lw a0, 100(sp)
+; RV32-NEXT:    sw a0, 0(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s6, 8(sp)
+; RV32-NEXT:    sw s7, 12(sp)
+; RV32-NEXT:    sw s8, 16(sp)
+; RV32-NEXT:    sw s9, 20(sp)
+; RV32-NEXT:    addi a0, sp, 40
+; RV32-NEXT:    addi a1, sp, 24
+; RV32-NEXT:    addi a2, sp, 8
+; RV32-NEXT:    sw s2, 24(sp)
+; RV32-NEXT:    sw s3, 28(sp)
+; RV32-NEXT:    sw s4, 32(sp)
+; RV32-NEXT:    sw s5, 36(sp)
+; RV32-NEXT:    call __subtf3
+; RV32-NEXT:    lw a0, 40(sp)
+; RV32-NEXT:    lw a1, 44(sp)
+; RV32-NEXT:    lw a2, 48(sp)
+; RV32-NEXT:    lw a3, 52(sp)
+; RV32-NEXT:    sw a0, 0(s0)
+; RV32-NEXT:    sw a1, 4(s0)
+; RV32-NEXT:    sw a2, 8(s0)
+; RV32-NEXT:    sw a3, 12(s0)
+; RV32-NEXT:    sw s10, 0(s1)
+; RV32-NEXT:    sw s11, 4(s1)
+; RV32-NEXT:    lw a0, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    sw a0, 8(s1)
+; RV32-NEXT:    lw a0, 0(sp) # 4-byte Folded Reload
+; RV32-NEXT:    sw a0, 12(s1)
+; RV32-NEXT:    mv a0, s1
+; RV32-NEXT:    mv a1, s0
+; RV32-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 152(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 148(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 144(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 140(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s4, 136(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s5, 132(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s6, 128(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s7, 124(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s8, 120(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s9, 116(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s10, 112(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s11, 108(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 160
+; RV32-NEXT:    tail callee_musttail_two_indirect
+;
+; RV64-LABEL: caller_musttail_both_computed:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -64
+; RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s4, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s5, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    mv s0, a3
+; RV64-NEXT:    mv s1, a2
+; RV64-NEXT:    mv s2, a1
+; RV64-NEXT:    mv s3, a0
+; RV64-NEXT:    call __addtf3
+; RV64-NEXT:    mv s4, a0
+; RV64-NEXT:    mv s5, a1
+; RV64-NEXT:    mv a0, s3
+; RV64-NEXT:    mv a1, s2
+; RV64-NEXT:    mv a2, s1
+; RV64-NEXT:    mv a3, s0
+; RV64-NEXT:    call __subtf3
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    mv a3, a1
+; RV64-NEXT:    mv a0, s4
+; RV64-NEXT:    mv a1, s5
+; RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s4, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s5, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 64
+; RV64-NEXT:    tail callee_musttail_two_indirect
+  %sum = fadd fp128 %a, %b
+  %diff = fsub fp128 %a, %b
+  %r = musttail call i32 @callee_musttail_two_indirect(fp128 %sum, fp128 %diff)
+  ret i32 %r
+}

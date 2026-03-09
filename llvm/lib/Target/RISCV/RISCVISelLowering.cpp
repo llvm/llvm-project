@@ -24780,31 +24780,63 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Promote the value if needed.
     // For now, only handle fully promoted and indirect arguments.
     if (VA.getLocInfo() == CCValAssign::Indirect) {
-      // For musttail calls, forward the incoming indirect pointer instead
-      // of creating a new stack temporary. The incoming pointer points to
-      // the caller's caller's frame, which remains valid after a tail call.
+      // For musttail calls, reuse incoming indirect pointers instead of
+      // creating new stack temporaries. The incoming pointers point to the
+      // caller's caller's frame, which remains valid after a tail call.
       if (IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
-        // Outs[OutIdx].OrigArgIndex is the position in the call's argument
-        // list (callee perspective), but the incoming indirect arg map is
-        // keyed by the caller's formal parameter index. When musttail
-        // reorders arguments, these differ. Resolve via the IR: find which
-        // formal parameter is being passed at this call position.
         unsigned CallArgIdx = Outs[OutIdx].OrigArgIndex;
-        unsigned FormalIdx = CallArgIdx; // default if lookup fails
+
+        // Resolve which formal parameter is being passed at this call
+        // position. Outs[].OrigArgIndex is the callee's argument position,
+        // but the incoming indirect arg map is keyed by the caller's formal
+        // parameter index. These differ when musttail reorders arguments.
+        const Argument *FormalArg = nullptr;
         unsigned Idx = 0;
         for (const auto &CallArg : CLI.CB->args()) {
           if (CallArg->getType()->isEmptyTy())
             continue;
           if (Idx == CallArgIdx) {
-            if (const auto *FormalArg = dyn_cast<Argument>(CallArg))
-              FormalIdx = FormalArg->getArgNo();
+            FormalArg = dyn_cast<Argument>(CallArg);
             break;
           }
           ++Idx;
         }
-        ArgValue = RVFI->getIncomingIndirectArg(FormalIdx);
-        // Skip any split parts of this argument (they are covered by the
-        // forwarded pointer).
+
+        if (FormalArg) {
+          // The call arg is a forwarded formal parameter. Forward its
+          // incoming indirect pointer directly (zero-copy).
+          ArgValue = RVFI->getIncomingIndirectArg(FormalArg->getArgNo());
+        } else {
+          // The call arg is a computed value. Store it into the incoming
+          // indirect pointer for the same-position formal parameter
+          // (musttail guarantees matching prototypes, so types match).
+          // The pointer survives the tail call since it points to the
+          // caller's caller's frame.
+          SDValue IncomingPtr =
+              RVFI->getIncomingIndirectArg(CallArgIdx);
+          MemOpChains.push_back(
+              DAG.getStore(Chain, DL, ArgValue, IncomingPtr,
+                           MachinePointerInfo()));
+          // Store any split parts at their respective offsets.
+          unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
+          while (i + 1 != e &&
+                 Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
+            SDValue PartValue = OutVals[OutIdx + 1];
+            unsigned PartOffset =
+                Outs[OutIdx + 1].PartOffset - ArgPartOffset;
+            SDValue Addr = DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr,
+                                       DAG.getIntPtrConstant(PartOffset, DL));
+            MemOpChains.push_back(
+                DAG.getStore(Chain, DL, PartValue, Addr,
+                             MachinePointerInfo()));
+            ++i;
+            ++OutIdx;
+          }
+          ArgValue = IncomingPtr;
+        }
+
+        // Skip any remaining split parts (for forwarded args, they are
+        // covered by the forwarded pointer).
         while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
           ++i;
           ++OutIdx;
