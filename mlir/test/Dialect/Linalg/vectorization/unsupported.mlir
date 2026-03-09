@@ -112,6 +112,9 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+/// Dynamic spatial dims for non-depthwise conv is not supported. This is already
+/// being tested for named ops and the following lit test checks that the same is
+/// applicable to linalg.generic conv ops as well.
 func.func @generic_conv1d_ncw_fcw_dyn_spatial(%input: tensor<1x8x?xf16>, %filter: tensor<4x8x1xf16>, %output: tensor<1x4x?xf16>) -> tensor<1x4x?xf16> {
   // expected-error @+1 {{Attempted to vectorize, but failed}}
   %0 = linalg.generic
