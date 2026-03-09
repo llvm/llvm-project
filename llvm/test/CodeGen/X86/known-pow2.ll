@@ -1241,3 +1241,34 @@ define i32 @pow2_rotr_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x, ptr 
   %res = urem i32 %x, %elt
   ret i32 %res
 }
+
+define <4 x i32> @pow2_shuffle_vec(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2) {
+; CHECK-LABEL: pow2_shuffle_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pxor %xmm3, %xmm3
+; CHECK-NEXT:    pxor %xmm4, %xmm4
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm4
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm3
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [8,4,2,4294967295]
+; CHECK-NEXT:    movdqa %xmm4, %xmm1
+; CHECK-NEXT:    pandn %xmm0, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [4,2,4294967295,0]
+; CHECK-NEXT:    pand %xmm5, %xmm4
+; CHECK-NEXT:    por %xmm1, %xmm4
+; CHECK-NEXT:    movdqa %xmm3, %xmm1
+; CHECK-NEXT:    pandn %xmm5, %xmm1
+; CHECK-NEXT:    pand %xmm0, %xmm3
+; CHECK-NEXT:    por %xmm1, %xmm3
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    paddd %xmm4, %xmm0
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %cmp0 = icmp sgt <4 x i32> zeroinitializer, %a0
+  %cmp1 = icmp sgt <4 x i32> zeroinitializer, %a1
+  %sel0 = select <4 x i1> %cmp0, <4 x i32> <i32 4, i32 2, i32 -1, i32 0>, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>
+  %sel1 = select <4 x i1> %cmp1, <4 x i32> <i32 8, i32 4, i32 2, i32 -1>, <4 x i32> <i32 4, i32 2, i32 -1, i32 0>
+  %shuf = shufflevector <4 x i32> %sel0, <4 x i32> %sel1, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %res = urem <4 x i32> %a2, %shuf
+  ret <4 x i32> %res
+}
