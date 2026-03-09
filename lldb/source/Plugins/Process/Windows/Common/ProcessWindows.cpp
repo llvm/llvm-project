@@ -27,6 +27,7 @@
 #include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
@@ -34,6 +35,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
@@ -78,6 +80,49 @@ std::string GetProcessExecutableName(DWORD pid) {
     ::CloseHandle(process_handle);
   }
   return file_name;
+}
+
+std::optional<std::string> GetMSVCRTCFailureDescription(Thread &thread) {
+  const uint32_t kMaxFrames = 8;
+
+  for (uint32_t i = 0; i < kMaxFrames; ++i) {
+    StackFrameSP frame = thread.GetStackFrameAtIndex(i);
+    if (!frame)
+      break;
+
+    SymbolContext sc = frame->GetSymbolContext(eSymbolContextSymbol);
+    if (!sc.symbol)
+      continue;
+
+    const char *fn_name = frame->GetFunctionName();
+    if (!fn_name)
+      continue;
+    llvm::StringRef name(fn_name);
+
+    if (!name.contains("failwithmessage"))
+      continue;
+    VariableListSP vars = frame->GetInScopeVariableList(false);
+    if (!vars)
+      continue;
+    for (size_t j = 0; j < vars->GetSize(); ++j) {
+      VariableSP var = vars->GetVariableAtIndex(j);
+      if (!var || var->GetName() != ConstString("msg"))
+        continue;
+      ValueObjectSP val =
+          frame->GetValueObjectForFrameVariable(var, eNoDynamicValues);
+      if (!val)
+        break;
+      uint64_t ptr = val->GetValueAsUnsigned(0);
+      if (!ptr)
+        break;
+      std::string msg;
+      Status err;
+      thread.GetProcess()->ReadCStringFromMemory(ptr, msg, err);
+      if (err.Success() && !msg.empty())
+        return "Run-time check failure: " + msg;
+    }
+  }
+  return std::nullopt;
 }
 } // anonymous namespace
 
@@ -489,6 +534,11 @@ void ProcessWindows::RefreshStateAfterStop() {
                  "creating empty stop info.",
                  site->GetID());
       }
+      stop_thread->SetStopInfo(stop_info);
+      return;
+    } else if (auto rtc_desc = GetMSVCRTCFailureDescription(*stop_thread)) {
+      stop_info = StopInfo::CreateStopReasonWithException(*stop_thread,
+                                                          rtc_desc->c_str());
       stop_thread->SetStopInfo(stop_info);
       return;
     } else {
