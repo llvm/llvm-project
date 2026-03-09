@@ -32,9 +32,7 @@ option(
 
 # List of all supported targets.
 set( LIBCLC_TARGETS_ALL
-  amdgcn--
   amdgcn-amd-amdhsa-llvm
-  amdgcn-mesa-mesa3d
   clspv--
   clspv64--
   nvptx64--
