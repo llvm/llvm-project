@@ -13,6 +13,7 @@
 
 #include "OffloadDump.h"
 #include "llvm-objdump.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/OffloadBundle.h"
@@ -43,13 +44,63 @@ static StringRef getImageName(const OffloadBinary &OB) {
   }
 }
 
+static void printOffloadBinaryMetadata(const OffloadBinary &OB,
+                                       uint64_t justifaction) {
+  outs() << left_justify("kind", justifaction) << getImageName(OB) << "\n";
+  outs() << left_justify("arch", justifaction) << OB.getArch() << "\n";
+  outs() << left_justify("triple", justifaction) << OB.getTriple() << "\n";
+  outs() << left_justify("producer", justifaction)
+         << getOffloadKindName(OB.getOffloadKind()) << "\n";
+
+  StringRef InnerImage = OB.getImage();
+  outs() << left_justify("    image size", justifaction) << InnerImage.size()
+         << " bytes\n";
+}
+
+/// Print information about nested OffloadBinary (inner layer)
+static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
+                                     uint64_t Index) {
+  StringRef ImageData = OuterOB.getImage();
+
+  // Parse inner OffloadBinary
+  MemoryBufferRef InnerBuffer(ImageData, "inner-offload-binary");
+  auto InnerBinariesOrErr = OffloadBinary::create(InnerBuffer);
+  if (!InnerBinariesOrErr) {
+    reportWarning("Failed to parse nested OffloadBinary: " +
+                      toString(InnerBinariesOrErr.takeError()),
+                  OuterOB.getFileName());
+    return;
+  }
+
+  auto &InnerBinaries = *InnerBinariesOrErr;
+  if (InnerBinaries.empty()) {
+    reportWarning("Nested OffloadBinary contains no entries",
+                  OuterOB.getFileName());
+    return;
+  }
+
+  outs() << "  [Nested OffloadBinary format detected]\n";
+  outs() << "  Number of inner images: " << InnerBinaries.size() << "\n";
+
+  // Display information for each inner image
+  for (uint64_t I = 0, E = InnerBinaries.size(); I != E; ++I) {
+    const OffloadBinary *InnerOB = InnerBinaries[I].get();
+
+    if (InnerBinaries.size() > 1)
+      outs() << "  Inner image [" << I << "]:\n";
+
+    printOffloadBinaryMetadata(*InnerOB, 20);
+  }
+}
+
 static void printBinary(const OffloadBinary &OB, uint64_t Index) {
   outs() << "\nOFFLOADING IMAGE [" << Index << "]:\n";
-  outs() << left_justify("kind", 16) << getImageName(OB) << "\n";
-  outs() << left_justify("arch", 16) << OB.getArch() << "\n";
-  outs() << left_justify("triple", 16) << OB.getTriple() << "\n";
-  outs() << left_justify("producer", 16)
-         << getOffloadKindName(OB.getOffloadKind()) << "\n";
+  printOffloadBinaryMetadata(OB, 16);
+
+  StringRef ImageData = OB.getImage();
+  // Check for nested OffloadBinary format
+  if (identify_magic(ImageData) == file_magic::offload_binary)
+    printNestedOffloadBinary(OB, Index);
 }
 
 /// Print the embedded offloading contents of an ObjectFile \p O.
