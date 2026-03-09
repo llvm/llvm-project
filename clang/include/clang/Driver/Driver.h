@@ -371,9 +371,6 @@ private:
   /// stored in it, and will clean them up when torn down.
   mutable llvm::StringMap<std::unique_ptr<ToolChain>> ToolChains;
 
-  /// Number of parallel jobs.
-  unsigned NumParallelJobs;
-
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
   /// arguments, after applying the standard argument translations.
@@ -758,12 +755,6 @@ public:
 
   /// Get the specific kind of offload LTO being performed.
   LTOKind getOffloadLTOMode() const { return OffloadLTOMode; }
-
-  /// Get the number of parallel jobs.
-  unsigned getNumberOfParallelJobs() const { return NumParallelJobs; }
-
-  /// Set the number of parallel jobs.
-  void setNumberOfParallelJobs(unsigned N) { NumParallelJobs = N; }
 
   /// Get the CUID option.
   const CUIDOptions &getCUIDOpts() const { return CUIDOpts; }

@@ -858,8 +858,6 @@ def P : Flag<["-"], "P">,
   Group<Preprocessor_Group>,
   HelpText<"Disable linemarker output in -E mode">,
   MarshallingInfoNegativeFlag<PreprocessorOutputOpts<"ShowLineMarkers">>;
-def parallel_jobs_EQ : Joined<["-"], "parallel-jobs=">, Flags<[NoXarchOption]>,
-  HelpText<"Number of parallel jobs">;
 def Qy : Flag<["-"], "Qy">, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit metadata containing compiler name and version">;
 def Qn : Flag<["-"], "Qn">, Visibility<[ClangOption, CC1Option]>,
@@ -1274,6 +1272,8 @@ def offload_jobs_EQ : Joined<["--"], "offload-jobs=">,
   HelpText<"Specify the number of threads to use for device offloading tasks "
            "during compilation. Can be a positive integer or the string "
            "'jobserver' to use the make-style jobserver from the environment.">;
+def parallel_jobs_EQ : Joined<["-"], "parallel-jobs=">,
+  Alias<offload_jobs_EQ>;
 
 defm offload_via_llvm : BoolFOption<"offload-via-llvm",
   LangOpts<"OffloadViaLLVM">, DefaultFalse,

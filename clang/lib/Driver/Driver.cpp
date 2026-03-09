@@ -185,8 +185,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
       CCPrintProcessStats(false), CCPrintInternalStats(false),
       TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
       PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
-      ProbePrecompiled(true), SuppressMissingInputWarning(false),
-      NumParallelJobs(1) {
+      ProbePrecompiled(true), SuppressMissingInputWarning(false) {
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
@@ -1690,13 +1689,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     } else
       BitcodeEmbed = static_cast<BitcodeEmbedMode>(Model);
   }
-
-  // Force -parallel-jobs=1 when verbose is set to avoid corrupted output
-  if (Args.hasArg(options::OPT_v))
-    setNumberOfParallelJobs(1);
-  else
-    setNumberOfParallelJobs(
-        getLastArgIntValue(Args, options::OPT_parallel_jobs_EQ, 1, Diags));
 
   // Remove existing compilation database so that each job can append to it.
   if (Arg *A = Args.getLastArg(options::OPT_MJ))
