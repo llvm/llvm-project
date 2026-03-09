@@ -1,3 +1,20 @@
+# Convert libclc target to clang target triple
+function(libclc_target_to_clang_triple target out_var)
+  string(REPLACE "-" ";" TRIPLE ${target})
+  list(GET TRIPLE 0 ARCH)
+  set(clang_triple ${target})
+  if(ARCH STREQUAL spirv AND LIBCLC_USE_SPIRV_BACKEND)
+    set(clang_triple spirv32--)
+  elseif(ARCH STREQUAL spirv64 AND LIBCLC_USE_SPIRV_BACKEND)
+    set(clang_triple spirv64--)
+  elseif(ARCH STREQUAL spirv OR ARCH STREQUAL clspv)
+    set(clang_triple spir--)
+  elseif(ARCH STREQUAL spirv64 OR ARCH STREQUAL clspv64)
+    set(clang_triple spir64--)
+  endif()
+  set(${out_var} ${clang_triple} PARENT_SCOPE)
+endfunction()
+
 # Converts a list of relative source paths to absolute paths and exports
 # it to the parent scope.
 macro(libclc_configure_source_list variable path)

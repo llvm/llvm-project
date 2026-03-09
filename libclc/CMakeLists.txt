@@ -10,8 +10,6 @@ set(CMAKE_CXX_STANDARD 17)
 # Add path for custom modules
 list( INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" )
 
-enable_language( CLC )
-
 include( AddLibclc )
 
 include( GNUInstallDirs )
@@ -114,6 +112,14 @@ else()
   endforeach()
 endif()
 
+if( NOT LIBCLC_TARGETS_TO_BUILD )
+  message( FATAL_ERROR
+    "LIBCLC_TARGETS_TO_BUILD is empty. Specify at least one target or use 'all'.\n"
+    "Valid targets are: ${LIBCLC_TARGETS_ALL}\n")
+endif()
+
+enable_language( CLC )
+
 list( SORT LIBCLC_TARGETS_TO_BUILD )
 
 foreach( tool IN ITEMS opt llvm-link )
@@ -153,16 +159,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   list( GET TRIPLE 2 OS )
 
   # Determine the clang target triple.
-  set(clang_triple ${t})
-  if(ARCH STREQUAL spirv AND LIBCLC_USE_SPIRV_BACKEND)
-    set(clang_triple spirv32--)
-  elseif(ARCH STREQUAL spirv64 AND LIBCLC_USE_SPIRV_BACKEND)
-    set(clang_triple spirv64--)
-  elseif(ARCH STREQUAL spirv OR ARCH STREQUAL clspv)
-    set(clang_triple spir--)
-  elseif(ARCH STREQUAL spirv64 OR ARCH STREQUAL clspv64)
-    set(clang_triple spir64--)
-  endif()
+  libclc_target_to_clang_triple(${t} clang_triple)
 
   # Determine the preprocessor identifier for this target.
   set(MACRO_ARCH ${ARCH})
