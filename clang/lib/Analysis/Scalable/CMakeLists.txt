@@ -26,9 +26,10 @@ add_clang_library(clangAnalysisScalable
   clangAST
   clangASTMatchers
   clangBasic
+  clangFrontend
   clangIndex
   clangLex
-  clangFrontend
+  clangSema
 
   DEPENDS
   )
