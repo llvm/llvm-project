@@ -1200,6 +1200,11 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   if (GV.hasLocalLinkage())
     return std::nullopt;
 
+  // Shader targets do not support the Linkage capability unless the module
+  // is a shader library.
+  if (ST.isShader() && !ST.isShaderLibrary())
+    return std::nullopt;
+
   if (GV.isDeclarationForLinker()) {
     // Interface variables must not get Import linkage.
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {

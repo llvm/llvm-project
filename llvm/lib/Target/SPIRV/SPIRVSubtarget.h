@@ -86,6 +86,11 @@ public:
   SPIRVEnvType getEnv() const { return Env; }
   bool isKernel() const { return getEnv() == Kernel; }
   bool isShader() const { return getEnv() == Shader; }
+  // Returns true if this is a shader library module.
+  bool isShaderLibrary() const {
+    return isShader() && (!TargetTriple.isShaderStageEnvironment() ||
+                          TargetTriple.getEnvironment() == Triple::Library);
+  }
   bool isLogicalSPIRV() const {
     return TargetTriple.getArch() == Triple::spirv;
   }
