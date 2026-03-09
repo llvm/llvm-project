@@ -85,8 +85,7 @@ llvm::StringRef commentKindToString(CommentKind Kind) {
 const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-static llvm::Expected<OwnedPtr<Info>>
-reduce(std::vector<OwnedPtr<Info>> &Values) {
+static llvm::Expected<OwnedPtr<Info>> reduce(OwningPtrArray<Info> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no value to reduce");
@@ -122,7 +121,7 @@ static void reduceChildren(OwningVec<T> &Children,
 }
 
 // Dispatch function.
-llvm::Expected<OwnedPtr<Info>> mergeInfos(std::vector<OwnedPtr<Info>> &Values) {
+llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values) {
   if (Values.empty() || !Values[0])
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "no info values to merge");

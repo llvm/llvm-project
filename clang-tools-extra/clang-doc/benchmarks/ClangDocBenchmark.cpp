@@ -116,7 +116,7 @@ static void BM_MergeInfos_Scale(benchmark::State &State) {
 
   for (auto _ : State) {
     State.PauseTiming();
-    std::vector<OwnedPtr<Info>> Input;
+    OwningPtrArray<Info> Input;
     Input.reserve(State.range(0));
     for (int i = 0; i < State.range(0); ++i) {
       auto I = std::make_unique<FunctionInfo>();
