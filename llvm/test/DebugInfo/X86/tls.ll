@@ -102,7 +102,7 @@
 
 source_filename = "test/DebugInfo/X86/tls.ll"
 
-@tls = thread_local global i32 0, align 4, !dbg !0
+@tls = internal thread_local global i32 0, align 4, !dbg !0
 @glbl = global i32 0, align 4, !dbg !4
 
 ; Function Attrs: nounwind uwtable

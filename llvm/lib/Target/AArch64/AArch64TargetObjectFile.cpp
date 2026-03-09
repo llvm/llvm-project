@@ -28,8 +28,6 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   PLTPCRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
 
-  SupportDebugThreadLocalLocation = true;
-
   // Make sure the implicitly created empty .text section has the
   // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
   // present.

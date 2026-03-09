@@ -41,7 +41,7 @@
 ; NONE-NOT: debug_names
 ; NONE: debug_gnu_pub
 
-@var = thread_local global i32 0, align 4, !dbg !0
+@var = internal thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: norecurse nounwind readnone uwtable
 define void @_Z3funv() local_unnamed_addr #0 !dbg !11 {
