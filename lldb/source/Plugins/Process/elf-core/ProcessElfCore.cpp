@@ -987,6 +987,9 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
       m_executable_name = thread_data.name;
+      m_process_args_string.assign(
+          prpsinfo.pr_psargs,
+          strnlen(prpsinfo.pr_psargs, sizeof(prpsinfo.pr_psargs)));
       break;
     }
     case ELF::NT_SIGINFO: {
@@ -1168,6 +1171,10 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
     const bool add_exe_file_as_first_arg = false;
     info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
                            add_exe_file_as_first_arg);
+  }
+  if (!m_process_args_string.empty()) {
+    Args args(m_process_args_string);
+    info.SetArguments(args, true);
   }
   return true;
 }

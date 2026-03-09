@@ -1521,6 +1521,20 @@ public:
   /// \return
   ///     File path to the core file.
   virtual FileSpec GetCoreFile() const { return {}; }
+  std::string GetCoreFileCommandString() {
+    if (!IsLiveDebugSession() && GetPluginName().contains("core")) {
+      ProcessInstanceInfo info;
+      if (GetProcessInfo(info)) {
+        const Args &args = info.GetArguments();
+        if (!args.empty()) {
+          std::string cmd;
+          args.GetCommandString(cmd);
+          return cmd;
+        }
+      }
+    }
+    return {};
+  }
 
   /// Before lldb detaches from a process, it warns the user that they are
   /// about to lose their debug session. In some cases, this warning doesn't

@@ -155,6 +155,8 @@ private:
   // Executable name found from the ELF PRPSINFO
   std::string m_executable_name;
 
+  // Command line args string found from the ELF PRPSINFO (pr_psargs)
+  std::string m_process_args_string;
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
