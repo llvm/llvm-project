@@ -239,6 +239,11 @@ struct VPlanTransforms {
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
 
+  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
+  /// is known to be <= VF, replacing them with the AVL directly.
+  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                               PredicatedScalarEvolution &PSE);
+
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
@@ -368,10 +373,9 @@ struct VPlanTransforms {
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
-  static void
-  optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues,
-                             PredicatedScalarEvolution &PSE);
+  static void optimizeInductionLiveOutUsers(VPlan &Plan,
+                                            PredicatedScalarEvolution &PSE,
+                                            bool FoldTail);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
@@ -488,12 +492,6 @@ struct VPlanTransforms {
   static void
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
-
-  /// Update the resume phis in the scalar preheader after creating wide recipes
-  /// for first-order recurrences, reductions and inductions. End values for
-  /// inductions are added to \p IVEndValues.
-  static void updateScalarResumePhis(
-      VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues, bool FoldTail);
 
   /// Handle users in the exit block for first order reductions in the original
   /// exit block. The penultimate value of recurrences is fed to their LCSSA phi

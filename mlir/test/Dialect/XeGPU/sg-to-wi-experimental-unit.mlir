@@ -267,19 +267,19 @@ gpu.func @scatter_ops_with_leading_dims(%src: memref<256xf16>) {
 // CHECK:     %[[LANE_RED:.*]] = vector.reduction <add>, %[[CAST:.*]] : vector<2xf32> into f32
 // CHECK-DAG: %[[C16_1:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
-// CHECK:     %[[SHUFFLE1:.*]], %{{.*}} = gpu.shuffle  xor %[[LANE_RED]], %[[C1]], %[[C16_1]] : f32
+// CHECK:     %[[SHUFFLE1:.*]], %{{.*}} = gpu.shuffle xor %[[LANE_RED]], %[[C1]], %[[C16_1]] : f32
 // CHECK:     %[[ADD1:.*]] = arith.addf %[[LANE_RED]], %[[SHUFFLE1]] : f32
 // CHECK-DAG: %[[C16_2:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
-// CHECK:     %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD1]], %[[C2]], %[[C16_2]] : f32
+// CHECK:     %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle xor %[[ADD1]], %[[C2]], %[[C16_2]] : f32
 // CHECK:     %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[SHUFFLE2]] : f32
 // CHECK-DAG: %[[C16_3:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : i32
-// CHECK:     %[[SHUFFLE3:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD2]], %[[C4]], %[[C16_3]] : f32
+// CHECK:     %[[SHUFFLE3:.*]], %{{.*}} = gpu.shuffle xor %[[ADD2]], %[[C4]], %[[C16_3]] : f32
 // CHECK:     %[[ADD3:.*]] = arith.addf %[[ADD2]], %[[SHUFFLE3]] : f32
 // CHECK-DAG: %[[C16_4:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i32
-// CHECK:     %[[SHUFFLE4:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD3]], %[[C8]], %[[C16_4]] : f32
+// CHECK:     %[[SHUFFLE4:.*]], %{{.*}} = gpu.shuffle xor %[[ADD3]], %[[C8]], %[[C16_4]] : f32
 // CHECK:     %[[ADD4:.*]] = arith.addf %[[ADD3]], %[[SHUFFLE4]] : f32
 // CHECK:     %[[FINAL:.*]] = arith.addf %[[ADD4]], %[[CST]] : f32
 gpu.func @vector_reduction() {
@@ -300,19 +300,19 @@ gpu.func @vector_reduction() {
 // CHECK: %[[V3:.*]] = vector.reduction <add>, %[[V1]] : vector<1xf32> into f32
 // CHECK-DAG: %[[C16:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
-// CHECK: %[[SHUFFLE1:.*]], %{{.*}} = gpu.shuffle  xor %[[V3]], %[[C1]], %[[C16]] : f32
+// CHECK: %[[SHUFFLE1:.*]], %{{.*}} = gpu.shuffle xor %[[V3]], %[[C1]], %[[C16]] : f32
 // CHECK: %[[V4:.*]] = arith.addf %[[V3]], %[[SHUFFLE1]] : f32
 // CHECK-DAG: %[[C16_2:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
-// CHECK: %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle  xor %[[V4]], %[[C2]], %[[C16_2]] : f32
+// CHECK: %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle xor %[[V4]], %[[C2]], %[[C16_2]] : f32
 // CHECK: %[[V5:.*]] = arith.addf %[[V4]], %[[SHUFFLE2]] : f32
 // CHECK-DAG: %[[C16_3:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : i32
-// CHECK: %[[SHUFFLE3:.*]], %{{.*}} = gpu.shuffle  xor %[[V5]], %[[C4]], %[[C16_3]] : f32
+// CHECK: %[[SHUFFLE3:.*]], %{{.*}} = gpu.shuffle xor %[[V5]], %[[C4]], %[[C16_3]] : f32
 // CHECK: %[[V6:.*]] = arith.addf %[[V5]], %[[SHUFFLE3]] : f32
 // CHECK-DAG: %[[C16_4:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i32
-// CHECK: %[[SHUFFLE4:.*]], %{{.*}} = gpu.shuffle  xor %[[V6]], %[[C8]], %[[C16_4]] : f32
+// CHECK: %[[SHUFFLE4:.*]], %{{.*}} = gpu.shuffle xor %[[V6]], %[[C8]], %[[C16_4]] : f32
 // CHECK: %[[V7:.*]] = arith.addf %[[V6]], %[[SHUFFLE4]] : f32
 // CHECK: %[[V8:.*]] = arith.addf %[[V7]], %[[V2]] : f32
 // CHECK: %[[V9:.*]] = vector.insert %[[V8]], %[[CST_1]] [0] : f32 into vector<2xf32>
@@ -322,19 +322,19 @@ gpu.func @vector_reduction() {
 // CHECK: %[[V13:.*]] = vector.reduction <add>, %[[V11]] : vector<1xf32> into f32
 // CHECK-DAG: %[[C16_5:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C1_2:.*]] = arith.constant 1 : i32
-// CHECK: %[[SHUFFLE5:.*]], %{{.*}} = gpu.shuffle  xor %[[V13]], %[[C1_2]], %[[C16_5]] : f32
+// CHECK: %[[SHUFFLE5:.*]], %{{.*}} = gpu.shuffle xor %[[V13]], %[[C1_2]], %[[C16_5]] : f32
 // CHECK: %[[V14:.*]] = arith.addf %[[V13]], %[[SHUFFLE5]] : f32
 // CHECK-DAG: %[[C16_6:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C2_2:.*]] = arith.constant 2 : i32
-// CHECK: %[[SHUFFLE6:.*]], %{{.*}} = gpu.shuffle  xor %[[V14]], %[[C2_2]], %[[C16_6]] : f32
+// CHECK: %[[SHUFFLE6:.*]], %{{.*}} = gpu.shuffle xor %[[V14]], %[[C2_2]], %[[C16_6]] : f32
 // CHECK: %[[V15:.*]] = arith.addf %[[V14]], %[[SHUFFLE6]] : f32
 // CHECK-DAG: %[[C16_7:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C4_2:.*]] = arith.constant 4 : i32
-// CHECK: %[[SHUFFLE7:.*]], %{{.*}} = gpu.shuffle  xor %[[V15]], %[[C4_2]], %[[C16_7]] : f32
+// CHECK: %[[SHUFFLE7:.*]], %{{.*}} = gpu.shuffle xor %[[V15]], %[[C4_2]], %[[C16_7]] : f32
 // CHECK: %[[V16:.*]] = arith.addf %[[V15]], %[[SHUFFLE7]] : f32
 // CHECK-DAG: %[[C16_8:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C8_2:.*]] = arith.constant 8 : i32
-// CHECK: %[[SHUFFLE8:.*]], %{{.*}} = gpu.shuffle  xor %[[V16]], %[[C8_2]], %[[C16_8]] : f32
+// CHECK: %[[SHUFFLE8:.*]], %{{.*}} = gpu.shuffle xor %[[V16]], %[[C8_2]], %[[C16_8]] : f32
 // CHECK: %[[V17:.*]] = arith.addf %[[V16]], %[[SHUFFLE8]] : f32
 // CHECK: %[[V18:.*]] = arith.addf %[[V17]], %[[V12]] : f32
 // CHECK: %[[V19:.*]] = vector.insert %[[V18]], %[[V9]] [1] : f32 into vector<2xf32>
@@ -365,19 +365,19 @@ gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction(%laneid: index)
 // CHECK: %[[V3:.*]] = vector.reduction <add>, %[[V1]] : vector<1xf32> into f32
 // CHECK-DAG: %[[C16:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
-// CHECK: %[[SHUFFLE1:.*]], %{{.*}} = gpu.shuffle  xor %[[V3]], %[[C1]], %[[C16]] : f32
+// CHECK: %[[SHUFFLE1:.*]], %{{.*}} = gpu.shuffle xor %[[V3]], %[[C1]], %[[C16]] : f32
 // CHECK: %[[V4:.*]] = arith.addf %[[V3]], %[[SHUFFLE1:.*]] : f32
 // CHECK-DAG: %[[C16_2:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32
-// CHECK: %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle  xor %[[V4]], %[[C2]], %[[C16_2]] : f32
+// CHECK: %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle xor %[[V4]], %[[C2]], %[[C16_2]] : f32
 // CHECK: %[[V5:.*]] = arith.addf %[[V4]], %[[SHUFFLE2]] : f32
 // CHECK-DAG: %[[C16_3:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : i32
-// CHECK: %[[SHUFFLE3:.*]], %{{.*}} = gpu.shuffle  xor %[[V5]], %[[C4]], %[[C16_3]] : f32
+// CHECK: %[[SHUFFLE3:.*]], %{{.*}} = gpu.shuffle xor %[[V5]], %[[C4]], %[[C16_3]] : f32
 // CHECK: %[[V6:.*]] = arith.addf %[[V5]], %[[SHUFFLE3]] : f32
 // CHECK-DAG: %[[C16_4:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i32
-// CHECK: %[[SHUFFLE4:.*]], %{{.*}} = gpu.shuffle  xor %[[V6]], %[[C8]], %[[C16_4]] : f32
+// CHECK: %[[SHUFFLE4:.*]], %{{.*}} = gpu.shuffle xor %[[V6]], %[[C8]], %[[C16_4]] : f32
 // CHECK: %[[V7:.*]] = arith.addf %[[V6]], %[[SHUFFLE4]] : f32
 // CHECK: %[[V8:.*]] = arith.addf %[[V7]], %[[V2]] : f32
 // CHECK: %[[V9:.*]] = vector.insert %[[V8]], %[[CST_1]] [0] : f32 into vector<2xf32>
@@ -387,19 +387,19 @@ gpu.func @vector_multi_reduction_dim1_distributed_dim1_reduction(%laneid: index)
 // CHECK: %[[V13:.*]] = vector.reduction <add>, %[[V11]] : vector<1xf32> into f32
 // CHECK-DAG: %[[C16_5:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C1_2:.*]] = arith.constant 1 : i32
-// CHECK: %[[SHUFFLE5:.*]], %{{.*}} = gpu.shuffle  xor %[[V13]], %[[C1_2]], %[[C16_5]] : f32
+// CHECK: %[[SHUFFLE5:.*]], %{{.*}} = gpu.shuffle xor %[[V13]], %[[C1_2]], %[[C16_5]] : f32
 // CHECK: %[[V14:.*]] = arith.addf %[[V13]], %[[SHUFFLE5]] : f32
 // CHECK-DAG: %[[C16_6:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C2_2:.*]] = arith.constant 2 : i32
-// CHECK: %[[SHUFFLE6:.*]], %{{.*}} = gpu.shuffle  xor %[[V14]], %[[C2_2]], %[[C16_6]] : f32
+// CHECK: %[[SHUFFLE6:.*]], %{{.*}} = gpu.shuffle xor %[[V14]], %[[C2_2]], %[[C16_6]] : f32
 // CHECK: %[[V15:.*]] = arith.addf %[[V14]], %[[SHUFFLE6]] : f32
 // CHECK-DAG: %[[C16_7:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C4_2:.*]] = arith.constant 4 : i32
-// CHECK: %[[SHUFFLE7:.*]], %{{.*}} = gpu.shuffle  xor %[[V15]], %[[C4_2]], %[[C16_7]] : f32
+// CHECK: %[[SHUFFLE7:.*]], %{{.*}} = gpu.shuffle xor %[[V15]], %[[C4_2]], %[[C16_7]] : f32
 // CHECK: %[[V16:.*]] = arith.addf %[[V15]], %[[SHUFFLE7]] : f32
 // CHECK-DAG: %[[C16_8:.*]] = arith.constant 16 : i32
 // CHECK-DAG: %[[C8_2:.*]] = arith.constant 8 : i32
-// CHECK: %[[SHUFFLE8:.*]], %{{.*}} = gpu.shuffle  xor %[[V16]], %[[C8_2]], %[[C16_8]] : f32
+// CHECK: %[[SHUFFLE8:.*]], %{{.*}} = gpu.shuffle xor %[[V16]], %[[C8_2]], %[[C16_8]] : f32
 // CHECK: %[[V17:.*]] = arith.addf %[[V16]], %[[SHUFFLE8]] : f32
 // CHECK: %[[V18:.*]] = arith.addf %[[V17]], %[[V12]] : f32
 // CHECK: %[[V19:.*]] = vector.insert %[[V18]], %[[V9]] [1] : f32 into vector<2xf32>
@@ -458,6 +458,70 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index)
         layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>
       }
       [1] : vector<16x12xf32> to vector<16xf32>
+  gpu.return
+}
+}
+
+// -----
+// load_matrix and store_matrix with coordinate computation (offsets [0,0])
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @load_store_matrix_1
+// CHECK-DAG: %[[LANE_ID1:.*]] = gpu.lane_id
+// CHECK-DAG: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
+// CHECK-DAG: %[[ROW:.*]] = arith.remui %[[R2]], %{{.*}} : index
+// CHECK-DAG: %[[COL:.*]] = arith.remui %[[R1]], %{{.*}} : index
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[ROW]], %[[COL]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<1x1xf32>
+// CHECK: %[[LANE_ID2:.*]] = gpu.lane_id
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] : vector<1x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+gpu.func @load_store_matrix_1(%arg0: !xegpu.mem_desc<32x32xf32>) {
+  %c0 = arith.constant 0 : index
+  %1 = xegpu.load_matrix %arg0[%c0, %c0] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}> : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x8xf32>
+  xegpu.store_matrix %1, %arg0[%c0, %c0] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}> : vector<2x8xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+  gpu.return
+}
+}
+
+// -----
+// load_matrix and store_matrix with non-zero offsets [0,1]
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @load_store_matrix_2
+// CHECK-DAG: %[[LANE_ID1:.*]] = gpu.lane_id
+// CHECK-DAG: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
+// CHECK-DAG: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
+// CHECK-DAG: %[[MUL:.*]] = arith.muli %[[R2]], %{{.*}} : index
+// CHECK-DAG: %[[ROW:.*]] = arith.remui %[[MUL]], %{{.*}} : index
+// CHECK-DAG: %[[R3:.*]] = arith.remui %[[R1]], %{{.*}} : index
+// CHECK-DAG: %[[ADD:.*]] = arith.addi %[[R3]], %{{.*}} : index
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[ROW]], %[[ADD]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x1xf32>
+// CHECK: %[[LANE_ID2:.*]] = gpu.lane_id
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] : vector<2x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+gpu.func @load_store_matrix_2(%arg0: !xegpu.mem_desc<32x32xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %1 = xegpu.load_matrix %arg0[%c0, %c1] <{layout = #xegpu.layout<lane_layout = [4, 4], lane_data = [2, 1]>}> : !xegpu.mem_desc<32x32xf32>, index, index -> vector<8x4xf32>
+  xegpu.store_matrix %1, %arg0[%c0, %c1] <{layout = #xegpu.layout<lane_layout = [4, 4], lane_data = [2, 1]>}> : vector<8x4xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+  gpu.return
+}
+}
+
+// -----
+// load_matrix and store_matrix with subgroup_block_io (no coordinate computation)
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @load_store_matrix_3
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%{{.*}}, %{{.*}}] <{subgroup_block_io}>:
+// CHECK-SAME: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<block = [16, 1], stride = [1, 32]>>, index, index -> vector<1x2xf32>
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] <{subgroup_block_io}>:
+// CHECK-SAME: vector<1x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<block = [16, 1], stride = [1, 32]>>, index, index
+gpu.func @load_store_matrix_3(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %1 = xegpu.load_matrix %arg0[%c0, %c1] <{subgroup_block_io, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}> :
+    !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>, index, index -> vector<16x2xf32>
+  xegpu.store_matrix %1, %arg0[%c0, %c1] <{subgroup_block_io, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}> :
+    vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>, index, index
   gpu.return
 }
 }

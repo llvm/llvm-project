@@ -2830,7 +2830,7 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
     called.
 
     The `vptr` operand must be a `!cir.ptr<!cir.vptr>` value, which would
-    have been returned by a previous call to `cir.vatble.get_vptr`. The
+    have been returned by a previous call to `cir.vtable.get_vptr`. The
     `index` operand is an index of the virtual function in the vtable.
 
     The return type is a pointer-to-pointer to the function type.
@@ -2861,6 +2861,46 @@ def CIR_VTableGetVirtualFnAddrOp : CIR_Op<"vtable.get_virtual_fn_addr", [
     `:` qualified(type($vptr)) `->` qualified(type($result))
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// VTableGetTypeInfoOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableGetTypeInfoOp : CIR_Op<"vtable.get_type_info", [
+  Pure
+]> {
+  let summary = "Get the address of the type_info from the vtable";
+  let description = [{
+    The `vtable.get_type_info` operation retreives the address of the dynamic
+    type_info/rtti object from an object's vtable. This is an ABI independent
+    abstraction of this operation.
+
+    The `vptr` operand must be a `!cir.vptr` value, which would have been
+    returned by a previous call to `cir.vtable.get_vptr`.
+
+    The return type is a loadable pointer to a `type_info` struct.
+
+    Example:
+    ```mlir
+    %5 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+    %6 = cir.load align(8) %5 : !cir.ptr<!cir.vptr>, !cir.vptr
+    %7 = cir.vtable.get_type_info %6 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>
+    %8 = cir.load align(8) %7 : !cir.ptr<!cir.ptr<!rec_std3A3Atype_info>>, !cir.ptr<!rec_std3A3Atype_info>
+
+    ```
+  }];
+
+  let arguments = (ins Arg<CIR_VPtrType, "vptr", [MemRead]>:$vptr);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $vptr attr-dict `:` qualified(type($vptr)) `->` qualified(type($result))
+  }];
+
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
+}
+
 
 //===----------------------------------------------------------------------===//
 // VTTAddrPointOp
@@ -3952,12 +3992,13 @@ def CIR_MemSetOp : CIR_Op<"libc.memset"> {
 
   let arguments = (ins
     Arg<CIR_VoidPtrType, "", [MemWrite]>:$dst,
+    OptionalAttr<I64Attr>:$alignment,
     CIR_UInt8:$val,
     CIR_AnyFundamentalUIntType:$len
   );
 
   let assemblyFormat = [{
-    $len `bytes` `at` $dst `to` $val attr-dict
+    $len `bytes` `at` $dst (`align` `(` $alignment^ `)`)? `to` $val attr-dict
     `:` qualified(type($dst)) `,` type($val) `,` type($len)
   }];
 }
@@ -4923,15 +4964,28 @@ def CIR_ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexRealOp
+// ComplexRealOp and ComplexImagOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
+class CIR_ComplexPartOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let results = (outs CIR_AnyIntOrBoolOrFloatType:$result);
+  let arguments = (ins CIR_AnyComplexOrIntOrBoolOrFloatType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+def CIR_ComplexRealOp : CIR_ComplexPartOp<"complex.real"> {
   let summary = "Extract the real part of a complex value";
   let description = [{
-    `cir.complex.real` operation takes an operand of `!cir.complex`, `cir.int`, 
-    `!cir.bool` or `!cir.float`. If the operand is `!cir.complex`, the real 
-    part of it will be returned, otherwise the value returned unmodified. 
+    `cir.complex.real` operation takes an operand of `!cir.complex`, `cir.int`,
+    `!cir.bool` or `!cir.float`. If the operand is `!cir.complex`, the real
+    part of it will be returned, otherwise the value returned unmodified.
 
     Example:
 
@@ -4940,29 +4994,14 @@ def CIR_ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
     %real = cir.complex.real %scalar : !cir.float -> !cir.float
     ```
   }];
-
-  let results = (outs CIR_AnyIntOrBoolOrFloatType:$result);
-  let arguments = (ins CIR_AnyComplexOrIntOrBoolOrFloatType:$operand);
-
-  let assemblyFormat = [{
-    $operand `:` qualified(type($operand)) `->` qualified(type($result))
-    attr-dict
-  }];
-
-  let hasVerifier = 1;
-  let hasFolder = 1;
 }
 
-//===----------------------------------------------------------------------===//
-// ComplexImagOp
-//===----------------------------------------------------------------------===//
-
-def CIR_ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
+def CIR_ComplexImagOp : CIR_ComplexPartOp<"complex.imag"> {
   let summary = "Extract the imaginary part of a complex value";
   let description = [{
     `cir.complex.imag` operation takes an operand of `!cir.complex`, `!cir.int`
-    `!cir.bool` or `!cir.float`. If the operand is `!cir.complex`, the imag 
-    part of it will be returned, otherwise a zero value will be returned.  
+    `!cir.bool` or `!cir.float`. If the operand is `!cir.complex`, the imag
+    part of it will be returned, otherwise a zero value will be returned.
 
     Example:
 
@@ -4971,24 +5010,25 @@ def CIR_ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
     %imag = cir.complex.imag %scalar : !cir.float -> !cir.float
     ```
   }];
-
-  let results = (outs CIR_AnyIntOrBoolOrFloatType:$result);
-  let arguments = (ins CIR_AnyComplexOrIntOrBoolOrFloatType:$operand);
-
-  let assemblyFormat = [{
-    $operand `:` qualified(type($operand)) `->` qualified(type($result))
-    attr-dict
-  }];
-
-  let hasVerifier = 1;
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexRealPtrOp
+// ComplexRealPtrOp and ComplexImagPtrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
+class CIR_ComplexPartPtrOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let arguments = (ins CIR_PtrToComplexType:$operand);
+  let results = (outs CIR_PtrToIntOrFloatType:$result);
+
+  let assemblyFormat = [{
+    $operand `:`
+    qualified(type($operand)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def CIR_ComplexRealPtrOp : CIR_ComplexPartPtrOp<"complex.real_ptr"> {
   let summary = "Derive a pointer to the real part of a complex value";
   let description = [{
     `cir.complex.real_ptr` operation takes a pointer operand that points to a
@@ -5002,23 +5042,9 @@ def CIR_ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
       -> !cir.ptr<!cir.double>
     ```
   }];
-
-  let results = (outs CIR_PtrToIntOrFloatType:$result);
-  let arguments = (ins CIR_PtrToComplexType:$operand);
-
-  let assemblyFormat = [{
-    $operand `:`
-    qualified(type($operand)) `->` qualified(type($result)) attr-dict
-  }];
-
-  let hasVerifier = 1;
 }
 
-//===----------------------------------------------------------------------===//
-// ComplexImagPtrOp
-//===----------------------------------------------------------------------===//
-
-def CIR_ComplexImagPtrOp : CIR_Op<"complex.imag_ptr", [Pure]> {
+def CIR_ComplexImagPtrOp : CIR_ComplexPartPtrOp<"complex.imag_ptr"> {
   let summary = "Derive a pointer to the imaginary part of a complex value";
   let description = [{
     `cir.complex.imag_ptr` operation takes a pointer operand that points to a
@@ -5032,25 +5058,23 @@ def CIR_ComplexImagPtrOp : CIR_Op<"complex.imag_ptr", [Pure]> {
       -> !cir.ptr<!cir.double>
     ```
   }];
-
-  let arguments = (ins CIR_PtrToComplexType:$operand);
-  let results = (outs CIR_PtrToIntOrFloatType:$result);
-
-  let assemblyFormat = [{
-    $operand `:`
-    qualified(type($operand)) `->` qualified(type($result)) attr-dict
-  }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexAddOp
+// ComplexAddOp and ComplexSubOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ComplexAddOp : CIR_Op<"complex.add", [
-  Pure, SameOperandsAndResultType
-]> {
+class CIR_ComplexBinOp<string mnemonic>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {
   let summary = "Complex addition";
   let description = [{
     The `cir.complex.add` operation takes two complex numbers and returns
@@ -5062,23 +5086,9 @@ def CIR_ComplexAddOp : CIR_Op<"complex.add", [
     %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
     ```
   }];
-
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
-
-  let results = (outs CIR_ComplexType:$result);
-
-  let assemblyFormat = [{
-    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
-  }];
 }
 
-//===----------------------------------------------------------------------===//
-// ComplexSubOp
-//===----------------------------------------------------------------------===//
-
-def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
-  Pure, SameOperandsAndResultType
-]> {
+def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
   let summary = "Complex subtraction";
   let description = [{
     The `cir.complex.sub` operation takes two complex numbers and returns
@@ -5090,18 +5100,10 @@ def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
     %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
     ```
   }];
-
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
-
-  let results = (outs CIR_ComplexType:$result);
-
-  let assemblyFormat = [{
-    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
-  }];
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexMulOp & ComplexDivOp
+// ComplexMulOp and ComplexDivOp
 //===----------------------------------------------------------------------===//
 
 def CIR_ComplexRangeKind : CIR_I32EnumAttr<
@@ -5112,9 +5114,24 @@ def CIR_ComplexRangeKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Basic", 3, "basic">,
 ]>;
 
-def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
-  Pure, SameOperandsAndResultType
-]> {
+class CIR_ComplexRangeBinOp<string mnemonic>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    CIR_ComplexRangeKind:$range
+  );
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+def CIR_ComplexMulOp : CIR_ComplexRangeBinOp<"complex.mul"> {
   let summary = "Complex multiplication";
   let description = [{
     The `cir.complex.mul` operation takes two complex numbers and returns
@@ -5135,25 +5152,9 @@ def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
     %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
-
-  let arguments = (ins
-    CIR_ComplexType:$lhs,
-    CIR_ComplexType:$rhs,
-    CIR_ComplexRangeKind:$range
-  );
-
-  let results = (outs CIR_ComplexType:$result);
-
-  let assemblyFormat = [{
-    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
-  }];
-
-  let hasLLVMLowering = false;
 }
 
-def CIR_ComplexDivOp : CIR_Op<"complex.div", [
-  Pure, SameOperandsAndResultType
-]> {
+def CIR_ComplexDivOp : CIR_ComplexRangeBinOp<"complex.div"> {
   let summary = "Complex division";
   let description = [{
     The `cir.complex.div` operation takes two complex numbers and returns
@@ -5179,20 +5180,6 @@ def CIR_ComplexDivOp : CIR_Op<"complex.div", [
     %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
-
-  let arguments = (ins
-    CIR_ComplexType:$lhs,
-    CIR_ComplexType:$rhs,
-    CIR_ComplexRangeKind:$range
-  );
-
-  let results = (outs CIR_ComplexType:$result);
-
-  let assemblyFormat = [{
-    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
-  }];
-
-  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
