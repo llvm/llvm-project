@@ -35,12 +35,85 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
 
   std::unordered_map<const MCSymbol *, const MCSymbol *> VeneerDestinations;
   uint64_t NumEliminatedVeneers = 0;
+  uint64_t NumE843419Inlined = 0;
+
   for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
     if (!BF.isPossibleVeneer())
       continue;
 
     if (BF.isIgnored())
       continue;
+
+    // Cortex-A53 erratum 843419 veneers: inline the veneer body at each
+    // branch site instead of redirecting, so LongJmp do not introduce
+    // code that clobbers registers (e.g. x16) used by the caller.
+    if (BC.MIB->matchE843419Veneer(BF)) {
+      const MCInst &VeneerFirstInstr = BF.front().getInstructionAtIndex(0);
+      const MCSymbol *ReturnTargetSym =
+          BC.MIB->getTargetSymbol(BF.front().getInstructionAtIndex(1));
+
+      // Check if this branch targets our e843419 veneer.
+      auto BranchTargetsVeneer = [&BF, &BC](const MCSymbol *Target) {
+        if (!Target)
+          return false;
+        if (BC.getFunctionForSymbol(Target) == &BF)
+          return true;
+        if (ErrorOr<uint64_t> Addr = BC.getSymbolValue(*Target))
+          return BC.getBinaryFunctionContainingAddress(*Addr) == &BF;
+        return false;
+      };
+
+      uint64_t CallSites = 0;
+
+      // Find caller from veneer's branch-back target so we can limit the scan.
+      BinaryFunction *CallerBF = nullptr;
+      if (ReturnTargetSym) {
+        if (ErrorOr<uint64_t> Addr = BC.getSymbolValue(*ReturnTargetSym))
+          CallerBF = BC.getBinaryFunctionContainingAddress(*Addr);
+      }
+
+      auto ScanForBranchesToVeneer = [&](BinaryFunction &F) {
+        for (BinaryBasicBlock &BB : F) {
+          for (auto II = BB.begin(); II != BB.end();) {
+            MCInst &Instr = *II;
+            if (!BC.MIB->isBranch(Instr)) {
+              ++II;
+              continue;
+            }
+            const MCSymbol *Target = BC.MIB->getTargetSymbol(Instr);
+            if (!BranchTargetsVeneer(Target)) {
+              ++II;
+              continue;
+            }
+            InstructionListType Repl;
+            Repl.emplace_back(VeneerFirstInstr);
+            II = BB.replaceInstruction(II, Repl);
+            ++CallSites;
+            ++NumE843419Inlined;
+          }
+        }
+      };
+
+      if (CallerBF && !CallerBF->isIgnored())
+        ScanForBranchesToVeneer(*CallerBF);
+      else
+        LLVM_DEBUG(dbgs() << "BOLT: skipping e843419 veneer inline for "
+                          << BF.getOneName()
+                          << " (caller not resolved or ignored)\n");
+
+      // Only mark pseudo when we actually inlined at least one branch site.
+      if (CallSites > 0) {
+        ++NumEliminatedVeneers;
+        BF.setPseudo(true);
+        LLVM_DEBUG(dbgs() << "BOLT-INFO: inlined e843419 veneer "
+                          << BF.getOneName() << " at " << CallSites
+                          << " branch sites\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "BOLT: e843419 veneer " << BF.getOneName()
+                          << " left unchanged (no branch sites inlined)\n");
+      }
+      continue;
+    }
 
     MCInst &FirstInstruction = *(BF.begin()->begin());
     const MCSymbol *VeneerTargetSymbol = 0;
@@ -67,6 +140,9 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
 
   BC.outs() << "BOLT-INFO: number of removed linker-inserted veneers: "
             << NumEliminatedVeneers << '\n';
+  if (NumE843419Inlined)
+    BC.outs() << "BOLT-INFO: e843419 veneer call sites inlined: "
+              << NumE843419Inlined << '\n';
 
   // Handle veneers to veneers in case they occur
   for (auto &Entry : VeneerDestinations) {
