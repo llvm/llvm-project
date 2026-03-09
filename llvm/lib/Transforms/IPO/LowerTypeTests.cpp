@@ -2002,14 +2002,14 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc,
       if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
         Assume->eraseFromParent();
     // If the assume was merged with another assume, we might have a use on a
-    // phi (which will feed the assume). Simply replace the use on the phi
-    // with "true" and leave the merged assume.
+    // phi or select (which will feed the assume). Simply replace the use on
+    // the phi/select with "true" and leave the merged assume.
     //
     // If ShouldDropAll is set, then we  we need to update any remaining uses,
     // regardless of the instruction type.
     if (!CI->use_empty()) {
       assert(ShouldDropAll || all_of(CI->users(), [](User *U) -> bool {
-               return isa<PHINode>(U);
+               return isa<PHINode>(U) || isa<SelectInst>(U);
              }));
       CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
     }
