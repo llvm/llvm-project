@@ -47,8 +47,8 @@ let Predicates = [NoVLX] in {
 }
 
 let Predicates = [HasVLX] in {
-  def : Pat<(v8f16 (scalar_to_vector FR16X:$src)),
-            (COPY_TO_REGCLASS FR16X:$src, VR128X)>;
+  def : Pat<(v8f16 (scalar_to_vector (f16 FR16X:$src))),
+            (COPY_TO_REGCLASS (f16 FR16X:$src), VR128X)>;
   // Implicitly promote a 32-bit scalar to a vector.
   def : Pat<(v4f32 (scalar_to_vector FR32X:$src)),
             (COPY_TO_REGCLASS FR32X:$src, VR128X)>;
