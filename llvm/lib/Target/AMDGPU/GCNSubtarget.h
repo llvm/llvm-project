@@ -30,6 +30,22 @@ namespace llvm {
 
 class GCNTargetMachine;
 
+/// Bit flags for the "amdgpu.oob.mode" LLVM module flag.
+/// These control per-module relaxation of out-of-bounds (OOB) buffer access
+/// semantics. Using Module::Min merge behaviour, a stricter module always
+/// overrides a more relaxed one at link time.
+namespace AMDGPUOOBMode {
+enum : unsigned {
+  /// Relax OOB handling for untyped buffer instructions (buffer_load /
+  /// buffer_store). When set, the backend may merge misaligned accesses across
+  /// an OOB boundary, which would be incorrect under strict Vulkan robustness.
+  UntypedBuffer = 0x1,
+  /// Relax OOB handling for typed buffer instructions (tbuffer_load /
+  /// tbuffer_store).
+  TypedBuffer = 0x2,
+};
+} // namespace AMDGPUOOBMode
+
 class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
                            public AMDGPUSubtarget {
 public:
@@ -70,6 +86,7 @@ protected:
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
+  unsigned OOBMode = 0;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -79,17 +96,6 @@ protected:
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "AMDGPUGenSubtargetInfo.inc"
-
-  // Module flag features.
-
-  // Out-Of-Bounds mode flags.
-  // Setting a bit enables a relaxed mode that disables strict OOB guarantees;
-  // an out-of-bounds access may cause a neighboring in-bounds access to be
-  // treated as OOB.
-  // If bit is set, enable relaxed mode. 0 in a bit keeps the corresponding check strict.
-  // OOBMode{0} - untyped buffers (buffer_load)
-  // OOBMode{1} - typed buffers (tbuffer_load)
-  unsigned OOBMode = 0;
 
 private:
   SIInstrInfo InstrInfo;
@@ -327,9 +333,12 @@ public:
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
-  bool hasRelaxedBufferOOBMode() const { return OOBMode == 1; // TODO: Use named const/enum.}
-  void setOOBMode(unsigned val) { OOBMode = val; }
   bool isTgSplitEnabled() const { return EnableTgSplit; }
+
+  bool hasRelaxedBufferOOBMode() const {
+    return OOBMode & AMDGPUOOBMode::UntypedBuffer;
+  }
+  void setOOBMode(unsigned Val) { OOBMode = Val; }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 

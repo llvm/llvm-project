@@ -90,6 +90,7 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -1188,15 +1189,6 @@ bool AMDGPUTargetMachine::splitModule(
   return true;
 }
 
-static unsigned getOOBModeFromModule(const Module *M) {
-  unsigned Mode = 0;
-  if (M)
-    if (Metadata *MD = M->getModuleFlag("amdgpu.oob.mode"))
-      if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
-        Mode = CI->getZExtValue();
-  return Mode;
-}
-
 //===----------------------------------------------------------------------===//
 // GCN Target Machine (SI+)
 //===----------------------------------------------------------------------===//
@@ -1209,13 +1201,23 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOptLevel OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
+/// Returns the value of the "amdgpu.oob.mode" module flag, or 0 if absent.
+/// See AMDGPUOOBMode for the bit definitions.
+static unsigned getOOBModeFromModule(const Module &M) {
+  const auto *Flag =
+      mdconst::dyn_extract_or_null<ConstantInt>(M.getModuleFlag("amdgpu.oob.mode"));
+  return Flag ? static_cast<unsigned>(Flag->getZExtValue()) : 0u;
+}
+
 const TargetSubtargetInfo *
 GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef GPU = getGPUName(F);
   StringRef FS = getFeatureString(F);
 
+  unsigned OOBMode = getOOBModeFromModule(*F.getParent());
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
+  SubtargetKey.append((",oob=" + Twine(OOBMode)).str());
 
   auto &I = SubtargetMap[SubtargetKey];
   if (!I) {
@@ -1224,10 +1226,10 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this);
+    I->setOOBMode(OOBMode);
   }
 
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);
-  I->setOOBMode(getOOBModeFromModule(F.getParent()));
 
   return I.get();
 }
