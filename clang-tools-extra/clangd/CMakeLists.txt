@@ -168,6 +168,7 @@ clang_target_link_libraries(clangDaemon
   clangOptions
   clangFormat
   clangFrontend
+  clangIndex
   clangLex
   clangSema
   clangSerialization
