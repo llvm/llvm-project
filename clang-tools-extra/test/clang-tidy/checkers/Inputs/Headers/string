@@ -158,6 +158,10 @@ std::string operator+(const std::string&, const std::string&);
 std::string operator+(const std::string&, const char*);
 std::string operator+(const char*, const std::string&);
 
+std::wstring operator+(const std::wstring&, const std::wstring&);
+std::wstring operator+(const std::wstring&, const wchar_t*);
+std::wstring operator+(const wchar_t*, const std::wstring&);
+
 bool operator==(const std::string&, const std::string&);
 bool operator==(const std::string&, const char*);
 bool operator==(const char*, const std::string&);
