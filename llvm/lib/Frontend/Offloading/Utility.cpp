@@ -15,6 +15,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -377,84 +378,41 @@ Error llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
   }
   return Error::success();
 }
-Error offloading::intel::containerizeOpenMPSPIRVImage(
-    std::unique_ptr<MemoryBuffer> &Img) {
-  constexpr char INTEL_ONEOMP_OFFLOAD_VERSION[] = "1.0";
-  constexpr int NT_INTEL_ONEOMP_OFFLOAD_VERSION = 1;
-  constexpr int NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT = 2;
-  constexpr int NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX = 3;
+Error offloading::intel::containerizeSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Img, object::OffloadKind Kind,
+    StringRef CompileOpts, StringRef LinkOpts) {
+  using namespace object;
 
-  // Start creating notes for the ELF container.
-  std::vector<ELFYAML::NoteEntry> Notes;
-  std::string Version = toHex(INTEL_ONEOMP_OFFLOAD_VERSION);
-  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
-                                        yaml::BinaryRef(Version),
-                                        NT_INTEL_ONEOMP_OFFLOAD_VERSION});
+  // Create inner OffloadBinary containing the raw SPIR-V
+  OffloadBinary::OffloadingImage InnerImage;
+  InnerImage.TheImageKind = ImageKind::IMG_SPIRV;
+  InnerImage.TheOffloadKind = Kind;
+  InnerImage.Flags = 0;
 
-  // The AuxInfo string will hold auxiliary information for the image.
-  // ELFYAML::NoteEntry structures will hold references to the
-  // string, so we have to make sure the string is valid.
-  std::string AuxInfo;
+  // Add metadata about the SPIR-V image as string key-value pairs.
+  MapVector<StringRef, StringRef> StringData;
+  StringData["version"] = "1.0";
+  StringData["format"] = "spirv";
+  StringData["triple"] = "spirv64-intel";
 
-  // TODO: Pass compile/link opts
-  StringRef CompileOpts = "";
-  StringRef LinkOpts = "";
+  // Store compile/link options if provided
+  if (!CompileOpts.empty())
+    StringData["compile-opts"] = CompileOpts;
+  if (!LinkOpts.empty())
+    StringData["link-opts"] = LinkOpts;
 
-  unsigned ImageFmt = 1; // SPIR-V format
+  InnerImage.StringData = StringData;
 
-  AuxInfo = toHex((Twine(0) + Twine('\0') + Twine(ImageFmt) + Twine('\0') +
-                   CompileOpts + Twine('\0') + LinkOpts)
-                      .str());
-  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
-                                        yaml::BinaryRef(AuxInfo),
-                                        NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX});
+  // Wrap the raw SPIR-V binary
+  InnerImage.Image = std::move(Img);
 
-  std::string ImgCount = toHex(Twine(1).str()); // always one image per ELF
-  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
-                                        yaml::BinaryRef(ImgCount),
-                                        NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT});
+  // Serialize inner OffloadBinary
+  SmallVector<OffloadBinary::OffloadingImage> Images;
+  Images.push_back(std::move(InnerImage));
+  SmallString<0> InnerBinaryData = OffloadBinary::write(Images);
 
-  std::string YamlFile;
-  llvm::raw_string_ostream YamlFileStream(YamlFile);
+  // Replace the buffer with the inner OffloadBinary
+  Img = MemoryBuffer::getMemBufferCopy(InnerBinaryData);
 
-  // Write the YAML template file.
-
-  // We use 64-bit little-endian ELF currently.
-  ELFYAML::FileHeader Header{};
-  Header.Class = ELF::ELFCLASS64;
-  Header.Data = ELF::ELFDATA2LSB;
-  Header.Type = ELF::ET_DYN;
-  Header.Machine = ELF::EM_INTELGT;
-
-  // Create a section with notes.
-  ELFYAML::NoteSection Section{};
-  Section.Type = ELF::SHT_NOTE;
-  Section.AddressAlign = 0;
-  Section.Name = ".note.inteloneompoffload";
-  Section.Notes.emplace(std::move(Notes));
-
-  ELFYAML::Object Object{};
-  Object.Header = Header;
-  Object.Chunks.push_back(
-      std::make_unique<ELFYAML::NoteSection>(std::move(Section)));
-
-  // Create the section that will hold the image
-  ELFYAML::RawContentSection ImageSection{};
-  ImageSection.Type = ELF::SHT_PROGBITS;
-  ImageSection.AddressAlign = 0;
-  std::string Name = "__openmp_offload_spirv_0";
-  ImageSection.Name = Name;
-  ImageSection.Content =
-      llvm::yaml::BinaryRef(arrayRefFromStringRef(Img->getBuffer()));
-  Object.Chunks.push_back(
-      std::make_unique<ELFYAML::RawContentSection>(std::move(ImageSection)));
-  Error Err = Error::success();
-  llvm::yaml::yaml2elf(
-      Object, YamlFileStream,
-      [&Err](const Twine &Msg) { Err = createStringError(Msg); }, UINT64_MAX);
-  if (Err)
-    return Err;
-
-  Img = MemoryBuffer::getMemBufferCopy(YamlFile);
   return Error::success();
 }

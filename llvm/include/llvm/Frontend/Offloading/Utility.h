@@ -158,10 +158,29 @@ LLVM_ABI Error getAMDGPUMetaDataFromImage(
 } // namespace amdgpu
 
 namespace intel {
-/// Containerizes an offloading binary into the ELF binary format expected by
-/// the Intel runtime offload plugin.
-LLVM_ABI Error
-containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
+/// Containerizes an SPIR-V image into inner OffloadBinary format.
+/// Creates a nested OffloadBinary structure where the inner binary contains
+/// the raw SPIR-V and associated metadata (version, format, triple, etc.).
+/// This inner OffloadBinary is then embedded in an outer OffloadBinary.
+///
+/// \param Binary The SPIR-V binary to containerize
+/// \param CompileOpts Optional compilation options
+/// \param LinkOpts Optional linking options
+LLVM_ABI Error containerizeSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary,
+                                      object::OffloadKind Kind,
+                                      StringRef CompileOpts = "",
+                                      StringRef LinkOpts = "");
+
+/// Containerizes OpenMP SPIR-V image into inner OffloadBinary format.
+/// \param Binary The SPIR-V binary to containerize
+/// \param CompileOpts Optional compilation options
+/// \param LinkOpts Optional linking options
+inline LLVM_ABI Error containerizeOpenMPSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Binary, StringRef CompileOpts = "",
+    StringRef LinkOpts = "") {
+  return containerizeSPIRVImage(Binary, object::OffloadKind::OFK_OpenMP,
+                                CompileOpts, LinkOpts);
+}
 } // namespace intel
 } // namespace offloading
 } // namespace llvm
