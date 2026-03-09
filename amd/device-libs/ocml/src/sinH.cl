@@ -17,11 +17,13 @@ MATH_MANGLE(sin)(half x)
     struct redret r = MATH_PRIVATE(trigred)(ax);
     struct scret sc =  MATH_PRIVATE(sincosred)(r.hi);
 
-    short s = AS_SHORT((r.i & (short)1) == (short)0 ? sc.s : sc.c);
-    s ^= (r.i > (short)1 ? (short)0x8000 : (short)0) ^ (AS_SHORT(x) & (short)0x8000);
+    half s = (r.i & (short)1) == (short)0 ? sc.s : sc.c;
+    short flip = r.i > (short)1 ? (short)SIGNBIT_HP16 : (short)0;
+
+    s = AS_HALF((short)(AS_SHORT(s) ^ (flip ^ (AS_SHORT(x) & (short)SIGNBIT_HP16))));
 
     if (!FINITE_ONLY_OPT()) {
-        s = BUILTIN_ISFINITE_F16(ax) ? s : (short)QNANBITPATT_HP16;
+        s = BUILTIN_ISFINITE_F16(ax) ? s : QNAN_F16;
     }
 
     return AS_HALF(s);

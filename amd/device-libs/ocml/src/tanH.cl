@@ -15,13 +15,14 @@ MATH_MANGLE(tan)(half x)
 {
     half ax = BUILTIN_ABS_F16(x);
     struct redret r = MATH_PRIVATE(trigred)(ax);
-    short t = AS_SHORT(MATH_PRIVATE(tanred)(r.hi, r.i & (short)1));
-    t ^= AS_SHORT(x) & (short)0x8000;
+    half t = MATH_PRIVATE(tanred)(r.hi, r.i & (short)1);
+
+    t = AS_HALF((short)(AS_SHORT(t) ^ (AS_SHORT(x) & SIGNBIT_HP16)));
 
     if (!FINITE_ONLY_OPT()) {
-        t = BUILTIN_ISFINITE_F16(ax) ? t : (short)QNANBITPATT_HP16;
+        t = BUILTIN_ISFINITE_F16(ax) ? t : QNAN_F16;
     }
 
-    return AS_HALF(t);
+    return t;
 }
 

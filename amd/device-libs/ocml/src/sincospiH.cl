@@ -26,21 +26,22 @@ MATH_MANGLE(sincospi)(half x, __private half *cp)
     struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));
     struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
 
-    short flip = r.i > (short)1 ? (short)0x8000 : (short)0;
+    short flip = r.i > (short)1 ? (short)SIGNBIT_HP16 : (short)0;
     bool odd = (r.i & (short)1) != (short)0;
-    short s = AS_SHORT(odd ? sc.c : sc.s);
-    s ^= flip ^ (AS_SHORT(x) & (short)0x8000);
+    half s = odd ? sc.c : sc.s;
+
+    s = AS_HALF((short)(AS_SHORT(s) ^ (flip ^ AS_SHORT(x) & (short)SIGNBIT_HP16)));
+
     sc.s = -sc.s;
-    short c = AS_SHORT(odd ? sc.s : sc.c);
-    c ^= flip;
+    half c = AS_HALF((short)(AS_SHORT(odd ? sc.s : sc.c) ^ flip));
 
     if (!FINITE_ONLY_OPT()) {
         bool finite = BUILTIN_ISFINITE_F16(x);
-        c = finite ? c : (short)QNANBITPATT_HP16;
-        s = finite ? s : (short)QNANBITPATT_HP16;
+        c = finite ? c : QNAN_F16;
+        s = finite ? s : QNAN_F16;
     }
 
-    *cp = AS_HALF(c);
-    return AS_HALF(s);
+    *cp = c;
+    return s;
 }
 

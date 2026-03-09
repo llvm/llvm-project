@@ -18,13 +18,15 @@ MATH_MANGLE(cos)(half x)
     struct scret sc = MATH_PRIVATE(sincosred)(r.hi);
     sc.s = -sc.s;
 
-    short c =  AS_SHORT((r.i & 1) == (short)0 ? sc.c : sc.s);
-    c ^= r.i > 1 ? (short)0x8000 : (short)0;
+    half c = (r.i & 1) == (short)0 ? sc.c : sc.s;
+
+    short flip = r.i > 1 ? (short)SIGNBIT_HP16 : 0;
+    c = AS_HALF((short)(AS_SHORT(c) ^ flip));
 
     if (!FINITE_ONLY_OPT()) {
-        c = BUILTIN_ISFINITE_F16(ax) ? c : (short)QNANBITPATT_HP16;
+        c = BUILTIN_ISFINITE_F16(ax) ? c : QNAN_F16;
     }
 
-    return AS_HALF(c);
+    return c;
 }
 
