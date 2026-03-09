@@ -5160,8 +5160,16 @@ LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
     const MatrixSingleSubscriptExpr *E) {
   LValue Base = EmitLValue(E->getBase());
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
+
+  RawAddress MatAddr = Base.getAddress();
+  if (getLangOpts().HLSL &&
+      E->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant)
+    MatAddr =
+        CGM.getHLSLRuntime().createBufferMatrixTempAddress(Base, E->getExprLoc(),
+                                                           *this);
+
   return LValue::MakeMatrixRow(
-      MaybeConvertMatrixAddress(Base.getAddress(), *this), RowIdx,
+      MaybeConvertMatrixAddress(MatAddr, *this), RowIdx,
       E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());
 }
 
