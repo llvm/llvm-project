@@ -907,7 +907,7 @@ public:
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize(this);
   }
 
   /// \returns Number of waves per execution unit required to support the given

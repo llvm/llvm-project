@@ -17,7 +17,7 @@ define i32 @use_grid_size_x_max_num_workgroups_existing_nonzero_range() #0 {
 ; CHECK-LABEL: define i32 @use_grid_size_x_max_num_workgroups_existing_nonzero_range(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[IMPLICITARG_PTR]], align 4, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[IMPLICITARG_PTR]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[GRID_SIZE_X]]
 ;
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -30,7 +30,7 @@ define i32 @use_grid_size_y_max_num_workgroups() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[GEP_GRID_SIZE_Y:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 4
-; CHECK-NEXT:    [[GRID_SIZE_Y:%.*]] = load i32, ptr addrspace(4) [[GEP_GRID_SIZE_Y]], align 4, !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[GRID_SIZE_Y:%.*]] = load i32, ptr addrspace(4) [[GEP_GRID_SIZE_Y]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[GRID_SIZE_Y]]
 ;
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -44,7 +44,7 @@ define i32 @use_grid_size_z_max_num_workgroups() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[GEP_GRID_SIZE_Z:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 8
-; CHECK-NEXT:    [[GRID_SIZE_Z:%.*]] = load i32, ptr addrspace(4) [[GEP_GRID_SIZE_Z]], align 4, !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[GRID_SIZE_Z:%.*]] = load i32, ptr addrspace(4) [[GEP_GRID_SIZE_Z]], align 4, !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[GRID_SIZE_Z]]
 ;
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -69,7 +69,7 @@ define i32 @use_grid_size_x_max_num_workgroups_max_minus_1() #1 {
 ; CHECK-LABEL: define i32 @use_grid_size_x_max_num_workgroups_max_minus_1(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[IMPLICITARG_PTR]], align 4, !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[IMPLICITARG_PTR]], align 4, !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[GRID_SIZE_X]]
 ;
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -118,8 +118,7 @@ attributes #3 = { "amdgpu-max-num-workgroups"="0,42,89" }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[RNG0]] = !{i32 1, i32 37}
-; CHECK: [[RNG1]] = !{i32 0, i32 -1}
-; CHECK: [[RNG2]] = !{i32 1, i32 43}
-; CHECK: [[RNG3]] = !{i32 1, i32 90}
-; CHECK: [[RNG4]] = !{i32 1, i32 -1}
+; CHECK: [[RNG1]] = !{i32 1, i32 43}
+; CHECK: [[RNG2]] = !{i32 1, i32 90}
+; CHECK: [[RNG3]] = !{i32 1, i32 -1}
 ;.
