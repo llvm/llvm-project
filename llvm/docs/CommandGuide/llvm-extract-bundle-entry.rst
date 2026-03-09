@@ -1,18 +1,18 @@
 llvm-extract-bundle-entry - object stripping tool
-==================================
+=================================================
 
 .. program:: llvm-extract-bundle-entry
 
 SYNOPSIS
 --------
 
-:program:`llvm-extract-bundle-entry` [*options*] *URI*
+:program:`llvm-extract-bundle-entry` [*options*] URI
 
 DESCRIPTION
 -----------
 
 :program: The `llvm-extract-offload-entry` command takes a URI argument, and generates a code 
-object file based on the details of the URI given, such as <executable_name>-[pid<number>]-offset<number>-size<number>.co.
+object file based on the details of the URI given.
 
 The URI syntax is defined as:
  
@@ -27,8 +27,7 @@ number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
 The `llvm-extract-offload-entry` command reads its input from standard input if the URI is omitted 
 or if the URI argument is -.  
 
-The output is always written to a file, whose name is generated from the URI input given, 
-unless the -o option is specified.
+The output is always written to a file, whose name is generated from the URI input given.
 
 
 OPTIONS
