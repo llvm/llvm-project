@@ -4,7 +4,6 @@ import gc
 import io
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
-from mlir.ir import get_parent_of_type
 from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import arith, func, scf, shape
 from mlir.dialects._ods_common import _cext
