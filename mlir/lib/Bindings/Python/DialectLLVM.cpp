@@ -180,10 +180,9 @@ struct ArrayType : PyConcreteType<ArrayType> {
                            mlirLLVMArrayTypeGet(elementType, numElements));
         },
         "element_type"_a, "num_elements"_a);
-    c.def_prop_ro("element_type",
-                  [](const ArrayType &type) {
-                    return mlirLLVMArrayTypeGetElementType(type);
-                  });
+    c.def_prop_ro("element_type", [](const ArrayType &type) {
+      return mlirLLVMArrayTypeGetElementType(type);
+    });
     c.def_prop_ro("num_elements", [](const ArrayType &type) {
       return mlirLLVMArrayTypeGetNumElements(type);
     });
