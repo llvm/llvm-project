@@ -1,31 +1,8 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
 
 // CHECK-FIXES: #include <utility>
 
-namespace std {
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
-  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
-}
-} // namespace std
+#include <utility>
 
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {
