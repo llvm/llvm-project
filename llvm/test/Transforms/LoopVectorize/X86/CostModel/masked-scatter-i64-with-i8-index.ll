@@ -2,8 +2,8 @@
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+sse2 --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=SSE2
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+sse4.2 --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=SSE42
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx  --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX1
-; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2,-fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX2,AVX2-NOFAST
-; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2,+fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX2
+; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2,-fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX2-NOFAST
+; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx2,+fast-gather --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX2-FAST
 ; RUN: opt -passes=loop-vectorize -vectorizer-maximize-bandwidth -S -mattr=+avx512bw --debug-only=loop-vectorize --disable-output < %s 2>&1 | FileCheck %s --check-prefixes=AVX512
 
 ; REQUIRES: asserts
@@ -18,12 +18,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; SSE2:  LV: Found an estimated cost of 10/4 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
 ; SSE2:  LV: Found an estimated cost of 5 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
 ; SSE2:  LV: Found an estimated cost of 10 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
 ; SSE2:  LV: Found an estimated cost of 20 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ;
 ; SSE42-LABEL: 'test'
+; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; SSE42:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
 ; SSE42:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
@@ -39,15 +41,25 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 18 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX1:  LV: Found an estimated cost of 36 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
 ;
-; AVX2-LABEL: 'test'
-; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2:  LV: Found an estimated cost of 18/4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2:  LV: Found an estimated cost of 9 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2:  LV: Found an estimated cost of 18 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2-NOFAST: LV: Found an estimated cost of 36 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST-LABEL: 'test'
+; AVX2-NOFAST:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST:  LV: Found an estimated cost of 18/4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST:  LV: Found an estimated cost of 9 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST:  LV: Found an estimated cost of 18 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST:  LV: Found an estimated cost of 36 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
+;
+; AVX2-FAST-LABEL: 'test'
+; AVX2-FAST:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-FAST:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-FAST:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-FAST:  LV: Found an estimated cost of 18/4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-FAST:  LV: Found an estimated cost of 9 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-FAST:  LV: Found an estimated cost of 18 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ;
 ; AVX512-LABEL: 'test'
+; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX512:  LV: Found an estimated cost of 5 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX512:  LV: Found an estimated cost of 11 for VF 4 For instruction: store i64 %valB, ptr %out, align 8

@@ -18,6 +18,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE2:  LV: Found an estimated cost of 10/4 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE2:  LV: Found an estimated cost of 22/4 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE2:  LV: Found an estimated cost of 11 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
@@ -25,12 +26,14 @@ define void @test() {
 ;
 ; SSE42-LABEL: 'test'
 ; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE42:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE42:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE42:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE42:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i32 %valB, ptr %out, align 4
 ;
 ; AVX1-LABEL: 'test'
+; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX1:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX1:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
@@ -40,6 +43,7 @@ define void @test() {
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX2:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX2:  LV: Found an estimated cost of 34/4 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
@@ -47,6 +51,7 @@ define void @test() {
 ; AVX2:  LV: Found an estimated cost of 34 for VF 32 For instruction: store i32 %valB, ptr %out, align 4
 ;
 ; AVX512-LABEL: 'test'
+; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX512:  LV: Found an estimated cost of 5 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX512:  LV: Found an estimated cost of 42/4 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
