@@ -396,6 +396,7 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
   if (srcBuff != srcBuffPairContOp)
     return false;
 
+  bool oneConstantOffset = false;
   for (size_t i = 0; i < indexVals.size(); i++) {
 
     if (indexVals[i] == indexValsPairContOp[i])
@@ -409,9 +410,11 @@ bool validatePairVectorContract(vector::ContractionOp contractOp,
 
     if ((*v1 - *v0) != nonUnitDimValue)
       return false;
+
+    oneConstantOffset = true;
   }
 
-  return true;
+  return oneConstantOffset;
 }
 
 } // namespace x86

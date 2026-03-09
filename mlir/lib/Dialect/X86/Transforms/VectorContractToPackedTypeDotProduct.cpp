@@ -71,9 +71,9 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
   bool opABeforeopB = opA->isBeforeInBlock(opB);
 
   if (opABeforeopB)
-    opB->moveAfter(opA);
+    rewriter.moveOpAfter(opB, opA);
   else
-    opA->moveAfter(opB);
+    rewriter.moveOpAfter(opA, opB);
 
   mlir::Operation *insertAfter = opABeforeopB ? opB : opA;
 
