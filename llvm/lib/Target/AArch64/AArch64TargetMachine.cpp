@@ -243,7 +243,7 @@ LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> V(getTheAArch64_32Target());
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeAArch64A53Fix835769Pass(PR);
+  initializeAArch64A53Fix835769LegacyPass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
   initializeAArch64AdvSIMDScalarPass(PR);
   initializeAArch64AsmPrinterPass(PR);
@@ -254,7 +254,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ConditionOptimizerPass(PR);
   initializeAArch64DeadRegisterDefinitionsPass(PR);
   initializeAArch64ExpandPseudoPass(PR);
-  initializeAArch64LoadStoreOptPass(PR);
+  initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
   initializeAArch64O0PreLegalizerCombinerPass(PR);
@@ -586,6 +586,8 @@ private:
 } // end anonymous namespace
 
 void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "AArch64PassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
@@ -612,7 +614,7 @@ std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
-// This function checks whether the opt level is explictly set to none,
+// This function checks whether the opt level is explicitly set to none,
 // or whether GlobalISel was enabled due to SDAG encountering an optnone
 // function. If the opt level is greater than the level we automatically enable
 // globalisel at, and it wasn't enabled via CLI, we know that it must be because
@@ -877,7 +879,7 @@ void AArch64PassConfig::addPreSched2() {
   // Use load/store pair instructions when possible.
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoadStoreOpt)
-      addPass(createAArch64LoadStoreOptimizationPass());
+      addPass(createAArch64LoadStoreOptLegacyPass());
   }
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
@@ -900,7 +902,7 @@ void AArch64PassConfig::addPreEmitPass() {
   // at O3, where the Tail Duplication Threshold is set to 4 instructions.
   // Run the load/store optimizer once more.
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive && EnableLoadStoreOpt)
-    addPass(createAArch64LoadStoreOptimizationPass());
+    addPass(createAArch64LoadStoreOptLegacyPass());
 
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive &&
       EnableAArch64CopyPropagation)
@@ -908,7 +910,7 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createAArch64RedundantCondBranchPass());
 
-  addPass(createAArch64A53Fix835769());
+  addPass(createAArch64A53Fix835769LegacyPass());
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.

@@ -2845,11 +2845,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 converter.mangleName(mapperIdName, *typeSpec->GetScope());
 
           if (!mapperIdName.empty()) {
-            bool allowImplicitMapper =
-                semantics::IsAllocatableOrObjectPointer(&sym);
+            bool isPointer = semantics::IsPointer(sym);
+            bool isAllocatable = semantics::IsAllocatable(sym);
             bool hasDefaultMapper =
                 converter.getModuleOp().lookupSymbol(mapperIdName);
-            if (hasDefaultMapper || allowImplicitMapper) {
+            // Avoid attaching implicit default mappers to pointer captures.
+            // For large pointer-based derived aggregates this can over-map
+            // nested payloads and conflict with explicit enter/exit maps.
+            if (!isPointer && (hasDefaultMapper || isAllocatable)) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -4320,10 +4323,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::TaskReduction>(clause.u) &&
         !std::holds_alternative<clause::Detach>(clause.u) &&
         !std::holds_alternative<clause::Device>(clause.u)) {
-      std::string name =
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
-      if (!semaCtx.langOptions().OpenMPSimd)
+      const common::LangOptions &options = semaCtx.langOptions();
+      if (!options.OpenMPSimd) {
+        std::string name =
+            parser::omp::GetUpperName(clause.id, options.OpenMPVersion);
         TODO(clauseLocation, name + " clause is not implemented yet");
+      }
     }
   }
 

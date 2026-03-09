@@ -558,6 +558,20 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_ipc
+  ../libc/include/sys/ipc.yaml
+  sys/ipc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ipc_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.uid_t
+    .llvm-libc-types.gid_t
+    .llvm-libc-types.mode_t
+    .llvm-libc-types.struct_ipc_perm
+)
+
+add_header_macro(
   sys_mman
   ../libc/include/sys/mman.yaml
   sys/mman.h
@@ -666,7 +680,6 @@ add_header_macro(
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
-    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_header_macro(
@@ -708,6 +721,7 @@ add_header_macro(
     .llvm-libc-types.dev_t
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
+    .llvm-libc-types.key_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t
@@ -742,6 +756,15 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_un
+  ../libc/include/sys/un.yaml
+  sys/un.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_header_macro(

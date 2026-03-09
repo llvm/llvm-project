@@ -388,9 +388,9 @@ private:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  void instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
-                       const DominatorTree &DT, const PostDominatorTree &PDT,
-                       const LoopInfo &LI);
+  void instrumentStack(OptimizationRemarkEmitter &ORE, memtag::StackInfo &Info,
+                       Value *StackTag, Value *UARTag, const DominatorTree &DT,
+                       const PostDominatorTree &PDT, const LoopInfo &LI);
   void instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
@@ -1464,7 +1464,8 @@ void HWAddressSanitizer::instrumentLandingPads(
   }
 }
 
-void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
+void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
+                                         memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
                                          const PostDominatorTree &PDT,
@@ -1526,15 +1527,18 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     if (DetectUseAfterScope && !SInfo.CallsReturnTwice &&
-        memtag::isStandardLifetime(Info, &DT, &LI, ClMaxLifetimes)) {
+        memtag::isSupportedLifetime(Info, &DT, &LI)) {
       TagStarts();
-      if (!memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec,
-                                        TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
-      }
+      memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec, TagEnd);
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "supportedLifetime", AI);
+      });
     } else if (DetectUseAfterScope && ClStrictUseAfterScope) {
       // SInfo.CallsReturnTwice || !isStandardLifetime
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "supportedLifetime", AI);
+      });
+
       tagAlloca(IRB, AI, Tag, Size);
       TagStarts();
       for_each(Info.LifetimeEnd, TagEnd);
@@ -1676,7 +1680,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
     Value *StackTag = getStackBaseTag(EntryIRB);
     Value *UARTag = getUARTag(EntryIRB);
-    instrumentStack(SInfo, StackTag, UARTag, DT, PDT, LI);
+    instrumentStack(ORE, SInfo, StackTag, UARTag, DT, PDT, LI);
   }
 
   // If we split the entry block, move any allocas that were originally in the

@@ -49,16 +49,16 @@ static constexpr const char *DuplicateTUNamespace =
 static NestedBuildNamespace
 resolveNamespace(const NestedBuildNamespace &LUNamespace,
                  const NestedBuildNamespace &EntityNamespace,
-                 EntityLinkage::LinkageType Linkage) {
+                 EntityLinkageType Linkage) {
   switch (Linkage) {
-  case EntityLinkage::LinkageType::None:
-  case EntityLinkage::LinkageType::Internal:
+  case EntityLinkageType::None:
+  case EntityLinkageType::Internal:
     return EntityNamespace.makeQualified(LUNamespace);
-  case EntityLinkage::LinkageType::External:
+  case EntityLinkageType::External:
     return NestedBuildNamespace(LUNamespace);
   }
 
-  llvm_unreachable("Unhandled EntityLinkage::LinkageType variant");
+  llvm_unreachable("Unhandled EntityLinkageType variant");
 }
 
 EntityId EntityLinker::resolveEntity(const EntityName &OldName,
@@ -79,8 +79,8 @@ EntityId EntityLinker::resolveEntity(const EntityName &OldName,
     // Insertion failure for `None` and `Internal` linkage is a fatal error
     // because these entities have unique namespaces and should never collide.
     // `External` linkage entities may collide.
-    if (Linkage.getLinkage() == EntityLinkage::LinkageType::None ||
-        Linkage.getLinkage() == EntityLinkage::LinkageType::Internal) {
+    if (Linkage.getLinkage() == EntityLinkageType::None ||
+        Linkage.getLinkage() == EntityLinkageType::Internal) {
       ErrorBuilder::fatal(ErrorMessages::EntityAlreadyExistsInLinkageTable,
                           ErrorMessages::EntityLinkerFatalErrorPrefix, NewId,
                           Linkage);
@@ -144,8 +144,8 @@ EntityLinker::merge(TUSummaryEncoding &Summary,
         // Insertion should never fail for `None` and `Internal` linkage
         // entities because these entities will have different namespaces across
         // TUs even if their names match.
-        if (Linkage.getLinkage() == EntityLinkage::LinkageType::None ||
-            Linkage.getLinkage() == EntityLinkage::LinkageType::Internal) {
+        if (Linkage.getLinkage() == EntityLinkageType::None ||
+            Linkage.getLinkage() == EntityLinkageType::Internal) {
           ErrorBuilder::fatal(
               ErrorMessages::FailedToInsertEntityIntoOutputSummary,
               ErrorMessages::EntityLinkerFatalErrorPrefix, NewId, Linkage, SN);
@@ -161,13 +161,17 @@ EntityLinker::merge(TUSummaryEncoding &Summary,
   return PatchTargets;
 }
 
-void EntityLinker::patch(
-    const std::vector<EntitySummaryEncoding *> &PatchTargets,
-    const std::map<EntityId, EntityId> &EntityResolutionTable) {
+llvm::Error
+EntityLinker::patch(const std::vector<EntitySummaryEncoding *> &PatchTargets,
+                    const std::map<EntityId, EntityId> &EntityResolutionTable) {
   for (auto *PatchTarget : PatchTargets) {
     assert(PatchTarget && "EntityLinker::patch: Patch target cannot be null");
-    PatchTarget->patch(EntityResolutionTable);
+
+    if (auto Err = PatchTarget->patch(EntityResolutionTable)) {
+      return Err;
+    }
   }
+  return llvm::Error::success();
 }
 
 llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
@@ -183,7 +187,5 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
 
   auto EntityResolutionTable = resolve(SummaryRef);
   auto PatchTargets = merge(SummaryRef, EntityResolutionTable);
-  patch(PatchTargets, EntityResolutionTable);
-
-  return llvm::Error::success();
+  return patch(PatchTargets, EntityResolutionTable);
 }

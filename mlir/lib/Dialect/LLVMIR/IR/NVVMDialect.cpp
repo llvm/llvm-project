@@ -3059,6 +3059,98 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
+template <typename OpType>
+static LogicalResult verifyAddSubFOp(OpType op) {
+  mlir::NVVM::FPRoundingMode rndMode = op.getRnd();
+  mlir::NVVM::SaturationMode satMode = op.getSat();
+  bool isFTZ = op.getFtz();
+
+  mlir::Type opType = op.getRes().getType();
+  mlir::Type opBaseType = isa<VectorType>(opType)
+                              ? cast<VectorType>(opType).getElementType()
+                              : opType;
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return op.emitOpError("FTZ and saturation are not supported for "
+                          "additions/subtractions involving f64 type");
+
+  if (opBaseType.isF16() && !(rndMode == NVVM::FPRoundingMode::RN ||
+                              rndMode == NVVM::FPRoundingMode::NONE))
+    return op.emitOpError("only RN rounding mode is supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN &&
+        rndMode != NVVM::FPRoundingMode::NONE)
+      return op.emitOpError("only RN rounding mode is supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return op.emitOpError("FTZ and saturation are not supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
+  }
+
+  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
+  // PTX instructions since the corresponding LLVM intrinsic is missing. This
+  // should be removed once the intrinsics for f16 addition (with FTZ only) are
+  // available.
+  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
+    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
+
+  return success();
+}
+
+LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
+
+LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
+
+LogicalResult NVVM::FmaOp::verify() {
+  auto opType = getRes().getType();
+  mlir::NVVM::FPRoundingMode rndMode = getRnd();
+  mlir::NVVM::SaturationMode satMode = getSat();
+  bool isFTZ = getFtz();
+  bool isRelu = getRelu();
+  bool hasOOB = getOob();
+
+  auto getBaseFType = [](Type type) -> Type {
+    if (isa<VectorType>(type))
+      return cast<VectorType>(type).getElementType();
+    return type;
+  };
+
+  auto opBaseType = getBaseFType(opType);
+
+  if (rndMode == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode must be specified");
+
+  if (isRelu && satMode == NVVM::SaturationMode::SAT)
+    return emitOpError("relu and saturation are not supported together");
+
+  if (hasOOB && (satMode == NVVM::SaturationMode::SAT || isFTZ))
+    return emitOpError("oob is not supported with saturation or FTZ");
+
+  if (!(opBaseType.isF16() || opBaseType.isBF16()) && (isRelu || hasOOB))
+    return emitOpError("relu and oob are only supported for f16 and bf16");
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return emitOpError("FTZ and saturation are not supported for f64 type");
+
+  if (opBaseType.isF16() && rndMode != NVVM::FPRoundingMode::RN)
+    return emitOpError(
+        "only RN rounding mode is supported for f16 and vector<2xf16>");
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN)
+      return emitOpError(
+          "only RN rounding mode is supported for bf16 and vector<2xbf16>");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return emitOpError(
+          "FTZ and saturation are not supported for bf16 and vector<2xbf16>");
+  }
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -3133,6 +3225,30 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
                        "DONE: \n\t"
                        "}",
                        space);
+}
+
+//===----------------------------------------------------------------------===//
+// Canonicalization patterns
+//===----------------------------------------------------------------------===//
+
+struct ConvertFsubToFnegFadd : public OpRewritePattern<SubFOp> {
+  using OpRewritePattern<SubFOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubFOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value negRhs =
+        LLVM::FNegOp::create(rewriter, loc, op.getRhs().getType(), op.getRhs());
+
+    rewriter.replaceOpWithNewOp<AddFOp>(op, op.getType(), op.getLhs(), negRhs,
+                                        op.getRnd(), op.getSat(), op.getFtz());
+    return success();
+  }
+};
+
+void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                         MLIRContext *context) {
+  patterns.add<ConvertFsubToFnegFadd>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5240,7 +5356,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
@@ -5253,7 +5369,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor
                    ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
@@ -5264,7 +5380,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                          : llvm::Intrinsic::
                                nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5287,15 +5403,14 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
 }
 
 static LogicalResult verifyTcgen05MMABlockScaleOp(
-    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::MMABlockScaleKind kind,
+    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::Tcgen05MMAKind kind,
     NVVM::Tcgen05MMABlockScale blockScale, Location loc) {
-
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
-      kind == MMABlockScaleKind::MXF4NVF4)
+      kind == NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc, "mxf4nvf4 requires block scale attribute");
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
-      kind != MMABlockScaleKind::MXF4NVF4)
+      kind != NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc,
                      llvm::formatv("{} kind does not support block16 attribute",
                                    stringifyEnum(kind)));
@@ -5338,7 +5453,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
@@ -5351,7 +5466,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
@@ -5364,7 +5479,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::

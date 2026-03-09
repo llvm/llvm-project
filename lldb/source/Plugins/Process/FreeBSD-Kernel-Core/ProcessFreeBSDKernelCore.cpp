@@ -87,13 +87,9 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
 }
 
 void ProcessFreeBSDKernelCore::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 }
 
 void ProcessFreeBSDKernelCore::DebuggerInitialize(Debugger &debugger) {
@@ -142,8 +138,8 @@ size_t ProcessFreeBSDKernelCore::DoWriteMemory(lldb::addr_t addr,
                                                Status &error) {
   if (GetGlobalPluginProperties().GetReadOnly()) {
     error = Status::FromErrorString(
-        "Memory writes are disabled in read-only mode. Disable with 'settings "
-        "set plugin.process.freebsd-kernel-core.read-only false'");
+        "Memory writes are currently disabled. You can enable them with "
+        "`settings set plugin.process.freebsd-kernel-core.read-only false`.");
     return 0;
   }
 
