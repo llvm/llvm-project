@@ -7,3 +7,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.wctype_utils    
 )
+
+add_entrypoint_object(
+  iswgraph
+  SRCS
+    iswgraph.cpp
+  HDRS
+    iswgraph.h
+  DEPENDS
+    libc.src.__support.wctype_utils    
+)
