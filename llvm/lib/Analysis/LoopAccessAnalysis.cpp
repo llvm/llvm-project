@@ -2570,6 +2570,12 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // loop info, as it may be arbitrary.
   LoopBlocksRPO RPOT(TheLoop);
   RPOT.perform(LI);
+
+  // We don't want to use a standard "early return" idiom in this loopnest
+  // because `HasConvergentOp` can be queried through LAI's public API even if
+  // the loop isn't safe to vectorize (e.g., in the LoopDistribute). As such, we
+  // need to finish iterating unless we found that the loop is **both** unsafe
+  // to vectorize and contains a convergent operation.
   for (BasicBlock *BB : RPOT) {
     // Scan the BB and collect legal loads and stores. Also detect any
     // convergent instructions.
@@ -2579,12 +2585,13 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasConvergentOp = true;
       }
 
-      // With both a non-vectorizable memory instruction and a convergent
-      // operation, found in this loop, no reason to continue the search.
+      // Unsafe to vectorize and we already found a convergent operation, can
+      // early return now.
       if (HasComplexMemInst && HasConvergentOp)
         return false;
 
-      // Avoid hitting recordAnalysis multiple times.
+      // We know already that the loop is unsafe to vectorize, let's finish our
+      // search for convergent operations.
       if (HasComplexMemInst)
         continue;
 
