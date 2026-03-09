@@ -794,7 +794,7 @@ enum OpenFlags : unsigned {
 ///
 /// Example: clang-%%-%%-%%-%%-%%.s => clang-a0-b1-c2-d3-e4.s
 ///
-/// @param Model Name to base unique path off of.
+/// @param Model Name to base unique path off of. Must contain at least one '%'.
 /// @param ResultPath Set to the file's path.
 /// @param MakeAbsolute Whether to use the system temp directory.
 LLVM_ABI void createUniquePath(const Twine &Model,

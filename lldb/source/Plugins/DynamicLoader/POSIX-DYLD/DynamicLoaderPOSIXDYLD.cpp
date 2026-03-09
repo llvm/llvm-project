@@ -843,10 +843,11 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   LLDB_LOGF(log,
             "GetThreadLocalData info: link_map=0x%" PRIx64
             ", thread info metadata: "
-            "modid_offset=0x%" PRIx32 ", dtv_offset=0x%" PRIx32
-            ", tls_offset=0x%" PRIx32 ", dtv_slot_size=%" PRIx32 "\n",
-            link_map, metadata.modid_offset, metadata.dtv_offset,
-            metadata.tls_offset, metadata.dtv_slot_size);
+            "modid_offset=0x%" PRIx32 ", pthread_size=0x%" PRIx32
+            ", dtv_offset=0x%" PRIx32 ", tls_offset=0x%" PRIx32
+            ", dtv_slot_size=%" PRIx32 "\n",
+            link_map, metadata.modid_offset, metadata.pthread_size,
+            metadata.dtv_offset, metadata.tls_offset, metadata.dtv_slot_size);
 
   // Get the thread pointer.
   addr_t tp = thread->GetThreadPointer();
@@ -865,8 +866,33 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   }
 
   // Lookup the DTV structure for this thread.
-  addr_t dtv_ptr = tp + metadata.dtv_offset;
-  addr_t dtv = ReadPointer(dtv_ptr);
+  addr_t dtv_ptr = LLDB_INVALID_ADDRESS;
+  if (metadata.dtv_offset < metadata.pthread_size) {
+    // The DTV pointer field lies within `pthread`. This indicates that `libc`
+    // placed `tcbhead_t header`, which contains the `dtv` field, inside
+    // `pthread`, so, for this architecture, `TLS_TCB_AT_TP` is set to `1` and
+    // `TLS_DTV_AT_TP` is `0`. This corresponds to the "Variant II" memory
+    // layout described in Ulrich Drepper's ELF TLS document
+    // (https://akkadia.org/drepper/tls.pdf). The thread pointer points to the
+    // start of `pthread`, and the address of the `dtv` field can be calculated
+    // by adding its offset.
+    dtv_ptr = tp + metadata.dtv_offset;
+  } else if (metadata.dtv_offset == metadata.pthread_size) {
+    // The DTV pointer field is located right after `pthread`. This means that,
+    // for this architecture, `TLS_DTV_AT_TP` is set to `1` in `libc`, which may
+    // correspond to the "Variant I" memory layout, in which the thread pointer
+    // points directly to the `dtv` field. However, for different architectures,
+    // the position of the `dtv` field relative to the thread pointer may vary,
+    // so the following calculations must be adjusted for each platform.
+    //
+    // On AArch64 and ARM, `tp` is known to point directly to `dtv`.
+    const llvm::Triple &triple = module_sp->GetArchitecture().GetTriple();
+    if (triple.isAArch64() || triple.isARM()) {
+      dtv_ptr = tp;
+    }
+  }
+  addr_t dtv = (dtv_ptr != LLDB_INVALID_ADDRESS) ? ReadPointer(dtv_ptr)
+                                                 : LLDB_INVALID_ADDRESS;
   if (dtv == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read dtv");
     return LLDB_INVALID_ADDRESS;

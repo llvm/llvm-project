@@ -29,8 +29,17 @@ jobs:
           sudo chmod +x /usr/bin/buildifier
       - name: Run Buildifier
         run: |
-          buildifier --mode=check $(find ./utils/bazel -name *BUILD*)
-  
+          BZL_FILES=$(find ./utils/bazel -name *BUILD* -o -name '*bzl' -o -name '*.bazel')
+          if ! buildifier --mode=check $BZL_FILES; then
+            echo "::error::Buildifier formatting issues found."
+            echo "::group::Buildifier Diff"
+            buildifier --mode=diff $BZL_FILES
+            echo "::endgroup::"
+            exit 1
+          else
+            echo "All files are formatted correctly."
+          fi
+
   bazel-build:
     name: "Bazel Build/Test"
     # Only run on US Central workers so we only have to keep one cache warm as
