@@ -731,6 +731,7 @@ private:
             FailedSNs.insert(SN.get());
             return true;
           };
+          llvm_unreachable("Unknown ExternalState enum");
         });
       });
 
