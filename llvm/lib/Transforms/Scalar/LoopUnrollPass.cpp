@@ -330,7 +330,7 @@ struct EstimatedUnrollCost {
 };
 
 struct PragmaInfo {
-  PragmaInfo(Loop *L);
+  PragmaInfo(const Loop *L);
   const bool UserUnrollCount;
   const bool PragmaFullUnroll;
   const unsigned PragmaCount;
@@ -792,7 +792,7 @@ static unsigned unrollCountPragmaValue(const Loop *L) {
   return 0;
 }
 
-PragmaInfo::PragmaInfo(Loop *L)
+PragmaInfo::PragmaInfo(const Loop *L)
     : UserUnrollCount(UnrollCount.getNumOccurrences() > 0),
       PragmaFullUnroll(hasUnrollFullPragma(L)),
       PragmaCount(unrollCountPragmaValue(L)),
