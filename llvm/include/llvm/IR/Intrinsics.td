@@ -231,6 +231,21 @@ def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
 //===----------------------------------------------------------------------===//
+// IIT (Intrinsic Information Table) Encoding
+// Each intrinsic's type signature is encoded at build time and decoded at
+// runtime via three cooperating components:
+// Token definitions: IIT_* records below assign a numeric code to each type or 
+// type modifier.
+// TypeInfoGen<> walks each Intrinsic<> record and builds a flat byte
+// sequence 'TypeSig' of IIT_* codes: return types first, then params.
+// Encoding: For each intrinsic ComputeTypeSignature() in IntrinsicEmitter.cpp 
+// gets TypeSig and encodePacked() encodes TypeSig into packed nibbles. 
+// The encodings are stored in two generated tables inside IntrinsicImpl.inc 
+// by EmitGenerator(). 
+// Decoding: getIntrinsicInfoTableEntries() in Intrinsics.cpp reads IIT_Table[id-1], 
+// checks the MSB to choose the path, unpacks the byte stream, and calls 
+// DecodeIITType() to build the IITDescriptor vector consumed by getType() and 
+// matchIntrinsicSignature().
 
 // llvm::Intrinsic::IITDescriptor::ArgKind::AK_%
 def ArgKind {
@@ -684,6 +699,14 @@ class TypeInfoGen<
   list<LLVMType> Types = !foreach(ty, AllTypes,
     !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
 
+  // TypeSig layout:
+  //   - If the intrinsic returns multiple values (struct return), the first code
+  //     is IIT_STRUCT followed by a count byte, then the element types.
+  //   - If it returns a single void, the first code is IIT_Done (0).
+  //   - Otherwise the first code(s) describe the single return type.
+  //   - Parameter type codes follow in order.
+  //   - The sequence is implicitly terminated: in LongEncodingTable by a 0 byte
+  //     (IIT_Done), and in the fixed encoding by the natural end of nibbles.
   list<int> TypeSig = !listflatten(!listconcat(
     [!cond(
       !eq(!size(RetTypes), 0): [IIT_Done.Number],
