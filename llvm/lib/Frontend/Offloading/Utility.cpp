@@ -378,30 +378,22 @@ Error llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
   }
   return Error::success();
 }
-Error offloading::intel::containerizeSPIRVImage(
-    std::unique_ptr<MemoryBuffer> &Img, object::OffloadKind Kind,
-    StringRef CompileOpts, StringRef LinkOpts) {
+
+Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
+                                    object::ImageKind ImageKind,
+                                    object::OffloadKind OffloadKind,
+                                    int32_t ImageFlags,
+                                    MapVector<StringRef, StringRef> &MetaData) {
   using namespace object;
 
-  // Create inner OffloadBinary containing the raw SPIR-V
+  // Create inner OffloadBinary containing the raw image
   OffloadBinary::OffloadingImage InnerImage;
-  InnerImage.TheImageKind = ImageKind::IMG_SPIRV;
-  InnerImage.TheOffloadKind = Kind;
-  InnerImage.Flags = 0;
+  InnerImage.TheImageKind = ImageKind;
+  InnerImage.TheOffloadKind = OffloadKind;
+  InnerImage.Flags = ImageFlags;
 
-  // Add metadata about the SPIR-V image as string key-value pairs.
-  MapVector<StringRef, StringRef> StringData;
-  StringData["version"] = "1.0";
-  StringData["format"] = "spirv";
-  StringData["triple"] = "spirv64-intel";
-
-  // Store compile/link options if provided
-  if (!CompileOpts.empty())
-    StringData["compile-opts"] = CompileOpts;
-  if (!LinkOpts.empty())
-    StringData["link-opts"] = LinkOpts;
-
-  InnerImage.StringData = StringData;
+  for (const auto &KV : MetaData)
+    InnerImage.StringData[KV.first] = KV.second;
 
   // Wrap the raw SPIR-V binary
   InnerImage.Image = std::move(Img);
@@ -415,4 +407,21 @@ Error offloading::intel::containerizeSPIRVImage(
   Img = MemoryBuffer::getMemBufferCopy(InnerBinaryData);
 
   return Error::success();
+}
+
+Error offloading::intel::containerizeOpenMPSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Binary, StringRef CompileOpts,
+    StringRef LinkOpts) {
+  MapVector<StringRef, StringRef> MetaData;
+  MetaData["version"] = "1.0";
+  MetaData["format"] = "spirv";
+  MetaData["triple"] = "spirv64-openmp";
+  if (!CompileOpts.empty())
+    MetaData["compile-opts"] = CompileOpts;
+  if (!LinkOpts.empty())
+    MetaData["link-opts"] = LinkOpts;
+
+  return containerizeImage(Binary, object::ImageKind::IMG_SPIRV,
+                           object::OffloadKind::OFK_OpenMP, /*ImageFlags=*/0,
+                           MetaData);
 }

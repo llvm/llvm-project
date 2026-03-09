@@ -157,30 +157,28 @@ LLVM_ABI Error getAMDGPUMetaDataFromImage(
     uint16_t &ELFABIVersion);
 } // namespace amdgpu
 
-namespace intel {
-/// Containerizes an SPIR-V image into inner OffloadBinary format.
+/// Containerizes an image into inner OffloadBinary format.
 /// Creates a nested OffloadBinary structure where the inner binary contains
-/// the raw SPIR-V and associated metadata (version, format, triple, etc.).
-/// This inner OffloadBinary is then embedded in an outer OffloadBinary.
-///
-/// \param Binary The SPIR-V binary to containerize
-/// \param CompileOpts Optional compilation options
-/// \param LinkOpts Optional linking options
-LLVM_ABI Error containerizeSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary,
-                                      object::OffloadKind Kind,
-                                      StringRef CompileOpts = "",
-                                      StringRef LinkOpts = "");
+/// the raw image and associated metadata (version, format, triple, etc.).
+/// \param Binary The image to containerize
+/// \param ImageKind The format of the image, e.g. SPIR-V or CUBIN.
+/// \param OffloadKind The expected consumer of the image, e.g. CUDA or OpenMP.
+/// \param ImageFlags Flags associated with the image, e.g. for AMDGPU the features
+/// \param MetaData The key-value map of metadata to be associated with the image.
+LLVM_ABI Error containerizeImage(std::unique_ptr<MemoryBuffer> &Binary,
+    object::ImageKind ImageKind,
+    object::OffloadKind OffloadKind,
+    int32_t ImageFlags,
+    MapVector<StringRef, StringRef> &MetaData);
 
+namespace intel {
 /// Containerizes OpenMP SPIR-V image into inner OffloadBinary format.
 /// \param Binary The SPIR-V binary to containerize
 /// \param CompileOpts Optional compilation options
 /// \param LinkOpts Optional linking options
-inline LLVM_ABI Error containerizeOpenMPSPIRVImage(
+LLVM_ABI Error containerizeOpenMPSPIRVImage(
     std::unique_ptr<MemoryBuffer> &Binary, StringRef CompileOpts = "",
-    StringRef LinkOpts = "") {
-  return containerizeSPIRVImage(Binary, object::OffloadKind::OFK_OpenMP,
-                                CompileOpts, LinkOpts);
-}
+    StringRef LinkOpts = "");
 } // namespace intel
 } // namespace offloading
 } // namespace llvm
