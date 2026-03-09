@@ -219,7 +219,7 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
     // Make sure we don't produce a load wider than the input load.
     if (Mask.size() * Factor > NumLoadElements) {
       if (Shuffles.size() == 0)
-	  return false;
+        return false;
       for (unsigned i = 0; i < Shuffles.size(); i++) {
         for (unsigned j = 0; j < Mask.size(); j++) {
           if ((unsigned)Shuffles[i]->getShuffleMask()[j] > NumLoadElements)
