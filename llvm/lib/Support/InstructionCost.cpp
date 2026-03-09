@@ -18,10 +18,10 @@ using namespace llvm;
 
 void InstructionCost::print(raw_ostream &OS) const {
   if (isValid()) {
-    if (Value % ScalingFactor)
-      OS << Value << "/" << ScalingFactor;
+    if (Value % CostGranularity)
+      OS << Value << "/" << CostGranularity;
     else
-      OS << (Value / ScalingFactor);
+      OS << (Value / CostGranularity);
   } else
     OS << "Invalid";
 }

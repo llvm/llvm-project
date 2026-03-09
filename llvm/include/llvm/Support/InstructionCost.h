@@ -60,7 +60,7 @@ private:
   }
 
   // Matches GCC, can use shift rather than multiply/divide to scale
-  static constexpr CostType ScalingFactor = 4;
+  static constexpr CostType CostGranularity = 4;
 
   static constexpr CostType MaxValue = std::numeric_limits<CostType>::max();
   static constexpr CostType MinValue = std::numeric_limits<CostType>::min();
@@ -72,7 +72,7 @@ public:
   InstructionCost(CostState) = delete;
   InstructionCost(CostType Val) : Value(), State(Valid) {
     InstructionCost::CostType Result;
-    if (MulOverflow(Val, ScalingFactor, Result)) {
+    if (MulOverflow(Val, CostGranularity, Result)) {
       if (Val > 0)
         Result = MaxValue;
       else
@@ -99,7 +99,7 @@ public:
   /// and comparisons.
   CostType getValue() const {
     assert(isValid());
-    return Value / ScalingFactor;
+    return Value / CostGranularity;
   }
 
   /// For all of the arithmetic operators provided here any invalid state is
@@ -154,7 +154,7 @@ public:
       else
         Result = MinValue;
     } else {
-      Result /= ScalingFactor;
+      Result /= CostGranularity;
     }
 
     Value = Result;
@@ -171,7 +171,7 @@ public:
     propagateState(RHS);
     // Saturating multiply.
     InstructionCost::CostType Result;
-    if (MulOverflow(Value, ScalingFactor, Result)) {
+    if (MulOverflow(Value, CostGranularity, Result)) {
       if (Value > 0)
         Result = MaxValue;
       else
