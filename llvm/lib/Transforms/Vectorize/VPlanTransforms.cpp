@@ -92,7 +92,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                            Ingredient.getDebugLoc());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
-          if (VectorID == Intrinsic::not_intrinsic)
+          if (VectorID == Intrinsic::not_intrinsic ||
+              VectorID == Intrinsic::assume ||
+              VectorID == Intrinsic::lifetime_end ||
+              VectorID == Intrinsic::lifetime_start ||
+              VectorID == Intrinsic::sideeffect ||
+              VectorID == Intrinsic::pseudoprobe ||
+              VectorID == Intrinsic::experimental_noalias_scope_decl)
             return false;
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
