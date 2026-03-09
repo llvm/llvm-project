@@ -29,10 +29,6 @@ const char *PPCSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
     return "PPCISD::READ_TIME_BASE";
   case PPCISD::MFOCRF:
     return "PPCISD::MFOCRF";
-  case PPCISD::ANDI_rec_1_EQ_BIT:
-    return "PPCISD::ANDI_rec_1_EQ_BIT";
-  case PPCISD::ANDI_rec_1_GT_BIT:
-    return "PPCISD::ANDI_rec_1_GT_BIT";
   case PPCISD::BDNZ:
     return "PPCISD::BDNZ";
   case PPCISD::BDZ:

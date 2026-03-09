@@ -169,9 +169,6 @@ static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
 // slightly under 32KB.
 constexpr uint64_t AIXSmallTlsPolicySizeLimit = 32751;
 
-// FIXME: Remove this once the bug has been fixed!
-extern cl::opt<bool> ANDIGlueBug;
-
 PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
                                      const PPCSubtarget &STI)
     : TargetLowering(TM, STI), Subtarget(STI) {
@@ -310,10 +307,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     // PowerPC does not support direct load/store of condition registers.
     setOperationAction(ISD::LOAD, MVT::i1, Custom);
     setOperationAction(ISD::STORE, MVT::i1, Custom);
-
-    // FIXME: Remove this once the ANDI glue bug is fixed:
-    if (ANDIGlueBug)
-      setOperationAction(ISD::TRUNCATE, MVT::i1, Custom);
 
     for (MVT VT : MVT::integer_valuetypes()) {
       setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
@@ -8039,15 +8032,6 @@ SDValue PPCTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getTruncStore(Chain, dl, Value, BasePtr, MVT::i8, MMO);
 }
 
-// FIXME: Remove this once the ANDI glue bug is fixed:
-SDValue PPCTargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
-  assert(Op.getValueType() == MVT::i1 &&
-         "Custom lowering only for i1 results");
-
-  SDLoc DL(Op);
-  return DAG.getNode(PPCISD::ANDI_rec_1_GT_BIT, DL, MVT::i1, Op.getOperand(0));
-}
-
 SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
                                                SelectionDAG &DAG) const {
 
@@ -12692,8 +12676,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::EH_SJLJ_LONGJMP:    return lowerEH_SJLJ_LONGJMP(Op, DAG);
 
   case ISD::LOAD:               return LowerLOAD(Op, DAG);
-  case ISD::STORE:              return LowerSTORE(Op, DAG);
-  case ISD::TRUNCATE:           return LowerTRUNCATE(Op, DAG);
+  case ISD::STORE:
+    return LowerSTORE(Op, DAG);
   case ISD::SELECT_CC:          return LowerSELECT_CC(Op, DAG);
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_TO_SINT:

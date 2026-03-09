@@ -32,13 +32,6 @@ enum NodeType : unsigned {
   /// resultant GPR.  Bits corresponding to other CR regs are undefined.
   MFOCRF,
 
-  // FIXME: Remove these once the ANDI glue bug is fixed:
-  /// i1 = ANDI_rec_1_[EQ|GT]_BIT(i32 or i64 x) - Represents the result of the
-  /// eq or gt bit of CR0 after executing andi. x, 1. This is used to
-  /// implement truncation of i32 or i64 to i1.
-  ANDI_rec_1_EQ_BIT,
-  ANDI_rec_1_GT_BIT,
-
   // READ_TIME_BASE - A read of the 64-bit time-base register on a 32-bit
   // target (returns (Lo, Hi)). It takes a chain operand.
   READ_TIME_BASE,

@@ -88,10 +88,6 @@ STATISTIC(OmittedForNonExtendUses,
 STATISTIC(NumP9Setb,
           "Number of compares lowered to setb.");
 
-// FIXME: Remove this once the bug has been fixed!
-cl::opt<bool> ANDIGlueBug("expose-ppc-andi-glue-bug",
-cl::desc("expose the ANDI glue bug on PPC"), cl::Hidden);
-
 static cl::opt<bool>
     UseBitPermRewriter("ppc-use-bit-perm-rewriter", cl::init(true),
                        cl::desc("use aggressive ppc isel for bit permutations"),
@@ -5825,30 +5821,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     }
     break;
-  }
-  // FIXME: Remove this once the ANDI glue bug is fixed:
-  case PPCISD::ANDI_rec_1_EQ_BIT:
-  case PPCISD::ANDI_rec_1_GT_BIT: {
-    if (!ANDIGlueBug)
-      break;
-
-    EVT InVT = N->getOperand(0).getValueType();
-    assert((InVT == MVT::i64 || InVT == MVT::i32) &&
-           "Invalid input type for ANDI_rec_1_EQ_BIT");
-
-    unsigned Opcode = (InVT == MVT::i64) ? PPC::ANDI8_rec : PPC::ANDI_rec;
-    SDValue AndI(CurDAG->getMachineNode(Opcode, dl, InVT, MVT::Glue,
-                                        N->getOperand(0),
-                                        CurDAG->getTargetConstant(1, dl, InVT)),
-                 0);
-    SDValue CR0Reg = CurDAG->getRegister(PPC::CR0, MVT::i32);
-    SDValue SRIdxVal = CurDAG->getTargetConstant(
-        N->getOpcode() == PPCISD::ANDI_rec_1_EQ_BIT ? PPC::sub_eq : PPC::sub_gt,
-        dl, MVT::i32);
-
-    CurDAG->SelectNodeTo(N, TargetOpcode::EXTRACT_SUBREG, MVT::i1, CR0Reg,
-                         SRIdxVal, SDValue(AndI.getNode(), 1) /* glue */);
-    return;
   }
   case ISD::SELECT_CC: {
     ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
