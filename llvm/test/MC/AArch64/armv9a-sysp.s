@@ -21,6 +21,10 @@ sysp #0, c8, c0, #1, x0, x1
 // CHECK-INST: sysp #0, c8, c0, #1, x0, x1
 // CHECK-ENCODING: encoding: [0x20,0x80,0x48,0xd5]
 
+sysp #0, c9, c0, #0, x0, x1
+// CHECK-INST: sysp #0, c9, c0, #0, x0, x1
+// CHECK-ENCODING: encoding: [0x00,0x90,0x48,0xd5]
+
 sysp #0, c8, c4, #0, x0, x1
 // CHECK-INST: sysp #0, c8, c4, #0, x0, x1
 // CHECK-ENCODING: encoding: [0x00,0x84,0x48,0xd5]
