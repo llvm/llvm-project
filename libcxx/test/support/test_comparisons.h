@@ -332,6 +332,23 @@ static_assert(HasOperatorLessThanEqual<ThreeWayComparable>);
 static_assert(HasOperatorNotEqual<ThreeWayComparable>);
 static_assert(HasOperatorSpaceship<ThreeWayComparable>);
 
+// LWG4366: Heterogeneous comparison of expected may be ill-formed
+struct ImplicitBool {
+  bool val;
+  constexpr operator bool() const { return val; };
+  constexpr explicit operator bool() = delete;
+
+  struct E1 {
+    int x;
+  };
+
+  struct E2 {
+    int y;
+  };
+};
+
+constexpr ImplicitBool operator==(ImplicitBool::E1 lhs, ImplicitBool::E2 rhs) { return {lhs.x == rhs.y}; }
+
 #endif // TEST_STD_VER >= 20
 
 #endif // TEST_COMPARISONS_H

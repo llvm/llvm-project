@@ -1171,7 +1171,9 @@ public:
     }
 #  endif
   {
-    return __x.__has_val() && static_cast<bool>(__x.__val() == __v);
+    if (__x.__has_val())
+      return __x.__val() == __v;
+    return false;
   }
 
   template <class _E2>
@@ -1182,7 +1184,9 @@ public:
     }
 #  endif
   {
-    return !__x.__has_val() && static_cast<bool>(__x.__unex() == __e.error());
+    if (!__x.__has_val())
+      return __x.__unex() == __e.error();
+    return false;
   }
 };
 
@@ -1883,8 +1887,10 @@ public:
   {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
+    } else if (__x.__has_val()) {
+      return true;
     } else {
-      return __x.__has_val() || static_cast<bool>(__x.__unex() == __y.__unex());
+      return __x.__unex() == __y.__unex();
     }
   }
 
@@ -1896,7 +1902,9 @@ public:
     }
 #  endif
   {
-    return !__x.__has_val() && static_cast<bool>(__x.__unex() == __y.error());
+    if (!__x.__has_val())
+      return __x.__unex() == __y.error();
+    return false;
   }
 };
 
