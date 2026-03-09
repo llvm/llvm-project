@@ -51,7 +51,8 @@ IdentifierLengthCheck::IdentifierLengthCheck(StringRef Name,
       IgnoredParameterNamesInput(
           Options.get("IgnoredParameterNames", DefaultIgnoredParameterNames)),
       IgnoredParameterNames(IgnoredParameterNamesInput),
-      LineCountThreshold(Options.get("LineCountThreshold", DefaultLineCountThreshold)) {}
+      LineCountThreshold(
+          Options.get("LineCountThreshold", DefaultLineCountThreshold)) {}
 
 void IdentifierLengthCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MinimumVariableNameLength", MinimumVariableNameLength);
@@ -88,21 +89,24 @@ void IdentifierLengthCheck::registerMatchers(MatchFinder *Finder) {
         this);
 }
 
-static unsigned countLinesToLastUse(const VarDecl* Var, const SourceManager* SrcMgr, ASTContext* Ctx){
+static unsigned countLinesToLastUse(const VarDecl *Var,
+                                    const SourceManager *SrcMgr,
+                                    ASTContext *Ctx) {
   const unsigned DeclLine = SrcMgr->getSpellingLineNumber(Var->getLocation());
 
   class VarUseCallback : public MatchFinder::MatchCallback {
-   private:
-    unsigned* LastUseLineNumber;
+  private:
+    unsigned *LastUseLineNumber;
 
-   public:
-    explicit VarUseCallback(unsigned* Output): LastUseLineNumber{Output} {}
+  public:
+    explicit VarUseCallback(unsigned *Output) : LastUseLineNumber{Output} {}
 
     void run(const MatchFinder::MatchResult &Result) override {
       const auto *Use = Result.Nodes.getNodeAs<DeclRefExpr>("varUse");
       if (Use && LastUseLineNumber) {
         auto Loc = Use->getLocation();
-        const unsigned UseLine = Result.SourceManager->getSpellingLineNumber(Loc);
+        const unsigned UseLine =
+            Result.SourceManager->getSpellingLineNumber(Loc);
         *LastUseLineNumber = std::max(*LastUseLineNumber, UseLine);
       }
     }
@@ -132,7 +136,9 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredVariableNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 && countLinesToLastUse(StandaloneVar, Result.SourceManager, Result.Context) <= LineCountThreshold)
+    if (LineCountThreshold > 0 &&
+        countLinesToLastUse(StandaloneVar, Result.SourceManager,
+                            Result.Context) <= LineCountThreshold)
       return;
 
     diag(StandaloneVar->getLocation(), ErrorMessage)
@@ -149,7 +155,9 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredExceptionVariableNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 && countLinesToLastUse(ExceptionVarName, Result.SourceManager, Result.Context) <= LineCountThreshold)
+    if (LineCountThreshold > 0 &&
+        countLinesToLastUse(ExceptionVarName, Result.SourceManager,
+                            Result.Context) <= LineCountThreshold)
       return;
 
     diag(ExceptionVarName->getLocation(), ErrorMessage)
@@ -167,7 +175,9 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredLoopCounterNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 && countLinesToLastUse(LoopVar, Result.SourceManager, Result.Context) <= LineCountThreshold)
+    if (LineCountThreshold > 0 &&
+        countLinesToLastUse(LoopVar, Result.SourceManager, Result.Context) <=
+            LineCountThreshold)
       return;
 
     diag(LoopVar->getLocation(), ErrorMessage)
@@ -185,7 +195,9 @@ void IdentifierLengthCheck::check(const MatchFinder::MatchResult &Result) {
         IgnoredParameterNames.match(VarName))
       return;
 
-    if (LineCountThreshold > 0 && countLinesToLastUse(ParamVar, Result.SourceManager, Result.Context) <= LineCountThreshold)
+    if (LineCountThreshold > 0 &&
+        countLinesToLastUse(ParamVar, Result.SourceManager, Result.Context) <=
+            LineCountThreshold)
       return;
 
     diag(ParamVar->getLocation(), ErrorMessage)
