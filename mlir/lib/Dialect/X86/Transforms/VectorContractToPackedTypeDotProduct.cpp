@@ -67,7 +67,15 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
                                         mlir::vector::ContractionOp contractB,
                                         int64_t nonUnitDimAcc,
                                         mlir::VectorType Ty) {
-  mlir::Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
+
+  bool opABeforeopB = opA->isBeforeInBlock(opB);
+
+  if (opABeforeopB)
+    rewriter.moveOpAfter(opB, opA);
+  else
+    rewriter.moveOpAfter(opA, opB);
+
+  mlir::Operation *insertAfter = opABeforeopB ? opB : opA;
 
   rewriter.setInsertionPointAfter(insertAfter);
   mlir::Location loc = insertAfter->getLoc();
@@ -325,14 +333,6 @@ struct VectorContractToPackedTypeDotProduct
         if (!nonUnitDimReadOp || !nonUnitDimReadOpPairContract)
           return rewriter.notifyMatchFailure(
               contractOp, "Could not find a valid contract pair");
-
-        if (contractOp->getBlock() ==
-                nonUnitDimReadOpPairContract->getBlock() &&
-            contractOp->isBeforeInBlock(nonUnitDimReadOpPairContract))
-          return rewriter.notifyMatchFailure(
-              contractOp,
-              "The load/read operation of pair contract operation is "
-              "after the contractOp");
 
         VectorType nonUnitDimTy = rhsHasMultipleNonUnitDims
                                       ? contractOp.getRhsType()

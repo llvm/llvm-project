@@ -17,10 +17,10 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
+#include <bitset>
 #include <climits>
 #include <memory>
 
@@ -67,7 +67,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   bool ATTRIBUTE = DEFAULT;
 #include "X86GenSubtargetInfo.inc"
   /// ReservedRReg R#i is not available as a general purpose register.
-  BitVector ReservedRReg;
+  std::bitset<X86::NUM_TARGET_REGS> ReservedRReg;
 
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
@@ -162,6 +162,7 @@ public:
   bool isRegisterReservedByUser(Register i) const override {
     return ReservedRReg[i.id()];
   }
+  bool hasUserReservedRegisters() const { return ReservedRReg.any(); }
 
 private:
   /// Initialize the full set of dependencies so we can use an initializer

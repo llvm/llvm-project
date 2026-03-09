@@ -1190,3 +1190,44 @@ define void @foo(i8 %v0, i8 %v1) {
   Add1->setOperand(0, Add0);
   EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
 }
+
+// Make sure we maintain the unscheduled succs when the use-def edges cross the
+// DAG boundaries, i.e., when have an external user.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsExtUser) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v1
+  %add1 = add i8 %add0, %v1
+  %extUser = add i8 %v0, 0   ; This is not in the DAG
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *ExtUser = cast<sandboxir::BinaryOperator>(&*It++);
+  // DAG does not contain extUser
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1});
+  auto *Add0N = DAG.getNode(Add0);
+  EXPECT_EQ(DAG.getNode(ExtUser), nullptr);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+
+  // Adding the use Add0->ExtUser shouldn't change Add's unscheduled succs.
+  ExtUser->setOperand(0, Add0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  ExtUser->setOperand(0, Arg0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+
+  // Same with RUOW.
+  ExtUser->replaceUsesOfWith(Arg0, Add0);
+  EXPECT_EQ(ExtUser->getOperand(0), Add0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  ExtUser->setOperand(0, Arg0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+}

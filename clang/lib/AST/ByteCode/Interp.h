@@ -296,6 +296,10 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   if constexpr (std::is_same_v<T, FixedPoint>)
     return handleFixedPointOverflow(S, OpPC, Result);
 
+  // If wrapping is enabled, the new value is fine.
+  if (S.Current->getExpr(OpPC)->getType().isWrapType())
+    return true;
+
   // Slow path - compute the result using another bit of precision.
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
 
@@ -708,6 +712,9 @@ bool Neg(InterpState &S, CodePtr OpPC) {
            "don't expect other types to fail at constexpr negation");
     S.Stk.push<T>(Result);
 
+    if (S.Current->getExpr(OpPC)->getType().isWrapType())
+      return true;
+
     APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
     if (S.checkingForUndefinedBehavior()) {
       const Expr *E = S.Current->getExpr(OpPC);
@@ -775,6 +782,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     }
   }
   assert(CanOverflow);
+
+  if (S.Current->getExpr(OpPC)->getType().isWrapType()) {
+    Ptr.deref<T>() = Result;
+    return true;
+  }
 
   // Something went wrong with the previous operation. Compute the
   // result with another bit of precision.
