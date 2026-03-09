@@ -1703,8 +1703,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return Cost;
   }
   case Intrinsic::experimental_vector_extract_last_active: {
-    Type *ValTy = ICA.getArgTypes()[0];
-    Type *MaskTy = ICA.getArgTypes()[1];
+    auto *ValTy = cast<VectorType>(ICA.getArgTypes()[0]);
+    auto *MaskTy = cast<VectorType>(ICA.getArgTypes()[1]);
 
     auto ValLT = getTypeLegalizationCost(ValTy);
     auto MaskLT = getTypeLegalizationCost(MaskTy);
@@ -1721,20 +1721,26 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // vmv.x.s a0, v8
     // exit:
     //   ...
-    auto *Int8Ty = Type::getInt8Ty(ValTy->getContext());
-    auto *Int8VecTy =
-        VectorType::get(Int8Ty, cast<VectorType>(ValTy)->getElementCount());
-    auto Int8LT = getTypeLegalizationCost(Int8VecTy);
+
+    // Find a suitable type for a stepvector.
+    ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
+    unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
+        MaskTy->getScalarType(), MaskTy->getElementCount(),
+        /*ZeroIsPoison=*/true, &VScaleRange);
+    EltWidth = std::max(EltWidth, MaskTy->getScalarSizeInBits());
+    Type *StepTy = Type::getIntNTy(MaskTy->getContext(), EltWidth);
+    auto *StepVecTy = VectorType::get(StepTy, ValTy->getElementCount());
+    auto StepLT = getTypeLegalizationCost(StepVecTy);
     InstructionCost Cost = 0;
     unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
 
     Cost += MaskLT.first *
             getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second, CostKind);
     Cost += getCFInstrCost(Instruction::Br, CostKind, nullptr);
-    Cost += Int8LT.first *
-            getRISCVInstructionCost(Opcodes, Int8LT.second, CostKind);
+    Cost += StepLT.first *
+            getRISCVInstructionCost(Opcodes, StepLT.second, CostKind);
     Cost += getCastInstrCost(Instruction::ZExt,
-                             Type::getInt64Ty(ValTy->getContext()), Int8Ty,
+                             Type::getInt64Ty(ValTy->getContext()), StepTy,
                              TTI::CastContextHint::None, CostKind, nullptr);
     Cost += ValLT.first *
             getRISCVInstructionCost({RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S},
