@@ -4,24 +4,21 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfWindows
 class TestArchetypeInConditionalBreakpoint(TestBase):
     @swiftTest
-    @expectedFailureWindows
     def test_stops_free_function(self):
         self.stops("break here for free function")
 
     @swiftTest
-    @expectedFailureWindows
     def test_doesnt_stop_free_function(self):
         self.doesnt_stop("break here for free function")
 
     @swiftTest
-    @expectedFailureWindows
     def test_stops_class(self):
         self.stops("break here for class")
 
     @swiftTest
-    @expectedFailureWindows
     def test_doesnt_stop_class(self):
         self.doesnt_stop("break here for class")
 

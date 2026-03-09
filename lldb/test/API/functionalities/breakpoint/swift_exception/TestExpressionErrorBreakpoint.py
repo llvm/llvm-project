@@ -43,14 +43,14 @@ class TestSwiftErrorBreakpoint(TestBase):
         self.do_tests("a.EnumError")
 
     @swiftTest
-    @expectedFailureWindows
+    @skipIfWindows
     def test_swift_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
         self.do_tests_in_mode("NoSuchErrorHere", mode="untyped", should_stop=False)
 
     @swiftTest
-    @expectedFailureWindows
+    @skipIfWindows
     @expectedFailureAll(bugnumber="rdar://148033473")
     def test_swift_typed_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
