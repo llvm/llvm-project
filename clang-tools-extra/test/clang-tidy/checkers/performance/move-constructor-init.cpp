@@ -4,17 +4,10 @@
 // RUN: -- -isystem %clang_tidy_headers
 
 #include <s.h>
+#include <utility>
+using std::move;
 
 // CHECK-FIXES: #include <utility>
-
-template <class T> struct remove_reference      {typedef T type;};
-template <class T> struct remove_reference<T&>  {typedef T type;};
-template <class T> struct remove_reference<T&&> {typedef T type;};
-
-template <typename T>
-typename remove_reference<T>::type&& move(T&& arg) {
-  return static_cast<typename remove_reference<T>::type&&>(arg);
-}
 
 struct C {
   C() = default;
@@ -31,8 +24,8 @@ struct D : B {
   D() : B() {}
   D(const D &RHS) : B(RHS) {}
   // CHECK-NOTES: :[[@LINE+3]]:16: warning: move constructor initializes base class by calling a copy constructor [performance-move-constructor-init]
-  // CHECK-NOTES: 26:3: note: copy constructor being called
-  // CHECK-NOTES: 27:3: note: candidate move constructor here
+  // CHECK-NOTES: :[[@LINE-8]]:3: note: copy constructor being called
+  // CHECK-NOTES: :[[@LINE-8]]:3: note: candidate move constructor here
   D(D &&RHS) : B(RHS) {}
 };
 
@@ -77,8 +70,8 @@ struct M {
   B Mem;
   // CHECK-NOTES: :[[@LINE+1]]:16: warning: move constructor initializes class member by calling a copy constructor [performance-move-constructor-init]
   M(M &&RHS) : Mem(RHS.Mem) {}
-  // CHECK-NOTES: 26:3: note: copy constructor being called
-  // CHECK-NOTES: 27:3: note: candidate move constructor here
+  // CHECK-NOTES: :[[@LINE-54]]:3: note: copy constructor being called
+  // CHECK-NOTES: :[[@LINE-54]]:3: note: candidate move constructor here
 };
 
 struct N {
@@ -111,7 +104,7 @@ struct TriviallyCopyable {
 
 struct Positive {
   Positive(Movable M) : M_(M) {}
-  // CHECK-NOTES: [[@LINE-1]]:12: warning: pass by value and use std::move [modernize-pass-by-value]
+  // CHECK-NOTES: :[[@LINE-1]]:12: warning: pass by value and use std::move [modernize-pass-by-value]
   // CHECK-FIXES: Positive(Movable M) : M_(std::move(M)) {}
   Movable M_;
 };
