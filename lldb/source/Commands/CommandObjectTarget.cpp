@@ -5293,7 +5293,7 @@ public:
 
 #pragma mark CommandObjectTargetModuleHookAdd
 
-#define LLDB_OPTIONS_target_module_hook_add
+#define LLDB_OPTIONS_target_modulehook_add
 #include "CommandOptions.inc"
 
 class CommandObjectTargetModuleHookAdd : public CommandObjectParsed,
@@ -5305,14 +5305,14 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_target_module_hook_add_options);
+      return llvm::ArrayRef(g_target_modulehook_add_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
       Status error;
       const int short_option =
-          g_target_module_hook_add_options[option_idx].short_option;
+          g_target_modulehook_add_options[option_idx].short_option;
       switch (short_option) {
       case 'o':
         m_use_one_liner = true;
@@ -5340,10 +5340,10 @@ public:
 
   CommandObjectTargetModuleHookAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(
-            interpreter, "target module-hook add",
+            interpreter, "target modulehook add",
             "Add a hook to be executed whenever modules are loaded into the "
             "target.",
-            "target module-hook add"),
+            "target modulehook add"),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
         m_python_class_options("scripted module hook", false, 'P') {
@@ -5351,15 +5351,15 @@ public:
 Command-based module hooks allow running LLDB commands every time modules are
 loaded into the target. For example:
 
-    target module-hook add -o "script print('module loaded')"
+    target modulehook add -o "script print('module loaded')"
 
 Use --on-unload (-u) to also fire the hook when modules are unloaded:
 
-    target module-hook add -u -o "script print('module event')"
+    target modulehook add -u -o "script print('module event')"
 
 Python-based module hooks allow running a Python class:
 
-    target module-hook add -P MyHook
+    target modulehook add -P MyHook
 
 The Python class should implement:
 
@@ -5478,9 +5478,9 @@ private:
 class CommandObjectTargetModuleHookDelete : public CommandObjectParsed {
 public:
   CommandObjectTargetModuleHookDelete(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "target module-hook delete",
+      : CommandObjectParsed(interpreter, "target modulehook delete",
                             "Delete a module-hook.",
-                            "target module-hook delete [<id>]") {
+                            "target modulehook delete [<id>]") {
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
@@ -5560,9 +5560,9 @@ private:
 class CommandObjectTargetModuleHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetModuleHookList(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "target module-hook list",
+      : CommandObjectParsed(interpreter, "target modulehook list",
                             "List all module-hooks.",
-                            "target module-hook list") {}
+                            "target modulehook list") {}
 
   ~CommandObjectTargetModuleHookList() override = default;
 
@@ -5590,9 +5590,9 @@ class CommandObjectMultiwordTargetModuleHooks : public CommandObjectMultiword {
 public:
   CommandObjectMultiwordTargetModuleHooks(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
-            interpreter, "target module-hook",
+            interpreter, "target modulehook",
             "Commands for operating on debugger target module-hooks.",
-            "target module-hook <subcommand> [<subcommand-options>]") {
+            "target modulehook <subcommand> [<subcommand-options>]") {
     LoadSubCommand("add", CommandObjectSP(new CommandObjectTargetModuleHookAdd(
                               interpreter)));
     LoadSubCommand(
@@ -5601,13 +5601,13 @@ public:
     LoadSubCommand(
         "disable",
         CommandObjectSP(new CommandObjectTargetModuleHookEnableDisable(
-            interpreter, false, "target module-hook disable [<id>]",
-            "Disable a module-hook.", "target module-hook disable")));
+            interpreter, false, "target modulehook disable [<id>]",
+            "Disable a module-hook.", "target modulehook disable")));
     LoadSubCommand(
         "enable",
         CommandObjectSP(new CommandObjectTargetModuleHookEnableDisable(
-            interpreter, true, "target module-hook enable [<id>]",
-            "Enable a module-hook.", "target module-hook enable")));
+            interpreter, true, "target modulehook enable [<id>]",
+            "Enable a module-hook.", "target modulehook enable")));
     LoadSubCommand(
         "list",
         CommandObjectSP(new CommandObjectTargetModuleHookList(interpreter)));
@@ -5909,7 +5909,7 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
   LoadSubCommand(
       "stop-hook",
       CommandObjectSP(new CommandObjectMultiwordTargetStopHooks(interpreter)));
-  LoadSubCommand("module-hook",
+  LoadSubCommand("modulehook",
                  CommandObjectSP(
                      new CommandObjectMultiwordTargetModuleHooks(interpreter)));
   LoadSubCommand("modules",
