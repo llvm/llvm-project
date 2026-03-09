@@ -39,9 +39,11 @@ SeedCollection::SeedCollection(StringRef Pipeline)
           SandboxVectorizerPassBuilder::createRegionPass) {
   StringRef AuxArg = VecUtils::getAuxPassArg(Pipeline);
   if (!AuxArg.empty()) {
-    if (DiffTypesArgStr != DiffTypesArgStr) {
-      errs() << "SeedCollection only supports '" << DiffTypesArgStr << "' !\n";
-      exit(1);
+    if (AuxArg != DiffTypesArgStr) {
+      std::string ErrStr;
+      raw_string_ostream ErrSS(ErrStr);
+      ErrSS << "SeedCollection only supports '" << DiffTypesArgStr << "' !\n";
+      reportFatalUsageError(ErrStr.c_str());
     }
     AllowDiffTypes = true;
   }
