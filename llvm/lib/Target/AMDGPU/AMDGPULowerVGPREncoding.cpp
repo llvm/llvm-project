@@ -105,11 +105,11 @@ class AMDGPULowerVGPREncoding {
       for (const auto &[I, Op] : enumerate(Ops)) {
         if (I)
           OS << ", ";
-        OS << FieldNames[I] << "=";
+        OS << FieldNames[I] << '=';
         if (Op.MSBits)
           OS << *Op.MSBits;
         else
-          OS << "?";
+          OS << '?';
       }
       OS << '}';
     }
@@ -331,7 +331,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
       MI.print(dbgs());
       dbgs() << "    computed NewMode=";
       NewMode.print(dbgs());
-      dbgs() << " compatible=" << CurrentMode.isCompatible(NewMode) << "\n";
+      dbgs() << " compatible=" << CurrentMode.isCompatible(NewMode) << '\n';
     });
     if (!CurrentMode.isCompatible(NewMode) && MI.isCommutable() &&
         TII->commuteInstruction(MI)) {
@@ -341,7 +341,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
         dbgs() << "    commuted NewMode=";
         NewModeCommuted.print(dbgs());
         dbgs() << " compatible=" << CurrentMode.isCompatible(NewModeCommuted)
-               << "\n";
+               << '\n';
       });
       if (CurrentMode.isCompatible(NewModeCommuted)) {
         // Update CurrentMode with mode bits the commuted instruction relies on.
@@ -458,7 +458,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   auto [HwRegId, Offset, Size] = HwregEncoding::decode(SIMM16Op->getImm());
   (void)Offset;
   LLVM_DEBUG(dbgs() << "    HwRegId=" << HwRegId << " Offset=" << Offset
-                    << " Size=" << Size << "\n");
+                    << " Size=" << Size << '\n');
   if (HwRegId != ID_MODE) {
     LLVM_DEBUG(dbgs() << "    -> not ID_MODE, skipping\n");
     return false;
@@ -469,7 +469,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
     dbgs() << "    CurrentMode=";
     CurrentMode.print(dbgs());
     dbgs() << " encoded=0x" << Twine::utohexstr(ModeValue)
-           << " VGPRMSBShift=" << VGPRMSBShift << "\n";
+           << " VGPRMSBShift=" << VGPRMSBShift << '\n';
   });
 
   // Case 1: Size <= 12 - the original instruction uses imm32[0:Size-1], so
@@ -501,7 +501,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "    Case 2: Size(" << Size << ") > VGPRMSBShift, "
                     << "ImmBits12To19=0x" << Twine::utohexstr(ImmBits12To19)
                     << " SetregModeValue=0x"
-                    << Twine::utohexstr(SetregModeValue) << "\n");
+                    << Twine::utohexstr(SetregModeValue) << '\n');
   if (ImmBits12To19 == SetregModeValue) {
     // Already correct, but we must invalidate MostRecentModeSet because this
     // instruction will overwrite mode[12:19]. We can't update this instruction
@@ -542,7 +542,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     MostRecentModeSet = nullptr;
     this->MBB = &MBB;
 
-    LLVM_DEBUG(dbgs() << "BB#" << MBB.getNumber() << " " << MBB.getName()
+    LLVM_DEBUG(dbgs() << "BB#" << MBB.getNumber() << ' ' << MBB.getName()
                       << ":\n");
 
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
@@ -573,7 +573,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         ClauseLen = ClauseRemaining = (ClauseLen & 63) + 1;
         Clause = &MI;
         LLVM_DEBUG(dbgs() << "  clause: len=" << ClauseLen
-                          << " breaks=" << ClauseBreaks << "\n");
+                          << " breaks=" << ClauseBreaks << '\n');
         continue;
       }
 
