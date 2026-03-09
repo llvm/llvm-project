@@ -100,7 +100,7 @@ reduce(std::vector<OwnedPtr<Info>> &Values) {
 // Return the index of the matching child in the vector, or -1 if merge is not
 // necessary.
 template <typename T>
-static int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
+static int getChildIndexIfExists(OwningVec<T> &Children, T &ChildToMerge) {
   for (unsigned long I = 0; I < Children.size(); I++) {
     if (ChildToMerge.USR == Children[I].USR)
       return I;
@@ -109,8 +109,8 @@ static int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
 }
 
 template <typename T>
-static void reduceChildren(std::vector<T> &Children,
-                           std::vector<T> &&ChildrenToMerge) {
+static void reduceChildren(OwningVec<T> &Children,
+                           OwningVec<T> &&ChildrenToMerge) {
   for (auto &ChildToMerge : ChildrenToMerge) {
     int MergeIdx = getChildIndexIfExists(Children, ChildToMerge);
     if (MergeIdx == -1) {
@@ -471,8 +471,8 @@ bool Index::operator<(const Index &Other) const {
   return Name.size() < Other.Name.size();
 }
 
-std::vector<const Index *> Index::getSortedChildren() const {
-  std::vector<const Index *> SortedChildren;
+OwningVec<const Index *> Index::getSortedChildren() const {
+  OwningVec<const Index *> SortedChildren;
   SortedChildren.reserve(Children.size());
   for (const auto &[_, C] : Children)
     SortedChildren.push_back(&C);

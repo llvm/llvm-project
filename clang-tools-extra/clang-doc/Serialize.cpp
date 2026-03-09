@@ -780,7 +780,7 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
 
 static void
 handleCompoundConstraints(const Expr *Constraint,
-                          std::vector<ConstraintInfo> &ConstraintInfos) {
+                          OwningVec<ConstraintInfo> &ConstraintInfos) {
   if (Constraint->getStmtClass() == Stmt::ParenExprClass) {
     handleCompoundConstraints(dyn_cast<ParenExpr>(Constraint)->getSubExpr(),
                               ConstraintInfos);
