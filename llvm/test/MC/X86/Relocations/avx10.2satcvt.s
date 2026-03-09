@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
-# RUN: llvm-objdump -dr --no-addresses %t | sed 's/#.*//;/^ *$/d' | FileCheck %s
+# RUN: llvm-objdump -dr --no-addresses %t | sed 's/#.*//' | FileCheck %s
 
 # CHECK:      62 f5 7f 08 69 05 00 00 00 00 vcvtbf162ibs    (%rip), %xmm0
 # CHECK-NEXT:          R_X86_64_PC32   foo-0x4

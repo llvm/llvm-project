@@ -246,6 +246,7 @@ multiclass avx10_sat_cvt_base<bits<8> Opc, string OpStr, X86SchedWriteWidths sch
   }
 }
 
+let ExeDomain = SSEPackedInt in {
 defm VCVTBF162IBS : avx10_sat_cvt_base<0x69, "vcvtbf162ibs",
                                        SchedWriteVecIMul, X86vcvtp2ibs,
                                        avx512vl_i16_info, avx512vl_bf16_info>,
@@ -254,7 +255,9 @@ defm VCVTBF162IUBS : avx10_sat_cvt_base<0x6b, "vcvtbf162iubs",
                                         SchedWriteVecIMul, X86vcvtp2iubs,
                                         avx512vl_i16_info, avx512vl_bf16_info>,
                        XD, T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedSingle in {
 defm VCVTPH2IBS : avx10_sat_cvt_base<0x69, "vcvtph2ibs", SchedWriteVecIMul,
                                      X86vcvtp2ibs, avx512vl_i16_info,
                                      avx512vl_f16_info>,
@@ -269,7 +272,9 @@ defm VCVTPH2IUBS : avx10_sat_cvt_base<0x6b, "vcvtph2iubs", SchedWriteVecIMul,
                                     avx512vl_i16_info, avx512vl_f16_info,
                                     X86vcvtp2iubsRnd>,
                    T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedDouble in {
 defm VCVTPS2IBS : avx10_sat_cvt_base<0x69, "vcvtps2ibs", SchedWriteVecIMul,
                                      X86vcvtp2ibs, avx512vl_i32_info,
                                      avx512vl_f32_info>,
@@ -284,7 +289,9 @@ defm VCVTPS2IUBS : avx10_sat_cvt_base<0x6b, "vcvtps2iubs", SchedWriteVecIMul,
                                     avx512vl_i32_info, avx512vl_f32_info,
                                     X86vcvtp2iubsRnd>,
                    PD, T_MAP5, EVEX_CD8<32, CD8VF>;
+}
 
+let ExeDomain = SSEPackedInt in {
 defm VCVTTBF162IBS : avx10_sat_cvt_base<0x68, "vcvttbf162ibs",
                                         SchedWriteVecIMul, X86vcvttp2ibs,
                                         avx512vl_i16_info, avx512vl_bf16_info>,
@@ -293,7 +300,9 @@ defm VCVTTBF162IUBS : avx10_sat_cvt_base<0x6a, "vcvttbf162iubs",
                                          SchedWriteVecIMul, X86vcvttp2iubs,
                                          avx512vl_i16_info, avx512vl_bf16_info>,
                         XD, T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedSingle in {
 defm VCVTTPH2IBS : avx10_sat_cvt_base<0x68, "vcvttph2ibs", SchedWriteVecIMul,
                                       X86vcvttp2ibs, avx512vl_i16_info,
                                       avx512vl_f16_info>,
@@ -308,7 +317,9 @@ defm VCVTTPH2IUBS : avx10_sat_cvt_base<0x6a, "vcvttph2iubs", SchedWriteVecIMul,
                                       avx512vl_i16_info, avx512vl_f16_info,
                                       X86vcvttp2iubsSAE>,
                     T_MAP5, EVEX_CD8<16, CD8VF>;
+}
 
+let ExeDomain = SSEPackedDouble in {
 defm VCVTTPS2IBS : avx10_sat_cvt_base<0x68, "vcvttps2ibs", SchedWriteVecIMul,
                                       X86vcvttp2ibs, avx512vl_i32_info,
                                       avx512vl_f32_info>,
@@ -323,6 +334,7 @@ defm VCVTTPS2IUBS : avx10_sat_cvt_base<0x6a, "vcvttps2iubs", SchedWriteVecIMul,
                                       avx512vl_i32_info, avx512vl_f32_info,
                                       X86vcvttp2iubsSAE>,
                     PD, T_MAP5, EVEX_CD8<32, CD8VF>;
+}
 
 //-------------------------------------------------
 // AVX10 SATCVT-DS instructions
