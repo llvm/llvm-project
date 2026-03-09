@@ -122,7 +122,6 @@
 # RUN: llvm-readobj --file-headers %t.elf64_s390.o | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
 # RUN: llvm-readobj --file-headers %t.elf64_s390.dwo | FileCheck %s --check-prefixes=CHECK,BE,S390X,64,SYSV
 
-
 # RUN: llvm-objcopy %t-amdgpu.o -O elf64-amdgpu %t-amdgpu.elf64_amdgpu.o --split-dwo=%t-amdgpu.elf64_amdgpu.dwo
 # RUN: llvm-readobj --file-headers %t-amdgpu.elf64_amdgpu.o | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
 # RUN: llvm-readobj --file-headers %t-amdgpu.elf64_amdgpu.dwo | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
