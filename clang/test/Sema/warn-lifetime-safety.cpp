@@ -1827,7 +1827,10 @@ namespace lambda_captures {
 
   auto capture_multiple() {
     int a, b;
-    auto lambda = [&a, &b]() { return a + b; }; // expected-warning 2 {{address of stack memory is returned later}}
+    auto lambda = [
+      &a,  // expected-warning {{address of stack memory is returned later}}
+      &b   // expected-warning {{address of stack memory is returned later}}
+    ]() { return a + b; };
     return lambda; // expected-note 2 {{returned here}}
   }
 
@@ -1870,6 +1873,15 @@ namespace lambda_captures {
     int local = 1, local2 = 2;
     auto lambda = [&]() { return local; }; // expected-warning {{address of stack memory is returned later}}
     return lambda; // expected-note {{returned here}}
+  }
+
+  // TODO: Include the name of the variable in the diagnostic to improve
+  // clarity, especially for implicit lambda captures where multiple warnings
+  // can point to the same source location.
+  auto implicit_ref_capture_multiple() {
+    int local = 1, local2 = 2;
+    auto lambda = [&]() { return local + local2; }; // expected-warning 2 {{address of stack memory is returned later}}
+    return lambda; // expected-note 2 {{returned here}}
   }
 
   auto implicit_value_capture() {
