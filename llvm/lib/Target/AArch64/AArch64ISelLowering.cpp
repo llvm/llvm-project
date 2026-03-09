@@ -23368,8 +23368,7 @@ static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
   // AArch64 SBC (non-flag-setting) has only one output; no flags guard needed.
   SDLoc DL(N);
   return DAG.getNode(AArch64ISD::SBC, DL, VT, SBC.getOperand(0),
-                     DAG.getNegative(C, DL, VT),
-                     SBC.getOperand(2));
+                     DAG.getNegative(C, DL, VT), SBC.getOperand(2));
 }
 
 static SDValue performAddSubCombine(SDNode *N,
