@@ -122,7 +122,6 @@ def testArrayType():
 
     typ = Type.parse("!llvm.array<4 x i32>")
     assert isinstance(typ, llvm.ArrayType)
-    assert isinstance(typ, llvm.ArrayType)
     assert typ == arr
 
 
