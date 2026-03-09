@@ -2716,6 +2716,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       if (blockNeedsPredication(ST->getParent(), TheLoop, DT))
         Loc.AATags.TBAA = nullptr;
 
+      // Support "forked" pointers (i.e., a phi of multiple strided pointers) by
+      // treating them as if this instruction accesses all of those
+      // alternatives.
       visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
                     [&Accesses, AccessTy, Loc](Value *Ptr) {
                       MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
@@ -2737,10 +2740,13 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // read list. If we *did* see it before, then it is already in
     // the read-write list. This allows us to vectorize expressions
     // such as A[i] += x;  Because the address of A[i] is a read-write
-    // pointer. This only works if the index of A[i] is consecutive.
-    // If the address of i is unknown (for example A[B[i]]) then we may
-    // read a few words, modify, and write a few words, and some of the
-    // words may be written to the same address.
+    // pointer. This only works if the index of A[i] is strictly monotonic. We
+    // approximate (conservatily) that by checking for a constant stride and
+    // filtering out the case of a uniform/not-strictly monotonic pointer (zero
+    // stride) in the check for uniform stores below. If the address of i is
+    // unknown (for example A[B[i]]) then we may read a few words, modify, and
+    // write a few words, and some of the words may be written to the same
+    // address.
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
@@ -2765,6 +2771,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     if (blockNeedsPredication(LD->getParent(), TheLoop, DT))
       Loc.AATags.TBAA = nullptr;
 
+    // Support "forked" pointers (i.e., a phi of multiple strided pointers) by
+    // treating them as if this instruction accesses all of those alternatives.
     visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
                   [&Accesses, AccessTy, Loc, IsReadOnlyPtr](Value *Ptr) {
                     MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
@@ -2772,8 +2780,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
                   });
   }
 
-  // If we write (or read-write) to a single destination and there are no
-  // other reads in this loop then is it safe to vectorize.
+  // If we write (or read-write) to a single destination and there are no other
+  // reads in this loop then is it safe to vectorize. The safety here is
+  // guaranteed by the fact that the vectorizez version of the store would
+  // preserve the ordering (either replication or @llvm.masked.scatter that has
+  // order-preserving guarantee).
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
     return true;
