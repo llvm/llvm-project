@@ -2234,6 +2234,7 @@ public:
   const TargetCodeGenInfo &getTargetHooks() const {
     return CGM.getTargetCodeGenInfo();
   }
+  unsigned getCurrentFunctionX86AVXABILevel() const;
 
   //===--------------------------------------------------------------------===//
   //                                  Cleanups

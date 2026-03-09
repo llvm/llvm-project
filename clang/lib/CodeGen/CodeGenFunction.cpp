@@ -90,6 +90,13 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
   SetFastMathFlags(CurFPFeatures);
 }
 
+unsigned CodeGenFunction::getCurrentFunctionX86AVXABILevel() const {
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  if (!FD)
+    FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl);
+  return static_cast<unsigned>(CGM.getEffectiveX86AVXABILevel(FD));
+}
+
 CodeGenFunction::~CodeGenFunction() {
   assert(LifetimeExtendedCleanupStack.empty() && "failed to emit a cleanup");
   assert(DeferredDeactivationCleanupStack.empty() &&

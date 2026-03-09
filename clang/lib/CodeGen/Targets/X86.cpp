@@ -2961,6 +2961,19 @@ X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
 }
 
 void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
+  bool shouldRespectFunctionAVXLevel =
+      !getTarget().getTriple().isPS() &&
+      getContext().getLangOpts().getClangABICompat() >
+          LangOptions::ClangABI::Ver22;
+
+  if (shouldRespectFunctionAVXLevel &&
+      FI.getX86AVXABILevel() != static_cast<unsigned>(AVXLevel)) {
+    auto EffectiveAVXLevel =
+        static_cast<X86AVXABILevel>(FI.getX86AVXABILevel());
+    X86_64ABIInfo EffectiveABIInfo(CGT, EffectiveAVXLevel);
+    EffectiveABIInfo.computeInfo(FI);
+    return;
+  }
 
   const unsigned CallingConv = FI.getCallingConvention();
   // It is possible to force Win64 calling convention on any x86_64 target by

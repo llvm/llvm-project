@@ -111,6 +111,8 @@ static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   llvm_unreachable("invalid C++ ABI kind");
 }
 
+static X86AVXABILevel getDefaultX86AVXABILevel(const TargetInfo &Target);
+
 static std::unique_ptr<TargetCodeGenInfo>
 createTargetCodeGenInfo(CodeGenModule &CGM) {
   const TargetInfo &Target = CGM.getTarget();
@@ -268,10 +270,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   }
 
   case llvm::Triple::x86_64: {
-    StringRef ABI = Target.getABI();
-    X86AVXABILevel AVXLevel = (ABI == "avx512" ? X86AVXABILevel::AVX512
-                               : ABI == "avx"  ? X86AVXABILevel::AVX
-                                               : X86AVXABILevel::None);
+    X86AVXABILevel AVXLevel = getDefaultX86AVXABILevel(Target);
 
     switch (Triple.getOS()) {
     case llvm::Triple::UEFI:
@@ -331,6 +330,18 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
   }
   }
+}
+
+static X86AVXABILevel getDefaultX86AVXABILevel(const TargetInfo &Target) {
+  X86AVXABILevel Level = X86AVXABILevel::None;
+  if (Target.getTriple().isX86_64()) {
+    StringRef ABI = Target.getABI();
+    if (ABI == "avx512")
+      Level = X86AVXABILevel::AVX512;
+    else if (ABI == "avx")
+      Level = X86AVXABILevel::AVX;
+  }
+  return Level;
 }
 
 const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
@@ -6265,6 +6276,25 @@ void CodeGenModule::maybeSetTrivialComdat(const Decl &D,
 
 const ABIInfo &CodeGenModule::getABIInfo() {
   return getTargetCodeGenInfo().getABIInfo();
+}
+
+unsigned CodeGenModule::getDefaultX86AVXABILevel() const {
+  return static_cast<unsigned>(::getDefaultX86AVXABILevel(Target));
+}
+
+unsigned
+CodeGenModule::getEffectiveX86AVXABILevel(const FunctionDecl *FD) const {
+  X86AVXABILevel Level = ::getDefaultX86AVXABILevel(Target);
+  if (!FD)
+    return static_cast<unsigned>(Level);
+
+  llvm::StringMap<bool> FeatureMap;
+  Context.getFunctionFeatureMap(FeatureMap, FD);
+  if (FeatureMap.lookup("avx512f"))
+    return static_cast<unsigned>(std::max(Level, X86AVXABILevel::AVX512));
+  if (FeatureMap.lookup("avx"))
+    return static_cast<unsigned>(std::max(Level, X86AVXABILevel::AVX));
+  return static_cast<unsigned>(Level);
 }
 
 /// Pass IsTentative as true if you want to create a tentative definition.

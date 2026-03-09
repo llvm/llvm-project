@@ -81,13 +81,13 @@ const CGFunctionInfo &
 arrangeCXXMethodCall(CodeGenModule &CGM, CanQualType returnType,
                      ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
                      ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-                     RequiredArgs args);
+                     RequiredArgs args, const FunctionDecl *CallerFD = nullptr);
 
 const CGFunctionInfo &arrangeFreeFunctionCall(
     CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
-    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-    RequiredArgs args);
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos, RequiredArgs args,
+    const FunctionDecl *CallerFD = nullptr);
 
 // An overload with an empty `paramInfos`
 inline const CGFunctionInfo &
