@@ -230,7 +230,7 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
     // FIXME(perf): Since we do this check on every Load from a static
     // temporary, it might make sense to cache the value of the
     // isUsableInConstantExpressions call.
-    if (B->getEvalID() != S.Ctx.getEvalID() &&
+    if (B->getEvalID() != S.EvalID &&
         !MTE->isUsableInConstantExpressions(S.getASTContext())) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
@@ -626,16 +626,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // In C++14 onwards, it is permitted to read a mutable member whose
   // lifetime began within the evaluation.
-  if (S.getLangOpts().CPlusPlus14 &&
-      Ptr.block()->getEvalID() == S.Ctx.getEvalID()) {
-    // FIXME: This check is necessary because (of the way) we revisit
-    // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
-    // unknown variable will get the same EvalID and we end up allowing
-    // reads from mutable members of it.
-    if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-      return false;
+  if (S.getLangOpts().CPlusPlus14 && Ptr.block()->getEvalID() == S.EvalID)
     return true;
-  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();

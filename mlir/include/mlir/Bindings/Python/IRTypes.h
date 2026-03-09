@@ -450,8 +450,6 @@ class MLIR_PYTHON_API_EXPORTED PyDynamicType
     : public PyConcreteType<PyDynamicType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsADynamicType;
-  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
-      mlirDynamicTypeGetTypeID;
   static constexpr const char *pyClassName = "DynamicType";
   using PyConcreteType::PyConcreteType;
 

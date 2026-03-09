@@ -18,7 +18,6 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -524,11 +523,11 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
     if (llvm::none_of(AllChecks.keys(),
                       [&Item](StringRef S) { return Item.Regex.match(S); })) {
       AnyInvalid = true;
-      if (Item.Text.contains('*'))
+      if (Item.Text.contains('*')) {
         llvm::WithColor::warning(llvm::errs(), Source)
             << "check glob '" << Item.Text << "' doesn't match any known check"
             << VerifyConfigWarningEnd;
-      else {
+      } else {
         llvm::raw_ostream &Output =
             llvm::WithColor::warning(llvm::errs(), Source)
             << "unknown check '" << Item.Text << '\'';

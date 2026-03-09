@@ -1,5 +1,4 @@
 // RUN: %check_clang_tidy %s performance-inefficient-string-concatenation %t -- -- -isystem %clang_tidy_headers
-
 #include <string>
 
 void f(std::string) {}

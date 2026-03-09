@@ -114,8 +114,6 @@ struct MissingFeatures {
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
-  static bool opCallLandingPad() { return false; }
-  static bool opCallContinueBlock() { return false; }
   static bool opCallChain() { return false; }
   static bool opCallExceptionAttr() { return false; }
 
@@ -232,7 +230,6 @@ struct MissingFeatures {
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
   static bool countedBySize() { return false; }
-  static bool cgFPOptionsRAII() { return false; }
   static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
@@ -263,13 +260,9 @@ struct MissingFeatures {
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
   static bool ehCleanupActiveFlag() { return false; }
-  static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
-  static bool ehCleanupBranchFixups() { return false; }
   static bool ehScopeFilter() { return false; }
-  static bool ehstackBranches() { return false; }
-  static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitConstrainedFPCall() { return false; }
@@ -279,6 +272,7 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+  static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
   static bool fastMathGuard() { return false; }
@@ -297,7 +291,6 @@ struct MissingFeatures {
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
-  static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
   static bool intrinsicElementTypeSupport() { return false; }
@@ -334,6 +327,7 @@ struct MissingFeatures {
   static bool pointerOverflowSanitizer() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool requiresCleanups() { return false; }
+  static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }
   static bool setDLLStorageClass() { return false; }
@@ -353,6 +347,7 @@ struct MissingFeatures {
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
+  static bool typeAwareAllocation() { return false; }
   static bool typeChecks() { return false; }
   static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }

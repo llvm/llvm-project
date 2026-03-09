@@ -1196,7 +1196,7 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
                                ivs, numThreads, givenTileSizes, reductionDims);
     if (failed(tilingResult)) {
       rewriter.eraseOp(clonedOp);
-      return op.emitOpError("faild to tile operation");
+      return op.emitOpError("failed to tile operation");
     }
 
     // 5d. Delete the cloned operation.

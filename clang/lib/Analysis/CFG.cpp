@@ -4793,19 +4793,11 @@ CFGBlock *CFGBuilder::VisitCXXTryStmt(CXXTryStmt *Terminator) {
 
   // Save the current "try" context.
   SaveAndRestore SaveTry(TryTerminatedBlock, NewTryTerminatedBlock);
-  cfg->addTryDispatchBlock(NewTryTerminatedBlock);
+  cfg->addTryDispatchBlock(TryTerminatedBlock);
 
   assert(Terminator->getTryBlock() && "try must contain a non-NULL body");
   Block = nullptr;
-
-  if (CFGBlock *TryBodyEntry = addStmt(Terminator->getTryBlock())) {
-    addSuccessor(NewTryTerminatedBlock, TryBodyEntry);
-  } else {
-    CFGBlock *EmptyTryBody = createBlock(/*add_successor=*/false);
-    addSuccessor(NewTryTerminatedBlock, EmptyTryBody);
-    addSuccessor(EmptyTryBody, TrySuccessor);
-  }
-  return NewTryTerminatedBlock;
+  return addStmt(Terminator->getTryBlock());
 }
 
 CFGBlock *CFGBuilder::VisitCXXCatchStmt(CXXCatchStmt *CS) {

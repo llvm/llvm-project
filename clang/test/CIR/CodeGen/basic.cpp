@@ -58,7 +58,7 @@ int f3(int i) {
   return i;
 }
 
-// CHECK: cir.func{{.*}} @_Z2f3i(%[[ARG:.*]]: !s32i loc({{.*}})) -> (!s32i {{.*}})
+// CHECK: cir.func{{.*}} @_Z2f3i(%[[ARG:.*]]: !s32i {{.*}} loc({{.*}})) -> (!s32i {{.*}})
 // CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.store{{.*}} %[[ARG]], %[[ARG_ALLOCA]] : !s32i, !cir.ptr<!s32i>
@@ -71,7 +71,7 @@ int f4(const int i) {
   return i;
 }
 
-// CHECK: cir.func{{.*}} @_Z2f4i(%[[ARG:.*]]: !s32i loc({{.*}})) -> (!s32i {{.*}})
+// CHECK: cir.func{{.*}} @_Z2f4i(%[[ARG:.*]]: !s32i {{.*}} loc({{.*}})) -> (!s32i {{.*}})
 // CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
 // CHECK:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.store{{.*}} %[[ARG]], %[[ARG_ALLOCA]] : !s32i, !cir.ptr<!s32i>
@@ -123,7 +123,7 @@ size_type max_size() {
 // CHECK: cir.func{{.*}} @_Z8max_sizev() -> (!u64i {{.*}})
 // CHECK:   %[[NOT_ZERO:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:   %[[SIZE_OF_TP:.*]] = cir.const #cir.int<8> : !u64i
-// CHECK:   %[[RESULT:.*]] = cir.binop(div, %[[NOT_ZERO]], %[[SIZE_OF_TP]]) : !u64i
+// CHECK:   %[[RESULT:.*]] = cir.div %[[NOT_ZERO]], %[[SIZE_OF_TP]] : !u64i
 
 void ref_arg(int &x) {
   int y = x;
