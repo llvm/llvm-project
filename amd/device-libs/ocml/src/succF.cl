@@ -10,13 +10,7 @@
 CONSTATTR float
 MATH_MANGLE(succ)(float x)
 {
-    int ix = AS_INT(x);
-    int mx = SIGNBIT_SP32 - ix;
-    mx = ix < 0 ? mx : ix;
-    int t = mx + (x != PINF_F32 && !BUILTIN_ISNAN_F32(x));
-    int r = SIGNBIT_SP32 - t;
-    r = t < 0 ? r : t;
-    r = mx == -1 ? SIGNBIT_SP32 : r;
-    return AS_FLOAT(r);
+    int y = AS_INT(x + 0.0f);
+    int ix = y + (y >= 0 ? 1 : -1);
+    return BUILTIN_ISNAN_F32(x) || x == PINF_F32 ? x : AS_FLOAT(ix);
 }
-
