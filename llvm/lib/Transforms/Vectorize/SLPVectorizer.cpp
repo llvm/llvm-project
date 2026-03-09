@@ -13287,7 +13287,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
     return false;
   Order.clear();
   unsigned CurrentValue = 0;
-  // Rhs should be (0, Stride, 2 * Stride, ..., Sz-Stride).
+  // Rhs should be (0, Stride, 2 * Stride, ..., N-Stride), where N <= Sz.
   if (all_of(RhsTE->Scalars,
              [&](Value *V) {
                CurrentValue += Stride;
@@ -13298,7 +13298,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
                  return false;
                return C->getUniqueInteger() == CurrentValue - Stride;
              }) &&
-      CurrentValue == Sz) {
+      CurrentValue <= Sz) {
     Order.clear();
   } else {
     const unsigned VF = RhsTE->getVectorFactor();
@@ -13306,8 +13306,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
     // Track which logical positions we've seen; reject duplicate shift amounts.
     SmallBitVector SeenPositions(VF);
     // Check if need to reorder Rhs to make it in form (0, Stride, 2 * Stride,
-    // ..., Sz-Stride).
-    if (VF * Stride != Sz)
+    // ..., N-Stride), where N <= Sz.
+    if (VF * Stride > Sz)
       return false;
     for (const auto [Idx, V] : enumerate(RhsTE->Scalars)) {
       if (isa<UndefValue>(V))
@@ -15697,12 +15697,18 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       InstructionCost BitcastCost = TTI.getCastInstrCost(
           Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
       if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap) {
-        auto *OrigScalarTy = E->getMainOp()->getType();
-        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, OrigScalarTy,
-                                          {OrigScalarTy});
+        auto *SrcType = IntegerType::getIntNTy(
+            ScalarTy->getContext(),
+            DL->getTypeSizeInBits(SrcScalarTy) * EntryVF);
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost IntrinsicCost =
             TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
         BitcastCost += IntrinsicCost;
+        if (SrcType != ScalarTy) {
+          BitcastCost +=
+              TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
+                                   TTI::CastContextHint::None, CostKind);
+        }
       }
       return BitcastCost + CommonCost;
     };
@@ -15731,16 +15737,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       const TreeEntry *LhsTE = getOperandEntry(E, /*Idx=*/0);
       const TreeEntry *LoadTE = getOperandEntry(LhsTE, /*Idx=*/0);
       auto *LI0 = cast<LoadInst>(LoadTE->getMainOp());
-      auto *OrigScalarTy = E->getMainOp()->getType();
+      auto *SrcType = IntegerType::getIntNTy(
+          ScalarTy->getContext(),
+          DL->getTypeSizeInBits(LI0->getType()) * EntryVF);
       InstructionCost LoadCost =
-          TTI.getMemoryOpCost(Instruction::Load, OrigScalarTy, LI0->getAlign(),
+          TTI.getMemoryOpCost(Instruction::Load, SrcType, LI0->getAlign(),
                               LI0->getPointerAddressSpace(), CostKind);
       if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwapLoads) {
-        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, OrigScalarTy,
-                                          {OrigScalarTy});
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost IntrinsicCost =
             TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
         LoadCost += IntrinsicCost;
+        if (SrcType != ScalarTy) {
+          LoadCost +=
+              TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
+                                   TTI::CastContextHint::None, CostKind);
+        }
       }
       return LoadCost + CommonCost;
     };
@@ -21522,17 +21534,25 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Const->VectorizedValue = PoisonValue::get(getWidenedType(
           Const->Scalars.front()->getType(), Const->getVectorFactor()));
       Value *Op = vectorizeOperand(ZExt, 0);
+      auto *SrcType = IntegerType::get(
+          Op->getContext(),
+          DL->getTypeSizeInBits(cast<CastInst>(ZExt->getMainOp())->getSrcTy()) *
+              E->getVectorFactor());
+      auto *OrigScalarTy = ScalarTy;
       // Set the scalar type properly to avoid casting to the extending type.
       ScalarTy = cast<CastInst>(ZExt->getMainOp())->getSrcTy();
       Op = FinalShuffle(Op, E);
-      auto *V = Builder.CreateBitCast(
-          Op, IntegerType::get(
-                  Op->getContext(),
-                  DL->getTypeSizeInBits(ZExt->getMainOp()->getType())));
-      if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap)
-        V = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, V);
-      E->VectorizedValue = V;
+      auto *V = Builder.CreateBitCast(Op, SrcType);
       ++NumVectorInstructions;
+      if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap) {
+        V = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, V);
+        ++NumVectorInstructions;
+      }
+      if (SrcType != OrigScalarTy) {
+        V = Builder.CreateIntCast(V, OrigScalarTy, /*isSigned=*/false);
+        ++NumVectorInstructions;
+      }
+      E->VectorizedValue = V;
       return V;
     }
     case TreeEntry::ReducedBitcastLoads:
@@ -21550,11 +21570,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Load->getMainOp()->getType(), Load->getVectorFactor()));
       LoadInst *LI = cast<LoadInst>(Load->getMainOp());
       Value *PO = LI->getPointerOperand();
-      Type *ScalarTy = ZExt->getMainOp()->getType();
-      Value *V = Builder.CreateAlignedLoad(ScalarTy, PO, LI->getAlign());
+      auto *SrcTy = IntegerType::get(
+          ScalarTy->getContext(),
+          DL->getTypeSizeInBits(cast<CastInst>(ZExt->getMainOp())->getSrcTy()) *
+              E->getVectorFactor());
+      auto *OrigScalarTy = ScalarTy;
+      ScalarTy = ZExt->getMainOp()->getType();
+      Value *V = Builder.CreateAlignedLoad(SrcTy, PO, LI->getAlign());
       ++NumVectorInstructions;
       if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwapLoads) {
         V = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, V);
+        ++NumVectorInstructions;
+      }
+      if (SrcTy != OrigScalarTy) {
+        V = Builder.CreateIntCast(V, OrigScalarTy, /*isSigned=*/false);
         ++NumVectorInstructions;
       }
       E->VectorizedValue = V;
