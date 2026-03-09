@@ -472,7 +472,16 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (It == ProfileAnchors.end())
       continue;
     const auto &ProfCalleeId = It->second;
-    if (IRCalleeId == ProfCalleeId ||
+    // An indirect call in the IR with a specific callee in the profile may not
+    // be a real mismatch: It's possible that only one of call targets was
+    // sampled and ICP will resolve the indirect call to the profiled target in
+    // a later pass, so the samples will be applied correctly. Treat this as a
+    // match for stats purposes.
+    bool IsIndirectCallDevirt =
+        IRCalleeId.stringRef() == UnknownIndirectCallee &&
+        !ProfCalleeId.stringRef().empty() &&
+        ProfCalleeId.stringRef() != UnknownIndirectCallee;
+    if (IRCalleeId == ProfCalleeId || IsIndirectCallDevirt ||
         // When the profile has UnknownIndirectCallee (indirect call) but the IR
         // has a direct call, check if the IR callee matches any of the actual
         // call targets in the profile.
