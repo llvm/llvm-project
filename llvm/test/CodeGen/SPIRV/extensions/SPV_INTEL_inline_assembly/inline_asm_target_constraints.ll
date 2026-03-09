@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s --spirv-ext=+SPV_INTEL_inline_assembly -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_inline_assembly -o - -filetype=obj | spirv-val %}
 
 ; Test that SPIR-V backend handles target-specific inline asm constraints
 ; (e.g., AMDGPU's "v" for VGPR) without crashing.
