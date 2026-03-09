@@ -489,7 +489,7 @@ public:
           File::eOpenOptionReadWrite | File::eOpenOptionCanCreate,
           perms, error);
       if (error.Success()) {
-        result.AppendMessageWithFormatv("File Descriptor = {0}", fd);
+        result.AppendMessageWithFormat("File Descriptor = %" PRIu64 "\n", fd);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -537,7 +537,7 @@ public:
       Status error;
       bool success = platform_sp->CloseFile(fd, error);
       if (success) {
-        result.AppendMessageWithFormatv("file {0} closed.", fd);
+        result.AppendMessageWithFormat("file %" PRIu64 " closed.\n", fd);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -581,8 +581,8 @@ public:
       uint64_t retcode = platform_sp->ReadFile(
           fd, m_options.m_offset, &buffer[0], m_options.m_count, error);
       if (retcode != UINT64_MAX) {
-        result.AppendMessageWithFormatv("Return = {0}", retcode);
-        result.AppendMessageWithFormatv("Data = \"{0}\"", buffer.c_str());
+        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
+        result.AppendMessageWithFormat("Data = \"%s\"\n", buffer.c_str());
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -675,7 +675,7 @@ public:
           platform_sp->WriteFile(fd, m_options.m_offset, &m_options.m_data[0],
                                  m_options.m_data.size(), error);
       if (retcode != UINT64_MAX) {
-        result.AppendMessageWithFormatv("Return = {0}", retcode);
+        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -828,13 +828,13 @@ public:
       Status error = platform_sp->GetFile(FileSpec(remote_file_path),
                                           FileSpec(local_file_path));
       if (error.Success()) {
-        result.AppendMessageWithFormatv(
-            "successfully get-file from {0} (remote) to {1} (host)",
+        result.AppendMessageWithFormat(
+            "successfully get-file from %s (remote) to %s (host)\n",
             remote_file_path, local_file_path);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormatv("get-file failed: {0}",
-                                        error.AsCString());
+        result.AppendMessageWithFormat("get-file failed: %s\n",
+                                       error.AsCString());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -875,12 +875,13 @@ public:
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       user_id_t size = platform_sp->GetFileSize(FileSpec(remote_file_path));
       if (size != UINT64_MAX) {
-        result.AppendMessageWithFormatv("File size of {0} (remote): {1}",
-                                        remote_file_path.c_str(), size);
+        result.AppendMessageWithFormat("File size of %s (remote): %" PRIu64
+                                       "\n",
+                                       remote_file_path.c_str(), size);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormatv(
-            "Error getting file size of {0} (remote)",
+        result.AppendMessageWithFormat(
+            "Error getting file size of %s (remote)\n",
             remote_file_path.c_str());
       }
     } else {
@@ -924,9 +925,9 @@ public:
       Status error = platform_sp->GetFilePermissions(FileSpec(remote_file_path),
                                                      permissions);
       if (error.Success()) {
-        result.AppendMessageWithFormatv(
-            "File permissions of {0} (remote): 0o{1}", remote_file_path,
-            llvm::format("%04o", permissions));
+        result.AppendMessageWithFormat(
+            "File permissions of %s (remote): 0o%04" PRIo32 "\n",
+            remote_file_path.c_str(), permissions);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else
         result.AppendError(error.AsCString());
@@ -968,9 +969,9 @@ public:
     if (platform_sp) {
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       bool exists = platform_sp->GetFileExists(FileSpec(remote_file_path));
-      result.AppendMessageWithFormatv("File {0} (remote) {1}",
-                                      remote_file_path.c_str(),
-                                      exists ? "exists" : "does not exist");
+      result.AppendMessageWithFormat(
+          "File %s (remote) %s\n",
+          remote_file_path.c_str(), exists ? "exists" : "does not exist");
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no platform currently selected\n");
