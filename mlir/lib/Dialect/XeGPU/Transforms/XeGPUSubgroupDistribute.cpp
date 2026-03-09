@@ -1520,12 +1520,9 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         auto broadcastUnitDimsSet = broadcastOp.computeBroadcastedUnitDims();
         SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
                                                broadcastUnitDimsSet.end());
-        bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
-        if (!isEqualTo)
-          return rewriter.notifyMatchFailure(
-              warpOp, "For same-rank broadcast, source must be identical to "
-                      "adjusted result layouts with unit dims.");
-        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
+        assert(sourceLayout.isEqualTo(
+                   sourceLayout.setUnitDimData(broadcastUnitDims)) &&
+               "The sg_data for unit dimensions should be set as 1");
         sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
       }
 

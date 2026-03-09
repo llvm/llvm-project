@@ -155,6 +155,8 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
       bcastDims.push_back(i);
   }
 
+  // the sg_layout and lane_layout for unit dimensions are preserved so it can
+  // be propagate to producer op so potentially used by the multi-reduction op.
   if (!bcastDims.empty())
     returnLayout = returnLayout.setUnitDimData(bcastDims);
 
