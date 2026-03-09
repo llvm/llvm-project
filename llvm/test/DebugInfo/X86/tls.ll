@@ -1,19 +1,19 @@
-; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu \
+; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu -enable-debug-tls-location \
 ; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-64,GNUOP %s
 
-; RUN: llc %s -o - -filetype=asm -O0 -mtriple=i386-linux-gnu \
+; RUN: llc %s -o - -filetype=asm -O0 -mtriple=i386-linux-gnu -enable-debug-tls-location -enable-debug-tls-location \
 ; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-32,GNUOP %s
 
-; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu -split-dwarf-file=foo.dwo \
+; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu -split-dwarf-file=foo.dwo -enable-debug-tls-location \
 ; RUN:   | FileCheck --check-prefixes=FISSION,GNUOP %s
 
-; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-scei-ps4 \
+; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-scei-ps4 -enable-debug-tls-location \
 ; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-64,STDOP %s
 
-; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-apple-darwin \
+; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-apple-darwin -enable-debug-tls-location \
 ; RUN:   | FileCheck --check-prefixes=DARWIN,STDOP %s
 
-; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-freebsd \
+; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-freebsd -enable-debug-tls-location \
 ; RUN:   | FileCheck --check-prefixes=SINGLE,SINGLE-64,GNUOP %s
 
 ; RUN: llc %s -o - -filetype=asm -O0 -mtriple=x86_64-unknown-linux-gnu -emulated-tls \
@@ -102,7 +102,7 @@
 
 source_filename = "test/DebugInfo/X86/tls.ll"
 
-@tls = internal thread_local global i32 0, align 4, !dbg !0
+@tls = dso_local thread_local global i32 0, align 4, !dbg !0
 @glbl = global i32 0, align 4, !dbg !4
 
 ; Function Attrs: nounwind uwtable

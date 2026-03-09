@@ -1,10 +1,10 @@
 ; Verify the emission of accelerator tables for various targets for the DWARF<=4 case
 
 ; Darwin has the apple tables unless we specifically tune for gdb
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s > %t
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -enable-debug-tls-location < %s > %t
 ; RUN: llvm-readobj --sections %t | FileCheck --check-prefix=APPLE %s
 ; RUN: llvm-dwarfdump -apple-names %t | FileCheck --check-prefix=APPLE-NAMES %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s \
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb -enable-debug-tls-location < %s \
 ; RUN:   | llvm-readobj --sections - | FileCheck --check-prefix=GNU %s
 
 ; Linux does has debug_names tables only if we explicitly tune for lldb
@@ -41,7 +41,7 @@
 ; NONE-NOT: debug_names
 ; NONE: debug_gnu_pub
 
-@var = internal thread_local global i32 0, align 4, !dbg !0
+@var = dso_local thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: norecurse nounwind readnone uwtable
 define void @_Z3funv() local_unnamed_addr #0 !dbg !11 {

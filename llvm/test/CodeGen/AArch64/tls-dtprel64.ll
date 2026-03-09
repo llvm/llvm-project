@@ -1,9 +1,9 @@
-; RUN: llc -O0 -mtriple=aarch64-linux-gnu -filetype=obj < %s \
+; RUN: llc -O0 -mtriple=aarch64-linux-gnu -enable-debug-tls-location -filetype=obj < %s \
 ; RUN:     | llvm-objdump -r - | FileCheck %s
 
 ; CHECK: R_AARCH64_TLS_DTPREL64   var
 
-@var = internal thread_local global i32 0, align 4, !dbg !0
+@var = dso_local thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: noinline nounwind optnone
 define i32 @foo() #0 !dbg !11 {

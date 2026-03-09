@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu -filetype=obj < %s \
+; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu -enable-debug-tls-location -filetype=obj < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK: .debug_info contents:
@@ -10,7 +10,7 @@
 ; CHECK-NEXT:   DW_AT_decl_line (1)
 ; CHECK-NEXT:   DW_AT_location  (DW_OP_const8u 0x0, DW_OP_GNU_push_tls_address)
 
-@var = internal thread_local global i32 0, align 4, !dbg !0
+@var = dso_local thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: noinline nounwind optnone
 define i32 @foo() #0 !dbg !11 {

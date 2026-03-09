@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=asm -mtriple=armv7-linux-gnuehabi < %s \
+; RUN: llc -O0 -filetype=asm -mtriple=armv7-linux-gnuehabi -enable-debug-tls-location < %s \
 ; RUN:     | FileCheck %s
 ; RUN: llc -O0 -filetype=asm -mtriple=armv7-linux-gnuehabi -emulated-tls < %s \
 ; RUN:     | FileCheck %s --check-prefix=EMU
@@ -8,7 +8,7 @@
 
 source_filename = "test/DebugInfo/ARM/tls.ll"
 
-@x = thread_local global i32 0, align 4, !dbg !0
+@x = dso_local thread_local global i32 0, align 4, !dbg !0
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7, !8}

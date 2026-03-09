@@ -55,6 +55,11 @@ static cl::opt<bool> EmitFuncLineTableOffsetsOption(
              "sequence after each function's line data."),
     cl::init(false));
 
+static cl::opt<bool> EnableDebugTLSLocation(
+    "enable-debug-tls-location", cl::Hidden,
+    cl::desc("Enable emitting TLS DWARF location with DTPREL relocation"),
+    cl::init(false));
+
 static bool AddLinkageNamesToDeclCallOriginsForTuning(const DwarfDebug *DD) {
   bool EnabledByDefault = DD->tuneForSCE();
   if (EnabledByDefault)
@@ -260,6 +265,9 @@ void DwarfCompileUnit::addLocationAttribute(
       // represented safely in DWARF. In that case let Debugger use
       // Runtime TLS lookup via DTV (Dynmic thread vector).
       if (!Global->isDSOLocal())
+        continue;
+
+      if (!EnableDebugTLSLocation)
         continue;
 
       if (!Asm->getObjFileLowering().supportDebugThreadLocalLocation())
