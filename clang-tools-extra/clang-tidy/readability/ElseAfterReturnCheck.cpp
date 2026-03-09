@@ -191,8 +191,9 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto IfWithInterruptingThenElse =
       ifStmt(unless(isConstexpr()), unless(isConsteval()),
-             hasThen(stmt(anyOf(InterruptsControlFlow,
-                                compoundStmt(has(InterruptsControlFlow))))),
+             hasThen(stripLabelLikeStatements(
+                 stmt(anyOf(InterruptsControlFlow,
+                            compoundStmt(has(InterruptsControlFlow)))))),
              hasElse(stmt().bind("else")))
           .bind("if");
 

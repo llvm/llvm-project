@@ -108,3 +108,58 @@ bool DependencyScanningWorker::computeDependencies(
 
   return Success && Action.hasScanned();
 }
+
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
+dependencies::initVFSForTUBufferScanning(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
+    llvm::MemoryBufferRef TUBuffer) {
+  // Reset what might have been modified in the previous worker invocation.
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+
+  auto OverlayFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+  auto InputPath = TUBuffer.getBufferIdentifier();
+  InMemoryFS->addFile(
+      InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
+
+  OverlayFS->pushOverlay(InMemoryOverlay);
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
+  ModifiedCommandLine.emplace_back(InputPath);
+
+  return std::make_pair(OverlayFS, ModifiedCommandLine);
+}
+
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
+dependencies::initVFSForByNameScanning(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
+    StringRef ModuleName) {
+  // Reset what might have been modified in the previous worker invocation.
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+
+  // If we're scanning based on a module name alone, we don't expect the client
+  // to provide us with an input file. However, the driver really wants to have
+  // one. Let's just make it up to make the driver happy.
+  auto OverlayFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+  SmallString<128> FakeInputPath;
+  // TODO: We should retry the creation if the path already exists.
+  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
+                                  /*MakeAbsolute=*/false);
+  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
+  OverlayFS->pushOverlay(InMemoryOverlay);
+
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
+  ModifiedCommandLine.emplace_back(FakeInputPath);
+
+  return std::make_pair(OverlayFS, ModifiedCommandLine);
+}

@@ -886,10 +886,6 @@ public:
     return IsFunctionTrivial(CE->getConstructor());
   }
 
-  bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-    return CanTriviallyDestruct(DE->getDestroyedType());
-  }
-
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {
     return IsFunctionTrivial(E->getConstructor());
   }

@@ -11,6 +11,7 @@ add_clang_library(clangAnalysisScalable
   Model/EntityLinkage.cpp
   Model/EntityName.cpp
   Model/SummaryName.cpp
+  Serialization/JSONFormat/JSONEntitySummaryEncoding.cpp
   Serialization/JSONFormat/JSONFormatImpl.cpp
   Serialization/JSONFormat/LUSummary.cpp
   Serialization/JSONFormat/LUSummaryEncoding.cpp
