@@ -50,7 +50,8 @@ enum CMD_STAT {
 
 // Override CopyCharsToDescriptor in tools.h, pass string directly
 void CopyCharsToDescriptor(const Descriptor &value, const char *rawValue) {
-  CopyCharsToDescriptor(value, rawValue, std::strlen(rawValue));
+  CopyAndPad(value.OffsetElement(), rawValue, value.ElementBytes(),
+      std::strlen(rawValue));
 }
 
 void CheckAndCopyCharsToDescriptor(

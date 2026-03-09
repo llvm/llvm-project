@@ -367,11 +367,13 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
 #ifdef _WIN32
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command not found.");
+  CheckDescriptorEqStr(cmdMsg.get(),
+      GetPaddedStr("Command not found.", cmdMsg->ElementBytes()));
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 4);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command cannot be execu");
+  CheckDescriptorEqStr(cmdMsg.get(),
+      GetPaddedStr("Command cannot be execu", cmdMsg->ElementBytes()));
   // removing the file only on Linux (file is not created on Win)
   OwningPtr<Descriptor> commandClean{
       CharDescriptor("rm -f NotExecutedCommandFile")};
@@ -396,11 +398,13 @@ TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
 #ifdef _WIN32
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command not found.");
+  CheckDescriptorEqStr(cmdMsg.get(),
+      GetPaddedStr("Command not found.", cmdMsg->ElementBytes()));
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command not found with exit");
+  CheckDescriptorEqStr(cmdMsg.get(),
+      GetPaddedStr("Command not found with exit", cmdMsg->ElementBytes()));
 #endif
 }
 
