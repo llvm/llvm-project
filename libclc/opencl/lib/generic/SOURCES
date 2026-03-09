@@ -202,6 +202,7 @@ shared/min.cl
 shared/vload.cl
 shared/vstore.cl
 subgroup/sub_group_broadcast.cl
+synchronization/sub_group_barrier.cl
 synchronization/work_group_barrier.cl
 workitem/get_enqueued_local_size.cl
 workitem/get_global_id.cl
