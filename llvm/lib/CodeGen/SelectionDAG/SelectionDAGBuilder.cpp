@@ -4779,6 +4779,16 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     if (MemVTs[i] != ValueVTs[i])
       L = DAG.getPtrExtOrTrunc(L, dl, ValueVTs[i]);
 
+    if (MDNode *NoFPClassMD = I.getMetadata(LLVMContext::MD_nofpclass)) {
+      uint64_t FPTestInt =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(NoFPClassMD->getOperand(0))->getValue())
+              ->getSExtValue();
+      SDValue FPTestConst = DAG.getTargetConstant(FPTestInt, SDLoc(), MVT::i32);
+      if (FPTestInt != fcNone)
+        L = DAG.getNode(ISD::AssertNoFPClass, dl, L.getValueType(), L,
+                        FPTestConst);
+    }
     Values[i] = L;
   }
 
