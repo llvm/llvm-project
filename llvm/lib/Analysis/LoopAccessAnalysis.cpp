@@ -1549,7 +1549,7 @@ void AccessAnalysis::buildDependenceSets() {
     // deterministic.
     auto ASPointers = AS.getPointers();
 
-    bool SetHasWrite = false;
+    bool AliasSetHasWrite = false;
 
     // Map of (pointer to underlying objects, accessed address space) to last
     // access encountered.
@@ -1607,13 +1607,13 @@ void AccessAnalysis::buildDependenceSets() {
           // this is a read only check other writes for conflicts (but only if
           // there is no other write to the ptr - this is an optimization to
           // catch "a[i] = a[i] + " without having to do a dependence check).
-          if ((IsWrite || IsReadOnlyPtr) && SetHasWrite) {
+          if ((IsWrite || IsReadOnlyPtr) && AliasSetHasWrite) {
             CheckDeps.push_back(Access);
             IsRTCheckAnalysisNeeded = true;
           }
 
           if (IsWrite)
-            SetHasWrite = true;
+            AliasSetHasWrite = true;
 
           // Create sets of pointers connected by a shared alias set and
           // underlying object.
