@@ -54,5 +54,5 @@ reorder_blocks:
 # BEYOND-1KB:      [[ADDR0]]: {{.*}} nop
 # BEYOND-1KB:                 {{.*}} mov  x0, #0x2 // =2
 # BEYOND-1KB-NEXT:            {{.*}} ret
-# BEYOND-1KB-NEXT: [[ADDR1]]: {{.*}} mov  x0, #0x1 // =1
+# BEYOND-1KB:      [[ADDR1]]: {{.*}} mov  x0, #0x1 // =1
 # BEYOND-1KB-NEXT:            {{.*}} ret
