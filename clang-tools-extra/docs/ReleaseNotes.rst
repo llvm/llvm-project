@@ -127,7 +127,7 @@ New checks
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 
-  Find common idioms which can be replaced by standard functions from the
+  Finds common idioms which can be replaced by standard functions from the
   ``<bit>`` C++20 header.
 
 - New :doc:`modernize-use-string-view

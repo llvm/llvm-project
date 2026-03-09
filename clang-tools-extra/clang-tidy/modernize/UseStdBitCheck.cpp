@@ -13,8 +13,21 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+UseStdBitCheck::UseStdBitCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()) {}
+
 void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
   const auto MakeBinaryOperatorMatcher = [](auto Op) {
+    return [=](const auto &LHS, const auto &RHS) {
+      return binaryOperator(hasOperatorName(Op),
+                            hasLHS(ignoringParenImpCasts(LHS)),
+                            hasRHS(ignoringParenImpCasts(RHS)));
+    };
+  };
+  const auto MakeCommutativeBinaryOperatorMatcher = [](auto Op) {
     return [=](const auto &LHS, const auto &RHS) {
       return binaryOperator(
           hasOperatorName(Op),
@@ -22,10 +35,10 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
     };
   };
 
-  const auto LogicalAnd = MakeBinaryOperatorMatcher("&&");
+  const auto LogicalAnd = MakeCommutativeBinaryOperatorMatcher("&&");
   const auto Sub = MakeBinaryOperatorMatcher("-");
-  const auto BitwiseAnd = MakeBinaryOperatorMatcher("&");
-  const auto CmpNot = MakeBinaryOperatorMatcher("!=");
+  const auto BitwiseAnd = MakeCommutativeBinaryOperatorMatcher("&");
+  const auto CmpNot = MakeCommutativeBinaryOperatorMatcher("!=");
   const auto CmpGt = MakeBinaryOperatorMatcher(">");
 
   const auto LogicalNot = [](const auto &Expr) {
@@ -37,11 +50,12 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
     return anyOf(Expr, CmpNot(Expr, integerLiteral(equals(0))),
                  CmpGt(Expr, integerLiteral(equals(0))));
   };
-  const auto BindDeclRef = [](auto Name) {
-    return declRefExpr(to(varDecl(hasType(isUnsignedInteger())).bind(Name)));
+  const auto BindDeclRef = [](StringRef Name) {
+    return declRefExpr(
+        to(varDecl(hasType(isUnsignedInteger())).bind(Name.str())));
   };
-  const auto BoundDeclRef = [](auto Name) {
-    return declRefExpr(to(varDecl(equalsBoundNode(Name))));
+  const auto BoundDeclRef = [](StringRef Name) {
+    return declRefExpr(to(varDecl(equalsBoundNode(Name.str()))));
   };
 
   // https://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
@@ -73,7 +87,6 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("expr");
 
   diag(MatchedExpr->getBeginLoc(), "use std::has_one_bit instead")
-      << MatchedVarDecl->getName()
       << FixItHint::CreateReplacement(
              MatchedExpr->getSourceRange(),
              ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())

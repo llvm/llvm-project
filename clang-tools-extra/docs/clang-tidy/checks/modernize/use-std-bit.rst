@@ -3,15 +3,15 @@
 modernize-use-std-bit
 =====================
 
-Find common idioms which can be replaced by standard functions from the
+Finds common idioms which can be replaced by standard functions from the
 ``<bit>`` C++20 header.
 
-.. code-block:: c++
+Covered scenarios:
 
-    bool has_one_bit = x && !(x & (x - 1));
-
-    // transforms to
-
-    #include <bit>
-
-    bool has_one_bit = std::has_one_bit(x);
+==================================================== =======================
+Expression                                           Replacement
+---------------------------------------------------- -----------------------
+``x && !(x & (x - 1))``                              ``std::has_one_bit(x)``
+``(x != 0) && !(x & (x - 1))``                       ``std::has_one_bit(x)``
+``(x > 0) && !(x & (x - 1))``                        ``std::has_one_bit(x)``
+==================================================== =======================

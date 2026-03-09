@@ -25,6 +25,12 @@ unsigned bithacks_perm(unsigned x) {
   return x && !((x - 1) & (x));
 }
 
+unsigned bithacks_otherperm(unsigned x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use std::has_one_bit instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_one_bit(x);
+  return !((x - 1) & (x)) && x;
+}
+
 unsigned bithacks_variant_neq(unsigned x) {
   // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use std::has_one_bit instead [modernize-use-std-bit]
   // CHECK-FIXES: return std::has_one_bit(x);
@@ -47,4 +53,35 @@ unsigned bithacks_variant_gt_perm(unsigned x) {
   // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use std::has_one_bit instead [modernize-use-std-bit]
   // CHECK-FIXES: return std::has_one_bit(x);
   return (x > 0) && !(x & (x - 1));
+}
+
+/*
+ * Invalid patterns
+ */
+struct integer_like {
+  integer_like operator!() const;
+  bool operator&&(integer_like) const;
+  integer_like operator&(integer_like) const;
+  friend integer_like operator-(integer_like, unsigned);
+};
+
+unsigned invalid_bithacks(integer_like w, unsigned x, signed y, unsigned z) {
+  bool patterns[] = {
+    // non commutative operators
+    x && !(x & (1 - x)),
+    x < 0 && !(x & (x - 1)),
+    x >= 0 && !(x & (x - 1)),
+    // unsupported combinations
+    x && !(x & (z - 1)),
+    z && !(x & (x - 1)),
+    x && !(z & (x - 1)),
+    // unsupported types
+    y && !(y & (y - 1)),
+    w && !(w & (w - 1)),
+  };
+}
+
+template <class T>
+T bithacks_generic(T x) {
+  return x && !(x & (x - 1));
 }
