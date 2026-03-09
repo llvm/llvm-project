@@ -42,15 +42,9 @@ class Symbol;
 
 // Add this namespace to avoid potential conflicts
 namespace omp {
-<<<<<<< users/kparzysz/e02-iterator-location
-using Fortran::parser::omp::ExecutionPartIterator;
-using Fortran::parser::omp::LoopNestIterator;
-using Fortran::parser::omp::BlockRange;
-=======
 using Fortran::parser::omp::BlockRange;
 using Fortran::parser::omp::ExecutionPartIterator;
 using Fortran::parser::omp::LoopNestIterator;
->>>>>>> main
 using Fortran::parser::omp::LoopRange;
 
 template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
