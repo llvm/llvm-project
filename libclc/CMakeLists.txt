@@ -270,7 +270,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   )
 
   # Build, link, and install the final OpenCL builtins library.
-  add_libclc_opencl_library(libclc-${t}
+  add_libclc_library(libclc-${t}
     ARCH ${ARCH}
     TRIPLE ${clang_triple}
     TARGET_TRIPLE ${t}

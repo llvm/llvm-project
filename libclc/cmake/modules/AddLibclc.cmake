@@ -142,7 +142,7 @@ endfunction()
 # Builds an OpenCL builtins library from sources, links it with any
 # internalized dependencies via link_libclc_builtin_library, and adds
 # a verification test for unresolved symbols.
-function(add_libclc_opencl_library target_name)
+function(add_libclc_library target_name)
   cmake_parse_arguments(ARG
     ""
     "ARCH;TRIPLE;TARGET_TRIPLE"
