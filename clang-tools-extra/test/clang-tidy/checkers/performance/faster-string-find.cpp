@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s performance-faster-string-find %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s performance-faster-string-find %t
 // RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-faster-string-find %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {performance-faster-string-find.StringLikeClasses: \
-// RUN:                '::llvm::StringRef;'}}" -- -isystem %clang_tidy_headers
+// RUN:                '::llvm::StringRef;'}}"
 #include <string>
 
 namespace llvm {
