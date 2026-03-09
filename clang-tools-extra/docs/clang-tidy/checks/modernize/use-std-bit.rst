@@ -3,7 +3,7 @@
 modernize-use-std-bit
 =====================
 
-Find common idioms which can be replaced by standrad functions from the
+Find common idioms which can be replaced by standard functions from the
 ``<bit>`` C++20 header.
 
 .. code-block:: c++

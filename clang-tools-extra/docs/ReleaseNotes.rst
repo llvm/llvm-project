@@ -127,7 +127,8 @@ New checks
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 
-  Use functions from ``<bit>`` instead of common idioms.
+  Find common idioms which can be replaced by standard functions from the
+  ``<bit>`` C++20 header.
 
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
