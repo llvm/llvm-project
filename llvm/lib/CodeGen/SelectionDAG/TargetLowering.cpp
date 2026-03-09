@@ -9939,32 +9939,50 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // On 32-bit platforms with 64-bit floats, we need to be careful about
   // integer comparisons. We use FP_ROUND to convert to a smaller float type
   // that matches ResultVT's size, then compare with 0.
-  if (Test == fcPositive || Test == fcNegative) {
+  FPClassTest FPTestSign = Test & (~fcNan);
+  FPClassTest FPTestNaN = Test & fcNan;
+  if ((FPTestSign == fcPositive || FPTestSign == fcNegative) &&
+      (FPTestNaN == fcNan || FPTestNaN == fcNone)) {
     SDValue SignBitResult;
-    unsigned MaxLegalIntBits = 32;
-    if (isTypeLegal(MVT::i64))
-      MaxLegalIntBits = 64;
+    bool testNegative = FPTestSign == fcNegative;
+    bool testNaN = FPTestNaN == fcNan;
 
-    unsigned IntVTBits = IntVT.getScalarSizeInBits();
-    bool NeedFPCompare = IntVTBits > MaxLegalIntBits;
-
-    if (NeedFPCompare) {
-      // Truncate to the largest legal float type.
-      EVT TruncFloatEltVT = EVT::getFloatingPointVT(MaxLegalIntBits);
-
-      EVT TruncFloatVT = TruncFloatEltVT;
-      if (ResultVT.isVector() && TruncFloatEltVT != MVT::Other) {
-        TruncFloatVT = EVT::getVectorVT(*DAG.getContext(), TruncFloatEltVT,
-                                        ResultVT.getVectorElementCount());
+    bool NeedFPTrunc = false;
+    EVT TruncFloatVT = OperandVT;
+    EVT TruncIntVT = IntVT;
+    do {
+      unsigned TruncFloatEltBitsize = TruncFloatVT.getScalarSizeInBits();
+      unsigned TruncIntEltBitsize = TruncIntVT.getScalarSizeInBits();
+      if (isTypeLegal(TruncIntVT) && isTypeLegal(TruncFloatVT) &&
+          TruncFloatEltBitsize == TruncIntEltBitsize) {
+        if (TruncFloatVT != OperandVT)
+          NeedFPTrunc = true;
+        break;
       }
-      if (TruncFloatVT != MVT::Other &&
-          isOperationLegalOrCustom(ISD::FP_ROUND, TruncFloatVT)) {
+      EVT TruncFloatEltVT = TruncFloatVT.getScalarType();
+      EVT TruncIntEltVT0 =
+          EVT::getIntegerVT(*DAG.getContext(), TruncFloatEltBitsize);
+      unsigned TruncIntEltVT0SizeInBits = TruncIntEltVT0.getScalarSizeInBits();
+      EVT TruncIntEltVT =
+          getTypeToTransformTo(*DAG.getContext(), TruncIntEltVT0);
+      unsigned TruncIntEltVTSizeInBits = TruncIntEltVT.getScalarSizeInBits();
+      TruncFloatEltVT =
+          EVT::getFloatingPointVT(TruncIntEltVT.getScalarSizeInBits());
+      if (TruncIntEltVTSizeInBits >= TruncIntEltVT0SizeInBits)
+        break;
+      TruncFloatVT =
+          TruncFloatVT.changeElementType(*DAG.getContext(), TruncFloatEltVT);
+      TruncIntVT =
+          TruncIntVT.changeElementType(*DAG.getContext(), TruncIntEltVT);
+    } while (true);
+
+    if (NeedFPTrunc) {
+      if (isOperationLegalOrCustom(ISD::FP_ROUND, TruncFloatVT)) {
         // Round to smaller float type, then bitcast to integer for sign check.
         // Use TargetConstant for the truncation flag.
         EVT PointerVT = getPointerTy(DAG.getDataLayout());
         SDValue OpTrunc = DAG.getNode(ISD::FP_ROUND, DL, TruncFloatVT, Op,
                                       DAG.getTargetConstant(0, DL, PointerVT));
-        EVT TruncIntVT = TruncFloatVT.changeTypeToInteger();
         SDValue OpTruncInt = DAG.getBitcast(TruncIntVT, OpTrunc);
         SignBitResult =
             DAG.getSetCC(DL, ResultVT, OpTruncInt,
@@ -9979,20 +9997,26 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
 
     if (!DAG.isKnownNeverNaN(Op)) {
       SDValue NotNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETO);
-      SignBitResult =
-          DAG.getNode(ISD::AND, DL, ResultVT, NotNaN, SignBitResult);
+      SDValue IsNaN = DAG.getSetCC(DL, ResultVT, Op, Op, ISD::SETUO);
+      if (testNaN)
+        SignBitResult =
+            DAG.getNode(ISD::OR, DL, ResultVT, IsNaN, SignBitResult);
+      else
+        SignBitResult =
+            DAG.getNode(ISD::AND, DL, ResultVT, NotNaN, SignBitResult);
     }
 
     bool IsICmpImmLegal =
-        isLegalICmpImmediate(APInt::getAllOnes(IntVTBits).getZExtValue());
-    if (!NeedFPCompare && (!DAG.isKnownNeverNaN(Op) || IsICmpImmLegal) &&
-        Test == fcPositive) {
-      ; // (fcPosInf | fcFinite) has better performance.
-    } else if (Test == fcNegative)
-      return SignBitResult;
-    else
-      return DAG.getNode(ISD::XOR, DL, ResultVT, SignBitResult,
-                         ResultInversionMask);
+        isLegalICmpImmediate(APInt::getAllOnes(BitSize).getSExtValue());
+    if (NeedFPTrunc || DAG.isKnownNeverNaN(Op) ||
+        (OperandVT.isVector() && isTypeLegal(OperandVT)) || testNegative ||
+        !IsICmpImmLegal) {
+      if (testNegative)
+        return SignBitResult;
+      else
+        return DAG.getNode(ISD::XOR, DL, ResultVT, SignBitResult,
+                           ResultInversionMask);
+    }
   }
 
   if (IsF80)
