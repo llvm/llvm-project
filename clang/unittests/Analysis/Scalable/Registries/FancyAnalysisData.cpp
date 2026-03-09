@@ -54,8 +54,6 @@ struct FancyAnalysisFormatInfo final : FormatInfo {
 };
 } // namespace
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFFancyAnalysisDataAnchorSource = 0;
 static llvm::Registry<FormatInfo>::Add<FancyAnalysisFormatInfo>
     RegisterFormatInfo("FancyAnalysisData",
                        "Format info for FancyAnalysisData for the "
