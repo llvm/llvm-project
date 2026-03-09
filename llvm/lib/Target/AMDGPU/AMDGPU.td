@@ -2652,6 +2652,12 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
 
+def HasDPPSrc1SGPR : Predicate<"Subtarget->hasDPPSrc1SGPR()">,
+                      AssemblerPredicate<(all_of FeatureDPPSrc1SGPR)>;
+
+def NotHasDPPSrc1SGPR : Predicate<"!Subtarget->hasDPPSrc1SGPR()">,
+                      AssemblerPredicate<(all_of (not FeatureDPPSrc1SGPR))>;
+
 def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize32,
                               FeatureAssemblerPermissiveWavesize)>;
@@ -2669,15 +2675,20 @@ def isWave64Strict : Predicate<"Subtarget->isWave64()">,
 //===----------------------------------------------------------------------===//
 
 defvar DefaultMode_Wave64 = DefaultMode;
-defvar DefaultMode_Wave32 = HwMode<[isWave32, NotNeedsAlignedVGPRs]>;
+
+defvar DefaultMode_Wave32_HasDPPSrc1SGPR = HwMode<[isWave32, NotNeedsAlignedVGPRs, HasDPPSrc1SGPR]>;
+defvar DefaultMode_Wave32_NotHasDPPSrc1SGPR = HwMode<[isWave32, NotNeedsAlignedVGPRs, NotHasDPPSrc1SGPR]>;
 
 // gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement. Implied
 // wave64.
-def AVAlign2LoadStoreMode : HwMode<[HasMAIInsts, NeedsAlignedVGPRs]>;
+def AVAlign2LoadStoreMode_HasDPPSrc1SGPR    : HwMode<[HasMAIInsts, NeedsAlignedVGPRs, HasDPPSrc1SGPR]>;
+def AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR : HwMode<[HasMAIInsts, NeedsAlignedVGPRs, NotHasDPPSrc1SGPR]>;
 
 // gfx1250, has alignment requirement but no AGPRs.
-def AlignedVGPRNoAGPRMode_Wave32 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave32Strict]>;
-def AlignedVGPRNoAGPRMode_Wave64 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave64Strict]>;
+def AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR    : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave32Strict, HasDPPSrc1SGPR]>;
+def AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave32Strict, NotHasDPPSrc1SGPR]>;
+def AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR    : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave64Strict, HasDPPSrc1SGPR]>;
+def AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, isWave64Strict, NotHasDPPSrc1SGPR]>;
 
 // FIXME: This should be able to only define a separate hwmode that
 // only depends on wavesize for just ValueTypes. These use different
@@ -2685,10 +2696,14 @@ def AlignedVGPRNoAGPRMode_Wave64 : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs, is
 // for RegClassByHwMode, tablegen crashes for some reason
 def WaveSizeVT : ValueTypeByHwMode<[
   DefaultMode_Wave64,
-  AVAlign2LoadStoreMode,
-  AlignedVGPRNoAGPRMode_Wave64,
-  DefaultMode_Wave32,
-  AlignedVGPRNoAGPRMode_Wave32], [i64, i64, i64, i32, i32]>;
+  AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+  AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+  AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+  AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+  DefaultMode_Wave32_HasDPPSrc1SGPR,
+  DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+  AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+  AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR], [i64, i64, i64, i64, i64, i32, i32, i32, i32]>;
 
 
 // Include AMDGPU TD files

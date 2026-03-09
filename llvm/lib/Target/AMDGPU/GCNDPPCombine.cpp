@@ -308,9 +308,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     if (Src1) {
       assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1) &&
              "dpp version of instruction missing src1");
-      // If subtarget does not support SGPRs for src1 operand then the
-      // requirements are the same as for src0. We check src0 instead because
-      // pseudos are shared between subtargets and allow SGPR for src1 on all.
       if (!ST->hasDPPSrc1SGPR()) {
         assert(TII->getOpSize(*DPPInst, Src0Idx) ==
                    TII->getOpSize(*DPPInst, NumOperands) &&
@@ -437,6 +434,16 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     DPPInst.getInstr()->eraseFromParent();
     return nullptr;
   }
+
+  if (!ST->hasDPPSrc1SGPR()) {
+    auto *Src1 =
+        TII->getNamedOperand(*DPPInst.getInstr(), AMDGPU::OpName::src1);
+    assert((!Src1 || !Src1->isReg() ||
+            !ST->getRegisterInfo()->isSGPRClass(
+                MRI->getRegClass(Src1->getReg()))) &&
+           "Src1 in a DPP instruction must not be a SGPR for this target");
+  }
+
   LLVM_DEBUG(dbgs() << "  combined:  " << *DPPInst.getInstr());
   return DPPInst.getInstr();
 }

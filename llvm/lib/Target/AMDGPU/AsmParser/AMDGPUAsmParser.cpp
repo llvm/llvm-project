@@ -526,6 +526,38 @@ public:
            isLiteralImm(MVT::i32) || isExpr();
   }
 
+  bool isVHSrc_b16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
+  bool isVHSrc_bf16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
+  bool isVHSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
+  bool isVHSrc_b32() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
+  bool isVHSrc_f32() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
+  bool isVHSrc_v2b16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
+  bool isVHSrc_v2bf16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
+  bool isVHSrc_v2f16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
+  }
+
   bool isVCSrc_b32() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }

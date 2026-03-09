@@ -2016,6 +2016,27 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
         1               : VCSrc_b32);
 }
 
+// Like getVOP3DPPSrcForVT but use VHSrc* to conditionally
+// allow SGPR based on HwMode.
+
+class getVOP3DPPSrc1ForVT<ValueType VT, bit IsFake16 = 1> {
+
+  assert !ne(VT, i1), "DPP SRC1 cannot be 1-bit";
+
+  RegisterOperand ret =
+  !cond(!eq(VT, i16)    : !if (IsFake16, VHSrc_b16, VCSrcT_b16),
+        !eq(VT, i64)    : VCSrc_b64,
+        !eq(VT, f16)    : !if (IsFake16, VHSrc_f16, VCSrcT_f16),
+        !eq(VT, bf16)   : !if (IsFake16, VHSrc_bf16, VCSrcT_bf16),
+        !eq(VT, v2i16)  : VHSrc_v2b16,
+        !eq(VT, v2f16)  : VHSrc_v2f16,
+        !eq(VT, v2bf16) : VHSrc_v2bf16,
+        !eq(VT, f32)    : VHSrc_f32,
+        !eq(VT, f64)    : VCSrc_f64,
+        !eq(VT, v2i32)  : VCSrc_v2b32,
+        1               : VHSrc_b32);
+}
+
 // Float or packed int
 class isModifierType<ValueType SrcVT> {
   bit ret = !or(!eq(SrcVT, f16),
@@ -2757,7 +2778,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field RegisterOperand Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterOperand Src2DPP = getVregSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0VOP3DPP = getVGPRSrcForVT<Src0VT>.ret;
-  field RegisterOperand Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT>.ret;
+  field RegisterOperand Src1VOP3DPP = getVOP3DPPSrc1ForVT<Src1VT>.ret;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;
@@ -2973,7 +2994,7 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src1ModDPP = getSrcModDPP_t16<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2ModDPP = getSrcModDPP_t16<Src2VT, 0 /*IsFake16*/>.ret;
   let Src0VOP3DPP = !if (!eq(Src0VT.Size, 16), VGPROp_16, VGPROp_32);
-  let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0 /*IsFake16*/>.ret;
+  let Src1VOP3DPP = getVOP3DPPSrc1ForVT<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0 /*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
   let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 0 /*IsFake16*/>.ret;
@@ -3003,7 +3024,7 @@ class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src1Mod = getSrcMod<Src1VT, 1 /*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src2Mod = getSrcMod<Src2VT, 1 /*IsTrue16*/, 1/*IsFake16*/>.ret;
-  let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1 /*IsFake16*/>.ret;
+  let Src1VOP3DPP = getVOP3DPPSrc1ForVT<Src1VT, 1 /*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1 /*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
   let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 1 /*IsFake16*/>.ret;

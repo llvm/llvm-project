@@ -1194,27 +1194,43 @@ defm AV_1024 : AVRegClass<32, VReg_1024.RegTypes, (add VGPR_1024), (add AGPR_102
 def SReg_1_XEXEC : SIRegisterClassLike<0, false, false, true>,
   RegClassByHwMode<
     [DefaultMode_Wave64,
-     AlignedVGPRNoAGPRMode_Wave64,
-     AVAlign2LoadStoreMode,
-     DefaultMode_Wave32,
-     AlignedVGPRNoAGPRMode_Wave32],
+     AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+     DefaultMode_Wave32_HasDPPSrc1SGPR,
+     DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
     [SReg_64_XEXEC,
      SReg_64_XEXEC,
      SReg_64_XEXEC,
+     SReg_64_XEXEC,
+     SReg_64_XEXEC,
      SReg_32_XM0_XEXEC, // FIXME: Why do the wave32 cases exclude m0?
+     SReg_32_XM0_XEXEC, // FIXME: Why do the wave32 cases exclude m0?
+     SReg_32_XM0_XEXEC,
      SReg_32_XM0_XEXEC]
 >;
 
 def SReg_1 : SIRegisterClassLike<0, false, false, true>,
   RegClassByHwMode<
     [DefaultMode_Wave64,
-     AlignedVGPRNoAGPRMode_Wave64,
-     AVAlign2LoadStoreMode,
-     DefaultMode_Wave32,
-     AlignedVGPRNoAGPRMode_Wave32],
+     AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+     DefaultMode_Wave32_HasDPPSrc1SGPR,
+     DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
     [SReg_64,
      SReg_64,
      SReg_64,
+     SReg_64,
+     SReg_64,
+     SReg_32,
+     SReg_32,
      SReg_32,
      SReg_32]
 >;
@@ -1232,13 +1248,21 @@ def SReg_1 : SIRegisterClassLike<0, false, false, true>,
 
 def AV_LdSt_32_Target : RegClassByHwMode<
     [DefaultMode_Wave64,
-     DefaultMode_Wave32,
-     AVAlign2LoadStoreMode,
-     AlignedVGPRNoAGPRMode_Wave64,
-     AlignedVGPRNoAGPRMode_Wave32],
+     DefaultMode_Wave32_HasDPPSrc1SGPR,
+     DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
     [VGPR_32,
      VGPR_32,
+     VGPR_32,
      AV_32,
+     AV_32,
+     VGPR_32,
+     VGPR_32,
      VGPR_32,
      VGPR_32]>,
     SIRegisterClassLike<32, true, true> {
@@ -1249,12 +1273,20 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 10
   def VReg_#RegSize#_AlignTarget : SIRegisterClassLike<RegSize, true>,
     RegClassByHwMode<
       [DefaultMode_Wave64,
-       DefaultMode_Wave32,
-       AVAlign2LoadStoreMode,
-       AlignedVGPRNoAGPRMode_Wave64,
-       AlignedVGPRNoAGPRMode_Wave32],
+       DefaultMode_Wave32_HasDPPSrc1SGPR,
+       DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
       [!cast<RegisterClass>("VReg_"#RegSize),
        !cast<RegisterClass>("VReg_"#RegSize),
+       !cast<RegisterClass>("VReg_"#RegSize),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2)]> {
@@ -1263,25 +1295,33 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 10
 
   def AReg_#RegSize#_AlignTarget : SIRegisterClassLike<RegSize, false, true>,
     RegClassByHwMode<
-      [DefaultMode_Wave64, /*unused combination*/ AVAlign2LoadStoreMode, /*Unused combination*/ /*Unused combination*/],
+      [DefaultMode_Wave64,
+       /*unused combination*/ AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR],
       [!cast<RegisterClass>("AReg_"#RegSize),
-       /*unused combination*/
-       !cast<RegisterClass>("AReg_"#RegSize#_Align2)
-       /*Unused combination*/
-       /*Unused combination*/]> {
+       /*unused combination*/ !cast<RegisterClass>("AReg_"#RegSize#_Align2),
+       /*unused combination*/ !cast<RegisterClass>("AReg_"#RegSize#_Align2)]> {
      let DecoderMethod = "DecodeAReg_"#RegSize#"RegisterClass";
    }
 
   def AV_#RegSize#_AlignTarget : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-      [DefaultMode_Wave32,
+      [DefaultMode_Wave32_HasDPPSrc1SGPR,
+       DefaultMode_Wave32_NotHasDPPSrc1SGPR,
        DefaultMode_Wave64,
-       AVAlign2LoadStoreMode,
-       AlignedVGPRNoAGPRMode_Wave64,
-       AlignedVGPRNoAGPRMode_Wave32],
+       AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
       [!cast<RegisterClass>("AV_"#RegSize),
        !cast<RegisterClass>("AV_"#RegSize),
+       !cast<RegisterClass>("AV_"#RegSize),
        !cast<RegisterClass>("AV_"#RegSize#_Align2),
+       !cast<RegisterClass>("AV_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2)]> {
      let DecoderMethod = "DecodeAV_"#RegSize#"RegisterClass";
@@ -1289,10 +1329,22 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 10
 
   def AV_LdSt_#RegSize#_AlignTarget : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-      [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
+      [DefaultMode_Wave64,
+       DefaultMode_Wave32_HasDPPSrc1SGPR,
+       DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
       [!cast<RegisterClass>("VReg_"#RegSize),
        !cast<RegisterClass>("VReg_"#RegSize),
+       !cast<RegisterClass>("VReg_"#RegSize),
        !cast<RegisterClass>("AV_"#RegSize#_Align2),
+       !cast<RegisterClass>("AV_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2)]> {
     let DecoderMethod = "decodeAVLdSt";
@@ -1300,10 +1352,22 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 10
 
   def AV_LdSt_#RegSize#_Align2 : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-      [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
+      [DefaultMode_Wave64,
+       DefaultMode_Wave32_HasDPPSrc1SGPR,
+       DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
       [!cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("AV_"#RegSize#_Align2),
+       !cast<RegisterClass>("AV_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
+       !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2),
        !cast<RegisterClass>("VReg_"#RegSize#_Align2)]> {
     let DecoderMethod = "decodeAVLdSt";
@@ -1311,10 +1375,22 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 10
 
   def AV_LdSt_#RegSize#_Align1 : SIRegisterClassLike<RegSize, true, true>,
     RegClassByHwMode<
-        [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
+        [DefaultMode_Wave64,
+         DefaultMode_Wave32_HasDPPSrc1SGPR,
+         DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+         AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+         AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+         AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+         AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+         AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+         AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
         [!cast<RegisterClass>("VReg_"#RegSize),
          !cast<RegisterClass>("VReg_"#RegSize),
+         !cast<RegisterClass>("VReg_"#RegSize),
          !cast<RegisterClass>("AV_"#RegSize),
+         !cast<RegisterClass>("AV_"#RegSize),
+         !cast<RegisterClass>("VReg_"#RegSize),
+         !cast<RegisterClass>("VReg_"#RegSize),
          !cast<RegisterClass>("VReg_"#RegSize),
          !cast<RegisterClass>("VReg_"#RegSize)]> {
     let DecoderMethod = "decodeAVLdSt";
@@ -1323,19 +1399,73 @@ foreach RegSize = [ 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 512, 10
 
 def VS_64_AlignTarget : SIRegisterClassLike<64, true, false, true>,
   RegClassByHwMode<
-      [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
-      [VS_64,              VS_64,              VS_64_Align2,          VS_64_Align2,                 VS_64_Align2]> {
+      [DefaultMode_Wave64,
+       DefaultMode_Wave32_HasDPPSrc1SGPR,
+       DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+       AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+       AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
+      [VS_64,
+       VS_64,
+       VS_64,
+       VS_64_Align2,
+       VS_64_Align2,
+       VS_64_Align2,
+       VS_64_Align2,
+       VS_64_Align2,
+       VS_64_Align2]> {
   let DecoderMethod = "decodeSrcRegOrImm9";
 }
 
+def VS_OR_V_Target : SIRegisterClassLike<32, true, false, true>,
+  RegClassByHwMode<
+    [DefaultMode_Wave64,
+     AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+     AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+     DefaultMode_Wave32_HasDPPSrc1SGPR,
+     DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+     AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
+    [VS_32,
+     VS_32,
+     VGPR_32,
+     VS_32,
+     VGPR_32,
+     VS_32,
+     VGPR_32,
+     VS_32,
+     VGPR_32]> {
+  let DecoderMethod = "decodeSrcRegOrImm9";
+}
 
 // Special case for DS_GWS instructions. The register input is really
 // 32-bit, but it needs to be even aligned on targets with a VGPR
 // alignment requirement.
 def AV_LdSt_32_Align2 : SIRegisterClassLike</*Bitwidth=*/32, /*VGPR=*/true, /*AGPR=*/true>,
                         RegClassByHwMode<
-  [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
-  [VGPR_32,            VGPR_32,            AV_64_Align2,          VReg_64_Align2,               VReg_64_Align2]> {
+  [DefaultMode_Wave64,
+   DefaultMode_Wave32_HasDPPSrc1SGPR,
+   DefaultMode_Wave32_NotHasDPPSrc1SGPR,
+   AVAlign2LoadStoreMode_HasDPPSrc1SGPR,
+   AVAlign2LoadStoreMode_NotHasDPPSrc1SGPR,
+   AlignedVGPRNoAGPRMode_Wave64_HasDPPSrc1SGPR,
+   AlignedVGPRNoAGPRMode_Wave64_NotHasDPPSrc1SGPR,
+   AlignedVGPRNoAGPRMode_Wave32_HasDPPSrc1SGPR,
+   AlignedVGPRNoAGPRMode_Wave32_NotHasDPPSrc1SGPR],
+  [VGPR_32,
+   VGPR_32,
+   VGPR_32,
+   AV_64_Align2,
+   AV_64_Align2,
+   VReg_64_Align2,
+   VReg_64_Align2,
+   VReg_64_Align2,
+   VReg_64_Align2]> {
   let DecoderMethod = "decodeAVLdSt<32>";
 }
 
@@ -1430,6 +1560,19 @@ def VSrc_v2f32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
 
 def VSrc_v2f16_splat : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2FP16_SPLAT">;
+
+//===----------------------------------------------------------------------===//
+//  VHSrc_* Operands with an SGPR (dependent on HwMode), VGPR or an inline constant
+//===----------------------------------------------------------------------===//
+
+def VHSrc_b16         : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_INT16">;
+def VHSrc_bf16        : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_BF16">;
+def VHSrc_f16         : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_FP16">;
+def VHSrc_b32         : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_INT32">;
+def VHSrc_f32         : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_FP32">;
+def VHSrc_v2b16       : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_V2INT16">;
+def VHSrc_v2bf16      : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_V2BF16">;
+def VHSrc_v2f16       : SrcRegOrImm9 <VS_OR_V_Target, "OPERAND_REG_INLINE_C_V2FP16">;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
