@@ -564,7 +564,9 @@ void OmpStructureChecker::CheckLooprangeBounds(
     if (auto loopCount{GetNumGeneratedNests(std::get<parser::Block>(x.t))}) {
       if (*loopCount < requiredCount) {
         context_.Say(clause->source,
-            "The specified loop range requires %ld loops, but the loop sequence has a length of %ld"_err_en_US,
+            "The specified loop range requires %" PRId64
+            " loops, but the loop sequence has a length of %" PRId64
+            ""_err_en_US,
             requiredCount, *loopCount);
       }
     }
