@@ -8,13 +8,9 @@
 
 #include "JSONFormatImpl.h"
 
-#include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
+#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/Support/Registry.h"
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFJSONFormatAnchorSource = 0;
-static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>
-    RegisterFormat("json", "JSON serialization format");
 LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
 
 namespace clang::ssaf {
