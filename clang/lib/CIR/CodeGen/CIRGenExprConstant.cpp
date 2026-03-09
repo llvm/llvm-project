@@ -1897,6 +1897,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     assert(!cir::MissingFeatures::cxxABI());
 
     const ValueDecl *memberDecl = value.getMemberPointerDecl();
+    if (!memberDecl)
+      return builder.getZeroInitAttr(cgm.convertType(destType));
+
     if (value.isMemberPointerToDerivedMember()) {
       cgm.errorNYI(
           "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
