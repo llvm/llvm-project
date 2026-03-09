@@ -92,7 +92,7 @@ public:
   /// ShouldPreferAnother - This callback may be invoked if getHazardType
   /// returns NoHazard. If, even though there is no hazard, it would be better to
   /// schedule another available instruction, this callback should return true.
-  virtual bool ShouldPreferAnother(SUnit *) {
+  virtual bool ShouldPreferAnother(SUnit *) const {
     return false;
   }
 
