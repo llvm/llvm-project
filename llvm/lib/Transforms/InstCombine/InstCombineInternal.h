@@ -486,7 +486,7 @@ private:
 
   Instruction *foldVni2mCmpEqUsingV2nim(Instruction &I);
 
-  Instruction *foldV2CmpGtUsingV4CmpGtPattern(BinaryOperator &I);
+  Instruction *foldVni2mCmpGtUsingV2nim(Instruction &I);
 
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable

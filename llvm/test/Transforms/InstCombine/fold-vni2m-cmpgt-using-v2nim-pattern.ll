@@ -51,16 +51,11 @@ define <4 x i32> @alt_cmpgt_epi64_select(<4 x i32> noundef %a, <4 x i32> noundef
 define <4 x i32> @alt_cmpgt_epi64_sext(<4 x i32> noundef %a, <4 x i32> noundef %b) {
 ; CHECK-LABEL: define <4 x i32> @alt_cmpgt_epi64_sext(
 ; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[XOR_A:%.*]] = xor <4 x i32> [[A]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
-; CHECK-NEXT:    [[XOR_B:%.*]] = xor <4 x i32> [[B]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
-; CHECK-NEXT:    [[GT:%.*]] = icmp sgt <4 x i32> [[XOR_A]], [[XOR_B]]
-; CHECK-NEXT:    [[GT_0:%.*]] = shufflevector <4 x i1> [[GT]], <4 x i1> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
-; CHECK-NEXT:    [[GT_1:%.*]] = shufflevector <4 x i1> [[GT]], <4 x i1> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[EQ_0:%.*]] = shufflevector <4 x i1> [[EQ]], <4 x i1> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
-; CHECK-NEXT:    [[SELECT:%.*]] = select <4 x i1> [[EQ_0]], <4 x i1> [[GT_0]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <4 x i1> [[SELECT]], [[GT_1]]
-; CHECK-NEXT:    [[SEXT_OR:%.*]] = sext <4 x i1> [[OR]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <2 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i1> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[SEXT_OR:%.*]] = bitcast <2 x i64> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[SEXT_OR]]
 ;
   %xor.a = xor <4 x i32> %a, <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
@@ -79,16 +74,11 @@ define <4 x i32> @alt_cmpgt_epi64_sext(<4 x i32> noundef %a, <4 x i32> noundef %
 define <6 x i32> @alt_cmpgt_epi64_generalized(<6 x i32> noundef %a, <6 x i32> noundef %b) {
 ; CHECK-LABEL: define <6 x i32> @alt_cmpgt_epi64_generalized(
 ; CHECK-SAME: <6 x i32> noundef [[A:%.*]], <6 x i32> noundef [[B:%.*]]) {
-; CHECK-NEXT:    [[XOR_A:%.*]] = xor <6 x i32> [[A]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0, i32 -2147483648, i32 0>
-; CHECK-NEXT:    [[XOR_B:%.*]] = xor <6 x i32> [[B]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0, i32 -2147483648, i32 0>
-; CHECK-NEXT:    [[GT:%.*]] = icmp sgt <6 x i32> [[XOR_A]], [[XOR_B]]
-; CHECK-NEXT:    [[SEXT_GT:%.*]] = sext <6 x i1> [[GT]] to <6 x i32>
-; CHECK-NEXT:    [[GT_0:%.*]] = shufflevector <6 x i32> [[SEXT_GT]], <6 x i32> poison, <6 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4>
-; CHECK-NEXT:    [[GT_1:%.*]] = shufflevector <6 x i32> [[SEXT_GT]], <6 x i32> poison, <6 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5>
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq <6 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[EQ_0:%.*]] = shufflevector <6 x i1> [[EQ]], <6 x i1> poison, <6 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5>
-; CHECK-NEXT:    [[SELECT:%.*]] = select <6 x i1> [[EQ_0]], <6 x i32> [[GT_0]], <6 x i32> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <6 x i32> [[SELECT]], [[GT_1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <6 x i32> [[A]] to <3 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <6 x i32> [[B]] to <3 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <3 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <3 x i1> [[TMP3]] to <3 x i64>
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <3 x i64> [[TMP4]] to <6 x i32>
 ; CHECK-NEXT:    ret <6 x i32> [[OR]]
 ;
   %xor.a = xor <6 x i32> %a, <i32 -2147483648, i32 0, i32 -2147483648, i32 0, i32 -2147483648, i32 0>
@@ -177,6 +167,66 @@ define <4 x i32> @alt_cmpgt_epi64_commutated_gt(<4 x i32> noundef %a, <4 x i32> 
 define <4 x i32> @alt_cmpgt_epi64_neg_0(<4 x i32> noundef %a, <4 x i32> noundef %b) {
 ; CHECK-LABEL: define <4 x i32> @alt_cmpgt_epi64_neg_0(
 ; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[XOR_A:%.*]] = xor <4 x i32> [[A]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 0>
+; CHECK-NEXT:    [[XOR_B:%.*]] = xor <4 x i32> [[B]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt <4 x i32> [[XOR_A]], [[XOR_B]]
+; CHECK-NEXT:    [[SEXT_GT:%.*]] = sext <4 x i1> [[GT]] to <4 x i32>
+; CHECK-NEXT:    [[GT_0:%.*]] = shufflevector <4 x i32> [[SEXT_GT]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; CHECK-NEXT:    [[GT_1:%.*]] = shufflevector <4 x i32> [[SEXT_GT]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT_EQ:%.*]] = sext <4 x i1> [[EQ]] to <4 x i32>
+; CHECK-NEXT:    [[EQ_0:%.*]] = shufflevector <4 x i32> [[SEXT_EQ]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[GT_0]], [[EQ_0]]
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[AND]], [[GT_1]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %xor.a = xor <4 x i32> %a, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 0>
+  %xor.b = xor <4 x i32> %b, <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
+  %gt = icmp sgt <4 x i32> %xor.a, %xor.b
+  %sext.gt = sext <4 x i1> %gt to <4 x i32>
+  %gt.0 = shufflevector <4 x i32> %sext.gt, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  %gt.1 = shufflevector <4 x i32> %sext.gt, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %eq = icmp eq <4 x i32> %a, %b
+  %sext.eq = sext <4 x i1> %eq to <4 x i32>
+  %eq.0 = shufflevector <4 x i32> %sext.eq, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %and = and <4 x i32> %gt.0, %eq.0
+  %or = or <4 x i32> %and, %gt.1
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @alt_cmpgt_epi64_neg_1(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @alt_cmpgt_epi64_neg_1(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[XOR_A:%.*]] = xor <4 x i32> [[A]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
+; CHECK-NEXT:    [[XOR_B:%.*]] = xor <4 x i32> [[B]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
+; CHECK-NEXT:    [[GT:%.*]] = icmp ugt <4 x i32> [[XOR_A]], [[XOR_B]]
+; CHECK-NEXT:    [[SEXT_GT:%.*]] = sext <4 x i1> [[GT]] to <4 x i32>
+; CHECK-NEXT:    [[GT_0:%.*]] = shufflevector <4 x i32> [[SEXT_GT]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; CHECK-NEXT:    [[GT_1:%.*]] = shufflevector <4 x i32> [[SEXT_GT]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[EQ]] to <4 x i32>
+; CHECK-NEXT:    [[AND:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> [[GT_0]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[AND1]], [[GT_1]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %xor.a = xor <4 x i32> %a, <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
+  %xor.b = xor <4 x i32> %b, <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
+  %gt = icmp ugt <4 x i32> %xor.a, %xor.b
+  %sext.gt = sext <4 x i1> %gt to <4 x i32>
+  %gt.0 = shufflevector <4 x i32> %sext.gt, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  %gt.1 = shufflevector <4 x i32> %sext.gt, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %eq = icmp eq <4 x i32> %a, %b
+  %sext.eq = sext <4 x i1> %eq to <4 x i32>
+  %eq.0 = shufflevector <4 x i32> %sext.eq, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %and = and <4 x i32> %gt.0, %eq.0
+  %or = or <4 x i32> %and, %gt.1
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @alt_cmpgt_epi64_neg_2(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @alt_cmpgt_epi64_neg_2(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[XOR_A:%.*]] = xor <4 x i32> [[A]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
 ; CHECK-NEXT:    [[XOR_B:%.*]] = xor <4 x i32> [[B]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
 ; CHECK-NEXT:    [[GT:%.*]] = icmp sgt <4 x i32> [[XOR_B]], [[XOR_A]]
@@ -203,8 +253,8 @@ define <4 x i32> @alt_cmpgt_epi64_neg_0(<4 x i32> noundef %a, <4 x i32> noundef 
   ret <4 x i32> %or
 }
 
-define <4 x i32> @alt_cmpgt_epi64_neg_1(<4 x i32> noundef %a, <4 x i32> noundef %b) {
-; CHECK-LABEL: define <4 x i32> @alt_cmpgt_epi64_neg_1(
+define <4 x i32> @alt_cmpgt_epi64_neg_3(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @alt_cmpgt_epi64_neg_3(
 ; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[XOR_A:%.*]] = xor <4 x i32> [[A]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
 ; CHECK-NEXT:    [[XOR_B:%.*]] = xor <4 x i32> [[B]], <i32 -2147483648, i32 0, i32 -2147483648, i32 0>
@@ -229,5 +279,35 @@ define <4 x i32> @alt_cmpgt_epi64_neg_1(<4 x i32> noundef %a, <4 x i32> noundef 
   %eq.0 = shufflevector <4 x i32> %sext.eq, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
   %and = and <4 x i32> %gt.1, %eq.0
   %or = or <4 x i32> %and, %gt.0
+  ret <4 x i32> %or
+}
+
+define <4 x i32> @alt_cmpgt_epu64_neg_0(<4 x i32> noundef %a, <4 x i32> noundef %b) {
+; CHECK-LABEL: define <4 x i32> @alt_cmpgt_epu64_neg_0(
+; CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) {
+; CHECK-NEXT:    [[XOR_A:%.*]] = xor <4 x i32> [[A]], <i32 0, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[XOR_B:%.*]] = xor <4 x i32> [[B]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt <4 x i32> [[XOR_A]], [[XOR_B]]
+; CHECK-NEXT:    [[SEXT_GT:%.*]] = sext <4 x i1> [[GT]] to <4 x i32>
+; CHECK-NEXT:    [[GT_0:%.*]] = shufflevector <4 x i32> [[SEXT_GT]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; CHECK-NEXT:    [[GT_1:%.*]] = shufflevector <4 x i32> [[SEXT_GT]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT_EQ:%.*]] = sext <4 x i1> [[EQ]] to <4 x i32>
+; CHECK-NEXT:    [[EQ_0:%.*]] = shufflevector <4 x i32> [[SEXT_EQ]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[GT_0]], [[EQ_0]]
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[AND]], [[GT_1]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %xor.a = xor <4 x i32> %a, <i32 0, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %xor.b = xor <4 x i32> %b, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %gt = icmp sgt <4 x i32> %xor.a, %xor.b
+  %sext.gt = sext <4 x i1> %gt to <4 x i32>
+  %gt.0 = shufflevector <4 x i32> %sext.gt, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  %gt.1 = shufflevector <4 x i32> %sext.gt, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %eq = icmp eq <4 x i32> %a, %b
+  %sext.eq = sext <4 x i1> %eq to <4 x i32>
+  %eq.0 = shufflevector <4 x i32> %sext.eq, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %and = and <4 x i32> %gt.0, %eq.0
+  %or = or <4 x i32> %and, %gt.1
   ret <4 x i32> %or
 }

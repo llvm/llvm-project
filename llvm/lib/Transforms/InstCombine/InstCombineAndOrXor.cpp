@@ -4652,7 +4652,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
     return replaceInstUsesWith(I, Res);
 
-  if (Instruction *Folded = foldV2CmpGtUsingV4CmpGtPattern(I))
+  if (Instruction *Folded = foldVni2mCmpGtUsingV2nim(I))
     return Folded;
 
   return nullptr;
