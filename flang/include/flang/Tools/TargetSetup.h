@@ -82,27 +82,7 @@ namespace Fortran::tools {
 
     // Query for fp128 backend support. Based on this, determine whether
     // compilation is possible on the frontend.
-    bool isLegal = dummyTLI->isTypeLegal(fp128EVT);
-
-    // We might also be able to determine fp128 backend support based on the
-    // LegalizeAction value. This is likely when the value is "Legal" or
-    // "LibCall". See
-    // https://llvm.org/doxygen/TargetLowering_8h_source.html#l00202.
-    llvm::TargetLowering::LegalizeAction LA =
-        dummyTLI->getOperationAction(llvm::ISD::FADD, fp128EVT);
-
-    // We might also be able to determine fp128 backend support based on the
-    // LegalizeTypeAction value. This is likely when the value is "TypeLegal".
-    // See https://llvm.org/doxygen/TargetLowering_8h_source.html#l00212.
-    llvm::TargetLowering::LegalizeTypeAction LTA =
-        dummyTLI->getTypeConversion(ctx, llvm::MVT::f128).first;
-
-    if (isLegal &&
-        (LA == llvm::TargetLowering::Legal ||
-            LA == llvm::TargetLowering::LibCall) &&
-        (LTA == llvm::TargetLowering::TypeLegal)) {
-      f128Support = true;
-    }
+    f128Support = dummyTLI->isTypeLegal(fp128EVT);
   }
 
   if (!f128Support) {
