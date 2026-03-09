@@ -336,6 +336,7 @@ add_header_library(
   HDRS
     atanpif16.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
@@ -344,6 +345,7 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
 
