@@ -1410,6 +1410,12 @@ def testGetParentOfType():
                 base_op = Operation.create("custom.base_op")
                 scf.YieldOp([])
             func.ReturnOp([])
+            
+        # CHECK: get_parent_of_type detached->func.func: None
+        detached = Operation.create("custom.detached")
+        res = get_parent_of_type(detached, func.FuncOp)
+        print(f"get_parent_of_type detached->func.func: {res}")
+        assert res is None
 
         # CHECK: get_parent_of_type base_op->func.func: func.func
         res = get_parent_of_type(base_op, func.FuncOp)
