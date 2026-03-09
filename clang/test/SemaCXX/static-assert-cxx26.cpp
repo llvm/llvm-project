@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++2c -triple=x86_64-linux -fsyntax-only %s -verify -fexperimental-new-constant-interpreter
 
 static_assert(true, "");
-static_assert(true, 0); // expected-error {{the message in a static assertion must be a string literal or an object with 'data()' and 'size()' member functions}}
+static_assert(true, 0); // expected-error {{the message in a static assertion must be a null terminated constant string or an object with 'data()' and 'size()' member functions}}
 struct Empty{};
 static_assert(true, Empty{}); // expected-error {{the message object in this static assertion is missing 'data()' and 'size()' member functions}}
 struct NoData {
@@ -288,7 +288,7 @@ struct Good {
 
 template <typename Ty>
 struct Bad {
-  static_assert(false, Ty{}); // expected-error {{the message in a static assertion must be a string literal or an object with 'data()' and 'size()' member functions}} \
+  static_assert(false, Ty{}); // expected-error {{the message in a static assertion must be a null terminated constant string or an object with 'data()' and 'size()' member functions}} \
                               // expected-error {{static assertion failed}}
 };
 
@@ -416,3 +416,50 @@ static_assert(
       // expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 );
 }
+
+static_assert(false, &(" basic test"[1]));
+// expected-error@-1 {{static assertion failed: basic test}}
+// expected-warning@-2 {{consteval string constants are an extension}}
+
+constexpr const char *constexpr_global = "global_constexpr";
+constexpr const char null_terminated_buffer[] = { 'n', 'u', 'l', 'l', 't', 'e', 'r', 'm', 0 };
+constexpr const char no_null_buffer[] = { 'n', 'o', 'n', 'u', 'l', 'l', 't', 'e', 'r', 'm' };
+
+constexpr const char *selector(int i) {
+  constexpr const char * a_constant = "a_constant";
+  const char *non_constexpr = "non-constexpr string";
+  switch (i) {
+    case 0: return "case 0";
+    case 1: return a_constant;
+    case 2: return constexpr_global;
+    case 3: return null_terminated_buffer;
+    case 4: return &(""[1]); // point to after the null terminator
+    case 5: return nullptr;
+    case 6: return no_null_buffer;
+  }
+};
+
+static_assert(false, selector(0));
+// expected-error@-1 {{static assertion failed: case 0}}
+// expected-warning@-2 {{consteval string constants are an extension}}
+static_assert(false, selector(1));
+// expected-error@-1 {{static assertion failed: a_constant}}
+// expected-warning@-2 {{consteval string constants are an extension}}
+static_assert(false, selector(2));
+// expected-error@-1 {{static assertion failed: global_constexpr}}
+// expected-warning@-2 {{consteval string constants are an extension}}
+static_assert(false, selector(3));
+// expected-error@-1 {{static assertion failed: nullterm}}
+// expected-warning@-2 {{consteval string constants are an extension}}
+static_assert(false, selector(4));
+// expected-error@-1 {{the message in a static assertion is not null terminated}}
+// expected-error@-2 {{static assertion failed}}
+static_assert(false, selector(5));
+// expected-error@-1 {{the message in a static assertion is not null terminated}}
+// expected-error@-2 {{static assertion failed}}
+static_assert(false, selector(6));
+// expected-error@-1 {{the message in a static assertion is not null terminated}}
+// expected-error@-2 {{static assertion failed}}
+static_assert(false, selector(7));
+// expected-error@-1 {{the message in a static assertion is not null terminated}}
+// expected-error@-2 {{static assertion failed}}
