@@ -1030,6 +1030,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         IntrinsicClass::transformationalFunction},
     {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"timef", {}, TypePattern{RealType, KindCode::exactKind, 8}, Rank::scalar},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,

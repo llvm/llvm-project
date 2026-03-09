@@ -413,6 +413,19 @@ double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line) {
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
 
+// Intel extension function TIMEF()
+// Returns number of seconds that have elapsed since the first time 
+// TIMEF was called. For the first call, it returns 0.
+double RTNAME(Timef)() {
+        static double first = -1;
+	if(first < 0){
+		first = time(nullptr);
+		return 0;
+	}
+	else
+		return time(nullptr) - first;
+}
+
 // MCLOCK: returns accumulated CPU time in ticks
 std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
 
