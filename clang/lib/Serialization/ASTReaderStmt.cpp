@@ -3691,6 +3691,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case STMT_OMP_SPLIT_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
+             "Split directive has no clauses");
+      S = OMPSplitDirective::CreateEmpty(Context, NumLoops);
+      break;
+    }
+
     case STMT_OMP_FUSE_DIRECTIVE: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       S = OMPFuseDirective::CreateEmpty(Context, NumClauses);
