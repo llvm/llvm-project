@@ -1659,8 +1659,9 @@ public:
 
   // Target Module Hooks
   //
-  // Module hooks fire whenever modules are loaded or unloaded from the
-  // target (via ModulesDidLoad / ModulesDidUnload).
+  // Module hooks fire whenever modules are loaded into the target
+  // (via ModulesDidLoad). Optionally, they can also fire on unload
+  // (via ModulesDidUnload) when the fire_on_unload flag is set.
   class ModuleHook : public UserID {
   public:
     ModuleHook(const ModuleHook &rhs);
@@ -1699,10 +1700,10 @@ public:
     void SetActionFromString(const std::string &string);
     void SetActionFromStrings(const std::vector<std::string> &strings);
 
-    void HandleModuleLoaded(lldb::StreamSP output) override;
-    void HandleModuleUnloaded(lldb::StreamSP output) override;
     void GetSubclassDescription(Stream &s,
                                 lldb::DescriptionLevel level) const override;
+    void HandleModuleLoaded(lldb::StreamSP output) override;
+    void HandleModuleUnloaded(lldb::StreamSP output) override;
 
   private:
     StringList m_commands;
@@ -1716,14 +1717,14 @@ public:
   public:
     ~ModuleHookScripted() override = default;
 
+    void GetSubclassDescription(Stream &s,
+                                lldb::DescriptionLevel level) const override;
+
     void HandleModuleLoaded(lldb::StreamSP output) override;
     void HandleModuleUnloaded(lldb::StreamSP output) override;
 
     Status SetScriptCallback(std::string class_name,
                              StructuredData::ObjectSP extra_args_sp);
-
-    void GetSubclassDescription(Stream &s,
-                                lldb::DescriptionLevel level) const override;
 
   private:
     std::string m_class_name;
@@ -1739,6 +1740,9 @@ public:
 
   ModuleHookSP CreateModuleHook(ModuleHook::ModuleHookKind kind);
 
+  /// Removes the most recently created module hook. Used to roll back a
+  /// hook creation when an error occurs (e.g., invalid script class name
+  /// or empty interactive input).
   void UndoCreateModuleHook(lldb::user_id_t uid);
 
   bool RemoveModuleHookByID(lldb::user_id_t uid);

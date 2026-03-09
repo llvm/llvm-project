@@ -5359,7 +5359,7 @@ Use --on-unload (-u) to also fire the hook when modules are unloaded:
 
 Python-based module hooks allow running a Python class:
 
-    target modulehook add -P MyHook
+    target modulehook add -P mymodule.MyHook
 
 The Python class should implement:
 
