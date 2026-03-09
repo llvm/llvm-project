@@ -1204,8 +1204,8 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
 /// Returns the value of the "amdgpu.oob.mode" module flag, or 0 if absent.
 /// See AMDGPUOOBMode for the bit definitions.
 static unsigned getOOBModeFromModule(const Module &M) {
-  const auto *Flag =
-      mdconst::dyn_extract_or_null<ConstantInt>(M.getModuleFlag("amdgpu.oob.mode"));
+  const auto *Flag = mdconst::dyn_extract_or_null<ConstantInt>(
+      M.getModuleFlag("amdgpu.oob.mode"));
   return Flag ? static_cast<unsigned>(Flag->getZExtValue()) : 0u;
 }
 
