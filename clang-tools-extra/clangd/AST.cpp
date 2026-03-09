@@ -180,6 +180,13 @@ std::string getQualification(ASTContext &Context,
 
 } // namespace
 
+bool isTemplateInstantiation(const NamedDecl *D) {
+  return isTemplateSpecializationKind(D,
+                                      TSK_ExplicitInstantiationDeclaration) ||
+         isTemplateSpecializationKind(D, TSK_ExplicitInstantiationDefinition) ||
+         isTemplateSpecializationKind(D, TSK_ImplicitInstantiation);
+}
+
 bool isImplicitTemplateInstantiation(const NamedDecl *D) {
   return isTemplateSpecializationKind(D, TSK_ImplicitInstantiation);
 }

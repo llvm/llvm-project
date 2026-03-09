@@ -2368,8 +2368,8 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
     return ND.getDeclContext()->getDeclKind() == Decl::CXXRecord;
   };
   // We only complete symbol's name, which is the same as the name of the
-  // *primary* template in case of template specializations.
-  if (isExplicitTemplateSpecialization(&ND))
+  // *primary* template in case of template specializations or instantiation.
+  if (isExplicitTemplateSpecialization(&ND) || isTemplateInstantiation(&ND))
     return false;
 
   // Category decls are not useful on their own outside the interface or

@@ -486,13 +486,11 @@ TEST_F(SymbolCollectorTest, FileLocal) {
 
 TEST_F(SymbolCollectorTest, Template) {
   Annotations Header(R"(
-    // Primary template and explicit specialization are indexed, instantiation
-    // is not.
     template <class T, class U> struct [[Tmpl]] {T $xdecl[[x]] = 0;};
     template <> struct $specdecl[[Tmpl]]<int, bool> {};
     template <class U> struct $partspecdecl[[Tmpl]]<bool, U> {};
-    extern template struct Tmpl<float, bool>;
-    template struct Tmpl<double, bool>;
+    extern template struct $extinst[[Tmpl]]<float, bool>;
+    template struct $inst[[Tmpl]]<double, bool>;
   )");
   runSymbolCollector(Header.code(), /*Main=*/"");
   EXPECT_THAT(Symbols,
@@ -503,7 +501,15 @@ TEST_F(SymbolCollectorTest, Template) {
                         forCodeCompletion(false)),
                   AllOf(qName("Tmpl"), declRange(Header.range("partspecdecl")),
                         forCodeCompletion(false)),
+                  AllOf(qName("Tmpl"), declRange(Header.range("extinst")),
+                        forCodeCompletion(false)),
+                  AllOf(qName("Tmpl"), declRange(Header.range("inst")),
+                        forCodeCompletion(false)),
                   AllOf(qName("Tmpl::x"), declRange(Header.range("xdecl")),
+                        forCodeCompletion(false)),
+                  AllOf(qName("Tmpl<float, bool>::x"), declRange(Header.range("xdecl")),
+                        forCodeCompletion(false)),
+                  AllOf(qName("Tmpl<double, bool>::x"), declRange(Header.range("xdecl")),
                         forCodeCompletion(false))));
 }
 
