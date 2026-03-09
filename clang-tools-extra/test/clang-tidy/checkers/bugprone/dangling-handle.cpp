@@ -1,14 +1,11 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 -check-suffix=,CXX14 %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
-// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
 // RUN: %check_clang_tidy -std=c++17-or-later -check-suffix=,CXX17 %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
-// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}" \
-// RUN:   -- -isystem %clang_tidy_headers
+// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
 #include <string>
 #include <vector>
 
