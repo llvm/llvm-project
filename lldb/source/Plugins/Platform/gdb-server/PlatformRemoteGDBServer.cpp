@@ -684,14 +684,15 @@ Status PlatformRemoteGDBServer::RunShellCommand(
     int *signo_ptr,  // Pass NULL if you don't want the signal that caused the
                      // process to exit
     std::string
-        *command_output,       // Pass NULL if you don't want the command output
-    std::string *error_output, // Pass NULL if you don't want the error output
+        *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // error output
     const Timeout<std::micro> &timeout) {
   if (!IsConnected())
     return Status::FromErrorStringWithFormat("Not connected.");
   return m_gdb_client_up->RunShellCommand(command, working_dir, status_ptr,
                                           signo_ptr, command_output,
-                                          error_output, timeout);
+                                          separated_error_output, timeout);
 }
 
 llvm::ErrorOr<llvm::MD5::MD5Result>

@@ -389,41 +389,41 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
 Status Host::RunShellCommand(llvm::StringRef command,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
-                             std::string *command_error_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
                              bool run_in_shell) {
   return RunShellCommand(llvm::StringRef(), Args(command), working_dir,
                          status_ptr, signo_ptr, command_output_ptr,
-                         command_error_ptr, timeout, run_in_shell);
+                         separated_error_output, timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(llvm::StringRef shell_path,
                              llvm::StringRef command,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
-                             std::string *command_error_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
                              bool run_in_shell) {
   return RunShellCommand(shell_path, Args(command), working_dir, status_ptr,
-                         signo_ptr, command_output_ptr, command_error_ptr,
+                         signo_ptr, command_output_ptr, separated_error_output,
                          timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
-                             std::string *command_error_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
                              bool run_in_shell) {
   return RunShellCommand(llvm::StringRef(), args, working_dir, status_ptr,
-                         signo_ptr, command_output_ptr, command_error_ptr,
+                         signo_ptr, command_output_ptr, separated_error_output,
                          timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
-                             std::string *command_error_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
                              bool run_in_shell) {
   Status error;
@@ -468,10 +468,10 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
     }
   }
 
-  if (command_error_ptr) {
+  if (separated_error_output) {
     // Create a temporary file to get the stderr and redirect the output
     // of the command into this file. We will later read this file if all goes
-    // well and fill the data into "command_output_ptr"
+    // well and fill the data into "separated_error_output".
     if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
       tmpdir_file_spec.AppendPathComponent("lldb-shell-error.%%%%%%");
       llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
@@ -496,7 +496,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
     launch_info.AppendOpenFileAction(STDERR_FILENO, error_file_spec, false,
                                      true);
   else
-    launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
+    launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
 
   std::shared_ptr<ShellInfo> shell_info_sp(new ShellInfo());
   launch_info.SetMonitorProcessCallback(
@@ -545,12 +545,12 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
           }
         }
       }
-      if (command_error_ptr) {
-        command_error_ptr->clear();
+      if (separated_error_output) {
+        separated_error_output->clear();
         uint64_t file_size =
             FileSystem::Instance().GetByteSize(error_file_spec);
         if (file_size > 0) {
-          if (file_size > command_error_ptr->max_size()) {
+          if (file_size > separated_error_output->max_size()) {
             error = Status::FromErrorStringWithFormat(
                 "shell command error output is too large to fit into a "
                 "std::string");
@@ -559,7 +559,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
                 FileSystem::Instance().CreateWritableDataBuffer(
                     error_file_spec);
             if (error.Success())
-              command_error_ptr->assign(
+              separated_error_output->assign(
                   reinterpret_cast<char *>(Buffer->GetBytes()),
                   Buffer->GetByteSize());
           }

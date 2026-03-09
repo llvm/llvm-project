@@ -748,12 +748,11 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
         packet.GetHexByteString(working_dir);
       int status, signo;
       std::string output;
-      std::string error;
       FileSpec working_spec(working_dir);
       FileSystem::Instance().Resolve(working_spec);
       Status err =
           Host::RunShellCommand(path.c_str(), working_spec, &status, &signo,
-                                &output, &error, std::chrono::seconds(10));
+                                &output, nullptr, std::chrono::seconds(10));
       StreamGDBRemote response;
       if (err.Fail()) {
         response.PutCString("F,");
@@ -765,7 +764,6 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
         response.PutHex32(signo);
         response.PutChar(',');
         response.PutEscapedBytes(output.c_str(), output.size());
-        response.PutEscapedBytes(error.c_str(), error.size());
       }
       return SendPacketNoLock(response.GetString());
     }

@@ -206,8 +206,11 @@ public:
   ///            process to exit
   /// \param[out] command_output
   ///            Pass nullptr if you don't want the command output
-  /// \param[out] error_output
-  ///            Pass nullptr if you don't want the command error output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
+  ///            in \a command_output.
   /// \param[in] timeout
   ///            Timeout duration to enforce
   /// \param[in] run_in_shell
@@ -233,8 +236,10 @@ public:
   ///            process to exit
   /// \param[out] command_output
   ///            Pass nullptr if you don't want the command output
-  /// \param[out] error_output
-  ///            Pass nullptr if you don't want the command error output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
   /// \param[in] timeout
   ///            Timeout duration to enforce
   /// \param[in] run_in_shell
@@ -242,7 +247,7 @@ public:
   static Status RunShellCommand(llvm::StringRef shell, llvm::StringRef command,
                                 const FileSpec &working_dir, int *status_ptr,
                                 int *signo_ptr, std::string *command_output,
-                                std::string *error_output,
+                                std::string *separated_error_output,
                                 const Timeout<std::micro> &timeout,
                                 bool run_in_shell = true);
 
@@ -258,8 +263,10 @@ public:
   ///            process to exit
   /// \param[out] command_output
   ///            Pass nullptr if you don't want the command output
-  /// \param[out] error_output
-  ///            Pass nullptr if you don't want the command error output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
   /// \param[in] timeout
   ///            Timeout duration to enforce
   /// \param[in] run_in_shell
@@ -267,7 +274,7 @@ public:
   static Status RunShellCommand(const Args &args, const FileSpec &working_dir,
                                 int *status_ptr, int *signo_ptr,
                                 std::string *command_output,
-                                std::string *error_output,
+                                std::string *separated_error_output,
                                 const Timeout<std::micro> &timeout,
                                 bool run_in_shell = true);
 
@@ -285,8 +292,10 @@ public:
   ///            process to exit
   /// \param[out] command_output
   ///            Pass nullptr if you don't want the command output
-  /// \param[out] error_output
-  ///            Pass nullptr if you don't want the command error output
+  /// \param[out] separated_error_output
+  ///            If a std::string is specified, error output is routed
+  ///            into a separate string.  If nullptr is provided,
+  ///            command output and error text will be returned combined
   /// \param[in] timeout
   ///            Timeout duration to enforce
   /// \param[in] run_in_shell
@@ -294,7 +303,7 @@ public:
   static Status RunShellCommand(llvm::StringRef shell, const Args &args,
                                 const FileSpec &working_dir, int *status_ptr,
                                 int *signo_ptr, std::string *command_output,
-                                std::string *error_output,
+                                std::string *separated_error_output,
                                 const Timeout<std::micro> &timeout,
                                 bool run_in_shell = true);
 
