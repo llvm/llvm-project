@@ -143,7 +143,7 @@ if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
 # DUMPIR:     %[[C64_5:.*]] = arith.constant 64 : index
 # DUMPIR:     %[[C64_6:.*]] = arith.constant 64 : index
 # DUMPIR:     %[[TMA1:.*]] = nvgpu.tma.create.descriptor %[[CAST1]] box[%[[C64_5]], %[[C64_6]]] : memref<*xf16> -> <tensor = memref<64x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
-# DUMPIR:       %[[THREADID:.*]] = gpu.thread_id  x
+# DUMPIR:       %[[THREADID:.*]] = gpu.thread_id x
 # DUMPIR:       %[[MB:.*]] = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>>
 # DUMPIR:       %[[C0:.*]] = arith.constant 0 : index
 # DUMPIR:       %[[EQ:.*]] = arith.cmpi eq, %[[THREADID]], %[[C0]] : index
