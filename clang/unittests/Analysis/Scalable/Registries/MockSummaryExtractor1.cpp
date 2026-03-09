@@ -38,9 +38,7 @@ public:
   }
 };
 
-} // namespace
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFMockSummaryExtractor1AnchorSource = 0;
 static TUSummaryExtractorRegistry::Add<MockSummaryExtractor1>
     RegisterExtractor("MockSummaryExtractor1", "Mock summary extractor 1");
+
+} // namespace

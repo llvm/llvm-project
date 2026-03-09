@@ -8,7 +8,6 @@
 
 #include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -16,7 +15,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -55,11 +53,9 @@ TEST(SerializationFormatRegistryTest, isFormatRegistered) {
 }
 
 TEST(SerializationFormatRegistryTest, EnumeratingRegistryEntries) {
-  auto NamesOf = [](const auto &Entry) { return Entry.getName(); };
-  auto Names = llvm::map_range(SerializationFormatRegistry::entries(), NamesOf);
-  using testing::UnorderedElementsAre;
-  EXPECT_THAT(Names, UnorderedElementsAre("MockSerializationFormat", "json",
-                                          "FailingSerializationFormat"));
+  auto Formats = SerializationFormatRegistry::entries();
+  ASSERT_EQ(std::distance(Formats.begin(), Formats.end()), 1U);
+  EXPECT_EQ(Formats.begin()->getName(), "MockSerializationFormat");
 }
 
 TEST(SerializationFormatRegistryTest, Roundtrip) {
