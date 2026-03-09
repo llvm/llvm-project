@@ -72,12 +72,8 @@ public:
   InstructionCost(CostState) = delete;
   InstructionCost(CostType Val) : Value(), State(Valid) {
     InstructionCost::CostType Result;
-    if (MulOverflow(Val, CostGranularity, Result)) {
-      if (Val > 0)
-        Result = MaxValue;
-      else
-        Result = MinValue;
-    }
+    if (MulOverflow(Val, CostGranularity, Result))
+      Result = Val > 0 ? MaxValue : MinValue;
     Value = Result;
   }
 
@@ -171,12 +167,8 @@ public:
     propagateState(RHS);
     // Saturating multiply.
     InstructionCost::CostType Result;
-    if (MulOverflow(Value, CostGranularity, Result)) {
-      if (Value > 0)
-        Result = MaxValue;
-      else
-        Result = MinValue;
-    }
+    if (MulOverflow(Value, CostGranularity, Result))
+      Result = Value > 0 ? MaxValue : MinValue;
     Result /= RHS.Value;
     Value = Result;
     return *this;
