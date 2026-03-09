@@ -1,17 +1,5 @@
-// RUN: %check_clang_tidy %s readability-qualified-auto %t -- -- -std=c++20
-namespace std {
-template <typename T>
-class vector { // dummy impl
-  T _data[1];
-
-public:
-  T *begin() { return _data; }
-  const T *begin() const { return _data; }
-  T *end() { return &_data[1]; }
-  const T *end() const { return &_data[1]; }
-  unsigned size() const { return 0; }
-};
-} // namespace std
+// RUN: %check_clang_tidy %s readability-qualified-auto %t -- -- -std=c++20 -isystem %clang_tidy_headers
+#include <vector>
 
 std::vector<int> *getVec();
 const std::vector<int> *getCVec();

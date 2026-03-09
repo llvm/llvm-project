@@ -10,7 +10,6 @@ add_lldb_library(lldbPluginClangREPL PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
 )

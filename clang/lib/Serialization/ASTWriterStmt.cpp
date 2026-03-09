@@ -473,6 +473,11 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
   Code = serialization::EXPR_COYIELD;
 }
 
+void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
+}
+
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getKeywordLoc());
@@ -632,6 +637,7 @@ void ASTStmtWriter::VisitCapturedStmt(CapturedStmt *S) {
 void ASTStmtWriter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
   VisitStmt(S);
   Record.AddStmt(S->getOriginalStmt());
+  Record.AddStmt(S->getKernelLaunchStmt());
   Record.AddDeclRef(S->getOutlinedFunctionDecl());
 
   Code = serialization::STMT_SYCLKERNELCALL;
@@ -688,6 +694,16 @@ void ASTStmtWriter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   Record.AddTypeSourceInfo(E->getTypeSourceInfo());
 
   Code = serialization::EXPR_SYCL_UNIQUE_STABLE_NAME;
+}
+
+void ASTStmtWriter::VisitUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *S) {
+  VisitStmt(S);
+
+  Record.AddStmt(S->getOriginalStmt());
+  Record.AddStmt(S->getKernelLaunchIdExpr());
+
+  Code = serialization::STMT_UNRESOLVED_SYCL_KERNEL_CALL;
 }
 
 void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
@@ -1198,6 +1214,14 @@ void ASTStmtWriter::VisitExtVectorElementExpr(ExtVectorElementExpr *E) {
   Record.AddIdentifierRef(&E->getAccessor());
   Record.AddSourceLocation(E->getAccessorLoc());
   Code = serialization::EXPR_EXT_VECTOR_ELEMENT;
+}
+
+void ASTStmtWriter::VisitMatrixElementExpr(MatrixElementExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getBase());
+  Record.AddIdentifierRef(&E->getAccessor());
+  Record.AddSourceLocation(E->getAccessorLoc());
+  Code = serialization::EXPR_MATRIX_ELEMENT;
 }
 
 void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {

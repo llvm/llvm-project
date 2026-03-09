@@ -38,9 +38,10 @@ enum ImplicitArgumentPositions {
 #define AMDGPU_ATTRIBUTE(Name, Str) Name = 1 << Name##_POS,
 
 enum ImplicitArgumentMask {
-  NOT_IMPLICIT_INPUT = 0,
+  UNKNOWN_INTRINSIC = 0,
 #include "AMDGPUAttributes.def"
-  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1
+  ALL_ARGUMENT_MASK = (1 << LAST_ARG_POS) - 1,
+  NOT_IMPLICIT_INPUT
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
@@ -115,7 +116,7 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     NeedsImplicit = (CodeObjectVersion >= AMDGPU::AMDHSA_COV5);
     return QUEUE_PTR;
   default:
-    return NOT_IMPLICIT_INPUT;
+    return UNKNOWN_INTRINSIC;
   }
 }
 
@@ -200,16 +201,6 @@ public:
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
-  /// Get the effective value of "amdgpu-waves-per-eu" for the function,
-  /// accounting for the interaction with the passed value to use for
-  /// "amdgpu-flat-work-group-size".
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
-  }
-
   std::optional<std::pair<unsigned, unsigned>>
   getWavesPerEUAttr(const Function &F) {
     auto Val = AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu",
@@ -247,14 +238,6 @@ private:
     }
 
     return Status;
-  }
-
-  /// Returns the minimum amount of LDS space used by a workgroup running
-  /// function \p F.
-  static unsigned getLDSSize(const Function &F) {
-    return AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
-                                           {0, UINT32_MAX}, true)
-        .first;
   }
 
   /// Get the constant access bitmap for \p C.
@@ -379,11 +362,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     if (CC != CallingConv::AMDGPU_KERNEL)
       return;
 
-    bool InitialValue = false;
-    if (F->hasFnAttribute("uniform-work-group-size"))
-      InitialValue =
-          F->getFnAttribute("uniform-work-group-size").getValueAsString() ==
-          "true";
+    bool InitialValue = F->hasFnAttribute("uniform-work-group-size");
 
     if (InitialValue)
       indicateOptimisticFixpoint();
@@ -418,13 +397,13 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    SmallVector<Attribute, 8> AttrList;
-    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    if (!getAssumed())
+      return ChangeStatus::UNCHANGED;
 
-    AttrList.push_back(Attribute::get(Ctx, "uniform-work-group-size",
-                                      getAssumed() ? "true" : "false"));
-    return A.manifestAttrs(getIRPosition(), AttrList,
-                           /* ForceReplace */ true);
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "uniform-work-group-size")},
+                           /*ForceReplace=*/true);
   }
 
   bool isValidState() const override {
@@ -525,6 +504,21 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
       ImplicitArgumentMask AttrMask =
           intrinsicToAttrMask(IID, NonKernelOnly, NeedsImplicit,
                               HasApertureRegs, SupportsGetDoorbellID, COV);
+
+      if (AttrMask == UNKNOWN_INTRINSIC) {
+        // Assume not-nocallback intrinsics may invoke a function which accesses
+        // implicit arguments.
+        //
+        // FIXME: This isn't really the correct check. We want to ensure it
+        // isn't calling any function that may use implicit arguments regardless
+        // of whether it's internal to the module or not.
+        //
+        // TODO: Ignoring callsite attributes.
+        if (!Callee->hasFnAttribute(Attribute::NoCallback))
+          return indicatePessimisticFixpoint();
+        continue;
+      }
+
       if (AttrMask != NOT_IMPLICIT_INPUT) {
         if ((IsNonEntryFunc || !NonKernelOnly))
           removeAssumedBits(AttrMask);
@@ -1327,7 +1321,6 @@ struct AAAMDGPUMinAGPRAlloc
         Maximum.takeAssumedMaximum(NumRegs);
         return true;
       }
-
       switch (CB.getIntrinsicID()) {
       case Intrinsic::not_intrinsic:
         break;
@@ -1345,10 +1338,24 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
+      // Trap-like intrinsics such as llvm.trap and llvm.debugtrap do not have
+      // the nocallback attribute, so the AMDGPU attributor can conservatively
+      // drop all implicitly-known inputs and AGPR allocation information. Make
+      // sure we still infer that no implicit inputs are required and that the
+      // AGPR allocation stays at zero. Trap-like intrinsics may invoke a
+      // function which requires AGPRs, so we need to check if the called
+      // function has the "trap-func-name" attribute.
+      case Intrinsic::trap:
+      case Intrinsic::debugtrap:
+      case Intrinsic::ubsantrap:
+        return CB.hasFnAttr(Attribute::NoCallback) ||
+               !CB.hasFnAttr("trap-func-name");
       default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
-        return true;
+        // Assume !nocallback intrinsics may call a function which requires
+        // AGPRs.
+        return CB.hasFnAttr(Attribute::NoCallback);
       }
 
       // TODO: Handle callsite attributes

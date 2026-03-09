@@ -176,13 +176,24 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                                             addr_t link_map_addr,
                                             addr_t base_addr,
                                             bool base_addr_is_offset) {
-  if (ModuleSP module_sp = FindModuleViaTarget(file)) {
+  ModuleSP module_sp = FindModuleViaTarget(file);
+  // We have a core file, try to load the image from memory if we didn't find
+  // the module.
+  if (!module_sp && !m_process->IsLiveDebugSession()) {
+    llvm::Expected<ModuleSP> memory_module_sp_or_err =
+        m_process->ReadModuleFromMemory(file, base_addr);
+    if (auto err = memory_module_sp_or_err.takeError())
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                     "Failed to read module from memory: {0}");
+    else {
+      module_sp = *memory_module_sp_or_err;
+      m_process->GetTarget().GetImages().AppendIfNeeded(module_sp, false);
+    }
+  }
+  if (module_sp)
     UpdateLoadedSections(module_sp, link_map_addr, base_addr,
                          base_addr_is_offset);
-    return module_sp;
-  }
-
-  return nullptr;
+  return module_sp;
 }
 
 static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
@@ -192,7 +203,14 @@ static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
     snprintf(namebuf, sizeof(namebuf), "memory-image-0x%" PRIx64, addr);
     name = namebuf;
   }
-  return process->ReadModuleFromMemory(FileSpec(name), addr);
+  llvm::Expected<ModuleSP> module_sp_or_err =
+      process->ReadModuleFromMemory(FileSpec(name), addr);
+  if (auto err = module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                   "Failed to read module from memory: {0}");
+    return {};
+  }
+  return *module_sp_or_err;
 }
 
 ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(

@@ -37,6 +37,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Process.h"
+#include <memory>
 #include <utility>
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -211,7 +212,8 @@ public:
         }
         const StringRef Code = Buffer.get()->getBuffer();
         auto Style = format::getStyle(
-            *Context.getOptionsForFile(File).FormatStyle, File, "none");
+            Context.getOptionsForFile(File).FormatStyle.value_or("none"), File,
+            "none");
         if (!Style) {
           llvm::errs() << llvm::toString(Style.takeError()) << "\n";
           continue;
@@ -339,7 +341,7 @@ private:
   std::unique_ptr<ClangTidyProfiling> Profiling;
   std::unique_ptr<ast_matchers::MatchFinder> Finder;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
-  void anchor() override {};
+  void anchor() override {}
 };
 
 } // namespace
@@ -444,8 +446,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (!Context.getOptions().SystemHeaders.value_or(false))
     FinderOptions.IgnoreSystemHeaders = true;
 
-  std::unique_ptr<ast_matchers::MatchFinder> Finder(
-      new ast_matchers::MatchFinder(std::move(FinderOptions)));
+  auto Finder =
+      std::make_unique<ast_matchers::MatchFinder>(std::move(FinderOptions));
 
   Preprocessor *PP = &Compiler.getPreprocessor();
   Preprocessor *ModuleExpanderPP = PP;
@@ -638,13 +640,14 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     class Action : public ASTFrontendAction {
     public:
       Action(ClangTidyASTConsumerFactory *Factory) : Factory(Factory) {}
+
+    private:
+      ClangTidyASTConsumerFactory *Factory;
+
       std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                      StringRef File) override {
         return Factory->createASTConsumer(Compiler, File);
       }
-
-    private:
-      ClangTidyASTConsumerFactory *Factory;
     };
 
     ClangTidyASTConsumerFactory ConsumerFactory;

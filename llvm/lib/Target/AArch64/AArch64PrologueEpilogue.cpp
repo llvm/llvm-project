@@ -168,9 +168,16 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
 
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
+  //
+  // On Windows, some register pairs involving LR can't be folded because
+  // there isn't a corresponding unwind opcode.
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
-      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
+      (NeedsWinCFI &&
+       (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre) &&
+       RegInfo.getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
+           RegInfo.getEncodingValue(MBBI->getOperand(1).getReg()))) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy) {
@@ -310,6 +317,11 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
   // (to force a stp with predecrement) to match the packed unwind format,
   // provided that there actually are any callee saved registers to merge the
   // decrement with.
+  //
+  // Note that for certain paired saves, like "x19, lr", we can't actually
+  // emit an predecrement stp, but packed unwind still expects a separate stack
+  // adjustment.
+  //
   // This is potentially marginally slower, but allows using the packed
   // unwind format for functions that both have a local area and callee saved
   // registers. Using the packed unwind format notably reduces the size of
@@ -542,11 +554,15 @@ void AArch64PrologueEmitter::allocateStackSpace(
     // objects), we need to issue an extra probe, so these allocations start in
     // a known state.
     if (FollowupAllocs) {
-      // STR XZR, [SP]
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
 
@@ -577,11 +593,15 @@ void AArch64PrologueEmitter::allocateStackSpace(
     }
     if (FollowupAllocs || upperBound(AllocSize) + RealignmentPadding >
                               AArch64::StackProbeMaxUnprobedStack) {
-      // STR XZR, [SP]
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
-          .addReg(AArch64::XZR)
+      // LDR XZR, [SP]
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
+          .addDef(AArch64::XZR)
           .addReg(AArch64::SP)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo::getUnknownStack(MF),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 8,
+              Align(8)))
           .setMIFlags(MachineInstr::FrameSetup);
     }
     return;
@@ -633,7 +653,7 @@ void AArch64PrologueEmitter::emitPrologue() {
   // the epilogue. In this case, we still need to emit a SEH prologue sequence.
   // See `seh-minimal-prologue-epilogue.ll` test cases.
   if (AFI->getArgumentStackToRestore())
-    HasWinCFI = true;
+    HasWinCFI |= NeedsWinCFI;
 
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions

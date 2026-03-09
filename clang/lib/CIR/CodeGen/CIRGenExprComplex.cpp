@@ -210,9 +210,12 @@ public:
     return Visit(die->getExpr());
   }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitExprWithCleanups");
-    return {};
+    CIRGenFunction::RunCleanupsScope scope(cgf);
+    mlir::Value complexVal = Visit(e->getSubExpr());
+    // Defend against dominance problems caused by jumps out of expression
+    // evaluation through the shared cleanup block.
+    scope.forceCleanup({&complexVal});
+    return complexVal;
   }
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
@@ -220,9 +223,9 @@ public:
     return builder.getNullValue(complexTy, loc);
   }
   mlir::Value VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitImplicitValueInitExpr");
-    return {};
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    mlir::Type complexTy = cgf.convertType(e->getType());
+    return builder.getNullValue(complexTy, loc);
   }
 
   struct BinOpInfo {
@@ -325,9 +328,7 @@ public:
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitPackIndexingExpr");
-    return {};
+    return Visit(e->getSelectedExpr());
   }
 };
 } // namespace
@@ -553,7 +554,7 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 
   case CK_FloatingRealToComplex:
   case CK_IntegralRealToComplex: {
-    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op);
     return emitScalarToComplexCast(cgf.emitScalarExpr(op), op->getType(),
                                    destTy, op->getExprLoc());
   }
@@ -562,7 +563,7 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   case CK_FloatingComplexToIntegralComplex:
   case CK_IntegralComplexCast:
   case CK_IntegralComplexToFloatingComplex: {
-    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op);
     return emitComplexToComplexCast(Visit(op), op->getType(), destTy,
                                     op->getExprLoc());
   }
@@ -609,7 +610,7 @@ mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
 
 mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
@@ -631,7 +632,7 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
 
 mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
@@ -670,7 +671,7 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
 
 mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType())) {
@@ -698,7 +699,7 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
 
 mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, op.fpFeatures);
 
   // Handle division between two complex values. In the case of complex integer
   // types mixed with scalar integers, the scalar integer type will always be
@@ -832,7 +833,7 @@ LValue ComplexExprEmitter::emitCompoundAssignLValue(
   BinOpInfo opInfo{loc};
   opInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
 
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, opInfo.fpFeatures);
 
   // Load the RHS and LHS operands.
   // __block variables need to have the rhs evaluated first, plus this should

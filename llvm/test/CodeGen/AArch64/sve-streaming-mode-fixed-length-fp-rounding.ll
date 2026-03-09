@@ -355,8 +355,6 @@ define <1 x double> @frintp_v1f64(<1 x double> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    frintp d0, d0
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.ceil.v1f64(<1 x double> %op)
@@ -771,8 +769,6 @@ define <1 x double> @frintm_v1f64(<1 x double> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    frintm d0, d0
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.floor.v1f64(<1 x double> %op)
@@ -1187,8 +1183,6 @@ define <1 x double> @frinti_v1f64(<1 x double> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    frinti d0, d0
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.nearbyint.v1f64(<1 x double> %op)
@@ -1603,8 +1597,6 @@ define <1 x double> @frintx_v1f64(<1 x double> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    frintx d0, d0
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.rint.v1f64(<1 x double> %op)
@@ -2019,8 +2011,6 @@ define <1 x double> @frinta_v1f64(<1 x double> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    frinta d0, d0
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.round.v1f64(<1 x double> %op)
@@ -2435,8 +2425,6 @@ define <1 x double> @frintn_v1f64(<1 x double> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    frintn d0, d0
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.roundeven.v1f64(<1 x double> %op)
@@ -2851,8 +2839,6 @@ define <1 x double> @frintz_v1f64(<1 x double> %op) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    frintz d0, d0
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x double> @llvm.trunc.v1f64(<1 x double> %op)

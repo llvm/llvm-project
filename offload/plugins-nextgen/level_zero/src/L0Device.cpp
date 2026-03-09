@@ -355,16 +355,24 @@ L0DeviceTy::hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
   return true;
 }
 
-Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo) {
+Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                                 bool *IsQueueWorkCompleted) {
+  if (IsQueueWorkCompleted)
+    *IsQueueWorkCompleted = true;
   const bool IsAsync = AsyncInfo.Queue && asyncEnabled();
   if (!IsAsync)
     return Plugin::success();
+  if (IsQueueWorkCompleted)
+    *IsQueueWorkCompleted = false;
 
   auto &Plugin = getPlugin();
   auto *AsyncQueue = static_cast<AsyncQueueTy *>(AsyncInfo.Queue);
 
   if (!AsyncQueue->WaitEvents.empty())
     return Plugin::success();
+
+  if (IsQueueWorkCompleted)
+    *IsQueueWorkCompleted = true;
 
   // Commit delayed USM2M copies.
   for (auto &USM2M : AsyncQueue->USM2MList) {
@@ -376,9 +384,11 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo) {
     std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
                 static_cast<char *>(std::get<1>(H2M)));
   }
-  Plugin.releaseAsyncQueue(AsyncQueue);
-  getStagingBuffer().reset();
-  AsyncInfo.Queue = nullptr;
+  if (ReleaseQueue) {
+    Plugin.releaseAsyncQueue(AsyncQueue);
+    getStagingBuffer().reset();
+    AsyncInfo.Queue = nullptr;
+  }
 
   return Plugin::success();
 }

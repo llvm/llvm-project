@@ -28,6 +28,7 @@ class Stmt;
 class TranslationUnitDecl;
 class Type;
 class TypedefDecl;
+class VarDecl;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
 // implementation. It can be modeled as: type T having public methods ref() and
@@ -152,6 +153,10 @@ std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
 
+/// \returns true if \p F's return type is annotated with
+/// [[clang::annotate_type("webkit.nodelete")]].
+bool isNoDeleteFunction(const FunctionDecl *F);
+
 /// \returns true if \p F is a builtin function which is considered trivial.
 bool isTrivialBuiltinFunction(const FunctionDecl *F);
 
@@ -163,8 +168,15 @@ bool isSingleton(const NamedDecl *F);
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
-  bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
+  bool isTrivial(const Decl *D, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(D, TheCache, OffendingStmt);
+  }
+  bool isTrivial(const Stmt *S, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(S, TheCache, OffendingStmt);
+  }
+  bool hasTrivialDtor(const VarDecl *VD) const {
+    return hasTrivialDtorImpl(VD, TheCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -173,8 +185,9 @@ private:
       llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
-  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
+  static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
 };
 
 } // namespace clang

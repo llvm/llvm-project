@@ -2058,3 +2058,105 @@ func.func @no_fold_extract_slice_into_unpack_non_zero_offset(
 //  CHECK-SAME:       into %[[DEST]]
 //       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
 //       CHECK:   return %[[SLICE]]
+
+// -----
+
+// Must not fold because extract_slice cuts the 0'th dimension from 30 to 28.
+func.func @no_fold_extract_slice_into_unpack_slice_over_non_tiled_dim(
+    %src : tensor<30x2x16xf32>, %dest : tensor<30x32xf32>
+) -> tensor<28x28xf32> {
+  %unpack = linalg.unpack %src
+      inner_dims_pos = [1]
+      inner_tiles = [16]
+      into %dest : tensor<30x2x16xf32> -> tensor<30x32xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0] [28, 28] [1, 1] : tensor<30x32xf32> to tensor<28x28xf32>
+  return %extracted_slice : tensor<28x28xf32>
+}
+
+// CHECK-LABEL: func @no_fold_extract_slice_into_unpack_slice_over_non_tiled_dim
+//  CHECK-SAME:     %[[SRC:.+]]: tensor<30x2x16xf32>
+//  CHECK-SAME:     %[[DEST:.+]]: tensor<30x32xf32>
+//       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+//  CHECK-SAME:       into %[[DEST]]
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+//       CHECK:   return %[[SLICE]]
+
+// -----
+
+// Must not fold because extract_slice's effect on the 0'th dimension is unknown.
+func.func @no_fold_extract_slice_into_unpack_slice_over_dynamic_dim(
+    %src : tensor<?x2x16xf32>, %dest : tensor<?x32xf32>, %size : index
+) -> tensor<?x28xf32> {
+  %unpack = linalg.unpack %src
+      inner_dims_pos = [1]
+      inner_tiles = [16]
+      into %dest : tensor<?x2x16xf32> -> tensor<?x32xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0] [%size, 28] [1, 1] : tensor<?x32xf32> to tensor<?x28xf32>
+  return %extracted_slice : tensor<?x28xf32>
+}
+
+// CHECK-LABEL: func @no_fold_extract_slice_into_unpack_slice_over_dynamic_dim
+//  CHECK-SAME:     %[[SRC:.+]]: tensor<?x2x16xf32>
+//  CHECK-SAME:     %[[DEST:.+]]: tensor<?x32xf32>
+//       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+//  CHECK-SAME:       into %[[DEST]]
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+//       CHECK:   return %[[SLICE]]
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_cast_unpack_dynamic_tile_size(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<1x1x8x1xi32>,
+// CHECK-SAME:      %[[DEST:.*]]: tensor<7x?xi32>) -> tensor<7x?xi32> {
+// CHECK:           %[[RES:.*]] = linalg.unpack %[[SRC]] inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %[[DEST]] {test_attr} : tensor<1x1x8x1xi32> -> tensor<7x?xi32>
+func.func @fold_cast_unpack_dynamic_tile_size(
+  %src: tensor<1x1x8x1xi32>,
+  %res: tensor<7x?xi32>) -> tensor<7x?xi32> {
+
+    %cast = tensor.cast %src : tensor<1x1x8x1xi32> to tensor<1x1x?x1xi32>
+    %c8 = arith.constant 8 : index
+    %unpack = linalg.unpack %cast
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%c8, 1]
+      into %res {test_attr} : tensor<1x1x?x1xi32> -> tensor<7x?xi32>
+    return %unpack : tensor<7x?xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fold_pack_unpack_tensor
+// CHECK-SAME:  (%[[ARG0:.*]]: tensor<2x3xf32>) -> tensor<2x3xf32>
+// CHECK:       return %[[ARG0]] : tensor<2x3xf32>
+func.func @fold_pack_unpack_tensor(%x: tensor<2x3xf32>) -> tensor<2x3xf32> {
+  %unpacked = linalg.unpack %x outer_dims_perm = [] inner_dims_pos = [] inner_tiles = []
+             into %x : tensor<2x3xf32> -> tensor<2x3xf32>
+  %packed = linalg.pack %unpacked outer_dims_perm = [] inner_dims_pos = [] inner_tiles = []
+             into %x : tensor<2x3xf32> -> tensor<2x3xf32>
+  return %packed : tensor<2x3xf32>
+}
+
+// -----
+
+// Test that pack/unpack canonicalization is disabled for memref versions.
+// CHECK-LABEL: func.func @pack_unpack_memref_no_canonicalization
+// CHECK: linalg.pack
+// CHECK: linalg.unpack
+func.func @pack_unpack_memref_no_canonicalization(%source: memref<128x256xf32>, %packed: memref<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
+  linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %packed : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  linalg.unpack %packed inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %dest : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  return
+}
+
+// -----
+
+// Test that unpack/pack canonicalization is disabled for memref versions.
+// CHECK-LABEL: func.func @unpack_pack_memref_no_canonicalization
+// CHECK: linalg.unpack
+// CHECK: linalg.pack
+func.func @unpack_pack_memref_no_canonicalization(%packed: memref<16x8x8x32xf32>, %unpacked: memref<128x256xf32>, %dest: memref<16x8x8x32xf32>) {
+  linalg.unpack %packed inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %unpacked : memref<16x8x8x32xf32> -> memref<128x256xf32>
+  linalg.pack %unpacked inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %dest : memref<128x256xf32> -> memref<16x8x8x32xf32>
+  return
+}

@@ -459,25 +459,11 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     unsigned Opc = MI->getOpcode();
-    // Insert point for use operands needs some calculation.
-    if (Opc == AMDGPU::G_PHI) {
-      if (!RBLHelper.applyMappingPHI(*MI))
-        return false;
-      continue;
-    }
 
     // Opcodes that support pretty much all combinations of reg banks and LLTs
     // (except S1). There is no point in writing rules for them.
-    if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_UNMERGE_VALUES ||
-        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_CONCAT_VECTORS ||
-        Opc == AMDGPU::G_BITCAST) {
-      RBLHelper.applyMappingTrivial(*MI);
-      continue;
-    }
-
-    // Opcodes that also support S1.
-    if (Opc == G_FREEZE &&
-        MRI.getType(MI->getOperand(0).getReg()) != LLT::scalar(1)) {
+    if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_MERGE_VALUES ||
+        Opc == AMDGPU::G_CONCAT_VECTORS || Opc == AMDGPU::G_BITCAST) {
       RBLHelper.applyMappingTrivial(*MI);
       continue;
     }

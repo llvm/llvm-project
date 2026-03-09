@@ -909,9 +909,7 @@ class ExpandMemCmpLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  ExpandMemCmpLegacyPass() : FunctionPass(ID) {
-    initializeExpandMemCmpLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  ExpandMemCmpLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F)) return false;

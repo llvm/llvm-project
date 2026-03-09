@@ -264,14 +264,14 @@ namespace std {
 #  include <__compare/three_way_comparable.h>
 #  include <__concepts/invocable.h>
 #  include <__config>
-#  include <__cstddef/ptrdiff_t.h>
 #  include <__exception/exception.h>
-#  include <__format/range_format.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
 #  include <__functional/unary_function.h>
+#  include <__fwd/format.h>
 #  include <__fwd/functional.h>
 #  include <__iterator/bounded_iter.h>
+#  include <__iterator/capacity_aware_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/addressof.h>
 #  include <__memory/construct_at.h>
@@ -722,8 +722,8 @@ public:
   using iterator       = __bounded_iter<__wrap_iter<__pointer>>;
   using const_iterator = __bounded_iter<__wrap_iter<__const_pointer>>;
 #      else
-  using iterator       = __wrap_iter<__pointer>;
-  using const_iterator = __wrap_iter<__const_pointer>;
+  using iterator       = __capacity_aware_iterator<__pointer, optional<_Tp>, 1>;
+  using const_iterator = __capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>;
 #      endif
 
   // [optional.iterators], iterator support
@@ -737,7 +737,7 @@ public:
         __wrap_iter<__pointer>(__ptr),
         __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
-    return iterator(__ptr);
+    return std::__make_capacity_aware_iterator<__pointer, optional<_Tp>, 1>(__ptr);
 #      endif
   }
 
@@ -751,7 +751,7 @@ public:
         __wrap_iter<__const_pointer>(__ptr),
         __wrap_iter<__const_pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
-    return const_iterator(__ptr);
+    return std::__make_capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>(__ptr);
 #      endif
   }
 
@@ -772,7 +772,7 @@ public:
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator = __bounded_iter<__wrap_iter<__pointer>>;
 #      else
-  using iterator = __wrap_iter<__pointer>;
+  using iterator = __capacity_aware_iterator<__pointer, optional<_Tp&>, 1>;
 #      endif
 
   // [optional.ref.iterators], iterator support
@@ -787,7 +787,7 @@ public:
         __wrap_iter<__pointer>(__ptr),
         __wrap_iter<__pointer>(__ptr) + (__derived_self.has_value() ? 1 : 0));
 #      else
-    return iterator(__ptr);
+    return std::__make_capacity_aware_iterator<__pointer, optional<_Tp&>, 1>(__pointer(__ptr));
 #      endif
   }
 

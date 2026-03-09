@@ -186,6 +186,19 @@ void test_pldx_range() {
 
 #endif
 
+#if defined(__ARM_64BIT_STATE)
+
+// AArch64-LABEL: @test_pldir(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.prefetch.ir(ptr null)
+// AArch64-NEXT:    ret void
+//
+void test_pldir() {
+  __pldir(0);
+}
+
+#endif
+
 // AArch32-LABEL: @test_pldx(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 1, i32 3, i32 1)
@@ -1809,4 +1822,13 @@ int test_rndrrs(uint64_t *__addr) {
 }
 #endif
 
-
+#if defined(__ARM_64BIT_STATE)
+// AArch64-LABEL: @test_stshh_atomic_store(
+// AArch64-NEXT:  entry:
+// AArch64:         call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 {{.*}}, i32 0, i32 0, i32 32)
+// AArch64-NEXT:    ret void
+//
+void test_stshh_atomic_store(int *p, int v) {
+  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+}
+#endif

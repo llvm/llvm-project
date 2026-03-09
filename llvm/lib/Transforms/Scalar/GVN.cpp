@@ -1298,8 +1298,9 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
   ORE->emit(R);
 }
 
-// Find non-clobbered value for Loc memory location in extended basic block
+// Find a dominating value for Loc memory location in the extended basic block
 // (chain of basic blocks with single predecessors) starting From instruction.
+// Returns the value from a matching load or a simple store to the same pointer.
 static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
                                   Instruction *From, AAResults *AA) {
   uint32_t NumVisitedInsts = 0;
@@ -1311,8 +1312,14 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
       // Stop the search if limit is reached.
       if (++NumVisitedInsts > MaxNumVisitedInsts)
         return nullptr;
-      if (isModSet(BatchAA.getModRefInfo(Inst, Loc)))
+      if (isModSet(BatchAA.getModRefInfo(Inst, Loc))) {
+        // A simple store to the exact location can forward its value.
+        if (auto *SI = dyn_cast<StoreInst>(Inst))
+          if (SI->isSimple() && SI->getPointerOperand() == Loc.Ptr &&
+              SI->getValueOperand()->getType() == LoadTy)
+            return SI->getValueOperand();
         return nullptr;
+      }
       if (auto *LI = dyn_cast<LoadInst>(Inst))
         if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy)
           return LI;
@@ -1594,6 +1601,9 @@ void GVNPass::eliminatePartiallyRedundantLoad(
       NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
     if (auto *RangeMD = Load->getMetadata(LLVMContext::MD_range))
       NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
+    if (auto *NoFPClassMD = Load->getMetadata(LLVMContext::MD_nofpclass))
+      NewLoad->setMetadata(LLVMContext::MD_nofpclass, NoFPClassMD);
+
     if (auto *AccessMD = Load->getMetadata(LLVMContext::MD_access_group))
       if (LI->getLoopFor(Load->getParent()) == LI->getLoopFor(UnavailableBlock))
         NewLoad->setMetadata(LLVMContext::MD_access_group, AccessMD);
@@ -2962,6 +2972,12 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       return false;
   }
 
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(CurInst))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
+
   uint32_t ValNo = VN.lookup(CurInst);
 
   // Look for the predecessors for PRE opportunities.  We're
@@ -3088,7 +3104,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
 
   LLVM_DEBUG(dbgs() << "GVN PRE removed: " << *CurInst << '\n');
   removeInstruction(CurInst);
-  ++NumGVNInstr;
 
   return true;
 }
@@ -3192,6 +3207,7 @@ void GVNPass::removeInstruction(Instruction *I) {
 #endif
   ICF->removeInstruction(I);
   I->eraseFromParent();
+  ++NumGVNInstr;
 }
 
 /// Verify that the specified instruction does not occur in our

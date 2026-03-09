@@ -1167,8 +1167,12 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
     const u64 LastReleaseSecAgo = DiffSinceLastReleaseNs / 1000000000;
     const u64 LastReleaseMsAgo =
         (DiffSinceLastReleaseNs % 1000000000) / 1000000;
-    Str->append("Latest release: %" PRIu64 ":%" PRIu64 " seconds ago",
+    Str->append(" Latest release: %6" PRIu64 ":%" PRIu64 " seconds ago",
                 LastReleaseSecAgo, LastReleaseMsAgo);
+  }
+  const s64 ResidentPages = Region->MemMapInfo.MemMap.getResidentPages();
+  if (ResidentPages >= 0) {
+    Str->append(" Resident Pages: %6" PRIu64, ResidentPages);
   }
   Str->append("\n");
 }
@@ -1329,8 +1333,17 @@ uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
     if (I == SizeClassMap::BatchClassId)
       continue;
     RegionInfo *Region = getRegionInfo(I);
-    ScopedLock L(Region->MMLock);
-    TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    if (ReleaseType == ReleaseToOS::ForceFast) {
+      // Never wait for the lock, always move on if there is already
+      // a release operation in progress.
+      if (Region->MMLock.tryLock()) {
+        TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+        Region->MMLock.unlock();
+      }
+    } else {
+      ScopedLock L(Region->MMLock);
+      TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    }
   }
   return TotalReleasedBytes;
 }

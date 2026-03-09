@@ -520,3 +520,12 @@ a, a:visited, a:hover, a:active {
   overflow: hidden;
   padding: 10px;
 }
+
+.param {
+    display: block;
+    padding-left: 4ch;
+}
+
+.param-container {
+    display: block;
+}

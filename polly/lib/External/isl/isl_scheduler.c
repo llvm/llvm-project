@@ -1074,6 +1074,7 @@ error:
 }
 
 struct isl_extract_edge_data {
+	isl_schedule_constraints *sc;
 	enum isl_edge_type type;
 	struct isl_sched_graph *graph;
 };
@@ -1249,6 +1250,11 @@ static isl_stat skip_edge(__isl_take isl_map *map, __isl_take isl_map *tagged)
  * the union of all the "map" relations
  * for which extract_edge is called that result in the same edge->map.
  *
+ * Compute the gist with respect to the context.
+ * This may remove some constraints on the parameters or
+ * eliminate some parts of the dependence relation
+ * that are not relevant on the context.
+ *
  * If the source or the destination node is compressed, then
  * intersect both "map" and "tagged" with the constraints that
  * were used to construct the compression.
@@ -1264,7 +1270,9 @@ static isl_stat extract_edge(__isl_take isl_map *map, void *user)
 	struct isl_sched_graph *graph = data->graph;
 	struct isl_sched_node *src, *dst;
 	struct isl_sched_edge *edge;
+	isl_set *context;
 	isl_map *tagged = NULL;
+	isl_schedule_constraints *sc = data->sc;
 
 	if (data->type == isl_edge_condition ||
 	    data->type == isl_edge_conditional_validity) {
@@ -1284,6 +1292,9 @@ static isl_stat extract_edge(__isl_take isl_map *map, void *user)
 	if (!isl_sched_graph_is_node(graph, src) ||
 	    !isl_sched_graph_is_node(graph, dst))
 		return skip_edge(map, tagged);
+
+	context = isl_schedule_constraints_get_context(sc);
+	map = isl_map_gist_params(map, context);
 
 	if (src->compressed || dst->compressed) {
 		isl_map *hull;
@@ -1345,7 +1356,7 @@ isl_stat isl_sched_graph_init(struct isl_sched_graph *graph,
 	isl_ctx *ctx;
 	isl_union_set *domain;
 	isl_union_map *c;
-	struct isl_extract_edge_data data;
+	struct isl_extract_edge_data data = { sc };
 	enum isl_edge_type i;
 	isl_stat r;
 	isl_size n;
@@ -4366,8 +4377,7 @@ static int is_trivial(struct isl_sched_node *node, __isl_keep isl_vec *sol)
 	if (!node_sol)
 		return -1;
 
-	trivial = isl_seq_first_non_zero(node_sol->el,
-					node->nvar - node->rank) == -1;
+	trivial = !isl_seq_any_non_zero(node_sol->el, node->nvar - node->rank);
 
 	isl_vec_free(node_sol);
 

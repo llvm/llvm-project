@@ -65,6 +65,14 @@ private:
   uint64_t RVVPadding = 0;
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
+
+  /// amount of bytes on stack consumed by the arguments being passed on the
+  /// stack
+  unsigned ArgumentStackSize = 0;
+
+  /// Incoming ByVal arguments
+  SmallVector<SDValue, 8> IncomingByValArgs;
+
   /// Is there any vector argument or return?
   bool IsVectorCall = false;
 
@@ -141,6 +149,13 @@ public:
 
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
+
+  unsigned getArgumentStackSize() const { return ArgumentStackSize; }
+  void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+
+  void addIncomingByValArgs(SDValue Val) { IncomingByValArgs.push_back(Val); }
+  SDValue getIncomingByValArgs(unsigned Idx) { return IncomingByValArgs[Idx]; }
+  unsigned getIncomingByValArgsSize() const { return IncomingByValArgs.size(); }
 
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 

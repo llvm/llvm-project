@@ -30,12 +30,10 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A8-SOFT
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=hard | FileCheck %s --check-prefix=CORTEX-A8-HARD
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A8-SOFT
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A9-SOFT
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=hard | FileCheck %s --check-prefix=CORTEX-A9-HARD
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12 | FileCheck %s --check-prefix=CORTEX-A12-DEFAULT
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a9 -float-abi=soft | FileCheck %s --check-prefix=CORTEX-A9-SOFT
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12 -mattr=-vfp2sp | FileCheck %s --check-prefix=CORTEX-A12-NOFPU
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a12 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a15 | FileCheck %s --check-prefix=CORTEX-A15
@@ -126,7 +124,6 @@
 ; ARMv8.1a (AArch32)
 ; RUN: llc < %s -mtriple=armv8.1a-none-linux-gnueabi | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv8.1a-none-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
-; RUN: llc < %s -mtriple=armv8.1a-none-linux-gnueabi | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; ARMv8a (AArch32)
 ; RUN: llc < %s -mtriple=armv8-none-linux-gnueabi -mcpu=cortex-a32 | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv8-none-linux-gnueabi -mcpu=cortex-a32 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
@@ -176,7 +173,6 @@
 ; RUN: llc < %s -mtriple=thumb-none-linux-gnueabi -mcpu=cortex-m0 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumb-none-linux-gnueabi -mattr=+strict-align -mcpu=cortex-m0 | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumbv6m-none-linux-gnueabi -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
-; RUN: llc < %s -mtriple=thumb-none-linux-gnueabi -mcpu=cortex-m0 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; ARMv5
 ; RUN: llc < %s -mtriple=armv5-none-linux-gnueabi -mcpu=arm1022e | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv5-none-linux-gnueabi -mcpu=arm1022e -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN

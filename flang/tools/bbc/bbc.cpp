@@ -237,6 +237,11 @@ static llvm::cl::opt<std::string>
     enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
                   llvm::cl::init(""));
 
+static llvm::cl::opt<std::string>
+    compilerDirectiveSentinel("sentinel-test",
+                              llvm::cl::desc("Test additional sentinel"),
+                              llvm::cl::init("dir$"));
+
 static llvm::cl::opt<bool> fixedForm("ffixed-form",
                                      llvm::cl::desc("enable fixed form"),
                                      llvm::cl::init(false));
@@ -369,6 +374,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
   // prep for prescan and parse
   Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
+  if (!compilerDirectiveSentinel.empty()) {
+    options.compilerDirectiveSentinels.push_back(compilerDirectiveSentinel);
+  }
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() && (parsing.messages().AnyFatalError())) {
     llvm::errs() << programPrefix << "could not scan " << path << '\n';

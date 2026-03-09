@@ -63,7 +63,10 @@ public:
     BuildOptions.AddLifetime = true;
 
     // Run the main analysis.
-    Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
+    LifetimeSafetyOpts LSOpts;
+    LSOpts.MaxCFGBlocks = 0;
+    Analysis =
+        std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, LSOpts);
     Analysis->run();
 
     AnnotationToPointMap = Analysis->getFactManager().getTestPoints();
@@ -1797,9 +1800,8 @@ TEST_F(LifetimeAnalysisTest, TrackImplicitObjectArg_GSLPointerArg) {
   EXPECT_THAT(Origin("sv1"), HasLoansTo({"s1"}, "end"));
   EXPECT_THAT(Origin("sv2"), HasLoansTo({"s2"}, "end"));
   EXPECT_THAT(Origin("sv3"), HasLoansTo({"s3"}, "end"));
-  // FIXME: Handle GSL pointer construction from raw pointers.
-  EXPECT_THAT(Origin("sv4"), HasLoansTo({}, "end"));
-  EXPECT_THAT(Origin("sv5"), HasLoansTo({}, "end"));
+  EXPECT_THAT(Origin("sv4"), HasLoansTo({"s4"}, "end"));
+  EXPECT_THAT(Origin("sv5"), HasLoansTo({"s5"}, "end"));
 }
 
 // ========================================================================= //

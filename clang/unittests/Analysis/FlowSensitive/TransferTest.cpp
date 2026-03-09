@@ -935,6 +935,130 @@ TEST(TransferTest, BinaryOperatorAssignIntegerLiteral) {
       });
 }
 
+TEST(TransferTest, BinaryOperatorAssignUnknown) {
+  std::string Code = R"(
+    int unknown();
+
+    void target() {
+      int Foo = unknown();
+      int FooAtA = Foo;
+
+      Foo = unknown();
+      int FooAtB = Foo;
+
+      Foo += unknown();
+      int FooAtC = Foo;
+
+      // [[p]]
+
+      if (FooAtA != FooAtB) {
+        (void)0;
+        // [[q]]
+      }
+
+      if (FooAtB != FooAtC) {
+        (void)0;
+        // [[r]]
+      }
+    }
+  )";
+  using ast_matchers::binaryOperator;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p", "q", "r"));
+
+        // Check that the second/third unknown value is different.
+        const Environment &EnvP = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *FooAtADecl = findValueDecl(ASTCtx, "FooAtA");
+        ASSERT_THAT(FooAtADecl, NotNull());
+        const Value *FooAtAVal = EnvP.getValue(*FooAtADecl);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooAtAVal));
+
+        const ValueDecl *FooAtBDecl = findValueDecl(ASTCtx, "FooAtB");
+        ASSERT_THAT(FooAtBDecl, NotNull());
+        const Value *FooAtBVal = EnvP.getValue(*FooAtBDecl);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooAtBVal));
+
+        const ValueDecl *FooAtCDecl = findValueDecl(ASTCtx, "FooAtC");
+        ASSERT_THAT(FooAtCDecl, NotNull());
+        const Value *FooAtCVal = EnvP.getValue(*FooAtCDecl);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooAtCVal));
+
+        EXPECT_NE(FooAtAVal, FooAtBVal);
+        // FIXME: Should be NE too.
+        EXPECT_EQ(FooAtBVal, FooAtCVal);
+
+        // Check that the storage location is correctly propagated.
+        auto MatchResult = match(binaryOperator().bind("bo"), ASTCtx);
+        const auto *BO = selectFirst<BinaryOperator>("bo", MatchResult);
+        EXPECT_NE(BO, nullptr);
+        const StorageLocation *BOLoc = EnvP.getStorageLocation(*BO);
+        EXPECT_NE(BOLoc, nullptr);
+
+        // Check that the branches are reachable with a non-false
+        // flow condition.
+        const Environment &EnvQ = getEnvironmentAtAnnotation(Results, "q");
+        const Environment &EnvR = getEnvironmentAtAnnotation(Results, "r");
+
+        EXPECT_FALSE(EnvQ.proves(EnvQ.arena().makeLiteral(false)));
+        // FIXME: Should be FALSE too.
+        EXPECT_TRUE(EnvR.proves(EnvR.arena().makeLiteral(false)));
+      });
+}
+
+TEST(TransferTest, BinaryOperatorAssignFloat) {
+  using ast_matchers::binaryOperator;
+  using ast_matchers::hasOperatorName;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+
+  // This was crashing.
+  std::string Code = R"(
+    void target() {
+      double Foo = 0.0f;
+      double FooAtA = Foo;
+      Foo = 1.0f;
+      double FooAtB = Foo;
+      bool check = (FooAtA == FooAtB);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+
+        const Environment &EnvP = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *FooAtADecl = findValueDecl(ASTCtx, "FooAtA");
+        ASSERT_THAT(FooAtADecl, NotNull());
+        const Value *FooAtAVal = EnvP.getValue(*FooAtADecl);
+        // FIXME: Should be non-null. Floats aren't modeled at all.
+        EXPECT_THAT(FooAtAVal, IsNull());
+
+        const ValueDecl *FooAtBDecl = findValueDecl(ASTCtx, "FooAtB");
+        ASSERT_THAT(FooAtBDecl, NotNull());
+        const Value *FooAtBVal = EnvP.getValue(*FooAtBDecl);
+        // FIXME: Should be non-null. Floats aren't modeled at all.
+        EXPECT_THAT(FooAtBVal, IsNull());
+
+        // See if the storage location is correctly propagated.
+        auto MatchResult =
+            match(binaryOperator(hasOperatorName("=")).bind("bo"), ASTCtx);
+        const auto *BO = selectFirst<BinaryOperator>("bo", MatchResult);
+        ASSERT_THAT(BO, NotNull());
+        const StorageLocation *BOLoc = EnvP.getStorageLocation(*BO);
+        // FIXME: Should be non-null.
+        EXPECT_THAT(BOLoc, IsNull());
+      });
+}
+
 TEST(TransferTest, VarDeclInitAssign) {
   std::string Code = R"(
     void target() {
@@ -3707,6 +3831,34 @@ TEST(TransferTest, StaticCastBaseToDerived) {
                   Env.getStorageLocation(*DRefDecl));
         // For DRefFromFunc, not crashing when analyzing the field accesses is
         // enough.
+      });
+}
+
+TEST(TransferTest, StaticCastBaseToDerivedUnknown) {
+  // This code used to crash.
+  std::string Code = R"(
+    struct Base {};
+    struct Derived: Base {};
+
+    Base *unknown();
+    void target() {
+      Derived *DPtr = static_cast<Derived *>(unknown());
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *DPtrDecl = findValueDecl(ASTCtx, "DPtr");
+        ASSERT_THAT(DPtrDecl, NotNull());
+
+        const auto *DPtrVal =
+            dyn_cast_or_null<PointerValue>(Env.getValue(*DPtrDecl));
+        EXPECT_THAT(DPtrVal, NotNull());
       });
 }
 

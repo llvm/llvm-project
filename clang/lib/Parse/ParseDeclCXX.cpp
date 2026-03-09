@@ -1123,6 +1123,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
     Diag(StartLoc, DiagID) << PrevSpec;
     DS.SetTypeSpecError();
   }
+  DS.SetRangeEnd(EndLoc);
   return EndLoc;
 }
 
@@ -1404,7 +1405,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   DeclSpec DS(AttrFactory);
   DS.SetRangeStart(IdLoc);
   DS.SetRangeEnd(EndLocation);
-  DS.getTypeSpecScope() = SS;
+  DS.getTypeSpecScope() = std::move(SS);
 
   const char *PrevSpec = nullptr;
   unsigned DiagID;
@@ -1470,6 +1471,8 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
   case tok::annot_pragma_ms_vtordisp:
   // struct foo {...} _Pragma(pointers_to_members(...));
   case tok::annot_pragma_ms_pointers_to_members:
+  // struct foo {...} _Pragma(export(...));
+  case tok::annot_pragma_export:
     return true;
   case tok::colon:
     return CouldBeBitfield || // enum E { ... }   :         2;
@@ -3396,6 +3399,9 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
   case tok::annot_pragma_ms_vtordisp:
     HandlePragmaMSVtorDisp();
     return nullptr;
+  case tok::annot_pragma_export:
+    HandlePragmaExport();
+    return nullptr;
   case tok::annot_pragma_dump:
     HandlePragmaDump();
     return nullptr;
@@ -4526,9 +4532,10 @@ bool Parser::ParseCXX11AttributeArgs(
       // The attribute parsed successfully, but was not allowed to have any
       // arguments. It doesn't matter whether any were provided -- the
       // presence of the argument list (even if empty) is diagnosed.
-      Diag(LParenLoc, diag::err_cxx11_attribute_forbids_arguments)
-          << AttrName
-          << FixItHint::CreateRemoval(SourceRange(LParenLoc, *EndLoc));
+      auto D = Diag(LParenLoc, diag::err_cxx11_attribute_forbids_arguments)
+               << AttrName;
+      if (EndLoc)
+        D << FixItHint::CreateRemoval(SourceRange(LParenLoc, *EndLoc));
       Attr.setInvalid(true);
     }
   }

@@ -8,13 +8,11 @@ typedef _Float16 half4 __attribute__((ext_vector_type(4)));
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_gather4_lz_2d_v4f32_f32_r(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -41,13 +39,11 @@ float4 test_amdgcn_image_gather4_lz_2d_v4f32_f32_r(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_gather4_lz_2d_v4f32_f32_g(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -74,13 +70,11 @@ float4 test_amdgcn_image_gather4_lz_2d_v4f32_f32_g(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_gather4_lz_2d_v4f32_f32_b(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -107,13 +101,11 @@ float4 test_amdgcn_image_gather4_lz_2d_v4f32_f32_b(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_gather4_lz_2d_v4f32_f32_a(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -140,13 +132,11 @@ float4 test_amdgcn_image_gather4_lz_2d_v4f32_f32_a(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_lz_1d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -172,13 +162,11 @@ float4 test_amdgcn_image_sample_lz_1d_v4f32_f32(float4 v4f32, float f32, int i32
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_l_1d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -205,13 +193,11 @@ float4 test_amdgcn_image_sample_l_1d_v4f32_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_d_1d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -239,13 +225,11 @@ float4 test_amdgcn_image_sample_d_1d_v4f32_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_lz_2d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -272,13 +256,11 @@ float4 test_amdgcn_image_sample_lz_2d_v4f32_f32(float4 v4f32, float f32, int i32
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_l_2d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -306,13 +288,11 @@ float4 test_amdgcn_image_sample_l_2d_v4f32_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_d_2d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -342,13 +322,11 @@ float4 test_amdgcn_image_sample_d_2d_v4f32_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_lz_3d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -376,13 +354,11 @@ float4 test_amdgcn_image_sample_lz_3d_v4f32_f32(float4 v4f32, float f32, int i32
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_l_3d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -411,13 +387,11 @@ float4 test_amdgcn_image_sample_l_3d_v4f32_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_d_3d_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -451,13 +425,11 @@ float4 test_amdgcn_image_sample_d_3d_v4f32_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_lz_cube_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -485,13 +457,11 @@ float4 test_amdgcn_image_sample_lz_cube_v4f32_f32(float4 v4f32, float f32, int i
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_l_cube_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -520,13 +490,11 @@ float4 test_amdgcn_image_sample_l_cube_v4f32_f32(float4 v4f32, float f32, int i3
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_lz_1darray_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -553,13 +521,11 @@ float4 test_amdgcn_image_sample_lz_1darray_v4f32_f32(float4 v4f32, float f32, in
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_l_1darray_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -587,13 +553,11 @@ float4 test_amdgcn_image_sample_l_1darray_v4f32_f32(float4 v4f32, float f32, int
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_d_1darray_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -622,13 +586,11 @@ float4 test_amdgcn_image_sample_d_1darray_v4f32_f32(float4 v4f32, float f32, int
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_lz_2darray_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -656,13 +618,11 @@ float4 test_amdgcn_image_sample_lz_2darray_v4f32_f32(float4 v4f32, float f32, in
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_l_2darray_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -691,13 +651,11 @@ float4 test_amdgcn_image_sample_l_2darray_v4f32_f32(float4 v4f32, float f32, int
 // CHECK-LABEL: define dso_local <4 x float> @test_amdgcn_image_sample_d_2darray_v4f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -729,13 +687,11 @@ float4 test_amdgcn_image_sample_d_2darray_v4f32_f32(float4 v4f32, float f32, int
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_lz_1d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -761,13 +717,11 @@ half4 test_amdgcn_image_sample_lz_1d_v4f16_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_l_1d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -794,13 +748,11 @@ half4 test_amdgcn_image_sample_l_1d_v4f16_f32(float4 v4f32, float f32, int i32, 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_d_1d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -828,13 +780,11 @@ half4 test_amdgcn_image_sample_d_1d_v4f16_f32(float4 v4f32, float f32, int i32, 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_lz_2d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -861,13 +811,11 @@ half4 test_amdgcn_image_sample_lz_2d_v4f16_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_l_2d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -895,13 +843,11 @@ half4 test_amdgcn_image_sample_l_2d_v4f16_f32(float4 v4f32, float f32, int i32, 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_d_2d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -932,13 +878,11 @@ half4 test_amdgcn_image_sample_d_2d_v4f16_f32(float4 v4f32, float f32, int i32, 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_lz_3d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -966,13 +910,11 @@ half4 test_amdgcn_image_sample_lz_3d_v4f16_f32(float4 v4f32, float f32, int i32,
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_l_3d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1001,13 +943,11 @@ half4 test_amdgcn_image_sample_l_3d_v4f16_f32(float4 v4f32, float f32, int i32, 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_d_3d_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1041,13 +981,11 @@ half4 test_amdgcn_image_sample_d_3d_v4f16_f32(float4 v4f32, float f32, int i32, 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_lz_cube_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1075,13 +1013,11 @@ half4 test_amdgcn_image_sample_lz_cube_v4f16_f32(float4 v4f32, float f32, int i3
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_l_cube_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1110,13 +1046,11 @@ half4 test_amdgcn_image_sample_l_cube_v4f16_f32(float4 v4f32, float f32, int i32
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_lz_1darray_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1143,13 +1077,11 @@ half4 test_amdgcn_image_sample_lz_1darray_v4f16_f32(float4 v4f32, float f32, int
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_l_1darray_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1177,13 +1109,11 @@ half4 test_amdgcn_image_sample_l_1darray_v4f16_f32(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_d_1darray_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1212,13 +1142,11 @@ half4 test_amdgcn_image_sample_d_1darray_v4f16_f32(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_lz_2darray_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1246,13 +1174,11 @@ half4 test_amdgcn_image_sample_lz_2darray_v4f16_f32(float4 v4f32, float f32, int
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_l_2darray_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1281,13 +1207,11 @@ half4 test_amdgcn_image_sample_l_2darray_v4f16_f32(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local <4 x half> @test_amdgcn_image_sample_d_2darray_v4f16_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x half>, align 8, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1319,13 +1243,11 @@ half4 test_amdgcn_image_sample_d_2darray_v4f16_f32(float4 v4f32, float f32, int 
 // CHECK-LABEL: define dso_local float @test_amdgcn_image_sample_lz_2d_f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1352,13 +1274,11 @@ float test_amdgcn_image_sample_lz_2d_f32_f32(float4 v4f32, float f32, int i32, _
 // CHECK-LABEL: define dso_local float @test_amdgcn_image_sample_l_2d_f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1386,13 +1306,11 @@ float test_amdgcn_image_sample_l_2d_f32_f32(float4 v4f32, float f32, int i32, __
 // CHECK-LABEL: define dso_local float @test_amdgcn_image_sample_d_2d_f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1423,13 +1341,11 @@ float test_amdgcn_image_sample_d_2d_f32_f32(float4 v4f32, float f32, int i32, __
 // CHECK-LABEL: define dso_local float @test_amdgcn_image_sample_lz_2darray_f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1457,13 +1373,11 @@ float test_amdgcn_image_sample_lz_2darray_f32_f32(float4 v4f32, float f32, int i
 // CHECK-LABEL: define dso_local float @test_amdgcn_image_sample_l_2darray_f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr
@@ -1492,13 +1406,11 @@ float test_amdgcn_image_sample_l_2darray_f32_f32(float4 v4f32, float f32, int i3
 // CHECK-LABEL: define dso_local float @test_amdgcn_image_sample_d_2darray_f32_f32(
 // CHECK-SAME: <4 x float> noundef [[V4F32:%.*]], float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]], <4 x i32> noundef [[VEC4I32:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[V4F32_ADDR:%.*]] = alloca <4 x float>, align 16, addrspace(5)
 // CHECK-NEXT:    [[F32_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[I32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[TEX_ADDR:%.*]] = alloca ptr, align 32, addrspace(5)
 // CHECK-NEXT:    [[VEC4I32_ADDR:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[V4F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V4F32_ADDR]] to ptr
 // CHECK-NEXT:    [[F32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F32_ADDR]] to ptr
 // CHECK-NEXT:    [[I32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I32_ADDR]] to ptr

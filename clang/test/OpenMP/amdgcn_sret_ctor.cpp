@@ -16,15 +16,13 @@ E::E() noexcept : foo(s()) {}
 // CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 1, addrspace(5)
 // CHECK-NEXT:    [[THIS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[THIS_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[THIS1_ASCAST:%.*]] = addrspacecast ptr [[THIS1]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z1sv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_S:%.*]]) align 1 [[THIS1_ASCAST]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @_Z1sv(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_S]]) align 1 [[TMP]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
-// CHECK-LABEL: declare void @_Z1sv(
-// CHECK-SAME: ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_S]]) align 1) #[[ATTR1:[0-9]+]]
 //
 // CHECK-LABEL: define hidden void @_ZN1EC1Ev(
 // CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {

@@ -2,9 +2,11 @@
 // RUN:            -verify %s
 // RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -Wno-gcc-compat\
 // RUN:            -verify %s -x objective-c++
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call -Wno-gcc-compat\
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN:            -Wunsafe-buffer-usage-in-format-attr-call -Wno-gcc-compat \
 // RUN:            -verify %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call -Wno-gcc-compat\
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-libc-call \
+// RUN:            -Wunsafe-buffer-usage-in-format-attr-call -Wno-gcc-compat \
 // RUN:            -verify %s -DTEST_STD_NS
 
 typedef struct {} FILE;
@@ -16,6 +18,7 @@ namespace std {
 
 void memcpy();
 void __asan_memcpy();
+void *memset(void *s, int c, size_t n);
 void strcpy();
 void strcpy_s();
 void wcscpy_s();
@@ -77,6 +80,10 @@ namespace std {
 
   typedef basic_string_view<char> string_view;
   typedef basic_string_view<wchar_t> wstring_view;
+
+
+  template <typename T>
+  T *addressof(T& arg);
 }
 
 void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
@@ -295,7 +302,7 @@ struct FormatAttrTestMember2 {
 void test_format_attr(char * Str, std::string StdStr) {
   myprintf("hello", Str);
   myprintf("hello %s", StdStr.c_str());
-  myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
+  myprintf("hello %s", Str);  // expected-warning{{formatting function 'myprintf' is unsafe}} \
 			         expected-note{{string argument is not guaranteed to be null-terminated}}
 
   extern int errno;
@@ -304,12 +311,12 @@ void test_format_attr(char * Str, std::string StdStr) {
 
   myprintf_2("hello", 0, Str);
   myprintf_2("hello %s", 0, StdStr.c_str());
-  myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \
+  myprintf_2("hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_2' is unsafe}} \
 			              expected-note{{string argument is not guaranteed to be null-terminated}}
 
   myprintf_3("irrelevant", "hello", 0, Str);
   myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
-  myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
+  myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_3' is unsafe}} \
 			               expected-note{{string argument is not guaranteed to be null-terminated}}
   myscanf("hello %s");
   myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
@@ -325,30 +332,30 @@ void test_format_attr(char * Str, std::string StdStr) {
 
   Obj.myprintf("hello", Str);
   Obj.myprintf("hello %s", StdStr.c_str());
-  Obj.myprintf("hello %s", Str);  // expected-warning{{function 'myprintf' is unsafe}} \
+  Obj.myprintf("hello %s", Str);  // expected-warning{{formatting function 'myprintf' is unsafe}} \
 			         expected-note{{string argument is not guaranteed to be null-terminated}}
 
   Obj.myprintf_2("hello", 0, Str);
   Obj.myprintf_2("hello %s", 0, StdStr.c_str());
-  Obj.myprintf_2("hello %s", 0, Str);  // expected-warning{{function 'myprintf_2' is unsafe}} \
+  Obj.myprintf_2("hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_2' is unsafe}} \
 			              expected-note{{string argument is not guaranteed to be null-terminated}}
 
   Obj.myprintf_3("irrelevant", "hello", 0, Str);
   Obj.myprintf_3("irrelevant", "hello %s", 0, StdStr.c_str());
-  Obj.myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{function 'myprintf_3' is unsafe}} \
+  Obj.myprintf_3("irrelevant", "hello %s", 0, Str);  // expected-warning{{formatting function 'myprintf_3' is unsafe}} \
 			               expected-note{{string argument is not guaranteed to be null-terminated}}
 
   Obj.myscanf("hello %s");
-  Obj.myscanf("hello %s", Str); // expected-warning{{function 'myscanf' is unsafe}}
+  Obj.myscanf("hello %s", Str); // expected-warning{{formatting function 'myscanf' is unsafe}}
 
-  Obj.myscanf("hello %d", &X); // expected-warning{{function 'myscanf' is unsafe}}
+  Obj.myscanf("hello %d", &X); // expected-warning{{formatting function 'myscanf' is unsafe}}
 
-  Obj.myprintf_default("irrelevant"); // expected-warning{{function 'myprintf_default' is unsafe}}
+  Obj.myprintf_default("irrelevant"); // expected-warning{{formatting function 'myprintf_default' is unsafe}}
   // expected-note@*{{string argument is not guaranteed to be null-terminated}}
 
   Obj("hello", Str);
   Obj("hello %s", StdStr.c_str());
-  Obj("hello %s", Str);  // expected-warning{{function 'operator()' is unsafe}} \
+  Obj("hello %s", Str);  // expected-warning{{formatting function 'operator()' is unsafe}} \
     		            expected-note{{string argument is not guaranteed to be null-terminated}}
   Obj["hello"];
   Obj["hello %s"];
@@ -357,7 +364,7 @@ void test_format_attr(char * Str, std::string StdStr) {
 
   Obj2("hello", Str);
   Obj2("hello %s", StdStr.c_str());
-  Obj2("hello %s", Str);  // expected-warning{{function 'operator()' is unsafe}} \
+  Obj2("hello %s", Str);  // expected-warning{{formatting function 'operator()' is unsafe}} \
 			 expected-note{{string argument is not guaranteed to be null-terminated}}
 }
 
@@ -367,9 +374,108 @@ void myprintf_arg_idx_oob(const char *) __attribute__((__format__ (__printf__, 1
 
 void test_format_attr_invalid_arg_idx(char * Str, std::string StdStr) {
   myprintf_arg_idx_oob("hello");
-  myprintf_arg_idx_oob(Str); // expected-warning{{function 'myprintf_arg_idx_oob' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  myprintf_arg_idx_oob(Str); // expected-warning{{formatting function 'myprintf_arg_idx_oob' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   myprintf_arg_idx_oob(StdStr.c_str());
   myprintf("hello");
-  myprintf(Str); // expected-warning{{function 'myprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  myprintf(Str); // expected-warning{{formatting function 'myprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   myprintf(StdStr.c_str());
 }
+
+
+void memset_address_of_operator() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  memset(&i, 0, sizeof(i));
+  memset(&i, 0, sizeof i);
+  memset(&(i), 0, sizeof(i));
+  memset(&(i), 0, sizeof i);
+
+  // memory-safe but considered unsafe by the check
+  memset(&i, 0, 0); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, 1); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, sizeof(int)); // expected-warning{{function 'memset' is unsafe}}
+  memset(&(++i), 0, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+
+  // unsafe
+  memset(nullptr, 0, 10); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, 10); // expected-warning{{function 'memset' is unsafe}}
+}
+
+void memset_address_of_function() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  memset(std::addressof(i), 0, sizeof(i));
+  memset(std::addressof(i), 0, sizeof i);
+  memset(std::addressof((i)), 0, sizeof(i));
+  memset(std::addressof((i)), 0, sizeof i);
+
+  // memory-safe but considered unsafe by the check
+  memset(std::addressof(i), 0, 0); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, 1); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, sizeof(int)); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(++i), 0, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+
+  // unsafe
+  memset(std::addressof(i), 0, 10); // expected-warning{{function 'memset' is unsafe}}
+}
+
+// Unknown `memset`s with more or less parameters.
+void *memset(void *s, size_t n);
+void *memset(void *s, int c, size_t n, size_t destlen);
+
+void unknown_memset_unsafe() {
+  int i = 0;
+
+  memset(&i, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, sizeof(i), sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, sizeof(i), sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+}
+
+void builtin_memset() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  __builtin_memset(&i, 0, sizeof(i));
+
+  // may be memory-safe but considered unsafe by the check
+  __builtin_memset(&i, 0 , 4); // expected-warning{{function '__builtin_memset' is unsafe}}
+  __builtin___memset_chk(&i, 0 , 4, 4); // expected-warning{{function '__builtin___memset_chk' is unsafe}}
+  __builtin___memset_chk(&i, 0 , sizeof(i), sizeof(i)); // expected-warning{{function '__builtin___memset_chk' is unsafe}}
+}
+
+namespace ms {
+  void memset(void *s, int c, size_t n);
+  void __builtin_memset(void *s, int c, size_t n);
+}
+
+// Custom-written `memset` functions are not included in the check.
+// Note: `using namespace ms;` results in compilation errors
+// ("call to 'memset' is ambiguous") which block other warnings,
+// so we don't include a test for it.
+void using_custom_memset_safe() {
+  int i = 0;
+
+  ms::memset(&i, 0, 10);
+  ms::__builtin_memset(&i, 0, 10);
+
+  using ms::memset;
+  memset(&i, 0, 10);
+  using ms::__builtin_memset;
+  __builtin_memset(&i, 0, 10);
+}
+
+#ifdef TEST_STD_NS
+void qualified_std_memset() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  std::memset(&i, 0, sizeof(i));
+
+  // unsafe
+  std::memset(&i, 0 , 10); // expected-warning{{function 'memset' is unsafe}}
+}
+#endif
+

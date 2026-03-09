@@ -493,14 +493,14 @@ func.func @rank_zero_memref_store(%arg0: i4) -> () {
 //  CHECK-SAME:     %[[ARG0:.+]]: i4
 //       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<i8>
 //       CHECK:   %[[EXTUI:.+]] = arith.extui %[[ARG0]] : i4 to i8
-//       CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i8, memref<i8>) -> i8
+//       CHECK:   memref.store %[[EXTUI]], %[[ALLOC]][] : memref<i8>
 //       CHECK:   return
 
 // CHECK32-LABEL: func @rank_zero_memref
 //  CHECK32-SAME:     %[[ARG0:.+]]: i4
 //       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<i32>
 //       CHECK32:   %[[EXTUI:.+]] = arith.extui %[[ARG0]] : i4 to i32
-//       CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
+//       CHECK32:   memref.store %[[EXTUI]], %[[ALLOC]][] : memref<i32>
 //       CHECK32:   return
 
 // -----
@@ -515,7 +515,7 @@ func.func @rank_zero_memref_store_f4(%arg0: f4E2M1FN) -> () {
 //       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<i8>
 //       CHECK:   %[[BC:.+]] = arith.bitcast %[[ARG0]] : f4E2M1FN to i4
 //       CHECK:   %[[EXTUI:.+]] = arith.extui %[[BC]] : i4 to i8
-//       CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i8, memref<i8>) -> i8
+//       CHECK:   memref.store %[[EXTUI]], %[[ALLOC]][] : memref<i8>
 //       CHECK:   return
 
 // CHECK32-LABEL: func @rank_zero_memref
@@ -523,7 +523,7 @@ func.func @rank_zero_memref_store_f4(%arg0: f4E2M1FN) -> () {
 //       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<i32>
 //       CHECK32:   %[[BC:.+]] = arith.bitcast %[[ARG0]] : f4E2M1FN to i4
 //       CHECK32:   %[[EXTUI:.+]] = arith.extui %[[BC]] : i4 to i32
-//       CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
+//       CHECK32:   memref.store %[[EXTUI]], %[[ALLOC]][] : memref<i32>
 //       CHECK32:   return
 
 // -----

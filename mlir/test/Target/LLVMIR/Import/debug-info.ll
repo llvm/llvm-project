@@ -316,7 +316,7 @@ define void @class_method() {
 ; Verify the cyclic subprogram is handled correctly.
 ; CHECK-DAG: #[[SP_SELF:.+]] = #llvm.di_subprogram<recId = [[REC_ID:.+]], isRecSelf = true>
 ; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_SELF]]>
-; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64, flags = "Artificial|ObjectPointer">
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<recId = [[REC_ID]], id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
 ; CHECK-DAG: #[[LOC]] = loc(fused<#[[SP]]>
@@ -338,10 +338,10 @@ define void @class_method() {
 
 ; Verify the cyclic composite type is handled correctly.
 ; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<recId = [[REC_ID:.+]], isRecSelf = true>
-; CHECK-DAG: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]]>
+; CHECK-DAG: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], flags = "Artificial|ObjectPointer">
 ; CHECK-DAG: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
 ; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<recId = [[REC_ID]], tag = DW_TAG_class_type, name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
-; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]]>
+; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], flags = "Artificial|ObjectPointer">
 ; CHECK-DAG: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
 
 ; CHECK: @class_field

@@ -620,12 +620,6 @@ class PinnedAllocationMapTy {
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
 
-  /// Indicate whether mapped host buffers should be locked automatically.
-  bool LockMappedBuffers;
-
-  /// Indicate whether failures when locking mapped buffers should be ignored.
-  bool IgnoreLockMappedFailures;
-
   /// Find an allocation that intersects with \p HstPtr pointer. Assume the
   /// map's mutex is acquired.
   const EntryTy *findIntersecting(const void *HstPtr) const {
@@ -691,34 +685,7 @@ class PinnedAllocationMapTy {
 
 public:
   /// Create the map of pinned allocations corresponding to a specific device.
-  PinnedAllocationMapTy(GenericDeviceTy &Device) : Device(Device) {
-
-    // Envar that indicates whether mapped host buffers should be locked
-    // automatically. The possible values are boolean (on/off) and a special:
-    //   off:       Mapped host buffers are not locked.
-    //   on:        Mapped host buffers are locked in a best-effort approach.
-    //              Failure to lock the buffers are silent.
-    //   mandatory: Mapped host buffers are always locked and failures to lock
-    //              a buffer results in a fatal error.
-    StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
-                                       "off");
-
-    bool Enabled;
-    if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
-      // Parsed as a boolean value. Enable the feature if necessary.
-      LockMappedBuffers = Enabled;
-      IgnoreLockMappedFailures = true;
-    } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
-      // Enable the feature and failures are fatal.
-      LockMappedBuffers = true;
-      IgnoreLockMappedFailures = false;
-    } else {
-      // Disable by default.
-      ODBG(OLDT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
-                       << OMPX_LockMappedBuffers.get();
-      LockMappedBuffers = false;
-    }
-  }
+  PinnedAllocationMapTy(GenericDeviceTy &Device) : Device(Device) {}
 
   /// Register a buffer that was recently allocated as a locked host buffer.
   /// None of the already registered pinned allocations should intersect with
@@ -734,25 +701,20 @@ public:
   /// not be unlocked by this function.
   Error unregisterHostBuffer(void *HstPtr);
 
-  /// Lock the host buffer at \p HstPtr or register a new user if it intersects
-  /// with an already existing one. A partial overlapping with extension is not
-  /// allowed. The function returns the device accessible pointer of the pinned
-  /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
-  Expected<void *> lockHostBuffer(void *HstPtr, size_t Size);
+  /// Registers and optionally page-locks host memory at \p HstPtr . Registers
+  /// a new user if it intersects with an already existing one, locked outside
+  /// of this API or passed LockMemory parameter as false. A partial overlapping
+  /// with extension is not allowed. The function returns the device accessible
+  /// pointer of the pinned buffer. The buffer must be unlocked using the
+  /// unlockHostBuffer function.
+  Expected<void *> registerMemory(void *HstPtr, size_t Size,
+                                  bool LockMemory = true);
 
-  /// Unlock the host buffer at \p HstPtr or unregister a user if other users
-  /// are still using the pinned allocation. If this was the last user, the
-  /// pinned allocation is removed from the map and the memory is unlocked.
-  Error unlockHostBuffer(void *HstPtr);
-
-  /// Lock or register a host buffer that was recently mapped by libomptarget.
-  /// This behavior is applied if LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS is
-  /// enabled. Even if not enabled, externally locked buffers are registered
-  /// in order to optimize their transfers.
-  Error lockMappedHostBuffer(void *HstPtr, size_t Size);
-
-  /// Unlock or unregister a host buffer that was unmapped by libomptarget.
-  Error unlockUnmappedHostBuffer(void *HstPtr);
+  /// Unregisters and optionally unlocks host memory at \p HstPtr . Unregister a
+  /// user if other users are still using the pinned allocation or passed
+  /// UnlockMemory parameter as false. If this was the last user, the pinned
+  /// allocation is removed from the map and the memory is unlocked.
+  Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
 
   /// Return the device accessible pointer associated to the host pinned
   /// allocation which the \p HstPtr belongs, if any. Return null in case the
@@ -854,8 +816,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Query for the completion of the pending operations on the __tgt_async_info
   /// structure in a non-blocking manner.
-  Error queryAsync(__tgt_async_info *AsyncInfo);
-  virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo) = 0;
+  Error queryAsync(__tgt_async_info *AsyncInfo, bool ReleaseQueue = true,
+                   bool *IsQueueWorkCompleted = nullptr);
+  virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                               bool *IsQueueWorkCompleted) = 0;
 
   /// Check whether the architecture supports VA management
   virtual bool supportVAManagement() const { return false; }
@@ -878,16 +842,17 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
 
-  /// Pin host memory to optimize transfers and return the device accessible
-  /// pointer that devices should use for memory transfers involving the host
-  /// pinned allocation.
-  Expected<void *> dataLock(void *HstPtr, int64_t Size) {
-    return PinnedAllocs.lockHostBuffer(HstPtr, Size);
+  /// Pin or register host memory to optimize transfers and return the device
+  /// accessible pointer that devices should use for memory transfers involving
+  /// the host pinned allocation.
+  Expected<void *> registerMemory(void *HstPtr, int64_t Size,
+                                  bool LockMemory = true) {
+    return PinnedAllocs.registerMemory(HstPtr, Size, LockMemory);
   }
 
-  /// Unpin a host memory buffer that was previously pinned.
-  Error dataUnlock(void *HstPtr) {
-    return PinnedAllocs.unlockHostBuffer(HstPtr);
+  /// Unregisters and optionally page-unlocks a host memory buffer.
+  Error unregisterMemory(void *HstPtr, bool UnlockMemory = true) {
+    return PinnedAllocs.unregisterMemory(HstPtr, UnlockMemory);
   }
 
   /// Lock the host buffer \p HstPtr with \p Size bytes with the vendor-specific
@@ -903,14 +868,22 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// as source/destination of memory transfers. We can use this information to
   /// lock the host buffer and optimize its memory transfers.
   Error notifyDataMapped(void *HstPtr, int64_t Size) {
-    return PinnedAllocs.lockMappedHostBuffer(HstPtr, Size);
+    auto Err = PinnedAllocs.registerMemory(HstPtr, Size, LockMappedBuffers);
+    if (!Err && !IgnoreLockMappedFailures)
+      return Err.takeError();
+    return Plugin::success();
   }
 
   /// Mark the host buffer with address \p HstPtr as unmapped. This means that
   /// libomptarget removed an existing mapping. If the plugin locked the buffer
   /// in notifyDataMapped, this function should unlock it.
   Error notifyDataUnmapped(void *HstPtr) {
-    return PinnedAllocs.unlockUnmappedHostBuffer(HstPtr);
+    auto Err = PinnedAllocs.unregisterMemory(HstPtr, LockMappedBuffers);
+    if (IgnoreLockMappedFailures) {
+      consumeError(std::move(Err));
+      return Plugin::success();
+    }
+    return Err;
   }
 
   /// Check whether the host buffer with address \p HstPtr is pinned by the
@@ -1205,6 +1178,12 @@ private:
 
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
+
+  /// Indicate whether mapped host buffers should be locked automatically.
+  bool LockMappedBuffers;
+
+  /// Indicate whether failures when locking mapped buffers should be ignored.
+  bool IgnoreLockMappedFailures;
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation

@@ -254,7 +254,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ConditionOptimizerPass(PR);
   initializeAArch64DeadRegisterDefinitionsPass(PR);
   initializeAArch64ExpandPseudoPass(PR);
-  initializeAArch64LoadStoreOptPass(PR);
+  initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
   initializeAArch64O0PreLegalizerCombinerPass(PR);
@@ -387,12 +387,19 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     // for the tiny code model, the maximum TLS size is 1MiB (< 16MiB)
     this->Options.TLSSize = 24;
 
-  // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
-  // MachO/CodeModel::Large, which GlobalISel does not support.
-  if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO &&
+  const bool TargetSupportsGISel =
       TT.getArch() != Triple::aarch64_32 &&
       TT.getEnvironment() != Triple::GNUILP32 &&
-      !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
+      !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
+
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
+  // MachO/CodeModel::Large, which GlobalISel does not support.
+  if (TargetSupportsGISel && EnableGlobalISelAtO != -1 &&
+      (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO ||
+       (!GlobalISelFlag && !Options.EnableGlobalISel))) {
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
@@ -409,6 +416,10 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   // AArch64 supports fixing up the DWARF unwind information.
   if (!getMCAsmInfo()->usesWindowsCFI())
     setCFIFixup(true);
+}
+
+unsigned AArch64TargetMachine::getEnableGlobalISelAtO() const {
+  return EnableGlobalISelAtO;
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
@@ -567,11 +578,16 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
+
+private:
+  bool isGlobalISelOptNone() const;
 };
 
 } // end anonymous namespace
 
 void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "AArch64PassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
@@ -596,6 +612,21 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
+}
+
+// This function checks whether the opt level is explictly set to none,
+// or whether GlobalISel was enabled due to SDAG encountering an optnone
+// function. If the opt level is greater than the level we automatically enable
+// globalisel at, and it wasn't enabled via CLI, we know that it must be because
+// of an optnone function.
+bool AArch64PassConfig::isGlobalISelOptNone() const {
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  return getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(getOptLevel()) >
+              getAArch64TargetMachine().getEnableGlobalISelAtO() &&
+          !GlobalISelFlag);
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -733,7 +764,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() == CodeGenOptLevel::None) {
+  if (isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -750,9 +781,8 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  if (!IsOptNone) {
-    addPass(createAArch64PostLegalizerCombiner(IsOptNone));
+  if (!isGlobalISelOptNone()) {
+    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
@@ -766,7 +796,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (!isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }
@@ -849,7 +879,7 @@ void AArch64PassConfig::addPreSched2() {
   // Use load/store pair instructions when possible.
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoadStoreOpt)
-      addPass(createAArch64LoadStoreOptimizationPass());
+      addPass(createAArch64LoadStoreOptLegacyPass());
   }
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
@@ -872,7 +902,7 @@ void AArch64PassConfig::addPreEmitPass() {
   // at O3, where the Tail Duplication Threshold is set to 4 instructions.
   // Run the load/store optimizer once more.
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive && EnableLoadStoreOpt)
-    addPass(createAArch64LoadStoreOptimizationPass());
+    addPass(createAArch64LoadStoreOptLegacyPass());
 
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive &&
       EnableAArch64CopyPropagation)

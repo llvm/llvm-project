@@ -18,6 +18,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Execution.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
 #include <optional>
@@ -67,6 +68,8 @@ enum class CommentKind {
   CK_VerbatimLineComment,
   CK_Unknown
 };
+
+enum OutputFormatTy { md, yaml, html, json, md_mustache };
 
 CommentKind stringToCommentKind(llvm::StringRef KindStr);
 llvm::StringRef commentKindToString(CommentKind Kind);
@@ -611,8 +614,9 @@ struct Index : public Reference {
   bool operator<(const Index &Other) const;
 
   std::optional<SmallString<16>> JumpToSection;
-  std::vector<Index> Children;
+  llvm::StringMap<Index> Children;
 
+  std::vector<const Index *> getSortedChildren() const;
   void sort();
 };
 
@@ -629,7 +633,8 @@ struct ClangDocContext {
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
-                  clang::DiagnosticsEngine &Diags, bool FTimeTrace = false);
+                  clang::DiagnosticsEngine &Diags, OutputFormatTy Format,
+                  bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
@@ -653,6 +658,7 @@ struct ClangDocContext {
   // A pointer to a DiagnosticsEngine for error reporting.
   clang::DiagnosticsEngine &Diags;
   Index Idx;
+  OutputFormatTy Format;
   int Granularity; // Granularity of ftime trace
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on

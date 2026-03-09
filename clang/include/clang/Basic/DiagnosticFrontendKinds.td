@@ -449,11 +449,6 @@ def warn_simdlen_must_fit_lanes
               "2048-bit, by steps of 128-bit)">,
       InGroup<SIMDLen>;
 
-def warn_pgo_nested_boolean_expr
-    : Warning<
-          "unsupported MC/DC boolean expression; contains an operation with a "
-          "nested boolean expression. Expression will not be covered">,
-      InGroup<PGOCoverage>;
 def warn_pgo_condition_limit
     : Warning<"unsupported MC/DC boolean expression; number of conditions (%0) "
               "exceeds max (%1). Expression will not be covered">,

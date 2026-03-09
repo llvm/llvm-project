@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/PassManager.h"
@@ -76,30 +77,6 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
-// This pattern lowers ConvertLayoutOp by removing the inst_data field from the
-// layout attributes. Since both producer and consumer operations handle data
-// partitioning based on their own inst_data, while maintaining original input
-// and output shape, ConvertLayoutOp does not need to manage inst_data.
-struct ConvertLayoutOpPattern
-    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
-                                PatternRewriter &rewriter) const override {
-    xegpu::DistributeLayoutAttr inputLayout = op.getInputLayoutAttr();
-    xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
-    if (inputLayout.getEffectiveInstDataAsInt().empty() ||
-        targetLayout.getEffectiveInstDataAsInt().empty())
-      return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
-
-    inputLayout = inputLayout.dropInstData();
-    targetLayout = targetLayout.dropInstData();
-    auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(
-        op.getLoc(), op.getType(), op.getSource(), inputLayout, targetLayout);
-    rewriter.replaceOp(op, newOp);
-    return success();
-  }
-};
-
 //===------------------------------------------------------------------------===//
 // The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
 // to partition operations that process large shapes into multiple operations on
@@ -137,35 +114,19 @@ template <typename T, typename>
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   Value value;
-  if constexpr (std::is_same_v<T, OpOperand>)
+  if constexpr (std::is_same_v<T, OpOperand>) {
     value = operandOrResult.get();
-  else
+  } else {
     value = (Value)operandOrResult;
+  }
 
   xegpu::DistributeLayoutAttr layout =
       xegpu::getDistributeLayoutAttr(operandOrResult);
   if (layout && layout.isForSubgroup()) {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
-      // Remove leading unit dimensions from inst_data
-      // For example, if the inst_data is [1, 1, 32]
-      // it will pass [32] as the unroll/blocking size.
-      // Skip it for xegpu nd ops since it will be 2D
-      // TODO: For vectors ops, experiment with the
-      // upstream vector remove leading unit dims patterns,
-      // populateCastAwayVectorLeadingOneDimPatterns.
-      Operation *definingOp = value.getDefiningOp();
-      bool skipLeadingUnitDimRemoval =
-          definingOp &&
-          (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::DpasOp,
-               xegpu::StoreNdOp, xegpu::PrefetchNdOp>(definingOp));
-      if (!skipLeadingUnitDimRemoval) {
-        auto it = llvm::find_if(instData, [](auto val) { return val != 1; });
-        instData.erase(instData.begin(), it);
-      }
       return instData;
     }
-
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
@@ -190,6 +151,18 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       return getTileShape(loadGatherOp->getOpResult(0));
     else
       return getTileShape(loadGatherOp->getOpOperand(0));
+  }
+
+  if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
+    auto inputInstData =
+        convertLayoutOp.getInputLayout().getEffectiveInstDataAsInt();
+    auto targetInstData =
+        convertLayoutOp.getTargetLayout().getEffectiveInstDataAsInt();
+    // return the one with larger size
+    if (computeProduct(inputInstData) >= computeProduct(targetInstData))
+      return inputInstData;
+    else
+      return targetInstData;
   }
 
   if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
@@ -229,7 +202,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     return getTileShape(op->getOpOperand(0));
 
   if (isa<vector::TransposeOp, vector::BroadcastOp, vector::StepOp,
-          vector::ConstantMaskOp, vector::CreateMaskOp>(op))
+          vector::ShapeCastOp, vector::ConstantMaskOp, vector::CreateMaskOp>(
+          op))
     return getTileShape(op->getOpResult(0));
 
   return std::nullopt;
@@ -274,20 +248,26 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
         std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
         return tileShape.has_value() && isUnrollable(result, *tileShape);
       });
-  return hasUnrollableOperands || hasUnrollableResults;
+  // ConvertLayoutOp must be processed to drop the inst_data in the layout
+  bool isConvertLayoutWithInstData = false;
+  if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
+    auto targettLayout = convertLayoutOp.getTargetLayout();
+    if (targettLayout && !targettLayout.getEffectiveInstDataAsInt().empty()) {
+      isConvertLayoutWithInstData = true;
+    }
+  }
+  return hasUnrollableOperands || hasUnrollableResults ||
+         isConvertLayoutWithInstData;
 }
 
 void XeGPUBlockingPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
   Operation *op = getOperation();
 
-  // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
-  // replace the function with recoverTemporaryLayouts
-  // if (!xegpu::recoverTemporaryLayouts(op)) {
-  //   signalPassFailure();
-  //   return;
-  // }
-  xegpu::recoverTemporaryLayoutsDeprecated(op);
+  if (!xegpu::recoverTemporaryLayouts(op)) {
+    signalPassFailure();
+    return;
+  }
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {
@@ -347,13 +327,6 @@ void XeGPUBlockingPass::runOnOperation() {
 
   xegpu::doSCFStructuralTypeConversionWithTensorType(op, converter);
 
-  // Remove leading unit dimensions from vector ops and then
-  // do the unrolling.
-  {
-    RewritePatternSet patterns(ctx);
-    vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
-    (void)applyPatternsGreedily(op, std::move(patterns));
-  }
   xegpu::UnrollOptions options;
   options.setFilterConstraint(
       [&](Operation *op) -> LogicalResult { return success(needsUnroll(op)); });
@@ -402,8 +375,6 @@ void XeGPUBlockingPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(ctx);
-  patterns.add<ConvertLayoutOpPattern>(ctx);
-
   vector::UnrollVectorOptions vectorOptions;
   vectorOptions.setNativeShapeFn(options.nativeShape);
 

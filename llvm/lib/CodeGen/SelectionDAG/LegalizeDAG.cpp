@@ -184,6 +184,7 @@ private:
   SDValue ExpandFNEG(SDNode *Node) const;
   SDValue expandLdexp(SDNode *Node) const;
   SDValue expandFrexp(SDNode *Node) const;
+  SDValue expandModf(SDNode *Node) const;
 
   SDValue ExpandLegalINT_TO_FP(SDNode *Node, SDValue &Chain);
   void PromoteLegalINT_TO_FP(SDNode *N, const SDLoc &dl,
@@ -1981,7 +1982,7 @@ ExpandBVWithShuffles(SDNode *Node, SelectionDAG &DAG,
     if (IntermedVals.size() > 1)
       Vec2 = IntermedVals[1].first;
     else if (Phase)
-      Vec2 = DAG.getUNDEF(VT);
+      Vec2 = DAG.getPOISON(VT);
 
     SmallVector<int, 16> ShuffleVec(NumElems, -1);
     for (unsigned i = 0, e = IntermedVals[0].second.size(); i != e; ++i)
@@ -2097,7 +2098,7 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
         if (Value2.getNode())
           Vec2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value2);
         else
-          Vec2 = DAG.getUNDEF(VT);
+          Vec2 = DAG.getPOISON(VT);
 
         // Return shuffle(LowValVec, undef, <0,0,0,0>)
         return DAG.getVectorShuffle(VT, dl, Vec1, Vec2, ShuffleVec);
@@ -2132,7 +2133,7 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                                     bool IsSigned, EVT RetVT) {
   EVT CodePtrTy = TLI.getPointerTy(DAG.getDataLayout());
   SDValue Callee;
-  RTLIB::LibcallImpl LCImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl != RTLIB::Unsupported)
     Callee = DAG.getExternalSymbol(LCImpl, CodePtrTy);
   else {
@@ -2163,8 +2164,8 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   bool signExtend = TLI.shouldSignExtendTypeInLibCall(RetTy, IsSigned);
   CLI.setDebugLoc(SDLoc(Node))
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallImplCallingConv(LCImpl), RetTy, Callee,
-                    std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                    Callee, std::move(Args))
       .setTailCall(isTailCall)
       .setSExtResult(signExtend)
       .setZExtResult(!signExtend)
@@ -2258,7 +2259,7 @@ void SelectionDAGLegalize::ExpandFastFPLibCall(
                              Call_F128.first, Call_PPCF128.first);
   }
 
-  if (!IsFast || TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
+  if (!IsFast || DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
     // Fall back if we don't have a fast implementation.
     LC = RTLIB::getFPLibCall(VT, Call_F32.second, Call_F64.second,
                              Call_F80.second, Call_F128.second,
@@ -2387,7 +2388,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   Entry.IsZExt = !isSigned;
   Args.push_back(Entry);
 
-  RTLIB::LibcallImpl LibcallImpl = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LibcallImpl == RTLIB::Unsupported) {
     DAG.getContext()->emitError(Twine("no libcall available for ") +
                                 Node->getOperationName(&DAG));
@@ -2404,8 +2405,8 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(TLI.getLibcallImplCallingConv(LibcallImpl), RetTy, Callee,
-                    std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl),
+                    RetTy, Callee, std::move(Args))
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
 
@@ -2422,10 +2423,12 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
 }
 
 /// Return true if sincos or __sincos_stret libcall is available.
-static bool isSinCosLibcallAvailable(SDNode *Node, const TargetLowering &TLI) {
+static bool isSinCosLibcallAvailable(SDNode *Node,
+                                     const LibcallLoweringInfo &Libcalls) {
   MVT::SimpleValueType VT = Node->getSimpleValueType(0).SimpleTy;
-  return TLI.getLibcallImpl(RTLIB::getSINCOS(VT)) != RTLIB::Unsupported ||
-         TLI.getLibcallImpl(RTLIB::getSINCOS_STRET(VT)) != RTLIB::Unsupported;
+  return Libcalls.getLibcallImpl(RTLIB::getSINCOS(VT)) != RTLIB::Unsupported ||
+         Libcalls.getLibcallImpl(RTLIB::getSINCOS_STRET(VT)) !=
+             RTLIB::Unsupported;
 }
 
 /// Only issue sincos libcall if both sin and cos are needed.
@@ -2451,7 +2454,7 @@ SDValue SelectionDAGLegalize::ExpandSincosStretLibCall(SDNode *Node) const {
   SDValue Arg = Node->getOperand(0);
   EVT ArgVT = Arg.getValueType();
   RTLIB::Libcall LC = RTLIB::getSINCOS_STRET(ArgVT);
-  RTLIB::LibcallImpl SincosStret = TLI.getLibcallImpl(LC);
+  RTLIB::LibcallImpl SincosStret = DAG.getLibcalls().getLibcallImpl(LC);
   if (SincosStret == RTLIB::Unsupported)
     return SDValue();
 
@@ -2767,6 +2770,34 @@ SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
       DAG.getNode(ISD::SELECT, dl, ExpVT, DenormOrZero, Zero, ComputedExp);
 
   return DAG.getMergeValues({Result0, Result1}, dl);
+}
+
+SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  SDNodeFlags Flags = Node->getFlags();
+
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
+  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
+
+  SDValue FracToUse;
+  if (Flags.hasNoInfs()) {
+    FracToUse = FracPart;
+  } else {
+    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
+    EVT SetCCVT =
+        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
+    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
+    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
+  }
+
+  SDValue ResultFrac =
+      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
+  return DAG.getMergeValues({ResultFrac, IntPart}, dl);
 }
 
 /// This function is responsible for legalizing a
@@ -3216,6 +3247,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if ((Tmp1 = TLI.expandCTLZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
+  case ISD::CTLS:
+    if ((Tmp1 = TLI.expandCTLS(Node, DAG)))
+      Results.push_back(Tmp1);
+    break;
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
     if ((Tmp1 = TLI.expandCTTZ(Node, DAG)))
@@ -3491,6 +3526,242 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Op = DAG.getAnyExtOrTrunc(Op, dl, Node->getValueType(0));
     }
     Results.push_back(Op);
+    break;
+  }
+  case ISD::CONVERT_FROM_ARBITRARY_FP: {
+    // Expand conversion from arbitrary FP format stored in an integer to a
+    // native IEEE float type using integer bit manipulation.
+    //
+    // TODO: currently only conversions from FP4, FP6 and FP8 formats from OCP
+    // specification are expanded. Remaining arbitrary FP types: Float8E4M3,
+    // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
+    // Float8E8M0FNU.
+    EVT DstVT = Node->getValueType(0);
+
+    SDValue IntVal = Node->getOperand(0);
+    const uint64_t SemEnum = Node->getConstantOperandVal(1);
+    const auto Sem = static_cast<APFloatBase::Semantics>(SemEnum);
+
+    // Supported source formats.
+    switch (Sem) {
+    case APFloatBase::S_Float8E5M2:
+    case APFloatBase::S_Float8E4M3FN:
+    case APFloatBase::S_Float6E3M2FN:
+    case APFloatBase::S_Float6E2M3FN:
+    case APFloatBase::S_Float4E2M1FN:
+      break;
+    default:
+      DAG.getContext()->emitError("CONVERT_FROM_ARBITRARY_FP: not implemented "
+                                  "source format (semantics enum " +
+                                  Twine(SemEnum) + ")");
+      Results.push_back(DAG.getPOISON(DstVT));
+      break;
+    }
+    if (!Results.empty())
+      break;
+
+    const fltSemantics &SrcSem = APFloatBase::EnumToSemantics(Sem);
+
+    const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
+    const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
+    const unsigned SrcMant = SrcPrecision - 1;
+    const unsigned SrcExp = SrcBits - SrcMant - 1;
+    const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
+
+    const fltNonfiniteBehavior NFBehavior = SrcSem.nonFiniteBehavior;
+
+    // Destination format parameters.
+    const fltSemantics &DstSem = DstVT.getFltSemantics();
+
+    const unsigned DstBits = APFloat::getSizeInBits(DstSem);
+    const unsigned DstMant = APFloat::semanticsPrecision(DstSem) - 1;
+    const unsigned DstExpBits = DstBits - DstMant - 1;
+    const int DstMinExp = APFloat::semanticsMinExponent(DstSem);
+    const int DstBias = 1 - DstMinExp;
+    const uint64_t DstExpAllOnes = (1ULL << DstExpBits) - 1;
+
+    // Work in an integer type matching the destination float width.
+    // Use zero-extend to preserve the raw bit-pattern.
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
+    SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
+
+    EVT SetCCVT = getSetCCResultType(IntVT);
+
+    SDValue Zero = DAG.getConstant(0, dl, IntVT);
+    SDValue One = DAG.getConstant(1, dl, IntVT);
+
+    // Extract bit fields.
+    const uint64_t MantMask = (SrcMant > 0) ? ((1ULL << SrcMant) - 1) : 0;
+    const uint64_t ExpMask = (1ULL << SrcExp) - 1;
+
+    SDValue MantField = DAG.getNode(ISD::AND, dl, IntVT, Src,
+                                    DAG.getConstant(MantMask, dl, IntVT));
+
+    SDValue ExpField =
+        DAG.getNode(ISD::AND, dl, IntVT,
+                    DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                                DAG.getShiftAmountConstant(SrcMant, IntVT, dl)),
+                    DAG.getConstant(ExpMask, dl, IntVT));
+
+    SDValue SignBit =
+        DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                    DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
+
+    // Precompute sign shifted to MSB of destination.
+    SDValue SignShifted =
+        DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
+                    DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl));
+
+    // Classify the input value based on compile-time format properties.
+    SDValue ExpAllOnes = DAG.getConstant(ExpMask, dl, IntVT);
+    SDValue IsExpAllOnes =
+        DAG.getSetCC(dl, SetCCVT, ExpField, ExpAllOnes, ISD::SETEQ);
+    SDValue IsExpZero = DAG.getSetCC(dl, SetCCVT, ExpField, Zero, ISD::SETEQ);
+    SDValue IsMantZero = DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETEQ);
+    SDValue IsMantNonZero =
+        DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETNE);
+
+    // NaN detection.
+    SDValue IsNaN;
+    if (NFBehavior == fltNonfiniteBehavior::FiniteOnly) {
+      // FiniteOnly formats (E2M1FN, E3M2FN, E2M3FN) never produce NaN.
+      IsNaN = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
+    } else if (NFBehavior == fltNonfiniteBehavior::IEEE754) {
+      // E5M2 produces NaN when exp == all-ones AND mantissa != 0.
+      IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantNonZero);
+    } else {
+      // NanOnly + AllOnes (E4M3FN): NaN when all exp and mantissa bits are 1.
+      assert(SrcSem.nanEncoding == fltNanEncoding::AllOnes);
+      SDValue MantAllOnes = DAG.getConstant(MantMask, dl, IntVT);
+      SDValue IsMantAllOnes =
+          DAG.getSetCC(dl, SetCCVT, MantField, MantAllOnes, ISD::SETEQ);
+      IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantAllOnes);
+    }
+
+    // Inf detection.
+    SDValue IsInf;
+    if (NFBehavior == fltNonfiniteBehavior::IEEE754) {
+      // E5M2: Inf when exp == all-ones AND mantissa == 0.
+      IsInf = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantZero);
+    } else {
+      // NanOnly and FiniteOnly formats have no Inf representation.
+      IsInf = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
+    }
+
+    // Zero detection.
+    SDValue IsZero = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantZero);
+
+    // Denorm detection: exp == 0 AND mant != 0.
+    SDValue IsDenorm =
+        DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantNonZero);
+
+    // Normal value conversion.
+    // dst_exp = exp_field + (DstBias - SrcBias)
+    // dst_mant = mant << (DstMant - SrcMant)
+    const int BiasAdjust = DstBias - SrcBias;
+    SDValue NormDstExp = DAG.getNode(
+        ISD::ADD, dl, IntVT, ExpField,
+        DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
+
+    SDValue NormDstMant;
+    if (DstMant > SrcMant) {
+      SDValue NormDstMantShift =
+          DAG.getShiftAmountConstant(DstMant - SrcMant, IntVT, dl);
+      NormDstMant =
+          DAG.getNode(ISD::SHL, dl, IntVT, MantField, NormDstMantShift);
+    } else {
+      NormDstMant = MantField;
+    }
+
+    // Assemble normal result.
+    SDValue DstMantShift = DAG.getShiftAmountConstant(DstMant, IntVT, dl);
+    SDValue NormExpShifted =
+        DAG.getNode(ISD::SHL, dl, IntVT, NormDstExp, DstMantShift);
+    SDValue NormResult = DAG.getNode(
+        ISD::OR, dl, IntVT,
+        DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
+        NormDstMant);
+
+    // Denormal value conversion.
+    // For a denormal source (exp_field == 0, mant != 0), normalize by finding
+    // the MSB position of mant using CTLZ, then compute the correct
+    // exponent and mantissa for the destination format.
+    SDValue DenormResult;
+    {
+      const unsigned IntVTBits = DstBits;
+      SDValue LeadingZeros =
+          DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, IntVT, MantField);
+
+      // dst_exp_denorm = (IntVTBits + DstBias - SrcBias - SrcMant) -
+      // LeadingZeros
+      const int DenormExpConst =
+          (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
+      SDValue DenormDstExp = DAG.getNode(
+          ISD::SUB, dl, IntVT,
+          DAG.getConstant(APInt(DstBits, DenormExpConst, true), dl, IntVT),
+          LeadingZeros);
+
+      // MSB position of the mantissa (0-indexed from LSB).
+      SDValue MantMSB =
+          DAG.getNode(ISD::SUB, dl, IntVT,
+                      DAG.getConstant(IntVTBits - 1, dl, IntVT), LeadingZeros);
+
+      // leading_one = 1 << MantMSB
+      SDValue LeadingOne = DAG.getNode(ISD::SHL, dl, IntVT, One, MantMSB);
+
+      // frac = mant XOR leading_one (strip the implicit 1)
+      SDValue Frac = DAG.getNode(ISD::XOR, dl, IntVT, MantField, LeadingOne);
+
+      // shift_amount = DstMant - MantMSB
+      //              = DstMant - (IntVTBits - 1 - LeadingZeros)
+      //              = LeadingZeros - (IntVTBits - 1 - DstMant)
+      const unsigned ShiftSub = IntVTBits - 1 - DstMant; // always >= 0
+      SDValue ShiftAmount = DAG.getNode(ISD::SUB, dl, IntVT, LeadingZeros,
+                                        DAG.getConstant(ShiftSub, dl, IntVT));
+
+      SDValue DenormDstMant =
+          DAG.getNode(ISD::SHL, dl, IntVT, Frac, ShiftAmount);
+
+      // Assemble denorm as sign | (denorm_dst_exp << DstMant) | denorm_dst_mant
+      SDValue DenormExpShifted =
+          DAG.getNode(ISD::SHL, dl, IntVT, DenormDstExp, DstMantShift);
+      DenormResult = DAG.getNode(
+          ISD::OR, dl, IntVT,
+          DAG.getNode(ISD::OR, dl, IntVT, SignShifted, DenormExpShifted),
+          DenormDstMant);
+    }
+
+    // Select between normal and denorm paths.
+    SDValue FiniteResult =
+        DAG.getSelect(dl, IntVT, IsDenorm, DenormResult, NormResult);
+
+    // Build special-value results.
+    // NaN -> canonical quiet NaN: sign=0, exp=all-ones, qNaN bit set.
+    // Encoding: (DstExpAllOnes << DstMant) | (1 << (DstMant - 1))
+    const uint64_t QNaNBit = (DstMant > 0) ? (1ULL << (DstMant - 1)) : 0;
+    SDValue NaNResult =
+        DAG.getConstant((DstExpAllOnes << DstMant) | QNaNBit, dl, IntVT);
+
+    // Inf -> destination Inf.
+    // sign | (DstExpAllOnes << DstMant)
+    SDValue InfResult =
+        DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
+                    DAG.getConstant(DstExpAllOnes << DstMant, dl, IntVT));
+
+    // Zero -> signed zero.
+    // Sign bit only.
+    SDValue ZeroResult = SignShifted;
+
+    // Final selection goes in order: NaN takes priority, then Inf, then Zero.
+    SDValue Result = FiniteResult;
+    Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
+    Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
+    Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
+
+    // Bitcast integer result to destination float type.
+    Result = DAG.getNode(ISD::BITCAST, dl, DstVT, Result);
+
+    Results.push_back(Result);
     break;
   }
   case ISD::FCANONICALIZE: {
@@ -3878,7 +4149,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Turn fsin / fcos into ISD::FSINCOS node if there are a pair of fsin /
     // fcos which share the same operand and both are used.
     if ((TLI.isOperationLegal(ISD::FSINCOS, VT) ||
-         isSinCosLibcallAvailable(Node, TLI)) &&
+         isSinCosLibcallAvailable(Node, DAG.getLibcalls())) &&
         useSinCos(Node)) {
       SDVTList VTs = DAG.getVTList(VT, VT);
       Tmp1 = DAG.getNode(ISD::FSINCOS, dl, VTs, Node->getOperand(0));
@@ -3894,7 +4165,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getLDEXP(VT);
     // Use the LibCall instead, it is very likely faster
     // FIXME: Use separate LibCall action.
-    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
     if (SDValue Expanded = expandLdexp(Node)) {
@@ -3909,7 +4180,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
     // Use the LibCall instead, it is very likely faster
     // FIXME: Use separate LibCall action.
-    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported)
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
       break;
 
     if (SDValue Expanded = expandFrexp(Node)) {
@@ -3918,8 +4189,21 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
+  case ISD::FMODF: {
+    RTLIB::Libcall LC = RTLIB::getMODF(Node->getValueType(0));
+    // Use the LibCall instead, it is very likely faster
+    // FIXME: Use separate LibCall action.
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
+      break;
+
+    if (SDValue Expanded = expandModf(Node)) {
+      Results.push_back(Expanded);
+      Results.push_back(Expanded.getValue(1));
+    }
+    break;
+  }
   case ISD::FSINCOS: {
-    if (isSinCosLibcallAvailable(Node, TLI))
+    if (isSinCosLibcallAvailable(Node, DAG.getLibcalls()))
       break;
     EVT VT = Node->getValueType(0);
     SDValue Op = Node->getOperand(0);
@@ -4717,7 +5001,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, Order, VT);
     EVT RetVT = Node->getValueType(0);
     SmallVector<SDValue, 4> Ops;
-    if (TLI.getLibcallImpl(LC) != RTLIB::Unsupported) {
+    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported) {
       // If outline atomic available, prepare its arguments and expand.
       Ops.append(Node->op_begin() + 2, Node->op_end());
       Ops.push_back(Node->getOperand(1));
@@ -4983,7 +5267,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::STRICT_FPOWI: {
     RTLIB::Libcall LC = RTLIB::getPOWI(Node->getSimpleValueType(0));
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
-    if (TLI.getLibcallImpl(LC) == RTLIB::Unsupported) {
+    if (DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
       // Some targets don't have a powi libcall; use pow instead.
       if (Node->isStrictFPOpcode()) {
         SDValue Exponent =

@@ -638,3 +638,552 @@ class ScriptedFrameProviderTestCase(TestBase):
         frame2 = thread.GetFrameAtIndex(2)
         self.assertIsNotNone(frame2)
         self.assertIn("thread_func", frame2.GetFunctionName())
+
+    def test_chained_frame_providers(self):
+        """Test that multiple frame providers chain together."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        # Get original frame count.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the test frame providers.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register 3 providers with different priorities.
+        # Each provider adds 1 frame at the beginning.
+        error = lldb.SBError()
+
+        # Provider 1: Priority 10 - adds "foo" frame
+        provider_id_1 = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.AddFooFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register foo provider: {error}")
+
+        # Provider 2: Priority 20 - adds "bar" frame
+        provider_id_2 = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.AddBarFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register bar provider: {error}")
+
+        # Provider 3: Priority 30 - adds "baz" frame
+        provider_id_3 = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.AddBazFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register baz provider: {error}")
+
+        # Verify we have 3 more frames (one from each provider).
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 3,
+            "Should have original frames + 3 chained frames",
+        )
+
+        # Verify the chaining order: baz, bar, foo, then real frames.
+        # Since priority is lower = higher, the order should be:
+        # Provider 1 (priority 10) transforms real frames first -> adds "foo"
+        # Provider 2 (priority 20) transforms Provider 1's output -> adds "bar"
+        # Provider 3 (priority 30) transforms Provider 2's output -> adds "baz"
+        # So final stack is: baz, bar, foo, real frames...
+
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        self.assertEqual(
+            frame0.GetFunctionName(),
+            "baz",
+            "Frame 0 should be 'baz' from last provider in chain",
+        )
+        self.assertEqual(frame0.GetPC(), 0xBAC)
+
+        frame1 = thread.GetFrameAtIndex(1)
+        self.assertIsNotNone(frame1)
+        self.assertEqual(
+            frame1.GetFunctionName(),
+            "bar",
+            "Frame 1 should be 'bar' from second provider in chain",
+        )
+        self.assertEqual(frame1.GetPC(), 0xBAA)
+
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertIsNotNone(frame2)
+        self.assertEqual(
+            frame2.GetFunctionName(),
+            "foo",
+            "Frame 2 should be 'foo' from first provider in chain",
+        )
+        self.assertEqual(frame2.GetPC(), 0xF00)
+
+        # Frame 3 should be the original real frame 0.
+        frame3 = thread.GetFrameAtIndex(3)
+        self.assertIsNotNone(frame3)
+        self.assertIn("thread_func", frame3.GetFunctionName())
+
+    def test_get_values(self):
+        """Test a frame that provides values."""
+        self.build()
+        # Set the breakpoint after the variable_in_main variable exists and can be queried.
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self,
+            "Breakpoint for variable tests",
+            lldb.SBFileSpec(self.source),
+            only_one_thread=False,
+        )
+
+        # Get original frame count.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the test frame providers.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register a provider that can provide variables.
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ValueProvidingFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+
+        # Verify we have 1 more frame.
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 1,
+            "Should have original frames + 1 extra frames",
+        )
+
+        # Check that we can get variables from this frame.
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        # Get every variable visible at this point
+        variables = frame0.GetVariables(True, True, True, False)
+        self.assertTrue(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 1)
+
+        # Check that we can get values from paths. `_handler_one` is a special
+        # value we provide through only our expression handler in the frame
+        # implementation.
+        one = frame0.GetValueForVariablePath("_handler_one")
+        self.assertEqual(one.unsigned, 1)
+        var = frame0.GetValueForVariablePath("variable_in_main")
+        # The names won't necessarily match, but the values should (the frame renames the SBValue)
+        self.assertEqual(var.unsigned, variables.GetValueAtIndex(0).unsigned)
+        varp1 = frame0.GetValueForVariablePath("variable_in_main + 1")
+        self.assertEqual(varp1.unsigned, 124)
+
+    def test_frame_validity_after_step(self):
+        """Test that SBFrame references from ScriptedFrameProvider remain valid after stepping.
+
+        This test verifies that ExecutionContextRef properly handles frame list identifiers
+        when the underlying stack changes. After stepping, old frame references should become
+        invalid gracefully without crashing.
+        """
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        # Import the test frame provider.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register a provider that prepends synthetic frames.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.PrependFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+
+        # Get frame references before stepping.
+        frame0_before = thread.GetFrameAtIndex(0)
+        frame1_before = thread.GetFrameAtIndex(1)
+        frame2_before = thread.GetFrameAtIndex(2)
+
+        self.assertIsNotNone(frame0_before)
+        self.assertIsNotNone(frame1_before)
+        self.assertIsNotNone(frame2_before)
+
+        # Verify frames are valid and have expected PCs.
+        self.assertTrue(frame0_before.IsValid(), "Frame 0 should be valid before step")
+        self.assertTrue(frame1_before.IsValid(), "Frame 1 should be valid before step")
+        self.assertTrue(frame2_before.IsValid(), "Frame 2 should be valid before step")
+
+        pc0_before = frame0_before.GetPC()
+        pc1_before = frame1_before.GetPC()
+        pc2_before = frame2_before.GetPC()
+
+        self.assertEqual(pc0_before, 0x9000, "Frame 0 should have synthetic PC 0x9000")
+        self.assertEqual(pc1_before, 0xA000, "Frame 1 should have synthetic PC 0xA000")
+
+        # Step the thread, which will invalidate the old frame list.
+        thread.StepInstruction(False)
+
+        # After stepping, the frame list has changed. Old frame references should
+        # detect this and become invalid, but shouldn't crash.
+        # The key here is that GetPC() and other operations should handle the
+        # "frame provider no longer available" case gracefully.
+
+        # Try to access the old frames - they should either:
+        # 1. Return invalid/default values gracefully, or
+        # 2. Still work if the frame provider is re-applied.
+
+        # Get new frames after stepping.
+        frame0_after = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0_after)
+        self.assertTrue(
+            frame0_after.IsValid(), "New frame 0 should be valid after step"
+        )
+
+        # The old frame references might or might not be valid depending on whether
+        # the frame provider is still active. What's important is that accessing
+        # them doesn't crash and handles the situation gracefully.
+        # We'll just verify we can call methods on them without crashing.
+        try:
+            _ = frame0_before.GetPC()
+            _ = frame0_before.IsValid()
+            _ = frame0_before.GetFunctionName()
+        except Exception as e:
+            self.fail(f"Accessing old frame reference should not crash: {e}")
+
+    def test_provider_lifecycle_with_frame_validity(self):
+        """Test provider registration/removal at breakpoints and SBFrame validity across lifecycle.
+
+        This test verifies:
+        1. Registering a provider while stopped at a breakpoint.
+        2. SBFrame references from synthetic frames persist across continues.
+        3. SBFrame references can access variables in real frames while provider is active.
+        4. Removing a provider while stopped at a breakpoint.
+        5. SBFrame references from removed provider don't crash when accessed.
+        """
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target.IsValid(), "Target should be valid")
+
+        # Import the test frame provider.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Set up breakpoints at the return statements in foo, bar, and baz.
+        # This ensures local variables are initialized.
+        bp_foo = target.BreakpointCreateBySourceRegex(
+            "Break in foo", lldb.SBFileSpec(self.source)
+        )
+        bp_bar = target.BreakpointCreateBySourceRegex(
+            "Break in bar", lldb.SBFileSpec(self.source)
+        )
+        bp_baz = target.BreakpointCreateBySourceRegex(
+            "Break in baz", lldb.SBFileSpec(self.source)
+        )
+
+        self.assertTrue(bp_foo.IsValid(), "Breakpoint at foo should be valid")
+        self.assertTrue(bp_bar.IsValid(), "Breakpoint at bar should be valid")
+        self.assertTrue(bp_baz.IsValid(), "Breakpoint at baz should be valid")
+
+        # Launch the process.
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process.IsValid(), "Process should be valid")
+
+        # We should hit the foo breakpoint first.
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped, "Process should be stopped at foo"
+        )
+        thread = process.GetSelectedThread()
+        self.assertIsNotNone(thread, "Should have a selected thread")
+
+        # Register the provider at foo breakpoint.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.PrependFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # Get individual frames BEFORE getting the full backtrace.
+        # This tests accessing frames before forcing evaluation of all frames.
+        frame0 = thread.GetFrameAtIndex(0)
+        frame1 = thread.GetFrameAtIndex(1)
+        frame2 = thread.GetFrameAtIndex(2)
+
+        self.assertIsNotNone(frame0, "Frame 0 should exist")
+        self.assertIsNotNone(frame1, "Frame 1 should exist")
+        self.assertIsNotNone(frame2, "Frame 2 should exist")
+
+        # First two frames should be synthetic with expected PCs.
+        pc0 = frame0.GetPC()
+        pc1 = frame1.GetPC()
+
+        self.assertEqual(pc0, 0x9000, "Frame 0 should have synthetic PC 0x9000")
+        self.assertEqual(pc1, 0xA000, "Frame 1 should have synthetic PC 0xA000")
+
+        # Frame 2 should be the real foo frame.
+        self.assertIn("foo", frame2.GetFunctionName(), "Frame 2 should be in foo")
+
+        # Save references to the synthetic frames.
+        saved_frames = [frame0, frame1, frame2]
+
+        # Test accessing saved frames at foo BEFORE getting full backtrace.
+        try:
+            _ = saved_frames[0].GetPC()
+            _ = saved_frames[1].GetPC()
+            _ = saved_frames[2].GetFunctionName()
+        except Exception as e:
+            self.fail(
+                f"Accessing saved frames at foo before full backtrace should not crash: {e}"
+            )
+
+        # Now verify the provider is active by checking frame count.
+        # PrependFrameProvider adds 2 synthetic frames.
+        # This forces a full backtrace evaluation.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreater(
+            original_frame_count,
+            2,
+            "Should have at least synthetic frames + real frames",
+        )
+
+        # Test accessing saved frames at foo AFTER getting full backtrace.
+        try:
+            _ = saved_frames[0].GetPC()
+            _ = saved_frames[1].GetPC()
+            _ = saved_frames[2].GetFunctionName()
+        except Exception as e:
+            self.fail(
+                f"Accessing saved frames at foo after full backtrace should not crash: {e}"
+            )
+
+        # Verify we can access variables in frame2 (real frame).
+        foo_local = frame2.FindVariable("foo_local")
+        self.assertTrue(foo_local.IsValid(), "Should find foo_local variable")
+        self.assertEqual(
+            foo_local.GetValueAsUnsigned(), 20, "foo_local should be 20 (10 * 2)"
+        )
+
+        # Continue to bar breakpoint.
+        threads = lldbutil.continue_to_breakpoint(process, bp_bar)
+        self.assertIsNotNone(threads, "Should have stopped at bar breakpoint")
+        self.assertEqual(len(threads), 1, "Should have one thread stopped at bar")
+        thread = threads[0]
+
+        # Verify the saved frames are still accessible without crashing at bar.
+        # Do this BEFORE getting the full backtrace.
+        # Note: They might not be "valid" in the traditional sense since we've moved
+        # to a different execution context, but they shouldn't crash.
+        try:
+            _ = saved_frames[0].GetPC()
+            _ = saved_frames[1].GetPC()
+        except Exception as e:
+            self.fail(
+                f"Accessing saved frames at bar before full backtrace should not crash: {e}"
+            )
+
+        # Verify the provider is still active by getting frame count.
+        # This forces full backtrace evaluation.
+        current_frame_count = thread.GetNumFrames()
+        self.assertGreater(
+            current_frame_count, 2, "Should still have synthetic frames at bar"
+        )
+
+        # Access the saved frames again AFTER getting the full backtrace.
+        # This ensures that forcing a full backtrace evaluation doesn't break
+        # the saved frame references.
+        try:
+            _ = saved_frames[0].GetPC()
+            _ = saved_frames[1].GetPC()
+        except Exception as e:
+            self.fail(
+                f"Accessing saved frames at bar after full backtrace should not crash: {e}"
+            )
+
+        # Get current frames at bar.
+        bar_frame0 = thread.GetFrameAtIndex(0)
+        bar_frame1 = thread.GetFrameAtIndex(1)
+        bar_frame2 = thread.GetFrameAtIndex(2)
+
+        # Verify current frames have synthetic PCs.
+        self.assertEqual(
+            bar_frame0.GetPC(), 0x9000, "Frame 0 at bar should have synthetic PC"
+        )
+        self.assertEqual(
+            bar_frame1.GetPC(), 0xA000, "Frame 1 at bar should have synthetic PC"
+        )
+        self.assertIn("bar", bar_frame2.GetFunctionName(), "Frame 2 should be in bar")
+
+        # Verify we can access variables in the bar frame.
+        bar_local = bar_frame2.FindVariable("bar_local")
+        self.assertTrue(bar_local.IsValid(), "Should find bar_local variable")
+        self.assertEqual(
+            bar_local.GetValueAsUnsigned(), 25, "bar_local should be 25 (5 * 5)"
+        )
+
+        # Continue to baz breakpoint.
+        threads = lldbutil.continue_to_breakpoint(process, bp_baz)
+        self.assertIsNotNone(threads, "Should have stopped at baz breakpoint")
+        self.assertEqual(len(threads), 1, "Should have one thread stopped at baz")
+        thread = threads[0]
+
+        # Verify the saved frames are still accessible without crashing at baz.
+        # Do this BEFORE getting the full backtrace.
+        try:
+            _ = saved_frames[0].GetPC()
+            _ = saved_frames[1].GetPC()
+            _ = saved_frames[2].GetFunctionName()
+        except Exception as e:
+            self.fail(
+                f"Accessing saved frames at baz before full backtrace should not crash: {e}"
+            )
+
+        # Get the frame count to force full backtrace evaluation at baz.
+        baz_frame_count = thread.GetNumFrames()
+        self.assertGreater(
+            baz_frame_count, 2, "Should still have synthetic frames at baz"
+        )
+
+        # Verify the saved frames are still accessible AFTER getting full backtrace at baz.
+        try:
+            _ = saved_frames[0].GetPC()
+            _ = saved_frames[1].GetPC()
+            _ = saved_frames[2].GetFunctionName()
+        except Exception as e:
+            self.fail(
+                f"Accessing saved frames at baz after full backtrace should not crash: {e}"
+            )
+
+        # Now manually remove the provider.
+        result = target.RemoveScriptedFrameProvider(provider_id)
+        self.assertSuccess(
+            result, f"Should successfully remove provider with ID {provider_id}"
+        )
+        # Verify frames no longer have synthetic frames.
+        final_frame_count = thread.GetNumFrames()
+
+        # Without the provider, we should have fewer frames (no synthetic ones).
+        self.assertLess(
+            final_frame_count,
+            original_frame_count,
+            "Frame count should decrease after provider removal",
+        )
+
+        # First frame should now be the real baz frame (no synthetic frames).
+        baz_frame0 = thread.GetFrameAtIndex(0)
+        self.assertIn(
+            "baz", baz_frame0.GetFunctionName(), "Frame 0 should now be real baz frame"
+        )
+
+        # The synthetic PC values should no longer appear.
+        for i in range(final_frame_count):
+            frame = thread.GetFrameAtIndex(i)
+            pc = frame.GetPC()
+            self.assertNotEqual(
+                pc, 0x9000, f"Frame {i} should not have synthetic PC 0x9000"
+            )
+            self.assertNotEqual(
+                pc, 0xA000, f"Frame {i} should not have synthetic PC 0xA000"
+            )
+
+        # Verify the originally saved frames are now truly invalid/stale.
+        # They should still not crash when accessed.
+        try:
+            _ = saved_frames[0].GetPC()
+            _ = saved_frames[0].IsValid()
+            _ = saved_frames[1].GetPC()
+            _ = saved_frames[1].IsValid()
+        except Exception as e:
+            self.fail(f"Accessing invalidated frames should not crash: {e}")
+
+    def test_event_broadcasting(self):
+        """Test that adding/removing frame providers broadcasts eBroadcastBitStackChanged."""
+        self.build()
+
+        listener = lldb.SBListener("stack_changed_listener")
+        listener.StartListeningForEventClass(
+            self.dbg,
+            lldb.SBThread.GetBroadcasterClassName(),
+            lldb.SBThread.eBroadcastBitStackChanged,
+        )
+
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        expected_thread_ids = {
+            process.GetThreadAtIndex(i).GetIndexID()
+            for i in range(process.GetNumThreads())
+        }
+
+        def collect_stack_changed_thread_ids(count):
+            event = lldb.SBEvent()
+            thread_ids = set()
+            for _ in range(count):
+                if not listener.WaitForEvent(5, event):
+                    break
+                self.assertEqual(
+                    event.GetType(),
+                    lldb.SBThread.eBroadcastBitStackChanged,
+                    "Event should be stack changed",
+                )
+                thread_ids.add(lldb.SBThread.GetThreadFromEvent(event).GetIndexID())
+            return thread_ids
+
+        # Import the test frame provider.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # 1. Test registration.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ReplaceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertSuccess(error, f"Failed to register provider: {error}")
+        self.assertEqual(
+            collect_stack_changed_thread_ids(len(expected_thread_ids)),
+            expected_thread_ids,
+            "All threads should broadcast eBroadcastBitStackChanged on registration",
+        )
+
+        # 2. Test removal.
+        result = target.RemoveScriptedFrameProvider(provider_id)
+        self.assertSuccess(result, f"Failed to remove provider: {result}")
+        self.assertEqual(
+            collect_stack_changed_thread_ids(len(expected_thread_ids)),
+            expected_thread_ids,
+            "All threads should broadcast eBroadcastBitStackChanged on removal",
+        )
+
+        # 3. Test clear.
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ReplaceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        # Consume registration
+        collect_stack_changed_thread_ids(len(expected_thread_ids))
+
+        self.runCmd("target frame-provider clear")
+        self.assertEqual(
+            collect_stack_changed_thread_ids(len(expected_thread_ids)),
+            expected_thread_ids,
+            "All threads should broadcast eBroadcastBitStackChanged on clear",
+        )

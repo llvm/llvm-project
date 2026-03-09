@@ -150,6 +150,20 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
     const Stmt *PreInits;
     CodeGenFunction::OMPMapVars PreCondVars;
     if (auto *LD = dyn_cast<OMPLoopDirective>(&S)) {
+      // Emit init, __range, __begin and __end variables for C++ range loops.
+      (void)OMPLoopBasedDirective::doForAllLoops(
+          LD->getInnermostCapturedStmt()->getCapturedStmt(),
+          /*TryImperfectlyNestedLoops=*/true, LD->getLoopsNumber(),
+          [&CGF](unsigned Cnt, const Stmt *CurStmt) {
+            if (const auto *CXXFor = dyn_cast<CXXForRangeStmt>(CurStmt)) {
+              if (const Stmt *Init = CXXFor->getInit())
+                CGF.EmitStmt(Init);
+              CGF.EmitStmt(CXXFor->getRangeStmt());
+              CGF.EmitStmt(CXXFor->getBeginStmt());
+              CGF.EmitStmt(CXXFor->getEndStmt());
+            }
+            return false;
+          });
       llvm::DenseSet<const VarDecl *> EmittedAsPrivate;
       for (const auto *E : LD->counters()) {
         const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
@@ -174,19 +188,6 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
         }
       }
       (void)PreCondVars.apply(CGF);
-      // Emit init, __range and __end variables for C++ range loops.
-      (void)OMPLoopBasedDirective::doForAllLoops(
-          LD->getInnermostCapturedStmt()->getCapturedStmt(),
-          /*TryImperfectlyNestedLoops=*/true, LD->getLoopsNumber(),
-          [&CGF](unsigned Cnt, const Stmt *CurStmt) {
-            if (const auto *CXXFor = dyn_cast<CXXForRangeStmt>(CurStmt)) {
-              if (const Stmt *Init = CXXFor->getInit())
-                CGF.EmitStmt(Init);
-              CGF.EmitStmt(CXXFor->getRangeStmt());
-              CGF.EmitStmt(CXXFor->getEndStmt());
-            }
-            return false;
-          });
       PreInits = LD->getPreInits();
     } else if (const auto *Tile = dyn_cast<OMPTileDirective>(&S)) {
       PreInits = Tile->getPreInits();
@@ -614,6 +615,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     F->removeFnAttr(llvm::Attribute::NoInline);
     F->addFnAttr(llvm::Attribute::AlwaysInline);
   }
+  if (!CGM.getCodeGenOpts().SampleProfileFile.empty())
+    F->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 
   // Generate the function.
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, TargetArgs,

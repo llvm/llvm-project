@@ -49,7 +49,7 @@ llvm::StringRef LanguageProperties::GetSettingName() {
 
 LanguageProperties::LanguageProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-  m_collection_sp->Initialize(g_language_properties);
+  m_collection_sp->Initialize(g_language_properties_def);
 }
 
 bool LanguageProperties::GetEnableFilterForLineBreakpoints() const {

@@ -28,9 +28,7 @@ namespace {
     static char ID; // Pass identification
     UnpackMachineBundles(
         std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-      initializeUnpackMachineBundlesPass(*PassRegistry::getPassRegistry());
-    }
+        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 

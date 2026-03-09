@@ -11,22 +11,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ShardToMPI/ShardToMPI.h"
+#include "mlir/Dialect/Shard/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Shard/IR/ShardDialect.h"
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
-#include "mlir/Dialect/Shard/Transforms/Simplifications.h"
+#include "mlir/Dialect/Shard/Transforms/Simplify.h"
 #include "mlir/Dialect/Shard/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -71,9 +75,9 @@ static SmallVector<Value> getMixedAsValues(OpBuilder b, const Location &loc,
 }
 
 /// Create operations converting a linear index to a multi-dimensional index.
-static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b,
-                                             Value linearIndex,
-                                             ValueRange dimensions) {
+[[maybe_unused]] static SmallVector<Value>
+linearToMultiIndex(Location loc, OpBuilder b, Value linearIndex,
+                   ValueRange dimensions) {
   int n = dimensions.size();
   SmallVector<Value> multiIndex(n);
 
@@ -246,46 +250,6 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
         op, TupleType::get(op.getContext(), resTypes),
         ValueRange{resSplitAxes, resHaloSizes, resOffsets});
 
-    return success();
-  }
-};
-
-struct ConvertProcessMultiIndexOp
-    : public OpConversionPattern<ProcessMultiIndexOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(ProcessMultiIndexOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    // Currently converts its linear index to a multi-dimensional index.
-
-    SymbolTableCollection symbolTableCollection;
-    Location loc = op.getLoc();
-    auto gridOp = getGrid(op, symbolTableCollection);
-    // For now we only support static grid shapes
-    if (ShapedType::isDynamicShape(gridOp.getShape()))
-      return failure();
-
-    SmallVector<Value> dims;
-    llvm::transform(
-        gridOp.getShape(), std::back_inserter(dims), [&](int64_t i) {
-          return arith::ConstantIndexOp::create(rewriter, loc, i).getResult();
-        });
-    Value rank = ProcessLinearIndexOp::create(rewriter, op.getLoc(), gridOp);
-    auto mIdx = linearToMultiIndex(loc, rewriter, rank, dims);
-
-    // optionally extract subset of grid axes
-    auto axes = adaptor.getAxes();
-    if (!axes.empty()) {
-      SmallVector<Value> subIndex;
-      for (auto axis : axes) {
-        subIndex.emplace_back(mIdx[axis]);
-      }
-      mIdx = std::move(subIndex);
-    }
-
-    rewriter.replaceOp(op, mIdx);
     return success();
   }
 };
@@ -545,99 +509,400 @@ static mpi::MPI_ReductionOpEnumAttr getMPIReductionOp(ReductionKindAttr kind) {
   }
 }
 
-struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
-  using OpConversionPattern::OpConversionPattern;
+template <typename CommOp>
+struct CommOpPattern : public OpConversionPattern<CommOp> {
+  using OpConversionPattern<CommOp>::OpConversionPattern;
+
+  MemRefType getMemrefType(ShapedType tensorType) const {
+    return MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+  }
+
+  Value getAsMemref(Value input, ImplicitLocOpBuilder &iBuilder) const {
+    auto itype = input.getType();
+    // If the source is a memref, cast it to a tensor.
+    if (isa<RankedTensorType>(itype)) {
+      auto memrefType = getMemrefType(cast<ShapedType>(itype));
+      input = bufferization::ToBufferOp::create(iBuilder, memrefType, input);
+    } else {
+      assert(isa<MemRefType>(itype) &&
+             "expected input to be of MemRefType or TensorType");
+    }
+    return input;
+  }
+
+  FailureOr<GridOp> checkGrid(CommOp op,
+                              SymbolTableCollection &symbolTableCollection,
+                              bool allowDynamic = false) const {
+    GridOp gridOp = getGrid(op, symbolTableCollection);
+    if (!gridOp)
+      return op->emitError() << "Missing grid symbol.";
+    if (!allowDynamic && ShapedType::isDynamicShape(gridOp.getShape()))
+      return op->emitError() << "Dynamic grid shape not supported.";
+    return gridOp;
+  }
+
+  // Get an MPI_Comm_split for a given grid and axes.
+  // The color is the linear index of the process in the grid along the
+  // non-'grid-axes'. The key is the linear index of the process in the grid
+  // along the grid-axes.
+  Value getComm(GridOp &gridOp, ::llvm::ArrayRef<int16_t> gridAxes,
+                ImplicitLocOpBuilder &iBuilder) const {
+    size_t gridDims = gridOp.getShape().size();
+    auto commType = mpi::CommType::get(gridOp->getContext());
+    Value commWorld = mpi::CommWorldOp::create(iBuilder, commType);
+
+    if (gridAxes.empty() || gridAxes.size() >= gridDims) {
+      return commWorld;
+    }
+
+    SmallVector<GridAxis> otherAxes;
+    for (GridAxis i = 0; i < static_cast<GridAxis>(gridDims); ++i) {
+      if (!llvm::is_contained(gridAxes, i))
+        otherAxes.emplace_back(i);
+    }
+
+    SmallVector<Type> indexResultTypes(otherAxes.size(),
+                                       iBuilder.getIndexType());
+
+    Value color =
+        createProcessLinearIndex(iBuilder, gridOp.getSymName(), otherAxes);
+    color = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), color);
+
+    Value key =
+        createProcessLinearIndex(iBuilder, gridOp.getSymName(), gridAxes);
+    key = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), key);
+
+    // Finally split the communicator
+    return mpi::CommSplitOp::create(iBuilder, commType, commWorld, color, key)
+        .getNewcomm();
+  }
+};
+
+struct ConvertAllReduceOp : public CommOpPattern<AllReduceOp> {
+  using CommOpPattern::CommOpPattern;
 
   LogicalResult
   matchAndRewrite(AllReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SymbolTableCollection symbolTableCollection;
-    auto grid = adaptor.getGrid();
-    mlir::shard::GridOp gridOp = getGrid(op, symbolTableCollection);
-    if (!gridOp)
-      return op->emitError() << "No grid found for AllReduceOp";
-    if (ShapedType::isDynamicShape(gridOp.getShape()))
-      return op->emitError()
-             << "Dynamic grid shape not supported in AllReduceOp";
-
+    FailureOr<GridOp> gridOp = checkGrid(op, symbolTableCollection);
+    if (failed(gridOp))
+      return failure();
     ImplicitLocOpBuilder iBuilder(op.getLoc(), rewriter);
-    Value input = adaptor.getInput();
-    auto inputShape = cast<ShapedType>(input.getType()).getShape();
-
-    // If the source is a memref, cast it to a tensor.
-    if (isa<RankedTensorType>(input.getType())) {
-      auto memrefType = MemRefType::get(
-          inputShape, cast<ShapedType>(input.getType()).getElementType());
-      input = bufferization::ToBufferOp::create(iBuilder, memrefType, input);
-    }
+    Value input = getAsMemref(adaptor.getInput(), iBuilder);
     MemRefType inType = cast<MemRefType>(input.getType());
-
-    // Get the actual shape to allocate the buffer.
-    SmallVector<OpFoldResult> shape(inType.getRank());
-    for (auto i = 0; i < inType.getRank(); ++i) {
-      auto s = inputShape[i];
-      if (ShapedType::isDynamic(s))
-        shape[i] = memref::DimOp::create(iBuilder, input, s).getResult();
-      else
-        shape[i] = iBuilder.getIndexAttr(s);
-    }
+    if (!memref::isStaticShapeAndContiguousRowMajor(inType))
+      return op.emitError(
+          "Expected static shaped memref in contiguous row-major layout.");
+    MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
+    if (!memref::isStaticShapeAndContiguousRowMajor(outType))
+      return op.emitError(
+          "Expected static shaped memref in contiguous row-major layout.");
 
     // Allocate buffer and copy input to buffer.
-    Value buffer = memref::AllocOp::create(
-        iBuilder, shape, cast<ShapedType>(op.getType()).getElementType());
+    Value buffer = memref::AllocOp::create(iBuilder, outType);
     linalg::CopyOp::create(iBuilder, input, buffer);
-
-    // Get an MPI_Comm_split for the AllReduce operation.
-    // The color is the linear index of the process in the grid along the
-    // non-reduced axes. The key is the linear index of the process in the grid
-    // along the reduced axes.
-    SmallVector<Type> indexResultTypes(gridOp.getShape().size(),
-                                       iBuilder.getIndexType());
-    SmallVector<Value> myMultiIndex =
-        ProcessMultiIndexOp::create(iBuilder, indexResultTypes, grid)
-            .getResult();
-    Value zero = arith::ConstantIndexOp::create(iBuilder, 0);
-    SmallVector<Value> multiKey(myMultiIndex.size(), zero);
-
-    auto redAxes = adaptor.getGridAxes();
-    for (auto axis : redAxes) {
-      multiKey[axis] = myMultiIndex[axis];
-      myMultiIndex[axis] = zero;
-    }
-
-    Value color =
-        createProcessLinearIndex(grid, myMultiIndex, redAxes, iBuilder);
-    color = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), color);
-    Value key = createProcessLinearIndex(grid, multiKey, redAxes, iBuilder);
-    key = arith::IndexCastOp::create(iBuilder, iBuilder.getI32Type(), key);
-
-    // Finally split the communicator
-    auto commType = mpi::CommType::get(op->getContext());
-    Value commWorld = mpi::CommWorldOp::create(iBuilder, commType);
-    auto comm =
-        mpi::CommSplitOp::create(iBuilder, commType, commWorld, color, key)
-            .getNewcomm();
-
-    Value buffer1d = buffer;
-    // Collapse shape to 1d if needed
-    if (inType.getRank() > 1) {
-      ReassociationIndices reassociation(inType.getRank());
-      std::iota(reassociation.begin(), reassociation.end(), 0);
-      buffer1d = memref::CollapseShapeOp::create(
-          iBuilder, buffer, ArrayRef<ReassociationIndices>(reassociation));
-    }
-
+    // Get the right communicator
+    Value comm = getComm(*gridOp, adaptor.getGridAxes(), iBuilder);
     // Create the MPI AllReduce operation.
-    mpi::AllReduceOp::create(iBuilder, TypeRange(), buffer1d, buffer1d,
+    mpi::AllReduceOp::create(iBuilder, TypeRange(), buffer, buffer,
                              getMPIReductionOp(adaptor.getReductionAttr()),
                              comm);
 
-    // If the destination is a memref, cast it to a tensor
+    // If the destination is a tensor, cast it to a tensor
     if (isa<RankedTensorType>(op.getType()))
       buffer = bufferization::ToTensorOp::create(iBuilder, op.getType(), buffer,
                                                  true);
-
     rewriter.replaceOp(op, buffer);
+    return success();
+  }
+};
+
+struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
+  using CommOpPattern::CommOpPattern;
+
+  // shard.reduce_scatter reduces and then scatters along a specified
+  // scatter-dim. mpi.reduce_scatter_block always scatters along the first
+  // dimension. Hence, if scatter-dim != 0, we need to rearrange the input
+  // data by expanding the scatter-dim into {nRanks, output_scatter_dim} and
+  // transposing nRanks to the first dimension.
+
+  LogicalResult
+  matchAndRewrite(ReduceScatterOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto gridAxes = adaptor.getGridAxes();
+    int64_t scatterDim = adaptor.getScatterDimAttr().getInt();
+
+    SymbolTableCollection symbolTableCollection;
+    FailureOr<GridOp> gridOp = checkGrid(op, symbolTableCollection);
+    if (failed(gridOp))
+      return failure();
+
+    ImplicitLocOpBuilder ib(op.getLoc(), rewriter);
+    Value rawInput = adaptor.getInput();
+    auto inShapedType = cast<ShapedType>(rawInput.getType());
+    MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
+    auto elemType = outType.getElementType();
+    auto inputShape = inShapedType.getShape();
+    auto outputShape = outType.getShape();
+    int64_t inputDimOnAxis = inputShape[scatterDim];
+    int64_t outputDimOnAxis = outputShape[scatterDim];
+
+    for (size_t i = 0; i < outputShape.size(); ++i)
+      if (outputShape[i] != inputShape[i] &&
+          i != static_cast<size_t>(scatterDim))
+        return op.emitError(
+            "Result and input shapes must match along non-scatter axes.");
+    if (outputDimOnAxis == 0)
+      return op.emitError(
+          "Output size along the scatter axis must be non-zero.");
+    if (inputDimOnAxis % outputDimOnAxis != 0)
+      return op.emitError(
+          "Input size along the scatter axis must be an exact "
+          "multiple of the output size along the scatter axis.");
+
+    if (!memref::isStaticShapeAndContiguousRowMajor(outType))
+      return op.emitError("Result must be a statically shaped memref in "
+                          "contiguous row-major layout.");
+
+    int64_t nRanks = inputDimOnAxis / outputDimOnAxis;
+
+    // Verify that nRanks matches the number of devices along the grid axes.
+    int64_t gridGroupSize =
+        collectiveProcessGroupSize(gridAxes, gridOp->getShape());
+    if (nRanks != gridGroupSize)
+      return op.emitError()
+             << "Expected the scatter factor (" << nRanks
+             << ") to match the number of devices along grid_axes ("
+             << gridGroupSize << ").";
+
+    // Get the right communicator.
+    Value comm = getComm(*gridOp, gridAxes, ib);
+
+    Value mpiInput;
+    if (scatterDim == 0) {
+      // scatter_dim == 0 maps directly to MPI_Reduce_scatter_block.
+      // Input must be contiguous for MPI.
+      Value input = getAsMemref(rawInput, ib);
+      MemRefType inType = cast<MemRefType>(input.getType());
+      if (!memref::isStaticShapeAndContiguousRowMajor(inType))
+        return op.emitError("Input must be a statically shaped memref in "
+                            "contiguous row-major layout.");
+      mpiInput = input;
+    } else {
+      // For scatter_dim != 0 we rearrange the input so the scatter factor
+      // becomes the first dimension.
+      //
+      // 1. Get a tensor representation of the input (avoid memref->tensor
+      //    round-trip if the input is already a tensor).
+      Value tensorInput = rawInput;
+      if (!isa<RankedTensorType>(rawInput.getType())) {
+        auto inTensorType = RankedTensorType::get(inputShape, elemType);
+        tensorInput =
+            bufferization::ToTensorOp::create(ib, inTensorType, rawInput, true);
+      }
+
+      // 2. Expand the scatter dim from {d0, ..., d_sd, ..., dN} to
+      //    {d0, ..., nRanks, o_sd, ..., dN}.
+      SmallVector<int64_t> expandedShape;
+      SmallVector<ReassociationIndices> expandReassociation;
+      int64_t expandedIdx = 0;
+      for (int64_t i = 0; i < static_cast<int64_t>(inputShape.size()); ++i) {
+        if (i == scatterDim) {
+          expandedShape.push_back(nRanks);
+          expandedShape.push_back(outputDimOnAxis);
+          expandReassociation.push_back({expandedIdx, expandedIdx + 1});
+          expandedIdx += 2;
+        } else {
+          expandedShape.push_back(inputShape[i]);
+          expandReassociation.push_back({expandedIdx});
+          expandedIdx += 1;
+        }
+      }
+      auto expandedType = RankedTensorType::get(expandedShape, elemType);
+      tensorInput = tensor::ExpandShapeOp::create(ib, expandedType, tensorInput,
+                                                  expandReassociation);
+
+      // 3. Transpose to move nRanks (at position scatterDim) to position 0:
+      //    {d0, ..., nRanks, o_sd, ..., dN} -> {nRanks, d0, ..., o_sd, ..., dN}
+      SmallVector<int64_t> permutation, transposedShape;
+      permutation.emplace_back(scatterDim);
+      for (int64_t i = 0; i < scatterDim; ++i)
+        permutation.emplace_back(i);
+      for (int64_t i = scatterDim + 1; i < (int64_t)expandedShape.size(); ++i)
+        permutation.emplace_back(i);
+      for (auto p : permutation)
+        transposedShape.emplace_back(expandedShape[p]);
+
+      Value permOutput = tensor::EmptyOp::create(ib, transposedShape, elemType);
+      tensorInput =
+          linalg::TransposeOp::create(ib, tensorInput, permOutput, permutation)
+              ->getResult(0);
+
+      // 4. Materialize as contiguous memref for MPI by copying into a
+      //    freshly allocated buffer.
+      auto mpiInType = MemRefType::get(transposedShape, elemType);
+      Value transposedBuf =
+          bufferization::ToBufferOp::create(ib, mpiInType, tensorInput);
+      mpiInput = memref::AllocOp::create(ib, mpiInType);
+      linalg::CopyOp::create(ib, transposedBuf, mpiInput);
+    }
+
+    // Allocate output buffer.
+    Value output = memref::AllocOp::create(ib, outType);
+    // Create the MPI ReduceScatter operation.
+    mpi::ReduceScatterBlockOp::create(
+        ib, TypeRange(), mpiInput, output,
+        getMPIReductionOp(adaptor.getReductionAttr()), comm);
+
+    // Deallocate the temporary input buffer if we allocated one.
+    if (scatterDim != 0)
+      memref::DeallocOp::create(ib, mpiInput);
+
+    // If the destination is a tensor, cast it to a tensor.
+    if (isa<RankedTensorType>(op.getType()))
+      output =
+          bufferization::ToTensorOp::create(ib, op.getType(), output, true);
+    rewriter.replaceOp(op, output);
+    return success();
+  }
+};
+
+struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
+  using CommOpPattern::CommOpPattern;
+
+  // shard.allgather concatenates along a specified gather-axis.
+  // mpi.allgather always concatenates along the first dimension and
+  // there is no MPI operation that allows gathering along an arbitrary axis.
+  // Hence, if gather-axis != 0, we need to permute the output buffer
+  // accordingly.
+
+  LogicalResult
+  matchAndRewrite(AllGatherOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SymbolTableCollection symbolTableCollection;
+    FailureOr<GridOp> gridOp = checkGrid(op, symbolTableCollection);
+    if (failed(gridOp))
+      return failure();
+
+    ImplicitLocOpBuilder ib(op.getLoc(), rewriter);
+    Value input = getAsMemref(adaptor.getInput(), ib);
+    MemRefType inType = cast<MemRefType>(input.getType());
+    MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
+    auto inputShape = inType.getShape();
+    auto outputShape = outType.getShape();
+    int64_t gatherAxis = adaptor.getGatherAxisAttr().getInt();
+    int64_t inputDimOnAxis = inputShape[gatherAxis];
+    int64_t outputDimOnAxis = outputShape[gatherAxis];
+
+    for (size_t i = 0; i < outputShape.size(); ++i)
+      if (outputShape[i] != inputShape[i] && i != (size_t)gatherAxis)
+        return op.emitError(
+            "Result and input shapes must match along non-gather axes.");
+    if (inputDimOnAxis == 0)
+      return op.emitError("Input size along the gather axis must be non-zero.");
+    if (inputDimOnAxis == 1) {
+      assert(outputDimOnAxis == inputDimOnAxis);
+      rewriter.replaceOp(op, adaptor.getInput());
+      return success();
+    }
+    if (outputDimOnAxis % inputDimOnAxis != 0)
+      return op.emitError("Result size along the gather axis must be an exact "
+                          "multiple of the input size along the gather axis.");
+
+    if (!memref::isStaticShapeAndContiguousRowMajor(inType) ||
+        !memref::isStaticShapeAndContiguousRowMajor(outType))
+      return op.emitError("Input/result must be statically shaped memrefs in "
+                          "contiguous row-major layout.");
+
+    // Get the right communicator.
+    Value comm = getComm(*gridOp, adaptor.getGridAxes(), ib);
+    Value nRanksV =
+        mpi::CommSizeOp::create(ib, ib.getI32Type(), comm).getSize();
+    nRanksV = arith::IndexCastOp::create(ib, ib.getIndexType(), nRanksV);
+    int64_t nRanks = outputDimOnAxis / inputDimOnAxis;
+    Value nRanksC = arith::ConstantIndexOp::create(ib, nRanks);
+    Value notError =
+        arith::CmpIOp::create(ib, arith::CmpIPredicate::eq, nRanksV, nRanksC);
+    cf::AssertOp::create(ib, notError,
+                         "Expected number of ranks in the communicator to "
+                         "match the output size along the gather axis divided "
+                         "by the input size along the gather axis.");
+
+    // mpi.allgather always concatenates along the first dimension, so
+    // get a output buffer of shape {nRanks, dim0, ...}.
+    SmallVector<int64_t> gatherShape;
+    gatherShape.emplace_back(nRanks);
+    gatherShape.append(inputShape.begin(), inputShape.end());
+    auto gatherType = MemRefType::get(gatherShape, outType.getElementType());
+    Value finalOutput = memref::AllocOp::create(ib, gatherType);
+    // Create the MPI AllGather operation.
+    mpi::AllGatherOp::create(ib, TypeRange(), input, finalOutput, comm);
+
+    if (gatherAxis == 0) {
+      // If gather axis == 0, simply collapse the first 2 dims from {nRanks,
+      // dim0, ...} to {nRanks*dim0, ...}.
+      SmallVector<ReassociationIndices> reassociation;
+      reassociation.push_back({0, 1});
+      int64_t numGatherDims = gatherShape.size();
+      for (int64_t i = 2; i < numGatherDims; ++i)
+        reassociation.push_back({i});
+      finalOutput = memref::CollapseShapeOp::create(ib, outType, finalOutput,
+                                                    reassociation);
+
+      // If the op's result is a tensor, cast it to a tensor.
+      if (isa<RankedTensorType>(op.getType()))
+        finalOutput = bufferization::ToTensorOp::create(ib, op.getType(),
+                                                        finalOutput, true);
+    } else {
+      // 1. Enter tensor-land.
+      auto inType =
+          RankedTensorType::get(gatherShape, outType.getElementType());
+      finalOutput =
+          bufferization::ToTensorOp::create(ib, inType, finalOutput, true);
+
+      // 2. Permute the output buffer from {nRanks, dim0, ..., gatherAxis, ...}
+      // to {dim0, ..., nRanks, dim1,...}.
+      SmallVector<int64_t> outShapePermuted, permutation;
+      for (int i = 1; i <= gatherAxis; ++i) {
+        outShapePermuted.emplace_back(gatherShape[i]);
+        permutation.emplace_back(i);
+      }
+      outShapePermuted.emplace_back(gatherShape[0]);
+      permutation.emplace_back(0);
+      for (size_t i = gatherAxis + 1; i < gatherShape.size(); ++i) {
+        outShapePermuted.emplace_back(gatherShape[i]);
+        permutation.emplace_back(i);
+      }
+      Value permOutput = tensor::EmptyOp::create(ib, outShapePermuted,
+                                                 outType.getElementType());
+      finalOutput =
+          linalg::TransposeOp::create(ib, finalOutput, permOutput, permutation)
+              ->getResult(0);
+
+      // 3. Collapse the output buffer from {dim0, ..., nRanks, gatherAxis, ...}
+      // to {dim0, ..., nRanks*gatherAxis, ...}.
+      SmallVector<ReassociationIndices> reassociation;
+      for (int64_t i = 0; i < gatherAxis; ++i) {
+        reassociation.push_back({i});
+      }
+      reassociation.push_back({gatherAxis, gatherAxis + 1});
+      for (int64_t i = gatherAxis + 2; i < (int64_t)outShapePermuted.size();
+           ++i) {
+        reassociation.push_back({i});
+      }
+      auto outTType =
+          RankedTensorType::get(outputShape, outType.getElementType());
+      finalOutput = tensor::CollapseShapeOp::create(ib, outTType, finalOutput,
+                                                    reassociation);
+
+      // 4. Cast back to memref if needed.
+      if (isa<MemRefType>(op.getType()))
+        finalOutput =
+            bufferization::ToBufferOp::create(ib, outType, finalOutput);
+    }
+
+    rewriter.replaceOp(op, finalOutput);
     return success();
   }
 };
@@ -919,10 +1184,11 @@ struct ConvertShardToMPIPass
     // ...except the global GridOp. GridShapeOp which will get folded later.
     target.addLegalOp<shard::GridOp, shard::GridShapeOp>();
     // Allow all the stuff that our patterns will convert to
-    target.addLegalDialect<
-        BuiltinDialect, mpi::MPIDialect, scf::SCFDialect, arith::ArithDialect,
-        tensor::TensorDialect, bufferization::BufferizationDialect,
-        linalg::LinalgDialect, memref::MemRefDialect, affine::AffineDialect>();
+    target.addLegalDialect<BuiltinDialect, mpi::MPIDialect, scf::SCFDialect,
+                           arith::ArithDialect, tensor::TensorDialect,
+                           bufferization::BufferizationDialect,
+                           linalg::LinalgDialect, memref::MemRefDialect,
+                           affine::AffineDialect, cf::ControlFlowDialect>();
     // Make sure the function signature, calls etc. are legal
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return typeConverter.isSignatureLegal(op.getFunctionType());
@@ -931,9 +1197,12 @@ struct ConvertShardToMPIPass
         [&](Operation *op) { return typeConverter.isLegal(op); });
 
     patterns.add<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp,
-                 ConvertProcessMultiIndexOp, ConvertGetShardingOp,
-                 ConvertShardingOp, ConvertShardShapeOp, ConvertAllReduceOp,
+                 ConvertGetShardingOp, ConvertShardingOp, ConvertShardShapeOp,
+                 ConvertAllGatherOp, ConvertAllReduceOp, ConvertReduceScatterOp,
                  ConvertProcessLinearIndexOp>(typeConverter, ctxt);
+    SymbolTableCollection stc;
+    populateProcessMultiIndexOpLoweringPatterns(patterns, stc);
+    populateAllSliceOpLoweringPatterns(patterns, stc);
 
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);

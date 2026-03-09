@@ -122,6 +122,7 @@ def IIC_SprTLBIEL    : InstrItinClass;
 def IIC_SprTLBIE     : InstrItinClass;
 def IIC_SprABORT     : InstrItinClass;
 def IIC_SprMSGSYNC   : InstrItinClass;
+def IIC_SprMSGSNDP   : InstrItinClass;
 def IIC_SprSTOP      : InstrItinClass;
 def IIC_SprMFPMR     : InstrItinClass;
 def IIC_SprMTPMR     : InstrItinClass;

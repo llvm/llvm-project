@@ -31,7 +31,7 @@ A::A() {}
 // CIR:    cir.store{{.*}} align(8) %[[VPTR]], %[[THIS_VPTR_PTR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:    cir.return
 
-// LLVM: define{{.*}} void @_ZN1AC2Ev(ptr %[[ARG0:.*]])
+// LLVM: define{{.*}} void @_ZN1AC2Ev(ptr {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
@@ -60,16 +60,16 @@ void f1(A *a) {
 // CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR:   %[[FN_PTR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>
 // CIR:   %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_PTR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>
-// CIR:   cir.call %[[FN_PTR]](%[[A]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>, !cir.ptr<!rec_A>, !s8i) -> ()
+// CIR:   cir.call %[[FN_PTR]](%[[A]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>, !cir.ptr<!rec_A> {{.*}}, !s8i {{.*}}) -> ()
 
-// LLVM: define{{.*}} void @_Z2f1P1A(ptr %[[ARG0:.*]])
+// LLVM: define{{.*}} void @_Z2f1P1A(ptr {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[A_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[A_ADDR]]
 // LLVM:   %[[A:.*]] = load ptr, ptr %[[A_ADDR]]
 // LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[A]]
 // LLVM:   %[[FN_PTR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i32 0
 // LLVM:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_PTR]]
-// LLVM:   call void %[[FN_PTR]](ptr %[[A]], i8 99)
+// LLVM:   call void %[[FN_PTR]](ptr {{.*}} %[[A]], i8 {{.*}} 99)
 
 // OGCG: define{{.*}} void @_Z2f1P1A(ptr {{.*}} %[[ARG0:.*]])
 // OGCG:   %[[A_ADDR:.*]] = alloca ptr

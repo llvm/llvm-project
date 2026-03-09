@@ -102,7 +102,7 @@ public:
                             bool IsVarArg) const;
 
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.

@@ -8,6 +8,7 @@
 
 #include "ScheduleOrderedAssignments.h"
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -23,7 +24,13 @@
 /// Log RAW or WAW conflict.
 [[maybe_unused]] static void logConflict(llvm::raw_ostream &os,
                                          mlir::Value writtenOrReadVarA,
-                                         mlir::Value writtenVarB);
+                                         mlir::Value writtenVarB,
+                                         bool isAligned = false);
+/// Log when a region must be retroactively saved.
+[[maybe_unused]] static void
+logRetroactiveSave(llvm::raw_ostream &os, mlir::Region &yieldRegion,
+                   hlfir::Run &modifyingRun,
+                   hlfir::RegionAssignOp currentAssign);
 /// Log when an expression evaluation must be saved.
 [[maybe_unused]] static void logSaveEvaluation(llvm::raw_ostream &os,
                                                unsigned runid,
@@ -39,15 +46,129 @@ logStartScheduling(llvm::raw_ostream &os,
                    hlfir::OrderedAssignmentTreeOpInterface root);
 /// Log op if effect value is not known.
 [[maybe_unused]] static void
-logIfUnkownEffectValue(llvm::raw_ostream &os,
-                       mlir::MemoryEffects::EffectInstance effect,
-                       mlir::Operation &op);
+logIfUnknownEffectValue(llvm::raw_ostream &os,
+                        mlir::MemoryEffects::EffectInstance effect,
+                        mlir::Operation &op);
 
 //===----------------------------------------------------------------------===//
 // Scheduling Implementation
 //===----------------------------------------------------------------------===//
 
+/// Is the apply using all the elemental indices in order?
+static bool isInOrderApply(hlfir::ApplyOp apply,
+                           hlfir::ElementalOpInterface elemental) {
+  mlir::Region::BlockArgListType elementalIndices = elemental.getIndices();
+  if (elementalIndices.size() != apply.getIndices().size())
+    return false;
+  for (auto [elementalIdx, applyIdx] :
+       llvm::zip(elementalIndices, apply.getIndices()))
+    if (elementalIdx != applyIdx)
+      return false;
+  return true;
+}
+
+hlfir::ElementalTree
+hlfir::ElementalTree::buildElementalTree(mlir::Operation &regionTerminator) {
+  ElementalTree tree;
+  if (auto elementalAddr =
+          mlir::dyn_cast<hlfir::ElementalOpInterface>(regionTerminator)) {
+    // Vector subscripted designator (hlfir.elemental_addr terminator).
+    tree.gatherElementalTree(elementalAddr, /*isAppliedInOrder=*/true);
+    return tree;
+  }
+  // Try if elemental expression.
+  if (auto yield = mlir::dyn_cast<hlfir::YieldOp>(regionTerminator)) {
+    mlir::Value entity = yield.getEntity();
+    if (auto maybeElemental =
+            mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
+                entity.getDefiningOp()))
+      tree.gatherElementalTree(maybeElemental, /*isAppliedInOrder=*/true);
+  }
+  return tree;
+}
+
+// Check if op is an ElementalOpInterface that is part of this elemental tree.
+bool hlfir::ElementalTree::contains(mlir::Operation *op) const {
+  for (auto &p : tree)
+    if (p.first == op)
+      return true;
+  return false;
+}
+
+std::optional<bool> hlfir::ElementalTree::isOrdered(mlir::Operation *op) const {
+  for (auto &p : tree)
+    if (p.first == op)
+      return p.second;
+  return std::nullopt;
+}
+
+void hlfir::ElementalTree::gatherElementalTree(
+    hlfir::ElementalOpInterface elemental, bool isAppliedInOrder) {
+  if (!elemental)
+    return;
+  // Only inline an applied elemental that must be executed in order if the
+  // applying indices are in order. An hlfir::Elemental may have been created
+  // for a transformational like transpose, and Fortran 2018 standard
+  // section 10.2.3.2, point 10 imply that impure elemental sub-expression
+  // evaluations should not be masked if they are the arguments of
+  // transformational expressions.
+  if (!isAppliedInOrder && elemental.isOrdered())
+    return;
+
+  insert(elemental, isAppliedInOrder);
+  for (mlir::Operation &op : elemental.getElementalRegion().getOps())
+    if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(op)) {
+      bool isUnorderedApply =
+          !isAppliedInOrder || !isInOrderApply(apply, elemental);
+      auto maybeElemental = mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
+          apply.getExpr().getDefiningOp());
+      gatherElementalTree(maybeElemental, !isUnorderedApply);
+    }
+}
+
+void hlfir::ElementalTree::insert(hlfir::ElementalOpInterface elementalOp,
+                                  bool isAppliedInOrder) {
+  tree.push_back({elementalOp.getOperation(), isAppliedInOrder});
+}
+
+static bool isInOrderDesignate(hlfir::DesignateOp designate,
+                               hlfir::ElementalTree *tree) {
+  if (!tree)
+    return false;
+  if (auto elemental =
+          designate->getParentOfType<hlfir::ElementalOpInterface>())
+    if (tree->isOrdered(elemental.getOperation()))
+      return fir::ArraySectionAnalyzer::isDesignatingArrayInOrder(designate,
+                                                                  elemental);
+  return false;
+}
+
+hlfir::DetailedEffectInstance::DetailedEffectInstance(
+    mlir::MemoryEffects::Effect *effect, mlir::OpOperand *value,
+    mlir::Value orderedElementalEffectOn)
+    : effectInstance(effect, value),
+      orderedElementalEffectOn(orderedElementalEffectOn) {}
+
+hlfir::DetailedEffectInstance::DetailedEffectInstance(
+    mlir::MemoryEffects::EffectInstance effectInst,
+    mlir::Value orderedElementalEffectOn)
+    : effectInstance(effectInst),
+      orderedElementalEffectOn(orderedElementalEffectOn) {}
+
+hlfir::DetailedEffectInstance
+hlfir::DetailedEffectInstance::getArrayReadEffect(mlir::OpOperand *array) {
+  return DetailedEffectInstance(mlir::MemoryEffects::Read::get(), array,
+                                array->get());
+}
+
+hlfir::DetailedEffectInstance
+hlfir::DetailedEffectInstance::getArrayWriteEffect(mlir::OpOperand *array) {
+  return DetailedEffectInstance(mlir::MemoryEffects::Write::get(), array,
+                                array->get());
+}
+
 namespace {
+
 /// Structure that is in charge of building the schedule. For each
 /// hlfir.region_assign inside an ordered assignment tree, it is walked through
 /// the parent operations and their "leaf" regions (that contain expression
@@ -99,20 +220,25 @@ public:
 
   /// After all the dependent evaluation regions have been analyzed, create the
   /// action to evaluate the assignment that was being analyzed.
-  void finishSchedulingAssignment(hlfir::RegionAssignOp assign);
+  void finishSchedulingAssignment(hlfir::RegionAssignOp assign,
+                                  bool leafRegionsMayOnlyRead);
 
   /// Once all the assignments have been analyzed and scheduled, return the
   /// schedule. The scheduler object should not be used after this call.
   hlfir::Schedule moveSchedule() { return std::move(schedule); }
 
 private:
+  struct EvaluationState {
+    bool saved = false;
+    std::optional<hlfir::Schedule::iterator> modifiedInRun;
+  };
+
   /// Save a conflicting region that is evaluating an expression that is
   /// controlling or masking the current assignment, or is evaluating the
   /// RHS/LHS.
-  void
-  saveEvaluation(mlir::Region &yieldRegion,
-                 llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects,
-                 bool anyWrite);
+  void saveEvaluation(mlir::Region &yieldRegion,
+                      llvm::ArrayRef<hlfir::DetailedEffectInstance> effects,
+                      bool anyWrite);
 
   /// Can the current assignment be schedule with the previous run. This is
   /// only possible if the assignment and all of its dependencies have no side
@@ -120,19 +246,17 @@ private:
   bool canFuseAssignmentWithPreviousRun();
 
   /// Memory effects of the assignments being lowered.
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance> assignEffects;
+  llvm::SmallVector<hlfir::DetailedEffectInstance> assignEffects;
   /// Memory effects of the evaluations implied by the assignments
   /// being lowered. They do not include the implicit writes
   /// to the LHS of the assignments.
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance> assignEvaluateEffects;
+  llvm::SmallVector<hlfir::DetailedEffectInstance> assignEvaluateEffects;
   /// Memory effects of the unsaved evaluation region that are controlling or
   /// masking the current assignments.
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance>
-      parentEvaluationEffects;
+  llvm::SmallVector<hlfir::DetailedEffectInstance> parentEvaluationEffects;
   /// Same as parentEvaluationEffects, but for the current "leaf group" being
   /// analyzed scheduled.
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance>
-      independentEvaluationEffects;
+  llvm::SmallVector<hlfir::DetailedEffectInstance> independentEvaluationEffects;
 
   /// Were any region saved for the current assignment?
   bool savedAnyRegionForCurrentAssignment = false;
@@ -140,7 +264,10 @@ private:
   // Schedule being built.
   hlfir::Schedule schedule;
   /// Leaf regions that have been saved so far.
-  llvm::SmallPtrSet<mlir::Region *, 16> savedRegions;
+  llvm::DenseMap<mlir::Region *, EvaluationState> regionStates;
+  /// Regions that have an aligned conflict with the current assignment.
+  llvm::SmallVector<mlir::Region *> pendingAlignedRegions;
+
   /// Is schedule.back() a schedule that is only saving region with read
   /// effects?
   bool currentRunIsReadOnly = false;
@@ -171,9 +298,10 @@ static bool isForallIndex(mlir::Value var) {
 /// side effect interface, or that are writing temporary variables that may be
 /// hard to identify as such (one would have to prove the write is "local" to
 /// the region even when the alloca may be outside of the region).
-static void gatherMemoryEffects(
+static void gatherMemoryEffectsImpl(
     mlir::Region &region, bool mayOnlyRead,
-    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+    llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &effects,
+    hlfir::ElementalTree *tree = nullptr) {
   /// This analysis is a simple walk of all the operations of the region that is
   /// evaluating and yielding a value. This is a lot simpler and safer than
   /// trying to walk back the SSA DAG from the yielded value. But if desired,
@@ -181,7 +309,7 @@ static void gatherMemoryEffects(
   for (mlir::Operation &op : region.getOps()) {
     if (op.hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>()) {
       for (mlir::Region &subRegion : op.getRegions())
-        gatherMemoryEffects(subRegion, mayOnlyRead, effects);
+        gatherMemoryEffectsImpl(subRegion, mayOnlyRead, effects, tree);
       // In MLIR, RecursiveMemoryEffects can be combined with
       // MemoryEffectOpInterface to describe extra effects on top of the
       // effects of the nested operations.  However, the presence of
@@ -214,16 +342,44 @@ static void gatherMemoryEffects(
     interface.getEffects(opEffects);
     for (auto &effect : opEffects)
       if (!isForallIndex(effect.getValue())) {
+        mlir::Value array;
+        if (effect.getValue())
+          if (auto designate =
+                  effect.getValue().getDefiningOp<hlfir::DesignateOp>())
+            if (isInOrderDesignate(designate, tree))
+              array = designate.getMemref();
+
         if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
-          LLVM_DEBUG(logIfUnkownEffectValue(llvm::dbgs(), effect, op););
-          effects.push_back(effect);
+          LLVM_DEBUG(logIfUnknownEffectValue(llvm::dbgs(), effect, op););
+          effects.emplace_back(effect, array);
         } else if (!mayOnlyRead &&
                    mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
-          LLVM_DEBUG(logIfUnkownEffectValue(llvm::dbgs(), effect, op););
-          effects.push_back(effect);
+          LLVM_DEBUG(logIfUnknownEffectValue(llvm::dbgs(), effect, op););
+          effects.emplace_back(effect, array);
         }
       }
   }
+}
+static void gatherMemoryEffects(
+    mlir::Region &region, bool mayOnlyRead,
+    llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &effects) {
+  if (!region.getParentOfType<hlfir::ForallOp>()) {
+    // TODO: leverage array access analysis for FORALL.
+    // While FORALL assignments can be array assignments, the iteration space
+    // is also driven by the FORALL indices, so the way ArraySectionAnalyzer
+    // results are used is not adequate for it.
+    // For instance "disjoint" array access cannot be ignored in:
+    // "forall (i=1:10) x(i+1,:) = x(i,:)".
+    // While identical access can probably also be accepted, this would deserve
+    // more thinking, it would probably make sense to also deal with "aligned
+    // scalar" access for them like in "forall (i=1:10) x(i) = x(i) + 1".  For
+    // now this feature is disabled for inside FORALL.
+    hlfir::ElementalTree tree =
+        hlfir::ElementalTree::buildElementalTree(region.back().back());
+    gatherMemoryEffectsImpl(region, mayOnlyRead, effects, &tree);
+    return;
+  }
+  gatherMemoryEffectsImpl(region, mayOnlyRead, effects, /*tree=*/nullptr);
 }
 
 /// Return the entity yielded by a region, or a null value if the region
@@ -246,10 +402,14 @@ static mlir::OpOperand *getYieldedEntity(mlir::Region &region) {
 static void gatherAssignEffects(
     hlfir::RegionAssignOp regionAssign,
     bool userDefAssignmentMayOnlyWriteToAssignedVariable,
-    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &assignEffects) {
+    llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &assignEffects) {
   mlir::OpOperand *assignedVar = getYieldedEntity(regionAssign.getLhsRegion());
   assert(assignedVar && "lhs cannot be an empty region");
-  assignEffects.emplace_back(mlir::MemoryEffects::Write::get(), assignedVar);
+  if (regionAssign->getParentOfType<hlfir::ForallOp>())
+    assignEffects.emplace_back(mlir::MemoryEffects::Write::get(), assignedVar);
+  else
+    assignEffects.emplace_back(
+        hlfir::DetailedEffectInstance::getArrayWriteEffect(assignedVar));
 
   if (!regionAssign.getUserDefinedAssignment().empty()) {
     // The write effect on the INTENT(OUT) LHS argument is already taken
@@ -273,7 +433,7 @@ static void gatherAssignEffects(
 static void gatherAssignEvaluationEffects(
     hlfir::RegionAssignOp regionAssign,
     bool userDefAssignmentMayOnlyWriteToAssignedVariable,
-    llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &assignEffects) {
+    llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &assignEffects) {
   gatherMemoryEffects(regionAssign.getLhsRegion(),
                       userDefAssignmentMayOnlyWriteToAssignedVariable,
                       assignEffects);
@@ -308,12 +468,57 @@ static mlir::Value getStorageSource(mlir::Value var) {
   return source;
 }
 
+namespace {
+
+/// Class to represent conflicts between several accesses (effects) to a memory
+/// location (read after write, write after write).
+struct ConflictKind {
+  enum Kind {
+    // None: The effects are not affecting the same memory location, or they are
+    // all reads.
+    None,
+    // Aligned: There are both read and write effects affecting the same memory
+    // location, but it is known that these effects are all accessing the memory
+    // location element by element in array order. This means the conflict does
+    // not introduce loop-carried dependencies.
+    Aligned,
+    // Any: There may be both read and write effects affecting the same memory
+    // in any way.
+    Any
+  };
+  Kind kind;
+
+  ConflictKind(Kind k) : kind(k) {}
+
+  static ConflictKind none() { return ConflictKind(None); }
+  static ConflictKind aligned() { return ConflictKind(Aligned); }
+  static ConflictKind any() { return ConflictKind(Any); }
+
+  bool isNone() const { return kind == None; }
+  bool isAligned() const { return kind == Aligned; }
+  bool isAny() const { return kind == Any; }
+
+  // Merge conflicts:
+  // none || none -> none
+  // aligned || <not any> -> aligned
+  // any || _ -> any
+  ConflictKind operator||(const ConflictKind &other) const {
+    if (kind == Any || other.kind == Any)
+      return any();
+    if (kind == Aligned || other.kind == Aligned)
+      return aligned();
+    return none();
+  }
+};
+} // namespace
+
 /// Could there be any read or write in effectsA on a variable written to in
 /// effectsB?
-static bool
-anyRAWorWAW(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effectsA,
-            llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effectsB,
+static ConflictKind
+anyRAWorWAW(llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
+            llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsB,
             fir::AliasAnalysis &aliasAnalysis) {
+  ConflictKind result = ConflictKind::none();
   for (const auto &effectB : effectsB)
     if (mlir::isa<mlir::MemoryEffects::Write>(effectB.getEffect())) {
       mlir::Value writtenVarB = effectB.getValue();
@@ -325,38 +530,66 @@ anyRAWorWAW(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effectsA,
           mlir::Value writtenOrReadVarA = effectA.getValue();
           if (!writtenVarB || !writtenOrReadVarA) {
             LLVM_DEBUG(
-                logConflict(llvm::dbgs(), writtenOrReadVarA, writtenVarB););
-            return true; // unknown conflict.
+                logConflict(llvm::dbgs(), writtenOrReadVarA, writtenVarB));
+            return ConflictKind::any(); // unknown conflict.
           }
           writtenOrReadVarA = getStorageSource(writtenOrReadVarA);
           if (!aliasAnalysis.alias(writtenOrReadVarA, writtenVarB).isNo()) {
+            mlir::Value arrayA = effectA.getOrderedElementalEffectOn();
+            mlir::Value arrayB = effectB.getOrderedElementalEffectOn();
+            if (arrayA && arrayB) {
+              if (arrayA == arrayB) {
+                result = result || ConflictKind::aligned();
+                LLVM_DEBUG(logConflict(llvm::dbgs(), writtenOrReadVarA,
+                                       writtenVarB, /*isAligned=*/true));
+                continue;
+              }
+              auto overlap = fir::ArraySectionAnalyzer::analyze(arrayA, arrayB);
+              if (overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::
+                                 DefinitelyDisjoint)
+                continue;
+              if (overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::
+                                 DefinitelyIdentical ||
+                  overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::
+                                 EitherIdenticalOrDisjoint) {
+                result = result || ConflictKind::aligned();
+                LLVM_DEBUG(logConflict(llvm::dbgs(), writtenOrReadVarA,
+                                       writtenVarB, /*isAligned=*/true));
+                continue;
+              }
+              LLVM_DEBUG(llvm::dbgs() << "conflicting arrays:" << arrayA
+                                      << " and " << arrayB << "\n");
+              return ConflictKind::any();
+            }
             LLVM_DEBUG(
-                logConflict(llvm::dbgs(), writtenOrReadVarA, writtenVarB););
-            return true;
+                logConflict(llvm::dbgs(), writtenOrReadVarA, writtenVarB));
+            return ConflictKind::any();
           }
         }
     }
-  return false;
+  return result;
 }
 
 /// Could there be any read or write in effectsA on a variable written to in
 /// effectsB, or any read in effectsB on a variable written to in effectsA?
-static bool
-conflict(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effectsA,
-         llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effectsB) {
+static ConflictKind
+conflict(llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
+         llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsB) {
   fir::AliasAnalysis aliasAnalysis;
   // (RAW || WAW) || (WAR || WAW).
-  return anyRAWorWAW(effectsA, effectsB, aliasAnalysis) ||
-         anyRAWorWAW(effectsB, effectsA, aliasAnalysis);
+  ConflictKind result = anyRAWorWAW(effectsA, effectsB, aliasAnalysis);
+  if (result.isAny())
+    return result;
+  return result || anyRAWorWAW(effectsB, effectsA, aliasAnalysis);
 }
 
 /// Could there be any write effects in "effects" affecting memory storages
 /// that are not local to the current region.
 static bool
-anyNonLocalWrite(llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects,
+anyNonLocalWrite(llvm::ArrayRef<hlfir::DetailedEffectInstance> effects,
                  mlir::Region &region) {
   return llvm::any_of(
-      effects, [&region](const mlir::MemoryEffects::EffectInstance &effect) {
+      effects, [&region](const hlfir::DetailedEffectInstance &effect) {
         if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
           if (mlir::Value v = effect.getValue()) {
             v = getStorageSource(v);
@@ -393,9 +626,9 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
   // If the region evaluation was previously executed and saved, the saved
   // value will be used when evaluating the current assignment and this has
   // no effects in the current assignment evaluation.
-  if (savedRegions.contains(&yieldRegion))
+  if (regionStates[&yieldRegion].saved)
     return;
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance> effects;
+  llvm::SmallVector<hlfir::DetailedEffectInstance> effects;
   gatherMemoryEffects(yieldRegion, leafRegionsMayOnlyRead, effects);
   // Yield has no effect as such, but in the context of order assignments.
   // The order assignments will usually read the yielded entity (except for
@@ -404,8 +637,13 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
   // intent(inout)).
   if (yieldIsImplicitRead) {
     mlir::OpOperand *entity = getYieldedEntity(yieldRegion);
-    if (entity && hlfir::isFortranVariableType(entity->get().getType()))
-      effects.emplace_back(mlir::MemoryEffects::Read::get(), entity);
+    if (entity && hlfir::isFortranVariableType(entity->get().getType())) {
+      if (yieldRegion.getParentOfType<hlfir::ForallOp>())
+        effects.emplace_back(mlir::MemoryEffects::Read::get(), entity);
+      else
+        effects.emplace_back(
+            hlfir::DetailedEffectInstance::getArrayReadEffect(entity));
+    }
   }
   if (!leafRegionsMayOnlyRead && anyNonLocalWrite(effects, yieldRegion)) {
     // Region with write effect must be executed only once (unless all writes
@@ -415,33 +653,58 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
                    << "saving eval because write effect prevents re-evaluation"
                    << "\n";);
     saveEvaluation(yieldRegion, effects, /*anyWrite=*/true);
-  } else if (conflict(effects, assignEffects)) {
-    // Region that conflicts with the current assignments must be fully
-    // evaluated and saved before doing the assignment (Note that it may
-    // have already have been evaluated without saving it before, but this
-    // implies that it never conflicted with a prior assignment, so its value
-    // should be the same.)
-    saveEvaluation(yieldRegion, effects, /*anyWrite=*/false);
-  } else if (evaluationsMayConflict &&
-             conflict(effects, assignEvaluateEffects)) {
-    // If evaluations of the assignment may conflict with the yield
-    // evaluations, we have to save yield evaluation.
-    // For example, a WHERE mask might be written by the masked assignment
-    // evaluations, and it has to be saved in this case:
-    //   where (mask) r = f() ! function f modifies mask
-    saveEvaluation(yieldRegion, effects,
-                   anyNonLocalWrite(effects, yieldRegion));
   } else {
-    // Can be executed while doing the assignment.
-    independentEvaluationEffects.append(effects.begin(), effects.end());
+    ConflictKind conflictKind = conflict(effects, assignEffects);
+    if (conflictKind.isAny()) {
+      // Region that conflicts with the current assignments must be fully
+      // evaluated and saved before doing the assignment (Note that it may
+      // have already been evaluated without saving it before, but this
+      // implies that it never conflicted with a prior assignment, so its value
+      // should be the same.)
+      saveEvaluation(yieldRegion, effects, /*anyWrite=*/false);
+    } else {
+      if (conflictKind.isAligned())
+        pendingAlignedRegions.push_back(&yieldRegion);
+
+      if (evaluationsMayConflict &&
+          !conflict(effects, assignEvaluateEffects).isNone()) {
+        // If evaluations of the assignment may conflict with the yield
+        // evaluations, we have to save yield evaluation.
+        // For example, a WHERE mask might be written by the masked assignment
+        // evaluations, and it has to be saved in this case:
+        //   where (mask) r = f() ! function f modifies mask
+        saveEvaluation(yieldRegion, effects,
+                       anyNonLocalWrite(effects, yieldRegion));
+      } else {
+        // Can be executed while doing the assignment.
+        independentEvaluationEffects.append(effects.begin(), effects.end());
+      }
+    }
   }
 }
 
 void Scheduler::saveEvaluation(
     mlir::Region &yieldRegion,
-    llvm::ArrayRef<mlir::MemoryEffects::EffectInstance> effects,
-    bool anyWrite) {
+    llvm::ArrayRef<hlfir::DetailedEffectInstance> effects, bool anyWrite) {
   savedAnyRegionForCurrentAssignment = true;
+  auto &state = regionStates[&yieldRegion];
+  if (state.modifiedInRun) {
+    // The region was modified in a previous run, but we now realize we need its
+    // value. We must save it before that modification run.
+    auto &newRun = *schedule.emplace(*state.modifiedInRun, hlfir::Run{});
+    newRun.actions.emplace_back(hlfir::SaveEntity{&yieldRegion});
+    // We do not have the parent effects from that time easily available here.
+    // However, since we are saving a parent of the current assignment, its
+    // parents are also parents of the current assignment.
+    newRun.memoryEffects.append(parentEvaluationEffects.begin(),
+                                parentEvaluationEffects.end());
+    newRun.memoryEffects.append(effects.begin(), effects.end());
+    state.saved = true;
+    LLVM_DEBUG(
+        logSaveEvaluation(llvm::dbgs(), /*runid=*/0, yieldRegion, anyWrite););
+    return;
+  }
+
   if (anyWrite) {
     // Create a new run just for regions with side effect. Further analysis
     // could try to prove the effects do not conflict with the previous
@@ -465,7 +728,7 @@ void Scheduler::saveEvaluation(
   schedule.back().memoryEffects.append(parentEvaluationEffects.begin(),
                                        parentEvaluationEffects.end());
   schedule.back().memoryEffects.append(effects.begin(), effects.end());
-  savedRegions.insert(&yieldRegion);
+  state.saved = true;
   LLVM_DEBUG(
       logSaveEvaluation(llvm::dbgs(), schedule.size(), yieldRegion, anyWrite););
 }
@@ -476,18 +739,78 @@ bool Scheduler::canFuseAssignmentWithPreviousRun() {
   if (savedAnyRegionForCurrentAssignment || schedule.empty())
     return false;
   auto &previousRunEffects = schedule.back().memoryEffects;
-  return !conflict(previousRunEffects, assignEffects) &&
-         !conflict(previousRunEffects, parentEvaluationEffects) &&
-         !conflict(previousRunEffects, independentEvaluationEffects);
+  return !conflict(previousRunEffects, assignEffects).isAny() &&
+         !conflict(previousRunEffects, parentEvaluationEffects).isAny() &&
+         !conflict(previousRunEffects, independentEvaluationEffects).isAny();
 }
 
-void Scheduler::finishSchedulingAssignment(hlfir::RegionAssignOp assign) {
-  // For now, always schedule each assignment in its own run. They could
-  // be done as part of previous assignment runs if it is proven they have
-  // no conflicting effects.
+/// Gather the parents of (not included) \p node in reverse execution order.
+static void gatherParents(
+    hlfir::OrderedAssignmentTreeOpInterface node,
+    llvm::SmallVectorImpl<hlfir::OrderedAssignmentTreeOpInterface> &parents) {
+  while (node) {
+    auto parent =
+        mlir::dyn_cast_or_null<hlfir::OrderedAssignmentTreeOpInterface>(
+            node->getParentOp());
+    if (parent && parent.getSubTreeRegion() == node->getParentRegion()) {
+      parents.push_back(parent);
+      node = parent;
+    } else {
+      break;
+    }
+  }
+}
+
+// Build the list of the parent nodes for this assignment. The list is built
+// from the closest parent until the ordered assignment tree root (this is the
+// reverse of their execution order).
+static void gatherAssignmentParents(
+    hlfir::RegionAssignOp assign,
+    llvm::SmallVectorImpl<hlfir::OrderedAssignmentTreeOpInterface> &parents) {
+  gatherParents(mlir::cast<hlfir::OrderedAssignmentTreeOpInterface>(
+                    assign.getOperation()),
+                parents);
+}
+
+void Scheduler::finishSchedulingAssignment(hlfir::RegionAssignOp assign,
+                                           bool leafRegionsMayOnlyRead) {
+  // Schedule the assignment in a new run, unless it can be fused with the
+  // previous run (if enabled and proven safe).
   currentRunIsReadOnly = false;
-  if (!tryFusingAssignments || !canFuseAssignmentWithPreviousRun())
+  bool fuse = tryFusingAssignments && canFuseAssignmentWithPreviousRun();
+  if (!fuse) {
+    // If we cannot fuse, we are about to start a new run.
+    // Check if any parent region was modified in a previous run and needs to be
+    // saved.
+    llvm::SmallVector<hlfir::OrderedAssignmentTreeOpInterface> parents;
+    gatherAssignmentParents(assign, parents);
+    for (auto parent : parents) {
+      llvm::SmallVector<mlir::Region *, 4> yieldRegions;
+      parent.getLeafRegions(yieldRegions);
+      for (mlir::Region *yieldRegion : yieldRegions) {
+        if (regionStates[yieldRegion].modifiedInRun &&
+            !regionStates[yieldRegion].saved) {
+          LLVM_DEBUG(logRetroactiveSave(
+              llvm::dbgs(), *yieldRegion,
+              **regionStates[yieldRegion].modifiedInRun, assign));
+          llvm::SmallVector<hlfir::DetailedEffectInstance> effects;
+          gatherMemoryEffects(*yieldRegion, leafRegionsMayOnlyRead, effects);
+          saveEvaluation(*yieldRegion, effects,
+                         anyNonLocalWrite(effects, *yieldRegion));
+        }
+      }
+    }
     schedule.emplace_back(hlfir::Run{});
+  }
+
+  // Mark pending aligned regions as modified in the current run (which is the
+  // last one).
+  auto runIt = std::prev(schedule.end());
+  for (mlir::Region *region : pendingAlignedRegions)
+    if (!regionStates[region].saved)
+      regionStates[region].modifiedInRun = runIt;
+  pendingAlignedRegions.clear();
+
   schedule.back().actions.emplace_back(assign);
   // TODO: when fusing, it would probably be best to filter the
   // parentEvaluationEffects that already in the previous run effects (since
@@ -528,34 +851,6 @@ gatherAssignments(hlfir::OrderedAssignmentTreeOpInterface root,
         for (mlir::Operation &op : llvm::reverse(block->getOperations()))
           nodeStack.push_back(&op);
   }
-}
-
-/// Gather the parents of (not included) \p node in reverse execution order.
-static void gatherParents(
-    hlfir::OrderedAssignmentTreeOpInterface node,
-    llvm::SmallVectorImpl<hlfir::OrderedAssignmentTreeOpInterface> &parents) {
-  while (node) {
-    auto parent =
-        mlir::dyn_cast_or_null<hlfir::OrderedAssignmentTreeOpInterface>(
-            node->getParentOp());
-    if (parent && parent.getSubTreeRegion() == node->getParentRegion()) {
-      parents.push_back(parent);
-      node = parent;
-    } else {
-      break;
-    }
-  }
-}
-
-// Build the list of the parent nodes for this assignment. The list is built
-// from the closest parent until the ordered assignment tree root (this is the
-// revere of their execution order).
-static void gatherAssignmentParents(
-    hlfir::RegionAssignOp assign,
-    llvm::SmallVectorImpl<hlfir::OrderedAssignmentTreeOpInterface> &parents) {
-  gatherParents(mlir::cast<hlfir::OrderedAssignmentTreeOpInterface>(
-                    assign.getOperation()),
-                parents);
 }
 
 hlfir::Schedule
@@ -616,7 +911,7 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
                                          leafRegionsMayOnlyRead,
                                          /*yieldIsImplicitRead=*/false);
     scheduler.finishIndependentEvaluationGroup();
-    scheduler.finishSchedulingAssignment(assign);
+    scheduler.finishSchedulingAssignment(assign, leafRegionsMayOnlyRead);
   }
   return scheduler.moveSchedule();
 }
@@ -704,6 +999,25 @@ static llvm::raw_ostream &printRegionPath(llvm::raw_ostream &os,
   return printRegionId(os, yieldRegion);
 }
 
+[[maybe_unused]] static void
+logRetroactiveSave(llvm::raw_ostream &os, mlir::Region &yieldRegion,
+                   hlfir::Run &modifyingRun,
+                   hlfir::RegionAssignOp currentAssign) {
+  printRegionPath(os, yieldRegion) << " is modified in order by ";
+  bool first = true;
+  for (auto &action : modifyingRun.actions) {
+    if (auto *assign = std::get_if<hlfir::RegionAssignOp>(&action)) {
+      if (!first)
+        os << ", ";
+      printNodePath(os, assign->getOperation());
+      first = false;
+    }
+  }
+  os << " and is needed by ";
+  printNodePath(os, currentAssign.getOperation());
+  os << " that is scheduled in a later run\n";
+}
+
 [[maybe_unused]] static void logSaveEvaluation(llvm::raw_ostream &os,
                                                unsigned runid,
                                                mlir::Region &yieldRegion,
@@ -721,13 +1035,14 @@ logAssignmentEvaluation(llvm::raw_ostream &os, unsigned runid,
 
 [[maybe_unused]] static void logConflict(llvm::raw_ostream &os,
                                          mlir::Value writtenOrReadVarA,
-                                         mlir::Value writtenVarB) {
+                                         mlir::Value writtenVarB,
+                                         bool isAligned) {
   auto printIfValue = [&](mlir::Value var) -> llvm::raw_ostream & {
     if (!var)
       return os << "<unknown>";
     return os << var;
   };
-  os << "conflict: R/W: ";
+  os << "conflict" << (isAligned ? " (aligned)" : "") << ": R/W: ";
   printIfValue(writtenOrReadVarA) << " W:";
   printIfValue(writtenVarB) << "\n";
 }
@@ -743,9 +1058,9 @@ logStartScheduling(llvm::raw_ostream &os,
 }
 
 [[maybe_unused]] static void
-logIfUnkownEffectValue(llvm::raw_ostream &os,
-                       mlir::MemoryEffects::EffectInstance effect,
-                       mlir::Operation &op) {
+logIfUnknownEffectValue(llvm::raw_ostream &os,
+                        mlir::MemoryEffects::EffectInstance effect,
+                        mlir::Operation &op) {
   if (effect.getValue() != nullptr)
     return;
   os << "unknown effected value (";

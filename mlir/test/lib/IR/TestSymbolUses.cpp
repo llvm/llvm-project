@@ -43,7 +43,12 @@ struct SymbolUsesPass
     // Test the functionality of symbolKnownUseEmpty.
     if (SymbolTable::symbolKnownUseEmpty(symbol, &module.getBodyRegion())) {
       func::FuncOp funcSymbol = dyn_cast<func::FuncOp>(symbol.getOperation());
-      if (funcSymbol && funcSymbol.isExternal())
+      // Only track functions that are direct children of the enclosing module.
+      // Functions in nested symbol tables (e.g., nested modules) belong to a
+      // different symbol table and cannot be erased via the outer module's
+      // SymbolTable instance.
+      if (funcSymbol && funcSymbol.isExternal() &&
+          funcSymbol->getParentOp() == module.getOperation())
         deadFunctions.push_back(funcSymbol);
 
       symbol->emitRemark() << "symbol has no uses";
@@ -60,6 +65,10 @@ struct SymbolUsesPass
         symbolUse.getUser()->emitRemark()
             << "found use of symbol : " << symbolUse.getSymbolRef() << " : "
             << symbol.getNameAttr();
+      } else {
+        symbolUse.getUser()->emitRemark()
+            << "failed to resolve use of symbol : " << symbolUse.getSymbolRef()
+            << " : " << symbol.getNameAttr();
       }
     }
     symbol->emitRemark() << "symbol has " << llvm::size(*symbolUses) << " uses";

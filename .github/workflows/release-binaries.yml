@@ -62,6 +62,7 @@ jobs:
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
+      attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
     # It's good practice to use setup-python, but this is also required on macos-14
@@ -69,6 +70,13 @@ jobs:
     - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: '3.14'
+
+    - name: Install Windows ARM64 dependencies
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        # Some of the python modules we install require this package to be installed on the system.
+        vcpkg install openssl:arm64-windows-static-md
+        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -167,6 +175,14 @@ jobs:
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
+          windows-11-arm)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="windows-11-arm-16core"
+            fi
+            test_runs_on=$build_runs_on
+            ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               build_runs_on="${{ inputs.runs-on }}"
@@ -199,6 +215,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
+        echo "attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-binary-attestation" >> $GITHUB_OUTPUT
 
   build-release-package:
     name: "Build Release Package"
@@ -215,13 +232,13 @@ jobs:
     # get changed unexpectedly.
     - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
-        python-version: '3.10'
+        python-version: '3.11.9'
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.10.11\x64\libs" >> $env:GITHUB_ENV
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
     - name: Setup crlf
       if: runner.os == 'Windows'
@@ -287,7 +304,13 @@ jobs:
         # This will be empty on non-Windows builds.
         WINDOWS_INSTALLER_FILENAME: ${{ steps.build-windows.outputs.windows-installer-filename }}
       run: |
-          echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            # Mac runners don't have sha256sum.
+            sha256sum="shasum -a 256"
+          else
+            sha256sum="sha256sum"
+          fi
+          echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
     - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       id: artifact-upload
@@ -333,7 +356,9 @@ jobs:
       - name: Upload Artifacts
         uses: ./.github/workflows/upload-release-artifact
         with:
+          release-version: ${{ needs.prepare.outputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
-          attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
+          attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}
           upload: ${{ needs.prepare.outputs.upload }}
+          user-token: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}

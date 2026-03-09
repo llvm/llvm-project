@@ -14,10 +14,13 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Transforms/RegionUtils.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
@@ -105,76 +108,98 @@ static void normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
   iv.replaceAllUsesExcept(denormalized, exceptions);
 }
 
-/// Clone an ACC region into a destination block, handling the ACC terminators.
-/// Returns the insertion point after the cloned operations.
-static Block::iterator cloneACCRegionInto(Region *src, Block *dest,
-                                          Block::iterator insertionPoint,
-                                          IRMapping &mapping) {
-  assert(src->hasOneBlock() && "expected single-block region");
-
-  Region *insertRegion = dest->getParent();
-  Block *postInsertBlock = dest->splitBlock(insertionPoint);
-  src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapping);
-
-  auto lastNewBlock = std::prev(postInsertBlock->getIterator());
-
-  Block::iterator newInsertionPoint;
-  Operation *terminator = lastNewBlock->getTerminator();
-
-  if (auto yieldOp = dyn_cast<acc::YieldOp>(terminator)) {
-    newInsertionPoint = std::prev(yieldOp->getIterator());
-    yieldOp.erase();
-  } else if (auto terminatorOp = dyn_cast<acc::TerminatorOp>(terminator)) {
-    newInsertionPoint = std::prev(terminatorOp->getIterator());
-    terminatorOp.erase();
-  } else {
-    llvm_unreachable("unexpected terminator in ACC region");
-  }
-
-  // Merge last block with the postInsertBlock
-  lastNewBlock->getOperations().splice(lastNewBlock->end(),
-                                       postInsertBlock->getOperations());
-  postInsertBlock->erase();
-
-  // Merge first block with original dest block
-  auto firstNewBlock = std::next(dest->getIterator());
-  dest->getOperations().splice(dest->end(), firstNewBlock->getOperations());
-  firstNewBlock->erase();
-
-  return newInsertionPoint;
-}
-
-/// Wrap a multi-block region with scf.execute_region.
-static scf::ExecuteRegionOp
-wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc, RewriterBase &rewriter) {
-  auto exeRegionOp = scf::ExecuteRegionOp::create(rewriter, loc, TypeRange{});
-
-  rewriter.cloneRegionBefore(region, exeRegionOp.getRegion(),
-                             exeRegionOp.getRegion().end(), mapping);
-
-  // Find and replace the ACC terminator with scf.yield
-  Operation *terminator = exeRegionOp.getRegion().back().getTerminator();
-  if (auto yieldOp = dyn_cast<acc::YieldOp>(terminator)) {
-    if (yieldOp.getNumOperands() > 0) {
-      region.getParentOp()->emitError(
-          "acc.loop with results not yet supported");
-      return nullptr;
-    }
-  } else if (!isa<acc::TerminatorOp>(terminator)) {
-    llvm_unreachable("unexpected terminator in ACC region");
-  }
-
-  rewriter.eraseOp(terminator);
-  rewriter.setInsertionPointToEnd(&exeRegionOp.getRegion().back());
-  scf::YieldOp::create(rewriter, loc);
-  return exeRegionOp;
+/// Helper used by loop conversion: clone region and return insertion point
+/// only.
+static Block::iterator cloneACCRegionIntoForLoop(Region *src, Block *dest,
+                                                 Block::iterator insertionPoint,
+                                                 IRMapping &mapping,
+                                                 RewriterBase &rewriter) {
+  auto [replacements, ip] =
+      acc::cloneACCRegionInto(src, dest, insertionPoint, mapping, ValueRange{});
+  (void)replacements;
+  return ip;
 }
 
 } // namespace
 
 namespace mlir {
 namespace acc {
+
+std::pair<SmallVector<Value>, Block::iterator>
+cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
+                   IRMapping &mapping, ValueRange resultsToReplace) {
+  if (!src->hasOneBlock())
+    llvm_unreachable("cloneACCRegionInto: multi-block region not supported "
+                     "(requires scf.execute_region)");
+
+  Region *insertRegion = dest->getParent();
+  Block *postInsertBlock = dest->splitBlock(inlinePoint);
+  src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapping);
+
+  SmallVector<Value> replacements;
+  Block *lastNewBlock = &*std::prev(postInsertBlock->getIterator());
+
+  Block::iterator ip;
+  if (auto yieldOp = dyn_cast<acc::YieldOp>(lastNewBlock->getTerminator())) {
+    for (auto [replacement, orig] :
+         llvm::zip(yieldOp.getOperands(), resultsToReplace)) {
+      replaceAllUsesInRegionWith(orig, replacement, *dest->getParent());
+      replacements.push_back(replacement);
+    }
+    ip = std::prev(yieldOp->getIterator());
+    yieldOp.erase();
+  } else {
+    auto terminatorOp =
+        dyn_cast<acc::TerminatorOp>(lastNewBlock->getTerminator());
+    if (!terminatorOp)
+      llvm_unreachable(
+          "cloneACCRegionInto: expected acc.yield or acc.terminator");
+    ip = std::prev(terminatorOp->getIterator());
+    terminatorOp.erase();
+  }
+
+  lastNewBlock->getOperations().splice(lastNewBlock->end(),
+                                       postInsertBlock->getOperations());
+  postInsertBlock->erase();
+
+  Block *firstNewBlock = &*std::next(dest->getIterator());
+  dest->getOperations().splice(dest->end(), firstNewBlock->getOperations());
+  firstNewBlock->erase();
+  return {replacements, ip};
+}
+
+/// Wrap a multi-block region with scf.execute_region.
+scf::ExecuteRegionOp
+wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
+                                         Location loc, RewriterBase &rewriter,
+                                         bool convertFuncReturn) {
+  auto exeRegionOp = scf::ExecuteRegionOp::create(rewriter, loc, TypeRange{});
+
+  rewriter.cloneRegionBefore(region, exeRegionOp.getRegion(),
+                             exeRegionOp.getRegion().end(), mapping);
+
+  SmallVector<Block *, 8> blocks(
+      llvm::make_pointer_range(exeRegionOp.getRegion().getBlocks()));
+
+  for (Block *block : blocks) {
+    if (block->empty())
+      continue;
+    Operation *blockTerminator = block->getTerminator();
+    if ((convertFuncReturn && isa<func::ReturnOp>(*blockTerminator)) ||
+        isa<acc::YieldOp>(*blockTerminator)) {
+      if (blockTerminator->getNumOperands()) {
+        region.getParentOp()->emitError(
+            "region with results not yet supported");
+        return nullptr;
+      }
+      rewriter.setInsertionPointToEnd(block);
+      (void)scf::YieldOp::create(rewriter, blockTerminator->getLoc());
+      rewriter.eraseOp(blockTerminator);
+    }
+  }
+
+  return exeRegionOp;
+}
 
 scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
                                   bool enableCollapse) {
@@ -193,6 +218,23 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(loopOp);
 
+  // First, compute ALL loop bounds at the current insertion point (before
+  // any ForOp). This ensures all bounds are defined in the outer scope,
+  // which is required for coalesceLoops to work correctly.
+  SmallVector<Value> lowerBounds, upperBounds, steps;
+  for (BlockArgument iv : loopOp.getBody().getArguments()) {
+    size_t idx = iv.getArgNumber();
+    Value newLowerBound = getValueOrCreateCastToIndexLike(
+        rewriter, loc, indexType, loopOp.getLowerbound()[idx]);
+    Value newUpperBound = getExclusiveUpperBoundAsIndex(loopOp, idx, rewriter);
+    Value newStep = getValueOrCreateCastToIndexLike(rewriter, loc, indexType,
+                                                    loopOp.getStep()[idx]);
+    lowerBounds.push_back(newLowerBound);
+    upperBounds.push_back(newUpperBound);
+    steps.push_back(newStep);
+  }
+
+  // Now create the nested ForOps using the pre-computed bounds
   for (BlockArgument iv : loopOp.getBody().getArguments()) {
     size_t idx = iv.getArgNumber();
 
@@ -200,14 +242,8 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     if (idx > 0)
       rewriter.setInsertionPointToStart(forOps.back().getBody());
 
-    Value newLowerBound = getValueOrCreateCastToIndexLike(
-        rewriter, loc, indexType, loopOp.getLowerbound()[idx]);
-    Value newUpperBound = getExclusiveUpperBoundAsIndex(loopOp, idx, rewriter);
-    Value newStep = getValueOrCreateCastToIndexLike(rewriter, loc, indexType,
-                                                    loopOp.getStep()[idx]);
-
-    scf::ForOp forOp = scf::ForOp::create(rewriter, loc, newLowerBound,
-                                          newUpperBound, newStep);
+    scf::ForOp forOp = scf::ForOp::create(rewriter, loc, lowerBounds[idx],
+                                          upperBounds[idx], steps[idx]);
     forOps.push_back(forOp);
     mapping.map(iv, forOp.getInductionVar());
   }
@@ -222,12 +258,12 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   mapACCLoopIVsToSCFIVs(loopOp, scfIVs, rewriter, mapping);
 
   // Clone the loop body into the innermost scf.for
-  cloneACCRegionInto(&loopOp.getRegion(), forOps.back().getBody(),
-                     rewriter.getInsertionPoint(), mapping);
+  cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
+                            rewriter.getInsertionPoint(), mapping, rewriter);
 
   // Optionally collapse nested loops
   if (enableCollapse && forOps.size() > 1)
-    if (failed(coalesceLoops(forOps)))
+    if (failed(coalesceLoops(rewriter, forOps)))
       loopOp.emitError("failed to collapse acc.loop");
 
   return forOps.front();
@@ -282,8 +318,8 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
       return nullptr;
     }
   } else {
-    cloneACCRegionInto(&loopOp.getRegion(), parallelOp.getBody(),
-                       rewriter.getInsertionPoint(), mapping);
+    cloneACCRegionIntoForLoop(&loopOp.getRegion(), parallelOp.getBody(),
+                              rewriter.getInsertionPoint(), mapping, rewriter);
   }
 
   // Denormalize IV uses

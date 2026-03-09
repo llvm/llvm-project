@@ -1124,17 +1124,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           InsertBefore = AI->getNextNode();
 
           // Make an estimate on the stack usage.
-          if (AI->isStaticAlloca()) {
-            uint32_t Bytes = DL.getTypeAllocSize(AI->getAllocatedType());
-            if (AI->isArrayAllocation()) {
-              if (const ConstantInt *arraySize =
-                      dyn_cast<ConstantInt>(AI->getArraySize())) {
-                Bytes *= arraySize->getZExtValue();
-              } else {
-                HasDynamicAlloc = true;
-              }
-            }
-            EstimatedStackSize += Bytes;
+          if (auto AllocaSize = AI->getAllocationSize(DL)) {
+            if (AllocaSize->isFixed())
+              EstimatedStackSize += AllocaSize->getFixedValue();
+            else
+              HasDynamicAlloc = true;
           } else {
             HasDynamicAlloc = true;
           }

@@ -623,6 +623,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
     break;
 
   case ARM::tBX_RET:
+  case ARM::t2BXAUT_RET:
   case ARM::TCRETURNri:
   case ARM::TCRETURNrinotr12:
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
@@ -1551,8 +1552,17 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     // function, the validation instruction is emitted during expansion of the
     // tBXNS_RET, since the validation must use the value of SP at function
     // entry, before saving, resp. after restoring, FPCXTNS.
-    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction())
-      BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    if (AFI->shouldSignReturnAddress() && !AFI->isCmseNSEntryFunction()) {
+      bool CanUseBXAut =
+          STI.isThumb() && STI.hasV8_1MMainlineOps() && STI.hasPACBTI();
+      auto TMBBI = MBB.getFirstTerminator();
+      bool IsBXReturn =
+          TMBBI != MBB.end() && TMBBI->getOpcode() == ARM::tBX_RET;
+      if (IsBXReturn && CanUseBXAut)
+        TMBBI->setDesc(STI.getInstrInfo()->get(ARM::t2BXAUT_RET));
+      else
+        BuildMI(MBB, MBBI, DebugLoc(), STI.getInstrInfo()->get(ARM::t2AUT));
+    }
   }
 
   if (MF.hasWinCFI()) {
@@ -2335,6 +2345,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     for (auto &Table: MF.getJumpTableInfo()->getJumpTables())
       FnSize += Table.MBBs.size() * 4;
   FnSize += MF.getConstantPool()->getConstants().size() * 4;
+  LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
+                    << FnSize << " bytes\n");
   return FnSize;
 }
 

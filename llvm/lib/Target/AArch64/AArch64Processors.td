@@ -272,6 +272,7 @@ def TuneX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   FeatureALULSLFast,
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
+                                  FeatureMaxInterleaveFactor4,
                                   FeaturePredictableSelectIsExpensive]>;
 
 def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
@@ -283,6 +284,7 @@ def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
                                   FeatureUseFixedOverScalableIfEqualCost,
+                                  FeatureMaxInterleaveFactor4,
                                   FeaturePredictableSelectIsExpensive]>;
 
 def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
@@ -293,6 +295,7 @@ def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
                                FeatureUseFixedOverScalableIfEqualCost,
+                               FeatureMaxInterleaveFactor4,
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
 
@@ -306,6 +309,7 @@ def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
                                FeatureUseFixedOverScalableIfEqualCost,
+                               FeatureMaxInterleaveFactor4,
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
 
@@ -319,6 +323,7 @@ def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
                                 FeaturePostRAScheduler,
                                 FeatureEnableSelectOptimize,
                                 FeatureUseFixedOverScalableIfEqualCost,
+                                FeatureMaxInterleaveFactor4,
                                 FeatureAvoidLDAPUR,
                                 FeaturePredictableSelectIsExpensive]>;
 
@@ -345,6 +350,7 @@ def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
                                   FeatureUseFixedOverScalableIfEqualCost,
+                                  FeatureMaxInterleaveFactor4,
                                   FeatureAvoidLDAPUR,
                                   FeaturePredictableSelectIsExpensive]>;
 
@@ -470,6 +476,7 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
+                                    FeatureFastLD1Single,
                                     FeatureFuseAddress,
                                     FeatureFuseAES,
                                     FeatureFuseArithmeticLogic,
@@ -491,6 +498,7 @@ def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
+                                    FeatureFastLD1Single,
                                     FeatureFuseAddress,
                                     FeatureFuseAdrpAdd,
                                     FeatureFuseAES,
@@ -513,6 +521,7 @@ def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
+                                    FeatureFastLD1Single,
                                     FeatureFuseAddress,
                                     FeatureFuseAdrpAdd,
                                     FeatureFuseAES,
@@ -535,6 +544,7 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
+                                    FeatureFastLD1Single,
                                     FeatureFuseAddress,
                                     FeatureFuseAdrpAdd,
                                     FeatureFuseAES,
@@ -557,6 +567,7 @@ def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                      FeatureArithmeticBccFusion,
                                      FeatureArithmeticCbzFusion,
                                      FeatureDisableLatencySchedHeuristic,
+                                     FeatureFastLD1Single,
                                      FeatureFuseAddress,
                                      FeatureFuseAdrpAdd,
                                      FeatureFuseAES,
@@ -578,6 +589,7 @@ def TuneAppleM5 : SubtargetFeature<"apple-m5", "ARMProcFamily", "AppleM5",
                                     FeatureArithmeticBccFusion,
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
+                                    FeatureFastLD1Single,
                                     FeatureFuseAddress,
                                     FeatureFuseAdrpAdd,
                                     FeatureFuseAES,
@@ -737,6 +749,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeatureFuseCmpCSet,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
@@ -750,6 +763,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureFuseCmpCSet,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
@@ -1379,7 +1393,7 @@ def ProcessorFeatures {
                                      FeatureSSBS, FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> GB10 = !listconcat(X925, [FeatureSVEAES, FeatureSVESHA3, FeatureSVESM4]);
-  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVESM4, FeatureSVEAES, FeatureSVESHA3]);
+  list<SubtargetFeature> Grace = !listconcat(!listremove(NeoverseV2, [FeatureRandGen]), [FeatureSVESM4, FeatureSVEAES, FeatureSVESHA3]);
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not

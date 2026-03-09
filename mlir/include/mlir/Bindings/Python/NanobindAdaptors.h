@@ -19,7 +19,6 @@
 #ifndef MLIR_BINDINGS_PYTHON_NANOBINDADAPTORS_H
 #define MLIR_BINDINGS_PYTHON_NANOBINDADAPTORS_H
 
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -30,46 +29,11 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
-#include "llvm/ADT/Twine.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 
 namespace mlir {
 namespace python {
 namespace {
-
-// Safely calls Python initialization code on first use, avoiding deadlocks.
-template <typename T>
-class SafeInit {
-public:
-  typedef std::unique_ptr<T> (*F)();
-
-  explicit SafeInit(F init_fn) : initFn(init_fn) {}
-
-  T &get() {
-    if (T *result = output.load()) {
-      return *result;
-    }
-
-    // Note: init_fn() may be called multiple times if, for example, the GIL is
-    // released during its execution. The intended use case is for module
-    // imports which are safe to perform multiple times. We are careful not to
-    // hold a lock across init_fn() to avoid lock ordering problems.
-    std::unique_ptr<T> m = initFn();
-    {
-      nanobind::ft_lock_guard lock(mu);
-      if (T *result = output.load()) {
-        return *result;
-      }
-      T *p = m.release();
-      output.store(p);
-      return *p;
-    }
-  }
-
-private:
-  nanobind::ft_mutex mu;
-  std::atomic<T *> output{nullptr};
-  F initFn;
-};
 
 nanobind::module_ &irModule() {
   static SafeInit<nanobind::module_> init([]() {
@@ -186,10 +150,11 @@ struct type_caster<MlirContext> {
     // If there is no context, including thread-bound, emit a warning (since
     // this function is not allowed to throw) and fail to cast.
     if (src.is_none()) {
-      PyErr_Warn(
+      PyErr_WarnEx(
           PyExc_RuntimeWarning,
           "Passing None as MLIR Context is only allowed inside "
-          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.");
+          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.",
+          /*stacklevel=*/1);
       return false;
     }
     if (std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src)) {
@@ -495,8 +460,11 @@ public:
         std::forward<Func>(f),
         nanobind::name(name), // nanobind::scope(thisClass),
         extra...);
-    thisClass.attr(name) =
-        nanobind::borrow<nanobind::object>(PyClassMethod_New(cf.ptr()));
+    static SafeInit<nanobind::object> classmethodFn([]() {
+      return std::make_unique<nanobind::object>(
+          nanobind::module_::import_("builtins").attr("classmethod"));
+    });
+    thisClass.attr(name) = classmethodFn.get()(cf);
     return *this;
   }
 
@@ -550,10 +518,9 @@ public:
               !isaFunction(rawAttribute)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherAttribute));
-            throw std::invalid_argument(
-                (llvm::Twine("Cannot cast attribute to ") + captureTypeName +
-                 " (from " + origRepr + ")")
-                    .str());
+            throw std::invalid_argument(nanobind::detail::join(
+                "Cannot cast attribute to ", captureTypeName, " (from ",
+                origRepr, ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherAttribute);
           return self;
@@ -571,8 +538,9 @@ public:
         [isaFunction](MlirAttribute other) { return isaFunction(other); },
         nanobind::arg("other_attribute"), nanobind::sig(kIsinstanceSig));
     def("__repr__", [superCls, captureTypeName](nanobind::object self) {
-      return nanobind::repr(superCls(self))
-          .attr("replace")(superCls.attr("__name__"), captureTypeName);
+      return nanobind::cast<std::string>(
+          nanobind::repr(superCls(self))
+              .attr("replace")(superCls.attr("__name__"), captureTypeName));
     });
     if (getTypeIDFunction) {
       def_staticmethod(
@@ -633,10 +601,9 @@ public:
               !isaFunction(rawType)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherType));
-            throw std::invalid_argument((llvm::Twine("Cannot cast type to ") +
-                                         captureTypeName + " (from " +
-                                         origRepr + ")")
-                                            .str());
+            throw std::invalid_argument(
+                nanobind::detail::join("Cannot cast type to ", captureTypeName,
+                                       " (from ", origRepr, ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherType);
           return self;
@@ -720,10 +687,9 @@ public:
               !isaFunction(rawValue)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherValue));
-            throw std::invalid_argument((llvm::Twine("Cannot cast value to ") +
-                                         captureValueName + " (from " +
-                                         origRepr + ")")
-                                            .str());
+            throw std::invalid_argument(nanobind::detail::join(
+                "Cannot cast value to ", captureValueName, " (from ", origRepr,
+                ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherValue);
           return self;

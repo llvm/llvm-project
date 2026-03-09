@@ -740,3 +740,11 @@ TEST(IntegerRelationTest, simplify) {
   // It can be obtained from 2 times the first equality minus the second.
   EXPECT_TRUE(rel.getNumEqualities() == 2);
 }
+
+TEST(IntegerRelationTest, isFullDim) {
+  IntegerRelation rel = parseRelationFromSet("(x): (1 >= 0)", 1);
+  EXPECT_TRUE(rel.isFullDim());
+
+  rel = parseRelationFromSet("(x): (-1 >= 0)", 1);
+  EXPECT_FALSE(rel.isFullDim());
+}

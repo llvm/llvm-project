@@ -45,6 +45,7 @@
 
 using namespace clang::tooling;
 using namespace clang;
+using clang::doc::OutputFormatTy;
 
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
@@ -111,24 +112,23 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy { md, yaml, html, json };
-
-static llvm::cl::opt<OutputFormatTy>
-    FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
-               llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
-                                           "Documentation in YAML format."),
-                                clEnumValN(OutputFormatTy::md, "md",
-                                           "Documentation in MD format."),
-                                clEnumValN(OutputFormatTy::html, "html",
-                                           "Documentation in HTML format."),
-                                clEnumValN(OutputFormatTy::json, "json",
-                                           "Documentation in JSON format")),
-               llvm::cl::init(OutputFormatTy::yaml),
-               llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<OutputFormatTy> FormatEnum(
+    "format", llvm::cl::desc("Format for outputted docs."),
+    llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
+                                "Documentation in YAML format."),
+                     clEnumValN(OutputFormatTy::md, "md",
+                                "Documentation in MD format."),
+                     clEnumValN(OutputFormatTy::html, "html",
+                                "Documentation in HTML format."),
+                     clEnumValN(OutputFormatTy::json, "json",
+                                "Documentation in JSON format"),
+                     clEnumValN(OutputFormatTy::md_mustache, "md_mustache",
+                                "Documentation in MD format.")),
+    llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
 
-static std::string getFormatString() {
+static llvm::StringRef getFormatString() {
   switch (FormatEnum) {
   case OutputFormatTy::yaml:
     return "yaml";
@@ -138,6 +138,8 @@ static std::string getFormatString() {
     return "html";
   case OutputFormatTy::json:
     return "json";
+  case OutputFormatTy::md_mustache:
+    return "md_mustache";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -179,8 +181,10 @@ static llvm::Error getHtmlFiles(const char *Argv0,
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
                  << " falling back to default\n";
   if (IsDir) {
-    if (auto Err = getAssetFiles(CDCtx))
-      return Err;
+    if (FormatEnum == OutputFormatTy::html) {
+      if (auto Err = getAssetFiles(CDCtx))
+        return Err;
+    }
   }
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
@@ -192,6 +196,27 @@ static llvm::Error getHtmlFiles(const char *Argv0,
   llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
 
   getHtmlFiles(AssetsPath, CDCtx);
+
+  return llvm::Error::success();
+}
+
+static llvm::Error getMdFiles(const char *Argv0,
+                              clang::doc::ClangDocContext &CDCtx) {
+  bool IsDir = llvm::sys::fs::is_directory(UserAssetPath);
+  if (!UserAssetPath.empty() && !IsDir)
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+
+  void *MainAddr = (void *)(intptr_t)getExecutablePath;
+  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc", "md");
+
+  getMdFiles(AssetsPath, CDCtx);
 
   return llvm::Error::success();
 }
@@ -263,7 +288,7 @@ Example usage for a project using a compile commands database:
     llvm::TimeTraceScope("main");
 
     // Fail early if an invalid format was provided.
-    std::string Format = getFormatString();
+    llvm::StringRef Format = getFormatString();
     llvm::outs() << "Emiting docs in " << Format << " format.\n";
     auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
@@ -283,10 +308,13 @@ Example usage for a project using a compile commands database:
     clang::doc::ClangDocContext CDCtx(
         Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
         SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
-        {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FTimeTrace);
+        {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
+        FTimeTrace);
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));
+    else if (Format == "md_mustache")
+      ExitOnErr(getMdFiles(argv[0], CDCtx));
 
     llvm::timeTraceProfilerBegin("Executor Launch", "total runtime");
     // Mapping phase

@@ -23,10 +23,12 @@
 #include "NoexceptDestructorCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NoexceptSwapCheck.h"
+#include "StringViewConversionsCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitializationCheck.h"
 #include "UnnecessaryValueParamCheck.h"
+#include "UseStdMoveCheck.h"
 
 namespace clang::tidy {
 namespace performance {
@@ -62,6 +64,8 @@ public:
         "performance-noexcept-move-constructor");
     CheckFactories.registerCheck<NoexceptSwapCheck>(
         "performance-noexcept-swap");
+    CheckFactories.registerCheck<StringViewConversionsCheck>(
+        "performance-string-view-conversions");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
@@ -70,6 +74,7 @@ public:
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
         "performance-unnecessary-value-param");
+    CheckFactories.registerCheck<UseStdMoveCheck>("performance-use-std-move");
   }
 };
 

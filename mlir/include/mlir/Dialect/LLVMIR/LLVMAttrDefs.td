@@ -520,6 +520,7 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"uint64_t">:$offsetInBits,
     OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
+    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
     OptionalParameter<"DINodeAttr">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
@@ -940,6 +941,18 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
   let builders = [
     TypeBuilder<(ins "ArrayRef<ModRefInfo>":$memInfoArgs)>
   ];
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DenormalFPEnvAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DenormalFPEnvAttr : LLVM_Attr<"DenormalFPEnv", "denormal_fpenv"> {
+  let parameters = (ins "DenormalModeKind":$default_output_mode,
+                        "DenormalModeKind":$default_input_mode,
+                        "DenormalModeKind":$float_output_mode,
+                        "DenormalModeKind":$float_input_mode);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
