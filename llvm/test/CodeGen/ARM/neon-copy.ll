@@ -674,8 +674,7 @@ define <2 x i32> @test_vdup_n_u32(i32 %v1) #0 {
 define <1 x i64> @test_vdup_n_u64(i64 %v1) #0 {
 ; CHECK-LABEL: test_vdup_n_u64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.32 d0[0], r0
-; CHECK-NEXT:    vmov.32 d0[1], r1
+; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    bx lr
   %vecinit.i = insertelement <1 x i64> undef, i64 %v1, i32 0
   ret <1 x i64> %vecinit.i

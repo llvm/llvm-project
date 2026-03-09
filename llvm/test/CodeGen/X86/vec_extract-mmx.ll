@@ -113,7 +113,9 @@ define i32 @test3(<1 x i64> %a) nounwind {
 define i32 @test4(<1 x i64> %a) nounwind {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    movd %xmm0, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:
