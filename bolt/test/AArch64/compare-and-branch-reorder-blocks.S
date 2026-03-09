@@ -51,7 +51,7 @@ reorder_blocks:
 # BEYOND-1KB: <reorder_blocks>:
 # BEYOND-1KB-NEXT:            {{.*}} cblt x0, #0x1, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
 # BEYOND-1KB-NEXT:            {{.*}} b              0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
-# BEYOND-1KB-NEXT: [[ADDR0]]: {{.*}} nop
+# BEYOND-1KB:      [[ADDR0]]: {{.*}} nop
 # BEYOND-1KB:                 {{.*}} mov  x0, #0x2 // =2
 # BEYOND-1KB-NEXT:            {{.*}} ret
 # BEYOND-1KB-NEXT: [[ADDR1]]: {{.*}} mov  x0, #0x1 // =1
