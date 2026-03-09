@@ -336,8 +336,8 @@ static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
 
 /// Emit IIT_Table[] and IIT_LongEncodingTable[] into \p OS
 /// (included via GET_INTRINSIC_GENERATOR_GLOBAL in Intrinsics.cpp).
-/// TypeInfoGen<> in Intrinsics.td builds the TypeSig list, 
-/// which IntrinsicEmitter.cpp packs using encodePacked(). 
+/// TypeInfoGen<> in Intrinsics.td builds the TypeSig list,
+/// which IntrinsicEmitter.cpp packs using encodePacked().
 /// Check the MSB of the IIT_Table entry to determine the following:
 ///   Fixed (MSB=0): all IIT codes < 16 and nibble-packed value fits in
 ///     FixedEncodingTy with MSB clear. Stored directly in IIT_Table[].
