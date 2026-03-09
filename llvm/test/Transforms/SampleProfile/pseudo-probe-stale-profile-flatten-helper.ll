@@ -41,58 +41,38 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@x = dso_local global i32 0, align 4
-
-define dso_local void @bar_new(i64 noundef %y) #0 !dbg !20 {
+define void @bar_new() #0 !dbg !20 {
 entry:
   call void @llvm.pseudoprobe(i64 8236371237083957767, i64 1, i32 0, i64 -1), !dbg !23
-  %0 = load volatile i32, ptr @x, align 4, !dbg !23
-  %conv = sext i32 %0 to i64, !dbg !23
-  %add = add nsw i64 %conv, %y, !dbg !23
-  %conv1 = trunc i64 %add to i32, !dbg !23
-  store volatile i32 %conv1, ptr @x, align 4, !dbg !23
   ret void, !dbg !24
 }
 
-define dso_local void @foo_new(i64 noundef %y) #0 !dbg !11 {
+define void @foo_new() #0 !dbg !11 {
 entry:
   call void @llvm.pseudoprobe(i64 -837213161392124280, i64 1, i32 0, i64 -1), !dbg !14
-  %0 = load volatile i32, ptr @x, align 4, !dbg !14
-  store volatile i32 %0, ptr @x, align 4, !dbg !14
-  call void @llvm.pseudoprobe(i64 -837213161392124280, i64 2, i32 0, i64 -1), !dbg !15
-  %1 = load volatile i32, ptr @x, align 4, !dbg !15
-  store volatile i32 %1, ptr @x, align 4, !dbg !15
-  call void @llvm.pseudoprobe(i64 -837213161392124280, i64 2, i32 0, i64 -1), !dbg !16
-  call void @bar_new(i64 noundef %y), !dbg !40
+  call void @bar_new(), !dbg !40
   ret void, !dbg !17
 }
 
-define dso_local noundef i32 @main() #1 !dbg !30 {
+define i32 @main() #0 !dbg !30 {
 entry:
   call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 1, i32 0, i64 -1), !dbg !33
-  call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 2, i32 0, i64 -1), !dbg !34
-  %0 = load volatile i32, ptr @x, align 4, !dbg !34
-  store volatile i32 %0, ptr @x, align 4, !dbg !34
-  call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 4, i32 0, i64 -1), !dbg !35
-  call void @foo_new(i64 noundef 42), !dbg !42
+  call void @foo_new(), !dbg !42
   ret i32 0, !dbg !36
 }
 
-declare void @llvm.pseudoprobe(i64, i64, i32, i64) #2
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 
 attributes #0 = { noinline nounwind "use-sample-profile" }
-attributes #1 = { noinline norecurse nounwind "use-sample-profile" }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
 !llvm.pseudo_probe_desc = !{!9, !10, !29}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, nameTableKind: None)
-!1 = !DIFile(filename: "test_flatten.cpp", directory: "/home")
+!1 = !DIFile(filename: "test.cpp", directory: "/tmp")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 7, !"uwtable", i32 2}
-; pseudo_probe_desc: {GUID, CFGChecksum, name}
 !9 = !{i64 -837213161392124280, i64 222222, !"foo_new"}
 !10 = !{i64 8236371237083957767, i64 333333, !"bar_new"}
 !29 = !{i64 -2624081020897602054, i64 111111, !"main"}
@@ -100,27 +80,19 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(inaccessib
 !11 = distinct !DISubprogram(name: "foo_new", linkageName: "foo_new", scope: !1, file: !1, line: 3, type: !12, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !12 = !DISubroutineType(types: !13)
 !13 = !{}
-!14 = !DILocation(line: 4, column: 3, scope: !11)
-!15 = !DILocation(line: 5, column: 3, scope: !11)
-!16 = !DILocation(line: 6, column: 3, scope: !11)
-!17 = !DILocation(line: 7, column: 1, scope: !11)
+!14 = !DILocation(line: 4, scope: !11)
+!17 = !DILocation(line: 6, scope: !11)
 
 !20 = distinct !DISubprogram(name: "bar_new", linkageName: "bar_new", scope: !1, file: !1, line: 10, type: !12, scopeLine: 10, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!23 = !DILocation(line: 11, column: 3, scope: !20)
-!24 = !DILocation(line: 12, column: 1, scope: !20)
+!23 = !DILocation(line: 11, scope: !20)
+!24 = !DILocation(line: 12, scope: !20)
 
 !30 = distinct !DISubprogram(name: "main", linkageName: "main", scope: !1, file: !1, line: 20, type: !12, scopeLine: 20, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!33 = !DILocation(line: 21, column: 3, scope: !30)
-!34 = !DILocation(line: 22, column: 3, scope: !30)
-!35 = !DILocation(line: 23, column: 3, scope: !30)
-!36 = !DILocation(line: 24, column: 1, scope: !30)
+!33 = !DILocation(line: 21, scope: !30)
+!36 = !DILocation(line: 24, scope: !30)
 
-; Discriminator-encoded probe locations for call instructions.
-; discriminator = (ProbeIndex << 3) | (Factor << 19) | (Type << 26) | 0x7
-; where Type=2 (DirectCall), Factor=100 (full distribution)
-; Probe 5 (foo_new call in main): (5<<3)|(100<<19)|(2<<26)|7 = 186646575
+; Call probe discriminators: (ProbeIndex << 3) | (100 << 19) | (2 << 26) | 0x7
 !41 = !DILexicalBlockFile(scope: !30, file: !1, discriminator: 186646575)
-!42 = !DILocation(line: 23, column: 3, scope: !41)
-; Probe 3 (bar_new call in foo_new): (3<<3)|(100<<19)|(2<<26)|7 = 186646559
+!42 = !DILocation(line: 23, scope: !41)
 !39 = !DILexicalBlockFile(scope: !11, file: !1, discriminator: 186646559)
-!40 = !DILocation(line: 6, column: 3, scope: !39)
+!40 = !DILocation(line: 5, scope: !39)
