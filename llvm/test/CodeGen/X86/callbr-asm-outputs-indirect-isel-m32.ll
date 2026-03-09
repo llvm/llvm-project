@@ -11,7 +11,7 @@ define i8 @emulator_cmpxchg_emulated() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load (s32) from `ptr null`, align 8)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32_norex2 = COPY [[MOV32rm]]
-  ; CHECK-NEXT:   INLINEASM_BR &"", 16 /* maystore attdialect */, 2359306 /* regdef:GR32 */, def %2, 2686986 /* regdef:GR32_NOREX2 */, def %3, 2147549193 /* reguse tiedto:$1 */, [[COPY]](tied-def 5), 13 /* imm */, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", 16 /* maystore attdialect */, 2228234 /* regdef:GR32 */, def %2, 2490378 /* regdef:GR32_NOREX2 */, def %3, 2147549193 /* reguse tiedto:$1 */, [[COPY]](tied-def 5), 13 /* imm */, %bb.2
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $eflags
   ; CHECK-NEXT:   $eflags = COPY [[COPY1]]
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
@@ -51,7 +51,7 @@ define i32 @emulator_cmpxchg_emulated2() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load (s32) from `ptr null`, align 8)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32_norex2 = COPY [[MOV32rm]]
-  ; CHECK-NEXT:   INLINEASM_BR &"", 16 /* maystore attdialect */, 2359306 /* regdef:GR32 */, def %2, 2686986 /* regdef:GR32_NOREX2 */, def %3, 2147549193 /* reguse tiedto:$1 */, [[COPY]](tied-def 5), 13 /* imm */, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", 16 /* maystore attdialect */, 2228234 /* regdef:GR32 */, def %2, 2490378 /* regdef:GR32_NOREX2 */, def %3, 2147549193 /* reguse tiedto:$1 */, [[COPY]](tied-def 5), 13 /* imm */, %bb.2
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $eflags
   ; CHECK-NEXT:   $eflags = COPY [[COPY1]]
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags

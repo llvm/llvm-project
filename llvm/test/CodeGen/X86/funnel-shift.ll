@@ -82,23 +82,23 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movl 48(%ebp), %edi
 ; X86-SSE2-NEXT:    movl 52(%ebp), %eax
-; X86-SSE2-NEXT:    movl 24(%ebp), %edx
+; X86-SSE2-NEXT:    movl 24(%ebp), %esi
+; X86-SSE2-NEXT:    movl 28(%ebp), %edx
 ; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
 ; X86-SSE2-NEXT:    testb $64, %cl
-; X86-SSE2-NEXT:    movl %edx, %ecx
+; X86-SSE2-NEXT:    movl %esi, %ecx
 ; X86-SSE2-NEXT:    cmovnel %edi, %ecx
-; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 28(%ebp), %esi
-; X86-SSE2-NEXT:    movl %esi, %ebx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spil
+; X86-SSE2-NEXT:    movl %edx, %ebx
 ; X86-SSE2-NEXT:    cmovnel %eax, %ebx
 ; X86-SSE2-NEXT:    cmovnel 44(%ebp), %eax
 ; X86-SSE2-NEXT:    cmovnel 40(%ebp), %edi
-; X86-SSE2-NEXT:    cmovel 36(%ebp), %esi
-; X86-SSE2-NEXT:    cmovel 32(%ebp), %edx
+; X86-SSE2-NEXT:    cmovel 36(%ebp), %edx
+; X86-SSE2-NEXT:    cmovel 32(%ebp), %esi
 ; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
-; X86-SSE2-NEXT:    cmovnel %edx, %esi
-; X86-SSE2-NEXT:    cmovnel %ebx, %edx
+; X86-SSE2-NEXT:    cmovnel %esi, %edx
+; X86-SSE2-NEXT:    cmovnel %ebx, %esi
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    cmovnel %ecx, %ebx
 ; X86-SSE2-NEXT:    cmovel %eax, %edi
@@ -112,13 +112,13 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE2-NEXT:    shldl %cl, %eax, %edi
 ; X86-SSE2-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl %edx, %edi
+; X86-SSE2-NEXT:    movl %esi, %edi
 ; X86-SSE2-NEXT:    movl 56(%ebp), %ecx
 ; X86-SSE2-NEXT:    shldl %cl, %ebx, %edi
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shldl %cl, %edx, %esi
-; X86-SSE2-NEXT:    movl %esi, 12(%eax)
+; X86-SSE2-NEXT:    shldl %cl, %esi, %edx
+; X86-SSE2-NEXT:    movl %edx, 12(%eax)
 ; X86-SSE2-NEXT:    movl %edi, 8(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 4(%eax)

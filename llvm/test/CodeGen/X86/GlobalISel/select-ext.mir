@@ -448,15 +448,15 @@ body:             |
     ; X86-LABEL: name: test_anyext_i16toi32
     ; X86: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X86-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; X86-NEXT: [[DEF:%[0-9]+]]:low32_addr_access_rbp = IMPLICIT_DEF
-    ; X86-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access_rbp = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
+    ; X86-NEXT: [[DEF:%[0-9]+]]:low32_addr_access = IMPLICIT_DEF
+    ; X86-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
     ; X86-NEXT: $eax = COPY [[INSERT_SUBREG]]
     ; X86-NEXT: RET 0, implicit $eax
     ; X64-LABEL: name: test_anyext_i16toi32
     ; X64: [[COPY:%[0-9]+]]:gr32 = COPY $edi
     ; X64-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; X64-NEXT: [[DEF:%[0-9]+]]:low32_addr_access_rbp = IMPLICIT_DEF
-    ; X64-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access_rbp = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
+    ; X64-NEXT: [[DEF:%[0-9]+]]:low32_addr_access = IMPLICIT_DEF
+    ; X64-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
     ; X64-NEXT: $eax = COPY [[INSERT_SUBREG]]
     ; X64-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edi
