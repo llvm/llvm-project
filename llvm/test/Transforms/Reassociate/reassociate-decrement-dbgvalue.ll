@@ -20,16 +20,14 @@ entry:
   %idxprom = sext i32 %mon to i64, !dbg !22
   %arrayidx = getelementptr inbounds i32, ptr @b, i64 %idxprom, !dbg !22
   %0 = load i32, ptr %arrayidx, align 4, !dbg !22
-  call void @llvm.dbg.value(metadata i32 %mday, metadata !16, metadata !DIExpression()), !dbg !23
+    #dbg_value(i32 %mday, !16, !DIExpression(), !23)
   %dec = add nsw i32 %mday, -1, !dbg !24
-  call void @llvm.dbg.value(metadata i32 %dec, metadata !16, metadata !DIExpression()), !dbg !23
+    #dbg_value(i32 %dec, !16, !DIExpression(), !23)
   %add = add nsw i32 %year, %0, !dbg !25
   %add1 = add nsw i32 %add, %dec, !dbg !26
   %conv = sext i32 %add1 to i64, !dbg !27
   ret i64 %conv, !dbg !28
 }
-
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

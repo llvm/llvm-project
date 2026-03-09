@@ -96,7 +96,6 @@ public:
   bool findRuleAndApplyMapping(MachineInstr &MI);
 
   // Manual apply helpers.
-  bool applyMappingPHI(MachineInstr &MI);
   void applyMappingTrivial(MachineInstr &MI);
 
 private:
