@@ -555,8 +555,17 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
     DbgObj = lookUpBuildIDObject(Path, ELFObj, ArchName);
   if (!DbgObj)
     DbgObj = lookUpDebuglinkObject(Path, Obj, ArchName);
-  if (!DbgObj)
+  if (!DbgObj) {
+    // No previously cached debug binary found. As a best-effort, we use the
+    // provided object instead, and also register its build ID (if any) so that
+    // build-ID-based lookups (e.g., from --filter-markup) can resolve to this
+    // path.
     DbgObj = Obj;
+
+    BuildIDRef BID = getBuildID(Obj);
+    if (!BID.empty())
+      BuildIDPaths[getBuildIDStr(BID)] = std::string(Path);
+  }
   ObjectPair Res = std::make_pair(Obj, DbgObj);
   auto Pair =
       ObjectPairForPathArch.emplace(std::make_pair(Path, ArchName), Res);
