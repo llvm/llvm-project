@@ -209,15 +209,24 @@ FunctionPass *llvm::createInterleavedAccessPass() {
 ///     <1, 3, 5, 7>    (mask of index 1 to extract odd elements)
 static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
                                unsigned &Index, unsigned MaxFactor,
-                               unsigned NumLoadElements) {
+                               unsigned NumLoadElements,
+                               SmallVector<ShuffleVectorInst *, 4> Shuffles) {
   if (Mask.size() < 2)
     return false;
 
   // Check potential Factors.
   for (Factor = 2; Factor <= MaxFactor; Factor++) {
     // Make sure we don't produce a load wider than the input load.
-    if (Mask.size() * Factor > NumLoadElements)
-      return false;
+    if (Mask.size() * Factor > NumLoadElements) {
+      if (Shuffles.size() == 0)
+	  return false;
+      for (unsigned i = 0; i < Shuffles.size(); i++) {
+        for (unsigned j = 0; j < Mask.size(); j++) {
+          if ((unsigned)Shuffles[i]->getShuffleMask()[j] > NumLoadElements)
+            return false;
+        }
+      }
+    }
     if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index))
       return true;
   }
@@ -333,7 +342,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   auto *FirstSVI = Shuffles.size() > 0 ? Shuffles[0] : BinOpShuffles[0];
   // Check if the first shufflevector is DE-interleave shuffle.
   if (!isDeInterleaveMask(FirstSVI->getShuffleMask(), Factor, Index, MaxFactor,
-                          NumLoadElements))
+                          NumLoadElements, Shuffles))
     return false;
 
   // Holds the corresponding index for each DE-interleave shuffle.
