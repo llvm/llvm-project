@@ -1221,8 +1221,7 @@ define i2 @neg_trunc_nsw_i2_non_zero(i8 %1) {
 
 define i1 @trunc_i1_usub_sat_one(i8 %x) {
 ; CHECK-LABEL: @trunc_i1_usub_sat_one(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8 @llvm.usub.sat.i8(i8 1, i8 [[X:%.*]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[CALL]] to i1
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[TRUNC]]
 ;
   %call = tail call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
@@ -1232,8 +1231,7 @@ define i1 @trunc_i1_usub_sat_one(i8 %x) {
 
 define <2 x i1> @trunc_i1_usub_sat_one_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @trunc_i1_usub_sat_one_vec(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> splat (i8 1), <2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[CALL]] to <2 x i1>
+; CHECK-NEXT:    [[TRUNC:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TRUNC]]
 ;
   %call = tail call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 1, i8 1>, <2 x i8> %x)
