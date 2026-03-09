@@ -657,11 +657,11 @@ void TypePrinter::printDependentSizedExtVectorAfter(
   if (Policy.UseHLSLTypes)
     return;
 
-  printAfter(T->getElementType(), OS);
   OS << " __attribute__((ext_vector_type(";
   if (T->getSizeExpr())
     T->getSizeExpr()->printPretty(OS, nullptr, Policy);
   OS << ")))";
+  printAfter(T->getElementType(), OS);
 }
 
 void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
