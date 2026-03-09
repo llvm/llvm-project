@@ -3746,6 +3746,9 @@ static SDValue performShiftCombine(SDNode *N,
   SDLoc DL(N);
   SDValue ExtendIn = LHS.getOperand(0);
   EVT FromVT = ExtendIn.getValueType();
+  if (FromVT != MVT::v8i16)
+    return SDValue();
+
   unsigned NumElts = VT.getVectorNumElements();
   unsigned BitWidth = FromVT.getScalarSizeInBits();
   bool IsSigned = (ExtOpc == ISD::SIGN_EXTEND);
