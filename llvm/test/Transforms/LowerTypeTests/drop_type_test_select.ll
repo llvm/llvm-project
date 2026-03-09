@@ -1,6 +1,6 @@
-; Test to ensure dropping of type tests can handle a select feeding the assume.
-; This pattern is created by SimplifyCFG when merging two type test + assume
-; sequences from different branches.
+;; Test to ensure dropping of type tests can handle a select feeding the assume.
+;; This pattern is created by SimplifyCFG when merging two type test + assume
+;; sequences from different branches.
 ; RUN: opt -S -passes=lowertypetests -lowertypetests-drop-type-tests=assume %s | FileCheck %s
 
 ; CHECK-LABEL: define void @test
