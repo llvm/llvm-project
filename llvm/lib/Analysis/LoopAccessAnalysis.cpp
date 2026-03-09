@@ -2409,8 +2409,10 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
     while (AI != AE) {
       Visited.insert(*AI);
       bool AIIsWrite = AI->getInt();
-      // Check loads only against next equivalent class, but stores also against
-      // other stores in the same equivalence class - to the same address.
+      // If AI is a read access, then all the reads (Accesses[*AI]) from the
+      // same ptr don't create extra hazards. On the other hand, having multiple
+      // stores into the same address causes WAW dependencies and we need to
+      // look through all of them.
       EquivalenceClasses<MemAccessInfo>::member_iterator OI =
           (AIIsWrite ? AI : std::next(AI));
       while (OI != AE) {
@@ -2418,8 +2420,10 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
         auto &Acc = Accesses[*AI];
         for (std::vector<unsigned>::iterator I1 = Acc.begin(), I1E = Acc.end();
              I1 != I1E; ++I1)
-          // Scan all accesses of another equivalence class, but only the next
-          // accesses of the same equivalent class.
+          // If OI == AI then we're looking for WAW dependencies caused by
+          // multiple writes to the same pointer (see comment above). As such,
+          // I2 must start iterating from the second instruction associated with
+          // this pointer as I1 points to the first one already.
           for (std::vector<unsigned>::iterator
                    I2 = (OI == AI ? std::next(I1) : Accesses[*OI].begin()),
                    I2E = (OI == AI ? I1E : Accesses[*OI].end());
