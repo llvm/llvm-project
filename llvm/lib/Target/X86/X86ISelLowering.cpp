@@ -3638,29 +3638,25 @@ bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
 }
 
 bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
-  EVT VT = Y.getValueType();
-
-  if (VT.isVector())
-    return false;
-
-  if (!Subtarget.hasBMI())
-    return false;
-
-  // There are only 32-bit and 64-bit forms for 'andn'.
-  if (VT != MVT::i32 && VT != MVT::i64)
-    return false;
-
-  return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
+  // Scalar integer and-not compares are efficiently handled by NOT+TEST (or
+  // BMI ANDN).
+  return Y.getValueType().isScalarInteger();
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
   EVT VT = Y.getValueType();
 
-  if (!VT.isVector())
-    return hasAndNotCompare(Y);
+  if (!VT.isVector()) {
+    if (!Subtarget.hasBMI())
+      return false;
+
+    // There are only 32-bit and 64-bit forms for 'andn'.
+    if (VT != MVT::i32 && VT != MVT::i64)
+      return false;
+    return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
+  }
 
   // Vector.
-
   if (!Subtarget.hasSSE1() || VT.getSizeInBits() < 128)
     return false;
 
@@ -55422,6 +55418,41 @@ static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineVTRUNCSAT(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace SDPatternMatch;
+  unsigned Opc = N->getOpcode();
+  EVT VT = N->getValueType(0);
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  assert((Opc == X86ISD::VTRUNCS || Opc == X86ISD::VTRUNCUS) &&
+         "Unexpected VTRUNC node");
+  assert((VT.is128BitVector() || VT.is256BitVector()) &&
+         "Unexpected VTRUNC node type");
+
+  // If the src was concatenated, see if PACKSS/US would be better.
+  SDValue Src;
+  if (EltSizeInBits <= 16 &&
+      (sd_match(N, m_UnaryOp(X86ISD::VTRUNCS, m_Value(Src))) ||
+       sd_match(N, m_UnaryOp(X86ISD::VTRUNCUS,
+                             m_SMaxLike(m_Value(Src), m_Zero())))) &&
+      (EltSizeInBits * 2) == Src.getScalarValueSizeInBits() &&
+      isFreeToSplitVector(Src, DAG)) {
+    SDLoc DL(N);
+    auto [LHS, RHS] = splitVector(Src, DAG, DL);
+    unsigned PackOpc = Opc == X86ISD::VTRUNCS ? X86ISD::PACKSS : X86ISD::PACKUS;
+    SDValue Pack = DAG.getNode(PackOpc, DL, VT, LHS, RHS);
+    if (VT.is128BitVector())
+      return Pack;
+    // Shuffle sub-lanes back to match the vtrunc sequential order.
+    return DAG.getBitcast(
+        VT, DAG.getNode(X86ISD::VPERMI, DL, MVT::v4i64,
+                        DAG.getBitcast(MVT::v4i64, Pack),
+                        getV4X86ShuffleImm8ForMask({0, 2, 1, 3}, DL, DAG)));
+  }
+
+  return SDValue();
+}
+
 /// Returns the negated value if the node \p N flips sign of FP value.
 ///
 /// FP-negation node may have different forms: FNEG(x), FXOR (x, 0x80000000)
@@ -57250,42 +57281,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   }
 
   if ((CC == ISD::SETNE || CC == ISD::SETEQ) && OpVT.isScalarInteger()) {
-    // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
-    // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
-    auto MatchOrCmpEq = [&](SDValue N0, SDValue N1) {
-      if (N0.getOpcode() == ISD::OR && N0->hasOneUse()) {
-        if (N0.getOperand(0) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
-                             N0.getOperand(1));
-        if (N0.getOperand(1) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
-                             N0.getOperand(0));
-      }
-      return SDValue();
-    };
-    if (SDValue AndN = MatchOrCmpEq(LHS, RHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-    if (SDValue AndN = MatchOrCmpEq(RHS, LHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-
-    // cmpeq(and(X,Y),Y) --> cmpeq(and(~X,Y),0)
-    // cmpne(and(X,Y),Y) --> cmpne(and(~X,Y),0)
-    auto MatchAndCmpEq = [&](SDValue N0, SDValue N1) {
-      if (N0.getOpcode() == ISD::AND && N0->hasOneUse()) {
-        if (N0.getOperand(0) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, N1,
-                             DAG.getNOT(DL, N0.getOperand(1), OpVT));
-        if (N0.getOperand(1) == N1)
-          return DAG.getNode(ISD::AND, DL, OpVT, N1,
-                             DAG.getNOT(DL, N0.getOperand(0), OpVT));
-      }
-      return SDValue();
-    };
-    if (SDValue AndN = MatchAndCmpEq(LHS, RHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-    if (SDValue AndN = MatchAndCmpEq(RHS, LHS))
-      return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-
     // If we're performing a bit test on a larger than legal type, attempt
     // to (aligned) shift down the value to the bottom 32-bits and then
     // perform the bittest on the i32 value.
@@ -62030,6 +62025,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
+  case X86ISD::VTRUNCS:
+  case X86ISD::VTRUNCUS:    return combineVTRUNCSAT(N, DAG, DCI);
   case X86ISD::ANDNP:       return combineAndnp(N, DAG, DCI, Subtarget);
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);

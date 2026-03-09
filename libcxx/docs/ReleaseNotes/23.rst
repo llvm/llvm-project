@@ -75,5 +75,9 @@ ABI Affecting Changes
   defining ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this
   flag, since it will be removed in LLVM 24 if there is no evidence that it's required.
 
+- ``vector::iterator`` and ``string::iterator`` no longer use ``__bounded_iter<__wrap_iter<Iter>>``, but instead
+  ``__bounded_iter<Iter>`` directly if ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` and
+  ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` are defined.
+
 Build System Changes
 --------------------
