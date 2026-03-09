@@ -453,8 +453,7 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
   if (!LambdaList)
     return;
   bool Kill = true;
-  for (unsigned I = 0; I < LE->capture_size(); ++I) {
-    const Expr *Init = LE->capture_init_begin()[I];
+  for (const Expr *Init : LE->capture_inits()) {
     if (!Init)
       continue;
     OriginList *InitList = getOriginsList(*Init);

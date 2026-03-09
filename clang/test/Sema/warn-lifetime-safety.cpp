@@ -1865,4 +1865,17 @@ namespace lambda_captures {
     auto lambda_copy = lambda;
     return lambda_copy; // expected-note {{returned here}}
   }
+
+  auto implicit_ref_capture() {
+    int local = 1, local2 = 2;
+    auto lambda = [&]() { return local; }; // expected-warning {{address of stack memory is returned later}}
+    return lambda; // expected-note {{returned here}}
+  }
+
+  auto implicit_value_capture() {
+    MyObj obj;
+    View v(obj); // expected-warning {{address of stack memory is returned later}}
+    auto lambda = [=]() { return v; };
+    return lambda; // expected-note {{returned here}}
+  }
 } // namespace lambda_captures
