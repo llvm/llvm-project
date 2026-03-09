@@ -29245,6 +29245,10 @@ TEST_F(FormatTest, UnbalancedAngleBrackets) {
                 getLLVMStyleWithColumns(50));
 }
 
+TEST_F(FormatTest, LambdaArrowAsTrailingReturnArrow) {
+  verifyNoCrash("void foo()([] consteval -> int {}())");
+}
+
 } // namespace
 } // namespace test
 } // namespace format
