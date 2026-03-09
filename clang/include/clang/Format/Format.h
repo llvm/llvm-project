@@ -995,7 +995,7 @@ struct FormatStyle {
     SRS_Never,
     /// Only merge empty records if the opening brace was not wrapped,
     /// i.e. the corresponding ``BraceWrapping.After...`` option was not set.
-    SRS_EmptyIfAttached,
+    SRS_EmptyAndAttached,
     /// Only merge empty records.
     /// \code
     ///   struct foo {};

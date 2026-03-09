@@ -716,11 +716,11 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortLambdasOnASingleLine: true",
               AllowShortLambdasOnASingleLine, FormatStyle::SLS_All);
 
-  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyAndAttached;
   CHECK_PARSE("AllowShortRecordOnASingleLine: Never",
               AllowShortRecordOnASingleLine, FormatStyle::SRS_Never);
-  CHECK_PARSE("AllowShortRecordOnASingleLine: EmptyIfAttached",
-              AllowShortRecordOnASingleLine, FormatStyle::SRS_EmptyIfAttached);
+  CHECK_PARSE("AllowShortRecordOnASingleLine: EmptyAndAttached",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_EmptyAndAttached);
   CHECK_PARSE("AllowShortRecordOnASingleLine: Empty",
               AllowShortRecordOnASingleLine, FormatStyle::SRS_Empty);
   CHECK_PARSE("AllowShortRecordOnASingleLine: Always",

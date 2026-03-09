@@ -15408,7 +15408,7 @@ TEST_F(FormatTest, NeverMergeShortRecords) {
 TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
   auto Style = getLLVMStyle();
   EXPECT_EQ(Style.AllowShortRecordOnASingleLine,
-            FormatStyle::SRS_EmptyIfAttached);
+            FormatStyle::SRS_EmptyAndAttached);
 
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
   verifyFormat("class foo {\n"

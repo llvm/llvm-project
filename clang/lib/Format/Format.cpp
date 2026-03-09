@@ -770,7 +770,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortLambdaStyle> {
 template <> struct ScalarEnumerationTraits<FormatStyle::ShortRecordStyle> {
   static void enumeration(IO &IO, FormatStyle::ShortRecordStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::SRS_Never);
-    IO.enumCase(Value, "EmptyIfAttached", FormatStyle::SRS_EmptyIfAttached);
+    IO.enumCase(Value, "EmptyAndAttached", FormatStyle::SRS_EmptyAndAttached);
     IO.enumCase(Value, "Empty", FormatStyle::SRS_Empty);
     IO.enumCase(Value, "Always", FormatStyle::SRS_Always);
   }
@@ -1747,7 +1747,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
   LLVMStyle.AllowShortNamespacesOnASingleLine = false;
-  LLVMStyle.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyIfAttached;
+  LLVMStyle.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyAndAttached;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");

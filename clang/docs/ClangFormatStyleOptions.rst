@@ -2096,7 +2096,7 @@ the configuration (without a prefix: ``Auto``).
   * ``SRS_Never`` (in configuration: ``Never``)
     Never merge records into a single line.
 
-  * ``SRS_EmptyIfAttached`` (in configuration: ``EmptyIfAttached``)
+  * ``SRS_EmptyAndAttached`` (in configuration: ``EmptyAndAttached``)
     Only merge empty records if the opening brace was not wrapped,
     i.e. the corresponding ``BraceWrapping.After...`` option was not set.
 

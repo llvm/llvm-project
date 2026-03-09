@@ -10,7 +10,6 @@
 #include "FormatToken.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
-#include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 
@@ -521,7 +520,7 @@ private:
                        !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
-                                          tok::kw_struct, Keywords.kw_record)) {
+                                          tok::kw_struct, tok::kw_union)) {
         // Try to merge a block with left brace unwrapped that wasn't yet
         // covered.
         ShouldMerge = !Style.BraceWrapping.AfterFunction ||
@@ -615,8 +614,7 @@ private:
           return false;
         case FormatStyle::SRS_Always:
           return true;
-        case FormatStyle::SRS_EmptyIfAttached:
-        case FormatStyle::SRS_Empty:
+        default:
           return NextLine->First->is(tok::r_brace);
         }
       };
