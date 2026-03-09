@@ -70,17 +70,17 @@ module {
       %26 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
       %view = memref.view %26[%c0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<2x2x64x64xf16, #gpu.address_space<workgroup>>
       %27 = nvgpu.mbarrier.create -> <memorySpace = #gpu.address_space<workgroup>>
-      %thread_id_x = gpu.thread_id  x
+      %thread_id_x = gpu.thread_id x
       %28 = arith.index_cast %thread_id_x : index to i32
       %29 = arith.shrui %28, %c5_i32 : i32
-      %30 = nvvm.shfl.sync  idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
+      %30 = nvvm.shfl.sync idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
       %31 = arith.cmpi eq, %30, %c0_i32 : i32
       %32 = nvvm.elect.sync -> i1
       %33 = arith.andi %31, %32 : i1
       scf.if %33 {
         nvgpu.mbarrier.init %27[%c0], %c1 : <memorySpace = #gpu.address_space<workgroup>>
       }
-      %34 = nvvm.shfl.sync  idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
+      %34 = nvvm.shfl.sync idx %c-1_i32, %29, %c0_i32, %c31_i32 : i32 -> i32
       %35 = arith.cmpi eq, %34, %c0_i32 : i32
       %36 = nvvm.elect.sync -> i1
       %37 = arith.andi %35, %36 : i1
@@ -95,13 +95,13 @@ module {
           %39 = arith.muli %arg15, %c64 : index
           %subview = memref.subview %view[%arg14, %arg15, 0, 0] [1, 1, 64, 64] [1, 1, 1, 1] : memref<2x2x64x64xf16, #gpu.address_space<workgroup>> to memref<64x64xf16, strided<[64, 1], offset: ?>, #gpu.address_space<workgroup>>
           %subview_0 = memref.subview %dstMemref[%38, %39] [64, 64] [1, 1] : memref<128x128xf16> to memref<64x64xf16, strided<[128, 1], offset: ?>>
-          %block_dim_x = gpu.block_dim  x
-          %thread_id_y = gpu.thread_id  y
+          %block_dim_x = gpu.block_dim x
+          %thread_id_y = gpu.thread_id y
           %40 = arith.muli %thread_id_y, %block_dim_x : index
           %41 = arith.addi %thread_id_x, %40 : index
-          %block_dim_y = gpu.block_dim  y
+          %block_dim_y = gpu.block_dim y
           %42 = arith.muli %block_dim_x, %block_dim_y : index
-          %thread_id_z = gpu.thread_id  z
+          %thread_id_z = gpu.thread_id z
           %43 = arith.muli %thread_id_z, %42 : index
           %44 = arith.addi %41, %43 : index
           %45 = arith.cmpi eq, %44, %c0 : index
