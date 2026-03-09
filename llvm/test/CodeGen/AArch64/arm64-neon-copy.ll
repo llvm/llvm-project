@@ -1658,12 +1658,11 @@ entry:
 define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_concat_diff_v1i32_v1i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    sqabs s2, s0
-; CHECK-NEXT:    sqabs s0, s1
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    sqabs s0, s0
+; CHECK-NEXT:    sqabs s1, s1
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:

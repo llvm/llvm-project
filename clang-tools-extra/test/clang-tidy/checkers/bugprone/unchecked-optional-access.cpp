@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access
+// RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access -isystem %clang_tidy_headers
 
 #include "absl/types/optional.h"
 #include "folly/types/Optional.h"
@@ -351,15 +351,7 @@ void std_forward_rvalue_ref_safe(absl::optional<int>&& opt) {
   std::forward<absl::optional<int>>(opt).value();
 }
 
-namespace std {
-
-template <typename T> class vector {
-public:
-  T &operator[](unsigned long index);
-  bool empty();
-};
-
-} // namespace std
+#include <vector>
 
 struct S {
   absl::optional<float> x;

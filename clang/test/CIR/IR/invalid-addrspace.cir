@@ -3,7 +3,7 @@
 // -----
 
 !u64i = !cir.int<u, 64>
-// expected-error @below {{expected 'target_address_space'}}
+// expected-error @+1 {{unknown address space specifier 'foobar'; expected 'target_address_space' or 'lang_address_space'}}
 cir.func @address_space1(%p : !cir.ptr<!u64i, foobar>) {
   cir.return
 }
@@ -11,6 +11,7 @@ cir.func @address_space1(%p : !cir.ptr<!u64i, foobar>) {
 // -----
 
 !u64i = !cir.int<u, 64>
+// expected-error@below {{expected '(' after 'target_address_space'}}
 // expected-error@below {{expected '('}}
 cir.func @address_space2(%p : !cir.ptr<!u64i, target_address_space>) {
   cir.return
@@ -19,8 +20,33 @@ cir.func @address_space2(%p : !cir.ptr<!u64i, target_address_space>) {
 // -----
 
 !u64i = !cir.int<u, 64>
-// expected-error@+2 {{expected integer value}}
-// expected-error@below {{expected integer address space value}}
+// expected-error@below {{expected target address space value}}
+// expected-error@below {{expected integer value}}
 cir.func @address_space3(%p : !cir.ptr<!u64i, target_address_space()>) {
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+// expected-error@below {{expected '(' after 'lang_address_space'}}
+// expected-error@below {{expected '('}}
+cir.func @lang_address_space_no_parens(%p : !cir.ptr<!u64i, lang_address_space>) {
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+// expected-error@+1 {{expected keyword for language address space kind}}
+cir.func @lang_address_space_empty(%p : !cir.ptr<!u64i, lang_address_space()>) {
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+// expected-error@+1 {{expected one of [default, offload_private, offload_local, offload_global, offload_constant, offload_generic] for language address space kind}}
+cir.func @lang_address_space_invalid(%p : !cir.ptr<!u64i, lang_address_space(foobar)>) {
   cir.return
 }

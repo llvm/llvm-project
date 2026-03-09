@@ -10,6 +10,8 @@
 
 #define BUILTIN_FENCE_ORDER(memory_order, ...)                                 \
   switch (memory_order) {                                                      \
+  case __ATOMIC_RELAXED:                                                       \
+    break;                                                                     \
   case __ATOMIC_ACQUIRE:                                                       \
     __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, __VA_ARGS__);                     \
     break;                                                                     \

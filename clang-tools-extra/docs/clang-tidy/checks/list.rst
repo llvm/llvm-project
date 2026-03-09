@@ -243,7 +243,6 @@ Clang-Tidy Checks
    :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
    :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
-   :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
@@ -369,7 +368,9 @@ Clang-Tidy Checks
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
    :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
+   :doc:`performance-use-std-move <performance/use-std-move>`, "Yes"
    :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
+   :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
@@ -607,6 +608,7 @@ Check aliases
    :doc:`hicpp-named-parameter <hicpp/named-parameter>`, :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
    :doc:`hicpp-new-delete-operators <hicpp/new-delete-operators>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`hicpp-no-array-decay <hicpp/no-array-decay>`, :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
+   :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
    :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`hicpp-noexcept-move <hicpp/noexcept-move>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,

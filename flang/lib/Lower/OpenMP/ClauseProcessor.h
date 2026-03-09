@@ -116,6 +116,7 @@ public:
   bool processSchedule(lower::StatementContext &stmtCtx,
                        mlir::omp::ScheduleClauseOps &result) const;
   bool processSimdlen(mlir::omp::SimdlenClauseOps &result) const;
+  bool processSimd(mlir::omp::OrderedRegionOperands &result) const;
   bool processThreadLimit(lower::StatementContext &stmtCtx,
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
@@ -209,7 +210,8 @@ private:
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-      llvm::StringRef mapperIdNameRef = "") const;
+      llvm::StringRef mapperIdNameRef = "",
+      bool isMotionModifier = false) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

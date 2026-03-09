@@ -132,7 +132,7 @@ DerivedMemFunc base_to_derived(Base2MemFunc ptr) {
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
-// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(add, %[[OFFSET]], %[[OFFSET_ADJ]]) nsw : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.add nsw %[[OFFSET]], %[[OFFSET_ADJ]] : !s64i
 // CIR-AFTER:   %{{.*}} = cir.insert_member %[[PTR]][1], %[[BINOP_KIND]] : !rec_anon_struct, !s64i
 
 // LLVM: define {{.*}} { i64, i64 } @_Z15base_to_derivedM5Base2FviE
@@ -193,7 +193,7 @@ Base2MemFunc derived_to_base(DerivedMemFunc ptr) {
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   %[[OFFSET:.*]] = cir.extract_member %[[PTR]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[OFFSET_ADJ:.*]] = cir.const #cir.int<16> : !s64i
-// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.binop(sub, %[[OFFSET]], %[[OFFSET_ADJ]]) nsw : !s64i
+// CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.sub nsw %[[OFFSET]], %[[OFFSET_ADJ]] : !s64i
 // CIR-AFTER:   %{{.*}} = cir.insert_member %[[PTR]][1], %[[BINOP_KIND]] : !rec_anon_struct, !s64i
 
 // LLVM: define {{.*}} { i64, i64 } @_Z15derived_to_baseM7DerivedFviE

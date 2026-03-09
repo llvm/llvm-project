@@ -776,6 +776,8 @@ def FeatureStdExtZvbc32e
                                  "Vector Carryless Multiplication with 32-bits elements",
                                  [FeatureStdExtZve32x]>;
 
+def HasStdExtZvbc32e : Predicate<"Subtarget->hasStdExtZvbc32e()">;
+
 def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget->hasStdExtZvbc32e()">,
                              AssemblerPredicate<(any_of FeatureStdExtZvbc, FeatureStdExtZvbc32e),
                              "'Zvbc' or 'Zvbc32e' (Vector Carryless Multiplication)">;
@@ -1113,7 +1115,9 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 // Packed SIMD Extensions
 def FeatureStdExtP
     : RISCVExperimentalExtension<0, 19,
-                                 "'Base P' (Packed SIMD)">;
+                                 "'Base P' (Packed SIMD)",
+                                 [FeatureStdExtZmmul, FeatureStdExtZba,
+                                  FeatureStdExtZbb, FeatureStdExtZicsr]>;
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
                                     "'Base P' (Packed SIMD)">;

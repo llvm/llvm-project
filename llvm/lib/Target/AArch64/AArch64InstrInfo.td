@@ -1028,12 +1028,16 @@ def AArch64sqrshl:  SDNode<"AArch64ISD::SQRSHL",  SDTFPBinOp>;
 def AArch64sqshl:   SDNode<"AArch64ISD::SQSHL",   SDTFPBinOp>;
 def AArch64sqsub:   SDNode<"AArch64ISD::SQSUB",   SDTFPBinOp>;
 def AArch64uqadd:   SDNode<"AArch64ISD::UQADD",   SDTFPBinOp>;
+def AArch64suqadd:  SDNode<"AArch64ISD::SUQADD",  SDTFPBinOp>;
+def AArch64usqadd:  SDNode<"AArch64ISD::USQADD",  SDTFPBinOp>;
 def AArch64uqrshl:  SDNode<"AArch64ISD::UQRSHL",  SDTFPBinOp>;
 def AArch64uqshl:   SDNode<"AArch64ISD::UQSHL",   SDTFPBinOp>;
 def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
 def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
+def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",   SDTFPUnaryOp>;
+def AArch64sqneg:   SDNode<"AArch64ISD::SQNEG",   SDTFPUnaryOp>;
 def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqshrn: SDNode<"AArch64ISD::SQSHRN", SDTFPTruncRoundOp>;
@@ -1576,6 +1580,19 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 def : InstAlias<"nop", (NOP)>;
 
 def STSHH: STSHHI;
+
+let hasSideEffects = 1, mayStore = 1, isCodeGenOnly = 1 in {
+let Size = 8 in
+def STSHH_ATOMIC_STORE_SZ
+    : Pseudo<(outs), (ins GPR64:$val, GPR64sp:$addr, i32imm:$order,
+                          i32imm:$policy, i32imm:$size), []>,
+             Sched<[WriteAtomic]>;
+}
+
+def : Pat<(int_aarch64_stshh_atomic_store GPR64sp:$addr, GPR64:$val,
+           (i32 timm:$order), (i32 timm:$policy), (i32 timm:$size)),
+          (STSHH_ATOMIC_STORE_SZ GPR64:$val, GPR64sp:$addr, (i32 timm:$order),
+           (i32 timm:$policy), (i32 timm:$size))>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
@@ -4501,7 +4518,6 @@ multiclass ExtLoad8_16_32AllModes<ValueType OutTy, ValueType InnerTy,
 
 // Instantiate bitconvert patterns for floating-point types.
 
-// Create a fragment to reuse same multiclass.
 defm : ExtLoad8_16AllModes<f32, i32, bitconvert, zextloadi8, zextloadi16>;
 defm : ExtLoad8_16_32AllModes<f64, i64, bitconvert, zextloadi8, zextloadi16, zextloadi32>;
 
@@ -6649,15 +6665,15 @@ defm FRSQRTE : SIMDFPTwoScalarNonCVT<  1, 1, 0b11101, "frsqrte">;
 defm NEG    : SIMDTwoScalarD<    1, 0b01011, "neg",
                                  UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
 defm SCVTF  : SIMDFPTwoScalarCVT<   0, 0, 0b11101, "scvtf", AArch64sitof>;
-defm SQABS  : SIMDTwoScalarBHSD< 0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
-defm SQNEG  : SIMDTwoScalarBHSD< 1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
+defm SQABS  : SIMDTwoScalarBHSD< 0, 0b00111, "sqabs", AArch64sqabs, int_aarch64_neon_sqabs>;
+defm SQNEG  : SIMDTwoScalarBHSD< 1, 0b00111, "sqneg", AArch64sqneg, int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDTwoScalarMixedBHS< 0, 0b10100, "sqxtn", int_aarch64_neon_scalar_sqxtn>;
 defm SQXTUN : SIMDTwoScalarMixedBHS< 1, 0b10010, "sqxtun", int_aarch64_neon_scalar_sqxtun>;
-defm SUQADD : SIMDTwoScalarBHSDTied< 0, 0b00011, "suqadd",
+defm SUQADD : SIMDTwoScalarBHSDTied< 0, 0b00011, "suqadd", AArch64suqadd,
                                      int_aarch64_neon_suqadd>;
 defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
-defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
+defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
 
 // Floating-point conversion patterns.
@@ -8256,9 +8272,9 @@ defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, scalar_to_vector_v2f32, INS
 // bitcast of an extract
 // f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
 def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),
-          (EXTRACT_SUBREG V128:$src, bsub)>;
+          (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, (i64 0))))),
-          (EXTRACT_SUBREG V128:$src, hsub)>;
+          (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
@@ -8703,6 +8719,8 @@ def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
                    [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
 
 let Predicates = [HasNEON] in {
+def : Pat<(f128 fpimm0), (f128 (MOVIv2d_ns (i32 0)))>;
+
 def : Pat<(v2i64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v4i32 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v8i16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
@@ -10905,28 +10923,28 @@ def : Pat<(AArch64faddp (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 0))),
                         (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4)))),
           (v4f16 (EXTRACT_SUBREG (FADDPv8f16 $Rn, $Rn), dsub))>;
 
+multiclass PairwiseUZPBinOp<SDPatternOperator Op, ValueType VT,
+                            RegisterClass RC, Instruction Inst> {
+  def : Pat<(VT (Op (AArch64uzp1 (VT RC:$Rn), (VT RC:$Rm)),
+                   (AArch64uzp2 (VT RC:$Rn), (VT RC:$Rm)))),
+            (VT (Inst $Rn, $Rm))>;
+}
+
+multiclass PairwiseZIPBinOp<SDPatternOperator Op, ValueType VT,
+                            RegisterClass RC, Instruction Inst> {
+  def : Pat<(VT (Op (AArch64zip1 (VT RC:$Rn), (VT RC:$Rm)),
+                   (AArch64zip2 (VT RC:$Rn), (VT RC:$Rm)))),
+            (VT (Inst $Rn, $Rm))>;
+}
+
 // add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
-def : Pat<(v2i64 (add (AArch64zip1 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)),
-                      (AArch64zip2 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)))),
-          (v2i64 (ADDPv2i64 $Rn, $Rm))>;
-def : Pat<(v2i32 (add (AArch64zip1 (v2i32 FPR64:$Rn), (v2i32 FPR64:$Rm)),
-                      (AArch64zip2 (v2i32 FPR64:$Rn), (v2i32 FPR64:$Rm)))),
-          (v2i32 (ADDPv2i32 $Rn, $Rm))>;
-def : Pat<(v4i32 (add (AArch64uzp1 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)),
-                      (AArch64uzp2 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)))),
-          (v4i32 (ADDPv4i32 $Rn, $Rm))>;
-def : Pat<(v4i16 (add (AArch64uzp1 (v4i16 FPR64:$Rn), (v4i16 FPR64:$Rm)),
-                      (AArch64uzp2 (v4i16 FPR64:$Rn), (v4i16 FPR64:$Rm)))),
-          (v4i16 (ADDPv4i16 $Rn, $Rm))>;
-def : Pat<(v8i16 (add (AArch64uzp1 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)),
-                      (AArch64uzp2 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)))),
-          (v8i16 (ADDPv8i16 $Rn, $Rm))>;
-def : Pat<(v8i8 (add (AArch64uzp1 (v8i8 FPR64:$Rn), (v8i8 FPR64:$Rm)),
-                     (AArch64uzp2 (v8i8 FPR64:$Rn), (v8i8 FPR64:$Rm)))),
-          (v8i8 (ADDPv8i8 $Rn, $Rm))>;
-def : Pat<(v16i8 (add (AArch64uzp1 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)),
-                      (AArch64uzp2 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)))),
-          (v16i8 (ADDPv16i8 $Rn, $Rm))>;
+defm : PairwiseZIPBinOp<add, v2i64, FPR128, ADDPv2i64>;
+defm : PairwiseZIPBinOp<add, v2i32, FPR64,  ADDPv2i32>;
+defm : PairwiseUZPBinOp<add, v4i32, FPR128, ADDPv4i32>;
+defm : PairwiseUZPBinOp<add, v4i16, FPR64,  ADDPv4i16>;
+defm : PairwiseUZPBinOp<add, v8i16, FPR128, ADDPv8i16>;
+defm : PairwiseUZPBinOp<add, v8i8,  FPR64,  ADDPv8i8>;
+defm : PairwiseUZPBinOp<add, v16i8, FPR128, ADDPv16i8>;
 
 def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
                                    (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
@@ -10940,23 +10958,54 @@ def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
                       (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
 
-def : Pat<(v2f64 (fadd (AArch64zip1 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)),
-                       (AArch64zip2 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)))),
-          (v2f64 (FADDPv2f64 $Rn, $Rm))>;
-def : Pat<(v2f32 (fadd (AArch64zip1 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)),
-                       (AArch64zip2 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)))),
-          (v2f32 (FADDPv2f32 $Rn, $Rm))>;
-def : Pat<(v4f32 (fadd (AArch64uzp1 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)),
-                       (AArch64uzp2 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)))),
-          (v4f32 (FADDPv4f32 $Rn, $Rm))>;
+defm : PairwiseZIPBinOp<fadd, v2f64, FPR128, FADDPv2f64>;
+defm : PairwiseZIPBinOp<fadd, v2f32, FPR64,  FADDPv2f32>;
+defm : PairwiseUZPBinOp<fadd, v4f32, FPR128, FADDPv4f32>;
 let Predicates = [HasFullFP16] in {
-def : Pat<(v4f16 (fadd (AArch64uzp1 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)),
-                       (AArch64uzp2 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)))),
-          (v4f16 (FADDPv4f16 $Rn, $Rm))>;
-def : Pat<(v8f16 (fadd (AArch64uzp1 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)),
-                       (AArch64uzp2 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)))),
-          (v8f16 (FADDPv8f16 $Rn, $Rm))>;
+  defm : PairwiseUZPBinOp<fadd, v4f16, FPR64,  FADDPv4f16>;
+  defm : PairwiseUZPBinOp<fadd, v8f16, FPR128, FADDPv8f16>;
 }
+
+defm : PairwiseZIPBinOp<umax, v2i32, FPR64,  UMAXPv2i32>;
+defm : PairwiseUZPBinOp<umax, v4i32, FPR128, UMAXPv4i32>;
+defm : PairwiseUZPBinOp<umax, v4i16, FPR64,  UMAXPv4i16>;
+defm : PairwiseUZPBinOp<umax, v8i16, FPR128, UMAXPv8i16>;
+defm : PairwiseUZPBinOp<umax, v8i8,  FPR64,  UMAXPv8i8>;
+defm : PairwiseUZPBinOp<umax, v16i8, FPR128, UMAXPv16i8>;
+
+defm : PairwiseZIPBinOp<umin, v2i32, FPR64,  UMINPv2i32>;
+defm : PairwiseUZPBinOp<umin, v4i32, FPR128, UMINPv4i32>;
+defm : PairwiseUZPBinOp<umin, v4i16, FPR64,  UMINPv4i16>;
+defm : PairwiseUZPBinOp<umin, v8i16, FPR128, UMINPv8i16>;
+defm : PairwiseUZPBinOp<umin, v8i8,  FPR64,  UMINPv8i8>;
+defm : PairwiseUZPBinOp<umin, v16i8, FPR128, UMINPv16i8>;
+
+defm : PairwiseZIPBinOp<smax, v2i32, FPR64,  SMAXPv2i32>;
+defm : PairwiseUZPBinOp<smax, v4i32, FPR128, SMAXPv4i32>;
+defm : PairwiseUZPBinOp<smax, v4i16, FPR64,  SMAXPv4i16>;
+defm : PairwiseUZPBinOp<smax, v8i16, FPR128, SMAXPv8i16>;
+defm : PairwiseUZPBinOp<smax, v8i8,  FPR64,  SMAXPv8i8>;
+defm : PairwiseUZPBinOp<smax, v16i8, FPR128, SMAXPv16i8>;
+
+defm : PairwiseZIPBinOp<smin, v2i32, FPR64,  SMINPv2i32>;
+defm : PairwiseUZPBinOp<smin, v4i32, FPR128, SMINPv4i32>;
+defm : PairwiseUZPBinOp<smin, v4i16, FPR64,  SMINPv4i16>;
+defm : PairwiseUZPBinOp<smin, v8i16, FPR128, SMINPv8i16>;
+defm : PairwiseUZPBinOp<smin, v8i8,  FPR64,  SMINPv8i8>;
+defm : PairwiseUZPBinOp<smin, v16i8, FPR128, SMINPv16i8>;
+
+
+defm : PairwiseZIPBinOp<any_fmaximum, v2f64, FPR128, FMAXPv2f64>;
+defm : PairwiseZIPBinOp<any_fmaximum, v2f32, FPR64,  FMAXPv2f32>;
+defm : PairwiseUZPBinOp<any_fmaximum, v4f32, FPR128, FMAXPv4f32>;
+defm : PairwiseUZPBinOp<any_fmaximum, v4f16, FPR64,  FMAXPv4f16>;
+defm : PairwiseUZPBinOp<any_fmaximum, v8f16, FPR128, FMAXPv8f16>;
+
+defm : PairwiseZIPBinOp<any_fminimum, v2f64, FPR128, FMINPv2f64>;
+defm : PairwiseZIPBinOp<any_fminimum, v2f32, FPR64,  FMINPv2f32>;
+defm : PairwiseUZPBinOp<any_fminimum, v4f32, FPR128, FMINPv4f32>;
+defm : PairwiseUZPBinOp<any_fminimum, v4f16, FPR64,  FMINPv4f16>;
+defm : PairwiseUZPBinOp<any_fminimum, v8f16, FPR128, FMINPv8f16>;
 
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),

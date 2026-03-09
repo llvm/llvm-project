@@ -6,14 +6,14 @@ include(DetermineGCCCompatible)
 
 # get_subproject_title(titlevar)
 #   Set ${outvar} to the title of the current LLVM subproject (Clang, MLIR ...)
-# 
+#
 # The title is set in the subproject's top-level using the variable
 # LLVM_SUBPROJECT_TITLE. If it does not exist, it is assumed it is LLVM itself.
 # The title is not semantically significant, but use to create folders in
 # CMake-generated IDE projects (Visual Studio/XCode).
 function(get_subproject_title outvar)
   if (LLVM_SUBPROJECT_TITLE)
-    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE) 
+    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE)
   else ()
     set(${outvar} "LLVM" PARENT_SCOPE)
   endif ()
@@ -636,7 +636,12 @@ function(llvm_add_library name)
     # Do add_dependencies(obj) later due to CMake issue 14747.
     list(APPEND objlibs ${obj_name})
 
-    # Bring in the target include directories from our original target.
+    # Bring in the target include directories and link info from our original
+    # target. target_link_libraries propagates transitive dependencies with
+    # proper SYSTEM include handling from IMPORTED targets.
+    # target_include_directories propagates include directories set directly on
+    # the target.
+    target_link_libraries(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},LINK_LIBRARIES>)
     target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
 
     set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
@@ -702,11 +707,11 @@ function(llvm_add_library name)
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
-  ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline 
+  ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
   ## class members from being dllexport'ed to reduce compile time.
   ## This will also keep us below the 64k exported symbol limit
   ## https://blog.llvm.org/2018/11/30-faster-windows-builds-with-clang-cl_14.html
-  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND 
+  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND
      MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
     target_compile_options(${name} PUBLIC /Zc:dllexportInlines-)
     if(TARGET ${obj_name})
@@ -1091,6 +1096,8 @@ macro(generate_llvm_objects name)
 
     set(INITLLVM_ARGS "")
 
+    # When Clang is invoked as an OS utility (e.g., c17), it needs to follow the POSIX specification
+    # for how utilities respond to signals.
     if(${name} STREQUAL "clang")
       set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
     endif()
@@ -1115,7 +1122,7 @@ macro(generate_llvm_objects name)
 
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_ALIASES_${name} ${name})
-      target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
+      target_link_libraries(${obj_name} PUBLIC ${LLVM_PTHREAD_LIB})
       llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
     endif()
   endif()
@@ -1597,8 +1604,8 @@ macro(llvm_add_tool project name)
                 RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
                 COMPONENT ${name})
         if (LLVM_ENABLE_PDB)
-          install(FILES $<TARGET_PDB_FILE:${name}> 
-                DESTINATION "${${project}_TOOLS_INSTALL_DIR}" COMPONENT ${name} 
+          install(FILES $<TARGET_PDB_FILE:${name}>
+                DESTINATION "${${project}_TOOLS_INSTALL_DIR}" COMPONENT ${name}
                 OPTIONAL)
         endif()
 
@@ -1632,8 +1639,8 @@ macro(add_llvm_example name)
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
     if (LLVM_ENABLE_PDB)
-      install(FILES $<TARGET_PDB_FILE:${name}> 
-              DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}" COMPONENT ${name} 
+      install(FILES $<TARGET_PDB_FILE:${name}>
+              DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}" COMPONENT ${name}
               OPTIONAL)
     endif()
   endif()
@@ -1671,8 +1678,8 @@ macro(add_llvm_utility name)
               RUNTIME DESTINATION ${LLVM_UTILS_INSTALL_DIR}
               COMPONENT ${name})
       if (LLVM_ENABLE_PDB)
-        install(FILES $<TARGET_PDB_FILE:${name}> 
-                DESTINATION "${LLVM_UTILS_INSTALL_DIR}" COMPONENT ${name} 
+        install(FILES $<TARGET_PDB_FILE:${name}>
+                DESTINATION "${LLVM_UTILS_INSTALL_DIR}" COMPONENT ${name}
                 OPTIONAL)
       endif()
 
