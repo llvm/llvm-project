@@ -222,6 +222,22 @@ private:
 
   friend tooling::CompilerInstanceWithContext;
 };
+
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
+initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                           ArrayRef<std::string> CommandLine,
+                           StringRef WorkingDirectory,
+                           llvm::MemoryBufferRef TUBuffer,
+                           std::shared_ptr<cas::ObjectStore> CAS);
+
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
+initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         ArrayRef<std::string> CommandLine,
+                         StringRef WorkingDirectory, StringRef ModuleName,
+                         std::shared_ptr<cas::ObjectStore> CAS);
+
 } // end namespace dependencies
 } // end namespace clang
 
