@@ -356,6 +356,17 @@ class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
   let isAsmParserOnly = 1;
 }
 
+// Pseudo add or shxadd instructions.
+class PseudoGPRel<string opcodestr>
+    : Pseudo<(outs GPR:$rd),
+             (ins GPR:$rs1, GPR:$rs2, gprel_add_symbol:$src), [], opcodestr,
+             "$rd, $rs1, $rs2, $src"> {
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+  let isCodeGenOnly = 0;
+}
+
 // Instruction formats are listed in the order they appear in the RISC-V
 // instruction set manual (R, R4, I, S, B, U, J).
 
