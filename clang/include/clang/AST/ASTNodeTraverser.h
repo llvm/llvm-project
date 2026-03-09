@@ -159,7 +159,8 @@ public:
 
       // Some statements have custom mechanisms for dumping their children.
       if (isa<DeclStmt, GenericSelectionExpr, RequiresExpr,
-              OpenACCWaitConstruct, SYCLKernelCallStmt>(S))
+              OpenACCWaitConstruct, SYCLKernelCallStmt,
+              UnresolvedSYCLKernelCallStmt>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -842,6 +843,14 @@ public:
     if (Traversal != TK_IgnoreUnlessSpelledInSource) {
       Visit(Node->getKernelLaunchStmt());
       Visit(Node->getOutlinedFunctionDecl());
+    }
+  }
+
+  void
+  VisitUnresolvedSYCLKernelCallStmt(const UnresolvedSYCLKernelCallStmt *Node) {
+    Visit(Node->getOriginalStmt());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource) {
+      Visit(Node->getKernelLaunchIdExpr());
     }
   }
 
