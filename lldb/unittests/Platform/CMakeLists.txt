@@ -12,6 +12,7 @@ add_lldb_unittest(LLDBPlatformTests
     lldbPluginPlatformLinux
     lldbPluginPlatformMacOSX
     lldbPluginPlatformNetBSD
+    lldbUtilityHelpers
   )
 
 add_subdirectory(Android)

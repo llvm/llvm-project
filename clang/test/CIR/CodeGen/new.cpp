@@ -428,7 +428,7 @@ void t_constant_size_partial_init() {
 // CHECK:    %[[OFFSET2:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:    %[[ELEM_3_PTR:.*]] = cir.ptr_stride %[[ELEM_2_PTR]], %[[OFFSET2]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CHECK:    %[[INIT_SIZE:.*]] = cir.const #cir.int<12> : !u64i
-// CHECK:    %[[REMAINING_SIZE:.*]] = cir.binop(sub, %[[ALLOCATION_SIZE]], %[[INIT_SIZE]]) : !u64i
+// CHECK:    %[[REMAINING_SIZE:.*]] = cir.sub %[[ALLOCATION_SIZE]], %[[INIT_SIZE]] : !u64i
 // CHECK:    %[[VOID_PTR:.*]] = cir.cast bitcast %[[ELEM_3_PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
 // CHECK:    cir.libc.memset %[[REMAINING_SIZE]] bytes at %[[VOID_PTR]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
@@ -563,7 +563,7 @@ void t_new_var_size5(int n) {
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<48> : !u64i
 // CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
 // CHECK:    %[[NUM_ELEMENTS_MULTIPLIER:.*]] = cir.const #cir.int<6>
-// CHECK:    %[[NUM_ELEMENTS:.*]] = cir.binop(mul, %[[N_SIZE_T]], %[[NUM_ELEMENTS_MULTIPLIER]]) : !u64i
+// CHECK:    %[[NUM_ELEMENTS:.*]] = cir.mul %[[N_SIZE_T]], %[[NUM_ELEMENTS_MULTIPLIER]] : !u64i
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef})
@@ -597,7 +597,7 @@ void t_new_var_size6(int n) {
 // CHECK:    %[[LT_MIN_SIZE:.*]] = cir.cmp(lt, %[[N_SIZE_T]], %[[MIN_SIZE]]) : !u64i, !cir.bool
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
-// CHECK:    %[[ANY_OVERFLOW:.*]] = cir.binop(or, %[[LT_MIN_SIZE]], %[[OVERFLOW]]) : !cir.bool
+// CHECK:    %[[ANY_OVERFLOW:.*]] = cir.or %[[LT_MIN_SIZE]], %[[OVERFLOW]] : !cir.bool
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[ANY_OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef})
@@ -615,7 +615,7 @@ void t_new_var_size6(int n) {
 // CHECK:    %[[ONE:.*]] = cir.const #cir.int<1>
 // CHECK:    %[[PTR_DOUBLE_3:.*]] = cir.ptr_stride %[[PTR_DOUBLE_2]], %[[ONE]]
 // CHECK:    %[[INIT_SIZE:.*]] = cir.const #cir.int<24> : !u64i
-// CHECK:    %[[REMAINING_SIZE:.*]] = cir.binop(sub, %[[ALLOC_SIZE]], %[[INIT_SIZE]]) : !u64i
+// CHECK:    %[[REMAINING_SIZE:.*]] = cir.sub %[[ALLOC_SIZE]], %[[INIT_SIZE]] : !u64i
 // CHECK:    %[[PTR_DOUBLE_3_VOID:.*]] = cir.cast bitcast %[[PTR_DOUBLE_3]] : !cir.ptr<!cir.double> -> !cir.ptr<!void>
 // CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
 // CHECK:    cir.libc.memset{{.*}} bytes at %[[PTR_DOUBLE_3_VOID]] to %[[ZERO]]
@@ -699,7 +699,7 @@ void t_new_var_size_nontrivial(size_t n) {
 // CHECK:    %[[SIZE_WITHOUT_COOKIE:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
 // CHECK:    %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CHECK:    %[[SIZE:.*]], %[[OVERFLOW2:.*]] = cir.binop.overflow(add, %[[SIZE_WITHOUT_COOKIE]], %[[COOKIE_SIZE]]) : !u64i, (!u64i, !cir.bool)
-// CHECK:    %[[ANY_OVERFLOW:.*]] = cir.binop(or, %[[OVERFLOW]], %[[OVERFLOW2]]) : !cir.bool
+// CHECK:    %[[ANY_OVERFLOW:.*]] = cir.or %[[OVERFLOW]], %[[OVERFLOW2]] : !cir.bool
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[ANY_OVERFLOW]] then %[[ALL_ONES]] else %[[SIZE]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef})

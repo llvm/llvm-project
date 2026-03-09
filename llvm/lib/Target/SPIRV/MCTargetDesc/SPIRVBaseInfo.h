@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -255,6 +256,8 @@ enum InstFlags {
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;
 using ExtensionList = SmallVector<SPIRV::Extension::Extension, 8>;
 using EnvironmentList = SmallVector<SPIRV::Environment::Environment, 8>;
+
+using ExtensionSet = DenseSet<SPIRV::Extension::Extension>;
 
 std::string
 getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,

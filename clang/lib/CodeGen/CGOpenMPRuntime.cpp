@@ -3729,9 +3729,7 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
     llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
         UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
         /*Idx0=*/1);
-    llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGF.SizeTy);
-    llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGF.SizeTy);
-    SizeVal = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
+    SizeVal = CGF.Builder.CreatePtrDiff(UpAddr, Addr, "", /*IsNUW=*/true);
   } else {
     SizeVal = CGF.getTypeSize(Ty);
   }

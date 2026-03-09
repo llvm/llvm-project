@@ -21,7 +21,7 @@
 #include "mlir/Transforms/ControlFlowSinkUtils.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONTROLFLOWSINK
+#define GEN_PASS_DEF_CONTROLFLOWSINKPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -29,7 +29,7 @@ using namespace mlir;
 
 namespace {
 /// A control-flow sink pass.
-struct ControlFlowSink : public impl::ControlFlowSinkBase<ControlFlowSink> {
+struct ControlFlowSink : public impl::ControlFlowSinkPassBase<ControlFlowSink> {
   void runOnOperation() override;
 };
 } // end anonymous namespace
@@ -51,8 +51,4 @@ void ControlFlowSink::runOnOperation() {
           op->moveBefore(&region->front(), region->front().begin());
         });
   });
-}
-
-std::unique_ptr<Pass> mlir::createControlFlowSinkPass() {
-  return std::make_unique<ControlFlowSink>();
 }
