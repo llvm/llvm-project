@@ -70,15 +70,62 @@ public:
 LLDB_PLUGIN_DEFINE(MockScriptInterpreterPython)
 } // namespace
 
-struct PlatformDarwinTest : public testing::Test {
+struct PlatformDarwinLocateTest : public testing::Test {
 protected:
   void SetUp() override {
     std::call_once(TestUtilities::g_debugger_initialize_flag,
                    []() { Debugger::Initialize(nullptr); });
+
+    ArchSpec arch("x86_64-apple-macosx-");
+    m_platform_sp = PlatformRemoteMacOSX::CreateInstance(true, &arch);
+    Platform::SetHostPlatform(m_platform_sp);
+
+    m_debugger_sp = Debugger::CreateInstance();
+
+    m_debugger_sp->GetTargetList().CreateTarget(*m_debugger_sp, "", arch,
+                                                lldb_private::eLoadDependentsNo,
+                                                m_platform_sp, m_target_sp);
+
+    ASSERT_TRUE(m_target_sp);
+    ASSERT_TRUE(m_platform_sp);
+
+    ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory(
+        "locate-scripts-from-dsym-test", m_tmp_root_dir))
+        << "Failed to create test directory.";
+
+    // Create <test-root>/.dSYM/Contents/Resources
+    llvm::SmallString<128> dsym_resource_dir(m_tmp_root_dir);
+    llvm::sys::path::append(dsym_resource_dir, ".dSYM", "Contents",
+                            "Resources");
+    ASSERT_FALSE(llvm::sys::fs::create_directories(dsym_resource_dir))
+        << "Failed to create test dSYM root directory.";
+
+    // Create <test-root>/.dSYM/Contents/Resources/DWARF
+    m_tmp_dsym_dwarf_dir = dsym_resource_dir;
+    llvm::sys::path::append(m_tmp_dsym_dwarf_dir, "DWARF");
+    ASSERT_FALSE(llvm::sys::fs::create_directory(m_tmp_dsym_dwarf_dir))
+        << "Failed to create test dSYM DWARF directory.";
+
+    // Create <test-root>/.dSYM/Contents/Resources/Python
+    m_tmp_dsym_python_dir = dsym_resource_dir;
+    llvm::sys::path::append(m_tmp_dsym_python_dir, "Python");
+    ASSERT_FALSE(llvm::sys::fs::create_directory(m_tmp_dsym_python_dir))
+        << "Failed to create test dSYM Python directory.";
   };
 
   DebuggerSP m_debugger_sp;
   PlatformSP m_platform_sp;
+  TargetSP m_target_sp;
+
+  /// Root directory for m_tmp_dsym_dwarf_dir and m_tmp_dsym_python_dir
+  llvm::SmallString<128> m_tmp_root_dir;
+
+  /// <test-root>/.dSYM/Contents/Resources/DWARF
+  llvm::SmallString<128> m_tmp_dsym_dwarf_dir;
+
+  /// <test-root>/.dSYM/Contents/Resources/Python
+  llvm::SmallString<128> m_tmp_dsym_python_dir;
+
   SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX,
                 MockScriptInterpreterPython>
       subsystems;
@@ -96,7 +143,7 @@ static std::string CreateFile(llvm::StringRef filename,
   return path.c_str();
 }
 
-TEST_F(PlatformDarwinTest, TestParseVersionBuildDir) {
+TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
   llvm::VersionTuple V;
   llvm::StringRef D;
 
@@ -124,59 +171,25 @@ TEST_F(PlatformDarwinTest, TestParseVersionBuildDir) {
   EXPECT_EQ(llvm::VersionTuple(3, 4, 5), V);
 }
 
-TEST_F(PlatformDarwinTest, LocateExecutableScriptingResourcesFromDSYM) {
-  TargetSP target_sp;
-  ArchSpec arch("x86_64-apple-macosx-");
-  auto platform_sp = PlatformRemoteMacOSX::CreateInstance(true, &arch);
-  Platform::SetHostPlatform(platform_sp);
-
-  m_debugger_sp = Debugger::CreateInstance();
-
-  m_debugger_sp->GetTargetList().CreateTarget(*m_debugger_sp, "", arch,
-                                              lldb_private::eLoadDependentsNo,
-                                              m_platform_sp, target_sp);
-
-  ASSERT_TRUE(target_sp);
-
-  llvm::SmallString<128> tmp_dir;
-  ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory(
-      "locate-scripts-from-dsym-test", tmp_dir))
-      << "Failed to create test directory.";
-
+TEST_F(PlatformDarwinLocateTest, LocateExecutableScriptingResourcesFromDSYM) {
   // Create dummy module file at <test-root>/TestModule.o
-  FileSpec module_fspec(CreateFile("TestModule.o", tmp_dir));
+  FileSpec module_fspec(CreateFile("TestModule.o", m_tmp_root_dir));
   ASSERT_TRUE(module_fspec);
-
-  // Create <test-root>/.dSYM/Contents/Resources
-  llvm::SmallString<128> dsym_resource_dir(tmp_dir);
-  llvm::sys::path::append(tmp_dir, ".dSYM", "Contents", "Resources");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(dsym_resource_dir))
-      << "Failed to create test dSYM root directory.";
-
-  // Create <test-root>/.dSYM/Contents/Resources/DWARF
-  llvm::SmallString<128> dwarf_dir(dsym_resource_dir);
-  llvm::sys::path::append(dwarf_dir, "DWARF");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(dwarf_dir))
-      << "Failed to create test dSYM DWARF directory.";
 
   // Create dummy module file at
   // <test-root>/.dSYM/Contents/Resources/DWARF/TestModule.o
-  FileSpec dsym_module_fpec(CreateFile("TestModule.o", dwarf_dir));
+  FileSpec dsym_module_fpec(CreateFile("TestModule.o", m_tmp_dsym_dwarf_dir));
   ASSERT_TRUE(dsym_module_fpec);
 
-  // Create <test-root>/.dSYM/Contents/Resources/Python
-  llvm::SmallString<128> python_dir(dsym_resource_dir);
-  llvm::sys::path::append(python_dir, "Python");
-  ASSERT_FALSE(llvm::sys::fs::create_directory(python_dir))
-      << "Failed to create test dSYM Python directory.";
-
-  CreateFile("TestModule.py", python_dir);
-  CreateFile("TestModule.txt", python_dir);
-  CreateFile("TestModule.sh", python_dir);
+  CreateFile("TestModule.py", m_tmp_dsym_python_dir);
+  CreateFile("TestModule.txt", m_tmp_dsym_python_dir);
+  CreateFile("TestModule.sh", m_tmp_dsym_python_dir);
 
   StreamString ss;
-  FileSpecList fspecs = std::static_pointer_cast<PlatformDarwin>(platform_sp)
-                            ->LocateExecutableScriptingResourcesFromDSYM(
-                                ss, module_fspec, *target_sp, dsym_module_fpec);
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule.py");
 }
