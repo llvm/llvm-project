@@ -175,6 +175,32 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @same_value_repeated_sgpr_inputs(ptr addrspace(1) %out) {
+; CHECK-LABEL: same_value_repeated_sgpr_inputs:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_add_u32 s3, s2, s2
+; CHECK-NEXT:    s_add_u32 s3, s3, s2
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s3
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  ; Same value %tid used three times as SGPR input ($1, $2, $3).
+  ; Early-clobber '&' ensures $0 gets a different register from the inputs.
+  %result = call i32 asm sideeffect "s_add_u32 $0, $1, $2\0As_add_u32 $0, $0, $3", "=&s,s,s,s"(i32 %tid, i32 %tid, i32 %tid)
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %result, ptr addrspace(1) %gep
+  ret void
+}
+
 define amdgpu_kernel void @physreg_sgpr_constraint_divergent_value(ptr addrspace(1) %out) {
 ; CHECK-LABEL: physreg_sgpr_constraint_divergent_value:
 ; CHECK:       ; %bb.0: ; %entry

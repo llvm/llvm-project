@@ -8571,7 +8571,7 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-  DenseSet<Register> SGPRInputRegs;
+  SmallSet<Register, 8> SGPRInputRegs;
 
   for (unsigned I = InlineAsm::Op_FirstOperand; I < NumOps - 1;) {
     const InlineAsm::Flag Flags(Op.getConstantOperandVal(I));
