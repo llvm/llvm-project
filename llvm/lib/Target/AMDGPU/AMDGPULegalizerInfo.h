@@ -97,6 +97,9 @@ public:
                           unsigned Flags) const;
   bool legalizeFExp10Unsafe(MachineIRBuilder &B, Register Dst, Register Src,
                             unsigned Flags) const;
+
+  bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,

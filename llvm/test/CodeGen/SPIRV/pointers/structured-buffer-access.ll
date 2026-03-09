@@ -37,14 +37,14 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    %47 = OpLoad %4 %41
 ; CHECK-NEXT:    %48 = OpAccessChain %13 %45 %28 %47
 ; CHECK-NEXT:    %49 = OpInBoundsAccessChain %9 %48 %30
-; CHECK-NEXT:    %50 = OpLoad %8 %49 Aligned 1
+; CHECK-NEXT:    %50 = OpLoad %8 %49
 ; CHECK-NEXT:    %51 = OpAccessChain %11 %46 %28 %47
 ; CHECK-NEXT:    %52 = OpInBoundsAccessChain %9 %51 %28
-; CHECK-NEXT:    OpStore %52 %50 Aligned 1
+; CHECK-NEXT:    OpStore %52 %50
 ; CHECK-NEXT:    %53 = OpAccessChain %6 %48 %28
-; CHECK-NEXT:    %54 = OpLoad %5 %53 Aligned 1
+; CHECK-NEXT:    %54 = OpLoad %5 %53
 ; CHECK-NEXT:    %55 = OpInBoundsAccessChain %6 %51 %30
-; CHECK-NEXT:    OpStore %55 %54 Aligned 1
+; CHECK-NEXT:    OpStore %55 %54
 ; CHECK-NEXT:    OpReturn
 ; CHECK-NEXT:    OpFunctionEnd
 entry:

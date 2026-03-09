@@ -1207,10 +1207,6 @@ def skipIfEditlineWideCharSupportMissing(func):
     return _get_bool_config_skip_if_decorator("editline_wchar")(func)
 
 
-def skipIfFBSDVMCoreSupportMissing(func):
-    return _get_bool_config_skip_if_decorator("fbsdvmcore")(func)
-
-
 def skipIfZLIBSupportMissing(func):
     return _get_bool_config_skip_if_decorator("zlib")(func)
 

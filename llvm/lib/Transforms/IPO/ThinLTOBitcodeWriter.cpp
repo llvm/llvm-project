@@ -411,7 +411,11 @@ void splitAndWriteThinLTOBitcode(
     return true;
   });
 
-  promoteInternals(*MergedM, M, ModuleId, CfiFunctions);
+  // CfiFunctions contains only symbols from M. promoteInternals tries to find
+  // match values from its first argument (the "exporting module") in
+  // CfiFunctions. So we only need CfiFunctions for the second promotion (M ->
+  // MergedM)
+  promoteInternals(*MergedM, M, ModuleId, {});
   promoteInternals(M, *MergedM, ModuleId, CfiFunctions);
 
   auto &Ctx = MergedM->getContext();

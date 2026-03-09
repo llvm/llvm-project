@@ -512,6 +512,7 @@ public:
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<UniqueBBID> &BBID);
   bool parseCallFrameSize(unsigned &CallFrameSize);
+  bool parsePrefetchTarget(CallsiteID &Target);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -678,17 +679,32 @@ bool MIParser::parseSectionID(std::optional<MBBSectionID> &SID) {
 
 // Parse Machine Basic Block ID.
 bool MIParser::parseBBID(std::optional<UniqueBBID> &BBID) {
-  assert(Token.is(MIToken::kw_bb_id));
+  if (Token.isNot(MIToken::kw_bb_id))
+    return error("expected 'bb_id'");
   lex();
   unsigned BaseID = 0;
   unsigned CloneID = 0;
-  if (getUnsigned(BaseID))
-    return error("Unknown BB ID");
-  lex();
-  if (Token.is(MIToken::IntegerLiteral)) {
-    if (getUnsigned(CloneID))
-      return error("Unknown Clone ID");
+  if (Token.is(MIToken::FloatingPointLiteral)) {
+    StringRef S = Token.range();
+    auto Parts = S.split('.');
+    if (Parts.first.getAsInteger(10, BaseID) ||
+        Parts.second.getAsInteger(10, CloneID))
+      return error("Unknown BB ID");
     lex();
+  } else {
+    if (getUnsigned(BaseID))
+      return error("Unknown BB ID");
+    lex();
+    if (Token.is(MIToken::comma) || Token.is(MIToken::dot)) {
+      lex();
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    } else if (Token.is(MIToken::IntegerLiteral)) {
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    }
   }
   BBID = {BaseID, CloneID};
   return false;
@@ -704,6 +720,17 @@ bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
   CallFrameSize = Value;
   lex();
   return false;
+}
+
+bool MIParser::parsePrefetchTarget(CallsiteID &Target) {
+  lex();
+  std::optional<UniqueBBID> BBID;
+  if (parseBBID(BBID))
+    return true;
+  Target.BBID = *BBID;
+  if (expectAndConsume(MIToken::comma))
+    return true;
+  return getUnsigned(Target.CallsiteIndex);
 }
 
 bool MIParser::parseBasicBlockDefinition(
@@ -1724,16 +1751,14 @@ bool MIParser::parseSubRegisterIndex(unsigned &SubReg) {
 }
 
 bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
-  if (!consumeIfPresent(MIToken::kw_tied_def))
-    return true;
+  assert(Token.is(MIToken::kw_tied_def));
+  lex();
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after 'tied-def'");
   if (getUnsigned(TiedDefIdx))
     return true;
   lex();
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-  return false;
+  return expectAndConsume(MIToken::rparen);
 }
 
 bool MIParser::assignRegisterTies(MachineInstr &MI,
@@ -1781,6 +1806,8 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterFlag(Flags))
       return true;
   }
+  // Update IsDef as we may have read a def flag.
+  IsDef = hasRegState(Flags, RegState::Define);
   if (!Token.isRegister())
     return error("expected a register after register flags");
   Register Reg;
@@ -1802,56 +1829,46 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterClassOrBank(*RegInfo))
         return true;
   }
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (!hasRegState(Flags, RegState::Define)) {
-    if (consumeIfPresent(MIToken::lparen)) {
+
+  if (consumeIfPresent(MIToken::lparen)) {
+    // For a def, we only expect a type. For use we expect either a type or a
+    // tied-def. Additionally, for physical registers, we don't expect a type.
+    if (Token.is(MIToken::kw_tied_def)) {
+      if (IsDef)
+        return error("tied-def not supported for defs");
       unsigned Idx;
-      if (!parseRegisterTiedDefIndex(Idx))
-        TiedDefIdx = Idx;
-      else {
-        // Try a redundant low-level type.
-        LLT Ty;
-        if (parseLowLevelType(Token.location(), Ty))
-          return error("expected tied-def or low-level type after '('");
+      if (parseRegisterTiedDefIndex(Idx))
+        return true;
+      TiedDefIdx = Idx;
+    } else {
+      if (!Reg.isVirtual())
+        return error("unexpected type on physical register");
 
-        if (expectAndConsume(MIToken::rparen))
-          return true;
+      LLT Ty;
+      // If type parsing fails, forwad the parse error for defs.
+      if (parseLowLevelType(Token.location(), Ty))
+        return IsDef ? true
+                     : error("expected tied-def or low-level type after '('");
 
-        if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-          return error("inconsistent type for generic virtual register");
+      if (expectAndConsume(MIToken::rparen))
+        return true;
 
-        MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-        MRI.setType(Reg, Ty);
-        MRI.noteNewVirtualRegister(Reg);
-      }
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
+        return error("inconsistent type for generic virtual register");
+
+      MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
+      MRI.setType(Reg, Ty);
+      MRI.noteNewVirtualRegister(Reg);
     }
-  } else if (consumeIfPresent(MIToken::lparen)) {
-    // Virtual registers may have a tpe with GlobalISel.
-    if (!Reg.isVirtual())
-      return error("unexpected type on physical register");
-
-    LLT Ty;
-    if (parseLowLevelType(Token.location(), Ty))
-      return true;
-
-    if (expectAndConsume(MIToken::rparen))
-      return true;
-
-    if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-      return error("inconsistent type for generic virtual register");
-
-    MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-    MRI.setType(Reg, Ty);
-  } else if (Reg.isVirtual()) {
-    // Generic virtual registers must have a type.
-    // If we end up here this means the type hasn't been specified and
-    // this is bad!
+  } else if (IsDef && Reg.isVirtual()) {
+    // Generic virtual registers defs must have a type.
     if (RegInfo->Kind == VRegInfo::GENERIC ||
         RegInfo->Kind == VRegInfo::REGBANK)
       return error("generic virtual registers must have a type");
   }
 
-  if (hasRegState(Flags, RegState::Define)) {
+  if (IsDef) {
     if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
@@ -1859,15 +1876,14 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("cannot have a dead use operand");
   }
 
-  Dest = MachineOperand::CreateReg(Reg, hasRegState(Flags, RegState::Define),
-                                   hasRegState(Flags, RegState::Implicit),
-                                   hasRegState(Flags, RegState::Kill),
-                                   hasRegState(Flags, RegState::Dead),
-                                   hasRegState(Flags, RegState::Undef),
-                                   hasRegState(Flags, RegState::EarlyClobber),
-                                   SubReg, hasRegState(Flags, RegState::Debug),
-                                   hasRegState(Flags, RegState::InternalRead),
-                                   hasRegState(Flags, RegState::Renamable));
+  Dest = MachineOperand::CreateReg(
+      Reg, IsDef, hasRegState(Flags, RegState::Implicit),
+      hasRegState(Flags, RegState::Kill), hasRegState(Flags, RegState::Dead),
+      hasRegState(Flags, RegState::Undef),
+      hasRegState(Flags, RegState::EarlyClobber), SubReg,
+      hasRegState(Flags, RegState::Debug),
+      hasRegState(Flags, RegState::InternalRead),
+      hasRegState(Flags, RegState::Renamable));
 
   return false;
 }
@@ -2115,7 +2131,10 @@ static bool getUnsigned(const MIToken &Token, unsigned &Result,
                         ErrorCallbackType ErrCB) {
   if (Token.hasIntegerValue()) {
     const uint64_t Limit = uint64_t(std::numeric_limits<unsigned>::max()) + 1;
-    uint64_t Val64 = Token.integerValue().getLimitedValue(Limit);
+    const APSInt &SInt = Token.integerValue();
+    if (SInt.isNegative())
+      return ErrCB(Token.location(), "expected unsigned integer");
+    uint64_t Val64 = SInt.getLimitedValue(Limit);
     if (Val64 == Limit)
       return ErrCB(Token.location(), "expected 32-bit integer (too large)");
     Result = Val64;
@@ -3728,14 +3747,18 @@ bool llvm::parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
   return MIParser(PFS, Error, Src).parseStandaloneVirtualRegister(Info);
 }
 
-bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS,
-                                     int &FI, StringRef Src,
-                                     SMDiagnostic &Error) {
+bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
+                                     StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneStackObject(FI);
 }
 
-bool llvm::parseMDNode(PerFunctionMIParsingState &PFS,
-                       MDNode *&Node, StringRef Src, SMDiagnostic &Error) {
+bool llvm::parsePrefetchTarget(PerFunctionMIParsingState &PFS,
+                               CallsiteID &Target, StringRef Src,
+                               SMDiagnostic &Error) {
+  return MIParser(PFS, Error, Src).parsePrefetchTarget(Target);
+}
+bool llvm::parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
+                       StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
 }
 

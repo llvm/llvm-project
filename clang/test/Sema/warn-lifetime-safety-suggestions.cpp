@@ -393,3 +393,13 @@ View Reassigned(View a) {
   a = Global;
   return a;
 }
+
+struct NoSuggestionForThisCapturedByLambda {
+  MyObj s;
+  bool cond;
+  void foo() {
+    auto x = [&]() { 
+      return cond > 0 ?  &this->s : &s;
+    };
+  }
+};

@@ -419,54 +419,53 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP11:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP9]], i64 1
 // IR-GPU-NEXT:    br label [[DOTSHUFFLE_PRE_COND:%.*]]
 // IR-GPU:       .shuffle.pre_cond:
-// IR-GPU-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP9]], [[ENTRY:%.*]] ], [ [[TMP23:%.*]], [[DOTSHUFFLE_THEN:%.*]] ]
-// IR-GPU-NEXT:    [[TMP13:%.*]] = phi ptr [ [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], [[ENTRY]] ], [ [[TMP24:%.*]], [[DOTSHUFFLE_THEN]] ]
-// IR-GPU-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP11]] to i64
-// IR-GPU-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP12]] to i64
+// IR-GPU-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP9]], [[ENTRY:%.*]] ], [ [[TMP22:%.*]], [[DOTSHUFFLE_THEN:%.*]] ]
+// IR-GPU-NEXT:    [[TMP13:%.*]] = phi ptr [ [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], [[ENTRY]] ], [ [[TMP23:%.*]], [[DOTSHUFFLE_THEN]] ]
+// IR-GPU-NEXT:    [[TMP14:%.*]] = ptrtoaddr ptr [[TMP11]] to i64
+// IR-GPU-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[TMP12]] to i64
 // IR-GPU-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], [[TMP15]]
-// IR-GPU-NEXT:    [[TMP17:%.*]] = sdiv exact i64 [[TMP16]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// IR-GPU-NEXT:    [[TMP18:%.*]] = icmp sgt i64 [[TMP17]], 7
-// IR-GPU-NEXT:    br i1 [[TMP18]], label [[DOTSHUFFLE_THEN]], label [[DOTSHUFFLE_EXIT:%.*]]
+// IR-GPU-NEXT:    [[TMP17:%.*]] = icmp sgt i64 [[TMP16]], 7
+// IR-GPU-NEXT:    br i1 [[TMP17]], label [[DOTSHUFFLE_THEN]], label [[DOTSHUFFLE_EXIT:%.*]]
 // IR-GPU:       .shuffle.then:
-// IR-GPU-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP12]], align 4
-// IR-GPU-NEXT:    [[TMP20:%.*]] = call i32 @__kmpc_get_warp_size()
-// IR-GPU-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
-// IR-GPU-NEXT:    [[TMP22:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP19]], i16 [[TMP6]], i16 [[TMP21]])
-// IR-GPU-NEXT:    store i64 [[TMP22]], ptr [[TMP13]], align 4
-// IR-GPU-NEXT:    [[TMP23]] = getelementptr i64, ptr [[TMP12]], i64 1
-// IR-GPU-NEXT:    [[TMP24]] = getelementptr i64, ptr [[TMP13]], i64 1
+// IR-GPU-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP12]], align 4
+// IR-GPU-NEXT:    [[TMP19:%.*]] = call i32 @__kmpc_get_warp_size()
+// IR-GPU-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i16
+// IR-GPU-NEXT:    [[TMP21:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP18]], i16 [[TMP6]], i16 [[TMP20]])
+// IR-GPU-NEXT:    store i64 [[TMP21]], ptr [[TMP13]], align 4
+// IR-GPU-NEXT:    [[TMP22]] = getelementptr i64, ptr [[TMP12]], i64 1
+// IR-GPU-NEXT:    [[TMP23]] = getelementptr i64, ptr [[TMP13]], i64 1
 // IR-GPU-NEXT:    br label [[DOTSHUFFLE_PRE_COND]]
 // IR-GPU:       .shuffle.exit:
 // IR-GPU-NEXT:    store ptr [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], ptr [[TMP10]], align 8
-// IR-GPU-NEXT:    [[TMP25:%.*]] = icmp eq i16 [[TMP7]], 0
-// IR-GPU-NEXT:    [[TMP26:%.*]] = icmp eq i16 [[TMP7]], 1
-// IR-GPU-NEXT:    [[TMP27:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
-// IR-GPU-NEXT:    [[TMP28:%.*]] = and i1 [[TMP26]], [[TMP27]]
-// IR-GPU-NEXT:    [[TMP29:%.*]] = icmp eq i16 [[TMP7]], 2
-// IR-GPU-NEXT:    [[TMP30:%.*]] = and i16 [[TMP5]], 1
-// IR-GPU-NEXT:    [[TMP31:%.*]] = icmp eq i16 [[TMP30]], 0
-// IR-GPU-NEXT:    [[TMP32:%.*]] = and i1 [[TMP29]], [[TMP31]]
-// IR-GPU-NEXT:    [[TMP33:%.*]] = icmp sgt i16 [[TMP6]], 0
-// IR-GPU-NEXT:    [[TMP34:%.*]] = and i1 [[TMP32]], [[TMP33]]
-// IR-GPU-NEXT:    [[TMP35:%.*]] = or i1 [[TMP25]], [[TMP28]]
-// IR-GPU-NEXT:    [[TMP36:%.*]] = or i1 [[TMP35]], [[TMP34]]
-// IR-GPU-NEXT:    br i1 [[TMP36]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// IR-GPU-NEXT:    [[TMP24:%.*]] = icmp eq i16 [[TMP7]], 0
+// IR-GPU-NEXT:    [[TMP25:%.*]] = icmp eq i16 [[TMP7]], 1
+// IR-GPU-NEXT:    [[TMP26:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+// IR-GPU-NEXT:    [[TMP27:%.*]] = and i1 [[TMP25]], [[TMP26]]
+// IR-GPU-NEXT:    [[TMP28:%.*]] = icmp eq i16 [[TMP7]], 2
+// IR-GPU-NEXT:    [[TMP29:%.*]] = and i16 [[TMP5]], 1
+// IR-GPU-NEXT:    [[TMP30:%.*]] = icmp eq i16 [[TMP29]], 0
+// IR-GPU-NEXT:    [[TMP31:%.*]] = and i1 [[TMP28]], [[TMP30]]
+// IR-GPU-NEXT:    [[TMP32:%.*]] = icmp sgt i16 [[TMP6]], 0
+// IR-GPU-NEXT:    [[TMP33:%.*]] = and i1 [[TMP31]], [[TMP32]]
+// IR-GPU-NEXT:    [[TMP34:%.*]] = or i1 [[TMP24]], [[TMP27]]
+// IR-GPU-NEXT:    [[TMP35:%.*]] = or i1 [[TMP34]], [[TMP33]]
+// IR-GPU-NEXT:    br i1 [[TMP35]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // IR-GPU:       then:
 // IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR2]]
 // IR-GPU-NEXT:    br label [[IFCONT:%.*]]
 // IR-GPU:       else:
 // IR-GPU-NEXT:    br label [[IFCONT]]
 // IR-GPU:       ifcont:
-// IR-GPU-NEXT:    [[TMP37:%.*]] = icmp eq i16 [[TMP7]], 1
-// IR-GPU-NEXT:    [[TMP38:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
-// IR-GPU-NEXT:    [[TMP39:%.*]] = and i1 [[TMP37]], [[TMP38]]
-// IR-GPU-NEXT:    br i1 [[TMP39]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
+// IR-GPU-NEXT:    [[TMP36:%.*]] = icmp eq i16 [[TMP7]], 1
+// IR-GPU-NEXT:    [[TMP37:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
+// IR-GPU-NEXT:    [[TMP38:%.*]] = and i1 [[TMP36]], [[TMP37]]
+// IR-GPU-NEXT:    br i1 [[TMP38]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
 // IR-GPU:       then4:
-// IR-GPU-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
-// IR-GPU-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[TMP40]], align 8
-// IR-GPU-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
-// IR-GPU-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[TMP42]], align 8
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP43]], ptr align 4 [[TMP41]], i64 400, i1 false)
+// IR-GPU-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
+// IR-GPU-NEXT:    [[TMP40:%.*]] = load ptr, ptr [[TMP39]], align 8
+// IR-GPU-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
+// IR-GPU-NEXT:    [[TMP42:%.*]] = load ptr, ptr [[TMP41]], align 8
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP42]], ptr align 4 [[TMP40]], i64 400, i1 false)
 // IR-GPU-NEXT:    br label [[IFCONT6:%.*]]
 // IR-GPU:       else5:
 // IR-GPU-NEXT:    br label [[IFCONT6]]
@@ -565,54 +564,53 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP11:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP9]], i64 1
 // IR-GPU-NEXT:    br label [[DOTSHUFFLE_PRE_COND:%.*]]
 // IR-GPU:       .shuffle.pre_cond:
-// IR-GPU-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP9]], [[ENTRY:%.*]] ], [ [[TMP23:%.*]], [[DOTSHUFFLE_THEN:%.*]] ]
-// IR-GPU-NEXT:    [[TMP13:%.*]] = phi ptr [ [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], [[ENTRY]] ], [ [[TMP24:%.*]], [[DOTSHUFFLE_THEN]] ]
-// IR-GPU-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP11]] to i64
-// IR-GPU-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP12]] to i64
+// IR-GPU-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP9]], [[ENTRY:%.*]] ], [ [[TMP22:%.*]], [[DOTSHUFFLE_THEN:%.*]] ]
+// IR-GPU-NEXT:    [[TMP13:%.*]] = phi ptr [ [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], [[ENTRY]] ], [ [[TMP23:%.*]], [[DOTSHUFFLE_THEN]] ]
+// IR-GPU-NEXT:    [[TMP14:%.*]] = ptrtoaddr ptr [[TMP11]] to i64
+// IR-GPU-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[TMP12]] to i64
 // IR-GPU-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP14]], [[TMP15]]
-// IR-GPU-NEXT:    [[TMP17:%.*]] = sdiv exact i64 [[TMP16]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// IR-GPU-NEXT:    [[TMP18:%.*]] = icmp sgt i64 [[TMP17]], 7
-// IR-GPU-NEXT:    br i1 [[TMP18]], label [[DOTSHUFFLE_THEN]], label [[DOTSHUFFLE_EXIT:%.*]]
+// IR-GPU-NEXT:    [[TMP17:%.*]] = icmp sgt i64 [[TMP16]], 7
+// IR-GPU-NEXT:    br i1 [[TMP17]], label [[DOTSHUFFLE_THEN]], label [[DOTSHUFFLE_EXIT:%.*]]
 // IR-GPU:       .shuffle.then:
-// IR-GPU-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP12]], align 4
-// IR-GPU-NEXT:    [[TMP20:%.*]] = call i32 @__kmpc_get_warp_size()
-// IR-GPU-NEXT:    [[TMP21:%.*]] = trunc i32 [[TMP20]] to i16
-// IR-GPU-NEXT:    [[TMP22:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP19]], i16 [[TMP6]], i16 [[TMP21]])
-// IR-GPU-NEXT:    store i64 [[TMP22]], ptr [[TMP13]], align 4
-// IR-GPU-NEXT:    [[TMP23]] = getelementptr i64, ptr [[TMP12]], i64 1
-// IR-GPU-NEXT:    [[TMP24]] = getelementptr i64, ptr [[TMP13]], i64 1
+// IR-GPU-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP12]], align 4
+// IR-GPU-NEXT:    [[TMP19:%.*]] = call i32 @__kmpc_get_warp_size()
+// IR-GPU-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i16
+// IR-GPU-NEXT:    [[TMP21:%.*]] = call i64 @__kmpc_shuffle_int64(i64 [[TMP18]], i16 [[TMP6]], i16 [[TMP20]])
+// IR-GPU-NEXT:    store i64 [[TMP21]], ptr [[TMP13]], align 4
+// IR-GPU-NEXT:    [[TMP22]] = getelementptr i64, ptr [[TMP12]], i64 1
+// IR-GPU-NEXT:    [[TMP23]] = getelementptr i64, ptr [[TMP13]], i64 1
 // IR-GPU-NEXT:    br label [[DOTSHUFFLE_PRE_COND]]
 // IR-GPU:       .shuffle.exit:
 // IR-GPU-NEXT:    store ptr [[DOTOMP_REDUCTION_ELEMENT_ASCAST]], ptr [[TMP10]], align 8
-// IR-GPU-NEXT:    [[TMP25:%.*]] = icmp eq i16 [[TMP7]], 0
-// IR-GPU-NEXT:    [[TMP26:%.*]] = icmp eq i16 [[TMP7]], 1
-// IR-GPU-NEXT:    [[TMP27:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
-// IR-GPU-NEXT:    [[TMP28:%.*]] = and i1 [[TMP26]], [[TMP27]]
-// IR-GPU-NEXT:    [[TMP29:%.*]] = icmp eq i16 [[TMP7]], 2
-// IR-GPU-NEXT:    [[TMP30:%.*]] = and i16 [[TMP5]], 1
-// IR-GPU-NEXT:    [[TMP31:%.*]] = icmp eq i16 [[TMP30]], 0
-// IR-GPU-NEXT:    [[TMP32:%.*]] = and i1 [[TMP29]], [[TMP31]]
-// IR-GPU-NEXT:    [[TMP33:%.*]] = icmp sgt i16 [[TMP6]], 0
-// IR-GPU-NEXT:    [[TMP34:%.*]] = and i1 [[TMP32]], [[TMP33]]
-// IR-GPU-NEXT:    [[TMP35:%.*]] = or i1 [[TMP25]], [[TMP28]]
-// IR-GPU-NEXT:    [[TMP36:%.*]] = or i1 [[TMP35]], [[TMP34]]
-// IR-GPU-NEXT:    br i1 [[TMP36]], label [[THEN:%.*]], label [[ELSE:%.*]]
+// IR-GPU-NEXT:    [[TMP24:%.*]] = icmp eq i16 [[TMP7]], 0
+// IR-GPU-NEXT:    [[TMP25:%.*]] = icmp eq i16 [[TMP7]], 1
+// IR-GPU-NEXT:    [[TMP26:%.*]] = icmp ult i16 [[TMP5]], [[TMP6]]
+// IR-GPU-NEXT:    [[TMP27:%.*]] = and i1 [[TMP25]], [[TMP26]]
+// IR-GPU-NEXT:    [[TMP28:%.*]] = icmp eq i16 [[TMP7]], 2
+// IR-GPU-NEXT:    [[TMP29:%.*]] = and i16 [[TMP5]], 1
+// IR-GPU-NEXT:    [[TMP30:%.*]] = icmp eq i16 [[TMP29]], 0
+// IR-GPU-NEXT:    [[TMP31:%.*]] = and i1 [[TMP28]], [[TMP30]]
+// IR-GPU-NEXT:    [[TMP32:%.*]] = icmp sgt i16 [[TMP6]], 0
+// IR-GPU-NEXT:    [[TMP33:%.*]] = and i1 [[TMP31]], [[TMP32]]
+// IR-GPU-NEXT:    [[TMP34:%.*]] = or i1 [[TMP24]], [[TMP27]]
+// IR-GPU-NEXT:    [[TMP35:%.*]] = or i1 [[TMP34]], [[TMP33]]
+// IR-GPU-NEXT:    br i1 [[TMP35]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // IR-GPU:       then:
 // IR-GPU-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_omp_outlined_omp$reduction$reduction_func"(ptr [[TMP4]], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]]) #[[ATTR2]]
 // IR-GPU-NEXT:    br label [[IFCONT:%.*]]
 // IR-GPU:       else:
 // IR-GPU-NEXT:    br label [[IFCONT]]
 // IR-GPU:       ifcont:
-// IR-GPU-NEXT:    [[TMP37:%.*]] = icmp eq i16 [[TMP7]], 1
-// IR-GPU-NEXT:    [[TMP38:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
-// IR-GPU-NEXT:    [[TMP39:%.*]] = and i1 [[TMP37]], [[TMP38]]
-// IR-GPU-NEXT:    br i1 [[TMP39]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
+// IR-GPU-NEXT:    [[TMP36:%.*]] = icmp eq i16 [[TMP7]], 1
+// IR-GPU-NEXT:    [[TMP37:%.*]] = icmp uge i16 [[TMP5]], [[TMP6]]
+// IR-GPU-NEXT:    [[TMP38:%.*]] = and i1 [[TMP36]], [[TMP37]]
+// IR-GPU-NEXT:    br i1 [[TMP38]], label [[THEN4:%.*]], label [[ELSE5:%.*]]
 // IR-GPU:       then4:
-// IR-GPU-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
-// IR-GPU-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[TMP40]], align 8
-// IR-GPU-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
-// IR-GPU-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[TMP42]], align 8
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP43]], ptr align 4 [[TMP41]], i64 400, i1 false)
+// IR-GPU-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST_ASCAST]], i64 0, i64 0
+// IR-GPU-NEXT:    [[TMP40:%.*]] = load ptr, ptr [[TMP39]], align 8
+// IR-GPU-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP4]], i64 0, i64 0
+// IR-GPU-NEXT:    [[TMP42:%.*]] = load ptr, ptr [[TMP41]], align 8
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP42]], ptr align 4 [[TMP40]], i64 400, i1 false)
 // IR-GPU-NEXT:    br label [[IFCONT6:%.*]]
 // IR-GPU:       else5:
 // IR-GPU-NEXT:    br label [[IFCONT6]]

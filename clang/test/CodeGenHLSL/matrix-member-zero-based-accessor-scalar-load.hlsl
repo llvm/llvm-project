@@ -10,9 +10,8 @@
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> zeroinitializer
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 0
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return00(float4x4 A) {
     return A._m00;
@@ -24,9 +23,8 @@ float Return00(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 1>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 1
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return01(float4x4 A) {
     return A._m01;
@@ -38,9 +36,8 @@ float Return01(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 2>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 2
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return02(float4x4 A) {
     return A._m02;
@@ -52,9 +49,8 @@ float Return02(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 3>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 3
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return03(float4x4 A) {
     return A._m03;
@@ -66,9 +62,8 @@ float Return03(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 4>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 4
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return10(float4x4 A) {
     return A._m10;
@@ -80,9 +75,8 @@ float Return10(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 5>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 5
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return11(float4x4 A) {
     return A._m11;
@@ -94,9 +88,8 @@ float Return11(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 6>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 6
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return12(float4x4 A) {
     return A._m12;
@@ -108,9 +101,8 @@ float Return12(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 7>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 7
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return13(float4x4 A) {
     return A._m13;
@@ -122,9 +114,8 @@ float Return13(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 8>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 8
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return20(float4x4 A) {
     return A._m20;
@@ -136,9 +127,8 @@ float Return20(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 9>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 9
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return21(float4x4 A) {
     return A._m21;
@@ -150,9 +140,8 @@ float Return21(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 10>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 10
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return22(float4x4 A) {
     return A._m22;
@@ -164,9 +153,8 @@ float Return22(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 11>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 11
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return23(float4x4 A) {
     return A._m23;
@@ -178,9 +166,8 @@ float Return23(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 12>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 12
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return30(float4x4 A) {
     return A._m30;
@@ -192,9 +179,8 @@ float Return30(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 13>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 13
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return31(float4x4 A) {
     return A._m31;
@@ -206,9 +192,8 @@ float Return31(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 14>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 14
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return32(float4x4 A) {
     return A._m32;
@@ -220,9 +205,8 @@ float Return32(float4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    store <16 x float> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <1 x i32> <i32 15>
-// CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <1 x float> [[TMP1]], i32 0
-// CHECK-NEXT:    ret float [[CAST_VTRUNC]]
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 15
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float Return33(float4x4 A) {
     return A._m33;

@@ -2718,6 +2718,20 @@ func.func @select_tensor(%arg0: tensor<4x8x16xi1>, %arg1: tensor<4x8x16xf32>, %a
   return %1 : tensor<4x8x16xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @select_integer_values
+// linalg.select with i1 condition and integer values: headBool=true (i1 bitwidth==1)
+// → valid, arith.select accepts i1 as condition regardless of value types.
+func.func @select_integer_values(%arg0: tensor<4x8x16xi1>, %arg1: tensor<4x8x16xi32>, %arg2: tensor<4x8x16xi32>) -> tensor<4x8x16xi32> {
+  %0 = tensor.empty() : tensor<4x8x16xi32>
+  // CHECK: linalg.select
+  // CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}} : tensor<4x8x16xi1>, tensor<4x8x16xi32>, tensor<4x8x16xi32>)
+  // CHECK-SAME: outs(%{{.+}} : tensor<4x8x16xi32>)
+  %1 = linalg.select ins(%arg0, %arg1, %arg2 : tensor<4x8x16xi1>, tensor<4x8x16xi32>, tensor<4x8x16xi32>) outs(%0: tensor<4x8x16xi32>) -> tensor<4x8x16xi32>
+  return %1 : tensor<4x8x16xi32>
+}
+
 //===----------------------------------------------------------------------===//
 // linalg.pack + linalg.unpack
 //===----------------------------------------------------------------------===//

@@ -349,6 +349,16 @@ def LDriw_ctr : LDInst<(outs CtrRegs:$dst),
                         (ins IntRegs:$addr, s32_0Imm:$off),
                         ".error \"should not emit\"", []>;
 
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 1 in {
+  def PS_readcr : InstHexagon<(outs IntRegs:$Rd32), (ins CtrRegs:$Cs32),
+                              ".error \"should not emit\" ", [], "",
+                              A2_tfrcrr.Itinerary, TypeCR>;
+
+  def PS_readcr64
+      : InstHexagon<(outs DoubleRegs:$Rdd32), (ins CtrRegs64:$Css32),
+                    ".error \"should not emit\" ", [], "", A4_tfrcpp.Itinerary,
+                    TypeCR>;
+}
 
 let isCodeGenOnly = 1, isPseudo = 1 in
 def PS_pselect: InstHexagon<(outs DoubleRegs:$Rd),

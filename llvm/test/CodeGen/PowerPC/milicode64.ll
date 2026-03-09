@@ -425,8 +425,9 @@ define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
+; CHECK-AIX-64-P9-NEXT:    clrldi r5, r5, 32
 ; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .memccpy[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___memccpy64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
