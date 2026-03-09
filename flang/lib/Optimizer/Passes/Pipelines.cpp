@@ -267,8 +267,10 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   }
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    addNestedPassToAllTopLevelOperations<PassConstructor>(
-        pm, hlfir::createSimplifyHLFIRIntrinsics);
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
+      return hlfir::createSimplifyHLFIRIntrinsics(
+          {/*allowNewSideEffects=*/false, config.fpMaxminBehavior});
+    });
   }
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createInlineElementals);
@@ -277,9 +279,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     pm.addPass(mlir::createCSEPass());
     // Run SimplifyHLFIRIntrinsics pass late after CSE,
     // and allow introducing operations with new side effects.
-    addNestedPassToAllTopLevelOperations<PassConstructor>(pm, []() {
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createSimplifyHLFIRIntrinsics(
-          {/*allowNewSideEffects=*/true});
+          {/*allowNewSideEffects=*/true, config.fpMaxminBehavior});
     });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createPropagateFortranVariableAttributes);
