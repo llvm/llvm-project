@@ -2100,6 +2100,8 @@ void AsmPrinter::emitFunctionBody() {
   FunctionCallGraphInfo FuncCGInfo;
   const auto &CallSitesInfoMap = MF->getCallSitesInfo();
 
+  // Dangling targets are not mapped to any blocks and must be emitted at the
+  // beginning of the function.
   emitDanglingPrefetchTargets();
 
   const auto &MFPrefetchTargets = MF->getPrefetchTargets();
@@ -2279,7 +2281,8 @@ void AsmPrinter::emitFunctionBody() {
       for (auto &Handler : Handlers)
         Handler->endInstruction();
     }
-    // Emit the remaining prefetch targets for this block.
+    // Emit the remaining prefetch targets for this block. This includes
+    // nonexisting callsite indexes.
     while (PrefetchTargetIt != PrefetchTargetEnd) {
       emitPrefetchTargetSymbol(MBB.getBBID()->BaseID, *PrefetchTargetIt);
       ++PrefetchTargetIt;
