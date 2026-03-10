@@ -10,6 +10,7 @@
 #define DEFAULTONLY_H
 
 #include <cassert>
+#include <type_traits> // std::is_constant_evaluated
 
 #include "test_macros.h"
 

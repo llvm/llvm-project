@@ -109,7 +109,7 @@ TEST_CONSTEXPR_CXX26 void basic_test() {
 }
 
 template <class It>
-void test_emplacable_concept() {
+TEST_CONSTEXPR_CXX26 void test_emplacable_concept() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -131,7 +131,7 @@ void test_emplacable_concept() {
 #endif
 }
 
-void test_iterators() {
+TEST_CONSTEXPR_CXX26 void test_iterators() {
   test_emplacable_concept<cpp17_input_iterator<int*> >();
   test_emplacable_concept<forward_iterator<int*> >();
   test_emplacable_concept<bidirectional_iterator<int*> >();
@@ -142,10 +142,15 @@ void test_iterators() {
   test_emplacable_concept<int*>();
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   basic_test();
+  test_iterators();
+}
+
+int main(int, char**) {
+  test();
 #if TEST_STD_VER >= 26
-  static_assert(basic_test());
+  static_assert(test());
 #endif
   return 0;
 }
