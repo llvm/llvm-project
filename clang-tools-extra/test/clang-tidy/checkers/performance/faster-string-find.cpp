@@ -1,21 +1,9 @@
-// RUN: %check_clang_tidy %s performance-faster-string-find %t
+// RUN: %check_clang_tidy %s performance-faster-string-find %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-faster-string-find %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {performance-faster-string-find.StringLikeClasses: \
-// RUN:                '::llvm::StringRef;'}}"
+// RUN:                '::llvm::StringRef;'}}" -- -fno-delayed-template-parsing
 #include <string>
-
-namespace std {
-template <typename T> struct set {
-  struct iterator {
-    const T& operator*() const;
-    iterator& operator++();
-    bool operator!=(const iterator&) const;
-  };
-  iterator begin() const;
-  iterator end() const;
-};
-}  // namespace std
 
 namespace llvm {
 struct StringRef {
@@ -25,6 +13,10 @@ struct StringRef {
 
 struct NotStringRef {
   int find(const char *);
+};
+
+template <typename T> struct Wrapper {
+  T value;
 };
 
 void StringFind() {
@@ -138,7 +130,7 @@ template <typename T>
 int FindTemplateNotDependant2() {
   return std::string().find("A");
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: 'find' called with a string literal
-  // CHECK-FIXES:   return std::string().find('A');
+  // CHECK-FIXES: return std::string().find('A');
 }
 
 int FindStr() {
@@ -154,11 +146,8 @@ int Macros() {
   // CHECK-MESSAGES: [[@LINE-2]]:37: warning: 'find' called with a string literal
 }
 
-void IteratorInLibStdCXX() {
-  std::set<std::string> s;
-  for (const auto &str : s) {
-    str.find("a");
-    // CHECK-MESSAGES: [[@LINE-1]]:14: warning: 'find' called with a string literal
-    // CHECK-FIXES: str.find('a');
-  }
+void SubstitutedTemplateType() {
+  Wrapper<std::string>().value.find("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:37: warning: 'find' called with a string literal
+  // CHECK-FIXES: Wrapper<std::string>().value.find('a');
 }
