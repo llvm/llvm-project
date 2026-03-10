@@ -32,10 +32,12 @@ class LLDB(DebuggerBase):
         # condition. See get_triggered_breakpoint_ids usage for more info.
         self._breakpoint_conditions = {}
         super(LLDB, self).__init__(context, *args)
-        self._interface.SBDebugger.Initialize()
+        if self.has_loaded:
+            self._interface.SBDebugger.Initialize()
 
     def __del__(self):
-        self._interface.SBDebugger.Terminate()
+        if self.has_loaded:
+            self._interface.SBDebugger.Terminate()
 
     def _custom_init(self):
         self._debugger = self._interface.SBDebugger.Create()
