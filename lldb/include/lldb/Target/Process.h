@@ -47,6 +47,7 @@
 #include "lldb/Target/Trace.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
@@ -1521,18 +1522,19 @@ public:
   /// \return
   ///     File path to the core file.
   virtual FileSpec GetCoreFile() const { return {}; }
-  std::string GetCoreFileCommandString() {
-    if (!IsLiveDebugSession() && GetPluginName().contains("core")) {
-      ProcessInstanceInfo info;
-      if (GetProcessInfo(info)) {
-        const Args &args = info.GetArguments();
-        if (!args.empty()) {
-          std::string cmd;
-          args.GetCommandString(cmd);
-          return cmd;
-        }
-      }
-    }
+
+  /// Provide arguments of a command that triggers a core dump
+  /// Only available when we have a core file
+  ///
+  /// \return
+  ///     Args of a core dump
+  Args GetCoreFileCommandString() {
+    if (!GetCoreFile())
+      return {};
+
+    ProcessInstanceInfo info;
+    if (GetProcessInfo(info))
+      return info.GetArguments();
     return {};
   }
 
