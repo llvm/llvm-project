@@ -624,7 +624,7 @@ void JSONGenerator::serializeInfo(const EnumValueInfo &I, Object &Obj) {
   else
     Obj["Value"] = I.Value;
 
-  serializeDescription(I.Description, Obj, "HasMemberComment");
+  serializeDescription(I.Description, Obj, "HasEnumMemberComments");
 }
 
 void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {

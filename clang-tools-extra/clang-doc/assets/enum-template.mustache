@@ -30,7 +30,7 @@
                 <td>{{ValueExpr}}</td>
                 {{/Value}}
                 {{#HasComments}}
-                <td>{{#HasMemberComment}}
+                <td>{{#HasEnumMemberComments}}
                     {{#Description}}
                         {{#BriefComments}}
                             {{#.}}
@@ -52,8 +52,8 @@
                             </p>
                         {{/ParagraphComment}}
                     {{/Description}}
-                    {{/HasMemberComment}}
-                    {{^HasMemberComment}} -- {{/HasMemberComment}}</td>
+                    {{/HasEnumMemberComments}}
+                    {{^HasEnumMemberComments}} -- {{/HasEnumMemberComments}}</td>
                 {{/HasComments}}
             </tr>
             {{/Members}}
