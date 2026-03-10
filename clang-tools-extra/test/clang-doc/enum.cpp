@@ -231,7 +231,7 @@ enum Size : uint8_t {
 // HTML-INDEX-NEXT:                 <td>Medium</td>
 // HTML-INDEX-NEXT:                 <td>1</td>
 // HTML-INDEX-NEXT:                 <td>
-// HTML-INDEX-NEXT:                   <p class="paragraph-container">A tennis ball.</p>
+// HTML-INDEX-NEXT:                   <p class="paragraph-container"> A tennis ball.</p>
 // HTML-INDEX-NEXT:                 </td>
 // HTML-INDEX-NEXT:             </tr>
 // HTML-INDEX-NEXT:             <tr>

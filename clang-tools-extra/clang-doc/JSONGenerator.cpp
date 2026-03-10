@@ -1,5 +1,6 @@
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
@@ -398,6 +399,24 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   Obj["HasContexts"] = true;
 }
 
+static void serializeDescription(llvm::ArrayRef<CommentInfo> Description, json::Object &Obj) {
+  // Skip straight to the FullComment's children
+  auto &Comments = Description.front().Children;
+  for (const auto &CommentInfo : Comments) {
+    json::Value Comment = serializeComment(*CommentInfo, Obj);
+    // if a ParagraphComment is returned, then it is a top-level comment that
+    // needs to be inserted manually.
+    if (auto *ParagraphComment = Comment.getAsObject();
+        ParagraphComment->get("ParagraphComment")) {
+      auto TextCommentsArray = extractTextComments(ParagraphComment);
+      if (TextCommentsArray.kind() == json::Value::Null ||
+          TextCommentsArray.getAsArray()->empty())
+        continue;
+      insertComment(Obj, TextCommentsArray, "ParagraphComments");
+    }
+  }
+}
+
 void JSONGenerator::serializeCommonAttributes(const Info &I,
                                               json::Object &Obj) {
   insertNonEmpty("Name", I.Name, Obj);
@@ -418,21 +437,7 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
 
   if (!I.Description.empty()) {
     Object Description = Object();
-    // Skip straight to the FullComment's children
-    auto &Comments = I.Description.at(0).Children;
-    for (const auto &CommentInfo : Comments) {
-      json::Value Comment = serializeComment(*CommentInfo, Description);
-      // if a ParagraphComment is returned, then it is a top-level comment that
-      // needs to be inserted manually.
-      if (auto *ParagraphComment = Comment.getAsObject();
-          ParagraphComment->get("ParagraphComment")) {
-        auto TextCommentsArray = extractTextComments(ParagraphComment);
-        if (TextCommentsArray.kind() == json::Value::Null ||
-            TextCommentsArray.getAsArray()->empty())
-          continue;
-        insertComment(Description, TextCommentsArray, "ParagraphComments");
-      }
-    }
+    serializeDescription(I.Description, Description);
     Obj["Description"] = std::move(Description);
   }
 
@@ -620,18 +625,7 @@ void JSONGenerator::serializeInfo(const EnumValueInfo &I, Object &Obj) {
     return;
 
   Object Description = Object();
-  auto &Comments = I.Description.at(0).Children;
-  for (const auto &CommentInfo : Comments) {
-    json::Value Comment = serializeComment(*CommentInfo, Description);
-    if (auto *ParagraphComment = Comment.getAsObject();
-        ParagraphComment->get("ParagraphComment")) {
-      auto TextCommentsArray = extractTextComments(ParagraphComment);
-      if (TextCommentsArray.kind() == json::Value::Null ||
-          TextCommentsArray.getAsArray()->empty())
-        continue;
-      insertComment(Description, TextCommentsArray, "ParagraphComments");
-    }
-  }
+  serializeDescription(I.Description, Description);
   Obj["Description"] = std::move(Description);
 }
 
