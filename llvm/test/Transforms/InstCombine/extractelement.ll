@@ -393,7 +393,6 @@ define i4 @bitcast_scalar_legal_type_index3(i64 %x) {
 ; BE128-NEXT:    [[R:%.*]] = extractelement <16 x i4> [[V]], i64 3
 ; BE128-NEXT:    ret i4 [[R]]
 ;
-
   %v = bitcast i64 %x to <16 x i4>
   %r = extractelement <16 x i4> %v, i64 3
   ret i4 %r
@@ -736,7 +735,6 @@ define i8 @bitcast_scalar_index0_use(i64 %x) {
 ; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[V]], i64 0
 ; ANY-NEXT:    ret i8 [[R]]
 ;
-
   %v = bitcast i64 %x to <8 x i8>
   call void @use(<8 x i8> %v)
   %r = extractelement <8 x i8> %v, i64 0
@@ -924,4 +922,101 @@ define float @crash_4b8320(<2 x float> %i1, float %i12) {
   %i26 = fadd <4 x float> %i23, %i24
   %i29 = extractelement <4 x float> %i26, i64 0
   ret float %i29
+}
+
+; extractelt (load <N x T>, ptr %p), C --> load T, ptr (gep inbounds T, %p, C)
+
+define i32 @load_extract_i32_idx2(ptr %p) {
+; ANY-LABEL: @load_extract_i32_idx2(
+; ANY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 8
+; ANY-NEXT:    [[V_ELT:%.*]] = load i32, ptr [[TMP1]], align 8
+; ANY-NEXT:    ret i32 [[V_ELT]]
+;
+  %v = load <4 x i32>, ptr %p, align 16
+  %e = extractelement <4 x i32> %v, i32 2
+  ret i32 %e
+}
+
+define float @load_extract_float_idx0(ptr %p) {
+; ANY-LABEL: @load_extract_float_idx0(
+; ANY-NEXT:    [[V_ELT:%.*]] = load float, ptr [[P:%.*]], align 16
+; ANY-NEXT:    ret float [[V_ELT]]
+;
+  %v = load <4 x float>, ptr %p, align 16
+  %e = extractelement <4 x float> %v, i32 0
+  ret float %e
+}
+
+define float @load_extract_float_idx1_align4(ptr %p) {
+; ANY-LABEL: @load_extract_float_idx1_align4(
+; ANY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
+; ANY-NEXT:    [[V_ELT:%.*]] = load float, ptr [[TMP1]], align 4
+; ANY-NEXT:    ret float [[V_ELT]]
+;
+  %v = load <4 x float>, ptr %p, align 4
+  %e = extractelement <4 x float> %v, i32 1
+  ret float %e
+}
+
+; Negative test: load has multiple uses
+declare void @use_v4i32(<4 x i32>)
+define i32 @load_extract_multiuse(ptr %p) {
+; ANY-LABEL: @load_extract_multiuse(
+; ANY-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 16
+; ANY-NEXT:    call void @use_v4i32(<4 x i32> [[V]])
+; ANY-NEXT:    [[E:%.*]] = extractelement <4 x i32> [[V]], i64 1
+; ANY-NEXT:    ret i32 [[E]]
+;
+  %v = load <4 x i32>, ptr %p, align 16
+  call void @use_v4i32(<4 x i32> %v)
+  %e = extractelement <4 x i32> %v, i32 1
+  ret i32 %e
+}
+
+; Negative test: volatile load
+define i32 @load_extract_volatile(ptr %p) {
+; ANY-LABEL: @load_extract_volatile(
+; ANY-NEXT:    [[V:%.*]] = load volatile <4 x i32>, ptr [[P:%.*]], align 16
+; ANY-NEXT:    [[E:%.*]] = extractelement <4 x i32> [[V]], i64 1
+; ANY-NEXT:    ret i32 [[E]]
+;
+  %v = load volatile <4 x i32>, ptr %p, align 16
+  %e = extractelement <4 x i32> %v, i32 1
+  ret i32 %e
+}
+
+; Scalable vector
+
+define i32 @load_extract_scalable_idx2(ptr %p) {
+; ANY-LABEL: @load_extract_scalable_idx2(
+; ANY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 8
+; ANY-NEXT:    [[V_ELT:%.*]] = load i32, ptr [[TMP1]], align 8
+; ANY-NEXT:    ret i32 [[V_ELT]]
+;
+  %v = load <vscale x 4 x i32>, ptr %p, align 16
+  %e = extractelement <vscale x 4 x i32> %v, i32 2
+  ret i32 %e
+}
+
+define i32 @load_extract_scalable_idx3(ptr %p) {
+; ANY-LABEL: @load_extract_scalable_idx3(
+; ANY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 12
+; ANY-NEXT:    [[V_ELT:%.*]] = load i32, ptr [[TMP1]], align 4
+; ANY-NEXT:    ret i32 [[V_ELT]]
+;
+  %v = load <vscale x 4 x i32>, ptr %p, align 16
+  %e = extractelement <vscale x 4 x i32> %v, i32 3
+  ret i32 %e
+}
+
+; Negative test: index not proven inbounds
+define i32 @load_extract_scalable_idx4_oob(ptr %p) {
+; ANY-LABEL: @load_extract_scalable_idx4_oob(
+; ANY-NEXT:    [[V:%.*]] = load <vscale x 4 x i32>, ptr [[P:%.*]], align 16
+; ANY-NEXT:    [[E:%.*]] = extractelement <vscale x 4 x i32> [[V]], i64 4
+; ANY-NEXT:    ret i32 [[E]]
+;
+  %v = load <vscale x 4 x i32>, ptr %p, align 16
+  %e = extractelement <vscale x 4 x i32> %v, i32 4
+  ret i32 %e
 }

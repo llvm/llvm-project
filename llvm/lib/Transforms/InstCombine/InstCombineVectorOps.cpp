@@ -467,6 +467,27 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     if (auto *Phi = dyn_cast<PHINode>(SrcVec))
       if (Instruction *ScalarPHI = scalarizePHI(EI, Phi))
         return ScalarPHI;
+
+    // extractelt (load <N x T>, ptr %p), C -->
+    //   load T, ptr (getelementptr inbounds T, %p, C)
+    // Scalarize a single-use vector load to a scalar load at the element's
+    // address, avoiding loading unused vector elements.
+    if (HasKnownValidIndex) {
+      if (auto *LI = dyn_cast<LoadInst>(SrcVec)) {
+        if (!LI->isVolatile() && !LI->isAtomic() && LI->hasOneUse()) {
+          Type *EltTy = EI.getType();
+          uint64_t Idx = IndexC->getZExtValue();
+          Value *NewPtr = Builder.CreateConstInBoundsGEP1_64(
+              EltTy, LI->getPointerOperand(), Idx);
+          const DataLayout &DL = getDataLayout();
+          Align EltAlign = commonAlignment(
+              LI->getAlign(), Idx * DL.getTypeStoreSize(EltTy).getFixedValue());
+          LoadInst *NewLoad = Builder.CreateAlignedLoad(EltTy, NewPtr, EltAlign,
+                                                        LI->getName() + ".elt");
+          return replaceInstUsesWith(EI, NewLoad);
+        }
+      }
+    }
   }
 
   // If SrcVec is a subvector starting at index 0, extract from the

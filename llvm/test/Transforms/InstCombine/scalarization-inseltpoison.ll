@@ -4,8 +4,8 @@
 define i32 @extract_load(ptr %p) {
 ;
 ; CHECK-LABEL: @extract_load(
-; CHECK-NEXT:    [[X:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    [[EXT:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
   %x = load <4 x i32>, ptr %p, align 4
@@ -16,8 +16,8 @@ define i32 @extract_load(ptr %p) {
 define double @extract_load_fp(ptr %p) {
 ;
 ; CHECK-LABEL: @extract_load_fp(
-; CHECK-NEXT:    [[X:%.*]] = load <4 x double>, ptr [[P:%.*]], align 32
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x double> [[X]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 24
+; CHECK-NEXT:    [[EXT:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret double [[EXT]]
 ;
   %x = load <4 x double>, ptr %p, align 32
@@ -183,10 +183,10 @@ define i8 @extract_element_binop_nonsplat_variable_index(<4 x i8> %x, i32 %y) {
 define float @extract_element_load(<4 x float> %x, ptr %ptr) {
 ;
 ; CHECK-LABEL: @extract_element_load(
-; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[LOAD]], i64 2
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[LOAD:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 8
+; CHECK-NEXT:    [[LOAD_ELT:%.*]] = load float, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP2]], [[LOAD_ELT]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %load = load <4 x float>, ptr %ptr

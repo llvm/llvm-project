@@ -367,8 +367,8 @@ entry:
 define void @scatter_v4i16_no_uniform_vals_uniform_ptrs_all_active_mask(ptr %dst, ptr  %src)  {
 ; CHECK-LABEL: @scatter_v4i16_no_uniform_vals_uniform_ptrs_all_active_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[SRC:%.*]], align 2
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC:%.*]], i64 6
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    store i16 [[TMP0]], ptr [[DST:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
