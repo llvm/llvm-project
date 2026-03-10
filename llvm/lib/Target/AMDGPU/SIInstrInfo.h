@@ -263,6 +263,9 @@ public:
 
   bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
+  bool isImplicitDefRematerializableAt(const MachineInstr &MI, SlotIndex UseIdx,
+                                       LiveIntervals &LIS) const override;
+
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
   bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,

@@ -17,7 +17,7 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    v_writelane_b32 v41, s16, 15
+; CHECK-NEXT:    v_writelane_b32 v41, s16, 17
 ; CHECK-NEXT:    v_writelane_b32 v41, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
 ; CHECK-NEXT:    v_writelane_b32 v41, s34, 2
@@ -32,8 +32,11 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    v_writelane_b32 v41, s51, 11
 ; CHECK-NEXT:    v_writelane_b32 v41, s52, 12
 ; CHECK-NEXT:    v_writelane_b32 v41, s53, 13
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v41, s54, 14
+; CHECK-NEXT:    v_writelane_b32 v41, s55, 15
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    v_writelane_b32 v41, s64, 16
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v31
 ; CHECK-NEXT:    s_mov_b32 s50, s15
 ; CHECK-NEXT:    s_mov_b32 s51, s14
@@ -43,8 +46,10 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
-; CHECK-NEXT:    s_mov_b32 s54, 0
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    s_mov_b32 s64, 0
+; CHECK-NEXT:    s_getpc_b64 s[54:55]
+; CHECK-NEXT:    s_add_u32 s54, s54, func@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s55, s55, func@rel32@hi+12
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -53,14 +58,11 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:  .LBB0_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, -1
-; CHECK-NEXT:    s_cselect_b32 s54, 0, s54
+; CHECK-NEXT:    s_cselect_b32 s64, 0, s64
 ; CHECK-NEXT:    s_mov_b64 s[4:5], -1
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.3: ; %bb3
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_getpc_b64 s[16:17]
-; CHECK-NEXT:    s_add_u32 s16, s16, func@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s17, s17, func@rel32@hi+12
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[36:37]
@@ -76,15 +78,17 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_branch .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: ; %bb4
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_mov_b32_e32 v0, s54
+; CHECK-NEXT:    v_mov_b32_e32 v0, s64
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_readlane_b32 s64, v41, 16
+; CHECK-NEXT:    v_readlane_b32 s55, v41, 15
 ; CHECK-NEXT:    v_readlane_b32 s54, v41, 14
 ; CHECK-NEXT:    v_readlane_b32 s53, v41, 13
 ; CHECK-NEXT:    v_readlane_b32 s52, v41, 12
@@ -101,7 +105,7 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
-; CHECK-NEXT:    v_readlane_b32 s4, v41, 15
+; CHECK-NEXT:    v_readlane_b32 s4, v41, 17
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]

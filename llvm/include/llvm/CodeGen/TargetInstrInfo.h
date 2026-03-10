@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOutliner.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -195,6 +196,14 @@ public:
   /// of instruction rematerialization or sinking.
   virtual bool isIgnorableUse(const MachineOperand &MO) const {
     return false;
+  }
+
+  /// Returns true if this instruction can be safely rematerialized at UseIdx
+  /// even if it has implicit physical register defs that are live.
+  virtual bool isImplicitDefRematerializableAt(const MachineInstr &MI,
+                                               SlotIndex UseIdx,
+                                               LiveIntervals &LIS) const {
+    return true;
   }
 
   virtual bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
