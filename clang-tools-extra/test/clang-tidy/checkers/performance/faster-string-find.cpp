@@ -118,23 +118,23 @@ void StringFind() {
 
 
 template <typename T>
-int FindTemplateDependant(T value) {
+int FindTemplateDependent(T value) {
   return value.find("A");
 }
 template <typename T>
-int FindTemplateNotDependant(T pos) {
+int FindTemplateDependent1(T pos) {
   // Ignored since the type of `pos` is dependent, the call cannot be completely resolved without instantiating the template.
   return std::string().find("A", pos);
 }
 template <typename T>
-int FindTemplateNotDependant2() {
+int FindTemplateNonDependent() {
   return std::string().find("A");
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: 'find' called with a string literal
   // CHECK-FIXES: return std::string().find('A');
 }
 
 int FindStr() {
-  return FindTemplateDependant(std::string()) + FindTemplateNotDependant(1);
+  return FindTemplateDependent(std::string()) + FindTemplateDependent1(1);
 }
 
 #define STR_MACRO(str) str.find("A")
