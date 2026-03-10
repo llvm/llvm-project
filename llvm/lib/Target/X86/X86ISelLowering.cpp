@@ -34566,8 +34566,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue AmtZ = DAG.getSetCC(dl, MVT::i1, Amt, DAG.getConstant(0, dl, AmtVT),
                                 ISD::SETNE);
     SDValue Sel = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i8, AmtZ);
-    SDValue InvAmt = DAG.getNode(ISD::SUB, dl, AmtVT,
-                                 DAG.getConstant(BW - 1, dl, AmtVT), Amt);
+    SDValue InvAmt =
+        DAG.getNode(ISD::SUB, dl, AmtVT, DAG.getConstant(BW, dl, AmtVT), Amt);
     SDValue ShX =
         DAG.getNode(ISD::SHL, dl, VT, Op0, Opc == ISD::FSHL ? Amt : InvAmt);
     SDValue ShY =
