@@ -7,33 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "ThrowKeywordMissingCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
-using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::bugprone {
 
 void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
-  const VariadicDynCastAllOfMatcher<Stmt, AttributedStmt> AttributedStmt;
-  // Matches an 'expression-statement', as defined in [stmt.expr]/1.
-  // Not to be confused with the similarly-named GNU extension, the
-  // statement expression.
-  const auto ExprStmt = [&](const Matcher<Expr> &InnerMatcher) {
-    return expr(hasParent(stmt(anyOf(doStmt(), whileStmt(), forStmt(),
-                                     compoundStmt(), ifStmt(), switchStmt(),
-                                     labelStmt(), AttributedStmt()))),
-                InnerMatcher);
-  };
-
   Finder->addMatcher(
-      ExprStmt(
-          cxxConstructExpr(hasType(cxxRecordDecl(anyOf(
+      cxxConstructExpr(
+          hasType(cxxRecordDecl(anyOf(
               matchesName("[Ee]xception|EXCEPTION"),
               hasAnyBase(hasType(hasCanonicalType(recordType(hasDeclaration(
                   cxxRecordDecl(matchesName("[Ee]xception|EXCEPTION"))
-                      .bind("base")))))))))))
+                      .bind("base"))))))))),
+          matchers::isDiscarded())
           .bind("temporary-exception-not-thrown"),
       this);
 }

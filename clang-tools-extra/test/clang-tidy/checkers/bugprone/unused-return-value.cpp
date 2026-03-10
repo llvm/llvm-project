@@ -196,6 +196,22 @@ void warning() {
     // CHECK-MESSAGES: [[@LINE-2]]:5: note: cast the expression to void to silence this warning
   }
 
+label:
+  std::remove(nullptr, nullptr, 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
+  // CHECK-MESSAGES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
+
+  auto v = ({
+    std::remove(nullptr, nullptr, 1);
+    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
+    // CHECK-MESSAGES: [[@LINE-2]]:5: note: cast the expression to void to silence this warning
+
+    std::remove(nullptr, nullptr, 1);
+  });
+
+  // FIXME: This is a false negative.
+  ({ std::remove(nullptr, nullptr, 1); });
+
   errorFunc();
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
   // CHECK-MESSAGES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning

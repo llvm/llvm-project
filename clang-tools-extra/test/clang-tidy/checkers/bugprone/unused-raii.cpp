@@ -145,6 +145,15 @@ void test() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
   // CHECK-FIXES: TCtorDefaultArg<int> give_me_a_name;
 
+  for (Foo(42);;) continue;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: for (Foo give_me_a_name(42);;) continue;
+
+label:
+  Foo(200);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: Foo give_me_a_name(200);
+
   templ<FooBar>();
   templ<Bar>();
 

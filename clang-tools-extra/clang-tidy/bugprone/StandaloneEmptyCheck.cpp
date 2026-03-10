@@ -7,86 +7,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "StandaloneEmptyCheck.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "../utils/Matchers.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/HeuristicResolver.h"
-#include "llvm/Support/Casting.h"
+
+using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-using ast_matchers::BoundNodes;
-using ast_matchers::callee;
-using ast_matchers::callExpr;
-using ast_matchers::classTemplateDecl;
-using ast_matchers::cxxMemberCallExpr;
-using ast_matchers::cxxMethodDecl;
-using ast_matchers::expr;
-using ast_matchers::functionDecl;
-using ast_matchers::hasAncestor;
-using ast_matchers::hasName;
-using ast_matchers::hasParent;
-using ast_matchers::ignoringImplicit;
-using ast_matchers::ignoringParenImpCasts;
-using ast_matchers::MatchFinder;
-using ast_matchers::optionally;
-using ast_matchers::returns;
-using ast_matchers::stmt;
-using ast_matchers::stmtExpr;
-using ast_matchers::unless;
-using ast_matchers::voidType;
-
-static const Expr *getCondition(const BoundNodes &Nodes,
-                                const StringRef NodeId) {
-  const auto *If = Nodes.getNodeAs<IfStmt>(NodeId);
-  if (If != nullptr)
-    return If->getCond();
-
-  const auto *For = Nodes.getNodeAs<ForStmt>(NodeId);
-  if (For != nullptr)
-    return For->getCond();
-
-  const auto *While = Nodes.getNodeAs<WhileStmt>(NodeId);
-  if (While != nullptr)
-    return While->getCond();
-
-  const auto *Do = Nodes.getNodeAs<DoStmt>(NodeId);
-  if (Do != nullptr)
-    return Do->getCond();
-
-  const auto *Switch = Nodes.getNodeAs<SwitchStmt>(NodeId);
-  if (Switch != nullptr)
-    return Switch->getCond();
-
-  return nullptr;
-}
-
-void StandaloneEmptyCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
+void StandaloneEmptyCheck::registerMatchers(MatchFinder *Finder) {
   // Ignore empty calls in a template definition which fall under callExpr
   // non-member matcher even if they are methods.
-  const auto NonMemberMatcher = expr(ignoringImplicit(ignoringParenImpCasts(
-      callExpr(
-          hasParent(stmt(optionally(hasParent(stmtExpr().bind("stexpr"))))
-                        .bind("parent")),
-          unless(hasAncestor(classTemplateDecl())),
-          callee(functionDecl(hasName("empty"), unless(returns(voidType())))))
-          .bind("empty"))));
+  const auto NonMemberMatcher =
+      expr(ignoringParenImpCasts(
+               callExpr(unless(hasAncestor(classTemplateDecl())),
+                        callee(functionDecl(hasName("empty"),
+                                            unless(returns(voidType())))))
+                   .bind("empty")),
+           matchers::isDiscarded());
   const auto MemberMatcher =
-      expr(ignoringImplicit(ignoringParenImpCasts(cxxMemberCallExpr(
-               hasParent(stmt(optionally(hasParent(stmtExpr().bind("stexpr"))))
-                             .bind("parent")),
-               callee(cxxMethodDecl(hasName("empty"),
-                                    unless(returns(voidType()))))))))
+      expr(ignoringParenImpCasts(cxxMemberCallExpr(callee(
+               cxxMethodDecl(hasName("empty"), unless(returns(voidType())))))),
+           matchers::isDiscarded())
           .bind("empty");
 
   Finder->addMatcher(MemberMatcher, this);
@@ -94,29 +37,8 @@ void StandaloneEmptyCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
 }
 
 void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
-  // Skip if the parent node is Expr.
-  if (Result.Nodes.getNodeAs<Expr>("parent"))
-    return;
-
-  const auto *PParentStmtExpr = Result.Nodes.getNodeAs<Expr>("stexpr");
-  const auto *ParentCompStmt = Result.Nodes.getNodeAs<CompoundStmt>("parent");
-  const auto *ParentCond = getCondition(Result.Nodes, "parent");
-  const auto *ParentReturnStmt = Result.Nodes.getNodeAs<ReturnStmt>("parent");
-
   if (const auto *MemberCall =
           Result.Nodes.getNodeAs<CXXMemberCallExpr>("empty")) {
-    // Skip if it's a condition of the parent statement.
-    if (ParentCond == MemberCall->getExprStmt())
-      return;
-    // Skip if it's the last statement in the GNU extension
-    // statement expression.
-    if (PParentStmtExpr && ParentCompStmt &&
-        ParentCompStmt->body_back() == MemberCall->getExprStmt())
-      return;
-    // Skip if it's a return statement
-    if (ParentReturnStmt)
-      return;
-
     const SourceLocation MemberLoc = MemberCall->getBeginLoc();
     const SourceLocation ReplacementLoc = MemberCall->getExprLoc();
     const SourceRange ReplacementRange =
@@ -154,13 +76,6 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
 
   } else if (const auto *NonMemberCall =
                  Result.Nodes.getNodeAs<CallExpr>("empty")) {
-    if (ParentCond == NonMemberCall->getExprStmt())
-      return;
-    if (PParentStmtExpr && ParentCompStmt &&
-        ParentCompStmt->body_back() == NonMemberCall->getExprStmt())
-      return;
-    if (ParentReturnStmt)
-      return;
     if (NonMemberCall->getNumArgs() != 1)
       return;
 
