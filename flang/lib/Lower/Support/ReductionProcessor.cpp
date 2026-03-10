@@ -582,6 +582,11 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   if (isByRef) {
     boxedTy = fir::unwrapPassByRefType(valTy);
     boxedTyAttr = mlir::TypeAttr::get(boxedTy);
+    // For character types that are not already references, we need to wrap
+    // them in a reference type for by-ref reductions.
+    if (fir::isa_char(valTy) && !fir::isa_ref_type(type)) {
+      type = fir::ReferenceType::get(valTy);
+    }
   } else
     type = valTy;
 
@@ -598,26 +603,6 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   genCombinerCB(builder, loc, type, op1, op2, isByRef);
 
   if (isByRef && fir::isa_box_type(valTy)) {
-    bool isBoxReductionSupported = [&]() {
-      auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
-          *builder.getModule());
-
-      // This check tests the implementation status on the GPU. Box reductions
-      // are fully supported on the CPU.
-      if (!offloadMod.getIsGPU())
-        return true;
-
-      auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxedTy);
-
-      // Dynamically-shaped arrays are not supported yet on the GPU.
-      return !seqTy || !fir::sequenceWithNonConstantShape(seqTy);
-    }();
-
-    if (!isBoxReductionSupported) {
-      TODO(loc, "Reduction of dynamically-shaped arrays are not supported yet "
-                "on the GPU.");
-    }
-
     mlir::Region &dataPtrPtrRegion = decl.getDataPtrPtrRegion();
     mlir::Block &dataAddrBlock = *builder.createBlock(
         &dataPtrPtrRegion, dataPtrPtrRegion.end(), {type}, {loc});

@@ -8,6 +8,7 @@
 
 #include "DebugTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -98,8 +99,8 @@ llvm::MDTuple *
 DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
   if (elements.empty())
     return nullptr;
-  SmallVector<llvm::Metadata *> llvmElements = llvm::to_vector(
-      llvm::map_range(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
+  SmallVector<llvm::Metadata *> llvmElements =
+      llvm::map_to_vector(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
         if (DIAnnotationAttr annAttr = dyn_cast<DIAnnotationAttr>(attr)) {
           llvm::Metadata *ops[2] = {
               llvm::MDString::get(llvmCtx, annAttr.getName()),
@@ -107,7 +108,7 @@ DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
           return llvm::MDNode::get(llvmCtx, ops);
         }
         return translate(attr);
-      }));
+      });
   return llvm::MDNode::get(llvmCtx, llvmElements);
 }
 
@@ -203,7 +204,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
-      /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
+      translate(attr.getExtraData()));
 }
 
 llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
@@ -283,7 +285,7 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
 
   llvm::DINode *result =
       TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DINode *>(attr)
-          .Case<DICompositeTypeAttr>([&](auto attr) {
+          .Case([&](DICompositeTypeAttr attr) {
             auto temporary = translateTemporaryImpl(attr);
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
@@ -292,7 +294,7 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
             temporary->replaceAllUsesWith(concrete);
             return concrete;
           })
-          .Case<DISubprogramAttr>([&](auto attr) {
+          .Case([&](DISubprogramAttr attr) {
             auto temporary = translateTemporaryImpl(attr);
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
@@ -441,7 +443,7 @@ DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
     types.push_back(translate(type));
   return llvm::DISubroutineType::get(
       llvmCtx, llvm::DINode::FlagZero, attr.getCallingConvention(),
-      llvm::DITypeRefArray(llvm::MDNode::get(llvmCtx, types)));
+      llvm::DITypeArray(llvm::MDNode::get(llvmCtx, types)));
 }
 
 llvm::DIType *DebugTranslation::translateImpl(DITypeAttr attr) {

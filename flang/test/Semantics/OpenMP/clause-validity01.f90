@@ -200,8 +200,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: A modifier may not be specified in a LINEAR clause on the DO directive
-  !$omp do linear(ref(b))
+  !$omp do linear(b: val)
   do i = 1, N
      a = 3.14
   enddo
@@ -221,6 +220,7 @@ use omp_lib
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
+  !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
   do i = 1, N
      a = 3.14
@@ -228,6 +228,7 @@ use omp_lib
 
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
+  !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
   !$omp do ordered(1-1) linear(a)
   do i = 1, N
      a = 3.14
@@ -407,8 +408,8 @@ use omp_lib
 !                              do-clause
 
   !ERROR: At most one PROC_BIND clause can appear on the PARALLEL DO directive
-  !ERROR: A modifier may not be specified in a LINEAR clause on the PARALLEL DO directive
-  !$omp parallel do proc_bind(master) proc_bind(close) linear(val(b))
+  !ERROR: A REF or UVAL 'linear-modifier' may not be specified in a LINEAR clause on the PARALLEL DO directive
+  !$omp parallel do proc_bind(master) proc_bind(close) linear(b: uval)
   do i = 1, N
      a = 3.14
   enddo
@@ -426,7 +427,7 @@ use omp_lib
      enddo
   enddo
   !omp end do nowait
-  !$omp end parallel 
+  !$omp end parallel
 
 ! 2.11.4 parallel-do-simd-clause -> parallel-clause |
 !                                   do-simd-clause
@@ -591,7 +592,7 @@ use omp_lib
      allc = 3.14
   enddo
 
-  !$omp target enter data map(alloc:A) device(0) 
-  !$omp target exit data map(delete:A) device(0) 
+  !$omp target enter data map(alloc:A) device(0)
+  !$omp target exit data map(delete:A) device(0)
 
 end program

@@ -335,10 +335,10 @@ Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
   else
     OrV = Op1 ? Op1 : Op2;
 
-  // BitMask is inverted to check if the operands are
-  // larger than the bypass type
-  uint64_t BitMask = ~BypassType->getBitMask();
-  Value *AndV = Builder.CreateAnd(OrV, BitMask);
+  // Check whether the operands are larger than the bypass type.
+  Value *AndV = Builder.CreateAnd(
+      OrV, APInt::getBitsSetFrom(OrV->getType()->getIntegerBitWidth(),
+                                 BypassType->getBitWidth()));
 
   // Compare operand values
   Value *ZeroV = ConstantInt::getSigned(getSlowType(), 0);

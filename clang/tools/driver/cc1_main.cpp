@@ -39,6 +39,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -273,12 +274,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
         GetResourcesPath(Argv0, MainAddr);
 
   /// Create the actual file system.
-  Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);
+  auto VFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::getRealFileSystem();
+  }();
+  Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
-  if (!Clang->hasDiagnostics())
-    return 1;
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -286,10 +289,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-  if (!Success) {
-    Clang->getDiagnosticClient().finish();
+  if (!Success)
     return 1;
-  }
 
   // Execute the frontend actions.
   {
@@ -303,15 +304,19 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
-  if (Clang->getCodeGenOpts().TimePassesJson) {
-    *IOFile << "{\n";
-    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
-    *IOFile << "\n}\n";
-  } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
-    llvm::TimerGroup::printAll(*IOFile);
+  {
+    // This isn't a formal input or output of the compiler.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+    if (Clang->getCodeGenOpts().TimePassesJson) {
+      *IOFile << "{\n";
+      llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+      *IOFile << "\n}\n";
+    } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
+      llvm::TimerGroup::printAll(*IOFile);
+    }
+    llvm::TimerGroup::clearAll();
   }
-  llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
     if (auto profilerOutput = Clang->createOutputFile(
@@ -332,6 +337,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
+    // DiagnosticConsumer must be always destroyed.
+    Clang->getDiagnosticClient().~DiagnosticConsumer();
     llvm::BuryPointer(std::move(Clang));
     return !Success;
   }

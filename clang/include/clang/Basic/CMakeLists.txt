@@ -42,6 +42,10 @@ clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
 
+clang_tablegen(DiagnosticStableIDs.inc -gen-clang-diags-stable-ids
+  SOURCE Diagnostic.td
+  TARGET ClangDiagnosticStableIDs)
+
 clang_tablegen(DiagnosticAllCompatIDs.inc
   -gen-clang-diags-compat-ids
   SOURCE Diagnostic.td
@@ -89,6 +93,10 @@ clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
 clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)
+
+clang_tablegen(BuiltinsAMDGPU.inc -gen-clang-builtins
+  SOURCE BuiltinsAMDGPU.td
+  TARGET ClangBuiltinsAMDGPU)
 
 clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td

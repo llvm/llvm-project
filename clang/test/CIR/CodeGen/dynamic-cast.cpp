@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t.before.log
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-cxxabi-lowering %s -o %t.cir 2> %t.before.log
 // RUN: FileCheck %s --input-file=%t.before.log -check-prefix=CIR-BEFORE
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2> %t.after.log
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-cxxabi-lowering %s -o %t.cir 2> %t.after.log
 // RUN: FileCheck %s --input-file=%t.after.log -check-prefix=CIR-AFTER
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s --input-file=%t-cir.ll -check-prefix=LLVM
@@ -80,7 +80,7 @@ Derived &ref_cast(Base &b) {
 // CIR-AFTER-NEXT:   %[[OFFSET_HINT:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER-NEXT:   %[[CASTED_PTR:.*]] = cir.call @__dynamic_cast(%[[SRC_VOID_PTR]], %[[SRC_RTTI]], %[[DEST_RTTI]], %[[OFFSET_HINT]]) : (!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
 // CIR-AFTER-NEXT:   %[[NULL_PTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CIR-AFTER-NEXT:   %[[CASTED_PTR_IS_NULL:.*]] = cir.cmp(eq, %[[CASTED_PTR]], %[[NULL_PTR]]) : !cir.ptr<!void>, !cir.bool
+// CIR-AFTER-NEXT:   %[[CASTED_PTR_IS_NULL:.*]] = cir.cmp eq %[[CASTED_PTR]], %[[NULL_PTR]] : !cir.ptr<!void>
 // CIR-AFTER-NEXT:   cir.if %[[CASTED_PTR_IS_NULL]] {
 // CIR-AFTER-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
 // CIR-AFTER-NEXT:     cir.unreachable
@@ -115,7 +115,7 @@ void *ptr_cast_to_complete(Base *ptr) {
 // CIR-AFTER-NEXT:   %[[SRC_IS_NOT_NULL:.*]] = cir.cast ptr_to_bool %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.bool
 // CIR-AFTER-NEXT:   %{{.+}} = cir.ternary(%[[SRC_IS_NOT_NULL]], true {
 // CIR-AFTER-NEXT:     %[[VPTR_PTR:.*]] = cir.vtable.get_vptr %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
-// CIR-AFTER-NEXT:     %[[VPTR:.*]] = cir.load %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR-AFTER-NEXT:     %[[VPTR:.*]] = cir.load {{.*}} %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-AFTER-NEXT:     %[[ELEM_PTR:.*]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!s64i>
 // CIR-AFTER-NEXT:     %[[MINUS_TWO:.*]] = cir.const #cir.int<-2> : !s64i
 // CIR-AFTER-NEXT:     %[[BASE_OFFSET_PTR:.*]] = cir.ptr_stride %[[ELEM_PTR]], %[[MINUS_TWO]] : (!cir.ptr<!s64i>, !s64i) -> !cir.ptr<!s64i>

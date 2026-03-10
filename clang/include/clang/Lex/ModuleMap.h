@@ -266,6 +266,10 @@ private:
   llvm::DenseMap<const FileEntry *, const modulemap::ModuleMapFile *>
       ParsedModuleMap;
 
+  /// Each CompilerInstance needs its own FileID for each module map, but there
+  /// should only ever be one for each.
+  llvm::DenseMap<const FileEntry *, FileID> ModuleMapLocalFileID;
+
   std::vector<std::unique_ptr<modulemap::ModuleMapFile>> ParsedModuleMaps;
 
   /// Map from top level module name to a list of ModuleDecls in the order they
@@ -430,6 +434,18 @@ public:
   /// that no module owns this header file.
   KnownHeader findModuleForHeader(FileEntryRef File, bool AllowTextual = false,
                                   bool AllowExcluded = false);
+
+  /// Find the FileEntry for an umbrella header in a module as if it was written
+  /// in the module map as a header decl.
+  ///
+  /// \param M The module in which we're resolving the header directive.
+  /// \param NameAsWritten The name of the header as written in the module map.
+  /// \param[out] RelativePathName Filled in with the relative path name from
+  ///             the module to the resolved header.
+  /// \return The resolved file, if any.
+  OptionalFileEntryRef
+  findUmbrellaHeaderForModule(Module *M, std::string NameAsWritten,
+                              SmallVectorImpl<char> &RelativePathName);
 
   /// Retrieve all the modules that contain the given header file. Note that
   /// this does not implicitly load module maps, except for builtin headers,
@@ -710,8 +726,11 @@ public:
 
   /// Parse a module map without creating `clang::Module` instances.
   bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
-                          DirectoryEntryRef Dir, FileID ID = FileID(),
+                          bool ImplicitlyDiscovered, DirectoryEntryRef Dir,
+                          FileID ID = FileID(),
                           SourceLocation ExternModuleLoc = SourceLocation());
+
+  void loadAllParsedModules();
 
   /// Load the given module map file, and record any modules we
   /// encounter.
@@ -720,6 +739,9 @@ public:
   ///
   /// \param IsSystem Whether this module map file is in a system header
   /// directory, and therefore should be considered a system module.
+  ///
+  /// \param ImplicitlyDiscovered Whether this module map file was found via
+  ///        module map search.
   ///
   /// \param HomeDir The directory in which relative paths within this module
   ///        map file will be resolved.
@@ -735,9 +757,19 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool
   parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                            bool ImplicitlyDiscovered,
                             DirectoryEntryRef HomeDir, FileID ID = FileID(),
                             unsigned *Offset = nullptr,
                             SourceLocation ExternModuleLoc = SourceLocation());
+
+  /// Get the ModuleMapFile for a FileEntry previously parsed with
+  /// parseModuleMapFile.
+  const modulemap::ModuleMapFile *getParsedModuleMap(FileEntryRef File) const {
+    auto It = ParsedModuleMap.find(File);
+    if (It == ParsedModuleMap.end())
+      return nullptr;
+    return It->second;
+  }
 
   /// Dump the contents of the module map, for debugging purposes.
   void dump();

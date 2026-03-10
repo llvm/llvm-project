@@ -3,11 +3,13 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # Flang {{version}} {{in_progress}}Release Notes
 
-> **warning**
->
-> These are in-progress notes for the upcoming LLVM {{version}} release.
-> Release notes for previous releases can be found on [the Download
-> Page](https://releases.llvm.org/download.html).
+````{only} PreRelease
+```{warning}
+These are in-progress notes for the upcoming LLVM {{version}} release.
+Release notes for previous releases can be found on [the Download
+Page](https://releases.llvm.org/download.html).
+```
+````
 
 ## Introduction
 
@@ -27,15 +29,11 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
-* Support for LOWER= argument for C_F_POINTER.
-
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release
 
 ## New Compiler Flags
-
-* -fexperimental-loop-fusion is now recognized by flang.
 
 ## Windows Support
 

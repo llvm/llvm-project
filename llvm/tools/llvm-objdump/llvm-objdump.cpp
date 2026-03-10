@@ -73,6 +73,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AVRTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -291,13 +292,6 @@ private:
 
 #define DEBUG_TYPE "objdump"
 
-enum class ColorOutput {
-  Auto,
-  Enable,
-  Disable,
-  Invalid,
-};
-
 static uint64_t AdjustVMA;
 static bool AllHeaders;
 static std::string ArchName;
@@ -310,7 +304,7 @@ bool objdump::SymbolDescription;
 bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
-static ColorOutput DisassemblyColor;
+ColorOutput objdump::DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
 static bool FaultMapSection;
@@ -340,6 +334,7 @@ static uint64_t StopAddress = UINT64_MAX;
 static bool HasStopAddressFlag;
 
 bool objdump::SymbolTable;
+static std::optional<bool> SymbolizeOperandsOption;
 static bool SymbolizeOperands;
 static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
@@ -646,13 +641,56 @@ static bool hasMappingSymbols(const ObjectFile &Obj) {
          isRISCVElf(Obj);
 }
 
+/// Get relocation type name, resolving RISCV vendor-specific relocations
+/// when preceded by R_RISCV_VENDOR at the same offset.
+static StringRef getRelocTypeName(const RelocationRef &Rel,
+                                  SmallVectorImpl<char> &RelocName,
+                                  std::string &CurrentRISCVVendorSymbol,
+                                  uint64_t &CurrentRISCVVendorOffset) {
+  Rel.getTypeName(RelocName);
+  const ObjectFile *Obj = Rel.getObject();
+  if (!isRISCVElf(*Obj))
+    return StringRef(RelocName.data(), RelocName.size());
+
+  uint64_t Type = Rel.getType();
+  uint64_t Offset = Rel.getOffset();
+  if (Type == ELF::R_RISCV_VENDOR) {
+    // Store vendor symbol name and offset for the next relocation.
+    symbol_iterator SI = Rel.getSymbol();
+    if (SI != Obj->symbol_end()) {
+      if (Expected<StringRef> SymName = SI->getName())
+        CurrentRISCVVendorSymbol = SymName->str();
+    }
+    CurrentRISCVVendorOffset = Offset;
+  } else if (!CurrentRISCVVendorSymbol.empty()) {
+    // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+    // vendor-specific relocation at the same offset. Clear the vendor symbol
+    // if this relocation doesn't form a valid pair.
+    if (Offset != CurrentRISCVVendorOffset ||
+        Type < ELF::R_RISCV_CUSTOM192 || Type > ELF::R_RISCV_CUSTOM255) {
+      CurrentRISCVVendorSymbol.clear();
+    } else {
+      // Valid vendor relocation pair - use vendor-specific name.
+      StringRef VendorRelocName = object::getRISCVVendorRelocationTypeName(
+          Type, CurrentRISCVVendorSymbol);
+      CurrentRISCVVendorSymbol.clear();
+      if (VendorRelocName != "Unknown")
+        return VendorRelocName;
+    }
+  }
+  return StringRef(RelocName.data(), RelocName.size());
+}
+
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
                             const RelocationRef &Rel, uint64_t Address,
-                            bool Is64Bits) {
+                            bool Is64Bits,
+                            std::string &CurrentRISCVVendorSymbol,
+                            uint64_t &CurrentRISCVVendorOffset) {
   StringRef Fmt = Is64Bits ? "%016" PRIx64 ":  " : "%08" PRIx64 ":  ";
-  SmallString<16> Name;
+  SmallString<16> RelocName;
   SmallString<32> Val;
-  Rel.getTypeName(Name);
+  StringRef Name = getRelocTypeName(Rel, RelocName, CurrentRISCVVendorSymbol,
+                                    CurrentRISCVVendorOffset);
   if (Error E = getRelocationValueString(Rel, SymbolDescription, Val))
     reportError(std::move(E), FileName);
   OS << (Is64Bits || !LeadingAddr ? "\t\t" : "\t\t\t");
@@ -1571,7 +1609,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   const bool isX86 = STI->getTargetTriple().isX86();
   const bool isAArch64 = STI->getTargetTriple().isAArch64();
   const bool isBPF = STI->getTargetTriple().isBPF();
-  if (!isPPC && !isX86 && !isAArch64 && !isBPF)
+  const bool isRISCV = STI->getTargetTriple().isRISCV();
+  if (!isPPC && !isX86 && !isAArch64 && !isBPF && !isRISCV)
     return;
 
   if (MIA)
@@ -2026,6 +2065,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     std::vector<RelocationRef> Rels = RelocMap[Section];
     std::vector<RelocationRef>::const_iterator RelCur = Rels.begin();
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
+    std::string CurrentRISCVVendorSymbol;
+    uint64_t CurrentRISCVVendorOffset = 0;
 
     // Loop over each chunk of code between two points where at least
     // one symbol is defined.
@@ -2593,7 +2634,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
+                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits,
+                            CurrentRISCVVendorSymbol, CurrentRISCVVendorOffset);
             LEP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
@@ -2633,6 +2675,11 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
 
   const Target *TheTarget = getTarget(Obj);
 
+  // Default --symbolize-operands to on for BPF, since BPF users expect to see
+  // basic block labels in disassembly.
+  SymbolizeOperands =
+      SymbolizeOperandsOption.value_or(Obj->makeTriple().isBPF());
+
   // Package up features to be passed to target/subtarget
   Expected<SubtargetFeatures> FeaturesValue = Obj->getFeatures();
   if (!FeaturesValue)
@@ -2643,6 +2690,21 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
       Features.AddFeature(MAttrs[I]);
   } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
+  } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
+    if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
+      if (Expected<std::string> VersionOrErr = AVR::getFeatureSetFromEFlag(
+              Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK)) {
+        Features.AddFeature('+' + *VersionOrErr);
+      } else {
+        // If the architecture version cannot be determined from ELF flags,
+        // fall back to the baseline "avr0" ISA. The AVR disassembler
+        // requires a valid feature specification to function correctly.
+        reportWarning(toString(VersionOrErr.takeError()) +
+                          ": defaulting to avr0",
+                      Obj->getFileName());
+        Features.AddFeature("+avr0");
+      }
+    }
   }
 
   if (MCPU.empty())
@@ -2785,20 +2847,23 @@ void Dumper::printRelocations() {
           continue;
         }
       }
+      std::string CurrentRISCVVendorSymbol;
+      uint64_t CurrentRISCVVendorOffset = 0;
       for (const RelocationRef &Reloc : Section.relocations()) {
         uint64_t Address = Reloc.getOffset();
         SmallString<32> RelocName;
         SmallString<32> ValueStr;
         if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
           continue;
-        Reloc.getTypeName(RelocName);
+        StringRef Name = getRelocTypeName(Reloc, RelocName,
+                                          CurrentRISCVVendorSymbol,
+                                          CurrentRISCVVendorOffset);
         if (Error E =
                 getRelocationValueString(Reloc, SymbolDescription, ValueStr))
           reportUniqueWarning(std::move(E));
 
         outs() << format(Fmt.data(), Address) << " "
-               << left_justify(RelocName, TypePadding) << " " << ValueStr
-               << "\n";
+               << left_justify(Name, TypePadding) << " " << ValueStr << "\n";
       }
     }
   }
@@ -3533,6 +3598,60 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   return Values;
 }
 
+static void mcpuHelp() {
+  Triple TheTriple;
+
+  if (!TripleName.empty()) {
+    TheTriple.setTriple(TripleName);
+  } else {
+    assert(!InputFilenames.empty());
+    Expected<OwningBinary<Binary>> OBinary = createBinary(InputFilenames[0]);
+    if (Error E = OBinary.takeError()) {
+      reportError(InputFilenames[0], "triple was not specified and could not "
+                                     "be inferred from the input file: " +
+                                         toString(std::move(E)));
+    }
+
+    Binary *Bin = OBinary->getBinary();
+    if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
+      TheTriple = Obj->makeTriple();
+    } else if (Archive *A = dyn_cast<Archive>(Bin)) {
+      Error Err = Error::success();
+      unsigned I = -1;
+      for (auto &C : A->children(Err)) {
+        ++I;
+        Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+        if (!ChildOrErr) {
+          if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+            reportError(std::move(E), getFileNameForError(C, I),
+                        A->getFileName());
+          continue;
+        }
+        if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
+          TheTriple = Obj->makeTriple();
+          break;
+        }
+      }
+      if (Err)
+        reportError(std::move(Err), A->getFileName());
+    }
+    if (TheTriple.empty())
+      reportError(InputFilenames[0],
+                  "target triple could not be derived from input file");
+  }
+
+  std::string ErrMessage;
+  const Target *DummyTarget =
+      TargetRegistry::lookupTarget(TheTriple, ErrMessage);
+  if (!DummyTarget)
+    reportCmdLineError(ErrMessage);
+  // We need to access the Help() through the corresponding MCSubtargetInfo.
+  // To avoid a memory leak, we wrap the createMcSubtargetInfo result in a
+  // unique_ptr.
+  std::unique_ptr<MCSubtargetInfo> MSI(
+      DummyTarget->createMCSubtargetInfo(TheTriple, "help", ""));
+}
+
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   MachOOpt = true;
   FullLeadingAddr = true;
@@ -3631,9 +3750,12 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   parseIntArg(InputArgs, OBJDUMP_stop_address_EQ, StopAddress);
   HasStopAddressFlag = InputArgs.hasArg(OBJDUMP_stop_address_EQ);
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
-  SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_symbolize_operands,
+                                               OBJDUMP_no_symbolize_operands))
+    SymbolizeOperandsOption =
+        A->getOption().matches(OBJDUMP_symbolize_operands);
   PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
-  if (PrettyPGOAnalysisMap && !SymbolizeOperands)
+  if (PrettyPGOAnalysisMap && !SymbolizeOperandsOption.value_or(false))
     reportCmdLineWarning("--symbolize-operands must be enabled for "
                          "--pretty-pgo-analysis-map to have an effect");
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
@@ -3749,6 +3871,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };
   if (Is("otool")) {
+    IsOtool = true;
     T = std::make_unique<OtoolOptTable>();
     Unknown = OTOOL_UNKNOWN;
     HelpFlag = OTOOL_help;
@@ -3826,18 +3949,29 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DisassembleSymbols.empty())
     Disassemble = true;
 
-  if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
-      !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
-      !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
-      !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
-      !(MachOOpt &&
-        (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
-         DylibsUsed || ExportsTrie || FirstPrivateHeader ||
-         FunctionStartsType != FunctionStartsMode::None || IndirectSymbols ||
-         InfoPlist || LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
-         Rpaths || UniversalHeaders || WeakBind || !FilterSections.empty()))) {
+  const bool PrintCpuHelp = (MCPU == "help" || is_contained(MAttrs, "help"));
+
+  const bool ShouldDump =
+      ArchiveHeaders || Disassemble || DwarfDumpType != DIDT_Null ||
+      DynamicRelocations || FileHeaders || PrivateHeaders || RawClangAST ||
+      Relocations || SectionHeaders || SectionContents || SymbolTable ||
+      DynamicSymbolTable || UnwindInfo || FaultMapSection || Offloading ||
+      (MachOOpt &&
+       (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
+        DylibsUsed || ExportsTrie || FirstPrivateHeader ||
+        FunctionStartsType != FunctionStartsMode::None || IndirectSymbols ||
+        InfoPlist || LazyBind || LinkOptHints || ObjcMetaData || Rebase ||
+        Rpaths || UniversalHeaders || WeakBind || !FilterSections.empty()));
+
+  if (!ShouldDump && !PrintCpuHelp) {
     T->printHelp(ToolName);
     return 2;
+  }
+
+  if (PrintCpuHelp) {
+    mcpuHelp();
+    if (!ShouldDump)
+      return EXIT_SUCCESS;
   }
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);

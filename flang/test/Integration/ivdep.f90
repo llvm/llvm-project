@@ -103,14 +103,28 @@ subroutine ivdep_test3
     end subroutine
 end subroutine ivdep_test3
 
+! CHECK-LABEL: ivdep_test4
+subroutine ivdep_test4
+  integer :: a(10)
+  !dir$ ivdep
+  !dir$ vector always
+  ! CHECK:   br i1 {{.*}}, label {{.*}}, label {{.*}}
+  do i=1,10
+     a(i)=i
+     !CHECK: br label {{.*}}, !llvm.loop ![[ANNOTATION3:.*]]
+  end do
+end subroutine ivdep_test4
+
 ! CHECK: [[DISTRINCT]] = distinct !{}
-! CHECK: ![[ANNOTATION]] = distinct !{![[ANNOTATION]], ![[VECTORIZE:.*]], ![[PARALLEL_ACCESSES:.*]]}
-! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+! CHECK: ![[ANNOTATION]] = distinct !{![[ANNOTATION]], ![[PARALLEL_ACCESSES:.*]]}
 ! CHECK: ![[PARALLEL_ACCESSES]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT]]}
 ! CHECK: [[DISTRINCT1]] = distinct !{}
-! CHECK: ![[ANNOTATION1]] = distinct !{![[ANNOTATION1]], ![[VECTORIZE:.*]], ![[PARALLEL_ACCESSES1:.*]]}
+! CHECK: ![[ANNOTATION1]] = distinct !{![[ANNOTATION1]], ![[PARALLEL_ACCESSES1:.*]]}
 ! CHECK: ![[PARALLEL_ACCESSES1]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT1]]}
 ! CHECK: [[DISTRINCT2]] = distinct !{}
-! CHECK: ![[ANNOTATION2]] = distinct !{![[ANNOTATION2]], ![[VECTORIZE:.*]], ![[PARALLEL_ACCESSES2:.*]]}
+! CHECK: ![[ANNOTATION2]] = distinct !{![[ANNOTATION2]], ![[PARALLEL_ACCESSES2:.*]]}
 ! CHECK: ![[PARALLEL_ACCESSES2]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT2]]}
-
+! CHECK: [[DISTRINCT3:.*]] = distinct !{}
+! CHECK: ![[ANNOTATION3]] = distinct !{![[ANNOTATION3]], ![[VECTORIZE:.*]], ![[PARALLEL_ACCESSES3:.*]]}
+! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+! CHECK: ![[PARALLEL_ACCESSES3]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT3]]}

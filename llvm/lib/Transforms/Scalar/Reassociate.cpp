@@ -636,12 +636,14 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         BinaryOperator *BO = isReassociableOp(OldLHS, Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        salvageDebugInfo(*Op);
         Op->setOperand(0, NewLHS);
       }
       if (NewRHS != OldRHS) {
         BinaryOperator *BO = isReassociableOp(OldRHS, Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        salvageDebugInfo(*Op);
         Op->setOperand(1, NewRHS);
       }
       LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
@@ -669,6 +671,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         BinaryOperator *BO = isReassociableOp(Op->getOperand(1), Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        salvageDebugInfo(*Op);
         Op->setOperand(1, NewRHS);
         ExpressionChangedStart = Op;
         if (!ExpressionChangedEnd)
@@ -707,6 +710,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     }
 
     LLVM_DEBUG(dbgs() << "RA: " << *Op << '\n');
+    salvageDebugInfo(*Op);
     Op->setOperand(0, NewOp);
     LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
     ExpressionChangedStart = Op;
@@ -739,13 +743,6 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         ClearFlags = false;
       if (ExpressionChangedStart == I)
         break;
-
-      // Discard any debug info related to the expressions that has changed (we
-      // can leave debug info related to the root and any operation that didn't
-      // change, since the result of the expression tree should be the same
-      // even after reassociation).
-      if (ClearFlags)
-        replaceDbgUsesWithUndef(ExpressionChangedStart);
 
       ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
@@ -1513,8 +1510,11 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
       // Insert a new multiply.
       Type *Ty = TheOp->getType();
-      Constant *C = Ty->isIntOrIntVectorTy() ?
-        ConstantInt::get(Ty, NumFound) : ConstantFP::get(Ty, NumFound);
+      // Truncate if NumFound overflows the type.
+      Constant *C = Ty->isIntOrIntVectorTy()
+                        ? ConstantInt::get(Ty, NumFound, /*IsSigned=*/false,
+                                           /*ImplicitTrunc=*/true)
+                        : ConstantFP::get(Ty, NumFound);
       Instruction *Mul = CreateMul(TheOp, C, "factor", I->getIterator(), I);
       Mul->setDebugLoc(I->getDebugLoc());
 

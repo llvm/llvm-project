@@ -422,10 +422,10 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 
 #define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \
   case vector::CombiningKind::kind:                                            \
-    if (llvm::isa<IntegerType>(resultType)) {                                  \
+    if (isa<IntegerType>(resultType)) {                                        \
       result = spirv::iop::create(rewriter, loc, resultType, result, next);    \
     } else {                                                                   \
-      assert(llvm::isa<FloatType>(resultType));                                \
+      assert(isa<FloatType>(resultType));                                      \
       result = spirv::fop::create(rewriter, loc, resultType, result, next);    \
     }                                                                          \
     break

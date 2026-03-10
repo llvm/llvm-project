@@ -25,6 +25,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -800,18 +801,6 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
   return Scalarize;
 }
 
-/// Returns true if the call return type `Ty` can be widened by the loop
-/// vectorizer.
-static bool canWidenCallReturnType(Type *Ty) {
-  auto *StructTy = dyn_cast<StructType>(Ty);
-  // TODO: Remove the homogeneous types restriction. This is just an initial
-  // simplification. When we want to support things like the overflow intrinsics
-  // we will have to lift this restriction.
-  if (StructTy && !StructTy->containsHomogeneousTypes())
-    return false;
-  return canVectorizeTy(StructTy);
-}
-
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   bool Result = true;
@@ -896,7 +885,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                                              PSE.getSE())) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
-      Reductions[Phi] = RedDes;
+      Reductions[Phi] = std::move(RedDes);
       assert((!RedDes.hasUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
                   RedDes.getRecurrenceKind())) &&
@@ -1026,7 +1015,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // For now, we only recognize struct values returned from calls where
     // all users are extractvalue as vectorizable. All element types of the
     // struct must be types that can be widened.
-    return isa<CallInst>(Inst) && canWidenCallReturnType(InstTy) &&
+    return isa<CallInst>(Inst) && canVectorizeTy(InstTy) &&
            all_of(Inst.users(), IsaPred<ExtractValueInst>);
   };
 
@@ -1443,17 +1432,15 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
   return FixedOrderRecurrences.count(Phi);
 }
 
-bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
+bool LoopVectorizationLegality::blockNeedsPredication(
+    const BasicBlock *BB) const {
   // When vectorizing early exits, create predicates for the latch block only.
-  // The early exiting block must be a direct predecessor of the latch at the
-  // moment.
+  // For a single early exit, it must be a direct predecessor of the latch.
+  // For multiple early exits, they form a chain where each exiting block
+  // dominates all subsequent blocks up to the latch.
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  if (hasUncountableEarlyExit()) {
-    assert(
-        is_contained(predecessors(Latch), getUncountableEarlyExitingBlock()) &&
-        "Uncountable exiting block must be a direct predecessor of latch");
+  if (hasUncountableEarlyExit())
     return BB == Latch;
-  }
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 }
 
@@ -1730,7 +1717,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // Keep a record of all the exiting blocks.
   SmallVector<const SCEVPredicate *, 4> Predicates;
-  BasicBlock *SingleUncountableExitingBlock = nullptr;
+  SmallVector<BasicBlock *> UncountableExitingBlocks;
   for (BasicBlock *BB : ExitingBlocks) {
     const SCEV *EC =
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
@@ -1743,15 +1730,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         return false;
       }
 
-      if (SingleUncountableExitingBlock) {
-        reportVectorizationFailure(
-            "Loop has too many uncountable exits",
-            "Cannot vectorize early exit loop with more than one early exit",
-            "TooManyUncountableEarlyExits", ORE, TheLoop);
-        return false;
-      }
-
-      SingleUncountableExitingBlock = BB;
+      UncountableExitingBlocks.push_back(BB);
     } else
       CountableExitingBlocks.push_back(BB);
   }
@@ -1761,18 +1740,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // PSE.getSymbolicMaxBackedgeTakenCount() below.
   Predicates.clear();
 
-  if (!SingleUncountableExitingBlock) {
-    LLVM_DEBUG(dbgs() << "LV: Cound not find any uncountable exits");
-    return false;
-  }
-
-  // The only supported early exit loops so far are ones where the early
-  // exiting block is a unique predecessor of the latch block.
-  BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (LatchPredBB != SingleUncountableExitingBlock) {
-    reportVectorizationFailure("Early exit is not the latch predecessor",
-                               "Cannot vectorize early exit loop",
-                               "EarlyExitNotLatchPredecessor", ORE, TheLoop);
+  if (UncountableExitingBlocks.empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
     return false;
   }
 
@@ -1829,10 +1798,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
       }
     }
 
-  // The vectoriser cannot handle loads that occur after the early exit block.
-  assert(LatchBB->getUniquePredecessor() == SingleUncountableExitingBlock &&
-         "Expected latch predecessor to be the early exiting block");
-
   SmallVector<LoadInst *, 4> NonDerefLoads;
   // TODO: Handle loops that may fault.
   if (!HasSideEffects) {
@@ -1845,9 +1810,13 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
           "NonReadOnlyEarlyExitLoop", ORE, TheLoop);
       return false;
     }
-  } else if (!canUncountableExitConditionLoadBeMoved(
-                 SingleUncountableExitingBlock))
-    return false;
+  } else {
+    // Check all uncountable exiting blocks for movable loads.
+    for (BasicBlock *ExitingBB : UncountableExitingBlocks) {
+      if (!canUncountableExitConditionLoadBeMoved(ExitingBB))
+        return false;
+    }
+  }
 
   // Check non-dereferenceable loads if any.
   for (LoadInst *LI : NonDerefLoads) {
@@ -1875,7 +1844,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
-  UncountableExitingBB = SingleUncountableExitingBlock;
+  HasUncountableEarlyExit = true;
   UncountableExitWithSideEffects = HasSideEffects;
   return true;
 }
@@ -2119,19 +2088,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
-
-  for (const auto &Entry : getInductionVars()) {
-    PHINode *OrigPhi = Entry.first;
-    for (User *U : OrigPhi->users()) {
-      auto *UI = cast<Instruction>(U);
-      if (!TheLoop->contains(UI)) {
-        LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking, loop IV has an "
-                             "outside user for "
-                          << *UI << "\n");
-        return false;
-      }
-    }
-  }
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;

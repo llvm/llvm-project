@@ -18,7 +18,7 @@ def FOO : I<(outs GPR32:$dst), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 // GISEL-NEXT: // (intrinsic_w_chain:{ *:[i32] } {{[0-9]+}}:{ *:[iPTR] }, srcvalue:{ *:[i32] }, i32:{ *:[i32] }:$src1)  =>  (FOO:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), GPR32:{ *:[i32] }:$src1)
 // GISEL-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::IMPLICIT_DEF),
-// GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
+// GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::FOO),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]

@@ -71,6 +71,7 @@ def testInvalidModule():
     func.func @foo() { return }
     """
         )
+        # CHECK: error: cannot be converted to LLVM IR: missing `LLVMTranslationDialectInterface` registration for dialect for op: func.func
         # CHECK: Got RuntimeError:  Failure while creating the ExecutionEngine.
         try:
             execution_engine = ExecutionEngine(module)
@@ -806,6 +807,7 @@ def testDumpToObjectFile():
                 # because RTDyldObjectLinkingLayer::emit will try to resolve symbols before dumping
                 # (see the jitLinkForORC call at the bottom there).
                 shared_libs=[MLIR_C_RUNNER_UTILS],
+                enable_pic=True,
             )
 
             # CHECK: Object file exists: True

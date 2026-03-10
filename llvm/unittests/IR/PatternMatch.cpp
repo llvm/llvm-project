@@ -1327,9 +1327,9 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
 TEST_F(PatternMatchTest, LoadStoreOps) {
   // Create this load/store sequence:
   //
-  //  %p = alloca i32*
-  //  %0 = load i32*, i32** %p
-  //  store i32 42, i32* %0
+  //  %p = alloca ptr
+  //  %0 = load ptr, ptr %p
+  //  store i32 42, ptr %0
 
   Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
   Value *LoadInst = IRB.CreateLoad(IRB.getInt32Ty(), Alloca);
@@ -2606,8 +2606,7 @@ TEST_F(PatternMatchTest, PtrAdd) {
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
-  Value *PtrAddConst =
-      ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Null, Offset);
+  Value *PtrAddConst = ConstantExpr::getPtrAdd(Null, Offset);
 
   Value *A, *B;
   EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));

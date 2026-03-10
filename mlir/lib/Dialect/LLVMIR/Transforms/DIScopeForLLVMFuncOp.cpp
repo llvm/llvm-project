@@ -120,11 +120,13 @@ static void setLexicalBlockFileAttr(Operation *op) {
     LLVM::DIScopeAttr scopeAttr;
     // We assemble the full inline stack so the parent of this loc must be a
     // function
-    auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
-    if (auto funcOpLoc = llvm::dyn_cast_if_present<FusedLoc>(funcOp.getLoc())) {
-      scopeAttr = cast<LLVM::DISubprogramAttr>(funcOpLoc.getMetadata());
-      op->setLoc(
-          CallSiteLoc::get(getNestedLoc(op, scopeAttr, calleeLoc), callerLoc));
+    if (auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>()) {
+      if (auto funcOpLoc =
+              llvm::dyn_cast_if_present<FusedLoc>(funcOp.getLoc())) {
+        scopeAttr = cast<LLVM::DISubprogramAttr>(funcOpLoc.getMetadata());
+        op->setLoc(CallSiteLoc::get(getNestedLoc(op, scopeAttr, calleeLoc),
+                                    callerLoc));
+      }
     }
 
     return;

@@ -14,6 +14,7 @@
 
 #include "FormatStringConverter.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
@@ -435,9 +436,9 @@ void FormatStringConverter::emitStringArgument(unsigned ArgIndex,
   }
 
   auto CStrMatches = match(*StringCStrCallExprMatcher, *Arg, *Context);
-  if (CStrMatches.size() == 1)
+  if (CStrMatches.size() == 1) {
     ArgCStrRemovals.push_back(CStrMatches.front());
-  else if (Arg->getType()->isPointerType()) {
+  } else if (Arg->getType()->isPointerType()) {
     const QualType Pointee = Arg->getType()->getPointeeType();
     // printf is happy to print signed char and unsigned char strings, but
     // std::format only likes char strings.
@@ -701,25 +702,25 @@ void FormatStringConverter::finalizeFormatText() {
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
     const auto UCh = static_cast<unsigned char>(Ch);
-    if (Ch == '\a')
+    if (Ch == '\a') {
       StandardFormatString += "\\a";
-    else if (Ch == '\b')
+    } else if (Ch == '\b') {
       StandardFormatString += "\\b";
-    else if (Ch == '\f')
+    } else if (Ch == '\f') {
       StandardFormatString += "\\f";
-    else if (Ch == '\n')
+    } else if (Ch == '\n') {
       StandardFormatString += "\\n";
-    else if (Ch == '\r')
+    } else if (Ch == '\r') {
       StandardFormatString += "\\r";
-    else if (Ch == '\t')
+    } else if (Ch == '\t') {
       StandardFormatString += "\\t";
-    else if (Ch == '\v')
+    } else if (Ch == '\v') {
       StandardFormatString += "\\v";
-    else if (Ch == '\"')
+    } else if (Ch == '\"') {
       StandardFormatString += "\\\"";
-    else if (Ch == '\\')
+    } else if (Ch == '\\') {
       StandardFormatString += "\\\\";
-    else if (Ch == '{') {
+    } else if (Ch == '{') {
       StandardFormatString += "{{";
       FormatStringNeededRewriting = true;
     } else if (Ch == '}') {
@@ -729,8 +730,9 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
       StandardFormatString += "\\x";
       StandardFormatString += llvm::hexdigit(UCh >> 4, true);
       StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
-    } else
+    } else {
       StandardFormatString += Ch;
+    }
   }
 }
 
@@ -761,14 +763,14 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // First move the value argument to the right place. But if there's a
     // pending c_str() removal then we must do that at the same time.
     if (const auto CStrRemovalMatch =
-            std::find_if(ArgCStrRemovals.cbegin(), ArgCStrRemovals.cend(),
-                         [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
-                             const BoundNodes &Match) {
-                           // This c_str() removal corresponds to the argument
-                           // being moved if they start at the same location.
-                           const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
-                           return ArgStartPos == CStrArg->getBeginLoc();
-                         });
+            llvm::find_if(ArgCStrRemovals,
+                          [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
+                              const BoundNodes &Match) {
+                            // This c_str() removal corresponds to the argument
+                            // being moved if they start at the same location.
+                            const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
+                            return ArgStartPos == CStrArg->getBeginLoc();
+                          });
         CStrRemovalMatch != ArgCStrRemovals.end()) {
       const std::string ArgText =
           withoutCStrReplacement(*CStrRemovalMatch, *Context);
@@ -779,9 +781,10 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
 
       // That c_str() removal is now dealt with, so we don't need to do it again
       ArgCStrRemovals.erase(CStrRemovalMatch);
-    } else
+    } else {
       Diag << tooling::fixit::createReplacement(*Args[ValueArgIndex - ArgCount],
                                                 *Args[ValueArgIndex], *Context);
+    }
 
     // Now shift down the field width and precision (if either are present) to
     // accommodate it.
@@ -793,16 +796,18 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // Now we need to modify the ArgFix index too so that we fix the right
     // argument. We don't need to care about the width and precision indices
     // since they never need fixing.
-    for (auto &ArgFix : ArgFixes) {
+    for (auto &ArgFix : ArgFixes)
       if (ArgFix.ArgIndex == ValueArgIndex)
         ArgFix.ArgIndex = ValueArgIndex - ArgCount;
-    }
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    const SourceLocation AfterOtherSide =
-        Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
-            ->getLocation();
+    const std::optional<Token> NextToken =
+        utils::lexer::findNextTokenSkippingComments(Args[ArgIndex]->getEndLoc(),
+                                                    SM, LangOpts);
+    if (!NextToken)
+      continue;
+    const SourceLocation AfterOtherSide = NextToken->getLocation();
 
     Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),
                                        Replacement, true)

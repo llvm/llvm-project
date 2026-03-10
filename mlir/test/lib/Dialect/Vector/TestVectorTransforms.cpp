@@ -121,7 +121,7 @@ struct TestVectorContractionPrepareForMMTLowering
     return "test-vector-contraction-prepare-for-mmt-lowering";
   }
   StringRef getDescription() const final {
-    return "Test vector.contraction matmul canonicalization for MMT lowering.";
+    return "Test vector.contract matmul canonicalization for MMT lowering.";
   }
   TestVectorContractionPrepareForMMTLowering() = default;
 
@@ -179,11 +179,13 @@ struct TestVectorUnrollingPatterns
                                        return success(isa<vector::StepOp>(op));
                                      }));
     populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setNativeShape(ArrayRef<int64_t>{8, 8})
-                      .setFilterConstraint([](Operation *op) {
-                        return success(isa<vector::CreateMaskOp>(op));
-                      }));
+        patterns,
+        UnrollVectorOptions()
+            .setNativeShape(ArrayRef<int64_t>{8, 8})
+            .setFilterConstraint([](Operation *op) {
+              return success(
+                  isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
+            }));
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()
@@ -199,6 +201,10 @@ struct TestVectorUnrollingPatterns
                   if (resultShape.size() == 2 && resultShape[0] == 1 &&
                       resultShape[1] == 32) {
                     return SmallVector<int64_t>{1, 16};
+                  }
+                  if (resultShape.size() == 2 && resultShape[0] == 2 &&
+                      resultShape[1] == 1) {
+                    return SmallVector<int64_t>{1, 1};
                   }
                   // Default case: [2,4] for all tests.
                   return SmallVector<int64_t>{2, 4};
@@ -680,9 +686,9 @@ struct TestVectorDistribution
     }
     WarpExecuteOnLane0LoweringOptions options;
     options.warpAllocationFn = allocateGlobalSharedMemory;
-    options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
-                                      gpu::WarpExecuteOnLane0Op warpOp) {
-      gpu::BarrierOp::create(builder, loc);
+    options.warpSynchronizationFn = [](Location loc, OpBuilder &builder,
+                                       gpu::WarpExecuteOnLane0Op warpOp) {
+      gpu::BarrierOp::create(builder, loc, gpu::AddressSpace::Workgroup);
     };
     // Test on one pattern in isolation.
     if (warpOpToSCF) {

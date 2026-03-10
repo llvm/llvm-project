@@ -3,6 +3,10 @@
 // Older versions of Android do not have certain posix_spawn* functions.
 // UNSUPPORTED: android
 
+// Simulators expect certain envars to be set, but this test overwrites
+// env when spawning the child process.
+// XFAIL: iossim
+
 #include <assert.h>
 #include <spawn.h>
 #include <stdio.h>

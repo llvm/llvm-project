@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
@@ -92,6 +93,8 @@ private:
   bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
+  bool expandSTSHHAtomicStore(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI);
   struct ConditionalBlocks {
     MachineBasicBlock &CondBB;
     MachineBasicBlock &EndBB;
@@ -137,8 +140,8 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                                        unsigned BitSize) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
-  uint64_t RenamableState =
-      MI.getOperand(0).isRenamable() ? RegState::Renamable : 0;
+  RegState RenamableState =
+      getRenamableRegState(MI.getOperand(0).isRenamable());
   uint64_t Imm = MI.getOperand(1).getImm();
 
   if (DstReg == AArch64::XZR || DstReg == AArch64::WZR) {
@@ -178,6 +181,8 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                 .addImm(I->Op2));
       }
       break;
+    case AArch64::EONXrs:
+    case AArch64::EORXrs:
     case AArch64::ORRWrs:
     case AArch64::ORRXrs: {
       Register DstReg = MI.getOperand(0).getReg();
@@ -615,7 +620,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   }
 
   // Preserve undef state until DOP's reg is defined.
-  unsigned DOPRegState = MI.getOperand(DOPIdx).isUndef() ? RegState::Undef : 0;
+  RegState DOPRegState = getUndefRegState(MI.getOperand(DOPIdx).isUndef());
 
   //
   // Create the destructive operation (if required)
@@ -639,7 +644,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
 
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
-    DOPRegState = 0;
+    DOPRegState = {};
 
     // Create the additional LSL to zero the lanes when the DstReg is not
     // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
@@ -660,7 +665,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
     DOPIdx = 0;
-    DOPRegState = 0;
+    DOPRegState = {};
   }
 
   //
@@ -790,9 +795,8 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
   assert((Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI ||
           Opc == AArch64::LDR_PXI || Opc == AArch64::STR_PXI) &&
          "Unexpected opcode");
-  unsigned RState = (Opc == AArch64::LDR_ZXI || Opc == AArch64::LDR_PXI)
-                        ? RegState::Define
-                        : 0;
+  RegState RState =
+      getDefRegState(Opc == AArch64::LDR_ZXI || Opc == AArch64::LDR_PXI);
   unsigned sub0 = (Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI)
                       ? AArch64::zsub0
                       : AArch64::psub0;
@@ -997,6 +1001,71 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
       .setMIFlag(MachineInstr::FrameSetup);
 
   MBBI->eraseFromParent();
+  return true;
+}
+
+bool AArch64ExpandPseudo::expandSTSHHAtomicStore(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL(MI.getDebugLoc());
+
+  unsigned Order = MI.getOperand(2).getImm();
+  unsigned Policy = MI.getOperand(3).getImm();
+  unsigned Size = MI.getOperand(4).getImm();
+
+  bool IsRelaxed = Order == 0;
+  unsigned StoreOpc = 0;
+
+  // __ATOMIC_RELAXED uses STR. __ATOMIC_{RELEASE/SEQ_CST} use STLR.
+  switch (Size) {
+  case 8:
+    StoreOpc = IsRelaxed ? AArch64::STRBBui : AArch64::STLRB;
+    break;
+  case 16:
+    StoreOpc = IsRelaxed ? AArch64::STRHHui : AArch64::STLRH;
+    break;
+  case 32:
+    StoreOpc = IsRelaxed ? AArch64::STRWui : AArch64::STLRW;
+    break;
+  case 64:
+    StoreOpc = IsRelaxed ? AArch64::STRXui : AArch64::STLRX;
+    break;
+  default:
+    llvm_unreachable("Unexpected STSHH atomic store size");
+  }
+
+  // Emit the hint with the retention policy immediate.
+  MachineInstr *Hint = BuildMI(MBB, MBBI, DL, TII->get(AArch64::STSHH))
+                           .addImm(Policy)
+                           .getInstr();
+
+  // Emit the associated store instruction.
+  Register ValReg = MI.getOperand(0).getReg();
+
+  if (Size < 64) {
+    const TargetRegisterInfo *TRI =
+        MBB.getParent()->getSubtarget().getRegisterInfo();
+    Register SubReg = TRI->getSubReg(ValReg, AArch64::sub_32);
+    if (SubReg)
+      ValReg = SubReg;
+  }
+
+  MachineInstrBuilder Store = BuildMI(MBB, MBBI, DL, TII->get(StoreOpc))
+                                  .addReg(ValReg)
+                                  .add(MI.getOperand(1));
+
+  // Relaxed uses base+imm addressing with a zero offset.
+  if (IsRelaxed)
+    Store.addImm(0);
+
+  // Preserve memory operands and any implicit uses/defs.
+  Store->setMemRefs(*MBB.getParent(), MI.memoperands());
+  transferImpOps(MI, Store, Store);
+
+  // Bundle the hint and store so they remain adjacent.
+  finalizeBundle(MBB, Hint->getIterator(), std::next(Store->getIterator()));
+
+  MI.eraseFromParent();
   return true;
 }
 
@@ -1296,7 +1365,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                 .add(MI.getOperand(3));
         transferImpOps(MI, I, I);
       } else {
-        unsigned RegState =
+        RegState RegState =
             getRenamableRegState(MI.getOperand(1).isRenamable()) |
             getKillRegState(
                 MI.getOperand(1).isKill() &&
@@ -1429,11 +1498,10 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       if (MF.getSubtarget<AArch64Subtarget>().isTargetILP32()) {
         auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
         unsigned Reg32 = TRI->getSubReg(DstReg, AArch64::sub_32);
-        unsigned DstFlags = MI.getOperand(0).getTargetFlags();
         MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRWui))
                    .addDef(Reg32)
                    .addReg(DstReg, RegState::Kill)
-                   .addReg(DstReg, DstFlags | RegState::Implicit);
+                   .addReg(DstReg, RegState::Implicit);
       } else {
         Register DstReg = MI.getOperand(0).getReg();
         MIB2 = BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
@@ -1696,6 +1764,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
+   case AArch64::STSHH_ATOMIC_STORE_SZ:
+     return expandSTSHHAtomicStore(MBB, MBBI);
    case AArch64::RestoreZAPseudo:
    case AArch64::CommitZASavePseudo:
    case AArch64::MSRpstatePseudo: {

@@ -124,10 +124,13 @@ set_target_properties(mlir-doc PROPERTIES FOLDER "MLIR/Docs")
 
 # Only enable execution engine if the native target is available.
 if(${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_EXECUTION_ENGINE 1)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 1)
 else()
-  set(MLIR_ENABLE_EXECUTION_ENGINE 0)
+  set(MLIR_ENABLE_EXECUTION_ENGINE_default 0)
 endif()
+option(MLIR_ENABLE_EXECUTION_ENGINE
+       "Enable building the MLIR Execution Engine."
+       ${MLIR_ENABLE_EXECUTION_ENGINE_default})
 
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available.
@@ -197,6 +200,14 @@ set(MLIR_PYTHON_PACKAGE_PREFIX "mlir"
   embedded in a relocatable way).")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_ENABLE_PYTHON_STABLE_ABI 0 CACHE BOOL
+       "Build Python bindings against the stable ABI (abi3, PEP 384) for \
+       cross-version compatibility. Requires Python 3.12+.")
+if(MLIR_ENABLE_PYTHON_STABLE_ABI AND CMAKE_VERSION VERSION_LESS "3.26.0")
+  message(FATAL_ERROR
+    "MLIR_ENABLE_PYTHON_STABLE_ABI requires CMake >= 3.26 "
+    "(Python::SABIModule not available in ${CMAKE_VERSION}).")
+endif()
 set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING
        "Prefix under install directory to place python bindings")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
@@ -296,6 +307,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.h"
     PATTERN "*.inc"
     PATTERN "*.td"
+    PATTERN "*.pdll"
     PATTERN "LICENSE.TXT"
     )
 

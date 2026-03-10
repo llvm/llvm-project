@@ -3835,9 +3835,8 @@ define <2 x half> @v_no_fmaximum3_f16__multi_use(half %a, half %b, half %c) {
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v1.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_maximum_f16 v0.h, v0.l, v2.l
-; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_no_fmaximum3_f16__multi_use:

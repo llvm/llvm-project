@@ -66,7 +66,7 @@ int main() {
 // IR-GPU-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
 // IR-GPU-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 1
 // IR-GPU-NEXT:    store ptr [[TMP3]], ptr [[TMP5]], align 8
-// IR-GPU-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP2]], i32 1, i32 64, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 2)
+// IR-GPU-NEXT:    call void @__kmpc_parallel_60(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP2]], i32 1, i32 64, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 2, i32 0)
 // IR-GPU-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NEXT:    ret void
 // IR-GPU:       worker.exit:

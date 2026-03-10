@@ -104,7 +104,7 @@ Build Requirements
 
 Please follow the steps below if you only want to **build** lldb.
 
-1. Install `Visual Studio <https://visualstudio.microsoft.com>` with the
+1. Install `Visual Studio <https://visualstudio.microsoft.com>`_ with the
    "Desktop Development with C++" workload. Make sure that the latest Windows
    SDK and the Active Template Library (ATL) are installed.
 2. Install `Git Bash <https://git-scm.com/install/windows>`_ and add

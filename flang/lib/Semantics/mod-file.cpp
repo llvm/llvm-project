@@ -887,6 +887,25 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
+static void CollectModules(const Scope &scope, const SymbolVector &symbols,
+    SourceOrderedSymbolSet &modules) {
+  for (const Symbol &symbol : symbols) {
+    const auto *generic{symbol.detailsIf<GenericDetails>()};
+    if (generic) {
+      for (const Symbol &used : generic->uses()) {
+        modules.insert(GetUsedModule(used.get<UseDetails>()));
+      }
+    } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+      modules.insert(GetUsedModule(*use));
+    }
+  }
+  for (const Scope &child : scope.children()) {
+    if (!child.IsSubmodule()) {
+      CollectModules(child, child.GetSymbols(), modules);
+    }
+  }
+}
+
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
@@ -895,20 +914,13 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
+  CollectModules(scope, symbols, modules);
   for (const Symbol &symbol : symbols) {
-    const auto *generic{symbol.detailsIf<GenericDetails>()};
-    if (generic) {
-      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
-      for (const Symbol &used : generic->uses()) {
-        modules.insert(GetUsedModule(used.get<UseDetails>()));
-      }
-    } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
-      modules.insert(GetUsedModule(*use));
-    }
     if (symbol.test(Symbol::Flag::ParentComp)) {
     } else if (symbol.has<NamelistDetails>()) {
       namelist.push_back(symbol);
-    } else if (generic) {
+    } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
+      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
       if (generic->specific() &&
           &generic->specific()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->specific());
@@ -1069,6 +1081,15 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
         PutPassName(os, details.passName());
       },
       attrs);
+  if (symbol.owner().IsDerivedType()) {
+    if (const auto &init{details.init()}) {
+      if (const Symbol *symbol{*init}) {
+        os << "=>" << symbol->name();
+      } else {
+        os << "=>NULL()";
+      }
+    }
+  }
   os << '\n';
 }
 
@@ -1365,12 +1386,17 @@ std::optional<ModuleCheckSumType> ExtractCheckSum(const std::string_view &str) {
   return std::nullopt;
 }
 
+static bool VerifyMagic(llvm::ArrayRef<char> content) {
+  std::string_view sv{content.data(), content.size()};
+  return sv.substr(0, ModHeader::magicLen) == ModHeader::magic;
+}
+
 static std::optional<ModuleCheckSumType> VerifyHeader(
     llvm::ArrayRef<char> content) {
-  std::string_view sv{content.data(), content.size()};
-  if (sv.substr(0, ModHeader::magicLen) != ModHeader::magic) {
+  if (!VerifyMagic(content)) {
     return std::nullopt;
   }
+  std::string_view sv{content.data(), content.size()};
   ModuleCheckSumType checkSum{ComputeCheckSum(sv.substr(ModHeader::len))};
   std::string_view expectSum{sv.substr(ModHeader::magicLen, ModHeader::sumLen)};
   if (auto extracted{ExtractCheckSum(expectSum)};
@@ -1513,7 +1539,6 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
           context_.moduleDependences().GetRequiredHash(name.ToString(), true);
     }
   }
-
   // Look for the right module file if its hash is known
   if (requiredHash && !fatalError) {
     for (const std::string &maybe :
@@ -1536,6 +1561,9 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
         // symbol of the same name that is not a module.
         context_.SayWithDecl(
             *notAModule, name, "'%s' is not a module"_err_en_US, name);
+      } else if (sourceFile && !VerifyMagic(sourceFile->content())) {
+        Say("read", name, ancestorName,
+            "'%s' is not a module file for this compiler"_err_en_US, path);
       } else {
         for (auto &msg : parsing.messages().messages()) {
           std::string str{msg.ToString()};
@@ -1551,13 +1579,22 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<ModuleCheckSumType> checkSum{
       VerifyHeader(sourceFile->content())};
   if (!checkSum) {
-    Say("use", name, ancestorName, "File has invalid checksum: %s"_err_en_US,
-        sourceFile->path());
+    if (!silent) {
+      if (!VerifyMagic(sourceFile->content())) {
+        Say("read", name, ancestorName,
+            "'%s' is not a module file for this compiler"_err_en_US, path);
+      } else {
+        Say("use", name, ancestorName,
+            "File has invalid checksum: %s"_err_en_US, sourceFile->path());
+      }
+    }
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    Say("use", name, ancestorName,
-        "File is not the right module file for %s"_err_en_US,
-        "'"s + name.ToString() + "': "s + sourceFile->path());
+    if (!silent) {
+      Say("use", name, ancestorName,
+          "File is not the right module file for %s"_err_en_US,
+          "'"s + name.ToString() + "': "s + sourceFile->path());
+    }
     return nullptr;
   }
   llvm::raw_null_ostream NullStream;
@@ -1565,8 +1602,10 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<parser::Program> &parsedProgram{parsing.parseTree()};
   if (!parsing.messages().empty() || !parsing.consumedWholeFile() ||
       !parsedProgram) {
-    Say("parse", name, ancestorName, "Module file is corrupt: %s"_err_en_US,
-        sourceFile->path());
+    if (!silent) {
+      Say("parse", name, ancestorName, "Module file is corrupt: %s"_err_en_US,
+          sourceFile->path());
+    }
     return nullptr;
   }
   parser::Program &parseTree{context_.SaveParseTree(std::move(*parsedProgram))};

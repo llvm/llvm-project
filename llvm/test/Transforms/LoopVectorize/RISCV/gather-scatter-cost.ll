@@ -98,11 +98,9 @@ define void @predicated_strided_store(ptr %start) {
 ; RVA23-NEXT:    br label [[VECTOR_PH:%.*]]
 ; RVA23:       vector.ph:
 ; RVA23-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
-; RVA23-NEXT:    [[TMP1:%.*]] = mul <vscale x 8 x i64> [[TMP0]], splat (i64 1)
-; RVA23-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> zeroinitializer, [[TMP1]]
 ; RVA23-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; RVA23:       vector.body:
-; RVA23-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; RVA23-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[TMP0]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23-NEXT:    [[AVL:%.*]] = phi i64 [ 586, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; RVA23-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
@@ -125,11 +123,9 @@ define void @predicated_strided_store(ptr %start) {
 ; RVA23ZVL1024B-NEXT:    br label [[VECTOR_PH:%.*]]
 ; RVA23ZVL1024B:       vector.ph:
 ; RVA23ZVL1024B-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; RVA23ZVL1024B-NEXT:    [[TMP1:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 1)
-; RVA23ZVL1024B-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP1]]
 ; RVA23ZVL1024B-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; RVA23ZVL1024B:       vector.body:
-; RVA23ZVL1024B-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; RVA23ZVL1024B-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP0]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23ZVL1024B-NEXT:    [[AVL:%.*]] = phi i64 [ 586, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23ZVL1024B-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; RVA23ZVL1024B-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
@@ -172,11 +168,9 @@ define void @store_to_addr_generated_from_invariant_addr(ptr noalias %p0, ptr no
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[P0:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <vscale x 2 x i64> [[TMP1]], splat (i64 1)
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64

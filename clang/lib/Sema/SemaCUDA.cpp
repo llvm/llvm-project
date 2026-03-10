@@ -215,6 +215,12 @@ CUDAFunctionTarget SemaCUDA::IdentifyTarget(const FunctionDecl *D,
   if (D == nullptr)
     return CurCUDATargetCtx.Target;
 
+  // C++ deduction guides are never codegen'ed and only participate in template
+  // argument deduction.  Treat them as if they were always host+device so that
+  // CUDA/HIP target checking never rejects their use based solely on target.
+  if (isa<CXXDeductionGuideDecl>(D))
+    return CUDAFunctionTarget::HostDevice;
+
   if (D->hasAttr<CUDAInvalidTargetAttr>())
     return CUDAFunctionTarget::InvalidTarget;
 
@@ -246,7 +252,7 @@ SemaCUDA::CUDAVariableTarget SemaCUDA::IdentifyTarget(const VarDecl *Var) {
     return CVT_Unified;
   // Only constexpr and const variabless with implicit constant attribute
   // are emitted on both sides. Such variables are promoted to device side
-  // only if they have static constant intializers on device side.
+  // only if they have static constant initializers on device side.
   if ((Var->isConstexpr() || Var->getType().isConstQualified()) &&
       Var->hasAttr<CUDAConstantAttr>() &&
       !hasExplicitAttr<CUDAConstantAttr>(Var))
@@ -490,7 +496,9 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
 
   // Look for special members in base classes that should be invoked from here.
   // Infer the target of this member base on the ones it should call.
-  // Skip direct and indirect virtual bases for abstract classes.
+  // Skip direct and indirect virtual bases for abstract classes, except for
+  // destructors — the complete destructor variant destroys virtual bases
+  // regardless of whether the class is abstract.
   llvm::SmallVector<const CXXBaseSpecifier *, 16> Bases;
   for (const auto &B : ClassDecl->bases()) {
     if (!B.isVirtual()) {
@@ -498,9 +506,8 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     }
   }
 
-  if (!ClassDecl->isAbstract()) {
+  if (!ClassDecl->isAbstract() || CSM == CXXSpecialMemberKind::Destructor)
     llvm::append_range(Bases, llvm::make_pointer_range(ClassDecl->vbases()));
-  }
 
   for (const auto *B : Bases) {
     auto *BaseClassDecl = B->getType()->getAsCXXRecordDecl();
@@ -984,6 +991,12 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
 
   const auto &ExprEvalCtx = SemaRef.currentEvaluationContext();
   if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
+    return true;
+
+  // C++ deduction guides participate in overload resolution but are not
+  // callable functions and are never codegen'ed.  Treat them as always
+  // allowed for CUDA/HIP compatibility checking.
+  if (isa<CXXDeductionGuideDecl>(Callee))
     return true;
 
   // FIXME: Is bailing out early correct here?  Should we instead assume that

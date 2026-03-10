@@ -6,16 +6,33 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+// This file defines profile data symbols for ELF, wasm, XCOFF. It assumes
+// __start_ and __stop_ symbols for profile data point at the beginning and
+// end of the sections in question.  (This is technically a linker feature,
+// not a file format feature, but linkers for these targets support it.)
+//
+// MachO (MacOS/iOS) and PE-COFF (Windows) have a similar support, but the
+// identifiers are different, so the support is in separate files.
+//
+// Support for targets which don't have linker support is in
+// InstrProfilingPlatformOther.c.
+//
+// This file also contains code to extract ELF build IDs from the ELF file,
+// to identify the build which generated the file.
+
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__Fuchsia__) ||      \
     (defined(__sun__) && defined(__svr4__)) || defined(__NetBSD__) ||          \
-    defined(_AIX) || defined(__wasm__) || defined(__HAIKU__)
+    defined(_AIX) || defined(__wasm__) || defined(__HAIKU__) ||                \
+    defined(COMPILER_RT_PROFILE_BAREMETAL)
 
-#if !defined(_AIX) && !defined(__wasm__)
+#if !defined(_AIX) && !defined(__wasm__) &&                                    \
+    !defined(COMPILER_RT_PROFILE_BAREMETAL)
+// Includes for non-baremetal ELF targets, used to output build IDs.
 #include <elf.h>
 #include <link.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"

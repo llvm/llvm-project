@@ -125,9 +125,8 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
   if (const DeclStmt *CondVar = S->getConditionVariableDeclStmt())
     CondEndLoc = CondVar->getEndLoc();
 
-  if (!CondEndLoc.isValid()) {
+  if (!CondEndLoc.isValid())
     return {};
-  }
 
   const SourceLocation PastCondEndLoc =
       Lexer::getLocForEndOfToken(CondEndLoc, 0, SM, LangOpts);
@@ -148,7 +147,7 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
 bool BracesAroundStatementsCheck::checkStmt(
     const MatchFinder::MatchResult &Result, const Stmt *S,
     SourceLocation StartLoc, SourceLocation EndLocHint) {
-  while (const auto *AS = dyn_cast<AttributedStmt>(S))
+  if (const auto *AS = dyn_cast<AttributedStmt>(S))
     S = AS->getSubStmt();
 
   const auto BraceInsertionHints = utils::getBraceInsertionsHints(

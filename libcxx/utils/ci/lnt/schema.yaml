@@ -1,0 +1,44 @@
+# Schema definition for the libc++ benchmark suite when running a LNT
+# instance. The metrics in this schema correspond to the metrics gathered
+# by libc++'s benchmark suite, and the "run fields" correspond to the
+# information gathered by the script that runs those benchmarks for
+# uploading with LNT.
+format_version: '2'
+name: libcxx2 # libcxx already exists on lnt.llvm.org, and sadly its schema is not correct
+metrics:
+- name: execution_time
+  type: Real
+  display_name: Execution Time
+  unit: seconds
+  unit_abbrev: s
+- name: instructions
+  type: Real
+  display_name: Instructions Retired
+  unit: instructions
+  unit_abbrev: instr
+- name: max_rss
+  type: Real
+  display_name: Maximum Resident Set Size
+  unit: megabytes
+  unit_abbrev: mb
+- name: cycles
+  type: Real
+  display_name: Cycles Elapsed
+  unit: cycles
+  unit_abbrev: cycles
+- name: peak_memory
+  type: Real
+  display_name: Peak Memory Footprint
+  unit: megabytes
+  unit_abbrev: mb
+run_fields:
+- name: llvm_project_revision
+  order: true
+- name: commit_info
+- name: git_sha
+machine_fields:
+- name: hardware
+- name: os
+- name: test_suite_commit
+- name: compiler
+- name: sdk

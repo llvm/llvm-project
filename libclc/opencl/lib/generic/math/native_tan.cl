@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_tan.h>
-#include <clc/opencl/math/native_tan.h>
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION native_tan

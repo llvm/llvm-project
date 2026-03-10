@@ -22,13 +22,13 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; RV64I-LABEL: func32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    mulw a1, a1, a2
-; RV64I-NEXT:    subw a2, a0, a1
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    beq a2, a0, .LBB0_2
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    subw a0, a2, a1
+; RV64I-NEXT:    sub a1, a2, a1
+; RV64I-NEXT:    beq a0, a1, .LBB0_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sraiw a0, a0, 31
+; RV64I-NEXT:    sraiw a0, a1, 31
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:  .LBB0_2:

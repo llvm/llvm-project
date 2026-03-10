@@ -230,7 +230,8 @@ void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,
                         const ToolChain &HostTC);
 
-void addOpenCLBuiltinsLib(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+void addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
+                          const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args);
 
 void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
@@ -273,6 +274,10 @@ bool shouldRecordCommandLine(const ToolChain &TC,
                              bool &FRecordCommandLine,
                              bool &GRecordCommandLine);
 
+void renderGlobalISelOptions(const Driver &D, const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs,
+                             const llvm::Triple &Triple);
+
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
                                         llvm::opt::ArgStringList &CmdArgs);
 
@@ -301,6 +306,17 @@ std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
 void setComplexRange(const Driver &D, StringRef NewOpt,
                      LangOptions::ComplexRangeKind NewRange, StringRef &LastOpt,
                      LangOptions::ComplexRangeKind &Range);
+
+// This function expects that the inputs to llvm-link will be specified by the
+// caller, but the output is handled by this function, with the optional ability
+// to set the output filename.
+void constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                              const JobAction &JA,
+                              const InputInfoList &JobInputs,
+                              const llvm::opt::ArgStringList &LinkerInputs,
+                              const InputInfo &Output,
+                              const llvm::opt::ArgList &Args,
+                              const char *OutputFilename = nullptr);
 
 } // end namespace tools
 } // end namespace driver

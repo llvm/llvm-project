@@ -1100,6 +1100,12 @@ inline u32 GetNumberOfCPUsCached() {
   return NumberOfCPUsCached;
 }
 
+inline u32 Rand(u32* state) {  // ANSI C linear congruential PRNG.
+  return (*state = *state * 1103515245 + 12345) >> 16;
+}
+
+inline u32 RandN(u32* state, u32 n) { return Rand(state) % n; }  // [0, n)
+
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::usize size,

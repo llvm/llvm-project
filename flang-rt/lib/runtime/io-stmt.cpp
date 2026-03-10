@@ -264,19 +264,17 @@ int ExternalIoStatementBase::EndIoStatement() {
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
   if (destroy_) {
     if (ExternalFileUnit *
-        toClose{ExternalFileUnit::LookUpForClose(unitNumber)}) {
+        toClose{ExternalFileUnit::LookUpForClose(unitNumber, *this)}) {
       toClose->Close(CloseStatus::Delete, *this);
-      toClose->DestroyClosed();
+      toClose->DestroyClosed(*this);
     }
   }
 #else
-  // Fetch the unit pointer before *this disappears.
-  ExternalFileUnit *unitPtr{&unit_};
   // The pseudo file units are dynamically allocated
-  // and are not tracked in the unit map.
-  // They have to be destructed and deallocated here.
-  unitPtr->~ExternalFileUnit();
-  FreeMemory(unitPtr);
+  // and are not tracked in any unit map.
+  // They have to be destroyed and deallocated here.
+  unit_.~ExternalFileUnit();
+  FreeMemory(&unit_);
 #endif
   return result;
 }
@@ -379,7 +377,7 @@ int CloseStatementState::EndIoStatement() {
   CompleteOperation();
   int result{ExternalIoStatementBase::EndIoStatement()};
   unit().CloseUnit(status_, *this);
-  unit().DestroyClosed();
+  unit().DestroyClosed(*this);
   return result;
 }
 

@@ -36,6 +36,7 @@
 #include <iterator>
 #include <list>
 #include <ranges>
+#include <set>
 #include <string_view>
 #include <string>
 #include <vector>
@@ -321,6 +322,12 @@ void runtime_only_test_case() {
                                  // int(-10.4) + -5.5 = -10 + -5.5 = -15.5
                                  // int(-15.5) + -6.6 = -15 + -6.6 = -21.6.
     check(data, 0.0, plus, expected);
+  }
+
+  {
+    auto const data     = std::set<int>{2, 4, 6, 8, 10, 12};
+    auto const expected = triangular_sum(data);
+    check(data, 0, std::plus<long>(), static_cast<long>(expected));
   }
 }
 

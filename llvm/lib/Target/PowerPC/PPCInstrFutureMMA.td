@@ -12,6 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// PowerPC ISA Future specific type constraints.
+//
+
+def SDT_PPCInst512 : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v256i1>, SDTCisVT<2, v256i1>
+]>;
+def SDT_PPCInst256 : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v256i1>, SDTCisVT<1, v256i1>, SDTCisVT<2, i32>
+]>;
+
+//===----------------------------------------------------------------------===//
+// ISA Future specific PPCISD nodes.
+//
+
+def PPCInst512   : SDNode<"PPCISD::INST512", SDT_PPCInst512, []>;
+def PPCInst512Hi : SDNode<"PPCISD::INST512HI", SDT_PPCInst512, []>;
+def PPCInst256   : SDNode<"PPCISD::INST256", SDT_PPCInst256, []>;
+
+//===----------------------------------------------------------------------===//
+
 class XX3Form_AT3_XABp5_P1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
                            string asmstr, list<dag> pattern>
     : I<opcode, OOL, IOL, asmstr, NoItinerary> {
@@ -429,14 +450,18 @@ let Predicates = [MMA, IsISAFuture] in {
   def DMXXINSTDMR512
       : XX3Form_AT3_XABp5_P1<60, 234, (outs wacc:$AT),
                              (ins vsrprc:$XAp, vsrprc:$XBp),
-                             "dmxxinstdmr512 $AT, $XAp, $XBp, 0", []> {
+                             "dmxxinstdmr512 $AT, $XAp, $XBp, 0",
+                             [(set v512i1:$AT, (PPCInst512 v256i1:$XAp,
+                                                v256i1:$XBp))]> {
     let P = 0;
   }
 
   def DMXXINSTDMR512_HI
       : XX3Form_AT3_XABp5_P1<60, 234, (outs wacc_hi:$AT),
                              (ins vsrprc:$XAp, vsrprc:$XBp),
-                             "dmxxinstdmr512 $AT, $XAp, $XBp, 1", []> {
+                             "dmxxinstdmr512 $AT, $XAp, $XBp, 1",
+                             [(set v512i1:$AT, (PPCInst512Hi v256i1:$XAp,
+                                                v256i1:$XBp))]> {
     let P = 1;
   }
 
@@ -446,7 +471,8 @@ let Predicates = [MMA, IsISAFuture] in {
 
   def DMXXINSTDMR256 : XX2Form_AT3_XBp5_P2<60, 485, (outs dmrrowp:$AT),
                                            (ins vsrprc:$XBp, u2imm:$P),
-                                           "dmxxinstdmr256 $AT, $XBp, $P", []>;
+                                           "dmxxinstdmr256 $AT, $XBp, $P",
+                                           [(set v256i1:$AT, (PPCInst256 v256i1:$XBp, u2imm_timm:$P))]>;
 
   def DMMR
       : XForm_ATB3<31, 6, 177, (outs dmr:$AT), (ins dmr:$AB), "dmmr $AT, $AB",
@@ -486,13 +512,14 @@ let Predicates = [MMA, IsISAFuture] in {
             31, 14, 177, (outs dmr:$AT), (ins dmr:$ATi, dmr:$AB, u1imm:$T),
             "dmsha2hash $AT, $AB, $T",
             [(set v1024i1:$AT, (int_ppc_mma_dmsha2hash v1024i1:$ATi,
-                                   v1024i1:$AB, timm:$T))]>,
+                                   v1024i1:$AB, u1imm_timm:$T))]>,
         RegConstraint<"$ATi = $AT">;
   def DMSHA3HASH
       : XForm_ATp2_SR5<31, 15, 177, (outs dmrp:$ATp),
                        (ins dmrp:$ATpi, u5imm:$SR), "dmsha3hash $ATp, $SR",
                        [(set v2048i1:$ATp,
-                           (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR))]>,
+                           (int_ppc_mma_dmsha3hash v2048i1:$ATpi,
+                                                   u5imm_timm:$SR))]>,
         RegConstraint<"$ATpi = $ATp">;
   def DMXXSHAPAD
       : XX2Form_AT3_XB6_ID2_E1_BL2<60, 421, (outs dmr:$AT),
@@ -566,8 +593,8 @@ let Predicates = [MMA, IsISAFuture] in {
             (DMXVF16GERX2NN $ATi, $XAp, RCCp.BToVSRC)>;
 
   // Cryptography Intrinsic
-  def : Pat<(v1024i1 (int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
-                timm:$E, timm:$BL)),
+  def : Pat<(v1024i1 (int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB,
+                u2imm_timm:$ID, u1imm_timm:$E, u2imm_timm:$BL)),
             (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
 }
 

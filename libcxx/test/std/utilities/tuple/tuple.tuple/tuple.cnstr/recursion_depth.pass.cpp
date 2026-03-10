@@ -22,8 +22,10 @@ constexpr void CreateTuple(std::index_sequence<I...>) {
   using LargeTuple = std::tuple<std::integral_constant<std::size_t, I>...>;
   using TargetTuple = std::tuple<decltype(I)...>;
   LargeTuple tuple(std::integral_constant<std::size_t, I>{}...);
-  assert(std::get<0>(tuple).value == 0);
-  assert(std::get<sizeof...(I)-1>(tuple).value == sizeof...(I)-1);
+  auto e1 = std::get<0>(tuple);
+  assert(e1.value == 0);
+  auto e2 = std::get<sizeof...(I) - 1>(tuple);
+  assert(e2.value == sizeof...(I) - 1);
 
   TargetTuple t1 = tuple;                                  // converting copy constructor from &
   TargetTuple t2 = static_cast<LargeTuple const&>(tuple);  // converting copy constructor from const&

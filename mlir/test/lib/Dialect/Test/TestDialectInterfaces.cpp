@@ -177,6 +177,22 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
+    if (auto nestedAttr = dyn_cast<TestNestedAliasAttr>(attr)) {
+      std::optional<StringRef> aliasName =
+          StringSwitch<std::optional<StringRef>>(nestedAttr.getValue())
+              .Case("alias_test:trailing_digit_conflict_base",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base_conflict",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base1",
+                    StringRef("unique_base1"))
+              .Default(std::nullopt);
+      if (!aliasName)
+        return AliasResult::NoAlias;
+      os << *aliasName;
+      return AliasResult::FinalAlias;
+    }
+
     StringAttr strAttr = dyn_cast<StringAttr>(attr);
     if (!strAttr)
       return AliasResult::NoAlias;
@@ -334,8 +350,11 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     if (!returnOp)
       return;
 
-    // Replace the values directly with the return operands.
-    assert(returnOp.getNumOperands() == valuesToRepl.size());
+    // Replace the values directly with the return operands. Skip if the
+    // number of operands doesn't match (e.g., when inlining into a call
+    // with a different result arity due to invalid IR mixing dialects).
+    if (returnOp.getNumOperands() != valuesToRepl.size())
+      return;
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }

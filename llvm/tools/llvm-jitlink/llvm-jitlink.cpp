@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/BacktraceTools.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
@@ -139,6 +140,18 @@ static cl::list<std::string>
     LoadHidden("load_hidden",
                cl::desc("Link against library X with hidden visibility"),
                cl::cat(JITLinkCategory));
+
+static cl::opt<std::string>
+    WriteSymbolTableTo("write-symtab",
+                       cl::desc("Write the symbol table for the JIT'd program "
+                                "to the specified file"),
+                       cl::cat(JITLinkCategory));
+
+static cl::opt<std::string> SymbolicateWith(
+    "symbolicate-with",
+    cl::desc("Given a path to a symbol table file, symbolicate the given "
+             "backtrace(s)"),
+    cl::cat(JITLinkCategory));
 
 static cl::list<std::string>
     LibrariesWeak("weak-l",
@@ -405,11 +418,16 @@ namespace llvm {
 
 static raw_ostream &
 operator<<(raw_ostream &OS, const Session::MemoryRegionInfo &MRI) {
-  return OS << "target addr = "
-            << format("0x%016" PRIx64, MRI.getTargetAddress())
-            << ", content: " << (const void *)MRI.getContent().data() << " -- "
-            << (const void *)(MRI.getContent().data() + MRI.getContent().size())
-            << " (" << MRI.getContent().size() << " bytes)";
+  OS << "target addr = " << format("0x%016" PRIx64, MRI.getTargetAddress());
+
+  if (MRI.isZeroFill())
+    OS << ", zero-fill: " << MRI.getZeroFillLength() << " bytes";
+  else
+    OS << ", content: " << (const void *)MRI.getContent().data() << " -- "
+       << (const void *)(MRI.getContent().data() + MRI.getContent().size())
+       << " (" << MRI.getContent().size() << " bytes)";
+
+  return OS;
 }
 
 static raw_ostream &
@@ -1203,6 +1221,15 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   auto &TT = ES.getTargetTriple();
 
+  if (!WriteSymbolTableTo.empty()) {
+    if (auto STDump = SymbolTableDumpPlugin::Create(WriteSymbolTableTo))
+      ObjLayer.addPlugin(std::move(*STDump));
+    else {
+      Err = STDump.takeError();
+      return;
+    }
+  }
+
   if (DebuggerSupport && TT.isOSBinFormatMachO()) {
     if (!ProcessSymsJD) {
       Err = make_error<StringError>("MachO debugging requires process symbols",
@@ -1374,7 +1401,7 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
   if (ShowLinkedFiles)
     outs() << "Linking " << G.getName() << "\n";
 
-  if (!CheckFiles.empty())
+  if (!CheckFiles.empty() || ShowAddrs)
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
       if (ES.getTargetTriple().getObjectFormat() == Triple::ELF)
         return registerELFGraphInfo(*this, G);
@@ -1666,6 +1693,12 @@ Session::findSymbolInfo(const orc::SymbolStringPtr &SymbolName,
 } // end namespace llvm
 
 static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
+
+  // If we're running in symbolicate mode then just use the process triple.
+  if (!SymbolicateWith.empty())
+    return std::make_pair(Triple(sys::getProcessTriple()), SubtargetFeatures());
+
+  // Otherwise we need to inspect the input files.
   static std::pair<Triple, SubtargetFeatures> FirstTTAndFeatures = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
 
@@ -1876,6 +1909,14 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
                 "disabled\n";
       RecordLazyExecs = "";
     }
+  }
+
+  if (!SymbolicateWith.empty()) {
+    if (!WriteSymbolTableTo.empty())
+      errs() << WriteSymbolTableTo.ArgStr << " specified with "
+             << SymbolicateWith.ArgStr << ", ignoring.";
+    if (InputFiles.empty())
+      InputFiles.push_back("-");
   }
 
   return Error::success();
@@ -2817,6 +2858,22 @@ static Expected<int> runWithoutRuntime(Session &S,
   return S.ES.getExecutorProcessControl().runAsMain(EntryPointAddr, InputArgv);
 }
 
+static Error symbolicateBacktraces() {
+  auto Symtab = DumpedSymbolTable::Create(SymbolicateWith);
+  if (!Symtab)
+    return Symtab.takeError();
+
+  for (auto InputFile : InputFiles) {
+    auto BacktraceBuffer = MemoryBuffer::getFileOrSTDIN(InputFile);
+    if (!BacktraceBuffer)
+      return createFileError(InputFile, BacktraceBuffer.getError());
+
+    outs() << Symtab->symbolicate((*BacktraceBuffer)->getBuffer());
+  }
+
+  return Error::success();
+}
+
 namespace {
 struct JITLinkTimers {
   TimerGroup JITLinkTG{"llvm-jitlink timers", "timers for llvm-jitlink phases"};
@@ -2843,6 +2900,11 @@ int main(int argc, char *argv[]) {
 
   auto [TT, Features] = getFirstFileTripleAndFeatures();
   ExitOnErr(sanitizeArguments(TT, argv[0]));
+
+  if (!SymbolicateWith.empty()) {
+    ExitOnErr(symbolicateBacktraces());
+    return 0;
+  }
 
   auto S = ExitOnErr(Session::Create(TT, Features));
 
@@ -2888,11 +2950,9 @@ int main(int argc, char *argv[]) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())
-      Result =
-          ExitOnErr(runWithRuntime(*S, ExecutorAddr(EntryPoint->getAddress())));
+      Result = ExitOnErr(runWithRuntime(*S, EntryPoint->getAddress()));
     else
-      Result = ExitOnErr(
-          runWithoutRuntime(*S, ExecutorAddr(EntryPoint->getAddress())));
+      Result = ExitOnErr(runWithoutRuntime(*S, EntryPoint->getAddress()));
   }
 
   // Destroy the session.

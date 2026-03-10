@@ -16,8 +16,8 @@ add_clang_library(clangDoc STATIC
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
-  HTMLMustacheGenerator.cpp
   JSONGenerator.cpp
+  MDMustacheGenerator.cpp
 
   DEPENDS
   omp_gen
@@ -40,7 +40,11 @@ clang_target_link_libraries(clangDoc
 
 target_link_libraries(clangDoc
   PRIVATE
-  clangDocSupport      
+  clangDocSupport
   )
 
 add_subdirectory(tool)
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()

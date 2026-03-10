@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/geometric/clc_fast_normalize.h>
-#include <clc/opencl/geometric/fast_normalize.h>
 
 #define __CLC_FUNCTION fast_normalize
 #define __CLC_FLOAT_ONLY

@@ -178,9 +178,8 @@ public:
 
     // Look through deref of this.
     if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent)) {
-      if (UnOp->getOpcode() == UO_Deref) {
+      if (UnOp->getOpcode() == UO_Deref)
         Parent = getParentExprIgnoreParens(UnOp);
-      }
     }
 
     // It's okay to
@@ -225,9 +224,9 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
           cxxMethodDecl(
               isDefinition(), isUserProvided(),
               unless(anyOf(
-                  isExpansionInSystemHeader(), isVirtual(), isConst(),
-                  isStatic(), hasTrivialBody(), cxxConstructorDecl(),
-                  cxxDestructorDecl(), isTemplate(), isDependentContext(),
+                  isVirtual(), isConst(), isStatic(), hasTrivialBody(),
+                  cxxConstructorDecl(), cxxDestructorDecl(), isTemplate(),
+                  isDependentContext(),
                   ofClass(anyOf(isLambda(),
                                 hasAnyDependentBases()) // Method might become
                                                         // virtual depending on

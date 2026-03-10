@@ -67,10 +67,10 @@ bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
                          DiagnosticsEngine *Diags = nullptr,
                          bool DefaultDiagColor = true);
 
-unsigned getOptimizationLevel(llvm::opt::ArgList &Args, InputKind IK,
+unsigned getOptimizationLevel(const llvm::opt::ArgList &Args, InputKind IK,
                               DiagnosticsEngine &Diags);
 
-unsigned getOptimizationLevelSize(llvm::opt::ArgList &Args);
+unsigned getOptimizationLevelSize(const llvm::opt::ArgList &Args);
 
 /// The base class of CompilerInvocation. It keeps individual option objects
 /// behind reference-counted pointers, which is useful for clients that want to
@@ -308,9 +308,11 @@ public:
                                            const LangOptions &LangOpts,
                                            const llvm::Triple &Triple);
 
-  /// Retrieve a module hash string that is suitable for uniquely
-  /// identifying the conditions under which the module was built.
-  std::string getModuleHash() const;
+  /// Compute the context hash - a string that uniquely identifies compiler
+  /// settings.
+  /// This is currently used mainly for distinguishing different variants of the
+  /// same implicitly-built Clang module.
+  std::string computeContextHash() const;
 
   /// Check that \p Args can be parsed and re-serialized without change,
   /// emiting diagnostics for any differences.

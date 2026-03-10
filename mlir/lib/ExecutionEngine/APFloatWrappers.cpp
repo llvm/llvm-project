@@ -21,6 +21,7 @@
 //
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Debug.h"
 
 #ifdef _WIN32
 #ifndef MLIR_APFLOAT_WRAPPERS_EXPORT
@@ -143,13 +144,76 @@ MLIR_APFLOAT_WRAPPERS_EXPORT int8_t _mlir_apfloat_compare(int32_t semantics,
   return static_cast<int8_t>(x.compare(y));
 }
 
-MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_neg(int32_t semantics, uint64_t a) {
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_neg(int32_t semantics,
+                                                        uint64_t a) {
   const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
       static_cast<llvm::APFloatBase::Semantics>(semantics));
   unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
   llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
   x.changeSign();
   return x.bitcastToAPInt().getZExtValue();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_abs(int32_t semantics,
+                                                        uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  return abs(x).bitcastToAPInt().getZExtValue();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT bool _mlir_apfloat_isfinite(int32_t semantics,
+                                                         uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  return x.isFinite();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT bool _mlir_apfloat_isinfinite(int32_t semantics,
+                                                           uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  return x.isInfinity();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT bool _mlir_apfloat_isnormal(int32_t semantics,
+                                                         uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  return x.isNormal();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT bool _mlir_apfloat_isnan(int32_t semantics,
+                                                      uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  return x.isNaN();
+}
+
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t
+_mlir_apfloat_fused_multiply_add(int32_t semantics, uint64_t operand,
+                                 uint64_t multiplicand, uint64_t addend) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat operand_(sem, llvm::APInt(bitWidth, operand));
+  llvm::APFloat multiplicand_(sem, llvm::APInt(bitWidth, multiplicand));
+  llvm::APFloat addend_(sem, llvm::APInt(bitWidth, addend));
+  llvm::detail::opStatus stat = operand_.fusedMultiplyAdd(
+      multiplicand_, addend_, llvm::RoundingMode::NearestTiesToEven);
+  assert(stat == llvm::APFloatBase::opOK &&
+         "expected fusedMultiplyAdd status to be OK");
+  (void)stat;
+  return operand_.bitcastToAPInt().getZExtValue();
 }
 
 /// Min/max operations.

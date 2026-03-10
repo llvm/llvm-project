@@ -62,19 +62,19 @@ llvm.func @init_mbarrier_try_wait(%barrier : !llvm.ptr, %ticks : i32, %phase : i
 
 // CHECK-LABEL: @async_cp
 func.func @async_cp(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>) {
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
   return
 }
 
 // CHECK-LABEL: @async_cp_zfill
 func.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) {
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  cg, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 4, cache =  ca, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  nvvm.cp.async.shared.global %dst, %src, 4, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 4, cache = ca, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 4, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   return
 }
 
@@ -584,29 +584,6 @@ func.func @cp_async_bulk_wait_group() {
 
 // -----
 
-func.func @fence_mbarrier_init() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.mbarrier_init.release.cluster;"
-  nvvm.fence.mbarrier.init
-  func.return 
-}
-// -----
-
-func.func @fence_proxy() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.alias;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<alias>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.global;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.global>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cta;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.proxy.async.shared::cluster;", ""  : () -> ()
-  nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>}
-  func.return
-}
-
-// -----
-
 // CHECK-LABEL: @llvm_nvvm_barrier_arrive
 // CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
 llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
@@ -699,21 +676,6 @@ llvm.func @inline_ptx_multi_rw_r(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) 
    %r4 = llvm.fadd %rw_c, %rw_d : f32
    %r5 = llvm.fadd %r3f, %rw_d : f32
    llvm.return %r5 : f32
-}
-
-
-// -----
-
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: %[[S0:.+]] = llvm.mlir.constant(10 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S0]] : (i32) -> ()
-  
-  nvvm.pmevent id = 10
-  // CHECK: %[[S1:.+]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S1]] : (i32) -> ()
-  nvvm.pmevent id = 4
-  llvm.return
 }
 
 // -----

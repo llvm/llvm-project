@@ -8,8 +8,8 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
+#include "../bugprone/UnusedReturnValueCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/AvoidGotoCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
@@ -31,18 +31,18 @@
 #include "../modernize/UseOverrideCheck.h"
 #include "../performance/MoveConstArgCheck.h"
 #include "../performance/NoexceptMoveConstructorCheck.h"
+#include "../portability/NoAssemblerCheck.h"
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "ExceptionBaseclassCheck.h"
-#include "IgnoredRemoveResultCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
-#include "NoAssemblerCheck.h"
 #include "SignedBitwiseCheck.h"
 
 namespace clang::tidy {
 namespace hicpp {
+namespace {
 
 class HICPPModule : public ClangTidyModule {
 public:
@@ -57,7 +57,7 @@ public:
         "hicpp-deprecated-headers");
     CheckFactories.registerCheck<ExceptionBaseclassCheck>(
         "hicpp-exception-baseclass");
-    CheckFactories.registerCheck<IgnoredRemoveResultCheck>(
+    CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "hicpp-ignored-remove-result");
     CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
         "hicpp-multiway-paths-covered");
@@ -81,7 +81,8 @@ public:
     CheckFactories
         .registerCheck<cppcoreguidelines::ProBoundsArrayToPointerDecayCheck>(
             "hicpp-no-array-decay");
-    CheckFactories.registerCheck<NoAssemblerCheck>("hicpp-no-assembler");
+    CheckFactories.registerCheck<portability::NoAssemblerCheck>(
+        "hicpp-no-assembler");
     CheckFactories.registerCheck<cppcoreguidelines::NoMallocCheck>(
         "hicpp-no-malloc");
     CheckFactories
@@ -109,7 +110,19 @@ public:
     CheckFactories.registerCheck<cppcoreguidelines::ProTypeVarargCheck>(
         "hicpp-vararg");
   }
+
+  ClangTidyOptions getModuleOptions() override {
+    ClangTidyOptions Options;
+    ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
+    Opts["hicpp-ignored-remove-result.CheckedFunctions"] =
+        "^::std::remove$;^::std::remove_if$;^::std::unique$";
+    Opts["hicpp-ignored-remove-result.CheckedReturnTypes"] = "";
+    Opts["hicpp-ignored-remove-result.AllowCastToVoid"] = "true";
+    return Options;
+  }
 };
+
+} // namespace
 
 // Register the HICPPModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<HICPPModule>

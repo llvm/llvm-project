@@ -104,7 +104,7 @@ define ptr @test_alloca_load_pre() {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ptr
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (s8) from %ir.next)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (volatile dereferenceable load (s8) from %ir.next)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %ptr = alloca i8, i32 128
@@ -183,7 +183,7 @@ define ptr @test_load_post_alloca() {
   ; CHECK-LABEL: name: test_load_post_alloca
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ptr
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (volatile load (s8) from %ir.ptr)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX]](p0) :: (volatile dereferenceable load (s8) from %ir.ptr)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)

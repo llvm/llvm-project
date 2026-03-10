@@ -207,12 +207,8 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16x2:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maxnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
@@ -673,4 +669,12 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+InstructionUniformity
+NVPTXTTIImpl::getInstructionUniformity(const Value *V) const {
+  if (isSourceOfDivergence(V))
+    return InstructionUniformity::NeverUniform;
+
+  return InstructionUniformity::Default;
 }

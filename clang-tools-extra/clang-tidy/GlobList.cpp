@@ -31,7 +31,7 @@ static llvm::StringRef extractNextGlob(StringRef &GlobList) {
 }
 
 static llvm::Regex createRegexFromGlob(StringRef &Glob) {
-  SmallString<128> RegexText("^");
+  llvm::SmallString<128> RegexText("^");
   const StringRef MetaChars("()^$|*+?.[]\\{}");
   for (const char C : Glob) {
     if (C == '*')
@@ -59,10 +59,9 @@ GlobList::GlobList(StringRef Globs, bool KeepNegativeGlobs /* =true */) {
 bool GlobList::contains(StringRef S) const {
   // Iterating the container backwards as the last match determins if S is in
   // the list.
-  for (const GlobListItem &Item : llvm::reverse(Items)) {
+  for (const GlobListItem &Item : llvm::reverse(Items))
     if (Item.Regex.match(S))
       return Item.IsPositive;
-  }
   return false;
 }
 

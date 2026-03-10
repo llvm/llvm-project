@@ -216,6 +216,18 @@ template<size_t N>
 template<class... T>
   using index_sequence_for = make_index_sequence<sizeof...(T)>;
 
+template<class T, T... Values>                                                  // C++26
+  struct tuple_size<integer_sequence<T, Values...>>;
+
+template<size_t I, class T, T... Values>                                        // C++26
+  struct tuple_element<I, integer_sequence<T, Values...>>;
+
+template<size_t I, class T, T... Values>                                        // C++26
+  struct tuple_element<I, const integer_sequence<T, Values...>>;
+
+template<size_t I, class T, T... Values>                                        // C++26
+  constexpr T get(integer_sequence<T, Values...>) noexcept;
+
 template<class T, class U=T>
     constexpr T exchange(T& obj, U&& new_value)                                 // constexpr in C++17, noexcept in C++23
       noexcept(is_nothrow_move_constructible<T>::value && is_nothrow_assignable<T&, U>::value);

@@ -59,11 +59,7 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
 
     uint32_t best_symfile_abilities = 0;
 
-    SymbolFileCreateInstance create_callback;
-    for (uint32_t idx = 0;
-         (create_callback = PluginManager::GetSymbolFileCreateCallbackAtIndex(
-              idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback : PluginManager::GetSymbolFileCreateCallbacks()) {
       std::unique_ptr<SymbolFile> curr_symfile_up(create_callback(objfile_sp));
 
       if (curr_symfile_up) {
@@ -125,6 +121,14 @@ void SymbolFile::FindFunctions(const Module::LookupInfo &lookup_info,
                                const CompilerDeclContext &parent_decl_ctx,
                                bool include_inlines,
                                SymbolContextList &sc_list) {}
+
+void SymbolFile::FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
+                               const CompilerDeclContext &parent_decl_ctx,
+                               bool include_inlines,
+                               SymbolContextList &sc_list) {
+  for (const auto &lookup_info : lookup_infos)
+    FindFunctions(lookup_info, parent_decl_ctx, include_inlines, sc_list);
+}
 
 void SymbolFile::FindFunctions(const RegularExpression &regex,
                                bool include_inlines,

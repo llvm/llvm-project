@@ -203,10 +203,9 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
         queue_kind_label = " (concurrent)";
 
       name = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                           queue_name, queue_kind_label)
-                 .str();
+                           queue_name, queue_kind_label);
     } else {
-      name = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+      name = llvm::formatv("Thread {0}", thread.GetIndexID());
     }
   }
   return protocol::Thread{thread.GetThreadID(), name};
@@ -239,10 +238,10 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   return filter;
 }
 
-Variable CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
+Variable CreateVariable(lldb::SBValue v, var_ref_t var_ref, bool format_hex,
                         bool auto_variable_summaries,
                         bool synthetic_child_debugging, bool is_name_duplicated,
-                        std::optional<std::string> custom_name) {
+                        std::optional<llvm::StringRef> custom_name) {
   VariableDescription desc(v, auto_variable_summaries, format_hex,
                            is_name_duplicated, custom_name);
   Variable var;
@@ -292,10 +291,10 @@ Variable CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
     var.variablesReference = var_ref;
 
   if (v.GetDeclaration().IsValid())
-    var.declarationLocationReference = PackLocation(var_ref, false);
+    var.declarationLocationReference = PackLocation(var_ref.AsUInt32(), false);
 
   if (ValuePointsToCode(v))
-    var.valueLocationReference = PackLocation(var_ref, true);
+    var.valueLocationReference = PackLocation(var_ref.AsUInt32(), true);
 
   if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     var.memoryReference = addr;

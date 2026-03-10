@@ -907,9 +907,9 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     // substitute plan. Otherwise, use eh_frame.
     if (m_sym_ctx_valid) {
       lldb::PlatformSP platform = process->GetTarget().GetPlatform();
+      const ArchSpec arch = process->GetTarget().GetArchitecture();
       if (auto unwind_plan_sp = platform->GetTrapHandlerUnwindPlan(
-              process->GetTarget().GetArchitecture().GetTriple(),
-              GetSymbolOrFunctionName(m_sym_ctx)))
+              arch, GetSymbolOrFunctionName(m_sym_ctx)))
         return unwind_plan_sp;
     }
 

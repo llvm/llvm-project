@@ -35,8 +35,8 @@ add_llvm_component_library(LLVMCodeGen
   BasicBlockSections.cpp
   BasicBlockPathCloning.cpp
   BasicBlockSectionsProfileReader.cpp
+  BasicBlockMatchingAndInference.cpp
   CalcSpillWeights.cpp
-  CallBrPrepare.cpp
   CallingConvLower.cpp
   CFGuardLongjmp.cpp
   CFIFixup.cpp
@@ -56,8 +56,7 @@ add_llvm_component_library(LLVMCodeGen
   EdgeBundles.cpp
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
-  ExpandLargeDivRem.cpp
-  ExpandFp.cpp
+  ExpandIRInsts.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
@@ -78,7 +77,9 @@ add_llvm_component_library(LLVMCodeGen
   ImplicitNullChecks.cpp
   IndirectBrExpandPass.cpp
   InitUndef.cpp
+  InlineAsmPrepare.cpp
   InlineSpiller.cpp
+  InsertCodePrefetch.cpp
   InterferenceCache.cpp
   InterleavedAccessPass.cpp
   InterleavedLoadCombinePass.cpp
@@ -196,6 +197,7 @@ add_llvm_component_library(LLVMCodeGen
   RegisterPressure.cpp
   RegisterScavenging.cpp
   GCEmptyBasicBlocks.cpp
+  Rematerializer.cpp
   RemoveRedundantDebugValues.cpp
   RenameIndependentSubregs.cpp
   MachineStableHash.cpp
@@ -265,6 +267,9 @@ add_llvm_component_library(LLVMCodeGen
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
+
+  PRECOMPILE_HEADERS
+  [["llvm/CodeGen/pch.h"]]
 
   LINK_LIBS ${LLVM_PTHREAD_LIB} ${MLLinkDeps}
 

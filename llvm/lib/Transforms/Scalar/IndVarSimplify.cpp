@@ -1031,8 +1031,15 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
       SE->getTypeSizeInBits(AR->getType()) >
       SE->getTypeSizeInBits(ExitCount->getType())) {
     const SCEV *IVInit = AR->getStart();
-    if (!isa<SCEVConstant>(IVInit) || !isa<SCEVConstant>(ExitCount))
-      AR = cast<SCEVAddRecExpr>(SE->getTruncateExpr(AR, ExitCount->getType()));
+    if (!isa<SCEVConstant>(IVInit) || !isa<SCEVConstant>(ExitCount)) {
+      const SCEV *TruncExpr = SE->getTruncateExpr(AR, ExitCount->getType());
+
+      // The following bailout is necessary due to the interaction with
+      // the depth limit in SCEV analysis.
+      if (!isa<SCEVAddRecExpr>(TruncExpr))
+        return nullptr;
+      AR = cast<SCEVAddRecExpr>(TruncExpr);
+    }
   }
 
   const SCEVAddRecExpr *ARBase = UsePostInc ? AR->getPostIncExpr(*SE) : AR;
@@ -1079,6 +1086,15 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
     }
   }
 
+  Value *ExitCnt =
+      genLoopLimit(IndVar, ExitingBB, ExitCount, UsePostInc, L, Rewriter, SE);
+  if (!ExitCnt)
+    return false;
+
+  assert(ExitCnt->getType()->isPointerTy() ==
+             IndVar->getType()->isPointerTy() &&
+         "genLoopLimit missed a cast");
+
   // It may be necessary to drop nowrap flags on the incrementing instruction
   // if either LFTR moves from a pre-inc check to a post-inc check (in which
   // case the increment might have previously been poison on the last iteration
@@ -1098,12 +1114,6 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
     if (BO->hasNoSignedWrap())
       BO->setHasNoSignedWrap(AR->hasNoSignedWrap());
   }
-
-  Value *ExitCnt = genLoopLimit(
-      IndVar, ExitingBB, ExitCount, UsePostInc, L, Rewriter, SE);
-  assert(ExitCnt->getType()->isPointerTy() ==
-             IndVar->getType()->isPointerTy() &&
-         "genLoopLimit missed a cast");
 
   // Insert a new icmp_ne or icmp_eq instruction before the branch.
   BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
@@ -1985,7 +1995,7 @@ bool IndVarSimplify::run(Loop *L) {
   Changed |= rewriteNonIntegerIVs(L);
 
   // Create a rewriter object which we'll use to transform the code with.
-  SCEVExpander Rewriter(*SE, DL, "indvars");
+  SCEVExpander Rewriter(*SE, "indvars");
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif

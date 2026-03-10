@@ -486,8 +486,8 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_nxv8bf16(<vscale x 8 x bfloat> %a, <
 define <vscale x 8 x bfloat> @fadd_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fadd_sel_fmul_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h
@@ -522,8 +522,8 @@ define <vscale x 8 x bfloat> @fadd_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %
 define <vscale x 8 x bfloat> @fsub_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fsub_sel_fmul_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h
@@ -636,8 +636,8 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nxv8bf16(<vscale x 8 x bfloa
 define <vscale x 8 x bfloat> @fadd_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fadd_sel_fmul_negzero_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h
@@ -673,8 +673,8 @@ define <vscale x 8 x bfloat> @fadd_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
 define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fsub_sel_fmul_negzero_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h
@@ -705,6 +705,26 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
   %sel = select <vscale x 8 x i1> %mask, <vscale x 8 x bfloat> %fmul, <vscale x 8 x bfloat> %nz
   %fsub = fsub nsz contract <vscale x 8 x bfloat> %a, %sel
   ret <vscale x 8 x bfloat> %fsub
+}
+
+define <vscale x 4 x float> @partial_reduce_to_nxv4f32(<vscale x 4 x float> %acc, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; SVE-LABEL: partial_reduce_to_nxv4f32:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    bfmlalb z0.s, z1.h, z2.h
+; SVE-NEXT:    bfmlalt z0.s, z1.h, z2.h
+; SVE-NEXT:    ret
+;
+; SVE-B16B16-LABEL: partial_reduce_to_nxv4f32:
+; SVE-B16B16:       // %bb.0: // %entry
+; SVE-B16B16-NEXT:    bfmlalb z0.s, z1.h, z2.h
+; SVE-B16B16-NEXT:    bfmlalt z0.s, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+entry:
+  %a.wide = fpext <vscale x 8 x bfloat> %a to <vscale x 8 x float>
+  %b.wide = fpext <vscale x 8 x bfloat> %b to <vscale x 8 x float>
+  %mult = fmul <vscale x 8 x float> %a.wide, %b.wide
+  %partial.reduce = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mult)
+  ret <vscale x 4 x float> %partial.reduce
 }
 
 declare <vscale x 8 x bfloat> @llvm.fma.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)

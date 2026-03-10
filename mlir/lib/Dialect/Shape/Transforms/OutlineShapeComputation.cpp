@@ -290,7 +290,7 @@ void OutlineShapeComputationPass::getClusterFromValue(
       cluster.insert(op);
       for (Value inp : op->getOperands()) {
         Operation *inpDefOp = inp.getDefiningOp();
-        if (nullptr != inpDefOp && visited.insert(inpDefOp).second)
+        if (inpDefOp != nullptr && visited.insert(inpDefOp).second)
           queue.push(inpDefOp);
       }
     }

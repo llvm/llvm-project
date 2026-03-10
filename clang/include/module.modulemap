@@ -8,6 +8,7 @@ module Clang_Analysis {
   umbrella "clang/Analysis"
 
   textual header "clang/Analysis/Analyses/ThreadSafetyOps.def"
+  textual header "clang/Analysis/Scalable/Model/PrivateFieldNames.def"
 
   module * { export * }
 
@@ -43,7 +44,6 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsAArch64.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
-  textual header "clang/Basic/BuiltinsAMDGPU.def"
   textual header "clang/Basic/BuiltinsARM.def"
   textual header "clang/Basic/BuiltinsHexagonMapCustomDep.def"
   textual header "clang/Basic/BuiltinsLoongArchBase.def"

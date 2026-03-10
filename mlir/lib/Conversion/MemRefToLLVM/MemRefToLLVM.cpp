@@ -741,7 +741,12 @@ struct GenericAtomicRMWOpLowering
       Operation *clone = rewriter.clone(nestedOp, mapping);
       mapping.map(nestedOp.getResults(), clone->getResults());
     }
-    Value result = mapping.lookup(entryBlock.getTerminator()->getOperand(0));
+
+    Value result =
+        mapping.lookupOrNull(entryBlock.getTerminator()->getOperand(0));
+    if (!result) {
+      return atomicOp.emitError("result not defined in region");
+    }
 
     // Prepare the epilog of the loop block.
     // Append the cmpxchg op to the end of the loop block.

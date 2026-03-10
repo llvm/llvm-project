@@ -50,6 +50,7 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // hlsl_private
     0,   // hlsl_device
     0,   // hlsl_input
+    0,   // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -456,12 +457,7 @@ public:
     LongDoubleWidth = 96;
     LongDoubleAlign = 32;
     SuitableAlign = 128;
-    resetDataLayout(Triple.isOSBinFormatMachO()
-                        ? "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
-                          "128-f64:32:64-f80:32-n8:16:32-S128"
-                        : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
-                          "128-f64:32:64-f80:32-n8:16:32-S128",
-                    Triple.isOSBinFormatMachO() ? "_" : "");
+    resetDataLayout();
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -565,9 +561,7 @@ public:
       UseSignedCharForObjCBool = false;
     SizeType = UnsignedLong;
     IntPtrType = SignedLong;
-    resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-"
-                    "f64:32:64-f80:128-n8:16:32-S128",
-                    "_");
+    resetDataLayout();
     HasAlignMac68kSupport = true;
   }
 
@@ -597,7 +591,9 @@ public:
     Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-";
     Layout += IsMSVC ? "f80:128" : "f80:32";
     Layout += "-n8:16:32-a:0:32-S32";
-    resetDataLayout(Layout, IsWinCOFF ? "_" : "");
+    if (IsWinCOFF)
+      UserLabelPrefix = "_";
+    resetDataLayout();
   }
 };
 
@@ -647,9 +643,8 @@ public:
     this->WIntType = TargetInfo::UnsignedInt;
     this->UseMicrosoftManglingForC = true;
     DoubleAlign = LongLongAlign = 64;
-    resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
-                    "i128:128-f80:32-n8:16:32-a:0:32-S32",
-                    "_");
+    UserLabelPrefix = "_";
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -687,8 +682,7 @@ public:
     LongDoubleWidth = 64;
     DefaultAlignForAttributeAligned = 32;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-"
-                    "f64:32-f128:32-n8:16:32-a:0:32-S32");
+    resetDataLayout();
     WIntType = UnsignedInt;
   }
 
@@ -731,8 +725,6 @@ public:
   X86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86TargetInfo(Triple, Opts) {
     const bool IsX32 = getTriple().isX32();
-    bool IsWinCOFF =
-        getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
     LongWidth = LongAlign = PointerWidth = PointerAlign = IsX32 ? 32 : 64;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
@@ -746,13 +738,7 @@ public:
     Int64Type = IsX32 ? SignedLongLong : SignedLong;
     RegParmMax = 6;
 
-    // Pointers are 32-bit in x32.
-    resetDataLayout(IsX32 ? "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-i128:128-f80:128-n8:16:32:64-S128"
-                    : IsWinCOFF ? "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:"
-                                  "64-i128:128-f80:128-n8:16:32:64-S128"
-                                : "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:"
-                                  "64-i128:128-f80:128-n8:16:32:64-S128");
+    resetDataLayout();
 
     // Use fpret only for long double.
     RealTypeUsesObjCFPRetMask = (unsigned)FloatModeKind::LongDouble;
@@ -821,6 +807,16 @@ public:
       return true;
     }
 
+    // -ffixed-r8 through -ffixed-r31 are lowered to reserve-r8 through
+    // reserve-r31 target features, so canonicalize subregister spellings
+    // like r15d/r15w/r15b back to the corresponding 64-bit register first.
+    StringRef Reg64 = RegName;
+    if (Reg64.back() == 'd' || Reg64.back() == 'w' || Reg64.back() == 'b') {
+      Reg64 = Reg64.substr(0, Reg64.size() - 1);
+    }
+    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str()))
+      return true;
+
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
@@ -870,8 +866,7 @@ public:
     IntPtrType = SignedLongLong;
     WCharType = UnsignedShort;
     WIntType = UnsignedShort;
-    this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
-                          "i64:64-i128:128-f80:128-n8:16:32:64-S128");
+    this->resetDataLayout();
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -1036,9 +1031,7 @@ public:
     llvm::Triple T = llvm::Triple(Triple);
     if (T.isiOS())
       UseSignedCharForObjCBool = false;
-    resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
-                    "f80:128-n8:16:32:64-S128",
-                    "_");
+    resetDataLayout();
   }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,

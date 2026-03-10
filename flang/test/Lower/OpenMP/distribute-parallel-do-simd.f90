@@ -11,7 +11,7 @@ subroutine distribute_parallel_do_simd_num_threads()
   ! CHECK:      omp.parallel num_threads({{.*}}) {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd private({{.*}}) {
+  ! CHECK-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd num_threads(10)
   do index_ = 1, 10
@@ -28,7 +28,7 @@ subroutine distribute_parallel_do_simd_dist_schedule()
   ! CHECK:      omp.parallel  {
   ! CHECK:      omp.distribute dist_schedule_static dist_schedule_chunk_size({{.*}}) {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd private({{.*}}) {
+  ! CHECK-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd dist_schedule(static, 4)
   do index_ = 1, 10
@@ -45,7 +45,7 @@ subroutine distribute_parallel_do_simd_schedule()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop schedule(static = {{.*}}) {
-  ! CHECK-NEXT: omp.simd private({{.*}}) {
+  ! CHECK-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd schedule(static, 4)
   do index_ = 1, 10
@@ -62,7 +62,7 @@ subroutine distribute_parallel_do_simd_simdlen()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd simdlen(4) private({{.*}}) {
+  ! CHECK-NEXT: omp.simd linear({{.*}}) simdlen(4) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd simdlen(4)
   do index_ = 1, 10
@@ -86,7 +86,7 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^,]+]],
+  ! CHECK-NEXT: omp.simd linear(%{{.*}}) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^,]+]],
   ! CHECK-SAME:                  @{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:.*]] : !fir.ref<i64>, !fir.ref<i32>) {
   ! CHECK-NEXT: omp.loop_nest
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]

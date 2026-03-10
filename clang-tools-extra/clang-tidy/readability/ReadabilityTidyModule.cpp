@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AmbiguousSmartptrResetCallCheck.h"
 #include "AvoidConstParamsInDeclsCheck.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
@@ -30,6 +29,7 @@
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolConversionCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
+#include "InconsistentIfElseBracesCheck.h"
 #include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MakeMemberFunctionConstCheck.h"
@@ -60,6 +60,7 @@
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
 #include "StringCompareCheck.h"
 #include "SuspiciousCallArgumentCheck.h"
+#include "TrailingCommaCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
@@ -68,6 +69,7 @@
 
 namespace clang::tidy {
 namespace readability {
+namespace {
 
 class ReadabilityModule : public ClangTidyModule {
 public:
@@ -112,6 +114,8 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
+    CheckFactories.registerCheck<InconsistentIfElseBracesCheck>(
+        "readability-inconsistent-ifelse-braces");
     CheckFactories.registerCheck<MathMissingParenthesesCheck>(
         "readability-math-missing-parentheses");
     CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
@@ -174,6 +178,8 @@ public:
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<SuspiciousCallArgumentCheck>(
         "readability-suspicious-call-argument");
+    CheckFactories.registerCheck<TrailingCommaCheck>(
+        "readability-trailing-comma");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
         "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(
@@ -186,6 +192,8 @@ public:
         "readability-use-std-min-max");
   }
 };
+
+} // namespace
 
 // Register the ReadabilityModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<ReadabilityModule>
