@@ -969,11 +969,12 @@ void CIRGenModule::emitDeferredVTables() {
   // that this entire operation doesn't modify it.
   size_t savedSize = deferredVTables.size();
 #endif
-  for (const CXXRecordDecl *rd : deferredVTables)
+  for (const CXXRecordDecl *rd : deferredVTables) {
     if (shouldEmitVTableAtEndOfTranslationUnit(*this, rd))
       vtables.generateClassData(rd);
     else if (shouldOpportunisticallyEmitVTables())
       opportunisticVTables.push_back(rd);
+  }
 
   assert(savedSize == deferredVTables.size() &&
          "deferred extra vtables during vtable emission?");

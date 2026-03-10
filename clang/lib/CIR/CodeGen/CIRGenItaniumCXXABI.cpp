@@ -2601,8 +2601,7 @@ bool CIRGenItaniumCXXABI::hasAnyUnusedVirtualInlineFunction(
 
     StringRef name = cgm.getMangledName(
         vtableComponent.getGlobalDecl(/*HasVectorDeletingDtors=*/false));
-    auto entry = dyn_cast_or_null<cir::GlobalOp>(
-        mlir::SymbolTable::lookupSymbolIn(cgm.getModule(), name));
+    auto entry = cgm.getGlobalValue(name);
     // This checks if virtual inline function has already been emitted.
     // Note that it is possible that this inline function would be emitted
     // after trying to emit vtable speculatively. Because of this we do
@@ -2736,6 +2735,7 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
         cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getItaniumVTableContext().isRelativeLayout()) {
+      assert(!cir::MissingFeatures::vtableRelativeLayout());
       cgf.cgm.errorNYI("virtual adjustment for relative layout vtables");
     } else {
       offset = builder.createAlignedLoad(loc, cgf.ptrDiffTy, offsetPtr,
