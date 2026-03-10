@@ -1,5 +1,6 @@
 // Tests for ssaf-linker input validation requiring file permission support.
 // UNSUPPORTED: system-windows
+// REQUIRES: stability
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
