@@ -44,6 +44,7 @@ add_entrypoint_object(
     ../stdin.h
   DEPENDS
     libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
 )
 
 add_entrypoint_object(
@@ -54,6 +55,7 @@ add_entrypoint_object(
     ../stdout.h
   DEPENDS
     libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
 )
 
 add_entrypoint_object(
@@ -64,4 +66,5 @@ add_entrypoint_object(
     ../stderr.h
   DEPENDS
     libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
 )
