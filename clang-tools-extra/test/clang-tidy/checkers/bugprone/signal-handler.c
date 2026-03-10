@@ -3,9 +3,9 @@
 // RUN: %check_clang_tidy -std=c23-or-later %s bugprone-signal-handler %t \
 // RUN:   -- -- -isystem %S/../Inputs/Headers
 
-#include "signal.h"
-#include "stdlib.h"
-#include "stdio.h"
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "system-other.h"
 
 // The function should be classified as standard function even if there is
