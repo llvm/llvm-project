@@ -1375,10 +1375,7 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
     // is used. This is needed to calculate the size of the function.
     MCSymbol *FnEndSym = createTempSymbol("func_end");
     OutStreamer->emitLabel(FnEndSym);
-    calculatePPA1(FnEndSym);
-
-    CurrentFnPPA1Sym = nullptr;
-    CurrentFnEPMarkerSym = nullptr;
+    DeferredPPA1.back().FnEnd = FnEndSym;
   }
 }
 
@@ -1590,7 +1587,7 @@ void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
   OutStreamer->emitAbsoluteSymbolDiff(Info.EPMarker, Info.PPA1, 4);
 }
 
-void SystemZAsmPrinter::calculatePPA1(MCSymbol *FnEndSym) {
+void SystemZAsmPrinter::calculatePPA1(MCSymbol *CurrentFnPPA1Sym, MCSymbol *CurrentFnEPMarkerSym) {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
 
   PPA1Info Info;
@@ -1692,7 +1689,7 @@ void SystemZAsmPrinter::calculatePPA1(MCSymbol *FnEndSym) {
     Info.Name = MF->getFunction().getName();
   Info.PPA1 = CurrentFnPPA1Sym;
   Info.EPMarker = CurrentFnEPMarkerSym;
-  Info.FnEnd = FnEndSym;
+  Info.FnEnd = nullptr; // Filled later.
   Info.PersonalityRoutine = PersonalityRoutine;
   Info.GCCEH = GCCEH;
   Info.CallFrameSize = MFFrame.getMaxCallFrameSize();
@@ -1902,10 +1899,11 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
                       ? Twine(MF->getFunction().getName()).concat("_").str()
                       : "");
 
-    CurrentFnEPMarkerSym =
+    MCSymbol *CurrentFnEPMarkerSym =
         OutContext.createTempSymbol(Twine("EPM_").concat(N).str(), true);
-    CurrentFnPPA1Sym =
+    MCSymbol *CurrentFnPPA1Sym =
         OutContext.createTempSymbol(Twine("PPA1_").concat(N).str(), true);
+    calculatePPA1(CurrentFnPPA1Sym, CurrentFnEPMarkerSym);
 
     // EntryPoint Marker
     const MachineFrameInfo &MFFrame = MF->getFrameInfo();

@@ -29,8 +29,6 @@ public:
   static char ID;
 
 private:
-  MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
-  MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
   MCSymbol *PPA2Sym;
 
   SystemZTargetStreamer *getTargetStreamer() {
@@ -120,7 +118,8 @@ private:
   };
   SmallVector<PPA1Info, 0> DeferredPPA1;
 
-  void calculatePPA1(MCSymbol *FnEndSym);
+  void calculatePPA1(MCSymbol *CurrentFnPPA1Sym,
+                     MCSymbol *CurrentFnEPMarkerSym);
   void emitPPA1(PPA1Info &Info);
   void emitPPA2(Module &M);
   void emitADASection();
