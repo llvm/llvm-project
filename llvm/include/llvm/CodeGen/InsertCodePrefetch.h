@@ -1,4 +1,4 @@
-//===- BasicBlockSectionUtils.h - Utilities for basic block sections     --===//
+//===- InsertCodePrefetch.h - Common utilities for code prefetching      --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,11 @@
 
 namespace llvm {
 
+// Returns the symbol name for a prefetch target at function `FunctionName`,
+// basic block `BBID` and callsite index `CallsiteIndex`.
 SmallString<128> getPrefetchTargetSymbolName(StringRef FunctionName,
                                              const UniqueBBID &BBID,
-                                             unsigned SubblockIndex);
+                                             unsigned CallsiteIndex);
 
 } // end namespace llvm
 

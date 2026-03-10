@@ -104,8 +104,8 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
 SmallVector<PrefetchHint>
 BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
     StringRef FuncName) const {
-  auto R = ProgramOptimizationProfile.find(getAliasName(FuncName));
-  return R != ProgramOptimizationProfile.end() ? R->second.PrefetchHints
+  StringMap<FunctionOptimizationProfile>::const_iterator It = ProgramOptimizationProfile.find(getAliasName(FuncName));
+  return It != ProgramOptimizationProfile.end() ? It->second.PrefetchHints
                                                : SmallVector<PrefetchHint>();
 }
 
@@ -178,7 +178,7 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // This is the beginning of the basic block for `i = 0` and immediately after
 // the `i`-th call for every `i > 0`.
 //
-// A prefetch int is specified by a pair "site target", where site is
+// A prefetch hint is specified by a pair "site target", where site is
 // specified as a pair "<bbid>,<callsite_index>" similar to prefetch
 // targets, and target is specified as a triple
 // "<function_name>,<bbid>,<callsite_index>".
@@ -396,7 +396,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     }
 
     case 'i': { // Prefetch hint specifier.
-      // Skip the profile when we the profile iterator (FI) refers to the
+      // Skip the profile when the profile iterator (FI) refers to the
       // past-the-end element.
       if (FI == ProgramOptimizationProfile.end())
         continue;
