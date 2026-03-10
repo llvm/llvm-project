@@ -312,6 +312,11 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`readability-identifier-length
+  <clang-tidy/checks/readability/readability-identifier-length>` check by adding
+  a new option to silence warnings for short-lived variables, based on distance
+  between declaration and last use.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in dependent expressions (e.g. inside generic
@@ -329,11 +334,6 @@ Changes in existing checks
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
-
-- Improve :doc:`readability-identifier-length
-  <clang-tidy/checks/readability/readability-identifier-length>` check by adding
-  a new option to silence warnings for short-lived variables, based on distance
-  between declaration and last use.
 
 Removed checks
 ^^^^^^^^^^^^^^
