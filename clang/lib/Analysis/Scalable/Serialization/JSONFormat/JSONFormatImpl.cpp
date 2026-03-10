@@ -16,7 +16,7 @@ volatile int SSAFJSONFormatAnchorSource = 0;
 LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
 
 static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>
-    RegisterJSONFormat("JSON", "JSON serialization format");
+    RegisterJSONFormat("json", "JSON serialization format");
 
 namespace clang::ssaf {
 
