@@ -218,7 +218,6 @@ endfunction()
 
 set(OCLC_DEFAULT_LIBS
   oclc_correctly_rounded_sqrt_off
-  oclc_daz_opt_off
   oclc_finite_only_off
   oclc_isa_version_803
   oclc_unsafe_math_off)
