@@ -233,6 +233,12 @@ bool NVPTXInstrInfo::isFloatSetp(const MachineInstr &MI) const {
     return false;
 
   switch (MI.getOpcode()) {
+  // TODO: Because these generate 2 predicates ISel doesn't duplicate the
+  // computation but rather directly lowers it to `not.pred` if we need the
+  // inverse. This means for patterns like these tests we would want to
+  // speculatively invert the `not.pred` instruction rather than the comparison.
+  // case NVPTX::SETP_bf16x2rr:
+  // case NVPTX::SETP_f16x2rr:
   case NVPTX::SETP_bf16rr:
   case NVPTX::SETP_f16rr:
   case NVPTX::SETP_f32rr:
@@ -249,7 +255,6 @@ bool NVPTXInstrInfo::isFloatSetp(const MachineInstr &MI) const {
 
 bool NVPTXInstrInfo::invertCompareInstr(MachineInstr &MI) const {
   if (isIntegerSetp(MI)) {
-    // Comparison mode is in operand 3 (includes flags in upper bits)
     MachineOperand &ModeOp = MI.getOperand(3);
     if (!ModeOp.isImm())
       return false;
@@ -363,6 +368,8 @@ bool NVPTXInstrInfo::invertPredicateWithUsers(MachineInstr &MI,
   if (!invertCompareInstr(MI))
     return false;
 
+  // For now must all be invertible conditional branches.
+  // TODO: support other users such as selects.
   bool AllInverted = true;
   for (MachineInstr &UseMI :
        MRI.use_nodbg_instructions(MI.getOperand(0).getReg())) {
