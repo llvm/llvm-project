@@ -14582,7 +14582,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     Result.reserve(NumElements);
 
     for (unsigned I = 0; I < NumElements; ++I) {
-	  Result.push_back(APValue(0)); 
+	  Result.push_back(APValue(APSInt(APInt(32, 0))));
     }
     
 	return Success(APValue(Result.data(), Result.size()), E);
