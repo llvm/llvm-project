@@ -397,9 +397,7 @@ Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
 
   InnerImage.Image = std::move(Img);
 
-  SmallVector<OffloadBinary::OffloadingImage> Images;
-  Images.push_back(std::move(InnerImage));
-  SmallString<0> InnerBinaryData = OffloadBinary::write(Images);
+  SmallString<0> InnerBinaryData = OffloadBinary::write(InnerImage);
 
   Img = MemoryBuffer::getMemBufferCopy(InnerBinaryData);
   return Error::success();
