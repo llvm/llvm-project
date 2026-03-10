@@ -490,13 +490,6 @@ def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
 def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
                   AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
 
-def FeatureStdExtZbc
-    : RISCVExtension<1, 0, "Carry-Less Multiplication">,
-      RISCVExtensionBitmask<0, 29>;
-def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
-                   AssemblerPredicate<(all_of FeatureStdExtZbc),
-                                      "'Zbc' (Carry-Less Multiplication)">;
-
 def FeatureStdExtZbs
     : RISCVExtension<1, 0, "Single-Bit Instructions">,
       RISCVExtensionBitmask<0, 33>;
@@ -544,6 +537,14 @@ def HasStdExtZbkc
     : Predicate<"Subtarget->hasStdExtZbkc()">,
       AssemblerPredicate<(all_of FeatureStdExtZbkc),
           "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+
+def FeatureStdExtZbc
+    : RISCVExtension<1, 0, "Carry-Less Multiplication",
+                     [FeatureStdExtZbkc]>,
+      RISCVExtensionBitmask<0, 29>;
+def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
+                   AssemblerPredicate<(all_of FeatureStdExtZbc),
+                                      "'Zbc' (Carry-Less Multiplication)">;
 
 def HasStdExtZbcOrZbkc
     : Predicate<"Subtarget->hasStdExtZbc() || Subtarget->hasStdExtZbkc()">,
@@ -776,6 +777,8 @@ def FeatureStdExtZvbc32e
                                  "Vector Carryless Multiplication with 32-bits elements",
                                  [FeatureStdExtZve32x]>;
 
+def HasStdExtZvbc32e : Predicate<"Subtarget->hasStdExtZvbc32e()">;
+
 def HasStdExtZvbcOrZvbc32e : Predicate<"Subtarget->hasStdExtZvbc() || Subtarget->hasStdExtZvbc32e()">,
                              AssemblerPredicate<(any_of FeatureStdExtZvbc, FeatureStdExtZvbc32e),
                              "'Zvbc' or 'Zvbc32e' (Vector Carryless Multiplication)">;
@@ -877,12 +880,12 @@ def FeatureStdExtZvksg
 
 // Vector quad widening dot product
 
-def FeatureStdExtZvqdotq
-    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
+def FeatureStdExtZvdot4a8i
+    : RISCVExperimentalExtension<0, 1, "Vector 4-element Dot Product of packed 8-bit Integers",
                                  [FeatureStdExtZve32x]>;
-def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
-                       AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
-                           "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
+def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
+                         AssemblerPredicate<(all_of FeatureStdExtZvdot4a8i),
+                         "'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)">;
 
 // Vector instruction predicates
 
@@ -1113,7 +1116,9 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 // Packed SIMD Extensions
 def FeatureStdExtP
     : RISCVExperimentalExtension<0, 19,
-                                 "'Base P' (Packed SIMD)">;
+                                 "'Base P' (Packed SIMD)",
+                                 [FeatureStdExtZmmul, FeatureStdExtZba,
+                                  FeatureStdExtZbb, FeatureStdExtZicsr]>;
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
                                     "'Base P' (Packed SIMD)">;

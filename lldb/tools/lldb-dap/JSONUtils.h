@@ -193,10 +193,10 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id);
 ///     A "runInTerminal" JSON object that follows the specification outlined by
 ///     Microsoft.
 llvm::json::Object CreateRunInTerminalReverseRequest(
-    llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
+    llvm::StringRef program, const std::vector<protocol::String> &args,
+    const llvm::StringMap<protocol::String> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid,
-    const std::vector<std::optional<std::string>> &stdio, bool external);
+    const std::vector<std::optional<protocol::String>> &stdio, bool external);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///

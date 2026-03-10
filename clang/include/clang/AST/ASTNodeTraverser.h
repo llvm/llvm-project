@@ -447,6 +447,9 @@ public:
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
   }
+  void VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
+    Visit(T->getUnderlyingType());
+  }
   void VisitHLSLAttributedResourceType(const HLSLAttributedResourceType *T) {
     QualType Contained = T->getContainedType();
     if (!Contained.isNull())
@@ -836,8 +839,10 @@ public:
 
   void VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *Node) {
     Visit(Node->getOriginalStmt());
-    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+    if (Traversal != TK_IgnoreUnlessSpelledInSource) {
+      Visit(Node->getKernelLaunchStmt());
       Visit(Node->getOutlinedFunctionDecl());
+    }
   }
 
   void VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {

@@ -502,7 +502,7 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateRecord(const CTFRecord &ctf_record) {
   const clang::TagTypeKind tag_kind = TranslateRecordKind(ctf_record.kind);
   CompilerType record_type = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), eAccessPublic, ctf_record.name.data(),
+      nullptr, OptionalClangModuleID(), ctf_record.name.data(),
       llvm::to_underlying(tag_kind), eLanguageTypeC);
   m_compiler_types[record_type.GetOpaqueQualType()] = &ctf_record;
   Declaration decl;
@@ -545,7 +545,7 @@ bool SymbolFileCTF::CompleteType(CompilerType &compiler_type) {
         llvm::expectedToOptional(field_type->GetByteSize(nullptr)).value_or(0);
     TypeSystemClang::AddFieldToRecordType(compiler_type, field.name,
                                           field_type->GetFullCompilerType(),
-                                          eAccessPublic, field_size);
+                                          field_size);
   }
   m_ast->CompleteTagDeclarationDefinition(compiler_type);
 
@@ -560,7 +560,7 @@ bool SymbolFileCTF::CompleteType(CompilerType &compiler_type) {
 llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateForward(const CTFForward &ctf_forward) {
   CompilerType forward_compiler_type = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), eAccessPublic, ctf_forward.name,
+      nullptr, OptionalClangModuleID(), ctf_forward.name,
       llvm::to_underlying(clang::TagTypeKind::Struct), eLanguageTypeC);
   Declaration decl;
   return MakeType(ctf_forward.uid, ConstString(ctf_forward.name), 0, nullptr,
@@ -865,7 +865,6 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
   const ArchSpec &architecture = module_sp->GetArchitecture();
   ByteOrder byte_order = architecture.GetByteOrder();
   uint32_t address_size = architecture.GetAddressByteSize();
-  uint32_t byte_size = architecture.GetDataByteSize();
 
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
   stream.PutHex8(llvm::dwarf::DW_OP_addr);
@@ -873,8 +872,7 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
 
   DataBufferSP buffer =
       std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
-  lldb_private::DataExtractor extractor(buffer, byte_order, address_size,
-                                        byte_size);
+  lldb_private::DataExtractor extractor(buffer, byte_order, address_size);
   DWARFExpression result(extractor);
   result.SetRegisterKind(eRegisterKindDWARF);
 

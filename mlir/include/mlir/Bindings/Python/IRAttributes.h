@@ -424,6 +424,13 @@ public:
 
   static PyType_Slot slots[];
 
+protected:
+  /// Registers get/get_splat factory methods with the concrete return
+  /// type in the nb::sig. Subclasses call this from their bindDerived
+  /// to override the return type in generated stubs.
+  template <typename ClassT>
+  static void bindFactoryMethods(ClassT &c, const char *pyClassName);
+
 private:
   static int bf_getbuffer(PyObject *exporter, Py_buffer *view, int flags);
   static void bf_releasebuffer(PyObject *, Py_buffer *buffer);
@@ -584,6 +591,16 @@ public:
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirStridedLayoutAttrGetTypeID;
   static inline const MlirStringRef name = mlirStridedLayoutAttrGetName();
+
+  static void bindDerived(ClassTy &c);
+};
+
+class MLIR_PYTHON_API_EXPORTED PyDynamicAttribute
+    : public PyConcreteAttribute<PyDynamicAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADynamicAttr;
+  static constexpr const char *pyClassName = "DynamicAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
 
   static void bindDerived(ClassTy &c);
 };

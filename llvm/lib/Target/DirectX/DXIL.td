@@ -1062,6 +1062,15 @@ def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def WaveActiveAllEqual : DXILOp<115, waveActiveAllEqual> {
+  let Doc = "returns true for each scalar element of the expression if the "
+            "expression is equal in all of the active lanes in the current wave";
+  let intrinsics = [IntrinSelect<int_dx_wave_all_equal>];
+  let arguments = [OverloadTy];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def WaveActiveBallot : DXILOp<116, waveActiveBallot> {
   let Doc = "returns uint4 containing a bitmask of the evaluation of the boolean expression for all active lanes in the current wave.";
   let intrinsics = [IntrinSelect<int_dx_wave_ballot>];
@@ -1091,6 +1100,16 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
     IntrinSelect<int_dx_wave_reduce_usum,
                  [
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
+    IntrinSelect<int_dx_wave_product,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_uproduct,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
     IntrinSelect<int_dx_wave_reduce_max,

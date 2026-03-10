@@ -359,10 +359,10 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
-    llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
+    llvm::StringRef program, const std::vector<protocol::String> &args,
+    const llvm::StringMap<protocol::String> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid,
-    const std::vector<std::optional<std::string>> &stdio, bool external) {
+    const std::vector<std::optional<protocol::String>> &stdio, bool external) {
   llvm::json::Object run_in_terminal_args;
   if (external) {
     // This indicates the IDE to open an external terminal window.
@@ -385,10 +385,10 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
 
     std::stringstream ss;
     std::string_view delimiter;
-    for (const std::optional<std::string> &file : stdio) {
+    for (const std::optional<protocol::String> &file : stdio) {
       ss << std::exchange(delimiter, ":");
       if (file)
-        ss << *file;
+        ss << file->str();
     }
     req_args.push_back(ss.str());
   }
