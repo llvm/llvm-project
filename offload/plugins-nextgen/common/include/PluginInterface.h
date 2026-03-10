@@ -1367,6 +1367,24 @@ struct GenericPluginTy {
   virtual Expected<bool> isELFCompatible(uint32_t DeviceID,
                                          StringRef Image) const = 0;
 
+  /// Indicate if an image is compatible with the plugin. This is called if
+  /// the image is not recognized as compatible by the common layer. This gives
+  /// the plugin a chance to inspect the image and decide if it is compatible.
+  virtual Expected<bool> isImageCompatible(StringRef Image) const {
+    return false;
+  }
+
+  /// Indicate if an image is compatible with the plugin devices. This is
+  /// called if the image is not recognized as compatible by the common layer.
+  /// This gives the plugin a chance to inspect the image and decide if it is
+  /// compatible. Notice that this function may be called before actually
+  /// initializing the devices. So we could not move this function into
+  /// GenericDeviceTy.
+  virtual Expected<bool> isImageCompatible(uint32_t DeviceID,
+                                           StringRef Image) const {
+    return isImageCompatible(Image);
+  }
+
   virtual Error flushQueueImpl(omp_interop_val_t *Interop) {
     return Plugin::success();
   }
