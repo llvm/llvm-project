@@ -679,7 +679,7 @@ public:
   }
 
   template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI deque(_InputIter __f, _InputIter __l);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 deque(_InputIter __f, _InputIter __l);
   template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 deque(_InputIter __f, _InputIter __l, const allocator_type& __a);
 
@@ -703,7 +703,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
   deque(const deque& __c, const __type_identity_t<allocator_type>& __a);
 
-  _LIBCPP_HIDE_FROM_ABI deque& operator=(const deque& __c);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 deque& operator=(const deque& __c);
 
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 deque(initializer_list<value_type> __il);
@@ -718,7 +718,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
   deque(deque&& __c) noexcept(is_nothrow_move_constructible<allocator_type>::value);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 deque(deque&& __c, const __type_identity_t<allocator_type>& __a);
-  _LIBCPP_HIDE_FROM_ABI deque& operator=(deque&& __c) noexcept(
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 deque& operator=(deque&& __c) noexcept(
       (__alloc_traits::propagate_on_container_move_assignment::value &&
        is_nothrow_move_assignable<allocator_type>::value) ||
       __alloc_traits::is_always_equal::value);
@@ -1810,6 +1810,7 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args) {
   return *begin();
 #    endif
 }
+#  endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
@@ -1860,8 +1861,6 @@ deque<_Tp, _Allocator>::__emplace(const_iterator __p, _Args&&... __args) {
   }
   return begin() + __pos;
 }
-
-#  endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 typename deque<_Tp, _Allocator>::iterator
