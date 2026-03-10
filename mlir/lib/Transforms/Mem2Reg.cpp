@@ -255,7 +255,8 @@ private:
   void promoteInRegion(Region *region, Value reachingDef);
 
   /// Removes the blocking uses of the slot within the given region, in
-  /// topological order.
+  /// reverse topological order. If the content of the region was moved out
+  /// to a different region, the new region will be processed instead.
   void removeBlockingUses(Region *region);
 
   /// Links merge point block arguments to the terminators targeting the merge
