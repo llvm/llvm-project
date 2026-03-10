@@ -1222,9 +1222,23 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 
   if (e->isArrayForm()) {
-    assert(!cir::MissingFeatures::deleteArray());
-    cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
-    return;
+    // To handle this for cases that require array cookie, we will need to
+    // add target-specific handling during the lowering of delete_array in
+    // CXXABILowering, but we can emit a better diagnostic here.
+    if (e->doesUsualArrayDeleteWantSize() || deleteTy.isDestructedType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXDeleteExpr: array delete requires cookies");
+    }
+    const FunctionDecl *operatorDelete = e->getOperatorDelete();
+    cir::FuncOp operatorDeleteFn = cgm.getAddrOfFunction(operatorDelete);
+    auto deleteFn =
+        mlir::FlatSymbolRefAttr::get(operatorDeleteFn.getSymNameAttr());
+    UsualDeleteParams udp = operatorDelete->getUsualDeleteParams();
+    auto deleteParams = cir::UsualDeleteParamsAttr::get(
+        builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
+        isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+    cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
+                               ptr.getPointer(), deleteFn, deleteParams);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }
