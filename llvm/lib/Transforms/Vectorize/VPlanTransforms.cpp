@@ -92,24 +92,30 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                            Ingredient.getDebugLoc());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
-          // These intrinsics are not widenable and should not be converted to
-          // VPWidenIntrinsicRecipe
-          if (VectorID == Intrinsic::not_intrinsic ||
-              VectorID == Intrinsic::lifetime_end ||
-              VectorID == Intrinsic::lifetime_start ||
-              VectorID == Intrinsic::sideeffect ||
-              VectorID == Intrinsic::pseudoprobe ||
-              VectorID == Intrinsic::experimental_noalias_scope_decl)
+          if (VectorID == Intrinsic::not_intrinsic)
             return false;
-          // llvm.assume is safe to drop since it is only an optimization hint
+          // llvm.assume is safe to drop
           if (VectorID == Intrinsic::assume) {
             Ingredient.eraseFromParent();
             continue;
           }
-          NewRecipe = new VPWidenIntrinsicRecipe(
-              *CI, getVectorIntrinsicIDForCall(CI, &TLI),
-              drop_end(Ingredient.operands()), CI->getType(), VPIRFlags(*CI),
-              *VPI, CI->getDebugLoc());
+          // These intrinsics are recognized by getVectorIntrinsicIDForCall
+          // but are not widenable. Emit them as single-scalar replicate
+          // instead of widening
+          if (VectorID == Intrinsic::lifetime_end ||
+              VectorID == Intrinsic::lifetime_start ||
+              VectorID == Intrinsic::sideeffect ||
+              VectorID == Intrinsic::pseudoprobe ||
+              VectorID == Intrinsic::experimental_noalias_scope_decl) {
+            NewRecipe = new VPReplicateRecipe(CI, Ingredient.operands(),
+                                              /*IsSingleScalar=*/true,
+                                              /*Mask=*/nullptr, *VPI, *VPI,
+                                              Ingredient.getDebugLoc());
+          } else {
+            NewRecipe = new VPWidenIntrinsicRecipe(
+                *CI, VectorID, drop_end(Ingredient.operands()), CI->getType(),
+                VPIRFlags(*CI), *VPI, CI->getDebugLoc());
+          }
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
           NewRecipe = new VPWidenCastRecipe(
               CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI,
