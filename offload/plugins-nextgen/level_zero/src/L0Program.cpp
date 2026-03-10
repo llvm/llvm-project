@@ -245,13 +245,11 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
 
     // Read metadata from inner binary
     llvm::StringRef Version = InnerBinary->getString("version");
-    llvm::StringRef Format = InnerBinary->getString("format");
     llvm::StringRef CompileOpts = InnerBinary->getString("compile-opts");
     llvm::StringRef LinkOpts = InnerBinary->getString("link-opts");
 
     ODBG(OLDT_Module) << "Inner OffloadBinary metadata: version=" << Version
-                      << ", format=" << Format << ", kind=" << ImageKind
-                      << "\n";
+                      << ", kind=" << ImageKind;
 
     // Build options string combining BuildOptions with compile/link opts
     std::string Options(BuildOptions);
