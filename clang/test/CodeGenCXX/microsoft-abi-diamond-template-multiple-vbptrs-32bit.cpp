@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -std=c++17 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-windows-msvc -std=c++17 -emit-llvm -o - %s | FileCheck %s
 
 // Test for the fix in EmitNullBaseClassInitialization where the calculation
 // of SplitAfterSize was incorrect when multiple vbptrs are present.
+// This is the 32-bit version of the test.
 
 namespace test {
 
@@ -23,14 +24,14 @@ class Diamond : public Left, public Right {
 template<typename T>
 class Derived : public Diamond {
 public:
-  // CHECK-LABEL: define {{.*}} @"??0?$Derived@H@test@@QEAA@XZ"
+  // CHECK-LABEL: define {{.*}} @"??0?$Derived@H@test@@QAE@XZ"
 
-  // Layout of Derived<int>:
-  // offset 0: vbptr for Left (8 bytes)
-  // offset 8: vbptr for Right (8 bytes)
-  // offset 16+: virtual base Base
+  // Layout of Derived<int> (32-bit):
+  // offset 0: vbptr for Left (4 bytes)
+  // offset 4: vbptr for Right (4 bytes)
+  // offset 8+: virtual base Base
 
-  // CHECK: call {{.*}} @"??0Diamond@test@@QEAA@XZ"
+  // CHECK: call {{.*}} @"??0Diamond@test@@QAE@XZ"
   // EmitNullBaseClassInitialization now correctly calculates memory regions
   // around the vbptrs without hitting negative size assertion
 
@@ -57,20 +58,20 @@ public:
   DerivedWithData();
 };
 
-// CHECK-LABEL: define {{.*}} @"??0?$DerivedWithData@H@test@@QEAA@XZ"
+// CHECK-LABEL: define {{.*}} @"??0?$DerivedWithData@H@test@@QAE@XZ"
 //
-// Layout of DerivedWithData<int>:
-// offset 0: vbptr for Left (8 bytes)
-// offset 8: vbptr for Right (8 bytes)
-// offset 16: x (4 bytes)
-// offset 20: y (4 bytes)
-// offset 24+: virtual base Base
+// Layout of DerivedWithData<int> (32-bit):
+// offset 0: vbptr for Left (4 bytes)
+// offset 4: vbptr for Right (4 bytes)
+// offset 8: x (4 bytes)
+// offset 12: y (4 bytes)
+// offset 16+: virtual base Base
 //
-// EmitNullBaseClassInitialization zero-initializes the data members [16, 24)
-// while skipping both vbptrs [0, 16)
+// EmitNullBaseClassInitialization zero-initializes the data members [8, 16)
+// while skipping both vbptrs [0, 8)
 //
-// memset zeros 8 bytes for x and y at offset 16
-// CHECK: call void @llvm.memset.p0.i64(ptr {{.*}}, i8 0, i64 8, i1 false)
+// memset zeros 8 bytes for x and y at offset 8
+// CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 0, i32 8, i1 false)
 // CHECK: ret
 
 template<typename T>
@@ -93,15 +94,15 @@ class TriDiamond : public Left, public Middle, public Right {
 template<typename T>
 class TriDerived : public TriDiamond {
 public:
-  // CHECK-LABEL: define {{.*}} @"??0?$TriDerived@H@test@@QEAA@XZ"
+  // CHECK-LABEL: define {{.*}} @"??0?$TriDerived@H@test@@QAE@XZ"
 
-  // Layout of TriDerived<int>:
-  // offset 0:  vbptr for Left (8 bytes)
-  // offset 8:  vbptr for Middle (8 bytes)
-  // offset 16: vbptr for Right (8 bytes)
-  // offset 24+: virtual base Base
+  // Layout of TriDerived<int> (32-bit):
+  // offset 0:  vbptr for Left (4 bytes)
+  // offset 4:  vbptr for Middle (4 bytes)
+  // offset 8:  vbptr for Right (4 bytes)
+  // offset 12+: virtual base Base
 
-  // CHECK: call {{.*}} @"??0TriDiamond@test@@QEAA@XZ"
+  // CHECK: call {{.*}} @"??0TriDiamond@test@@QAE@XZ"
   // No memset is generated since there are no gaps to zero
   // CHECK-NOT: call void @llvm.memset
   // CHECK: ret
@@ -125,18 +126,18 @@ public:
   TriDerivedWithData();
 };
 
-// CHECK-LABEL: define {{.*}} @"??0?$TriDerivedWithData@H@test@@QEAA@XZ"
+// CHECK-LABEL: define {{.*}} @"??0?$TriDerivedWithData@H@test@@QAE@XZ"
 //
-// Layout of TriDerivedWithData<int>:
-// offset 0:  vbptr for Left (8 bytes)
-// offset 8:  vbptr for Middle (8 bytes)
-// offset 16: vbptr for Right (8 bytes)
-// offset 24: a (4 bytes)
-// offset 28: b (4 bytes)
-// offset 32+: virtual base Base
+// Layout of TriDerivedWithData<int> (32-bit):
+// offset 0:  vbptr for Left (4 bytes)
+// offset 4:  vbptr for Middle (4 bytes)
+// offset 8:  vbptr for Right (4 bytes)
+// offset 12: a (4 bytes)
+// offset 16: b (4 bytes)
+// offset 20+: virtual base Base
 
-// memset zeros 8 bytes [24, 32)
-// CHECK: call void @llvm.memset.p0.i64(ptr {{.*}}, i8 0, i64 8, i1 false)
+// memset zeros 8 bytes [12, 20)
+// CHECK: call void @llvm.memset.p0.i32(ptr {{.*}}, i8 0, i32 8, i1 false)
 // CHECK: ret
 
 template<typename T>
@@ -162,14 +163,14 @@ class BaseIf : public Base1If, public Base2If {
 
 class DerivedClass : public BaseIf {
 public:
-  // CHECK-LABEL: define {{.*}} @"??0DerivedClass@test@@QEAA@XZ"
+  // CHECK-LABEL: define {{.*}} @"??0DerivedClass@test@@QAE@XZ"
 
-  // Layout of DerivedClass:
-  // offset 0: vbptr for Base1If (8 bytes)
-  // offset 8: vbptr for Base2If (8 bytes)
-  // offset 16+: virtual base Interface
+  // Layout of DerivedClass (32-bit):
+  // offset 0: vbptr for Base1If (4 bytes)
+  // offset 4: vbptr for Base2If (4 bytes)
+  // offset 8+: virtual base Interface
 
-  // CHECK: call {{.*}} @"??0BaseIf@test@@QEAA@XZ"
+  // CHECK: call {{.*}} @"??0BaseIf@test@@QAE@XZ"
   // EmitNullBaseClassInitialization now correctly calculates memory regions
   // around the vbptrs without hitting negative size assertion
 
@@ -188,15 +189,15 @@ DerivedClass d;
 // Test 4c: Non-template version with three vbptrs
 class TriConcreteClass : public TriDiamond {
 public:
-  // CHECK-LABEL: define {{.*}} @"??0TriConcreteClass@test@@QEAA@XZ"
+  // CHECK-LABEL: define {{.*}} @"??0TriConcreteClass@test@@QAE@XZ"
 
-  // Layout of TriConcreteClass:
-  // offset 0:  vbptr for Left (8 bytes)
-  // offset 8:  vbptr for Middle (8 bytes)
-  // offset 16: vbptr for Right (8 bytes)
-  // offset 24+: virtual base Base
+  // Layout of TriConcreteClass (32-bit):
+  // offset 0:  vbptr for Left (4 bytes)
+  // offset 4:  vbptr for Middle (4 bytes)
+  // offset 8:  vbptr for Right (4 bytes)
+  // offset 12+: virtual base Base
 
-  // CHECK: call {{.*}} @"??0TriDiamond@test@@QEAA@XZ"
+  // CHECK: call {{.*}} @"??0TriDiamond@test@@QAE@XZ"
   // No memset is generated since there are no gaps to zero
   // CHECK-NOT: call void @llvm.memset
   // CHECK: ret
