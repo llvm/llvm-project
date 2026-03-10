@@ -67,9 +67,9 @@ bool RISCVLandingPadSetup::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
-      if (MI.getOpcode() != RISCV::PseudoBRINDNonX7 &&
-          MI.getOpcode() != RISCV::PseudoCALLIndirectNonX7 &&
-          MI.getOpcode() != RISCV::PseudoTAILIndirectNonX7)
+      if (MI.getOpcode() != RISCV::PseudoBRIND &&
+          MI.getOpcode() != RISCV::PseudoCALLIndirect &&
+          MI.getOpcode() != RISCV::PseudoTAILIndirect)
         continue;
       BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::LUI), RISCV::X7)
           .addImm(Label);

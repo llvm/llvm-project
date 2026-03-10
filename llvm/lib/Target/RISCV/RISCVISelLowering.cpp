@@ -317,7 +317,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BR_CC, XLenVT, Expand);
-  setOperationAction(ISD::BRIND, MVT::Other, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::SELECT_CC, XLenVT, Expand);
 
@@ -7892,8 +7891,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSELECT(Op, DAG);
   case ISD::BRCOND:
     return lowerBRCOND(Op, DAG);
-  case ISD::BRIND:
-    return lowerBRIND(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   case ISD::FRAMEADDR:
@@ -10182,19 +10179,6 @@ SDValue RISCVTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(RISCVISD::BR_CC, DL, Op.getValueType(), Op.getOperand(0),
                      CondV, DAG.getConstant(0, DL, XLenVT),
                      DAG.getCondCode(ISD::SETNE), Op.getOperand(2));
-}
-
-SDValue RISCVTargetLowering::lowerBRIND(SDValue Op, SelectionDAG &DAG) const {
-  // When cf-protection-branch is enabled, use BRIND_NONX7 to avoid using X7
-  // for the target address, since X7 is reserved for landing pad labels.
-  const MachineFunction &MF = DAG.getMachineFunction();
-  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
-    return Op;
-
-  SDLoc DL(Op);
-  SDValue Chain = Op.getOperand(0);
-  SDValue Addr = Op.getOperand(1);
-  return DAG.getNode(RISCVISD::BRIND_NONX7, DL, Op.getValueType(), Chain, Addr);
 }
 
 SDValue RISCVTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
@@ -24882,26 +24866,22 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  // Determine which call opcode to use based on cf-protection-branch and
-  // call type:
-  // - SW_GUARDED_*: Large code model direct calls need X7 for landing pad label
-  // - *_NONX7: Indirect calls with cf-protection must avoid X7
-  // - Regular: No cf-protection or direct calls in non-large code model
+  // Determine which call opcode to use:
+  // - SW_GUARDED_*: Large code model direct calls with cf-protection-branch
+  //   need X7 for landing pad label
+  // - Regular CALL/TAIL: All other cases. Indirect calls use NonX7 register
+  //   classes unconditionally via tablegen patterns.
   bool HasCFBranch =
       MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
   bool IsIndirectCall = CLI.CB && CLI.CB->isIndirectCall();
   bool NeedSWGuarded = getTargetMachine().getCodeModel() == CodeModel::Large &&
                        HasCFBranch &&
                        (!IsIndirectCall || CalleeIsLargeExternalSymbol);
-  bool NeedNonX7 = HasCFBranch && IsIndirectCall;
 
   unsigned TailOpc, CallOpc;
   if (NeedSWGuarded) {
     TailOpc = RISCVISD::SW_GUARDED_TAIL;
     CallOpc = RISCVISD::SW_GUARDED_CALL;
-  } else if (NeedNonX7) {
-    TailOpc = RISCVISD::TAIL_NONX7;
-    CallOpc = RISCVISD::CALL_NONX7;
   } else {
     TailOpc = RISCVISD::TAIL;
     CallOpc = RISCVISD::CALL;

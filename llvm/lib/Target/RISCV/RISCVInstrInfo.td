@@ -91,15 +91,6 @@ def riscv_brcc      : RVSDNode<"BR_CC", SDT_RISCVBrCC,
 def riscv_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
                                       SDTBrind, [SDNPHasChain]>;
 
-// NonX7 variants for cf-protection-branch. These avoid using X7 for indirect
-// branches/calls since X7 is used for landing pad labels.
-def riscv_brind_nonx7 : RVSDNode<"BRIND_NONX7", SDTBrind, [SDNPHasChain]>;
-def riscv_call_nonx7  : RVSDNode<"CALL_NONX7", SDT_RISCVCall,
-                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                  SDNPVariadic]>;
-def riscv_tail_nonx7  : RVSDNode<"TAIL_NONX7", SDT_RISCVCall,
-                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                                  SDNPVariadic]>;
 
 // RV64I shifts, directly matching the semantics of the named RISC-V
 // instructions.
@@ -1772,26 +1763,22 @@ def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
 let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
-def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12_lo:$imm12), []>,
+// Use GPRJALRNonX7 to avoid X7 which is reserved for landing pad labels
+// in cf-protection-branch. The NonX7 constraint is applied unconditionally
+// to simplify the code at a negligible performance cost.
+def PseudoBRIND : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
-def PseudoBRINDNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
-                       PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
 def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo:$imm12), []>,
                     PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
 }
-
-def : Pat<(riscv_brind_nonx7 GPRJALRNonX7:$rs1),
-          (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, 0)>;
-def : Pat<(riscv_brind_nonx7 (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
-          (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
 
 def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
 def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12_lo:$imm12)),
           (PseudoBRINDX7 GPRX7:$rs1, simm12_lo:$imm12)>;
 
-def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
-def : Pat<(brind (add GPRJALR:$rs1, simm12_lo:$imm12)),
-          (PseudoBRIND GPRJALR:$rs1, simm12_lo:$imm12)>;
+def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRIND GPRJALRNonX7:$rs1, 0)>;
+def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
+          (PseudoBRIND GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
@@ -1824,12 +1811,12 @@ let Predicates = [HasStdExtSmrnmi] in
 def : Pat<(riscv_mnret_glue), (MNRET)>;
 
 let isCall = 1, Defs = [X1] in {
-def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
-                                [(riscv_call GPRJALR:$rs1)]>,
+// Use GPRJALRNonX7 to avoid X7 which is reserved for landing pad labels
+// in cf-protection-branch. The NonX7 constraint is applied unconditionally
+// to simplify the code at a negligible performance cost.
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
+                                [(riscv_call GPRJALRNonX7:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-def PseudoCALLIndirectNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
-                                     [(riscv_call_nonx7 GPRJALRNonX7:$rs1)]>,
-                              PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
 def PseudoCALLIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_call GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
@@ -1849,12 +1836,12 @@ def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
-def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
-                                [(riscv_tail GPRTC:$rs1)]>,
+// Use GPRTCNonX7 to avoid X7 which is reserved for landing pad labels
+// in cf-protection-branch. The NonX7 constraint is applied unconditionally
+// to simplify the code at a negligible performance cost.
+def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
+                                [(riscv_tail GPRTCNonX7:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-def PseudoTAILIndirectNonX7 : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
-                                     [(riscv_tail_nonx7 GPRTCNonX7:$rs1)]>,
-                              PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
 def PseudoTAILIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_tail GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;

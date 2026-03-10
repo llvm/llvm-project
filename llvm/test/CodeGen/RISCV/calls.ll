@@ -838,13 +838,13 @@ define fastcc void @fastcc_call_nonfastcc(){
 ; RV64I-LARGE-NEXT:    li a2, 3
 ; RV64I-LARGE-NEXT:    li a3, 4
 ; RV64I-LARGE-NEXT:    li a4, 5
-; RV64I-LARGE-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi6)(a5)
+; RV64I-LARGE-NEXT:    ld t3, %pcrel_lo(.Lpcrel_hi6)(a5)
 ; RV64I-LARGE-NEXT:    li a5, 6
 ; RV64I-LARGE-NEXT:    li a6, 7
 ; RV64I-LARGE-NEXT:    li a7, 8
 ; RV64I-LARGE-NEXT:    sd t1, 0(sp)
 ; RV64I-LARGE-NEXT:    sd t0, 8(sp)
-; RV64I-LARGE-NEXT:    jalr t2
+; RV64I-LARGE-NEXT:    jalr t3
 ; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-LARGE-NEXT:    .cfi_restore ra
 ; RV64I-LARGE-NEXT:    addi sp, sp, 32
