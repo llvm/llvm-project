@@ -12,12 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
-#include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -26,34 +25,31 @@ using namespace llvm;
 
 namespace {
 
-class SPIRVConvertMaskedMemIntrinsics
-    : public FunctionPass,
-      public InstVisitor<SPIRVConvertMaskedMemIntrinsics> {
+class SPIRVConvertMaskedMemIntrinsics : public ModulePass {
   const SPIRVTargetMachine *TM = nullptr;
 
 public:
   static char ID;
 
-  SPIRVConvertMaskedMemIntrinsics() : FunctionPass(ID) {
+  SPIRVConvertMaskedMemIntrinsics() : ModulePass(ID) {
     initializeSPIRVConvertMaskedMemIntrinsicsPass(
         *PassRegistry::getPassRegistry());
   }
 
   SPIRVConvertMaskedMemIntrinsics(const SPIRVTargetMachine *TM)
-      : FunctionPass(ID), TM(TM) {
+      : ModulePass(ID), TM(TM) {
     initializeSPIRVConvertMaskedMemIntrinsicsPass(
         *PassRegistry::getPassRegistry());
   }
 
-  bool runOnFunction(Function &F) override;
-  void visitIntrinsicInst(IntrinsicInst &I);
+  bool runOnModule(Module &M) override;
 
   StringRef getPassName() const override {
     return "SPIRV convert masked memory intrinsics";
   }
 
 private:
-  SmallVector<Instruction *, 4> ToErase;
+  bool processIntrinsic(IntrinsicInst &I);
 };
 
 } // namespace
@@ -64,27 +60,34 @@ INITIALIZE_PASS(SPIRVConvertMaskedMemIntrinsics,
                 "spirv-convert-masked-mem-intrinsics",
                 "Convert masked memory intrinsics for SPIR-V", false, false)
 
-bool SPIRVConvertMaskedMemIntrinsics::runOnFunction(Function &F) {
+bool SPIRVConvertMaskedMemIntrinsics::runOnModule(Module &M) {
   if (!TM)
     return false;
 
-  ToErase.clear();
-  visit(F);
+  bool Changed = false;
+  SmallVector<IntrinsicInst *, 8> ToProcess;
 
-  for (Instruction *I : ToErase)
-    I->eraseFromParent();
+  for (Function &F : M) {
+    if (!F.isIntrinsic())
+      continue;
+    Intrinsic::ID IID = F.getIntrinsicID();
+    if (IID != Intrinsic::masked_gather && IID != Intrinsic::masked_scatter)
+      continue;
 
-  return !ToErase.empty();
+    for (User *U : F.users()) {
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        ToProcess.push_back(II);
+    }
+  }
+
+  for (IntrinsicInst *II : ToProcess)
+    Changed |= processIntrinsic(*II);
+
+  return Changed;
 }
 
-void SPIRVConvertMaskedMemIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
+bool SPIRVConvertMaskedMemIntrinsics::processIntrinsic(IntrinsicInst &I) {
   if (I.getIntrinsicID() == Intrinsic::masked_gather) {
-    const SPIRVSubtarget &ST =
-        TM->getSubtarget<SPIRVSubtarget>(*I.getFunction());
-    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
-      report_fatal_error(
-          "llvm.masked.gather requires SPV_INTEL_masked_gather_scatter");
-
     IRBuilder<> B(I.getParent());
     B.SetInsertPoint(&I);
 
@@ -102,14 +105,11 @@ void SPIRVConvertMaskedMemIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
 
     auto *NewI = B.CreateIntrinsic(Intrinsic::spv_masked_gather, Types, Args);
     I.replaceAllUsesWith(NewI);
-    ToErase.push_back(&I);
-  } else if (I.getIntrinsicID() == Intrinsic::masked_scatter) {
-    const SPIRVSubtarget &ST =
-        TM->getSubtarget<SPIRVSubtarget>(*I.getFunction());
-    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
-      report_fatal_error(
-          "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
+    I.eraseFromParent();
+    return true;
+  }
 
+  if (I.getIntrinsicID() == Intrinsic::masked_scatter) {
     IRBuilder<> B(I.getParent());
     B.SetInsertPoint(&I);
 
@@ -126,11 +126,14 @@ void SPIRVConvertMaskedMemIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
                                     Mask->getType()};
 
     B.CreateIntrinsic(Intrinsic::spv_masked_scatter, Types, Args);
-    ToErase.push_back(&I);
+    I.eraseFromParent();
+    return true;
   }
+
+  return false;
 }
 
-FunctionPass *
+ModulePass *
 llvm::createSPIRVConvertMaskedMemIntrinsicsPass(const SPIRVTargetMachine *TM) {
   return new SPIRVConvertMaskedMemIntrinsics(TM);
 }

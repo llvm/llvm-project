@@ -1,6 +1,6 @@
-; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s
 
-; CHECK: LLVM ERROR: llvm.masked.gather requires SPV_INTEL_masked_gather_scatter
+; CHECK: error:{{.*}}: llvm.masked.gather requires SPV_INTEL_masked_gather_scatter
 
 define spir_kernel void @test_gather_no_ext(<4 x i64> %addrs, <4 x i1> %mask, <4 x i32> %passthru) {
 entry:

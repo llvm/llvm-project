@@ -32,7 +32,7 @@ FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerCombiner();
 FunctionPass *createSPIRVPreLegalizerPass();
 FunctionPass *createSPIRVPostLegalizerPass();
-FunctionPass *
+ModulePass *
 createSPIRVConvertMaskedMemIntrinsicsPass(const SPIRVTargetMachine *TM);
 ModulePass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
 ModulePass *createSPIRVPrepareGlobalsPass();

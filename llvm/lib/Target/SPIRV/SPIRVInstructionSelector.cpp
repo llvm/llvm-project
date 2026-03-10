@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -303,6 +304,8 @@ private:
   bool selectMaskedGather(Register ResVReg, SPIRVTypeInst ResType,
                           MachineInstr &I) const;
   bool selectMaskedScatter(MachineInstr &I) const;
+
+  bool diagnoseUnsupported(const MachineInstr &I, const Twine &Msg) const;
 
   bool selectFrameIndex(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
@@ -1778,6 +1781,14 @@ bool SPIRVInstructionSelector::selectMaskedScatter(MachineInstr &I) const {
           .addUse(ValuesReg);
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
+}
+
+bool SPIRVInstructionSelector::diagnoseUnsupported(const MachineInstr &I,
+                                                   const Twine &Msg) const {
+  const Function &F = I.getMF()->getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupported(F, Msg, I.getDebugLoc(), DS_Error));
+  return false;
 }
 
 bool SPIRVInstructionSelector::selectStackSave(Register ResVReg,
@@ -4380,13 +4391,13 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_masked_gather:
     if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
       return selectMaskedGather(ResVReg, ResType, I);
-    report_fatal_error(
-        "llvm.masked.gather requires SPV_INTEL_masked_gather_scatter");
+    return diagnoseUnsupported(
+        I, "llvm.masked.gather requires SPV_INTEL_masked_gather_scatter");
   case Intrinsic::spv_masked_scatter:
     if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
       return selectMaskedScatter(I);
-    report_fatal_error(
-        "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
+    return diagnoseUnsupported(
+        I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
