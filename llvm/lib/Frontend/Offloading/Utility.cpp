@@ -392,8 +392,8 @@ Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
   InnerImage.TheOffloadKind = OffloadKind;
   InnerImage.Flags = ImageFlags;
 
-  for (const auto &KV : MetaData)
-    InnerImage.StringData[KV.first] = KV.second;
+  for (const auto &[Key, Value] : MetaData)
+    InnerImage.StringData[Key] = Value;
 
   InnerImage.Image = std::move(Img);
 
