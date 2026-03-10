@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 
 template <class S, class Pred>
-void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
+TEST_CONSTEXPR_CXX26 void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
   ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
   assert(s == expected);
@@ -31,7 +31,7 @@ void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
 }
 
 template <typename S>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   auto is1   = [](auto v) { return v == 1; };
   auto is2   = [](auto v) { return v == 2; };
   auto is3   = [](auto v) { return v == 3; };

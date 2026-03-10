@@ -34,8 +34,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
   test_sequence_append_range_move_only<std::deque>();
   test_sequence_append_range_emplace_constructible<std::deque>();
 
-  test_append_range_exception_safety_throwing_copy<std::deque>();
-  test_append_range_exception_safety_throwing_allocator<std::deque, int>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_append_range_exception_safety_throwing_copy<std::deque>();
+    test_append_range_exception_safety_throwing_allocator<std::deque, int>();
+  }
   return true;
 }
 

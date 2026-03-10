@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -39,7 +39,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(C& c1, int size, int v) {
+TEST_CONSTEXPR_CXX26 void test(C& c1, int size, int v) {
   typedef typename C::const_iterator CI;
   c1.assign(size, v);
   assert(c1.size() == static_cast<std::size_t>(size));
@@ -50,7 +50,7 @@ void test(C& c1, int size, int v) {
 }
 
 template <class C>
-void testN(int start, int N, int M) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N, int M) {
   C c1 = make<C>(N, start);
   test(c1, M, -10);
 }

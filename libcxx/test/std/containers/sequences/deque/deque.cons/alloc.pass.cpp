@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class T, class Allocator>
-void test_util(const Allocator& a) {
+TEST_CONSTEXPR_CXX26 void test_util(const Allocator& a) {
   std::deque<T, Allocator> d(a);
   assert(d.size() == 0);
   assert(d.get_allocator() == a);

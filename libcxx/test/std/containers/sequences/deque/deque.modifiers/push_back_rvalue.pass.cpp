@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -42,7 +42,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(int size) {
+TEST_CONSTEXPR_CXX26 void test(int size) {
   int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2046, 2047, 2048, 2049};
   const int N = sizeof(rng) / sizeof(rng[0]);
   for (int j = 0; j < N; ++j) {

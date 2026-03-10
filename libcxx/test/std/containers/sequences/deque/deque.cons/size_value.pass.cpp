@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class T, class Allocator>
-void test(unsigned n, const T& x) {
+TEST_CONSTEXPR_CXX26 void test(unsigned n, const T& x) {
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
   C d(n, x);

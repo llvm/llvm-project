@@ -20,7 +20,7 @@
 #include "test_macros.h"
 
 template <typename C>
-void test(C c) {
+TEST_CONSTEXPR_CXX26 void test(C c) {
   typename C::iterator it1 = c.begin() + 1;
   typename C::iterator it2 = c.end() - 1;
 

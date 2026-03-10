@@ -51,7 +51,7 @@ bool Throws::sThrows = false;
 #endif
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -70,7 +70,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(int P, C& c1, int size) {
+TEST_CONSTEXPR_CXX26 void test(int P, C& c1, int size) {
   typedef typename C::iterator I;
   assert(static_cast<std::size_t>(P + size) <= c1.size());
   std::size_t c1_osize = c1.size();
@@ -88,7 +88,7 @@ void test(int P, C& c1, int size) {
 }
 
 template <class C>
-void testN(int start, int N) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   int pstep = std::max(N / std::max(std::min(N, 10), 1), 1);
   for (int p = 0; p <= N; p += pstep) {
     int sstep = std::max((N - p) / std::max(std::min(N - p, 10), 1), 1);
@@ -120,7 +120,7 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   // Test for LWG2953:
   // Throws: Nothing unless an exception is thrown by the assignment operator of T.
   // (which includes move assignment)
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     Throws arr[] = {1, 2, 3};
     std::deque<Throws> v(arr, arr + 3);
     Throws::sThrows = true;

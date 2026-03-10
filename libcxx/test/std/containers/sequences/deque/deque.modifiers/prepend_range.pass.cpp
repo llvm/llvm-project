@@ -34,8 +34,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
   // FIXME: This should work - see https://llvm.org/PR162605
   // test_sequence_prepend_range_emplace_constructible<std::deque>();
 
-  test_prepend_range_exception_safety_throwing_copy<std::deque>();
-  test_prepend_range_exception_safety_throwing_allocator<std::deque, int>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_prepend_range_exception_safety_throwing_copy<std::deque>();
+    test_prepend_range_exception_safety_throwing_allocator<std::deque, int>();
+  }
   return true;
 }
 

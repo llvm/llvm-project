@@ -20,7 +20,7 @@
 #include "test_macros.h"
 
 template <typename C>
-void del_at_start(C c) {
+TEST_CONSTEXPR_CXX26 void del_at_start(C c) {
   typename C::iterator first = c.begin();
   typename C::iterator it1   = first + 1;
   typename C::iterator it2   = c.end() - 1;
@@ -38,7 +38,7 @@ void del_at_start(C c) {
 }
 
 template <typename C>
-void del_at_end(C c) {
+TEST_CONSTEXPR_CXX26 void del_at_end(C c) {
   typename C::iterator first = c.end() - 1;
   typename C::iterator it1   = c.begin();
   typename C::iterator it2   = first - 1;

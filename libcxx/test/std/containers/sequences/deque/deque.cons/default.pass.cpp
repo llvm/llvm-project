@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class T, class Allocator>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   std::deque<T, Allocator> d;
   assert(d.size() == 0);
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));

@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class T, class Allocator>
-void test2(unsigned n) {
+TEST_CONSTEXPR_CXX26 void test2(unsigned n) {
 #if TEST_STD_VER > 11
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
@@ -42,7 +42,7 @@ void test2(unsigned n) {
 }
 
 template <class T, class Allocator>
-void test1(unsigned n) {
+TEST_CONSTEXPR_CXX26 void test1(unsigned n) {
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
   assert(DefaultOnly::count == 0);
@@ -61,7 +61,7 @@ void test1(unsigned n) {
 }
 
 template <class T, class Allocator>
-void test3(unsigned n, Allocator const& alloc = Allocator()) {
+TEST_CONSTEXPR_CXX26 void test3(unsigned n, Allocator const& alloc = Allocator()) {
 #if TEST_STD_VER > 11
   typedef std::deque<T, Allocator> C;
   {
@@ -77,7 +77,7 @@ void test3(unsigned n, Allocator const& alloc = Allocator()) {
 }
 
 template <class T, class Allocator>
-void test(unsigned n) {
+TEST_CONSTEXPR_CXX26 void test(unsigned n) {
   test1<T, Allocator>(n);
   test2<T, Allocator>(n);
 }

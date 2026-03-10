@@ -18,7 +18,7 @@
 #include "min_allocator.h"
 
 template <class C>
-void test(const C& x) {
+TEST_CONSTEXPR_CXX26 void test(const C& x) {
   C c;
   c = x;
   assert(c == x);

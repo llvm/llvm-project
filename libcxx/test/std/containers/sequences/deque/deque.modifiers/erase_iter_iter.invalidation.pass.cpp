@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 template <typename C>
-void del_at_start(C c, std::size_t num) {
+TEST_CONSTEXPR_CXX26 void del_at_start(C c, std::size_t num) {
   typename C::iterator first = c.begin();
   typename C::iterator last  = first + num;
   typename C::iterator it1   = last;
@@ -41,7 +41,7 @@ void del_at_start(C c, std::size_t num) {
 }
 
 template <typename C>
-void del_at_end(C c, std::size_t num) {
+TEST_CONSTEXPR_CXX26 void del_at_end(C c, std::size_t num) {
   typename C::iterator last  = c.end();
   typename C::iterator first = last - num;
   typename C::iterator it1   = c.begin();
