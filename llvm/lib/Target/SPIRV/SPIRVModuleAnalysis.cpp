@@ -964,8 +964,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageGatherExtended, Capability::Addresses,
-                    Capability::VulkanMemoryModelKHR});
+                    Capability::ImageQuery, Capability::ImageGatherExtended,
+                    Capability::Addresses, Capability::VulkanMemoryModelKHR});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1735,6 +1735,16 @@ void addInstrRequirements(const MachineInstr &MI,
   }
   case SPIRV::OpGroupNonUniformQuadSwap:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformQuad);
+    break;
+  case SPIRV::OpImageQueryLod:
+    Reqs.addCapability(SPIRV::Capability::ImageQuery);
+    break;
+  case SPIRV::OpImageQuerySize:
+  case SPIRV::OpImageQuerySizeLod:
+  case SPIRV::OpImageQueryLevels:
+  case SPIRV::OpImageQuerySamples:
+    if (ST.isShader())
+      Reqs.addCapability(SPIRV::Capability::ImageQuery);
     break;
   case SPIRV::OpImageQueryFormat: {
     Register ResultReg = MI.getOperand(0).getReg();

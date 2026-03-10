@@ -272,6 +272,16 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
                                llvm_float_ty, llvm_any_ty],
                               [IntrReadMem]>;
 
+  def int_spv_resource_calculate_lod
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_any_ty, llvm_any_ty, llvm_any_ty],
+                              [IntrReadMem]>;
+
+  def int_spv_resource_calculate_lod_unclamped
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_any_ty, llvm_any_ty, llvm_any_ty],
+                              [IntrReadMem]>;
+
   def int_spv_resource_gather
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty,
