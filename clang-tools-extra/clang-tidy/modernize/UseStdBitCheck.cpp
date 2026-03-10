@@ -58,7 +58,7 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
     return declRefExpr(to(varDecl(equalsBoundNode(Name.str()))));
   };
 
-  // https://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
+  // Determining if an integer is a power of 2 with following pattern:
   // has_one_bit(v) = v && !(v & (v - 1));
   Finder->addMatcher(
       LogicalAnd(IsNonNull(BindDeclRef("v")),
@@ -86,7 +86,8 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("expr");
 
-  auto Diag = diag(MatchedExpr->getBeginLoc(), "use std::has_one_bit instead");
+  auto Diag =
+      diag(MatchedExpr->getBeginLoc(), "use 'std::has_one_bit' instead");
   if (!MatchedExpr->getSourceRange().getBegin().isMacroID()) {
     Diag << FixItHint::CreateReplacement(
                 MatchedExpr->getSourceRange(),
