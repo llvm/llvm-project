@@ -23,7 +23,7 @@ namespace math {
 
 namespace integer_only {
 
-LIBC_INLINE constexpr double cos(double x) {
+LIBC_INLINE double cos(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
