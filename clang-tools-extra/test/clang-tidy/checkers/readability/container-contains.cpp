@@ -1,6 +1,4 @@
-// RUN: %check_clang_tidy %s readability-container-contains %t -- \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN: %check_clang_tidy %s readability-container-contains %t
 #include <string>
 
 // Some *very* simplified versions of `map` etc.

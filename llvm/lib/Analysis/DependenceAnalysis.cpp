@@ -1222,6 +1222,9 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
+    return false;
+
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   assert(Coeff == Dst->getStepRecurrence(*SE) &&
          "Expecting same coefficient in Strong SIV test");
@@ -1829,8 +1832,6 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= MaxLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (SrcConst == DstConst && SE->isKnownNonZero(DstCoeff)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::GE;
@@ -1838,6 +1839,10 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
     }
     return false; // dependences caused by first iteration
   }
+  const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
+  if (!Delta)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
   if (!ConstCoeff)
     return false;
@@ -1939,8 +1944,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= SrcLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (DstConst == SrcConst && SE->isKnownNonZero(SrcCoeff)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::LE;
@@ -1948,6 +1951,10 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
     }
     return false; // dependences caused by first iteration
   }
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   if (!ConstCoeff)
     return false;
