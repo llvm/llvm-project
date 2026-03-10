@@ -104,7 +104,7 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &Source = Context.getSourceManager();
 
   if (const auto *MatchedExpr =
-          Result.Nodes.getNodeAs<BinaryOperator>("expr")) {
+          Result.Nodes.getNodeAs<BinaryOperator>("has_one_bit_expr")) {
     const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
 
     auto Diag =
@@ -116,33 +116,33 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
                   ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())
            << IncludeInserter.createIncludeInsertion(
                   Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
-    } else if (const auto *MatchedExpr =
-                   Result.Nodes.getNodeAs<CXXMemberCallExpr>("popcount_expr")) {
-      const auto *BitsetInstantiatedDecl =
-          cast<ClassTemplateSpecializationDecl>(MatchedExpr->getRecordDecl());
-      const llvm::APSInt BitsetSize =
-          BitsetInstantiatedDecl->getTemplateArgs()[0].getAsIntegral();
-      const auto *MatchedArg = Result.Nodes.getNodeAs<Expr>("v");
-      const uint64_t MatchedVarSize =
-          Context.getTypeSize(MatchedArg->getType());
-      if (BitsetSize >= MatchedVarSize) {
-        MatchedArg->dump();
-        auto Diag =
-            diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                    MatchedArg->getEndLoc().getLocWithOffset(1),
-                    MatchedExpr->getRParenLoc().getLocWithOffset(-1)))
-             << FixItHint::CreateReplacement(
-                    CharSourceRange::getTokenRange(
-                        MatchedExpr->getBeginLoc(),
-                        MatchedArg->getBeginLoc().getLocWithOffset(-1)),
-                    "std::popcount(")
-             << IncludeInserter.createIncludeInsertion(
-                    Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
-      }
-    } else {
-      llvm_unreachable();
     }
+  } else if (const auto *MatchedExpr =
+                 Result.Nodes.getNodeAs<CXXMemberCallExpr>("popcount_expr")) {
+    const auto *BitsetInstantiatedDecl =
+        cast<ClassTemplateSpecializationDecl>(MatchedExpr->getRecordDecl());
+    const llvm::APSInt BitsetSize =
+        BitsetInstantiatedDecl->getTemplateArgs()[0].getAsIntegral();
+    const auto *MatchedArg = Result.Nodes.getNodeAs<Expr>("v");
+    const uint64_t MatchedVarSize = Context.getTypeSize(MatchedArg->getType());
+    if (BitsetSize >= MatchedVarSize) {
+      MatchedArg->dump();
+      auto Diag =
+          diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                  MatchedArg->getEndLoc().getLocWithOffset(1),
+                  MatchedExpr->getRParenLoc().getLocWithOffset(-1)))
+           << FixItHint::CreateReplacement(
+                  CharSourceRange::getTokenRange(
+                      MatchedExpr->getBeginLoc(),
+                      MatchedArg->getBeginLoc().getLocWithOffset(-1)),
+                  "std::popcount(")
+           << IncludeInserter.createIncludeInsertion(
+                  Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+    }
+  } else {
+    llvm_unreachable("unexpected match");
   }
+}
 
 } // namespace clang::tidy::modernize
