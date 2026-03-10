@@ -385,6 +385,7 @@ multiclass VOPC_Pseudos <string opName,
     VCMPVCMPXTable<opName#"_e64"> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
+    let isReMaterializable = 1;
     let isCompare = 1;
     let isCommutable = 1;
     let AsmMatchConverter = !cond(
