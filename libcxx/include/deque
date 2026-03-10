@@ -975,11 +975,16 @@ private:
     __asan_back_moved,
   };
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_from_to(
+  _LIBCPP_HIDE_FROM_ABI void _LIBCPP_CONSTEXPR_SINCE_CXX26 __annotate_from_to(
       size_type __beg,
       size_type __end,
       __asan_annotation_type __annotation_type,
       __asan_annotation_place __place) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     (void)__beg;
     (void)__end;
     (void)__annotation_type;
@@ -1080,7 +1085,12 @@ private:
 #  endif // _LIBCPP_HAS_ASAN
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __annotate_new(size_type __current_size) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     (void)__current_size;
 #  if _LIBCPP_HAS_ASAN
     if (__current_size == 0)
@@ -1092,7 +1102,12 @@ private:
 #  endif // _LIBCPP_HAS_ASAN
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __annotate_delete() const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
 #  if _LIBCPP_HAS_ASAN
     if (empty()) {
       for (size_t __i = 0; __i < __map_.size(); ++__i) {
@@ -1105,21 +1120,37 @@ private:
 #  endif // _LIBCPP_HAS_ASAN
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_increase_front(size_type __n) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __annotate_increase_front(size_type __n) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     (void)__n;
 #  if _LIBCPP_HAS_ASAN
     __annotate_from_to(__start_ - __n, __start_, __asan_unposion, __asan_front_moved);
 #  endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_increase_back(size_type __n) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __annotate_increase_back(size_type __n) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     (void)__n;
 #  if _LIBCPP_HAS_ASAN
     __annotate_from_to(__start_ + size(), __start_ + size() + __n, __asan_unposion, __asan_back_moved);
 #  endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_front(size_type __old_size, size_type __old_start) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  __annotate_shrink_front(size_type __old_size, size_type __old_start) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     (void)__old_size;
     (void)__old_start;
 #  if _LIBCPP_HAS_ASAN
@@ -1127,7 +1158,13 @@ private:
 #  endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_back(size_type __old_size, size_type __old_start) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  __annotate_shrink_back(size_type __old_size, size_type __old_start) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     (void)__old_size;
     (void)__old_start;
 #  if _LIBCPP_HAS_ASAN
@@ -1135,12 +1172,23 @@ private:
 #  endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __annotate_poison_block(const void* __beginning, const void* __end) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  __annotate_poison_block(const void* __beginning, const void* __end) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     std::__annotate_double_ended_contiguous_container<_Allocator>(__beginning, __end, __beginning, __end, __end, __end);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __annotate_whole_block(size_t __block_index, __asan_annotation_type __annotation_type) const _NOEXCEPT {
+#  if _LIBCPP_STD_VER >= 26
+    if consteval {
+      return;
+    }
+#  endif // _LIBCPP_STD_VER >= 26
     (void)__block_index;
     (void)__annotation_type;
 #  if _LIBCPP_HAS_ASAN
