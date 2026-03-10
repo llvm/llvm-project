@@ -433,8 +433,8 @@ public:
 
 #  else
 
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX26 strong_ordering
-  operator<=>(const __deque_iterator& __x, const __deque_iterator& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX26
+      strong_ordering operator<=>(const __deque_iterator& __x, const __deque_iterator& __y) {
     if (__x.__m_iter_ < __y.__m_iter_)
       return strong_ordering::less;
 
@@ -685,8 +685,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
-  deque(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 deque(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
       : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       __append_with_size(ranges::begin(__range), ranges::distance(__range));
@@ -918,8 +918,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
-  insert_range(const_iterator __position, _Range&& __range) {
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator insert_range(const_iterator __position, _Range&& __range) {
     if constexpr (ranges::bidirectional_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
       return __insert_bidirectional(__position, ranges::begin(__range), ranges::end(__range), __n);
@@ -2635,8 +2635,8 @@ swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y) _NOEXCEPT_(_NOEXC
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Allocator, class _Up>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 typename deque<_Tp, _Allocator>::size_type
-erase(deque<_Tp, _Allocator>& __c, const _Up& __v) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+    typename deque<_Tp, _Allocator>::size_type erase(deque<_Tp, _Allocator>& __c, const _Up& __v) {
   auto __old_size = __c.size();
   __c.erase(std::remove(__c.begin(), __c.end(), __v), __c.end());
   return __old_size - __c.size();
