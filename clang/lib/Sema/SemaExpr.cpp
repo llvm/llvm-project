@@ -15868,6 +15868,7 @@ static bool operandEscapesImmediateMacroExpansion(const SourceManager &SM,
 
   return BeginExp != OpExp || EndExp != OpExp;
 }
+
 static void DiagnoseMacroMixedOperator(Sema &Self, BinaryOperatorKind Opc,
                                        SourceLocation OpLoc, Expr *LHSExpr,
                                        Expr *RHSExpr) {
