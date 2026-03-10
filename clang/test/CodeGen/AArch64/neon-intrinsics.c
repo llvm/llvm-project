@@ -22384,26 +22384,6 @@ poly64x2_t test_vreinterpretq_p64_p16(poly16x8_t a) {
   return vreinterpretq_p64_p16(a);
 }
 
-// CHECK-LABEL: define dso_local float @test_vabds_f32(
-// CHECK-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VABDS_F32_I:%.*]] = call float @llvm.aarch64.sisd.fabd.f32(float [[A]], float [[B]])
-// CHECK-NEXT:    ret float [[VABDS_F32_I]]
-//
-float32_t test_vabds_f32(float32_t a, float32_t b) {
-  return vabds_f32(a, b);
-}
-
-// CHECK-LABEL: define dso_local double @test_vabdd_f64(
-// CHECK-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VABDD_F64_I:%.*]] = call double @llvm.aarch64.sisd.fabd.f64(double [[A]], double [[B]])
-// CHECK-NEXT:    ret double [[VABDD_F64_I]]
-//
-float64_t test_vabdd_f64(float64_t a, float64_t b) {
-  return vabdd_f64(a, b);
-}
-
 // CHECK-LABEL: define dso_local <16 x i8> @test_vuqaddq_s8(
 // CHECK-SAME: <16 x i8> noundef [[A:%.*]], <16 x i8> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

@@ -250,24 +250,24 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                              ? "conflicts with a keyword"
                                              : "contains reserved characters";
       if (FileSystem::Instance().Exists(script_fspec))
-        feedback_stream.Printf(
-            "warning: the symbol file '%s' contains a debug "
+        feedback_stream.Format(
+            "warning: the symbol file '{0}' contains a debug "
             "script. However, its name"
-            " '%s' %s and as such cannot be loaded. LLDB will"
-            " load '%s' instead. Consider removing the file with "
+            " '{1}' {2} and as such cannot be loaded. LLDB will"
+            " load '{3}' instead. Consider removing the file with "
             "the malformed name to"
             " eliminate this warning.\n",
-            symfile_spec.GetPath().c_str(), original_path_string.GetData(),
-            reason_for_complaint, path_string.GetData());
+            symfile_spec.GetPath(), original_path_string.GetString(),
+            reason_for_complaint, path_string.GetString());
       else
-        feedback_stream.Printf(
-            "warning: the symbol file '%s' contains a debug "
+        feedback_stream.Format(
+            "warning: the symbol file '{0}' contains a debug "
             "script. However, its name"
-            " %s and as such cannot be loaded. If you intend"
-            " to have this script loaded, please rename '%s' to "
-            "'%s' and retry.\n",
-            symfile_spec.GetPath().c_str(), reason_for_complaint,
-            original_path_string.GetData(), path_string.GetData());
+            " {1} and as such cannot be loaded. If you intend"
+            " to have this script loaded, please rename '{2}' to "
+            "'{3}' and retry.\n",
+            symfile_spec.GetPath(), reason_for_complaint,
+            original_path_string.GetString(), path_string.GetString());
     }
 
     if (FileSystem::Instance().Exists(script_fspec)) {
