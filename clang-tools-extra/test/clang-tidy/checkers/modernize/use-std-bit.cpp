@@ -49,6 +49,24 @@ unsigned bithacks_variant_gt(unsigned x) {
   return (x > 0) && !(x & (x - 1));
 }
 
+unsigned bithacks_variant_gte(unsigned x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_one_bit(x);
+  return (x >= 1) && !(x & (x - 1));
+}
+
+unsigned bithacks_variant_lt(unsigned x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_one_bit(x);
+  return (0 < x) && !(x & (x - 1));
+}
+
+unsigned bithacks_variant_lte(unsigned x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::has_one_bit(x);
+  return (1 <= x) && !(x & (x - 1));
+}
+
 unsigned bithacks_variant_gt_perm(unsigned x) {
   // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::has_one_bit' instead [modernize-use-std-bit]
   // CHECK-FIXES: return std::has_one_bit(x);

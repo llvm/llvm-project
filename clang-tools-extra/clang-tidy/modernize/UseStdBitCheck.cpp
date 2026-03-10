@@ -40,6 +40,12 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
   const auto BitwiseAnd = MakeCommutativeBinaryOperatorMatcher("&");
   const auto CmpNot = MakeCommutativeBinaryOperatorMatcher("!=");
   const auto CmpGt = MakeBinaryOperatorMatcher(">");
+  const auto CmpGte = MakeBinaryOperatorMatcher(">=");
+  const auto CmpLt = MakeBinaryOperatorMatcher("<");
+  const auto CmpLte = MakeBinaryOperatorMatcher("<=");
+
+  const auto Literal0 = integerLiteral(equals(0));
+  const auto Literal1 = integerLiteral(equals(1));
 
   const auto LogicalNot = [](const auto &Expr) {
     return unaryOperator(hasOperatorName("!"),
@@ -47,8 +53,9 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
   };
 
   const auto IsNonNull = [=](const auto &Expr) {
-    return anyOf(Expr, CmpNot(Expr, integerLiteral(equals(0))),
-                 CmpGt(Expr, integerLiteral(equals(0))));
+    return anyOf(Expr, CmpNot(Expr, Literal0), CmpGt(Expr, Literal0),
+                 CmpGte(Expr, Literal1), CmpLt(Literal0, Expr),
+                 CmpLte(Literal1, Expr));
   };
   const auto BindDeclRef = [](StringRef Name) {
     return declRefExpr(
@@ -88,7 +95,8 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto Diag =
       diag(MatchedExpr->getBeginLoc(), "use 'std::has_one_bit' instead");
-  if (!MatchedExpr->getSourceRange().getBegin().isMacroID()) {
+  if (auto R = MatchedExpr->getSourceRange();
+      !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
     Diag << FixItHint::CreateReplacement(
                 MatchedExpr->getSourceRange(),
                 ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())
