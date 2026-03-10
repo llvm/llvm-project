@@ -1945,7 +1945,6 @@ float3 pow(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 float4 pow(float4, float4);
 
-
 //===----------------------------------------------------------------------===//
 // reversebits builtins
 //===----------------------------------------------------------------------===//
