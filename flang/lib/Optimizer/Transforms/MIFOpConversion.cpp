@@ -113,32 +113,6 @@ mlir::Value getCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
   return mlir::Value{};
 }
 
-// Function to generate the PRIF runtime function call to retrieve
-// the number of images in the current team
-static mlir::Value getNumImages(fir::FirOpBuilder &builder,
-                                mlir::Location loc) {
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Value result = builder.createTemporary(loc, i32Ty);
-  mlir::FunctionType ftype = mlir::FunctionType::get(
-      builder.getContext(),
-      /*inputs*/ {builder.getRefType(i32Ty)}, /*results*/ {});
-  mlir::func::FuncOp funcOp =
-      builder.createFunction(loc, getPRIFProcName("num_images"), ftype);
-  llvm::SmallVector<mlir::Value> args =
-      fir::runtime::createArguments(builder, loc, ftype, result);
-  fir::CallOp::create(builder, loc, funcOp, args);
-  return fir::LoadOp::create(builder, loc, result);
-}
-
-static mlir::Value getRank(fir::FirOpBuilder &builder, mlir::Location loc,
-                           mlir::Value v) {
-  mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v.getType()));
-  unsigned rank = 0;
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(argTy))
-    rank = seqTy.getDimension();
-  return builder.createIntegerConstant(loc, builder.getI32Type(), rank);
-}
-
 // Storing the coarray descriptor as a global variable
 void storeCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::Value coarrayHandle, std::string uniqName) {
