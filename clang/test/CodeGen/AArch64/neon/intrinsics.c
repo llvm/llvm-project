@@ -720,9 +720,27 @@ float64x2_t test_vabdq_f64(float64x2_t v1, float64x2_t v2) {
   return vabdq_f64(v1, v2);
 }
 
-// TODO SISD variants:
-// TODO @vabdd_f64(a, b);
-// TODO @test_vabds_f32(
+// LLVM-LABEL: @test_vabds_f32(
+// CIR-LABEL: @vabds_f32(
+float32_t test_vabds_f32(float32_t a, float32_t b) {
+// CIR:   cir.call_llvm_intrinsic "aarch64.sisd.fabd"
+
+// LLVM-SAME: float {{.*}} [[A:%.*]], float noundef [[B:%.*]])
+// LLVM:    [[VABDS_F32_I:%.*]] = call float @llvm.aarch64.sisd.fabd.f32(float [[A]], float [[B]])
+// LLVM-NEXT:    ret float [[VABDS_F32_I]]
+  return vabds_f32(a, b);
+}
+
+// LLVM-LABEL: @test_vabdd_f64(
+// CIR-LABEL: @vabdd_f64(
+float64_t test_vabdd_f64(float64_t a, float64_t b) {
+// CIR:   cir.call_llvm_intrinsic "aarch64.sisd.fabd"
+
+// LLVM-SAME: double {{.*}} [[A:%.*]], double noundef [[B:%.*]])
+// LLVM:    [[VABDD_F64_I:%.*]] = call double @llvm.aarch64.sisd.fabd.f64(double [[A]], double [[B]])
+// LLVM-NEXT:    ret double [[VABDD_F64_I]]
+  return vabdd_f64(a, b);
+}
 
 //===------------------------------------------------------===//
 // 2.1.1.6.3. Absolute difference and accumulate
