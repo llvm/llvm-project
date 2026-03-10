@@ -909,6 +909,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             else:
                 break
 
+        # `env` without a subcommand is fully handled in-process above.
+        # Its output has already been staged as stdin for the next pipeline
+        # stage, so do not fall through to builtin/subprocess execution.
         if handled_inproc_pipeline:
             continue
 
