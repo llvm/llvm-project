@@ -1354,7 +1354,6 @@ struct SparseWMMAOpInfo {
 
 static std::optional<SparseWMMAOpInfo>
 sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, Chipset chipset) {
-
   Type sourceAElem = getElementTypeOrSelf(swmmac.getSourceA().getType());
   Type sourceBElem = getElementTypeOrSelf(swmmac.getSourceB().getType());
   Type destElem = getElementTypeOrSelf(swmmac.getDestC().getType());
@@ -1766,7 +1765,6 @@ struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
     if (!outType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    // TODO (Ravil)
     std::optional<SparseWMMAOpInfo> maybeIntrinsic =
         sparseWMMAOpToIntrinsic(op, chipset);
 
