@@ -28,7 +28,7 @@ define double @test_fdiv_double(double %a, double %b) #0 {
 
 ; CHECK: ; Function test_fma_double : 0x00000044
 define double @test_fma_double(double %a, double %b, double %c) #0 {
-  %r = call double @llvm.dx.fma.f64(double %a, double %b, double %c)
+  %r = call double @llvm.fma.f64(double %a, double %b, double %c)
   ret double %r
 }
 
@@ -56,6 +56,6 @@ define i64 @test_fptosi_i64(double %a) #0 {
   ret i64 %r
 }
 
-declare double @llvm.dx.fma.f64(double, double, double)
+declare double @llvm.fma.f64(double, double, double)
 
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}
