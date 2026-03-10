@@ -136,13 +136,13 @@ define void @main() {
 ; CHECK-NEXT:   %alloc_lifetime = alloca i32, align 4 => ptr 0xC [alloc_lifetime]
 ; CHECK-NEXT:   %val12 = load i32, ptr %alloc_lifetime, align 4 => poison
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc_lifetime)
-; CHECK-NEXT:   %val13 = load i32, ptr %alloc_lifetime, align 4 => i32 -1744110296
-; CHECK-NEXT:   %val14 = load i32, ptr %alloc_lifetime, align 4 => i32 1822494346
+; CHECK-NEXT:   %val13 = load i32, ptr %alloc_lifetime, align 4 => i32 -289830082
+; CHECK-NEXT:   %val14 = load i32, ptr %alloc_lifetime, align 4 => i32 -399511892
 ; CHECK-NEXT:   store i32 77, ptr %alloc_lifetime, align 4
 ; CHECK-NEXT:   %val15 = load i32, ptr %alloc_lifetime, align 4 => i32 77
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc_lifetime)
-; CHECK-NEXT:   %val_undef1 = load i32, ptr %alloc_lifetime, align 4 => i32 -1486034729
-; CHECK-NEXT:   %val_undef2 = load i32, ptr %alloc_lifetime, align 4 => i32 1900108014
+; CHECK-NEXT:   %val_undef1 = load i32, ptr %alloc_lifetime, align 4 => i32 -132966042
+; CHECK-NEXT:   %val_undef2 = load i32, ptr %alloc_lifetime, align 4 => i32 1094190734
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %alloc_lifetime)
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0(ptr %alloc_lifetime)
 ; CHECK-NEXT:   %val16 = load i32, ptr %alloc_lifetime, align 4 => poison
@@ -159,8 +159,8 @@ define void @main() {
 ; CHECK-NEXT:   %alloc_struct = alloca %struct, align 8 => ptr 0x30 [alloc_struct]
 ; CHECK-NEXT:   store %struct { [2 x i16] [i16 1, i16 2], i64 3 }, ptr %alloc_struct, align 8
 ; CHECK-NEXT:   %val19 = load %struct, ptr %alloc_struct, align 8 => { { i16 1, i16 2 }, i64 3 }
-; CHECK-NEXT:   %val20 = load i64, ptr %alloc_struct, align 8 => i64 281484800733898
-; CHECK-NEXT:   %val21 = load i64, ptr %alloc_struct, align 8 => i64 281484196877349
+; CHECK-NEXT:   %val20 = load i64, ptr %alloc_struct, align 8 => i64 281486191577587
+; CHECK-NEXT:   %val21 = load i64, ptr %alloc_struct, align 8 => i64 281486962127119
 ; CHECK-NEXT:   %alloc_struct_packed = alloca %struct.packed, align 8 => ptr 0x40 [alloc_struct_packed]
 ; CHECK-NEXT:   store %struct.packed <{ [2 x i16] [i16 1, i16 2], i64 3 }>, ptr %alloc_struct_packed, align 1
 ; CHECK-NEXT:   %val22 = load %struct.packed, ptr %alloc_struct_packed, align 1 => { { i16 1, i16 2 }, i64 3 }
