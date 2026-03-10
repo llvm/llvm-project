@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; Test that llvm.powi on Vulkan targets is lowered by converting the
 ; integer exponent to float with OpConvertSToF, then calling GLSL.std.450 Pow.
@@ -16,7 +16,7 @@
 ; CHECK: %[[#ret32:]] = OpExtInst %[[#F32Ty]] %[[#ExtInstId]] Pow %[[#base32]] %[[#fexp32]]
 ; CHECK: OpReturnValue %[[#ret32]]
 ; CHECK-LABEL: OpFunctionEnd
-define float @test_powi_f32_i32(float %x, i32 %n) {
+define internal float @test_powi_f32_i32(float %x, i32 %n) {
   %res = call float @llvm.powi.f32.i32(float %x, i32 %n)
   ret float %res
 }
@@ -28,7 +28,7 @@ define float @test_powi_f32_i32(float %x, i32 %n) {
 ; CHECK: %[[#ret64:]] = OpExtInst %[[#F32Ty]] %[[#ExtInstId]] Pow %[[#base64]] %[[#fexp64]]
 ; CHECK: OpReturnValue %[[#ret64]]
 ; CHECK-LABEL: OpFunctionEnd
-define float @test_powi_f32_i64(float %x, i64 %n) {
+define internal float @test_powi_f32_i64(float %x, i64 %n) {
   %res = call float @llvm.powi.f32.i64(float %x, i64 %n)
   ret float %res
 }
