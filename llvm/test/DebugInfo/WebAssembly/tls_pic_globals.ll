@@ -59,8 +59,8 @@ target triple = "wasm32-unknown-emscripten"
 @internal_var1 = internal global i32 444, align 4, !dbg !10
 @external_tls_var0 = thread_local[[TLS_MODE]] global i32 555, align 4, !dbg !12
 @external_tls_var1 = thread_local[[TLS_MODE]] global i32 666, align 4, !dbg !14
-@internal_tls_var0 = thread_local[[TLS_MODE]] global i32 777, align 4, !dbg !16
-@internal_tls_var1 = thread_local[[TLS_MODE]] global i32 888, align 4, !dbg !18
+@internal_tls_var0 = internal thread_local[[TLS_MODE]] global i32 777, align 4, !dbg !16
+@internal_tls_var1 = internal thread_local[[TLS_MODE]] global i32 888, align 4, !dbg !18
 
 define void @foo(i32, i32, i32, i32, i32, i32, i32, i32) {
   ret void
