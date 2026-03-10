@@ -399,11 +399,15 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   Obj["HasContexts"] = true;
 }
 
-static void serializeDescription(llvm::ArrayRef<CommentInfo> Description, json::Object &Obj) {
+static void serializeDescription(llvm::ArrayRef<CommentInfo> Description, json::Object &Obj, StringRef Key = "") {
+  if(Description.empty())
+    return;
+
   // Skip straight to the FullComment's children
   auto &Comments = Description.front().Children;
+  Object DescriptionObj = Object();
   for (const auto &CommentInfo : Comments) {
-    json::Value Comment = serializeComment(*CommentInfo, Obj);
+    json::Value Comment = serializeComment(*CommentInfo, DescriptionObj);
     // if a ParagraphComment is returned, then it is a top-level comment that
     // needs to be inserted manually.
     if (auto *ParagraphComment = Comment.getAsObject();
@@ -412,9 +416,12 @@ static void serializeDescription(llvm::ArrayRef<CommentInfo> Description, json::
       if (TextCommentsArray.kind() == json::Value::Null ||
           TextCommentsArray.getAsArray()->empty())
         continue;
-      insertComment(Obj, TextCommentsArray, "ParagraphComments");
+      insertComment(DescriptionObj, TextCommentsArray, "ParagraphComments");
     }
   }
+  Obj["Description"] = std::move(DescriptionObj);
+  if (!Key.empty())
+    Obj[Key] = true;
 }
 
 void JSONGenerator::serializeCommonAttributes(const Info &I,
@@ -435,11 +442,7 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
       Obj["Namespace"].getAsArray()->push_back(NS.Name);
   }
 
-  if (!I.Description.empty()) {
-    Object Description = Object();
-    serializeDescription(I.Description, Description);
-    Obj["Description"] = std::move(Description);
-  }
+  serializeDescription(I.Description, Obj);
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
   if (I.IT != InfoType::IT_namespace) {
@@ -621,12 +624,7 @@ void JSONGenerator::serializeInfo(const EnumValueInfo &I, Object &Obj) {
   else
     Obj["Value"] = I.Value;
 
-  if (I.Description.empty())
-    return;
-
-  Object Description = Object();
-  serializeDescription(I.Description, Description);
-  Obj["Description"] = std::move(Description);
+  serializeDescription(I.Description, Obj, "HasMemberComment");
 }
 
 void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {

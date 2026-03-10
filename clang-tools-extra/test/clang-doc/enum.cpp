@@ -468,7 +468,7 @@ enum Car {
 
   Sedan,    ///< Comment 1
   SUV,      ///< Comment 2
-  Pickup,   ///< Comment 3
+  Pickup,
   Hatchback ///< Comment 4
 };
 } // namespace Vehicles
@@ -515,11 +515,7 @@ enum Car {
 // HTML-VEHICLES-NEXT:              <tr>
 // HTML-VEHICLES-NEXT:                  <td>Pickup</td>
 // HTML-VEHICLES-NEXT:                  <td>2</td>
-// HTML-VEHICLES-NEXT:                  <td>
-// HTML-VEHICLES-NEXT:                    <p class="paragraph-container">
-// HTML-VEHICLES-NEXT:                        Comment 3<br>
-// HTML-VEHICLES-NEXT:                    </p>
-// HTML-VEHICLES-NEXT:                  </td>
+// HTML-VEHICLES-NEXT:                  <td> -- </td>
 // HTML-VEHICLES-NEXT:              </tr>
 // HTML-VEHICLES-NEXT:              <tr>
 // HTML-VEHICLES-NEXT:                  <td>Hatchback</td>
@@ -537,7 +533,7 @@ enum Car {
 // HTML-VEHICLES-NEXT:           <p> specify type of car</p>
 // HTML-VEHICLES-NEXT:        </div>
 // HTML-VEHICLES-NEXT:      </div>
-// HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-75]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+// HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-71]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 // HTML-VEHICLES-NEXT:    </div>
 
 // MD-MUSTACHE-VEHICLES: # namespace Vehicles

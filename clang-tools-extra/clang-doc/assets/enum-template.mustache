@@ -30,7 +30,8 @@
                 <td>{{ValueExpr}}</td>
                 {{/Value}}
                 {{#HasComments}}
-                <td>{{#Description}}
+                <td>{{#HasMemberComment}}
+                    {{#Description}}
                         {{#BriefComments}}
                             {{#.}}
                             <p class="paragraph-container">{{TextComment}}</p>
@@ -51,7 +52,8 @@
                             </p>
                         {{/ParagraphComment}}
                     {{/Description}}
-                    {{^Description}} -- {{/Description}}</td>
+                    {{/HasMemberComment}}
+                    {{^HasMemberComment}} -- {{/HasMemberComment}}</td>
                 {{/HasComments}}
             </tr>
             {{/Members}}
