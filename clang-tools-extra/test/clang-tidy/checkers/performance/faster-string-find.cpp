@@ -5,7 +5,6 @@
 // RUN:                '::llvm::StringRef;'}}"
 #include <string>
 
-// Mock for libstdc++
 namespace std {
 template <typename T> struct set {
   struct iterator {
@@ -139,7 +138,7 @@ template <typename T>
 int FindTemplateNotDependant2() {
   return std::string().find("A");
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: 'find' called with a string literal
-  // CHECK-FIXES: return std::string().find('A');
+  // CHECK-FIXES:   return std::string().find('A');
 }
 
 int FindStr() {

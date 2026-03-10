@@ -58,9 +58,8 @@ void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
   const auto SingleChar =
       ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal"));
 
-  const auto StringExpr =
-      expr(hasType(hasUnqualifiedDesugaredType(recordType(
-               hasDeclaration(recordDecl(hasAnyName(StringLikeClasses)))))));
+  const auto StringExpr = expr(hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(recordDecl(hasAnyName(StringLikeClasses)))))));
 
   const auto InterestingStringFunction = hasAnyName(
       "find", "rfind", "find_first_of", "find_first_not_of", "find_last_of",
