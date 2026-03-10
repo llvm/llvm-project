@@ -979,22 +979,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         retType, CGM.getHLSLRuntime().getIsNaNIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.isnan");
   }
-  case Builtin::BI__builtin_hlsl_elementwise_fma: {
-    Value *M = EmitScalarExpr(E->getArg(0));
-    Value *A = EmitScalarExpr(E->getArg(1));
-    Value *B = EmitScalarExpr(E->getArg(2));
-    if (CGM.getTarget().getTriple().isDXIL())
-      return Builder.CreateIntrinsic(M->getType(), Intrinsic::dx_fma,
-                                     ArrayRef<Value *>{M, A, B}, nullptr,
-                                     "dx.fma");
-
-    if (CGM.getTarget().getTriple().isSPIRV())
-      return Builder.CreateIntrinsic(M->getType(), Intrinsic::spv_fma,
-                                     ArrayRef<Value *>{M, A, B}, nullptr,
-                                     "spv.fma");
-
-    break;
-  }
   case Builtin::BI__builtin_hlsl_mad: {
     Value *M = EmitScalarExpr(E->getArg(0));
     Value *A = EmitScalarExpr(E->getArg(1));

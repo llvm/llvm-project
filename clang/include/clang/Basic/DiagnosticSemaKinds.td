@@ -13232,8 +13232,8 @@ def err_builtin_invalid_arg_type: Error<
 def err_builtin_requires_double_type: Error<
   "%ordinal0 argument must be a scalar, vector, or matrix of double type (was %1)">;
 
-def err_builtin_requires_fp_scalar_or_vector_type: Error<
-  "%ordinal0 argument must be a scalar or vector of floating-point type (was %1)">;
+def err_builtin_requires_any_fp_type: Error<
+  "%ordinal0 argument must be a scalar, vector, or matrix of any floating-point type (was %1)">;
 
 def err_bswapg_invalid_bit_width : Error<
   "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;

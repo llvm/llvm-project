@@ -110,7 +110,7 @@ static bool checkFmaOps(Intrinsic::ID IID) {
   switch (IID) {
   default:
     return false;
-  case Intrinsic::dx_fma:
+  case Intrinsic::fma:
     return true;
   }
 }

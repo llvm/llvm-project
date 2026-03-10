@@ -47,6 +47,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cmath>
 #include <cstddef>
@@ -3041,19 +3042,6 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
   return false;
 }
 
-static bool CheckFloatOrHalfOrDoubleRepresentation(Sema *S, SourceLocation Loc,
-                                                   int ArgOrdinal,
-                                                   clang::QualType PassedType) {
-  clang::QualType BaseType =
-      PassedType->isVectorType()
-          ? PassedType->castAs<clang::VectorType>()->getElementType()
-          : PassedType;
-  if (!BaseType->isFloatingType())
-    return S->Diag(Loc, diag::err_builtin_requires_fp_scalar_or_vector_type)
-           << ArgOrdinal << PassedType;
-  return false;
-}
-
 static bool CheckAnyDoubleRepresentation(Sema *S, SourceLocation Loc,
                                          int ArgOrdinal,
                                          clang::QualType PassedType) {
@@ -3818,29 +3806,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_fma: {
+  case Builtin::BI__builtin_elementwise_fma: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckAllArgsHaveSameType(&SemaRef, TheCall)) {
       return true;
     }
-    const llvm::Triple &TT = getASTContext().getTargetInfo().getTriple();
-    // This check is here because emitting a general error for both backends
-    // here (like for exmaple "Accepts only floating points") won't end really
-    // good. after that we still need to check if the types satisfy
-    // backends constrains, so we better check everything now rather than
-    // confusing user with 2 different error messages
 
-    if (TT.isSPIRV()) {
-      // SPIR-V accept any float (besides matrices)
-      if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                     CheckFloatOrHalfOrDoubleRepresentation))
-        return true;
-    } else if (TT.isDXIL()) {
-      // while DirectX accepts only double
-      if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                     CheckAnyDoubleRepresentation))
-        return true;
-    }
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                   CheckAnyDoubleRepresentation))
+      return true;
 
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();

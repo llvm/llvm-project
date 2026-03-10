@@ -784,7 +784,7 @@ def FMad : DXILOp<46, tertiary> {
 
 def Fma : DXILOp<47, tertiary> {
   let Doc = "Double-precision fused multiply-add. fma(a,b,c) = a * b + c.";
-  let intrinsics = [IntrinSelect<int_dx_fma>];
+  let intrinsics = [IntrinSelect<int_fma>];
   let arguments = [OverloadTy, OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];

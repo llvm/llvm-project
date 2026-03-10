@@ -2178,9 +2178,12 @@ static bool
 checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
                             Sema::EltwiseBuiltinArgTyRestriction ArgTyRestr,
                             int ArgOrdinal) {
-  QualType EltTy = ArgTy;
-  if (auto *VecTy = EltTy->getAs<VectorType>())
-    EltTy = VecTy->getElementType();
+  clang::QualType EltTy =
+      ArgTy->isVectorType()
+          ? ArgTy->castAs<clang::VectorType>()->getElementType()
+      : ArgTy->isMatrixType()
+          ? ArgTy->castAs<clang::MatrixType>()->getElementType()
+          : ArgTy;
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
@@ -2192,9 +2195,8 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::FloatTy:
     if (!EltTy->isRealFloatingType()) {
-      return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* scalar or vector */ 5 << /* no int */ 0
-             << /* floating-point */ 1 << ArgTy;
+      return S.Diag(Loc, diag::err_builtin_requires_any_fp_type)
+             << ArgOrdinal << ArgTy;
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::IntegerTy:
