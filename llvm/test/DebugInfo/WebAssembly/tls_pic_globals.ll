@@ -1,30 +1,30 @@
 ; Non-PIC tests
-; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics - -o %t.localexec.o
-; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics - -o %t.generaldynamic.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -filetype=obj -mattr=+bulk-memory,atomics - -o %t.localexec.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -filetype=obj -mattr=+bulk-memory,atomics - -o %t.generaldynamic.o
 ; RUN: llvm-dwarfdump %t.localexec.o | FileCheck %s --check-prefixes=CHECK,NOPIC
 ; RUN: llvm-dwarfdump %t.generaldynamic.o | FileCheck %s --check-prefixes=CHECK,NOPIC
 ; RUN: llvm-readobj -r %t.localexec.o | FileCheck %s --check-prefixes=RELOCS-NOSPLIT
 ; RUN: llvm-readobj -r %t.generaldynamic.o | FileCheck %s --check-prefixes=RELOCS-NOSPLIT
 
 ; PIC tests
-; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic - -o %t.localexec.pic.o
-; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic - -o %t.generaldynamic.pic.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic - -o %t.localexec.pic.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic - -o %t.generaldynamic.pic.o
 ; RUN: llvm-dwarfdump %t.localexec.pic.o | FileCheck %s --check-prefixes=CHECK,PIC
 ; RUN: llvm-dwarfdump %t.generaldynamic.pic.o | FileCheck %s --check-prefixes=CHECK,PIC
 ; RUN: llvm-readobj -r %t.localexec.pic.o | FileCheck %s --check-prefixes=RELOCS-NOSPLIT,RELOCS-PIC-NOSPLIT
 ; RUN: llvm-readobj -r %t.generaldynamic.pic.o | FileCheck %s --check-prefixes=RELOCS-NOSPLIT,RELOCS-PIC-NOSPLIT
 
 ; Non-PIC + split DWARF tests
-; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics -split-dwarf-file=%t.localexec.split.dwo -split-dwarf-output=%t.localexec.split.dwo - -o %t.localexec.split.o
-; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics -split-dwarf-file=%t.generaldynamic.split.dwo -split-dwarf-output=%t.generaldynamic.split.dwo - -o %t.generaldynamic.split.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -filetype=obj -mattr=+bulk-memory,atomics -split-dwarf-file=%t.localexec.split.dwo -split-dwarf-output=%t.localexec.split.dwo - -o %t.localexec.split.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -filetype=obj -mattr=+bulk-memory,atomics -split-dwarf-file=%t.generaldynamic.split.dwo -split-dwarf-output=%t.generaldynamic.split.dwo - -o %t.generaldynamic.split.o
 ; RUN: llvm-dwarfdump %t.localexec.split.dwo | FileCheck %s --check-prefixes=CHECK,NOPIC
 ; RUN: llvm-dwarfdump %t.generaldynamic.split.dwo | FileCheck %s --check-prefixes=CHECK,NOPIC
 ; RUN: llvm-readobj -r %t.localexec.split.dwo | FileCheck %s --check-prefixes=RELOCS-SPLIT
 ; RUN: llvm-readobj -r %t.generaldynamic.split.dwo | FileCheck %s --check-prefixes=RELOCS-SPLIT
 
 ; PIC + split DWARF tests
-; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic -split-dwarf-file=%t.localexec.pic.split.dwo -split-dwarf-output=%t.localexec.pic.split.dwo - -o %t.localexec.pic.split.o
-; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -enable-debug-tls-location -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic -split-dwarf-file=%t.generaldynamic.pic.split.dwo -split-dwarf-output=%t.generaldynamic.pic.split.dwo - -o %t.generaldynamic.pic.split.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]/(localexec)/' %s | llc -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic -split-dwarf-file=%t.localexec.pic.split.dwo -split-dwarf-output=%t.localexec.pic.split.dwo - -o %t.localexec.pic.split.o
+; RUN: sed -e 's/\[\[TLS_MODE\]\]//' %s | llc -filetype=obj -mattr=+bulk-memory,atomics -relocation-model=pic -split-dwarf-file=%t.generaldynamic.pic.split.dwo -split-dwarf-output=%t.generaldynamic.pic.split.dwo - -o %t.generaldynamic.pic.split.o
 ; RUN: llvm-dwarfdump %t.localexec.pic.split.dwo | FileCheck %s --check-prefixes=CHECK,PIC
 ; RUN: llvm-dwarfdump %t.generaldynamic.pic.split.dwo | FileCheck %s --check-prefixes=CHECK,PIC
 ; RUN: llvm-readobj -r %t.localexec.pic.split.dwo | FileCheck %s --check-prefixes=RELOCS-SPLIT
@@ -57,10 +57,10 @@ target triple = "wasm32-unknown-emscripten"
 @external_var1 = global i32 222, align 4, !dbg !5
 @internal_var0 = internal global i32 333, align 4, !dbg !8
 @internal_var1 = internal global i32 444, align 4, !dbg !10
-@external_tls_var0 = dso_local thread_local[[TLS_MODE]] global i32 555, align 4, !dbg !12
-@external_tls_var1 = dso_local thread_local[[TLS_MODE]] global i32 666, align 4, !dbg !14
-@internal_tls_var0 = internal thread_local[[TLS_MODE]] global i32 777, align 4, !dbg !16
-@internal_tls_var1 = internal thread_local[[TLS_MODE]] global i32 888, align 4, !dbg !18
+@external_tls_var0 = thread_local[[TLS_MODE]] global i32 555, align 4, !dbg !12
+@external_tls_var1 = thread_local[[TLS_MODE]] global i32 666, align 4, !dbg !14
+@internal_tls_var0 = thread_local[[TLS_MODE]] global i32 777, align 4, !dbg !16
+@internal_tls_var1 = thread_local[[TLS_MODE]] global i32 888, align 4, !dbg !18
 
 define void @foo(i32, i32, i32, i32, i32, i32, i32, i32) {
   ret void

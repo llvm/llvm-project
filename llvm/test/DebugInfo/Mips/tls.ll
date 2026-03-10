@@ -1,7 +1,7 @@
-; RUN: llc -O0 -mtriple=mips-elf -mcpu=mips32r2 -enable-debug-tls-location -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-WORD
-; RUN: llc -O0 -mtriple=mips64-elf -mcpu=mips64r2 -enable-debug-tls-location -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-DWORD
+; RUN: llc -O0 -mtriple=mips-elf -mcpu=mips32r2 -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-WORD
+; RUN: llc -O0 -mtriple=mips64-elf -mcpu=mips64r2 -filetype=asm < %s | FileCheck %s -check-prefix=CHECK-DWORD
 
-@x = dso_local thread_local global i32 5, align 4, !dbg !0
+@x = thread_local global i32 5, align 4, !dbg !0
 
 ; CHECK-WORD: .dtprelword x+32768
 ; CHECK-DWORD: .dtpreldword x+32768

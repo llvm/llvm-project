@@ -24,7 +24,7 @@
 ; llvm-debuginfo-analyzer --attribute=location --print=symbols
 ;                         ThreadLocalStorage.o
 
-; RUN: llc --filetype=obj -enable-debug-tls-location \
+; RUN: llc --filetype=obj \
 ; RUN:     %p/Inputs/ThreadLocalStorage.ll -o %t.ThreadLocalStorage.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=location \

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -O0 -enable-debug-tls-location -filetype=asm < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -O0 -filetype=asm < %s | FileCheck %s
 
 ; FIXME: add relocation and DWARF expression support to llvm-dwarfdump & use
 ; that here instead of raw assembly printing
@@ -14,7 +14,7 @@
 
 source_filename = "test/DebugInfo/PowerPC/tls.ll"
 
-@tls = dso_local thread_local global i32 7, align 4, !dbg !0
+@tls = thread_local global i32 7, align 4, !dbg !0
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7, !8}

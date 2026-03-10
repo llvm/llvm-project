@@ -4,16 +4,16 @@
 ; vs. DW_OP_GNU_push_tls_address opcodes to distinguish the debuggers.
 
 ; Verify defaults for various targets.
-; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
-; RUN: llc -mtriple=x86_64-sie-ps5 -filetype=obj -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
-; RUN: llc -mtriple=x86_64-pc-freebsd -filetype=obj -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
+; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
+; RUN: llc -mtriple=x86_64-sie-ps5 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
+; RUN: llc -mtriple=x86_64-pc-freebsd -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
 
 ; We can override defaults.
-; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj -debugger-tune=gdb -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=sce -enable-debug-tls-location < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
+; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj -debugger-tune=gdb < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
 
 ; GDB-NOT: DW_AT_APPLE_optimized
 ; GDB-NOT: DW_OP_form_tls_address
@@ -24,7 +24,7 @@
 ; SCE-NOT: DW_AT_APPLE_optimized
 ; SCE-NOT: DW_OP_GNU_push_tls_address
 
-@var = dso_local thread_local global i32 0, align 4, !dbg !0
+@var = thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: norecurse nounwind readnone uwtable
 define void @_Z3funv() local_unnamed_addr #0 !dbg !11 {
