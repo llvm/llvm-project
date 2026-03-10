@@ -218,6 +218,32 @@ void KernelEnvironmentOp::getCanonicalizationPatterns(
   results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
+template <typename ComputeConstructT>
+KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate(ComputeConstructT computeConstruct,
+                                       OpBuilder &builder) {
+  auto kernelEnvironment = KernelEnvironmentOp::create(
+      builder, computeConstruct->getLoc(),
+      computeConstruct.getDataClauseOperands(),
+      computeConstruct.getAsyncOperands(),
+      computeConstruct.getAsyncOperandsDeviceTypeAttr(),
+      computeConstruct.getAsyncOnlyAttr(), computeConstruct.getWaitOperands(),
+      computeConstruct.getWaitOperandsSegmentsAttr(),
+      computeConstruct.getWaitOperandsDeviceTypeAttr(),
+      computeConstruct.getHasWaitDevnumAttr(),
+      computeConstruct.getWaitOnlyAttr());
+  Block &block = kernelEnvironment.getRegion().emplaceBlock();
+  builder.setInsertionPointToStart(&block);
+  return kernelEnvironment;
+}
+
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<ParallelOp>(ParallelOp, OpBuilder &);
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<KernelsOp>(KernelsOp, OpBuilder &);
+template KernelEnvironmentOp
+KernelEnvironmentOp::createAndPopulate<SerialOp>(SerialOp, OpBuilder &);
+
 //===----------------------------------------------------------------------===//
 // FirstprivateMapInitialOp
 //===----------------------------------------------------------------------===//
@@ -417,7 +443,8 @@ SmallVector<GPUParallelDimAttr> ComputeRegionOp::getLaunchParDims() {
 Value ComputeRegionOp::getOperand(BlockArgument blockArg) {
   unsigned argNumber = blockArg.getArgNumber();
   unsigned numLaunchArgs = getLaunchArgs().size();
-  assert(argNumber < (numLaunchArgs + getInputArgs().size()) &&
+  unsigned numInputArgs = getInputArgs().size();
+  assert(argNumber < (numLaunchArgs + numInputArgs) &&
          "invalid block argument");
   if (argNumber < numLaunchArgs)
     return getLaunchArgs()[argNumber];
