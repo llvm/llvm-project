@@ -16,13 +16,14 @@ namespace Fortran::runtime {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-void RTDEF(ComputeLastUcobound)(
-    int num_images, const Descriptor &lcobounds, const Descriptor &ucobounds) {
+void RTDEF(ComputeLastUcobound)(int num_images, const Descriptor &lcobounds,
+    const Descriptor &ucobounds, int rank) {
   int corank = ucobounds.GetDimension(0).Extent();
-  if (corank > 15)
+  if (corank + rank > 15)
     Fortran::runtime::Terminator{}.Crash(
-        "Fortran runtime error: maximum corank for a coarray is 15, current "
-        "corank is %d.",
+        "Fortran runtime error: maximum corank + rank for a coarray is 15, "
+        "current "
+        "corank is %d and rank is %d.",
         corank);
 
   int64_t *lcobounds_ptr = (int64_t *)lcobounds.raw().base_addr;

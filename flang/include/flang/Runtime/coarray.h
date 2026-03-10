@@ -16,8 +16,8 @@ namespace Fortran::runtime {
 // class Descriptor;
 extern "C" {
 
-void RTDECL(ComputeLastUcobound)(
-    int num_images, const Descriptor &lcobounds, const Descriptor &ucobounds);
+void RTDECL(ComputeLastUcobound)(int num_images, const Descriptor &lcobounds,
+    const Descriptor &ucobounds, int rank);
 }
 } // namespace Fortran::runtime
 

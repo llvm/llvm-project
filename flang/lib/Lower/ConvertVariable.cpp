@@ -671,6 +671,33 @@ getLinkageAttribute(Fortran::lower::AbstractConverter &converter,
   return builder.createInternalLinkage();
 }
 
+static void
+genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
+                            const Fortran::lower::pft::Variable &var,
+                            Fortran::lower::SymMap &symMap) {
+  mlir::Location loc = converter.getCurrentLocation();
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
+    TODO(loc, "Coarray with finalization.");
+
+  auto *builder = &converter.getFirOpBuilder();
+  fir::ExtendedValue exv = converter.getSymbolExtendedValue(sym, &symMap);
+  if (!Fortran::semantics::IsDummy(var.getSymbol())) {
+    converter.getFctCtx().attachCleanup([builder, loc, exv]() {
+      mif::DeallocCoarrayOp::create(*builder, loc, fir::getBase(exv),
+                                    /*stat*/ mlir::Value{},
+                                    /*errmsg*/ mlir::Value{});
+    });
+  } else {
+    // PRIF provide prif_alias_destroy to delete an aliased descriptor
+    // for a coarray. This procedure does not deallocate or alter the
+    // orginal coarray but need to be called when we leave the scope
+    // for a dummy coarray argument.The MIF dialect will provide an
+    // operation to handle this case.
+    TODO(loc, "Cleanup of dummy coarray.");
+  }
+}
+
 /// Instantiate a global variable. If it hasn't already been processed, add
 /// the global to the ModuleOp as a new uniqued symbol and initialize it with
 /// the correct value. It will be referenced on demand using `fir.addr_of`.
@@ -703,6 +730,14 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::Value cast = builder.createConvert(loc, varAddrType, addrOf);
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx, cast);
+  // Local coarray must have the SAVE or ALLOCATABLE attribute and are
+  // never explicitly deallaocated or finalized (see 7.5.6.4).
+  // Otherwize, a coarray is global we will add an implicit deallocation
+  // for nonallocatable and nonpointer at the end of the scope.
+  if (Fortran::evaluate::IsCoarray(sym) &&
+      !Fortran::semantics::IsAllocatable(sym) &&
+      !Fortran::semantics::IsPointer(sym))
+    genCleanupDeallocateCoarray(converter, var, symMap);
 }
 
 bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
@@ -1134,22 +1169,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       });
     }
   }
-  if (Fortran::evaluate::IsCoarray(var.getSymbol()) &&
-      !Fortran::semantics::IsAllocatableOrPointer(var.getSymbol()) &&
-      !Fortran::semantics::IsDummy(var.getSymbol())) {
-    mlir::Location loc = converter.getCurrentLocation();
-    fir::ExtendedValue exv =
-        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
-    auto *sym = &var.getSymbol();
-    const Fortran::semantics::Scope &owner = sym->owner();
-    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram) {
-      converter.getFctCtx().attachCleanup([builder, loc, exv]() {
-        mif::DeallocCoarrayOp::create(*builder, loc, fir::getBase(exv),
-                                      /*stat*/ mlir::Value{},
-                                      /*errmsg*/ mlir::Value{});
-      });
-    }
-  }
+
   if (std::optional<VariableCleanUp> cleanup =
           needDeallocationOrFinalization(var)) {
     auto *builder = &converter.getFirOpBuilder();

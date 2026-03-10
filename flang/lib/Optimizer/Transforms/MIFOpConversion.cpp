@@ -131,48 +131,13 @@ static mlir::Value getNumImages(fir::FirOpBuilder &builder,
   return fir::LoadOp::create(builder, loc, result);
 }
 
-static std::pair<mlir::Value, mlir::Value>
-genCoBounds(fir::FirOpBuilder &builder, mlir::Location loc,
-            mif::AllocCoarrayOp op) {
-  mlir::Value ucobounds, lcobounds;
-  mlir::DenseI64ArrayAttr lcbsAttr = op.getLcoboundsAttr();
-  mlir::DenseI64ArrayAttr ucbsAttr = op.getUcoboundsAttr();
-
-  size_t corank = lcbsAttr.size();
-  mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type addrType = builder.getRefType(i64Ty);
-  mlir::Type arrayType = fir::SequenceType::get(
-      {static_cast<fir::SequenceType::Extent>(corank)}, i64Ty);
-  lcobounds = builder.createTemporary(loc, arrayType);
-  ucobounds = builder.createTemporary(loc, arrayType);
-
-  for (size_t i = 0; i < corank; i++) {
-    auto index = builder.createIntegerConstant(loc, builder.getIndexType(), i);
-    // Lower cobounds
-    auto lcovalue = builder.createIntegerConstant(loc, i64Ty, lcbsAttr[i]);
-    auto lcoaddr =
-        fir::CoordinateOp::create(builder, loc, addrType, lcobounds, index);
-    fir::StoreOp::create(builder, loc, lcovalue, lcoaddr);
-
-    // Upper cobounds
-    auto ucovalue = builder.createIntegerConstant(loc, i64Ty, ucbsAttr[i]);
-    auto ucoaddr =
-        fir::CoordinateOp::create(builder, loc, addrType, ucobounds, index);
-    fir::StoreOp::create(builder, loc, ucovalue, ucoaddr);
-  }
-
-  lcobounds = builder.createBox(loc, lcobounds);
-  ucobounds = builder.createBox(loc, ucobounds);
-
-  // Computing last ucobound
-  mlir::func::FuncOp func =
-      fir::runtime::getRuntimeFunc<mkRTKey(ComputeLastUcobound)>(loc, builder);
-  mlir::Value numImages = getNumImages(builder, loc);
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-      builder, loc, func.getFunctionType(), numImages, lcobounds, ucobounds);
-  fir::CallOp::create(builder, loc, func, args);
-
-  return {lcobounds, ucobounds};
+static mlir::Value getRank(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value v) {
+  mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v.getType()));
+  unsigned rank = 0;
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(argTy))
+    rank = seqTy.getDimension();
+  return builder.createIntegerConstant(loc, builder.getI32Type(), rank);
 }
 
 // Storing the coarray descriptor as a global variable
@@ -1117,7 +1082,6 @@ struct MIFAllocCoarrayOpConversion
 
     mlir::Value sizeInBytes =
         getSizeInBytes(builder, loc, mod, dl, typeConverter, op.getBox());
-    auto [lcobounds, ucobounds] = genCoBounds(builder, loc, op);
     mlir::Value stat = op.getStat();
     if (!stat)
       stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
@@ -1125,8 +1089,8 @@ struct MIFAllocCoarrayOpConversion
         genErrmsgPRIF(builder, loc, op.getErrmsg());
 
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-        builder, loc, ftype, lcobounds, ucobounds, sizeInBytes, finalFunc,
-        coarrayHandle, allocMem, stat, errmsgArg, errmsgAllocArg);
+        builder, loc, ftype, op.getLcobounds(), op.getUcobounds(), sizeInBytes,
+        finalFunc, coarrayHandle, allocMem, stat, errmsgArg, errmsgAllocArg);
     fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
 
     storeCoarrayHandle(builder, loc, coarrayHandle, op.getUniqName().str());

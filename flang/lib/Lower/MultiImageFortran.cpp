@@ -13,6 +13,7 @@
 
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
@@ -262,100 +263,165 @@ void Fortran::lower::genFormTeamStatement(
 // COARRAY utils
 //===----------------------------------------------------------------------===//
 
-mlir::DenseI64ArrayAttr
+mlir::Value
 Fortran::lower::genLowerCoBounds(Fortran::lower::AbstractConverter &converter,
                                  mlir::Location loc,
                                  const Fortran::semantics::Symbol &sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::DenseI64ArrayAttr lcobounds;
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type addrType = builder.getRefType(i64Ty);
+  mlir::Value one = builder.createIntegerConstant(loc, i64Ty, 1);
+  mlir::Value lcobounds;
 
   if (Fortran::semantics::IsAllocatableOrObjectPointer(&sym))
-    return {};
+    mlir::emitError(
+        loc,
+        "Unable to use genLowerCoBounds on ALLOCATABLE and POINTER symbol");
   if (const auto *object =
           sym.GetUltimate()
               .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-    llvm::SmallVector<std::int64_t> lcbs;
-    for (const Fortran::semantics::ShapeSpec &cobounds : object->coshape()) {
-      if (auto lb = cobounds.lbound().GetExplicit()) {
-        if (auto constant = Fortran::evaluate::ToInt64(*lb))
-          lcbs.push_back(*constant);
-        else
-          lcbs.push_back(1); // default lcobounds
+    size_t corank = object->coshape().size();
+    mlir::Type arrayType = fir::SequenceType::get(
+        {static_cast<fir::SequenceType::Extent>(corank)}, i64Ty);
+    lcobounds = builder.createTemporary(loc, arrayType);
+    mlir::Value lcovalue = one; // default lcobounds
+    for (size_t i = 0; i < corank; i++) {
+      if (auto lb = object->coshape()[i].lbound().GetExplicit()) {
+        auto lbExpr = ignoreEvConvert(*lb);
+        lcovalue = fir::getBase(converter.genExprValue(loc, lbExpr, stmtCtx));
       }
+
+      if (lcovalue.getType() != i64Ty)
+        lcovalue = fir::ConvertOp::create(builder, loc, i64Ty, lcovalue);
+      mlir::Value index =
+          builder.createIntegerConstant(loc, builder.getIndexType(), i);
+      mlir::Value lcoaddr =
+          fir::CoordinateOp::create(builder, loc, addrType, lcobounds, index);
+      fir::StoreOp::create(builder, loc, lcovalue, lcoaddr);
     }
-    lcobounds = mlir::DenseI64ArrayAttr::get(builder.getContext(), lcbs);
+    lcobounds = builder.createBox(loc, lcobounds);
   }
   return lcobounds;
 }
 
-mlir::DenseI64ArrayAttr
+mlir::Value
 Fortran::lower::genUpperCoBounds(Fortran::lower::AbstractConverter &converter,
                                  mlir::Location loc,
                                  const Fortran::semantics::Symbol &sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::DenseI64ArrayAttr ucobounds;
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type addrType = builder.getRefType(i64Ty);
+  mlir::Value one = builder.createIntegerConstant(loc, i64Ty, 1);
+  mlir::Value ucobounds;
 
   if (Fortran::semantics::IsAllocatableOrObjectPointer(&sym))
-    return {};
+    mlir::emitError(
+        loc,
+        "Unable to use genUpperCoBounds on ALLOCATABLE and POINTER symbol");
   if (const auto *object =
           sym.GetUltimate()
               .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-    llvm::SmallVector<std::int64_t> ucbs;
-    for (const Fortran::semantics::ShapeSpec &cobounds : object->coshape()) {
-      if (cobounds.ubound().isStar()) {
-        ucbs.push_back(-1);
-      } else if (auto ub = cobounds.ubound().GetExplicit()) {
-        if (auto constant = Fortran::evaluate::ToInt64(*ub))
-          ucbs.push_back(*constant);
-        else {
-          if (auto lb = cobounds.lbound().GetExplicit()) {
-            if (auto constant2 = Fortran::evaluate::ToInt64(*lb))
-              ucbs.push_back(*constant2);
-            else
-              ucbs.push_back(1); // use lcobound as default value
-          }
-        }
+    size_t corank = object->coshape().size();
+    mlir::Type arrayType = fir::SequenceType::get(
+        {static_cast<fir::SequenceType::Extent>(corank)}, i64Ty);
+    ucobounds = builder.createTemporary(loc, arrayType);
+    mlir::Value ucovalue;
+    for (size_t i = 0; i < corank; i++) {
+      if (auto ub = object->coshape()[i].lbound().GetExplicit()) {
+        auto ubExpr = ignoreEvConvert(*ub);
+        ucovalue = fir::getBase(converter.genExprValue(loc, ubExpr, stmtCtx));
+      } else if (object->coshape()[i].ubound().isStar())
+        ucovalue = builder.createIntegerConstant(loc, i64Ty, -1);
+      else {
+        if (auto lb = object->coshape()[i].lbound().GetExplicit()) {
+          auto lbExpr = ignoreEvConvert(*lb);
+          ucovalue = fir::getBase(converter.genExprValue(
+              loc, lbExpr, stmtCtx)); // default value from lcobound
+        } else
+          ucovalue = one;
       }
+      if (ucovalue.getType() != i64Ty)
+        ucovalue = fir::ConvertOp::create(builder, loc, i64Ty, ucovalue);
+      mlir::Value index =
+          builder.createIntegerConstant(loc, builder.getIndexType(), i);
+      mlir::Value ucoaddr =
+          fir::CoordinateOp::create(builder, loc, addrType, ucobounds, index);
+      fir::StoreOp::create(builder, loc, ucovalue, ucoaddr);
     }
-    ucobounds = mlir::DenseI64ArrayAttr::get(builder.getContext(), ucbs);
+    ucobounds = builder.createBox(loc, ucobounds);
   }
   return ucobounds;
 }
 
-static std::tuple<mlir::DenseI64ArrayAttr, mlir::DenseI64ArrayAttr>
-genCoBoundsAttrs(Fortran::lower::AbstractConverter &converter,
-                 mlir::Location loc,
-                 const Fortran::parser::AllocateCoarraySpec &allocSpec) {
+static std::tuple<mlir::Value, mlir::Value>
+genCoBounds(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+            const Fortran::parser::AllocateCoarraySpec &allocSpec) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
   llvm::SmallVector<std::int64_t> lcbs, ucbs;
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type addrType = builder.getRefType(i64Ty);
+  mlir::Value one = builder.createIntegerConstant(loc, i64Ty, 1);
 
   const std::list<Fortran::parser::AllocateCoshapeSpec> &coshapeSpecs =
       std::get<0>(allocSpec.t);
+  size_t corank = coshapeSpecs.size() + 1;
+  mlir::Type arrayType = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(corank)}, i64Ty);
+  mlir::Value lcobounds = builder.createTemporary(loc, arrayType);
+  mlir::Value ucobounds = builder.createTemporary(loc, arrayType);
+  size_t i = 0;
   for (const Fortran::parser::AllocateCoshapeSpec &coshapeSpec : coshapeSpecs) {
-    std::int64_t lb;
-    if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
-            std::get<0>(coshapeSpec.t))
-      lb = *Fortran::evaluate::ToInt64(Fortran::semantics::GetExpr(*lbExpr));
-    else
-      lb = 1;
-    lcbs.push_back(lb);
-    ucbs.push_back(*Fortran::evaluate::ToInt64(
-        Fortran::semantics::GetExpr(std::get<1>(coshapeSpec.t))));
+    const std::optional<Fortran::parser::BoundExpr> &lbExpr =
+        std::get<0>(coshapeSpec.t);
+    const Fortran::parser::BoundExpr &ubExpr = std::get<1>(coshapeSpec.t);
+    mlir::Value lb = one;
+    if (lbExpr.has_value()) {
+      auto expr = Fortran::semantics::GetExpr(*lbExpr);
+      lb = fir::getBase(converter.genExprValue(loc, expr, stmtCtx));
+      if (lb.getType() != i64Ty)
+        lb = fir::ConvertOp::create(builder, loc, i64Ty, lb);
+    }
+
+    auto ube = Fortran::semantics::GetExpr(ubExpr);
+    mlir::Value ub = fir::getBase(converter.genExprValue(loc, ube, stmtCtx));
+    if (ub.getType() != i64Ty)
+      ub = fir::ConvertOp::create(builder, loc, i64Ty, ub);
+
+    mlir::Value index =
+        builder.createIntegerConstant(loc, builder.getIndexType(), i);
+    // Lcobound
+    mlir::Value lcoaddr =
+        fir::CoordinateOp::create(builder, loc, addrType, lcobounds, index);
+    fir::StoreOp::create(builder, loc, lb, lcoaddr);
+    // Ucobound
+    mlir::Value ucoaddr =
+        fir::CoordinateOp::create(builder, loc, addrType, ucobounds, index);
+    fir::StoreOp::create(builder, loc, ub, ucoaddr);
+    i++;
+  }
+  // Last cobound;
+  {
+    mlir::Value lb = one;
+    if (const std::optional<Fortran::parser::BoundExpr> &lastCobound =
+            std::get<1>(allocSpec.t)) {
+      auto expr = Fortran::semantics::GetExpr(*lastCobound);
+      lb = fir::getBase(converter.genExprValue(loc, expr, stmtCtx));
+    }
+    mlir::Value index =
+        builder.createIntegerConstant(loc, builder.getIndexType(), i);
+    mlir::Value lcoaddr =
+        fir::CoordinateOp::create(builder, loc, addrType, lcobounds, index);
+    mlir::Value ucoaddr =
+        fir::CoordinateOp::create(builder, loc, addrType, ucobounds, index);
+    fir::StoreOp::create(builder, loc, lb, lcoaddr);
+    fir::StoreOp::create(builder, loc, lb, ucoaddr);
   }
 
-  const std::optional<Fortran::parser::BoundExpr> &lastBound =
-      std::get<1>(allocSpec.t);
-  if (lastBound.has_value())
-    lcbs.push_back(
-        *Fortran::evaluate::ToInt64(Fortran::semantics::GetExpr(*lastBound)));
-  else
-    lcbs.push_back(1);
-  ucbs.push_back(-1);
-
-  mlir::DenseI64ArrayAttr lcobounds =
-      mlir::DenseI64ArrayAttr::get(builder.getContext(), lcbs);
-  mlir::DenseI64ArrayAttr ucobounds =
-      mlir::DenseI64ArrayAttr::get(builder.getContext(), ucbs);
+  lcobounds = builder.createBox(loc, lcobounds);
+  ucobounds = builder.createBox(loc, ucobounds);
   return {lcobounds, ucobounds};
 }
 
@@ -371,10 +437,9 @@ mlir::Value Fortran::lower::genAllocateCoarray(
   if (hasStat)
     stat = builder.createTemporary(loc, builder.getI32Type());
 
-  mlir::DenseI64ArrayAttr lcobounds, ucobounds;
+  mlir::Value lcobounds, ucobounds;
   if (allocSpec.has_value()) {
-    std::tie(lcobounds, ucobounds) =
-        genCoBoundsAttrs(converter, loc, *allocSpec);
+    std::tie(lcobounds, ucobounds) = genCoBounds(converter, loc, *allocSpec);
   } else {
     lcobounds = Fortran::lower::genLowerCoBounds(converter, loc, sym);
     ucobounds = Fortran::lower::genUpperCoBounds(converter, loc, sym);

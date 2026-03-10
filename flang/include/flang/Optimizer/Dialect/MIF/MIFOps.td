@@ -443,21 +443,20 @@ def mif_AllocCoarrayOp
 
   let arguments = (ins StrAttr:$uniq_name,
       Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-      DenseI64ArrayAttr:$lcobounds, DenseI64ArrayAttr:$ucobounds,
+      AnyBoxedArray:$lcobounds, AnyBoxedArray:$ucobounds,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
 
   let builders = [OpBuilder<(ins "mlir::Value":$box, "llvm::StringRef":$symName,
-                      "mlir::DenseI64ArrayAttr":$lcobounds,
-                      "mlir::DenseI64ArrayAttr":$ucobounds, "mlir::Value":$stat,
-                      "mlir::Value":$errmsg)>,
+                      "mlir::Value":$lcobounds, "mlir::Value":$ucobounds,
+                      "mlir::Value":$stat, "mlir::Value":$errmsg)>,
                   OpBuilder<(ins "mlir::Value":$box, "llvm::StringRef":$symName,
-                      "mlir::DenseI64ArrayAttr":$lcobounds,
-                      "mlir::DenseI64ArrayAttr":$ucobounds)>];
+                      "mlir::Value":$lcobounds, "mlir::Value":$ucobounds)>];
 
   let hasVerifier = 1;
   let assemblyFormat = [{
     $box 
+    `lcobounds` $lcobounds `ucobounds` $ucobounds 
     (`stat` $stat^ )?
     (`errmsg` $errmsg^ )? 
     attr-dict `:` functional-type(operands, results)

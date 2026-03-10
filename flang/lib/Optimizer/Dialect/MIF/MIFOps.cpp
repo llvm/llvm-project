@@ -231,9 +231,8 @@ static void printChangeTeamOpBody(mlir::OpAsmPrinter &p, mif::ChangeTeamOp op,
 
 void mif::AllocCoarrayOp::build(mlir::OpBuilder &builder,
                                 mlir::OperationState &result, mlir::Value box,
-                                llvm::StringRef symName,
-                                mlir::DenseI64ArrayAttr lcbs,
-                                mlir::DenseI64ArrayAttr ucbs, mlir::Value stat,
+                                llvm::StringRef symName, mlir::Value lcbs,
+                                mlir::Value ucbs, mlir::Value stat,
                                 mlir::Value errmsg) {
   mlir::StringAttr nameAttr = builder.getStringAttr(symName);
   build(builder, result, nameAttr, box, lcbs, ucbs, stat, errmsg);
@@ -241,9 +240,8 @@ void mif::AllocCoarrayOp::build(mlir::OpBuilder &builder,
 
 void mif::AllocCoarrayOp::build(mlir::OpBuilder &builder,
                                 mlir::OperationState &result, mlir::Value box,
-                                llvm::StringRef symName,
-                                mlir::DenseI64ArrayAttr lcbs,
-                                mlir::DenseI64ArrayAttr ucbs) {
+                                llvm::StringRef symName, mlir::Value lcbs,
+                                mlir::Value ucbs) {
   build(builder, result, symName, box, lcbs, ucbs, /*stat*/ mlir::Value{},
         /*errmsg*/ mlir::Value{});
 }
@@ -253,6 +251,21 @@ llvm::LogicalResult mif::AllocCoarrayOp::verify() {
     TODO(getLoc(),
          "Derived type coarray with at least one ALLOCATABLE or POINTER "
          "component");
+
+  fir::BoxType lcElemType =
+      mlir::dyn_cast<fir::BoxType>(getLcobounds().getType());
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+          lcElemType.getElementOrSequenceType()))
+    if (!seqTy.getElementType().isInteger(64))
+      return emitOpError("lcobounds need to be a boxed array of I64 elements.");
+
+  fir::BoxType ucElemType =
+      mlir::dyn_cast<fir::BoxType>(getUcobounds().getType());
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+          ucElemType.getElementOrSequenceType()))
+    if (!seqTy.getElementType().isInteger(64))
+      return emitOpError("ucobounds need to be a boxed array of I64 elements.");
+
   return mlir::success();
 }
 

@@ -481,30 +481,7 @@ private:
                             !box.isPointer();
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
 
-    const Fortran::lower::SomeExpr *expr =
-        Fortran::semantics::GetExpr(alloc.getAllocObj());
-    std::optional<Fortran::evaluate::DataRef> dataRef =
-        !expr ? std::nullopt : Fortran::evaluate::ExtractDataRef(expr);
-    bool isCoarrayAllocate = alloc.hasCoarraySpec();
-
-    if (isCoarrayAllocate) {
-      errorManager.genStatCheck(builder, loc);
-      genAllocateObjectInit(box, allocatorIdx);
-      Fortran::lower::StatementContext stmtCtx;
-      genSetType(alloc, box, loc);
-      genSetDeferredLengthParameters(alloc, box);
-      genAllocateObjectBounds(alloc, box);
-      mlir::Value stat;
-      stat = Fortran::lower::genAllocateCoarray(
-          converter, loc, alloc.getSymbol(), box.getAddr(),
-          alloc.getCoarraySpec(), errorManager.errMsgAddr);
-      fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-      postAllocationAction(alloc, box);
-      errorManager.assignStat(builder, loc, stat);
-      return;
-    }
-
-    if (inlineAllocation &&
+    if (inlineAllocation && !alloc.hasCoarraySpec() &&
         ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
       // Pointers must use PointerAllocate so that their deallocations
       // can be validated.
@@ -532,7 +509,11 @@ private:
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (!isCudaAllocate) {
+    if (alloc.hasCoarraySpec()) {
+      stat = Fortran::lower::genAllocateCoarray(
+          converter, loc, alloc.getSymbol(), box.getAddr(),
+          alloc.getCoarraySpec(), errorManager.errMsgAddr);
+    } else if (!isCudaAllocate) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
@@ -662,8 +643,6 @@ private:
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box, allocatorIdx);
-    if (alloc.hasCoarraySpec())
-      TODO(loc, "coarray: allocation of a coarray object");
     // Set length of the allocate object if it has. Otherwise, get the length
     // from source for the deferred length parameter.
     const bool isDeferredLengthCharacter =
@@ -677,7 +656,12 @@ private:
       genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) || sourceIsDevice) {
+    if (alloc.hasCoarraySpec()) {
+      stat = Fortran::lower::genAllocateCoarray(
+          converter, loc, alloc.getSymbol(), box.getAddr(),
+          alloc.getCoarraySpec(), errorManager.errMsgAddr);
+    } else if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) ||
+               sourceIsDevice) {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     } else {
@@ -916,26 +900,10 @@ genDeallocate(fir::FirOpBuilder &builder,
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
       !useAllocateRuntime && !box.isPointer();
-
-  std::optional<Fortran::evaluate::DataRef> dataRef =
-      !allocExpr ? std::nullopt : Fortran::evaluate::ExtractDataRef(allocExpr);
   bool isCoarraySymbol = symbol && Fortran::evaluate::IsCoarray(*symbol);
 
-  // Deallocate coarray
-  if (isCoarraySymbol) {
-    mlir::Value ret = builder.createTemporary(loc, builder.getI32Type());
-    mif::DeallocCoarrayOp::create(builder, loc, box.getAddr(), ret,
-                                  errorManager.errMsgAddr);
-    ret = fir::LoadOp::create(builder, loc, ret);
-    fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-    if (symbol)
-      postDeallocationAction(converter, builder, *symbol);
-    errorManager.assignStat(builder, loc, ret);
-    return ret;
-  }
-
   // Deallocate intrinsic types inline.
-  if (inlineDeallocation &&
+  if (inlineDeallocation && !isCoarraySymbol &&
       ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
     // Pointers must use PointerDeallocate so that their deallocations
     // can be validated.
@@ -948,7 +916,16 @@ genDeallocate(fir::FirOpBuilder &builder,
   // with its descriptor before and after calls if needed.
   errorManager.genStatCheck(builder, loc);
   mlir::Value stat;
-  if (!isCudaSymbol)
+  if (isCoarraySymbol) {
+    stat = errorManager.hasStatSpec()
+               ? builder.createTemporary(loc, builder.getI32Type())
+               : fir::AbsentOp::create(
+                     builder, loc, builder.getRefType(builder.getI32Type()));
+    mif::DeallocCoarrayOp::create(builder, loc, box.getAddr(), stat,
+                                  errorManager.errMsgAddr);
+    if (errorManager.hasStatSpec())
+      stat = fir::LoadOp::create(builder, loc, stat);
+  } else if (!isCudaSymbol)
     stat =
         genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
   else

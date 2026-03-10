@@ -63,13 +63,11 @@ void genFormTeamStatement(AbstractConverter &, pft::Evaluation &eval,
 // COARRAY utils
 //===----------------------------------------------------------------------===//
 
-mlir::DenseI64ArrayAttr genLowerCoBounds(AbstractConverter &converter,
-                                         mlir::Location loc,
-                                         const semantics::Symbol &sym);
+mlir::Value genLowerCoBounds(AbstractConverter &converter, mlir::Location loc,
+                             const semantics::Symbol &sym);
 
-mlir::DenseI64ArrayAttr genUpperCoBounds(AbstractConverter &converter,
-                                         mlir::Location loc,
-                                         const semantics::Symbol &sym);
+mlir::Value genUpperCoBounds(AbstractConverter &converter, mlir::Location loc,
+                             const semantics::Symbol &sym);
 
 mlir::Value genAllocateCoarray(
     AbstractConverter &converter, mlir::Location loc,
