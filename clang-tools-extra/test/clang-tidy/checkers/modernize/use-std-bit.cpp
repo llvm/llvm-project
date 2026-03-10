@@ -55,6 +55,13 @@ unsigned bithacks_variant_gt_perm(unsigned x) {
   return (x > 0) && !(x & (x - 1));
 }
 
+#define HAS_ONE_BIT v && !(v & (v - 1))
+unsigned bithacks_macro(unsigned v) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use std::has_one_bit instead [modernize-use-std-bit]
+  // No fixes, it comes from macro expansion.
+  return HAS_ONE_BIT;
+}
+
 /*
  * Invalid patterns
  */
@@ -83,5 +90,6 @@ unsigned invalid_bithacks(integer_like w, unsigned x, signed y, unsigned z) {
 
 template <class T>
 T bithacks_generic(T x) {
+  // substitution only valid for some instantiation of bithacks_generic
   return x && !(x & (x - 1));
 }

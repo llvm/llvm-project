@@ -86,12 +86,14 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("expr");
 
-  diag(MatchedExpr->getBeginLoc(), "use std::has_one_bit instead")
-      << FixItHint::CreateReplacement(
-             MatchedExpr->getSourceRange(),
-             ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())
-      << IncludeInserter.createIncludeInsertion(
-             Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+  auto Diag = diag(MatchedExpr->getBeginLoc(), "use std::has_one_bit instead");
+  if (!MatchedExpr->getSourceRange().getBegin().isMacroID()) {
+    Diag << FixItHint::CreateReplacement(
+                MatchedExpr->getSourceRange(),
+                ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())
+         << IncludeInserter.createIncludeInsertion(
+                Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+  }
 }
 
 } // namespace clang::tidy::modernize
