@@ -91,7 +91,6 @@ def riscv_brcc      : RVSDNode<"BR_CC", SDT_RISCVBrCC,
 def riscv_sw_guarded_brind : RVSDNode<"SW_GUARDED_BRIND",
                                       SDTBrind, [SDNPHasChain]>;
 
-
 // RV64I shifts, directly matching the semantics of the named RISC-V
 // instructions.
 def riscv_sllw      : RVSDNode<"SLLW", SDT_RISCVIntBinOpW>;
