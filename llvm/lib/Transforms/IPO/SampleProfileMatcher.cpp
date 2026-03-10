@@ -372,8 +372,9 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
     auto R = FuncToProfileNameMap.find(&F);
     if (R != FuncToProfileNameMap.end()) {
       FSForMatching = getFlattenedSamplesFor(R->second);
-      // Try to find the salvaged top-level profiles that are explicitly loaded
-      // for the matching, see "functionMatchesProfileHelper" for the details.
+      // Fallback for profiles loaded by functionMatchesProfileHelper but not
+      // yet in FlattenedProfiles. This should be rare now that
+      // functionMatchesProfileHelper flattens after loading.
       if (!FSForMatching && LoadFuncProfileforCGMatching)
         FSForMatching = Reader.getSamplesFor(R->second.stringRef());
     }
@@ -876,6 +877,16 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
     if (std::error_code EC = Reader.read(TopLevelFunc))
       return false;
     FSForMatching = Reader.getSamplesFor(ProfFunc.stringRef());
+    // Flatten the newly loaded profile so its inlined callees get their own
+    // entries in FlattenedProfiles, making them discoverable by subsequent
+    // CG matching steps.
+    if (FSForMatching) {
+      SampleProfileMap TempProfiles;
+      TempProfiles.create(FSForMatching->getFunction()).merge(*FSForMatching);
+      ProfileConverter::flattenProfile(TempProfiles, FlattenedProfiles,
+                                       FunctionSamples::ProfileIsCS);
+      FSForMatching = getFlattenedSamplesFor(ProfFunc);
+    }
     LLVM_DEBUG({
       if (FSForMatching)
         dbgs() << "Read top-level function " << ProfFunc
