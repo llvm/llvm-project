@@ -333,6 +333,9 @@ private:
   bool selectLog10(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
+  bool selectFpowi(Register ResVReg, SPIRVTypeInst ResType,
+                   MachineInstr &I) const;
+
   bool selectSaturate(Register ResVReg, SPIRVTypeInst ResType,
                       MachineInstr &I) const;
 
@@ -1033,7 +1036,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FPOW:
     return selectExtInst(ResVReg, ResType, I, CL::pow, GL::Pow);
   case TargetOpcode::G_FPOWI:
-    return selectExtInst(ResVReg, ResType, I, CL::pown);
+    return selectFpowi(ResVReg, ResType, I);
 
   case TargetOpcode::G_FEXP:
     return selectExtInst(ResVReg, ResType, I, CL::exp, GL::Exp);
@@ -5555,6 +5558,29 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
       .addUse(ScaleReg)
       .constrainAllUses(TII, TRI, RBI);
   return true;
+}
+
+bool SPIRVInstructionSelector::selectFpowi(Register ResVReg,
+                                           SPIRVTypeInst ResType,
+                                           MachineInstr &I) const {
+  // On OpenCL targets, pown(gentype x, intn n) maps directly.
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std))
+    return selectExtInst(ResVReg, ResType, I, CL::pown);
+
+  // On GLSL (Vulkan) targets, there is no integer-exponent power instruction.
+  // Lower as: Pow(base, OpConvertSToF(exp)).
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+    Register BaseReg = I.getOperand(1).getReg();
+    Register ExpReg = I.getOperand(2).getReg();
+    Register FloatExpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    if (!selectOpWithSrcs(FloatExpReg, ResType, I, {ExpReg},
+                          SPIRV::OpConvertSToF))
+      return false;
+    return selectExtInst(ResVReg, ResType, I, GL::Pow,
+                         /*setMIFlags=*/true, /*useMISrc=*/false,
+                         {BaseReg, FloatExpReg});
+  }
+  return false;
 }
 
 bool SPIRVInstructionSelector::selectModf(Register ResVReg,
