@@ -79,6 +79,9 @@ LLDB_PLUGIN_DEFINE(MockScriptInterpreterPython)
 struct PlatformDarwinLocateTest : public testing::Test {
 protected:
   void SetUp() override {
+#ifdef _WIN32
+    GTEST_SKIP() << "PlatformDarwin tests are not supported on Windows";
+#endif
     std::call_once(TestUtilities::g_debugger_initialize_flag,
                    []() { Debugger::Initialize(nullptr); });
 
