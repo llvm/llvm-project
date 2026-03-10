@@ -201,6 +201,12 @@ static cl::opt<unsigned> MaxProfitableStride(
     cl::desc("The maximum stride, considered to be profitable."));
 
 static cl::opt<bool>
+    EnableStridedStores("slp-enable-strided-stores", cl::init(false),
+                        cl::Hidden,
+                        cl::desc("Enable SLP trees to be built from strided "
+                                 "store chains."));
+
+static cl::opt<bool>
     DisableTreeReorder("slp-disable-tree-reorder", cl::init(false), cl::Hidden,
                        cl::desc("Disable tree reordering even if it is "
                                 "profitable. Used for testing only."));
@@ -8865,8 +8871,9 @@ void BoUpSLP::buildReorderableOperands(
         continue;
       if (UserTE->getOpcode() == Instruction::InsertElement && I == 0)
         continue;
-      if (UserTE->getOpcode() == Instruction::Store &&
-          UserTE->State == TreeEntry::Vectorize && I == 1)
+      if (UserTE->getOpcode() == Instruction::Store && I == 1 &&
+          (UserTE->State == TreeEntry::Vectorize ||
+           UserTE->State == TreeEntry::StridedVectorize))
         continue;
       if (UserTE->getOpcode() == Instruction::Load &&
           (UserTE->State == TreeEntry::Vectorize ||
@@ -9280,7 +9287,6 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         Data.first->reorderOperands(Mask);
       if (!isa<InsertElementInst, StoreInst>(Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first) ||
-          Data.first->State == TreeEntry::StridedVectorize ||
           Data.first->State == TreeEntry::CompressVectorize) {
         reorderScalars(Data.first->Scalars, Mask);
         reorderOrder(Data.first->ReorderIndices, MaskOrder,
@@ -10706,11 +10712,16 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         Ptr0 = PointerOps[CurrentOrder.front()];
         PtrN = PointerOps[CurrentOrder.back()];
       }
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL0);
       std::optional<int64_t> Dist =
           getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
+      if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                         CurrentOrder, *Dist, Ptr0, PtrN,
+                                         SPtrInfo))
+        return TreeEntry::StridedVectorize;
     }
 
     LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
@@ -12596,6 +12607,18 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       return;
     }
     case Instruction::Store: {
+      if (State == TreeEntry::StridedVectorize) {
+        TreeEntry *TE =
+            newTreeEntry(VL, TreeEntry::StridedVectorize, Bundle, S,
+                         UserTreeIdx, ReuseShuffleIndices, CurrentOrder);
+        TreeEntryToStridedPtrInfoMap[TE] = SPtrInfo;
+        LLVM_DEBUG(
+            dbgs() << "SLP: added a new TreeEntry (strided StoreInst).\n";
+            TE->dump());
+        TE->setOperands(Operands);
+        buildTreeRec(TE->getOperand(0), Depth + 1, {TE, 0});
+        return;
+      }
       bool Consecutive = CurrentOrder.empty();
       if (!Consecutive)
         fixupOrderingIndices(CurrentOrder);
@@ -14260,10 +14283,18 @@ void BoUpSLP::transformNodes() {
                                        /*VariableMask=*/false, CommonAlignment,
                                        BaseSI),
             CostKind);
-        if (StridedCost < OriginalVecCost)
+        if (StridedCost < OriginalVecCost) {
           // Strided store is more profitable than reverse + consecutive store -
           // transform the node to strided store.
           E.State = TreeEntry::StridedVectorize;
+          Type *StrideTy = DL->getIndexType(cast<StoreInst>(E.Scalars.front())
+                                                ->getPointerOperand()
+                                                ->getType());
+          StridedPtrInfo SPtrInfo;
+          SPtrInfo.StrideVal = ConstantInt::getSigned(StrideTy, -1);
+          SPtrInfo.Ty = VecTy;
+          TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
+        }
       } else if (!E.ReorderIndices.empty()) {
         // Check for interleaved stores.
         auto IsInterleaveMask = [&, &TTI = *TTI](ArrayRef<int> Mask) {
@@ -22013,12 +22044,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
         Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
+
+        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+        Value *Stride = SPtrInfo.StrideVal;
+        assert(Stride && "Missing StridedPointerInfo for tree entry.");
+        Value *StrideVal =
+            Builder.CreateIntCast(Stride, StrideTy, /*isSigned=*/true);
+        // vp_strided_store::stride is defined in bytes
+        StrideVal = Builder.CreateMul(
+            StrideVal,
+            ConstantInt::getSigned(
+                StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         auto *Inst = Builder.CreateIntrinsic(
             Intrinsic::experimental_vp_strided_store,
             {VecTy, Ptr->getType(), StrideTy},
-            {VecValue, Ptr,
-             ConstantInt::getSigned(
-                 StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
+            {VecValue, Ptr, StrideVal,
              Builder.getAllOnesMask(VecTy->getElementCount()),
              Builder.getInt32(E->Scalars.size())});
         Inst->addParamAttr(
@@ -25368,17 +25408,22 @@ public:
 
   explicit StoreChainContext(ArrayRef<Value *> Ops,
                              ArrayRef<SizePair> RangeSizes,
-                             SmallVector<unsigned> &RangeSizesByIdx)
+                             SmallVector<unsigned> &RangeSizesByIdx,
+                             unsigned Stride)
       : Operands(Ops), RangeSizesStorage(RangeSizes),
-        RangeSizesByIdx(RangeSizesByIdx) {}
+        RangeSizesByIdx(RangeSizesByIdx), Stride(Stride) {}
 
   /// Set up initial values using the already set Operands
-  bool initializeContext(BoUpSLP &R, const DataLayout &DL,
-                         const TargetTransformInfo &TTI);
+  bool initializeContext(
+      BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
+      DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
+          &Visited);
   /// Get the current VF
   std::optional<unsigned> getCurrentVF() const;
   /// Return the maximum VF for the context
   unsigned getMaxVF() const { return MaxVF; }
+  /// Return the stride of the context
+  unsigned getStride() const { return Stride; }
   /// Attempt to vectorize Operands for the given VF
   /// Returns false if no more attempts should be made for the context
   bool vectorizeOneVF(const TargetTransformInfo &TTI, unsigned VF,
@@ -25386,6 +25431,10 @@ public:
                       llvm::function_ref<std::optional<bool>(
                           ArrayRef<Value *>, unsigned, unsigned, unsigned &)>
                           VectorizeStoreChain);
+  /// Add an additional store to the chain
+  /// \p Store store too append to Operands
+  /// \p Idx position within TryToVectorize::StoreSeq
+  void addOperand(Value *Store, unsigned Idx);
 
 private:
   bool isNotVectorized(const SizePair &P) const {
@@ -25482,9 +25531,16 @@ private:
   unsigned Repeat = 1;
   /// Did any vectorization occur for the current iteration over CandidateVFs
   bool RepeatChanged = false;
+  /// For constant strided stores, what is the stride amount
+  const unsigned Stride = 0;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
 };
+
+void StoreChainContext::addOperand(Value *Store, unsigned Idx) {
+  Operands.push_back(Store);
+  RangeSizesStorage.push_back({Idx, 1});
+}
 
 void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
                                             unsigned &FirstUnvecStore,
@@ -25511,8 +25567,19 @@ void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
   }
 }
 
-bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
-                                          const TargetTransformInfo &TTI) {
+bool StoreChainContext::initializeContext(
+    BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
+    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
+        &Visited) {
+  if (!Visited
+           .insert({Operands.front(),
+                    cast<StoreInst>(Operands.front())->getValueOperand(),
+                    Operands.back(),
+                    cast<StoreInst>(Operands.back())->getValueOperand(),
+                    Operands.size()})
+           .second)
+    return false;
+
   // Initialize range tracking in context.
   RangeSizes = MutableArrayRef(RangeSizesStorage);
 
@@ -25538,6 +25605,8 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
       ValueTy->getScalarType()));
   MinVF /= getNumElements(StoreTy);
   MinVF = std::max<unsigned>(2, MinVF);
+  if (Stride > 1)
+    MinVF = std::max<unsigned>(MinVF, MinProfitableStridedStores);
 
   if (MaxVF < MinVF) {
     LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
@@ -25903,45 +25972,94 @@ bool SLPVectorizerPass::vectorizeStores(
   bool Changed = false;
 
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    int64_t PrevDist = -1;
-    unsigned GlobalMaxVF = 0;
     SmallVector<unsigned> RangeSizesByIdx(StoreSeq.size(), 1);
     SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
     BoUpSLP::ValueList Operands;
     SmallVector<StoreChainContext::SizePair> RangeSizes;
+
+    // All chains that we're still building
+    struct PartialChainStatus {
+      // Has been added to AllContexts
+      // Wait to add to AllContexts until at least two stores are found
+      bool AddedToAllContexts;
+      union {
+        // If added, index into AllContexts
+        unsigned AllContextsIdx;
+        // Index into StoreSeq if not added to AllContexts yet
+        unsigned StoreSeqIdx;
+      };
+      // If not added to AllContexts, what is the single store in the chain
+      Value *FirstStore;
+      // What is the Stride of this chain
+      unsigned Stride;
+    };
+    SmallVector<SmallVector<PartialChainStatus, 1>> Chains(MaxProfitableStride +
+                                                           1);
+    auto GetChainsKey = [&](int64_t Query) -> unsigned {
+      // Just modulo function, get the index into Chains for a given query
+      int64_t Rem = (Query % (int64_t)Chains.size());
+      if (Rem < 0)
+        Rem += (int64_t)Chains.size();
+      return (unsigned)Rem;
+    };
+    int64_t LastDist;
     for (auto [Idx, Data] : enumerate(StoreSeq)) {
       auto &[Dist, InstIdx] = Data;
-      if (Operands.empty() || Dist - PrevDist == 1) {
-        Operands.push_back(Stores[InstIdx]);
-        RangeSizes.emplace_back(Idx, 1);
-        PrevDist = Dist;
-        if (Idx != StoreSeq.size() - 1)
-          continue;
+      // Clean up chains that can't be continued
+      if (Idx > 0)
+        for (int64_t D = LastDist; D < Dist; ++D)
+          Chains[GetChainsKey(D)].clear();
+      LastDist = Dist;
+
+      // Track which stride lengths we found existing chains for
+      // Don't have to add new entries for these
+      SmallVector<bool> FoundStrides(MaxProfitableStride + 1, false);
+      for (auto &Status : Chains[GetChainsKey(Dist)]) {
+        if (Status.AddedToAllContexts) {
+          // Chain already in AllContexts()
+          AllContexts[Status.AllContextsIdx]->addOperand(Stores[InstIdx], Idx);
+        } else {
+          // Chain just a single element, not yet in AllContexts()
+          SmallVector<StoreChainContext::SizePair> RS = {
+              {Status.StoreSeqIdx, 1}, {Idx, 1}};
+          BoUpSLP::ValueList Ops = {Status.FirstStore, Stores[InstIdx]};
+          AllContexts.emplace_back(std::make_unique<StoreChainContext>(
+              Ops, RS, RangeSizesByIdx, Status.Stride));
+          Status.AllContextsIdx = AllContexts.size() - 1;
+        }
+        unsigned Key = GetChainsKey(Status.Stride + Dist);
+        Chains[Key].push_back({/*AddedToAllContexts*/ true,
+                               Status.AllContextsIdx, /*FirstStore*/ nullptr,
+                               Status.Stride});
+        FoundStrides[Status.Stride] = true;
       }
 
-      if (Operands.size() > 1 &&
-          Visited
-              .insert({Operands.front(),
-                       cast<StoreInst>(Operands.front())->getValueOperand(),
-                       Operands.back(),
-                       cast<StoreInst>(Operands.back())->getValueOperand(),
-                       Operands.size()})
-              .second) {
-        AllContexts.emplace_back(std::make_unique<StoreChainContext>(
-            Operands, RangeSizes, RangeSizesByIdx));
-        if (!AllContexts.back()->initializeContext(R, *DL, *TTI))
-          AllContexts.pop_back();
-        else
-          GlobalMaxVF = std::max(GlobalMaxVF, AllContexts.back()->getMaxVF());
-      }
-      Operands.clear();
-      RangeSizes.clear();
-      if (Idx != StoreSeq.size() - 1) {
-        Operands.push_back(Stores[InstIdx]);
-        RangeSizes.emplace_back(Idx, 1);
-        PrevDist = Dist;
+      // For any stride lengths that we didn't append to a chain for,
+      // instead start a new chain
+      for (auto Stride : seq<unsigned>(
+               1, (EnableStridedStores ? MaxProfitableStride : 1) + 1)) {
+        if (FoundStrides[Stride])
+          continue;
+        unsigned Key = GetChainsKey(Dist + Stride);
+        Chains[Key].push_back({/*AddedToAllContexts*/ false,
+                               /*StoreSeqIdx*/ (unsigned)Idx, Stores[InstIdx],
+                               Stride});
       }
     }
+
+    unsigned GlobalMaxVF = 0;
+    for (auto &CtxPtr : AllContexts)
+      if (CtxPtr->initializeContext(R, *DL, *TTI, Visited))
+        GlobalMaxVF = std::max(GlobalMaxVF, AllContexts.back()->getMaxVF());
+      else
+        CtxPtr.reset();
+
+    // Prioritize non-strided chains (Stride = 1)
+    llvm::stable_sort(AllContexts,
+                      [](const std::unique_ptr<StoreChainContext> &A,
+                         const std::unique_ptr<StoreChainContext> &B) {
+                        return A && (!B || A->getStride() < B->getStride());
+                      });
 
     for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
          LimitVF = bit_ceil(LimitVF) / 2) {
