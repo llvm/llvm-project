@@ -9,9 +9,7 @@
 // RUN: %check_clang_tidy -check-suffix=,NONDEDUCED -std=c++11 %s cppcoreguidelines-rvalue-reference-param-not-moved %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreUnnamedParams: true, cppcoreguidelines-rvalue-reference-param-not-moved.IgnoreNonDeducedTemplateTypes: false}}" -- -fno-delayed-template-parsing
 
-// NOLINTBEGIN
 #include <utility>
-// NOLINTEND
 
 struct Obj {
   Obj();

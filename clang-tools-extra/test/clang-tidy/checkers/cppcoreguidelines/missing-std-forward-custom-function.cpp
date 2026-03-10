@@ -1,9 +1,7 @@
 // RUN: %check_clang_tidy -std=c++14-or-later %s cppcoreguidelines-missing-std-forward %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-missing-std-forward.ForwardFunction: custom_forward}}" -- -fno-delayed-template-parsing
 
-// NOLINTBEGIN
 #include <utility>
-// NOLINTEND
 
 template<class T>
 constexpr decltype(auto) custom_forward(std::remove_reference_t<T>& tmp) noexcept

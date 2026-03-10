@@ -1,8 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-missing-std-forward %t -- -- -fno-delayed-template-parsing
 
-// NOLINTBEGIN
 #include <utility>
-// NOLINTEND
 
 struct S {
   S();
