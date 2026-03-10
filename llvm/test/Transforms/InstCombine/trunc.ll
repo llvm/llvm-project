@@ -1224,7 +1224,7 @@ define i1 @trunc_i1_usub_sat_one(i8 %x) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[TRUNC]]
 ;
-  %call = tail call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
+  %call = call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
   %trunc = trunc i8 %call to i1
   ret i1 %trunc
 }
@@ -1234,41 +1234,41 @@ define <2 x i1> @trunc_i1_usub_sat_one_vec(<2 x i8> %x) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TRUNC]]
 ;
-  %call = tail call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 1, i8 1>, <2 x i8> %x)
+  %call = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 1, i8 1>, <2 x i8> %x)
   %trunc = trunc <2 x i8> %call to <2 x i1>
   ret <2 x i1> %trunc
 }
 
 define i1 @neg_trunc_i1_usub_sat_two(i8 %x) {
 ; CHECK-LABEL: @neg_trunc_i1_usub_sat_two(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8 @llvm.usub.sat.i8(i8 2, i8 [[X:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8 @llvm.usub.sat.i8(i8 2, i8 [[X:%.*]])
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[CALL]] to i1
 ; CHECK-NEXT:    ret i1 [[TRUNC]]
 ;
-  %call = tail call i8 @llvm.usub.sat.i8(i8 2, i8 %x)
+  %call = call i8 @llvm.usub.sat.i8(i8 2, i8 %x)
   %trunc = trunc i8 %call to i1
   ret i1 %trunc
 }
 
 define i2 @neg_trunc_i2_usub_sat_one(i8 %x) {
 ; CHECK-LABEL: @neg_trunc_i2_usub_sat_one(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8 @llvm.usub.sat.i8(i8 1, i8 [[X:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8 @llvm.usub.sat.i8(i8 1, i8 [[X:%.*]])
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i8 [[CALL]] to i2
 ; CHECK-NEXT:    ret i2 [[TRUNC]]
 ;
-  %call = tail call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
+  %call = call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
   %trunc = trunc i8 %call to i2
   ret i2 %trunc
 }
 
 define i1 @neg_trunc_i1_usub_sat_one_multi_use(i8 %x) {
 ; CHECK-LABEL: @neg_trunc_i1_usub_sat_one_multi_use(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8 @llvm.usub.sat.i8(i8 1, i8 [[X:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8 @llvm.usub.sat.i8(i8 1, i8 [[X:%.*]])
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[CALL]] to i1
 ; CHECK-NEXT:    call void @use.i8(i8 [[CALL]])
 ; CHECK-NEXT:    ret i1 [[TRUNC]]
 ;
-  %call = tail call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
+  %call = call i8 @llvm.usub.sat.i8(i8 1, i8 %x)
   %trunc = trunc i8 %call to i1
   call void @use.i8(i8 %call)
   ret i1 %trunc
