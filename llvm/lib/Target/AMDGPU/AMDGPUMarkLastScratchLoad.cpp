@@ -118,7 +118,6 @@ bool AMDGPUMarkLastScratchLoad::run(MachineFunction &MF) {
       // If there is no instruction at this slot because it was deleted take the
       // instruction from the next slot.
       if (!MISegmentEnd) {
-        abort();
         SlotIndex NextSlot = Slots.getNextNonNullIndex(Segment.end);
         MISegmentEnd = SI->getInstructionFromIndex(NextSlot);
       }
