@@ -28,7 +28,6 @@
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
@@ -1677,12 +1676,6 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
       return HandleError(std::move(Err));
     return *MatchOrErr;
   }
-  case file_magic::offload_binary: {
-    auto MatchOrErr = checkOffloadBinaryImage(Image);
-    if (Error Err = MatchOrErr.takeError())
-      return HandleError(std::move(Err));
-    return *MatchOrErr;
-  }
   default:
     auto MatchOrErr = isImageCompatible(Image);
     if (Error Err = MatchOrErr.takeError())
@@ -1719,12 +1712,6 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   }
   case file_magic::bitcode: {
     auto MatchOrErr = checkBitcodeImage(Image);
-    if (Error Err = MatchOrErr.takeError())
-      return HandleError(std::move(Err));
-    return *MatchOrErr;
-  }
-  case file_magic::offload_binary: {
-    auto MatchOrErr = checkOffloadBinaryImage(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
