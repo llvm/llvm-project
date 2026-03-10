@@ -48,16 +48,16 @@
 // math_functions.h from CUDA 13.2+ defines _NV_RSQRT_SPECIFIER.
 // Clang does not include it, so we need to define it ourselves.
 #if defined(__GNUC__)
-# include <features.h> /* For GLIBC macros */
-# if defined(__GLIBC_PREREQ)
-#  if __GLIBC_PREREQ(2, 42)
-#   define _NV_RSQRT_SPECIFIER noexcept(true)
-#  endif
-# endif
+#include <features.h> /* For GLIBC macros */
+#if defined(__GLIBC_PREREQ)
+#if __GLIBC_PREREQ(2, 42)
+#define _NV_RSQRT_SPECIFIER noexcept(true)
+#endif
+#endif
 #endif
 
 #ifndef _NV_RSQRT_SPECIFIER
-# define _NV_RSQRT_SPECIFIER
+#define _NV_RSQRT_SPECIFIER
 #endif
 
 // Preserve common macros that will be changed below by us or by CUDA
