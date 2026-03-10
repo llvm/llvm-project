@@ -603,9 +603,9 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
             slot, reachingDef, hasValueStores, reachingAtBlockEnd, builder);
 
         // Blocking uses can then be removed for the regions that were promoted.
-        // Even though `finalizePromotion` may have moved regions to a new operation,
-        // `removeBlockingUses` handles this case and will redirect processing to
-        // the correct region.
+        // Even though `finalizePromotion` may have moved regions to a new
+        // operation, `removeBlockingUses` handles this case and will redirect
+        // processing to the correct region.
         for (auto &[region, reachingDef] : regionsToProcess)
           removeBlockingUses(region);
       }
