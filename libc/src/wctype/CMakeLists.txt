@@ -16,4 +16,5 @@ add_entrypoint_object(
     iswcntrl.h
   DEPENDS
     libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
 )
