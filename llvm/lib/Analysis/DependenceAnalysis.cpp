@@ -1690,6 +1690,8 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 
   APInt TB = BM.sdiv(G);
   APInt TA = AM.sdiv(G);
+  LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
 
   // At this point, we have the following equations:
   //
@@ -1703,26 +1705,26 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   auto [TL0, TU0] = inferDomainOfAffine(TB, TX, UM);
   auto [TL1, TU1] = inferDomainOfAffine(TA, TY, UM);
 
-  auto CreateVec = [](const OverflowSafeSignedAPInt &V0,
-                      const OverflowSafeSignedAPInt &V1) {
-    SmallVector<APInt, 2> Vec;
+  auto GetMaxOrMin = [](const auto &V0, const auto &V1,
+                        auto op) -> std::optional<APInt> {
+    if (V0 && V1)
+      return op(*V0, *V1);
     if (V0)
-      Vec.push_back(*V0);
+      return *V0;
     if (V1)
-      Vec.push_back(*V1);
-    return Vec;
+      return *V1;
+    return std::nullopt;
   };
 
-  SmallVector<APInt, 2> TLVec = CreateVec(TL0, TL1);
-  SmallVector<APInt, 2> TUVec = CreateVec(TU0, TU1);
+  std::optional<APInt> OptTL = GetMaxOrMin(TL0, TL1, APIntOps::smax);
+  std::optional<APInt> OptTU = GetMaxOrMin(TU0, TU1, APIntOps::smin);
 
-  LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
-
-  if (TLVec.empty() || TUVec.empty())
+  if (!OptTL || !OptTU)
     return false;
-  TL = APIntOps::smax(TLVec.front(), TLVec.back());
-  TU = APIntOps::smin(TUVec.front(), TUVec.back());
+
+  TL = std::move(*OptTL);
+  TU = std::move(*OptTU);
+
   LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
   LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
 
