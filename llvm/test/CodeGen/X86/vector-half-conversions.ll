@@ -2201,12 +2201,12 @@ define <3 x half> @cvt_3f32_to_3f16(<3 x float> %a0) nounwind {
 ;
 ; F16C-LABEL: cvt_3f32_to_3f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_3f32_to_3f16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtps2ph $0, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = fptrunc <3 x float> %a0 to <3 x half>
   ret <3 x half> %1
