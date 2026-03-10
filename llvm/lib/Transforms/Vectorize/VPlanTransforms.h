@@ -401,10 +401,12 @@ struct VPlanTransforms {
                                      PredicatedScalarEvolution &PSE);
 
   /// Materialize vector trip count computations to a set of VPInstructions.
+  /// \p Step is used as the step value for the trip count computation.
   static void materializeVectorTripCount(VPlan &Plan,
                                          VPBasicBlock *VectorPHVPBB,
                                          bool TailByMasking,
-                                         bool RequiresScalarEpilogue);
+                                         bool RequiresScalarEpilogue,
+                                         VPValue *Step);
 
   /// Materialize the backedge-taken count to be computed explicitly using
   /// VPInstructions.

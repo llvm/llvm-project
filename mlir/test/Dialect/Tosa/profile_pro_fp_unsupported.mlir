@@ -1,8 +1,8 @@
-//--------------------------------------------------------------------------------------------------
-// Enable all supported extensions to focus the verification of expected profile requirement errors.
-//--------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Check operations fail to validate when pro_fp is not provided in the target.
+//-----------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_int extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround,mxfp,mxfp_conv" -tosa-validate="strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_int" -tosa-validate="strict-op-spec-alignment"
 
 // -----
 func.func @test_const_f16() -> tensor<3x11x11x3xf16> {
