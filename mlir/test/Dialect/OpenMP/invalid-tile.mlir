@@ -40,7 +40,6 @@ func.func @insufficient_sizes(%tc : i32, %ts : i32) {
   %canonloop1 = omp.new_cli
   %canonloop2 = omp.new_cli
   omp.canonical_loop(%canonloop1) %iv1 : i32 in range(%tc) {
-    %v = arith.constant 42 : i32
     omp.canonical_loop(%canonloop2) %iv2 : i32 in range(%tc) {
       omp.terminator
     }

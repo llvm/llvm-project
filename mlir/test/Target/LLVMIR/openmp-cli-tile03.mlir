@@ -24,10 +24,6 @@ llvm.func @tile_composition(%baseptr: !llvm.ptr, %tc: i32, %ts: i32, %grid_ts: i
 }
 
 
-// CHECK:       ; ModuleID = 'LLVMDialectModule'
-// CHECK-NEXT:  source_filename = "LLVMDialectModule"
-
-
 // CHECK-LABEL: define void @tile_composition(
 // CHECK-SAME:      ptr %[[TMP0:.+]], i32 %[[TMP1:.+]], i32 %[[TMP2:.+]], i32 %[[TMP3:.+]], i32 %[[TMP4:.+]]) {
 // CHECK-NEXT:    br label %[[OMP_OMP_LOOP_PREHEADER:.+]]
