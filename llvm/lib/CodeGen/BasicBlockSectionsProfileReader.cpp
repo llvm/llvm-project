@@ -104,9 +104,10 @@ BasicBlockSectionsProfileReader::getPrefetchTargetsForFunction(
 SmallVector<PrefetchHint>
 BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
     StringRef FuncName) const {
-  StringMap<FunctionOptimizationProfile>::const_iterator It = ProgramOptimizationProfile.find(getAliasName(FuncName));
+  StringMap<FunctionOptimizationProfile>::const_iterator It =
+      ProgramOptimizationProfile.find(getAliasName(FuncName));
   return It != ProgramOptimizationProfile.end() ? It->second.PrefetchHints
-                                               : SmallVector<PrefetchHint>();
+                                                : SmallVector<PrefetchHint>();
 }
 
 // Reads the version 1 basic block sections profile. Profile for each function
