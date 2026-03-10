@@ -1896,4 +1896,15 @@ namespace lambda_captures {
     return &lambda; // expected-warning {{address of stack memory is returned later}} \
                     // expected-note {{returned here}}
   }
+
+  auto capture_static() {
+    static int local = 1;
+    // Only automatic storage duration variables may be captured.
+    // Variables with static storage duration behave like globals and are directly accessible.
+    // The below lambdas should not capture `local`.
+    auto lambda = [&]() { return local; };
+    auto lambda2 = []() { return local; };
+    lambda2();
+    return lambda;
+  }
 } // namespace lambda_captures
