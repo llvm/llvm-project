@@ -1652,7 +1652,7 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    auto MatchOrErr = isCompatibleImage(Image);
+    auto MatchOrErr = isImageCompatible(Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
@@ -1692,7 +1692,7 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    auto MatchOrErr = isCompatibleImage(DeviceId, Image);
+    auto MatchOrErr = isImageCompatible(DeviceId, Image);
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
