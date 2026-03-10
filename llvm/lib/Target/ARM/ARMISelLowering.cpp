@@ -18351,6 +18351,53 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   SDValue ARMcc = N->getOperand(2);
   ARMCC::CondCodes CC = (ARMCC::CondCodes)ARMcc->getAsZExtVal();
 
+  // Thumb1 branchless code generation for zext(setcc Z, 0) + X -> (X + 1) or X
+  // (CMOV X, X+1, NE, (CMPZ Z, 0)) -> X + (Z != 0) -> ADCS X, 0 (carry from
+  // Z-1) (CMOV X+1, X, EQ, (CMPZ Z, 0)) -> X + (Z != 0) -> ADCS X, 0 (carry
+  // from Z-1) (CMOV X, X+1, EQ, (CMPZ Z, 0)) -> X + (Z == 0) -> ADCS X, 0
+  // (carry from 0-Z) (CMOV X+1, X, NE, (CMPZ Z, 0)) -> X + (Z == 0) -> ADCS X,
+  // 0 (carry from 0-Z)
+  if (Subtarget->isThumb1Only() && isNullConstant(RHS)) {
+    SDValue Base;
+    bool AddIsTrueVal = false;
+
+    auto IsAddOne = [&](SDValue Op, SDValue Other) {
+      return Op.getOpcode() == ISD::ADD &&
+             (Op.getOperand(0) == Other || Op.getOperand(1) == Other) &&
+             (isOneConstant(Op.getOperand(0)) ||
+              isOneConstant(Op.getOperand(1)));
+    };
+
+    if (IsAddOne(TrueVal, FalseVal)) {
+      Base = FalseVal;
+      AddIsTrueVal = true;
+    } else if (IsAddOne(FalseVal, TrueVal)) {
+      Base = TrueVal;
+      AddIsTrueVal = false;
+    }
+
+    if (Base.getNode()) {
+      bool IsNE = (CC == ARMCC::NE);
+      bool AddIfZNotZero = AddIsTrueVal ? IsNE : !IsNE;
+
+      if (AddIfZNotZero) {
+        // x + (z != 0)
+        // subs rtmp, z, 1 -> carry is 1 if z != 0
+        SDValue Sub = DAG.getNode(ARMISD::SUBC, dl, DAG.getVTList(VT, MVT::i32),
+                                  LHS, DAG.getConstant(1, dl, VT));
+        return DAG.getNode(ARMISD::ADDE, dl, DAG.getVTList(VT, MVT::i32), Base,
+                           DAG.getConstant(0, dl, VT),
+                           SDValue(Sub.getNode(), 1));
+      }
+      // x + (z == 0)
+      // rsbs rtmp, 0, z -> carry is 1 if z == 0
+      SDValue Sub = DAG.getNode(ARMISD::SUBC, dl, DAG.getVTList(VT, MVT::i32),
+                                DAG.getConstant(0, dl, VT), LHS);
+      return DAG.getNode(ARMISD::ADDE, dl, DAG.getVTList(VT, MVT::i32), Base,
+                         DAG.getConstant(0, dl, VT), SDValue(Sub.getNode(), 1));
+    }
+  }
+
   // BFI is only available on V6T2+.
   if (!Subtarget->isThumb1Only() && Subtarget->hasV6T2Ops()) {
     SDValue R = PerformCMOVToBFICombine(N, DAG);
