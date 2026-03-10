@@ -39,33 +39,41 @@ entry:
 }
 
 ;--- vulkan.ll
-declare hidden void @hidden_helper()
+@hidden_leaf_var = external hidden addrspace(1) global i32
 
-define hidden void @hidden_def() {
+declare hidden void @hidden_helper(ptr addrspace(1))
+
+define hidden void @hidden_def(ptr addrspace(1) %x) {
 entry:
   ret void
 }
 
-define void @main() #0 {
+define void @main(ptr addrspace(1) %data) #0 {
 entry:
-  call void @hidden_helper()
-  call void @hidden_def()
+  %val = load i32, ptr addrspace(1) @hidden_leaf_var
+  store i32 %val, ptr addrspace(1) %data
+  call void @hidden_helper(ptr addrspace(1) %data)
+  call void @hidden_def(ptr addrspace(1) %data)
   ret void
 }
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 ;--- vulkan-lib.ll
-declare hidden void @hidden_helper()
+@hidden_leaf_var = external hidden addrspace(1) global i32
 
-define hidden void @hidden_def() {
+declare hidden void @hidden_helper(ptr addrspace(1))
+
+define hidden void @hidden_def(ptr addrspace(1) %x) {
 entry:
   ret void
 }
 
-define void @caller() {
+define void @caller(ptr addrspace(1) %data) {
 entry:
-  call void @hidden_helper()
-  call void @hidden_def()
+  %val = load i32, ptr addrspace(1) @hidden_leaf_var
+  store i32 %val, ptr addrspace(1) %data
+  call void @hidden_helper(ptr addrspace(1) %data)
+  call void @hidden_def(ptr addrspace(1) %data)
   ret void
 }
