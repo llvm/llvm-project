@@ -5,6 +5,7 @@
 // RUN:                '::llvm::StringRef;'}}"
 #include <string>
 
+// Mock for libstdc++
 namespace std {
 template <typename T> struct set {
   struct iterator {
