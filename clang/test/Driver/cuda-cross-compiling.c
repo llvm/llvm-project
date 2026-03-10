@@ -112,3 +112,8 @@
 // RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=PATH %s
 
 // PATH: clang-nvlink-wrapper{{.*}}"--cuda-path={{.*}}/Inputs/CUDA/usr/local/cuda"
+
+// RUN: %clang -### --target=nvptx64-nvidia-cuda -march=sm_89 -nogpulib \
+// RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
+
+// PROFILE: clang-nvlink-wrapper{{.*}}libclang_rt.profile.a

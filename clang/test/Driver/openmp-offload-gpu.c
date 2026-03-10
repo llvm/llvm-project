@@ -410,3 +410,12 @@
 // RUN:   | FileCheck --check-prefix=SHOULD-EXTRACT %s
 //
 // SHOULD-EXTRACT: clang-linker-wrapper{{.*}}"--should-extract=gfx906"
+
+//
+// Check that `-fprofile-generate` flags are forwarded to link in the runtime.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=PROFILE %s
+//
+// PROFILE: clang-linker-wrapper{{.*}}--device-compiler=amdgcn-amd-amdhsa=-fprofile-generate

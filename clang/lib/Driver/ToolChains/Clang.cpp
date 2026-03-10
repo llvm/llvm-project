@@ -9357,7 +9357,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_flto_partitions_EQ,
       OPT_flto_EQ,
       OPT_hipspv_pass_plugin_EQ,
-      OPT_use_spirv_backend};
+      OPT_use_spirv_backend,
+      OPT_fprofile_generate,
+      OPT_fprofile_generate_EQ,
+      OPT_fprofile_instr_generate,
+      OPT_fprofile_instr_generate_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
     // Don't forward -mllvm to toolchains that don't support LLVM.
