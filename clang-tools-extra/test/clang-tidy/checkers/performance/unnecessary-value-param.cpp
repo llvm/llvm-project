@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fno-delayed-template-parsing
 
 // CHECK-FIXES: #include <utility>
 

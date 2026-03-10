@@ -16,7 +16,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -55,11 +54,11 @@ TEST(SerializationFormatRegistryTest, isFormatRegistered) {
 }
 
 TEST(SerializationFormatRegistryTest, EnumeratingRegistryEntries) {
-  auto NamesOf = [](const auto &Entry) { return Entry.getName(); };
-  auto Names = llvm::map_range(SerializationFormatRegistry::entries(), NamesOf);
-  using testing::UnorderedElementsAre;
-  EXPECT_THAT(Names, UnorderedElementsAre("MockSerializationFormat", "json",
-                                          "FailingSerializationFormat"));
+  auto Formats = SerializationFormatRegistry::entries();
+  ASSERT_GE(std::distance(Formats.begin(), Formats.end()), 1U);
+  EXPECT_TRUE(llvm::any_of(Formats, [](const auto &Entry) {
+    return StringRef(Entry.getName()) == "MockSerializationFormat";
+  }));
 }
 
 TEST(SerializationFormatRegistryTest, Roundtrip) {

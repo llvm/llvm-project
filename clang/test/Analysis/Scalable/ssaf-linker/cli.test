@@ -1,0 +1,17 @@
+// Tests for ssaf-linker command-line option validation.
+
+// RUN: not ssaf-linker 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-ARGS
+// NO-ARGS:      ssaf-linker{{(\.exe)?}}: Not enough positional command line arguments specified!
+// NO-ARGS-NEXT: Must specify at least 1 positional argument: See: {{.*}}ssaf-linker{{(\.exe)?}} --help
+// NO-ARGS-NEXT: ssaf-linker{{(\.exe)?}}: for the -o option: must be specified at least once!
+
+// RUN: not ssaf-linker %S/Inputs/tu-empty.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-OUTPUT
+// NO-OUTPUT: ssaf-linker{{(\.exe)?}}: for the -o option: must be specified at least once!
+
+// RUN: not ssaf-linker -o %t/output.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-INPUT
+// NO-INPUT:      ssaf-linker{{(\.exe)?}}: Not enough positional command line arguments specified!
+// NO-INPUT-NEXT: Must specify at least 1 positional argument: See: {{.*}}ssaf-linker{{(\.exe)?}} --help
+

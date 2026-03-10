@@ -274,10 +274,6 @@ def StaticAnalyzer_Group : OptionGroup<"<Static analyzer group>">,
                            DocName<"Static analyzer options">, DocBrief<[{
 Flags controlling the behavior of the Clang Static Analyzer.}]>;
 
-def SSAF_Group : OptionGroup<"<ssaf options>">,
-                 DocName<"SSAF options">, DocBrief<[{
-Flags controlling the behavior of the Scalable Static Analysis Framework (SSAF).}]>;
-
 // gfortran options that we recognize in the driver and pass along when
 // invoking GCC to compile Fortran code.
 def gfortran_Group : OptionGroup<"<gfortran group>">,
@@ -945,22 +941,6 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def _ssaf_extract_summaries :
-  CommaJoined<["--"], "ssaf-extract-summaries=">,
-  MetaVarName<"<summary-names>">,
-  Group<SSAF_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Comma-separated list of summary names to extract">,
-  MarshallingInfoStringVector<FrontendOpts<"SSAFExtractSummaries">>;
-def _ssaf_tu_summary_file :
-  Joined<["--"], "ssaf-tu-summary-file=">,
-  MetaVarName<"<path>.<format>">,
-  Group<SSAF_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<
-    "The output file for the extracted summaries. "
-    "The extension selects which file format to use.">,
-  MarshallingInfoString<FrontendOpts<"SSAFTUSummaryFile">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -5708,6 +5688,8 @@ def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Fea
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
 def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
+def mrelaxed_atomics : Flag<["-"], "mrelaxed-atomics">, Group<m_wasm_Features_Group>;
+def mno_relaxed_atomics : Flag<["-"], "mno-relaxed-atomics">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
