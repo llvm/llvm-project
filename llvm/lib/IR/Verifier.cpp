@@ -91,6 +91,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicDiagnostics.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -3930,9 +3931,17 @@ void Verifier::visitCallBase(CallBase &Call) {
   Function *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
   bool IsIntrinsic = Callee && Callee->isIntrinsic();
-  if (IsIntrinsic)
-    Check(Callee->getFunctionType() == FTy,
-          "Intrinsic called with incompatible signature", Call);
+  if (IsIntrinsic) {
+    FunctionType *DeclFTy = cast<FunctionType>(Callee->getValueType());
+    if (DeclFTy != FTy) {
+      std::string Msg = "Intrinsic called with incompatible signature";
+      raw_string_ostream SS(Msg);
+      IntrinsicDiagnosticsProvider::querySignatureMismatch(
+          Callee->getName(), DeclFTy, FTy, SS);
+      CheckFailed(Msg, Call);
+      return;
+    }
+  }
 
   // Verify if the calling convention of the callee is callable.
   Check(isCallableCC(Call.getCallingConv()),
