@@ -1197,8 +1197,13 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
-  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility()) {
+    // Emit local/hidden function decls that are accessed within the module
+    // as Import.
+    if (GV.isDeclarationForLinker() && isa<Function>(GV) && !GV.user_empty())
+      return SPIRV::LinkageType::Import;
     return std::nullopt;
+  }
 
   if (GV.isDeclarationForLinker())
     return SPIRV::LinkageType::Import;
