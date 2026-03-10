@@ -3334,7 +3334,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
   return WaitStatesNeeded;
 }
 
-bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   if (!SU->isInstr())
     return false;
 
