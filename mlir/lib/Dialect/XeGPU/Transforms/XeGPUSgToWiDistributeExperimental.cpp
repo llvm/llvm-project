@@ -121,6 +121,20 @@ static bool isReductionLaneLocal(vector::MultiDimReductionOp op) {
   return resTy != resDistTypeOrFailure.value();
 }
 
+/// Given a vector type and its distributed vector type, return the list of
+/// dimensions that are distributed.
+static SmallVector<int64_t> getDistributedDims(VectorType originalType,
+                                               VectorType distributedType) {
+  assert(originalType.getRank() == distributedType.getRank() &&
+         "original and distributed vector types must have the same rank");
+  SmallVector<int64_t> distributedDims;
+  for (int64_t i = 0; i < originalType.getRank(); ++i) {
+    if (distributedType.getDimSize(i) != originalType.getDimSize(i))
+      distributedDims.push_back(i);
+  }
+  return distributedDims;
+}
+
 /// Distributes a subgroup-level CreateNdDesc op to workitem-level CreateNdDesc
 /// op. This simply drops the layout attribute from the tensor descriptor type.
 struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
@@ -739,18 +753,13 @@ struct SgToWiVectorExtractStridedSlice
     VectorType resultType = op.getType();
     auto distResultTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, resultType);
-    // If distribution fails (e.g., dimension smaller than lane layout),
-    // the type stays unchanged.
-    VectorType distResultTy =
-        succeeded(distResultTyOrFailure) ? *distResultTyOrFailure : resultType;
+    if (failed(distResultTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute distributed vector type from lane layout");
+    VectorType distResultTy = *distResultTyOrFailure;
 
-    // Find distributed dimensions by comparing original and distributed
-    // result types.
-    SmallVector<int64_t> distributedDims;
-    for (int64_t i = 0; i < resultType.getRank(); ++i) {
-      if (distResultTy.getDimSize(i) != resultType.getDimSize(i))
-        distributedDims.push_back(i);
-    }
+    SmallVector<int64_t> distributedDims =
+        getDistributedDims(resultType, distResultTy);
 
     // Collect updated sizes, offsets, strides. Pad to full source rank.
     int64_t sourceRank = op.getSourceVectorType().getRank();
@@ -774,12 +783,15 @@ struct SgToWiVectorExtractStridedSlice
         return rewriter.notifyMatchFailure(
             op, "only single dimension distribution is supported");
       int64_t distDim = distributedDims[0];
+      const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+      if (!uArch)
+        return rewriter.notifyMatchFailure(
+            op, "target attribute required to determine subgroup size");
+      int subgroupSize = uArch->getSubgroupSize();
       auto sourceLayout = xegpu::getTemporaryLayout(op->getOpOperand(0));
       if (!sourceLayout || sourceLayout.getEffectiveLaneLayoutAsInt().empty())
         return rewriter.notifyMatchFailure(
             op, "source of extract_strided_slice lacks distribution layout");
-      auto sourceLaneLayout = sourceLayout.getEffectiveLaneLayoutAsInt();
-      int subgroupSize = sourceLaneLayout[distDim];
       int sourceDistrDimSize = op.getSourceVectorType().getShape()[distDim];
       if (sourceDistrDimSize % subgroupSize != 0)
         return rewriter.notifyMatchFailure(
@@ -830,17 +842,13 @@ struct SgToWiVectorInsertStridedSlice
     VectorType destType = op.getDestVectorType();
     auto distDestTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
-    // If distribution fails (e.g., dimension smaller than lane layout),
-    // the type stays unchanged.
-    VectorType distDestTy =
-        succeeded(distDestTyOrFailure) ? *distDestTyOrFailure : destType;
+    if (failed(distDestTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute distributed vector type from lane layout");
+    VectorType distDestTy = *distDestTyOrFailure;
 
-    // Find distributed dimensions of the dest vector.
-    SmallVector<int64_t> destDistributedDims;
-    for (int64_t i = 0; i < destType.getRank(); ++i) {
-      if (distDestTy.getDimSize(i) != destType.getDimSize(i))
-        destDistributedDims.push_back(i);
-    }
+    SmallVector<int64_t> destDistributedDims =
+        getDistributedDims(destType, distDestTy);
 
     SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
         op.getOffsets(), [](Attribute attr) { return attr; });
@@ -850,6 +858,12 @@ struct SgToWiVectorInsertStridedSlice
         return rewriter.notifyMatchFailure(
             op, "only single dimension distribution is supported");
       int64_t destDistDim = destDistributedDims[0];
+
+      const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+      if (!uArch)
+        return rewriter.notifyMatchFailure(
+            op, "target attribute required to determine subgroup size");
+      int subgroupSize = uArch->getSubgroupSize();
 
       VectorType srcType = op.getSourceVectorType();
       // The distributed dim must be in the last k (source rank) dims of dest.
@@ -868,7 +882,6 @@ struct SgToWiVectorInsertStridedSlice
             op, "source or dest of insert_strided_slice lacks distribution "
                 "layout");
 
-      int subgroupSize = destLayout.getEffectiveLaneLayoutAsInt()[destDistDim];
       auto destLaneData = destLayout.getEffectiveLaneDataAsInt();
       auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
       if (!llvm::all_of(destLaneData, [](int64_t v) { return v == 1; }) ||
