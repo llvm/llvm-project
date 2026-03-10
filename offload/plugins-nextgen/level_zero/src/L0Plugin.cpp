@@ -237,7 +237,7 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
 Expected<bool> LevelZeroPluginTy::isCompatibleImage(StringRef Image) const {
   if (identify_magic(Image) == file_magic::spirv_object)
     return true;
-  return false; 
+  return false;
 }
 
 } // namespace llvm::omp::target::plugin
