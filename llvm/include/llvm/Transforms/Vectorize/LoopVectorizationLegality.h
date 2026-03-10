@@ -451,8 +451,8 @@ public:
   /// blocks) and tail-folding masking (predicated loop vectorization).
   bool isMaskRequired(const Instruction *I, bool LoopPredicated) const {
     if (LoopPredicated)
-      return PredMaskedOps.contains(I);
-    return UnpredMaskedOps.contains(I);
+      return TailFoldedMaskedOp.contains(I);
+    return ConditionallyExecutedOps.contains(I);
   }
 
   /// Returns true if there is at least one function call in the loop which
@@ -721,17 +721,11 @@ private:
   /// which a reduction can be computed.
   AssumptionCache *AC;
 
-  /// While vectorizing these instructions we have to generate a
-  /// call to the appropriate masked intrinsic or drop them.
-  /// In order to differentiate between control flow introduced at the source
-  /// level and that introduced by the loop vectoriser during tail-folding, we
-  /// keep two lists:
-  /// 1) UnpredMaskedOp - instructions that need masking if we are
-  ///    in conditionally executed block.
-  /// 2) PredMaskedOp - instructions that need masking if we are in
-  ///    a predicated loop.
-  SmallPtrSet<const Instruction *, 8> UnpredMaskedOps;
-  SmallPtrSet<const Instruction *, 8> PredMaskedOps;
+  /// Instructions that require masking because they are in source-level
+  /// conditionally executed blocks.
+  SmallPtrSet<const Instruction *, 8> ConditionallyExecutedOps;
+  /// Instructions that require masking only due to tail-folding predication.
+  SmallPtrSet<const Instruction *, 8> TailFoldedMaskedOp;
 
   /// Contains all identified histogram operations, which are sequences of
   /// load -> update -> store instructions where multiple lanes in a vector

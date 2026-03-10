@@ -1603,7 +1603,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB) &&
-        !blockCanBePredicated(BB, SafePointers, UnpredMaskedOps)) {
+        !blockCanBePredicated(BB, SafePointers, ConditionallyExecutedOps)) {
       reportVectorizationFailure(
           "Control flow cannot be substituted for a select", "NoCFGForSelect",
           ORE, TheLoop, BB->getTerminator());
@@ -2102,7 +2102,7 @@ void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     [[maybe_unused]] bool R =
-        blockCanBePredicated(BB, SafePointers, PredMaskedOps);
+        blockCanBePredicated(BB, SafePointers, TailFoldedMaskedOp);
     assert(R && "Must be able to predicate block when tail-folding.");
   }
 }
