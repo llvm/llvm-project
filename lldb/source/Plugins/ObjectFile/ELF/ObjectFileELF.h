@@ -85,7 +85,7 @@ public:
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
+  static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 
   // PluginInterface protocol
@@ -274,6 +274,10 @@ private:
   static void ParseARMAttributes(lldb_private::DataExtractor &data,
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
+
+  static void ParseRISCVAttributes(lldb_private::DataExtractor &data,
+                                   uint64_t length,
+                                   lldb_private::ArchSpec &arch_spec);
 
   /// Parses the elf section headers and returns the uuid, debug link name,
   /// crc, archspec.

@@ -24,6 +24,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -48,12 +50,14 @@ struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
   llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
   const Expr *MovedExpr;
+  const Expr *InvalidatedByExpr;
   Confidence ConfidenceLevel;
 };
 
 using AnnotationTarget =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-using EscapingTarget = llvm::PointerUnion<const Expr *, const FieldDecl *>;
+using EscapingTarget =
+    llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
 
 class LifetimeChecker {
 private:
@@ -80,6 +84,8 @@ public:
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
+        else if (const auto *IOF = F->getAs<InvalidateOriginFact>())
+          checkInvalidation(IOF);
         else if (const auto *OEF = F->getAs<OriginEscapesFact>())
           checkAnnotations(OEF);
     issuePendingWarnings();
@@ -105,6 +111,8 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
           NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
         return;
       }
       // Suggest lifetimebound for parameter escaping through return.
@@ -175,7 +183,56 @@ public:
     FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
                                      /*BestCausingFact=*/BestCausingFact,
                                      /*MovedExpr=*/MovedExpr,
+                                     /*InvalidatedByExpr=*/nullptr,
                                      /*ConfidenceLevel=*/CurConfidence};
+  }
+
+  /// Checks for use-after-invalidation errors when a container is modified.
+  ///
+  /// This method identifies origins that are live at the point of invalidation
+  /// and checks if they hold loans that are invalidated by the operation
+  /// (e.g., iterators into a vector that is being pushed to).
+  void checkInvalidation(const InvalidateOriginFact *IOF) {
+    OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
+    /// Get loans directly pointing to the invalidated container
+    LoanSet DirectlyInvalidatedLoans =
+        LoanPropagation.getLoans(InvalidatedOrigin, IOF);
+    auto IsInvalidated = [&](const Loan *L) {
+      auto *PathL = dyn_cast<PathLoan>(L);
+      auto *PlaceholderL = dyn_cast<PlaceholderLoan>(L);
+      for (LoanID InvalidID : DirectlyInvalidatedLoans) {
+        const Loan *L = FactMgr.getLoanMgr().getLoan(InvalidID);
+        auto *InvalidPathL = dyn_cast<PathLoan>(L);
+        auto *InvalidPlaceholderL = dyn_cast<PlaceholderLoan>(L);
+        if (PathL && InvalidPathL &&
+            PathL->getAccessPath() == InvalidPathL->getAccessPath())
+          return true;
+        if (PlaceholderL && InvalidPlaceholderL &&
+            PlaceholderL->getParmVarDecl() ==
+                InvalidPlaceholderL->getParmVarDecl())
+          return true;
+      }
+      return false;
+    };
+    // For each live origin, check if it holds an invalidated loan and report.
+    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
+    for (auto &[OID, LiveInfo] : Origins) {
+      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
+      for (LoanID LiveLoanID : HeldLoans)
+        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
+          Confidence CurConfidence = livenessKindToConfidence(LiveInfo.Kind);
+          Confidence LastConf =
+              FinalWarningsMap.lookup(LiveLoanID).ConfidenceLevel;
+          if (LastConf < CurConfidence) {
+            FinalWarningsMap[LiveLoanID] = {
+                /*ExpiryLoc=*/{},
+                /*CausingFact=*/LiveInfo.CausingFact,
+                /*MovedExpr=*/nullptr,
+                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
+                /*ConfidenceLevel=*/CurConfidence};
+          }
+        }
+    }
   }
 
   void issuePendingWarnings() {
@@ -183,19 +240,33 @@ public:
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const auto *BL = cast<PathLoan>(L);
-      const Expr *IssueExpr = BL->getIssueExpr();
+
+      const Expr *IssueExpr = nullptr;
+      if (const auto *BL = dyn_cast<PathLoan>(L))
+        IssueExpr = BL->getIssueExpr();
+      const ParmVarDecl *InvalidatedPVD = nullptr;
+      if (const auto *PL = dyn_cast<PlaceholderLoan>(L))
+        InvalidatedPVD = PL->getParmVarDecl();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
-      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>())
-        SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                       ExpiryLoc, Confidence);
-      else if (const auto *OEF =
-                   CausingFact.dyn_cast<const OriginEscapesFact *>()) {
+      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
+        if (Warning.InvalidatedByExpr) {
+          if (IssueExpr)
+            SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
+                                                   Warning.InvalidatedByExpr);
+          if (InvalidatedPVD)
+            SemaHelper->reportUseAfterInvalidation(
+                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
+
+        } else
+          SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
+                                         ExpiryLoc, Confidence);
+      } else if (const auto *OEF =
+                     CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
           SemaHelper->reportUseAfterReturn(IssueExpr,
                                            RetEscape->getReturnExpr(),
@@ -203,6 +274,9 @@ public:
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
+        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+          SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
+                                           MovedExpr, ExpiryLoc);
         else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
@@ -275,6 +349,8 @@ public:
         SemaHelper->reportNoescapeViolation(PVD, E);
       else if (const auto *FD = EscapeTarget.dyn_cast<const FieldDecl *>())
         SemaHelper->reportNoescapeViolation(PVD, FD);
+      else if (const auto *G = EscapeTarget.dyn_cast<const VarDecl *>())
+        SemaHelper->reportNoescapeViolation(PVD, G);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }

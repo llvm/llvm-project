@@ -2823,6 +2823,196 @@ llvm.func @allocsize_call_2() {
 
 // -----
 
+// CHECK-LABEL: @minsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @minsize() attributes { minsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @minsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @minsize_call() {
+  llvm.call @f() {minsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @optsize() attributes { optsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @optsize_call() {
+  llvm.call @f() {optsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params() attributes { save_reg_params } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params_call() {
+  llvm.call @f() {save_reg_params} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_1
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="skip"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_2() attributes { zero_call_used_regs = "all"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_1
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_1() {
+  llvm.call @f() {zero_call_used_regs="used_gpr_all"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used_gpr_all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_2
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_2() {
+  llvm.call @f() {zero_call_used_regs="used"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @trap_func_name_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @trap_func_name_call() {
+  llvm.call @f() {trap_func_name="whatever"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "trap-func-name"="whatever"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs() attributes {default_func_attrs={key="value", justKey}} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_call() {
+  llvm.call @f() {default_func_attrs={key="value", justKey}} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @nobuiltin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @nobuiltin_call() {
+  llvm.call @f() {nobuiltin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nobuiltin
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call

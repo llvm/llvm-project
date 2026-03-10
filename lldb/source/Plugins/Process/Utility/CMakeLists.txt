@@ -43,7 +43,6 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextPOSIX_arm.cpp
   RegisterContextPOSIX_arm64.cpp
   RegisterContextPOSIX_loongarch64.cpp
-  RegisterContextPOSIX_mips64.cpp
   RegisterContextPOSIX_riscv32.cpp
   RegisterContextPOSIX_powerpc.cpp
   RegisterContextPOSIX_ppc64le.cpp
@@ -59,6 +58,7 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterInfoPOSIX_arm64.cpp
   RegisterInfoPOSIX_loongarch64.cpp
   RegisterInfoPOSIX_ppc64le.cpp
+  RegisterInfoPOSIX_ppc64.cpp
   RegisterInfoPOSIX_riscv32.cpp
   RegisterInfoPOSIX_riscv64.cpp
   StopInfoMachException.cpp

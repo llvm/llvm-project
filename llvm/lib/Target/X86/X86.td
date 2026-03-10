@@ -32,6 +32,13 @@ def IsX32 : SubtargetFeature<"x32", "IsX32", "true",
 // X86 Subtarget ISA features
 //===----------------------------------------------------------------------===//
 
+foreach i = {8-15} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
+                                             "Reserve R"#i#", making it unavailable as a GPR">;
+foreach i = {16-31} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
+                                             "Reserve R"#i#", making it unavailable as a GPR">;
+
 def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
                                       "Enable X87 float instructions">;
 
@@ -1631,6 +1638,15 @@ def ProcessorFeatures {
                                                   ];
   list<SubtargetFeature> ZN5Features =
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
+
+  list<SubtargetFeature> ZN6Tuning = ZN5Tuning;
+  list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
+                                                  FeatureAVXVNNIINT8,
+                                                  FeatureAVXNECONVERT,
+                                                  FeatureAVXIFMA
+                                                  ];
+  list<SubtargetFeature> ZN6Features =
+    !listconcat(ZN5Features, ZN6AdditionalFeatures);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1993,6 +2009,8 @@ def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
                 ProcessorFeatures.ZN4Tuning>;
 def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
                 ProcessorFeatures.ZN5Tuning>;
+def : ProcModel<"znver6", Znver4Model, ProcessorFeatures.ZN6Features,
+                ProcessorFeatures.ZN6Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;

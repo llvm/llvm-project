@@ -21,15 +21,15 @@ define void @weakzero_dst_siv_prod_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [S]!
+; CHECK-ALL-NEXT:    da analyze - output [S]!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'weakzero_dst_siv_prod_ovfl'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - none!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [S]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [S]!
 ;
 entry:
   br label %loop.header
@@ -66,28 +66,25 @@ exit:
 ;   A[INT64_MAX] = 2;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist. When `%n` is 2^62, the value of `%offset` will be
-; the same as INT64_MAX at the last iteration.
-; The root cause is that the calculation of the difference between the two
-; constants (INT64_MAX and -1) overflows in a signed sense.
+; When `%n` is 2^62, the value of `%offset` will be the same as INT64_MAX at
+; the last iteration.
 ;
 define void @weakzero_dst_siv_delta_ovfl(ptr %A, i64 %n) {
 ; CHECK-ALL-LABEL: 'weakzero_dst_siv_delta_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [S]!
+; CHECK-ALL-NEXT:    da analyze - output [S]!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'weakzero_dst_siv_delta_ovfl'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [S]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [S]!
 ;
 entry:
   %guard = icmp sgt i64 %n, 0
@@ -95,7 +92,7 @@ entry:
 
 loop.header:
   %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.latch ]
-  %offset = phi i64 [ -2, %entry ], [ %offset.next, %loop.latch ]
+  %offset = phi i64 [ -1, %entry ], [ %offset.next, %loop.latch ]
   %ec = icmp eq i64 %i, %n
   br i1 %ec, label %exit, label %loop.body
 

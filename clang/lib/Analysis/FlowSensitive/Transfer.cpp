@@ -336,7 +336,6 @@ public:
       RecordStorageLocation *Loc = nullptr;
       if (S->getType()->isPointerType()) {
         auto *PV = Env.get<PointerValue>(*SubExpr);
-        assert(PV != nullptr);
         if (PV == nullptr)
           break;
         Loc = cast<RecordStorageLocation>(&PV->getPointeeLoc());

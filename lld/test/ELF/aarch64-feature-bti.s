@@ -290,5 +290,5 @@ func1:
 
 .ifdef RELVTABLE_PLT
 // R_AARCH64_PLT32
-.word funcRelVtable@PLT - .
+.word %pltpcrel(funcRelVtable)
 .endif

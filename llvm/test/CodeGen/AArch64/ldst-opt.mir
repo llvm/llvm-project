@@ -181,3 +181,253 @@ body: |
 # CHECK-NOT: LDRXui
 # CHECK-NOT: ORR
 # CHECK: BL &bar, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def $sp
+
+name: test_LDRBB
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $w2 = LDRBBui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $w3 = LDRBBui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRBB
+# CHECK: LDRBBpost $x0, 1
+# CHECK: LDRBBpre $x1, 1
+
+name: test_LDRHH
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $w2 = LDRHHui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $w3 = LDRHHui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRHH
+# CHECK: LDRHHpost $x0, 1
+# CHECK: LDRHHpre $x1, 1
+name: test_LDRW
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $w2 = LDRWui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $w3 = LDRWui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRW
+# CHECK: LDRWpost $x0, 1
+# CHECK: LDRWpre $x1, 1
+
+name: test_LDRX
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $x2 = LDRXui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $x3 = LDRXui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRX
+# CHECK: LDRXpost $x0, 1
+# CHECK: LDRXpre $x1, 1
+
+name: test_LDRB
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $b0 = LDRBui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $b1 = LDRBui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRB
+# CHECK: LDRBpost $x0, 1
+# CHECK: LDRBpre $x1, 1
+
+name: test_LDRH
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $h0 = LDRHui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $h1 = LDRHui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRH
+# CHECK: LDRHpost $x0, 1
+# CHECK: LDRHpre $x1, 1
+
+name: test_LDRS
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $s0 = LDRSui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $s1 = LDRSui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRS
+# CHECK: LDRSpost $x0, 1
+# CHECK: LDRSpre $x1, 1
+
+name: test_LDRD
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $d0 = LDRDui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $d1 = LDRDui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRD
+# CHECK: LDRDpost $x0, 1
+# CHECK: LDRDpre $x1, 1
+
+name: test_LDRQ
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1
+
+    $q0 = LDRQui $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    $q1 = LDRQui $x1, 0
+...
+# CHECK-LABEL: name: test_LDRQ
+# CHECK: LDRQpost $x0, 1
+# CHECK: LDRQpre $x1, 1
+
+name: test_STRBB
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $w2, $w3
+
+    STRBBui $w2, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRBBui $w3, $x1, 0
+...
+# CHECK-LABEL: name: test_STRBB
+# CHECK: STRBBpost $w2, $x0, 1
+# CHECK: STRBBpre $w3, $x1, 1
+
+name: test_STRHH
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $w2, $w3
+
+    STRHHui $w2, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRHHui $w3, $x1, 0
+...
+# CHECK-LABEL: name: test_STRHH
+# CHECK: STRHHpost $w2, $x0, 1
+# CHECK: STRHHpre $w3, $x1, 1
+name: test_STRW
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $w2, $w3
+
+    STRWui $w2, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRWui $w3, $x1, 0
+...
+# CHECK-LABEL: name: test_STRW
+# CHECK: STRWpost $w2, $x0, 1
+# CHECK: STRWpre $w3, $x1, 1
+
+name: test_STRX
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
+
+    STRXui $x2, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRXui $x3, $x1, 0
+...
+# CHECK-LABEL: name: test_STRX
+# CHECK: STRXpost $x2, $x0, 1
+# CHECK: STRXpre $x3, $x1, 1
+
+name: test_STRB
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $b0, $b1
+
+    STRBui $b0, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRBui $b1, $x1, 0
+...
+# CHECK-LABEL: name: test_STRB
+# CHECK: STRBpost $b0, $x0, 1
+# CHECK: STRBpre $b1, $x1, 1
+
+name: test_STRH
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $h0, $h1
+
+    STRHui $h0, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRHui $h1, $x1, 0
+...
+# CHECK-LABEL: name: test_STRH
+# CHECK: STRHpost $h0, $x0, 1
+# CHECK: STRHpre $h1, $x1, 1
+
+name: test_STRS
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $s0, $s1
+
+    STRSui $s0, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRSui $s1, $x1, 0
+...
+# CHECK-LABEL: name: test_STRS
+# CHECK: STRSpost $s0, $x0, 1
+# CHECK: STRSpre $s1, $x1, 1
+
+name: test_STRD
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $d0, $d1
+
+    STRDui $d0, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRDui $d1, $x1, 0
+...
+# CHECK-LABEL: name: test_STRD
+# CHECK: STRDpost $d0, $x0, 1
+# CHECK: STRDpre $d1, $x1, 1
+
+name: test_STRQ
+body: |
+  bb.0.entry:
+    liveins: $x0, $x1, $q0, $q1
+
+    STRQui $q0, $x0, 0
+    $x0 = ADDXri $x0, 1, 0
+    $x1 = ADDXri $x1, 1, 0
+    STRQui $q1, $x1, 0
+...
+# CHECK-LABEL: name: test_STRQ
+# CHECK: STRQpost $q0, $x0, 1
+# CHECK: STRQpre $q1, $x1, 1

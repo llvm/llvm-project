@@ -23,10 +23,6 @@ namespace llvm::omp::target::plugin {
 using namespace llvm::omp::target;
 using namespace error;
 
-#pragma clang diagnostic ignored "-Wglobal-constructors"
-// Common data across all possible plugin instantiations.
-L0OptionsTy LevelZeroPluginTy::Options;
-
 Expected<int32_t> LevelZeroPluginTy::findDevices() {
   CALL_ZE_RET_ERROR(zeInit, ZE_INIT_FLAG_GPU_ONLY);
   uint32_t NumDrivers = 0;
@@ -235,6 +231,11 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
   }
 
   return Plugin::success();
+}
+
+// We only need to check for formats other than ELF here
+Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
+  return identify_magic(Image) == file_magic::spirv_object;
 }
 
 } // namespace llvm::omp::target::plugin
