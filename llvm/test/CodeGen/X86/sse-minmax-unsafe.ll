@@ -257,7 +257,7 @@ define double @ult(double %x, double %y)  {
   ret double %d
 }
 
-define double @ugt_inverse(double %x, double %y)  {
+define double @ugt_inverse(double nofpclass(nan) %x, double nofpclass(nan) %y)  {
 ;
 ; RELAX-LABEL: ugt_inverse:
 ; RELAX:       # %bb.0:
@@ -273,7 +273,7 @@ define double @ugt_inverse(double %x, double %y)  {
   ret double %d
 }
 
-define double @ult_inverse(double %x, double %y)  {
+define double @ult_inverse(double nofpclass(nan) %x, double nofpclass(nan) %y)  {
 ;
 ; RELAX-LABEL: ult_inverse:
 ; RELAX:       # %bb.0:
