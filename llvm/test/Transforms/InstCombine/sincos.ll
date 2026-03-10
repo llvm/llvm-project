@@ -268,7 +268,7 @@ define { float, float } @sincos_double_to_float_shrink(float %x) {
 ; CHECK-NEXT:    [[COS:%.*]] = extractvalue { double, double } [[SINCOS]], 1
 ; CHECK-NEXT:    [[ST:%.*]] = fptrunc double [[SIN]] to float
 ; CHECK-NEXT:    [[CT:%.*]] = fptrunc double [[COS]] to float
-; CHECK-NEXT:    [[R0:%.*]] = insertvalue { float, float } undef, float [[ST]], 0
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { float, float } poison, float [[ST]], 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { float, float } [[R0]], float [[CT]], 1
 ; CHECK-NEXT:    ret { float, float } [[R1]]
 ;
@@ -281,7 +281,7 @@ define { float, float } @sincos_double_to_float_shrink(float %x) {
   %c = call double @cos(double %ext) #0
   %st = fptrunc double %s to float
   %ct = fptrunc double %c to float
-  %r0 = insertvalue { float, float } undef, float %st, 0
+  %r0 = insertvalue { float, float } poison, float %st, 0
   %r1 = insertvalue { float, float } %r0, float %ct, 1
   ret { float, float } %r1
 }
