@@ -34537,6 +34537,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         !mayFoldIntoVector(Op1, DAG, Subtarget))
       return;
 
+    bool IsFSHL = Opc == ISD::FSHL;
     unsigned BW = VT.getSizeInBits();
     MVT AmtVT = MVT::i64;
     MVT VecVT = MVT::getVectorVT(MVT::i64, BW / 64);
@@ -34550,7 +34551,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res = concatSubVectors(DAG.getBitcast(MVT::v4i64, Op1),
                                      DAG.getBitcast(MVT::v4i64, Op0), DAG, dl);
       Res = DAG.getBitcast(MVT::i512, Res);
-      if (Opc == ISD::FSHL) {
+      if (IsFSHL) {
         Res = DAG.getNode(ISD::SHL, dl, MVT::i512, Res, Amt);
         Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res,
                           DAG.getShiftAmountConstant(256, MVT::i512, dl));
@@ -34568,14 +34569,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Sel = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i8, AmtZ);
     SDValue InvAmt =
         DAG.getNode(ISD::SUB, dl, AmtVT, DAG.getConstant(BW, dl, AmtVT), Amt);
-    SDValue ShX =
-        DAG.getNode(ISD::SHL, dl, VT, Op0, Opc == ISD::FSHL ? Amt : InvAmt);
-    SDValue ShY =
-        DAG.getNode(ISD::SRL, dl, VT, Op1, Opc == ISD::FSHR ? Amt : InvAmt);
+    SDValue ShX = DAG.getNode(ISD::SHL, dl, VT, Op0, IsFSHL ? Amt : InvAmt);
+    SDValue ShY = DAG.getNode(ISD::SRL, dl, VT, Op1, IsFSHL ? InvAmt : Amt);
     SDValue Res = DAG.getNode(ISD::OR, dl, VecVT, DAG.getBitcast(VecVT, ShX),
                               DAG.getBitcast(VecVT, ShY));
     Res = DAG.getSelect(dl, VecVT, DAG.getBitcast(BoolVT, Sel), Res,
-                        DAG.getBitcast(VecVT, Opc == ISD::FSHL ? Op0 : Op1));
+                        DAG.getBitcast(VecVT, IsFSHL ? Op0 : Op1));
     Results.push_back(DAG.getBitcast(VT, Res));
     return;
   }
