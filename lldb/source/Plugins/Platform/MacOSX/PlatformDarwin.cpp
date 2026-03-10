@@ -90,8 +90,6 @@ PlatformDarwin::~PlatformDarwin() = default;
 static uint32_t g_initialize_count = 0;
 
 void PlatformDarwin::Initialize() {
-  Platform::Initialize();
-
   if (g_initialize_count++ == 0) {
     PluginManager::RegisterPlugin(PlatformDarwin::GetPluginNameStatic(),
                                   PlatformDarwin::GetDescriptionStatic(),
@@ -106,8 +104,6 @@ void PlatformDarwin::Terminate() {
       PluginManager::UnregisterPlugin(PlatformDarwin::CreateInstance);
     }
   }
-
-  Platform::Terminate();
 }
 
 llvm::StringRef PlatformDarwin::GetDescriptionStatic() {
@@ -233,12 +229,13 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     // .dSYM/Contents/Resources/DWARF/<basename> let us go to
     // .dSYM/Contents/Resources/Python/<basename>.py and see if the
     // file exists
-    path_string.Printf("%s/../Python/%s.py",
-                       symfile_spec.GetDirectory().GetCString(),
-                       module_basename.c_str());
-    original_path_string.Printf("%s/../Python/%s.py",
-                                symfile_spec.GetDirectory().GetCString(),
-                                original_module_basename.c_str());
+    path_string.Format("{0}/../Python/{1}.py",
+                       symfile_spec.GetDirectory().GetStringRef(),
+                       module_basename);
+    original_path_string.Format("{0}/../Python/{1}.py",
+                                symfile_spec.GetDirectory().GetStringRef(),
+                                original_module_basename);
+
     FileSpec script_fspec(path_string.GetString());
     FileSystem::Instance().Resolve(script_fspec);
     FileSpec orig_script_fspec(original_path_string.GetString());

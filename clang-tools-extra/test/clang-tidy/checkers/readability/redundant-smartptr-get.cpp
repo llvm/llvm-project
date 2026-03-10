@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-redundant-smartptr-get %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s readability-redundant-smartptr-get %t
 #include <vector>
 
 #define NULL __null
