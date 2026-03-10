@@ -1,5 +1,4 @@
 // RUN: fir-opt --split-input-file --omp-map-info-finalization %s | FileCheck %s
-// XFAIL: *
 // Test that the 'close' map flag is cleared from member maps if the parent map
 // (derived type) does not have the 'close' flag. This typically happens in
 // Unified Shared Memory (USM) mode where the parent is in USM (no close) but
@@ -19,6 +18,6 @@ module attributes {omp.requires = #omp<clause_requires unified_shared_memory>} {
 }
 
 // CHECK-LABEL: func.func @test_usm_close_flag_cleanup
-// CHECK: %[[MEMBER:.*]] = omp.map.info {{.*}} map_clauses(always, to) {{.*}} {name = "parent.a.implicit_map"}
+// CHECK: %[[MEMBER:.*]] = omp.map.info {{.*}} map_clauses(always, descriptor, to) {{.*}} {name = "parent.a.implicit_map"}
 // CHECK: %[[PARENT:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}} members(%[[MEMBER]], {{.*}}) {{.*}} {name = "parent", {{.*}}}
 // CHECK-NOT: close

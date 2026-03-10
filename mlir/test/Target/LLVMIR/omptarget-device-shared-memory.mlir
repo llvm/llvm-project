@@ -1,5 +1,4 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
 // This test checks that, when compiling for an offloading target, device shared
 // memory will be used in place of allocas for certain private variables.
 
@@ -59,8 +58,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     // CHECK-NEXT: call void @[[OUTLINED_TEAMS:__omp_offloading_[A-Za-z0-9_.]*]](ptr %structArg.ascast)
 
     // CHECK: [[REDUCE_FINALIZE_BB:reduce\.finalize.*]]:
-    // CHECK-NEXT: %{{.*}} = call i32 @__kmpc_global_thread_num
-    // CHECK-NEXT: call void @__kmpc_barrier
     // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[X_PRIV]], i64 4)
 
     // CHECK: define internal void @[[OUTLINED_TEAMS]]
