@@ -84,9 +84,20 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
   });
 }
 
+static bool isIteratingOverTemporary(const Expr *Init) {
+  if (const auto *EWC = dyn_cast<ExprWithCleanups>(Init))
+    Init = EWC->getSubExpr();
+  Init = Init->IgnoreParenImpCasts();
+  return isa<MaterializeTemporaryExpr>(Init) || Init->isPRValue();
+}
+
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
+      return;
+
+    if (!getLangOpts().CPlusPlus20 &&
+        isIteratingOverTemporary(S->getRangeInit()))
       return;
 
     diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::any_of()'")
@@ -94,6 +105,10 @@ void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *S =
                  Result.Nodes.getNodeAs<CXXForRangeStmt>("all_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
+      return;
+
+    if (!getLangOpts().CPlusPlus20 &&
+        isIteratingOverTemporary(S->getRangeInit()))
       return;
 
     diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::all_of()'")

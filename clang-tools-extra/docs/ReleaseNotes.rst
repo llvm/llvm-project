@@ -336,6 +336,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improved :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability/use-anyofallof>` check by avoiding false
+  positives in pre-C++20 mode when iterating over temporary range expressions.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
