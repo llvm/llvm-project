@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <memory>
 #include <tuple>
@@ -344,8 +345,18 @@ TEST_F(PlatformDarwinLocateTest,
           ->LocateExecutableScriptingResourcesFromDSYM(
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 0u);
-  EXPECT_TRUE(ss.GetString().contains(
-      "its name conflicts with a keyword and as such cannot be loaded"));
+
+  std::string orig_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/import.py").str();
+  std::string fixed_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/_import.py").str();
+  std::string expected = llvm::formatv(
+      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "name conflicts with a keyword and as such cannot be loaded. If you "
+      "intend to have this script loaded, please rename '{1}' to '{2}' and "
+      "retry.\n",
+      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+  EXPECT_EQ(ss.GetString(), expected);
 }
 
 TEST_F(PlatformDarwinLocateTest,
@@ -374,9 +385,18 @@ TEST_F(PlatformDarwinLocateTest,
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 1u);
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
-  EXPECT_TRUE(
-      ss.GetString().contains("Consider removing the file with the malformed "
-                              "name to eliminate this warning."));
+
+  std::string orig_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/import.py").str();
+  std::string fixed_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/_import.py").str();
+  std::string expected = llvm::formatv(
+      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "name '{1}' conflicts with a keyword and as such cannot be loaded. LLDB "
+      "will load '{2}' instead. Consider removing the file with the malformed "
+      "name to eliminate this warning.\n",
+      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+  EXPECT_EQ(ss.GetString(), expected);
 }
 
 TEST_F(
@@ -432,8 +452,18 @@ TEST_F(
           ->LocateExecutableScriptingResourcesFromDSYM(
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 0u);
-  EXPECT_TRUE(ss.GetString().contains(
-      "its name contains reserved characters and as such cannot be loaded"));
+
+  std::string orig_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/TestModule-1.1 1.py").str();
+  std::string fixed_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/TestModule_1_1_1.py").str();
+  std::string expected = llvm::formatv(
+      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "name contains reserved characters and as such cannot be loaded. If you "
+      "intend to have this script loaded, please rename '{1}' to '{2}' and "
+      "retry.\n",
+      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+  EXPECT_EQ(ss.GetString(), expected);
 }
 
 TEST_F(
@@ -463,9 +493,18 @@ TEST_F(
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 1u);
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_1_1_1.py");
-  EXPECT_TRUE(
-      ss.GetString().contains("Consider removing the file with the malformed "
-                              "name to eliminate this warning."));
+
+  std::string orig_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/TestModule-1.1 1.py").str();
+  std::string fixed_script =
+      (m_tmp_dsym_dwarf_dir + "/../Python/TestModule_1_1_1.py").str();
+  std::string expected = llvm::formatv(
+      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "name '{1}' contains reserved characters and as such cannot be loaded. "
+      "LLDB will load '{2}' instead. Consider removing the file with the "
+      "malformed name to eliminate this warning.\n",
+      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+  EXPECT_EQ(ss.GetString(), expected);
 }
 
 TEST_F(
