@@ -109,6 +109,14 @@ static bool isOpInSerialRegion(Operation *op) {
     return computeRegion.isEffectivelySerial();
   if (op->getParentOfType<SerialOp>())
     return true;
+  if (auto funcOp = op->getParentOfType<FunctionOpInterface>()) {
+    if (isSpecializedAccRoutine(funcOp)) {
+      auto attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
+          getSpecializedRoutineAttrName());
+      if (attr && attr.getLevel().getValue() == ParLevel::seq)
+        return true;
+    }
+  }
   return false;
 }
 

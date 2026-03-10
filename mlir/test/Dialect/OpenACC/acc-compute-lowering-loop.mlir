@@ -131,17 +131,38 @@ func.func @orphan_loop(%buf: memref<8xi32>) {
 
 // -----
 
-// Loop in specialized acc routine: should not be treated as orphan (scf.for)
-// but converted to scf.parallel when independent. With vector tag, the
-// scf.parallel gets acc.par_dims = thread_x (vector dimension).
+// Loop in specialized seq acc routine: not treated as orphan (scf.for).
 acc.routine @routine_with_loop func(@device_routine_with_loop) seq
 // CHECK-LABEL: func.func @device_routine_with_loop
 // CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_with_loop, <seq>, "host_routine_with_loop">}
 // CHECK-NOT: acc.loop
 // CHECK: scf.parallel
-// CHECK: acc.par_dims = #acc<par_dims[thread_x]>
+// CHECK: acc.par_dims = #acc<par_dims[sequential]>
 // CHECK-NOT: scf.for
 func.func @device_routine_with_loop(%buf: memref<8xi32>) attributes {acc.specialized_routine = #acc.specialized_routine<@routine_with_loop, <seq>, "host_routine_with_loop">} {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c0_i32 = arith.constant 0 : i32
+
+  acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
+    memref.store %c0_i32, %buf[%i] : memref<8xi32>
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}
+
+// -----
+
+// Loop in specialized vector acc routine with vector loop.
+acc.routine @routine_vector_with_loop func(@device_routine_vector_with_loop) vector
+// CHECK-LABEL: func.func @device_routine_vector_with_loop
+// CHECK: attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector_with_loop, <vector>, "host_routine_vector_with_loop">}
+// CHECK-NOT: acc.loop
+// CHECK: scf.parallel
+// CHECK: acc.par_dims = #acc<par_dims[thread_x]>
+// CHECK-NOT: scf.for
+func.func @device_routine_vector_with_loop(%buf: memref<8xi32>) attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector_with_loop, <vector>, "host_routine_vector_with_loop">} {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c8 = arith.constant 8 : index
