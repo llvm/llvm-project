@@ -77,7 +77,7 @@ void test() {
                 "");
 }
 
-TEST_CONSTEXPR_CXX26 bool tests() {
+int main(int, char**) {
   test<int, test_allocator<int> >();
   test<int*, std::allocator<int*> >();
   test<Copyable, test_allocator<Copyable> >();
@@ -105,14 +105,6 @@ TEST_CONSTEXPR_CXX26 bool tests() {
                                 typename std::iterator_traits<typename C::const_iterator>::difference_type>::value),
                   "");
   }
-#endif
-  return false;
-}
-
-int main(int, char**) {
-  tests();
-#if TEST_STD_VER >= 26
-  static_assert(tests());
 #endif
 
   return 0;

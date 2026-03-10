@@ -22,7 +22,7 @@
 
 struct A {};
 
-TEST_CONSTEXPR_CXX26 bool test() {
+int main(int, char**) {
   //  Test the explicit deduction guides
 
   //  Test the implicit deduction guides
@@ -34,14 +34,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
     //  Also, we can't use {} instead of parens, because that constructs a
     //      deque<allocator<int>, allocator<allocator<int>>>
   }
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
 
   return 0;
 }

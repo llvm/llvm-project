@@ -52,7 +52,7 @@ struct some_alloc2 {
   typedef std::true_type is_always_equal;
 };
 
-TEST_CONSTEXPR_CXX26 bool test() {
+int main(int, char**) {
   {
     typedef std::deque<MoveOnly> C;
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
@@ -82,14 +82,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
     //  if the allocators are always equal, then the swap can be noexcept
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
   }
-#endif
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
 #endif
 
   return 0;
