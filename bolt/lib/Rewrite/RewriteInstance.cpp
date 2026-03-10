@@ -2200,8 +2200,7 @@ Error RewriteInstance::readSpecialSections() {
     // Compressed debug sections currently aren't supported.
     if (isDebugSection(SectionName)) {
       HasDebugInfo = true;
-      if (opts::UpdateDebugSections &&
-          isCompressedDebugSection(Section)) {
+      if (opts::UpdateDebugSections && isCompressedDebugSection(Section)) {
         return createStringError(errc::not_supported,
                                  Twine("compressed debug section '") +
                                      SectionName +
