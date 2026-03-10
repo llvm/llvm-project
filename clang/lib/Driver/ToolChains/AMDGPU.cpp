@@ -1075,7 +1075,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   // duplicate definitions persist even with internalization enabled
   if (Pref.GPUSan && !Pref.IsOpenMP)
     // Add Gpu Sanitizer RTL bitcode lib required for AMDGPU Sanitizer
-    AddBCLib(getAsanRTLPath(),false);
+    AddBCLib(getAsanRTLPath(), false);
   AddBCLib(getOCMLPath());
   if (!Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
