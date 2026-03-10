@@ -50,6 +50,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 
@@ -252,7 +253,9 @@ public:
       if (!forOp)
         return failure();
       rewriter.replaceOp(loopOp, forOp);
-    } else if (!isOpInComputeRegion(loopOp)) {
+    } else if (!isOpInComputeRegion(loopOp) &&
+               !isSpecializedAccRoutine(
+                   loopOp->getParentOfType<FunctionOpInterface>())) {
       // This loop is an orphan `acc loop` but it is not in any sort
       // of compute region. Thus it is just a sequential non-accelerator loop.
       auto forOp =
