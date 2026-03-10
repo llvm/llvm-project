@@ -121,7 +121,10 @@ public:
   DGNode(const DGNode &Other) = delete;
   virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
-  unsigned getNumUnscheduledSuccs() const { return *UnscheduledSuccs; }
+  unsigned getNumUnscheduledSuccs() const {
+    assert((bool)UnscheduledSuccs && "Invalid UnscheduledSuccs!");
+    return *UnscheduledSuccs;
+  }
 #ifndef NDEBUG
   /// \returns true unscheduled successors contains valid data (for testing).
   bool validUnscheduledSuccs() const { return (bool)UnscheduledSuccs; }
