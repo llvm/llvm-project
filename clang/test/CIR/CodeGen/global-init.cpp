@@ -141,7 +141,7 @@ float _Complex a = {num, num};
 // OGCG:   %[[REAL:.*]] = load float, ptr @num, align 4
 // OGCG:   %[[IMAG:.*]] = load float, ptr @num, align 4
 // OGCG:   store float %[[REAL]], ptr @a, align 4
-// OGCG:   store float %[[IMAG]], ptr getelementptr inbounds nuw ({ float, float }, ptr @a, i32 0, i32 1), align 4
+// OGCG:   store float %[[IMAG]], ptr getelementptr inbounds nuw (i8, ptr @a, i64 4), align 4
 
 float fp;
 int i = (int)fp;
@@ -203,7 +203,7 @@ ArrayDtor arrDtor[16];
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CUR:.*]] = cir.load %[[CUR_ADDR]] : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, !cir.ptr<!rec_ArrayDtor>
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[BEGIN]]) : !cir.ptr<!rec_ArrayDtor>, !cir.bool
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[BEGIN]] : !cir.ptr<!rec_ArrayDtor>
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   cir.return
@@ -253,7 +253,7 @@ ArrayDtor arrDtor[16];
 // OGCG:   store ptr %[[ARG]], ptr %[[UNUSED_ADDR]]
 // OGCG:   br label %[[LOOP_BODY:.*]]
 // OGCG: [[LOOP_BODY]]:
-// OGCG:   %[[PREV:.*]] = phi ptr [ getelementptr inbounds (%struct.ArrayDtor, ptr @arrDtor, i64 16), %entry ], [ %[[CUR:.*]], %[[LOOP_BODY]] ]
+// OGCG:   %[[PREV:.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arrDtor, i64 16), %entry ], [ %[[CUR:.*]], %[[LOOP_BODY]] ]
 // OGCG:   %[[CUR]] = getelementptr inbounds %struct.ArrayDtor, ptr %[[PREV]], i64 -1
 // OGCG:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
 // OGCG:   %[[DONE:.*]] = icmp eq ptr %[[CUR]], @arrDtor

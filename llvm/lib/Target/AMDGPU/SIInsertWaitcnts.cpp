@@ -315,7 +315,8 @@ public:
   void print(raw_ostream &OS) const {
     ListSeparator LS(", ");
     for (WaitEventType Event : wait_events()) {
-      OS << LS << getWaitEventTypeName(Event);
+      if (contains(Event))
+        OS << LS << getWaitEventTypeName(Event);
     }
   }
   LLVM_DUMP_METHOD void dump() const;
@@ -2013,8 +2014,6 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       continue;
     }
 
-    MachineInstr **UpdatableInstr;
-
     // Update required wait count. If this is a soft waitcnt (= it was added
     // by an earlier pass), it may be entirely removed.
 
@@ -2034,7 +2033,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         Wait = Wait.combined(OldWait);
       else
         RequiredWait = RequiredWait.combined(OldWait);
-      UpdatableInstr = &CombinedLoadDsCntInstr;
+      // Keep the first wait_loadcnt, erase the rest.
+      if (CombinedLoadDsCntInstr == nullptr) {
+        CombinedLoadDsCntInstr = &II;
+      } else {
+        II.eraseFromParent();
+        Modified = true;
+      }
     } else if (Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT) {
       unsigned OldEnc =
           TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
@@ -2043,7 +2048,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         Wait = Wait.combined(OldWait);
       else
         RequiredWait = RequiredWait.combined(OldWait);
-      UpdatableInstr = &CombinedStoreDsCntInstr;
+      // Keep the first wait_storecnt, erase the rest.
+      if (CombinedStoreDsCntInstr == nullptr) {
+        CombinedStoreDsCntInstr = &II;
+      } else {
+        II.eraseFromParent();
+        Modified = true;
+      }
     } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
       unsigned OldEnc =
           TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
@@ -2053,12 +2064,33 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
-      UpdatableInstr = &WaitcntDepctrInstr;
+      if (WaitcntDepctrInstr == nullptr) {
+        WaitcntDepctrInstr = &II;
+      } else {
+        // S_WAITCNT_DEPCTR requires special care. Don't remove a
+        // duplicate if it is waiting on things other than VA_VDST or
+        // VM_VSRC. If that is the case, just make sure the VA_VDST and
+        // VM_VSRC subfields of the operand are set to the "no wait"
+        // values.
+
+        unsigned Enc =
+            TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
+        Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, ~0u);
+        Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, ~0u);
+
+        if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST)) {
+          Modified |= updateOperandIfDifferent(II, AMDGPU::OpName::simm16, Enc);
+          Modified |= promoteSoftWaitCnt(&II);
+        } else {
+          II.eraseFromParent();
+          Modified = true;
+        }
+      }
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       // Architectures higher than GFX10 do not have direct loads to
       // LDS, so no work required here yet.
       II.eraseFromParent();
-      continue;
+      Modified = true;
     } else if (Opcode == AMDGPU::WAIT_ASYNCMARK) {
       reportFatalUsageError("WAIT_ASYNCMARK is not ready for GFX12 yet");
     } else {
@@ -2070,33 +2102,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         addWait(Wait, CT.value(), OldCnt);
       else
         addWait(RequiredWait, CT.value(), OldCnt);
-      UpdatableInstr = &WaitInstrs[CT.value()];
-    }
-
-    // Merge consecutive waitcnt of the same type by erasing multiples.
-    if (!*UpdatableInstr) {
-      *UpdatableInstr = &II;
-    } else if (Opcode == AMDGPU::S_WAITCNT_DEPCTR) {
-      // S_WAITCNT_DEPCTR requires special care. Don't remove a
-      // duplicate if it is waiting on things other than VA_VDST or
-      // VM_VSRC. If that is the case, just make sure the VA_VDST and
-      // VM_VSRC subfields of the operand are set to the "no wait"
-      // values.
-
-      unsigned Enc = TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-      Enc = AMDGPU::DepCtr::encodeFieldVmVsrc(Enc, ~0u);
-      Enc = AMDGPU::DepCtr::encodeFieldVaVdst(Enc, ~0u);
-
-      if (Enc != (unsigned)AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST)) {
-        Modified |= updateOperandIfDifferent(II, AMDGPU::OpName::simm16, Enc);
-        Modified |= promoteSoftWaitCnt(&II);
+      // Keep the first wait of its kind, erase the rest.
+      if (WaitInstrs[CT.value()] == nullptr) {
+        WaitInstrs[CT.value()] = &II;
       } else {
         II.eraseFromParent();
         Modified = true;
       }
-    } else {
-      II.eraseFromParent();
-      Modified = true;
     }
   }
 
@@ -3247,17 +3259,21 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     if (Block.getFirstTerminator() == Inst)
       FlushFlags = isPreheaderToFlush(Block, ScoreBrackets);
 
-    if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
-      // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-      assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
-      ScoreBrackets.recordAsyncMark(Inst);
-      continue;
-    }
-
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
                                           FlushFlags);
     OldWaitcntInstr = nullptr;
+
+    if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
+      // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
+      //
+      // Asyncmarks record the current wait state and so should not allow
+      // waitcnts that occur after them to be merged into waitcnts that occur
+      // before.
+      assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
+      ScoreBrackets.recordAsyncMark(Inst);
+      continue;
+    }
 
     if (TII->isSMRD(Inst)) {
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
