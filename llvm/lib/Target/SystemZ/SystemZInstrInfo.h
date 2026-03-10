@@ -352,6 +352,17 @@ public:
                            SystemZII::FusedCompareType Type,
                            const MachineInstr *MI = nullptr) const;
 
+  // Return true if this is a load and test which can be optimized the
+  // same way as compare instruction.
+  bool isLoadAndTestAsCmp(const MachineInstr &MI) const;
+
+  // Return true if Compare is a comparison against zero.
+  bool isCompareZero(const MachineInstr &Compare) const;
+
+  // Return the source register of Compare, which is the unknown value
+  // being tested.
+  Register getCompareSourceReg(const MachineInstr &Compare) const;
+
   // Try to find all CC users of the compare instruction (MBBI) and update
   // all of them to maintain equivalent behavior after swapping the compare
   // operands. Return false if not all users can be conclusively found and
