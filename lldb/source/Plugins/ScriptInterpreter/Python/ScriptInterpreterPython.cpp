@@ -1522,9 +1522,9 @@ ScriptInterpreterPythonImpl::CreateScriptedStopHookInterface() {
   return std::make_shared<ScriptedStopHookPythonInterface>(*this);
 }
 
-ScriptedModuleHookInterfaceSP
-ScriptInterpreterPythonImpl::CreateScriptedModuleHookInterface() {
-  return std::make_shared<ScriptedModuleHookPythonInterface>(*this);
+ScriptedHookInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedHookInterface() {
+  return std::make_shared<ScriptedHookPythonInterface>(*this);
 }
 
 ScriptedBreakpointInterfaceSP

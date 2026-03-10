@@ -1657,44 +1657,98 @@ public:
 
   typedef std::shared_ptr<StopHook> StopHookSP;
 
-  // Target Module Hooks
+  // Target Hooks
   //
-  // Module hooks fire whenever modules are loaded into the target
-  // (via ModulesDidLoad). Optionally, they can also fire on unload
-  // (via ModulesDidUnload) when the fire_on_unload flag is set.
-  class ModuleHook : public UserID {
+  // Hooks fire on lifecycle events. By default, they fire when modules
+  // are loaded into the target (via ModulesDidLoad). They can also fire
+  // on module unload (via ModulesDidUnload) and on process stop (via
+  // RunStopHooks), controlled by the event mask.
+  class Hook : public UserID {
   public:
-    ModuleHook(const ModuleHook &rhs);
-    virtual ~ModuleHook() = default;
+    Hook(const Hook &rhs);
+    virtual ~Hook() = default;
 
-    enum class ModuleHookKind : uint32_t { CommandBased = 0, ScriptBased };
+    enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
+
+    /// Event mask bits controlling when this hook fires.
+    enum EventMask : uint32_t {
+      kModulesLoaded = (1u << 0),
+      kModulesUnloaded = (1u << 1),
+      kProcessStop = (1u << 2),
+    };
 
     lldb::TargetSP &GetTarget() { return m_target_sp; }
 
     bool IsActive() { return m_active; }
     void SetIsActive(bool is_active) { m_active = is_active; }
 
-    bool GetFireOnUnload() const { return m_fire_on_unload; }
-    void SetFireOnUnload(bool fire) { m_fire_on_unload = fire; }
+    uint32_t GetEventMask() const { return m_event_mask; }
+    void SetEventMask(uint32_t mask) { m_event_mask = mask; }
+    void AddEvent(uint32_t event) { m_event_mask |= event; }
+    void RemoveEvent(uint32_t event) { m_event_mask &= ~event; }
+    bool FiresOn(uint32_t event) const { return m_event_mask & event; }
+
+    // Stop-hook features (only relevant when kProcessStop is set)
+
+    /// Set the specifier. The hook will own the specifier.
+    void SetSpecifier(SymbolContextSpecifier *specifier);
+    SymbolContextSpecifier *GetSpecifier() { return m_specifier_sp.get(); }
+
+    /// Check if the execution context passes the specifier and thread spec
+    /// filters. Always returns true if no filters are set.
+    bool ExecutionContextPasses(const ExecutionContext &exe_ctx);
+
+    /// Set the thread specifier. The hook will own the thread specifier.
+    void SetThreadSpecifier(ThreadSpec *specifier);
+    ThreadSpec *GetThreadSpecifier() { return m_thread_spec_up.get(); }
+
+    void SetAutoContinue(bool auto_continue) {
+      m_auto_continue = auto_continue;
+    }
+    bool GetAutoContinue() const { return m_auto_continue; }
+
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
+    void SetSuppressOutput(bool suppress_output) {
+      m_suppress_output = suppress_output;
+    }
+    bool GetSuppressOutput() const { return m_suppress_output; }
+
+    // Event handler methods
+
+    virtual void HandleModuleLoaded(lldb::StreamSP output) = 0;
+    virtual void HandleModuleUnloaded(lldb::StreamSP output) = 0;
+
+    /// Called when the process stops. Returns a StopHookResult indicating
+    /// whether the process should remain stopped or continue.
+    virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                                lldb::StreamSP output) = 0;
 
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
     virtual void GetSubclassDescription(Stream &s,
                                         lldb::DescriptionLevel level) const = 0;
 
-    virtual void HandleModuleLoaded(lldb::StreamSP output) = 0;
-    virtual void HandleModuleUnloaded(lldb::StreamSP output) = 0;
-
   protected:
     lldb::TargetSP m_target_sp;
     bool m_active = true;
-    bool m_fire_on_unload = false;
+    uint32_t m_event_mask = kModulesLoaded; // Default: fire on load only
 
-    ModuleHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
+    // Stop-hook filter fields (only used when kProcessStop is set)
+    lldb::SymbolContextSpecifierSP m_specifier_sp;
+    std::unique_ptr<ThreadSpec> m_thread_spec_up;
+    bool m_auto_continue = false;
+    bool m_at_initial_stop = true;
+    bool m_suppress_output = false;
+
+    Hook(lldb::TargetSP target_sp, lldb::user_id_t uid);
   };
 
-  class ModuleHookCommandLine : public ModuleHook {
+  class HookCommandLine : public Hook {
   public:
-    ~ModuleHookCommandLine() override = default;
+    ~HookCommandLine() override = default;
 
     StringList &GetCommands() { return m_commands; }
     void SetActionFromString(const std::string &string);
@@ -1704,24 +1758,28 @@ public:
                                 lldb::DescriptionLevel level) const override;
     void HandleModuleLoaded(lldb::StreamSP output) override;
     void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
 
   private:
     StringList m_commands;
 
-    ModuleHookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
-        : ModuleHook(target_sp, uid) {}
+    HookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid) {}
     friend class Target;
   };
 
-  class ModuleHookScripted : public ModuleHook {
+  class HookScripted : public Hook {
   public:
-    ~ModuleHookScripted() override = default;
+    ~HookScripted() override = default;
 
     void GetSubclassDescription(Stream &s,
                                 lldb::DescriptionLevel level) const override;
 
     void HandleModuleLoaded(lldb::StreamSP output) override;
     void HandleModuleUnloaded(lldb::StreamSP output) override;
+    StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                        lldb::StreamSP output) override;
 
     Status SetScriptCallback(std::string class_name,
                              StructuredData::ObjectSP extra_args_sp);
@@ -1729,35 +1787,35 @@ public:
   private:
     std::string m_class_name;
     StructuredDataImpl m_extra_args;
-    lldb::ScriptedModuleHookInterfaceSP m_interface_sp;
+    lldb::ScriptedHookInterfaceSP m_interface_sp;
 
-    ModuleHookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
-        : ModuleHook(target_sp, uid) {}
+    HookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : Hook(target_sp, uid) {}
     friend class Target;
   };
 
-  typedef std::shared_ptr<ModuleHook> ModuleHookSP;
+  typedef std::shared_ptr<Hook> HookSP;
 
-  ModuleHookSP CreateModuleHook(ModuleHook::ModuleHookKind kind);
+  HookSP CreateHook(Hook::HookKind kind);
 
-  /// Removes the most recently created module hook. Used to roll back a
+  /// Removes the most recently created hook. Used to roll back a
   /// hook creation when an error occurs (e.g., invalid script class name
   /// or empty interactive input).
-  void UndoCreateModuleHook(lldb::user_id_t uid);
+  void UndoCreateHook(lldb::user_id_t uid);
 
-  bool RemoveModuleHookByID(lldb::user_id_t uid);
+  bool RemoveHookByID(lldb::user_id_t uid);
 
-  void RemoveAllModuleHooks();
+  void RemoveAllHooks();
 
-  ModuleHookSP GetModuleHookByID(lldb::user_id_t uid);
+  HookSP GetHookByID(lldb::user_id_t uid);
 
-  bool SetModuleHookActiveStateByID(lldb::user_id_t uid, bool active_state);
+  bool SetHookActiveStateByID(lldb::user_id_t uid, bool active_state);
 
-  void SetAllModuleHooksActiveState(bool active_state);
+  void SetAllHooksActiveState(bool active_state);
 
-  size_t GetNumModuleHooks() const { return m_module_hooks.size(); }
+  size_t GetNumHooks() const { return m_hooks.size(); }
 
-  ModuleHookSP GetModuleHookAtIndex(size_t index);
+  HookSP GetHookAtIndex(size_t index);
 
   void RunModuleHooks(bool is_load);
 
@@ -1949,9 +2007,9 @@ protected:
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
 
-  typedef std::map<lldb::user_id_t, ModuleHookSP> ModuleHookCollection;
-  ModuleHookCollection m_module_hooks;
-  lldb::user_id_t m_module_hook_next_id = 0;
+  typedef std::map<lldb::user_id_t, HookSP> HookCollection;
+  HookCollection m_hooks;
+  lldb::user_id_t m_hook_next_id = 0;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
       LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; ///< The globally unique ID

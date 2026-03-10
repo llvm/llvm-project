@@ -16,7 +16,7 @@
 #include "ScriptedBreakpointPythonInterface.h"
 #include "ScriptedFrameProviderPythonInterface.h"
 #include "ScriptedFramePythonInterface.h"
-#include "ScriptedModuleHookPythonInterface.h"
+#include "ScriptedHookPythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedStopHookPythonInterface.h"

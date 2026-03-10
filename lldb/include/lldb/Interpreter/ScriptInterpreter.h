@@ -562,8 +562,7 @@ public:
     return {};
   }
 
-  virtual lldb::ScriptedModuleHookInterfaceSP
-  CreateScriptedModuleHookInterface() {
+  virtual lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() {
     return {};
   }
 

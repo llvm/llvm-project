@@ -8,12 +8,12 @@ class TestCase(TestBase):
     @no_debug_info_test
     def test_invalid_arg(self):
         self.expect(
-            "target modulehook disable -1",
+            "target hook disable -1",
             error=True,
-            startstr='error: invalid module hook id: "-1".',
+            startstr='error: invalid hook id: "-1".',
         )
         self.expect(
-            "target modulehook disable abcdfx",
+            "target hook disable abcdfx",
             error=True,
-            startstr='error: invalid module hook id: "abcdfx".',
+            startstr='error: invalid hook id: "abcdfx".',
         )

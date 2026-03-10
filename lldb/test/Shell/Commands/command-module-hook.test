@@ -1,18 +1,18 @@
-# Test module hook add/list/delete/enable/disable commands.
+# Test hook add/list/delete/enable/disable/add-filter commands.
 #
 # RUN: %lldb -b -s %s 2>&1 | FileCheck %s
 
 # Adding hooks assigns incrementing IDs.
-target modulehook add -o "script print('hook1')"
-# CHECK: Module hook #1 added.
-target modulehook add -o "script print('hook2')"
-# CHECK: Module hook #2 added.
-target modulehook add -o "script print('hook3')"
-# CHECK: Module hook #3 added.
+target hook add -o "script print('hook1')"
+# CHECK: Hook #1 added.
+target hook add -o "script print('hook2')"
+# CHECK: Hook #2 added.
+target hook add -o "script print('hook3')"
+# CHECK: Hook #3 added.
 
 # List all hooks.
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK: Hook: 1
 # CHECK:   State: enabled
 # CHECK:   Commands:
@@ -27,9 +27,9 @@ target modulehook list
 # CHECK:       script print('hook3')
 
 # Disable a hook.
-target modulehook disable 2
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook disable 2
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK: Hook: 1
 # CHECK:   State: enabled
 # CHECK: Hook: 2
@@ -38,9 +38,9 @@ target modulehook list
 # CHECK:   State: enabled
 
 # Re-enable the hook.
-target modulehook enable 2
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook enable 2
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK: Hook: 1
 # CHECK:   State: enabled
 # CHECK: Hook: 2
@@ -49,34 +49,34 @@ target modulehook list
 # CHECK:   State: enabled
 
 # Delete a hook in the middle.
-target modulehook delete 2
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook delete 2
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK:     Hook: 1
 # CHECK-NOT: Hook: 2
 # CHECK:     Hook: 3
 
 # New hook gets a new ID (not reused).
-target modulehook add -o "script print('hook4')"
-# CHECK: Module hook #4 added.
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook add -o "script print('hook4')"
+# CHECK: Hook #4 added.
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK:     Hook: 1
 # CHECK-NOT: Hook: 2
 # CHECK:     Hook: 3
 # CHECK:     Hook: 4
 
 # Delete all hooks.
-target modulehook delete
-target modulehook list
-# CHECK: (lldb) target modulehook list
-# CHECK: No module hooks.
+target hook delete
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: No hooks.
 
 # Add a hook with --on-unload and verify the description.
-target modulehook add -u -o "script print('load+unload')"
-# CHECK: Module hook #5 added.
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook add -u -o "script print('load+unload')"
+# CHECK: Hook #5 added.
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK: Hook: 5
 # CHECK:   State: enabled
 # CHECK:   Fires on: load, unload
@@ -84,9 +84,9 @@ target modulehook list
 # CHECK:       script print('load+unload')
 
 # Add a hook with multiple one-liner commands.
-target modulehook add -o "script print('first')" -o "script print('second')"
-# CHECK: Module hook #6 added.
-target modulehook list
+target hook add -o "script print('first')" -o "script print('second')"
+# CHECK: Hook #6 added.
+target hook list
 # CHECK: Hook: 6
 # CHECK:   State: enabled
 # CHECK-NOT: Fires on:
@@ -95,19 +95,67 @@ target modulehook list
 # CHECK:       script print('second')
 
 # Disable all hooks.
-target modulehook disable
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook disable
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK: Hook: 5
 # CHECK:   State: disabled
 # CHECK: Hook: 6
 # CHECK:   State: disabled
 
 # Enable all hooks.
-target modulehook enable
-target modulehook list
-# CHECK: (lldb) target modulehook list
+target hook enable
+target hook list
+# CHECK: (lldb) target hook list
 # CHECK: Hook: 5
 # CHECK:   State: enabled
 # CHECK: Hook: 6
 # CHECK:   State: enabled
+
+# Add a hook with --on-stop.
+target hook delete
+target hook add -S -o "bt"
+# CHECK: Hook #7 added.
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 7
+# CHECK:   State: enabled
+# CHECK:   Fires on: load, stop
+# CHECK:   Commands:
+# CHECK:       bt
+
+# Add a hook with both --on-unload and --on-stop.
+target hook add -u -S -o "script print('all events')"
+# CHECK: Hook #8 added.
+target hook list
+# CHECK: Hook: 8
+# CHECK:   State: enabled
+# CHECK:   Fires on: load, unload, stop
+
+# Add a filter to hook #7 using add-filter.
+target hook add-filter -s mylib.so 7
+# CHECK: Filter added to hook #7.
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 7
+# CHECK:   State: enabled
+# CHECK:   Fires on: load, stop
+# CHECK:   Specifier:
+# CHECK:     Module: mylib.so
+
+# Per-event disable: remove stop from hook #7.
+target hook disable stop-hook 7
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 7
+# CHECK:   State: enabled
+# CHECK-NOT: Fires on: load, stop
+# CHECK:   Specifier:
+
+# Per-event enable: re-add stop to hook #7.
+target hook enable stop-hook 7
+target hook list
+# CHECK: (lldb) target hook list
+# CHECK: Hook: 7
+# CHECK:   State: enabled
+# CHECK:   Fires on: load, stop

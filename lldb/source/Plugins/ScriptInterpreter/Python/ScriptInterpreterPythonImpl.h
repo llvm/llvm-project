@@ -90,8 +90,7 @@ public:
 
   lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
 
-  lldb::ScriptedModuleHookInterfaceSP
-  CreateScriptedModuleHookInterface() override;
+  lldb::ScriptedHookInterfaceSP CreateScriptedHookInterface() override;
 
   lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() override;
