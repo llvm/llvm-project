@@ -125,7 +125,7 @@ public:
   explicit BytesView(ArrayRefT Ref, const DataLayout &DL)
       : Bytes(Ref), IsLittleEndian(DL.isLittleEndian()) {}
 
-  decltype(auto) operator[](uint32_t Index) {
+  auto &operator[](uint32_t Index) {
     return Bytes[IsLittleEndian ? Index : Bytes.size() - 1 - Index];
   }
 };

@@ -189,8 +189,6 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
     uint32_t AlignedVecBits = alignTo(VecBits, 8);
     ConstBytesView View(Bytes, DL);
     if (VecBits != AlignedVecBits) {
-      // The padding bits are located in the last byte on little-endian systems.
-      // On big-endian systems, the padding bits are located in the first byte.
       const Byte &PaddingByte = View[Bytes.size() - 1];
       uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
       // Make sure all high padding bits are zero.
@@ -308,8 +306,6 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     uint32_t AlignedVecBits = alignTo(VecBits, 8);
     MutableBytesView View(Bytes, DL);
     if (VecBits != AlignedVecBits) {
-      // The padding bits are located in the last byte on little-endian systems.
-      // On big-endian systems, the padding bits are located in the first byte.
       Byte &PaddingByte = View[Bytes.size() - 1];
       uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
       PaddingByte.zeroBits(Mask);
