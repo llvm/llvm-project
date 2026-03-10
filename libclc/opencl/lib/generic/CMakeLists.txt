@@ -207,6 +207,8 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   shared/vstore.cl
   subgroup/sub_group_broadcast.cl
   subgroup/sub_group_reduce.cl
+  subgroup/sub_group_scan_exclusive.cl
+  subgroup/sub_group_scan_inclusive.cl
   subgroup/subgroup.cl
   synchronization/sub_group_barrier.cl
   synchronization/work_group_barrier.cl

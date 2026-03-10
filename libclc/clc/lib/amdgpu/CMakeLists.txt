@@ -30,6 +30,7 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   subgroup/clc_subgroup.cl
   subgroup/clc_sub_group_broadcast.cl
   subgroup/clc_sub_group_reduce.cl
+  subgroup/clc_sub_group_scan.cl
   synchronization/clc_sub_group_barrier.cl
   synchronization/clc_work_group_barrier.cl
   workitem/clc_get_enqueued_local_size.cl
