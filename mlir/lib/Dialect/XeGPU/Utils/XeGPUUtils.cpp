@@ -679,11 +679,11 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   for (int64_t i = 0; i < sourceRank - 2; ++i)
     assert(sourceType.getShape()[i] == 1 &&
            "expected leading dimensions to be unit");
-  int64_t dim0Idx = sourceRank - 2;
-  int64_t dim1Idx = sourceRank - 1;
-  int64_t sourceH = sourceType.getShape()[dim0Idx];
-  int64_t sourceW = sourceType.getShape()[dim1Idx];
-  int nSlices = (reductionDim == dim0Idx) ? sourceW : sourceH;
+  int64_t rowIdx = sourceRank - 2;
+  int64_t columnIdx = sourceRank - 1;
+  int64_t sourceH = sourceType.getShape()[rowIdx];
+  int64_t sourceW = sourceType.getShape()[columnIdx];
+  int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;
   // Create a constant vector to hold the result of the reduction.
   TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
   Value reductionResult = arith::ConstantOp::create(
@@ -702,12 +702,12 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
     SmallVector<int64_t> sliceOffsets(sourceRank, 0);
     SmallVector<int64_t> sliceSizes(sourceRank, 1);
     SmallVector<int64_t> strides(sourceRank, 1);
-    if (reductionDim == dim1Idx) {
-      sliceOffsets[dim0Idx] = i;
-      sliceSizes[dim1Idx] = sourceW;
+    if (reductionDim == columnIdx) {
+      sliceOffsets[rowIdx] = i;
+      sliceSizes[columnIdx] = sourceW;
     } else {
-      sliceOffsets[dim1Idx] = i;
-      sliceSizes[dim0Idx] = sourceH;
+      sliceOffsets[columnIdx] = i;
+      sliceSizes[rowIdx] = sourceH;
     }
 
     vector::ExtractStridedSliceOp extractOp =
