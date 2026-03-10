@@ -498,6 +498,7 @@ add_header_macro(
     .llvm-libc-types.Elf32_Versym
     .llvm-libc-types.Elf32_Word
     .llvm-libc-types.Elf32_Xword
+    .llvm-libc-types.Elf32_auxv_t
     .llvm-libc-types.Elf64_Addr
     .llvm-libc-types.Elf64_Chdr
     .llvm-libc-types.Elf64_Dyn
@@ -520,6 +521,7 @@ add_header_macro(
     .llvm-libc-types.Elf64_Versym
     .llvm-libc-types.Elf64_Word
     .llvm-libc-types.Elf64_Xword
+    .llvm-libc-types.Elf64_auxv_t
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys

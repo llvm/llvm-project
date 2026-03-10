@@ -114,6 +114,13 @@ bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
+
+std::optional<int64_t> GetNumGeneratedNestsFrom(
+    const parser::ExecutionPartConstruct &epc,
+    std::optional<int64_t> nestedCount);
 } // namespace omp
 } // namespace Fortran::semantics
 

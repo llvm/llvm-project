@@ -38,6 +38,20 @@ int64_t test_vnegd_s64(int64_t a) {
 //===------------------------------------------------------===//
 // 2.1.2.2 Bitwise equal to zero
 //===------------------------------------------------------===//
+// LLVM-LABEL: @test_vceqzd_s64
+// CIR-LABEL: @vceqzd_s64
+uint64_t test_vceqzd_s64(int64_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.int<0>
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !s64i
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
+
+// LLVM-SAME: i64{{.*}} [[A:%.*]])
+// LLVM:          [[TMP0:%.*]] = icmp eq i64 [[A]], 0
+// LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
+// LLVM-NEXT:    ret i64 [[VCEQZ_I]]
+  return (uint64_t)vceqzd_s64(a);
+}
 // LLVM-LABEL: @test_vceqz_s8(
 // CIR-LABEL: @vceqz_s8(
 uint8x8_t test_vceqz_s8(int8x8_t a) {
@@ -395,21 +409,6 @@ uint64x2_t test_vceqzq_p64(poly64x2_t a) {
 // LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 // LLVM-NEXT:    ret <2 x i64> [[VCEQZ_I]]
   return vceqzq_p64(a);
-}
-
-// LLVM-LABEL: @test_vceqzd_s64
-// CIR-LABEL: @vceqzd_s64
-uint64_t test_vceqzd_s64(int64_t a) {
-// CIR:   [[C_0:%.*]] = cir.const #cir.int<0>
-// CIR:   [[CMP:%.*]] = cir.cmp(eq, %{{.*}}, [[C_0]]) : !s64i, !cir.bool
-// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
-// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
-
-// LLVM-SAME: i64{{.*}} [[A:%.*]])
-// LLVM:          [[TMP0:%.*]] = icmp eq i64 [[A]], 0
-// LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
-// LLVM-NEXT:    ret i64 [[VCEQZ_I]]
-  return (uint64_t)vceqzd_s64(a);
 }
 
 // TODO SISD variants:

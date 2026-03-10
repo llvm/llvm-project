@@ -851,23 +851,21 @@ bool CodeGenRegisterClass::Key::operator<(
   // artificial registers.
   auto IA = Members->begin(), EA = Members->end();
   auto IB = B.Members->begin(), EB = B.Members->end();
-  while (IA != EA && IB != EB) {
-    if ((*IA)->Artificial) {
+  for (;;) {
+    while (IA != EA && (*IA)->Artificial)
       ++IA;
-      continue;
-    }
-    if ((*IB)->Artificial) {
+    while (IB != EB && (*IB)->Artificial)
       ++IB;
-      continue;
-    }
+    if (IA == EA && IB == EB)
+      break;
+    if (IA == EA || IB == EB)
+      return IA == EA;
     if (*IA != *IB)
       return *IA < *IB;
     ++IA;
     ++IB;
   }
-  if (IA == EA && IB == EB)
-    return RSI < B.RSI;
-  return IA == EA;
+  return RSI < B.RSI;
 }
 
 // Returns true if RC is a strict subclass.
