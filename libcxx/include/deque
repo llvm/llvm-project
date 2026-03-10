@@ -470,9 +470,8 @@ private:
       __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, _DiffType, _BlockSize>;
 
 public:
-  using __segment_iterator _LIBCPP_NODEBUG =
-      __rebind_pointer_t<_Pointer, const __rebind_pointer_t<_Pointer, _ValueType> >;
-  using __local_iterator _LIBCPP_NODEBUG = _Pointer;
+  using __segment_iterator _LIBCPP_NODEBUG = typename _Iterator::__map_iterator;
+  using __local_iterator _LIBCPP_NODEBUG   = _Pointer;
 
   static _LIBCPP_HIDE_FROM_ABI __segment_iterator __segment(_Iterator __iter) { return __iter.__m_iter_; }
   static _LIBCPP_HIDE_FROM_ABI __local_iterator __local(_Iterator __iter) { return __iter.__ptr_; }
@@ -737,7 +736,7 @@ public:
   // iterators:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT {
-    auto __mp = static_cast<const __map&>(__map_).begin() + __start_ / __block_size;
+    auto __mp = __map_.begin() + __start_ / __block_size;
     return iterator(__mp, __map_.empty() ? 0 : *__mp + __start_ % __block_size);
   }
 
@@ -748,7 +747,7 @@ public:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT {
     size_type __p = size() + __start_;
-    auto __mp     = static_cast<const __map&>(__map_).begin() + __p / __block_size;
+    auto __mp     = __map_.begin() + __p / __block_size;
     return iterator(__mp, __map_.empty() ? 0 : *__mp + __p % __block_size);
   }
 
