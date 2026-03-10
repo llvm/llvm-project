@@ -268,28 +268,46 @@ public:
   /// pass argument is enclosed in parentheses and should be before any other
   /// argument.
   static StringRef getAuxPassArg(StringRef Args) {
-    if (Args.empty())
-      return Args;
-    if (Args[0] != AuxArgBeginToken) {
-      // Check that none of the aux tokens exist in the string.
-      if (Args.find(AuxArgBeginToken) != StringRef::npos ||
-          Args.find(AuxArgEndToken) != StringRef::npos) {
+    // Will exit with report if aux tokens are not properly nested.
+    auto CheckLegalAuxTokenNesting = [](StringRef Str) {
+      auto ExitWithError = [Str]() {
         std::string ErrStr;
         llvm::raw_string_ostream ErrSS(ErrStr);
         ErrSS << "Spurious '" << AuxArgBeginToken << "' or '" << AuxArgEndToken
-              << "' in '" << Args << "'!\n";
+              << "' in '" << Str << "' !\n";
         reportFatalUsageError(ErrStr.c_str());
+      };
+      unsigned CntBegin = 0;
+      for (char C : Str) {
+        switch (C) {
+        case AuxArgBeginToken:
+          ++CntBegin;
+          break;
+        case AuxArgEndToken: {
+          if (CntBegin == 0)
+            ExitWithError();
+          --CntBegin;
+          break;
+        }
+        default:
+          break;
+        }
       }
+      if (CntBegin != 0)
+        ExitWithError();
+    };
+
+    if (Args.empty())
+      return Args;
+    CheckLegalAuxTokenNesting(Args);
+    if (Args[0] != AuxArgBeginToken)
+      // Args may contain other passes with their own aux arguments so we allow
+      // aux tokens to appear later in the Args string, like "foo(bar)baz".
       return StringRef();
-    }
     // We found the Begin token, so look for the End token.
     size_t EndIdx = Args.find(AuxArgEndToken);
-    if (EndIdx == StringRef::npos) {
-      std::string ErrStr;
-      llvm::raw_string_ostream ErrSS(ErrStr);
-      ErrSS << "Missing '" << AuxArgEndToken << "' in '" << Args << "' !\n";
-      reportFatalUsageError(ErrStr.c_str());
-    }
+    assert(EndIdx != StringRef::npos &&
+           "Should have been caught by CheckLegalAuxTOkenNesting!");
     assert(EndIdx >= 1 && "Expected at index 1 or later!");
     return Args.substr(1, EndIdx - 1);
   }

@@ -621,19 +621,18 @@ bb1:
 TEST_F(VecUtilsTest, GetAuxPassArg) {
   // Check no aux argument.
   EXPECT_EQ(sandboxir::VecUtils::getAuxPassArg("no aux arg"), "");
+  EXPECT_EQ(sandboxir::VecUtils::getAuxPassArg("some pass(aux) blah"), "");
+  EXPECT_EQ(sandboxir::VecUtils::getAuxPassArg("some pass(aux()) blah"), "");
   // Check a valid argument.
   EXPECT_EQ(sandboxir::VecUtils::getAuxPassArg("(some arg)other stuff"),
             "some arg");
-  // Missing token.
-  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg("(arg other"), "Missing.*");
-  // No parentheses allowed if not at the beginning of the string.
-  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg(" ("), "Spurious.*");
-  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg(" )"), "Spurious.*");
-  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg(" ()"), "Spurious.*");
-  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg(" )("), "Spurious.*");
-  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg(" (foo)"), "Spurious.*");
-  // Spurious closing token.
-  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg("no aux arg)"), "Spurious.*");
+  // Check nesting of aux tokens.
+  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg(")"), "Spurious.*");
+  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg("("), "Spurious.*");
+  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg("())"), "Spurious.*");
+  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg("()("), "Spurious.*");
+  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg("(()"), "Spurious.*");
+  EXPECT_DEATH(sandboxir::VecUtils::getAuxPassArg(")()"), "Spurious.*");
 }
 
 TEST_F(VecUtilsTest, StripAuxPassArg) {
@@ -643,5 +642,6 @@ TEST_F(VecUtilsTest, StripAuxPassArg) {
   EXPECT_EQ(sandboxir::VecUtils::stripAuxPassArg("(legal aux arg)foo bar"),
             "foo bar");
   // Missing token.
-  EXPECT_DEATH(sandboxir::VecUtils::stripAuxPassArg("(arg other"), "Missing.*");
+  EXPECT_DEATH(sandboxir::VecUtils::stripAuxPassArg("(arg other"),
+               "Spurious.*");
 }
