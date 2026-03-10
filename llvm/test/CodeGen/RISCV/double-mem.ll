@@ -280,7 +280,7 @@ define dso_local double @fld_stack(double %a) nounwind {
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
 ; RV32IZFINXZDINXZILSD-NEXT:    addi sp, sp, -32
 ; RV32IZFINXZDINXZILSD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINXZILSD-NEXT:    sd s0, 20(sp) # 8-byte Folded Spill
+; RV32IZFINXZDINXZILSD-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV32IZFINXZDINXZILSD-NEXT:    fmv.d s0, a0
 ; RV32IZFINXZDINXZILSD-NEXT:    addi a0, sp, 8
 ; RV32IZFINXZDINXZILSD-NEXT:    call notdead
