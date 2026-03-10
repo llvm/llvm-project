@@ -1723,8 +1723,7 @@ deque<_Tp, _Allocator>::back() const _NOEXCEPT {
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 void _LIBCPP_CONSTEXPR_SINCE_CXX26
-deque<_Tp, _Allocator>::push_back(const value_type& __v) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void deque<_Tp, _Allocator>::push_back(const value_type& __v) {
   allocator_type& __a = __alloc();
   if (__back_spare() == 0)
     __add_back_capacity();
@@ -1814,8 +1813,8 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args) {
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::__emplace(const_iterator __p, _Args&&... __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26
+    typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::__emplace(const_iterator __p, _Args&&... __args) {
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
