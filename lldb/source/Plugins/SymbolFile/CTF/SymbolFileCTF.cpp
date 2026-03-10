@@ -346,21 +346,18 @@ SymbolFileCTF::CreateInteger(const CTFInteger &ctf_integer) {
     // Make sure the type we got is an integer type.
     bool compiler_type_is_signed = false;
     if (!compiler_type.IsIntegerType(compiler_type_is_signed))
-      return llvm::createStringError(
-          llvm::formatv(
-              "Found compiler type for '{0}' but it's not an integer type: {1}",
-              ctf_integer.name,
-              compiler_type.GetDisplayTypeName().GetStringRef()));
+      return llvm::createStringError(llvm::formatv(
+          "Found compiler type for '{0}' but it's not an integer type: {1}",
+          ctf_integer.name, compiler_type.GetDisplayTypeName().GetStringRef()));
 
     // Make sure the signing matches between the CTF and the compiler type.
     const bool type_is_signed = (ctf_integer.encoding & IntEncoding::eSigned);
     if (compiler_type_is_signed != type_is_signed)
-      return llvm::createStringError(
-          llvm::formatv("Found integer compiler type for {0} but compiler type "
-                        "is {1} and {0} is {2}",
-                        ctf_integer.name,
-                        compiler_type_is_signed ? "signed" : "unsigned",
-                        type_is_signed ? "signed" : "unsigned"));
+      return llvm::createStringError(llvm::formatv(
+          "Found integer compiler type for {0} but compiler type is {1} and "
+          "{0} is {2}",
+          ctf_integer.name, compiler_type_is_signed ? "signed" : "unsigned",
+          type_is_signed ? "signed" : "unsigned"));
   }
 
   Declaration decl;
@@ -393,9 +390,8 @@ SymbolFileCTF::CreateModifier(const CTFModifier &ctf_modifier) {
     compiler_type = ref_type->GetFullCompilerType().AddRestrictModifier();
     break;
   default:
-    return llvm::createStringError(
-        llvm::formatv("ParseModifier called with unsupported kind: {0}",
-                      ctf_modifier.kind));
+    return llvm::createStringError(llvm::formatv(
+        "ParseModifier called with unsupported kind: {0}", ctf_modifier.kind));
   }
 
   Declaration decl;
@@ -408,9 +404,8 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateTypedef(const CTFTypedef &ctf_typedef) {
   Type *underlying_type = ResolveTypeUID(ctf_typedef.type);
   if (!underlying_type)
-    return llvm::createStringError(
-        llvm::formatv("Could not find typedef underlying type: {0}",
-                      ctf_typedef.type));
+    return llvm::createStringError(llvm::formatv(
+        "Could not find typedef underlying type: {0}", ctf_typedef.type));
 
   CompilerType target_ast_type = underlying_type->GetFullCompilerType();
   clang::DeclContext *decl_ctx = m_ast->GetTranslationUnitDecl();
@@ -427,8 +422,8 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateArray(const CTFArray &ctf_array) {
   Type *element_type = ResolveTypeUID(ctf_array.type);
   if (!element_type)
-    return llvm::createStringError(
-        llvm::formatv("Could not find array element type: {0}", ctf_array.type));
+    return llvm::createStringError(llvm::formatv(
+        "Could not find array element type: {0}", ctf_array.type));
 
   auto element_size_or_err = element_type->GetByteSize(nullptr);
   if (!element_size_or_err)
@@ -476,9 +471,8 @@ SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
 
   Type *ret_type = ResolveTypeUID(ctf_function.return_type);
   if (!ret_type)
-    return llvm::createStringError(
-        llvm::formatv("Could not find function return type: {0}",
-                      ctf_function.return_type));
+    return llvm::createStringError(llvm::formatv(
+        "Could not find function return type: {0}", ctf_function.return_type));
 
   CompilerType func_type = m_ast->CreateFunctionType(
       ret_type->GetFullCompilerType(), arg_types, ctf_function.variadic, 0,

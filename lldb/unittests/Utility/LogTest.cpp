@@ -339,14 +339,12 @@ TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {
   LLDB_LOG_ERROR(getLog(), llvm::Error::success(), "Foo failed: {0}");
   ASSERT_EQ("", takeOutput());
 
-  LLDB_LOG_ERROR(getLog(),
-                 llvm::createStringError("My Error"),
+  LLDB_LOG_ERROR(getLog(), llvm::createStringError("My Error"),
                  "Foo failed: {0}");
   ASSERT_EQ("Foo failed: My Error\n", takeOutput());
 
   // Doesn't log, but doesn't assert either
-  LLDB_LOG_ERROR(nullptr,
-                 llvm::createStringError("My Error"),
+  LLDB_LOG_ERROR(nullptr, llvm::createStringError("My Error"),
                  "Foo failed: {0}");
 }
 

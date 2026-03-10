@@ -1166,8 +1166,7 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
       return scalar.GetAPSInt();
   }
 
-  return llvm::createStringError(
-      "error occurred; unable to convert to APSInt");
+  return llvm::createStringError("error occurred; unable to convert to APSInt");
 }
 
 llvm::Expected<llvm::APFloat> ValueObject::GetValueAsAPFloat() {

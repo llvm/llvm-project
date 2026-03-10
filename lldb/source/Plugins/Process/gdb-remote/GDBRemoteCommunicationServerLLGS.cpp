@@ -2457,7 +2457,8 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   if (pid == StringExtractorGDBRemote::AllProcesses)
     return SendUnimplementedResponse("Selecting all processes not supported");
   if (pid == LLDB_INVALID_PROCESS_ID)
-    return SendErrorResponse(llvm::createStringError("No current process and no PID provided"));
+    return SendErrorResponse(
+        llvm::createStringError("No current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);
@@ -4137,7 +4138,8 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   // Technically, this would also be caught by the PID check but let's be more
   // explicit about the error.
   if (pid == LLDB_INVALID_PROCESS_ID)
-    return SendErrorResponse(llvm::createStringError("No current process and no PID provided"));
+    return SendErrorResponse(
+        llvm::createStringError("No current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);

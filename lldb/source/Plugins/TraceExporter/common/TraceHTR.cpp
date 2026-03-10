@@ -234,16 +234,14 @@ llvm::Error TraceHTR::Export(std::string outfile) {
   std::error_code ec;
   llvm::raw_fd_ostream os(outfile, ec, llvm::sys::fs::OF_Text);
   if (ec) {
-    return llvm::createStringError(os.error(),
-                                    "unable to open destination file: " +
-                                        outfile);
+    return llvm::createStringError(
+        os.error(), "unable to open destination file: " + outfile);
   } else {
     os << toJSON(*this);
     os.close();
     if (os.has_error()) {
-      return llvm::createStringError(os.error(),
-                                     "unable to write to destination file: " +
-                                         outfile);
+      return llvm::createStringError(
+          os.error(), "unable to write to destination file: " + outfile);
     }
   }
   return llvm::Error::success();
