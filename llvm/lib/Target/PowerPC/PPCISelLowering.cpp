@@ -1438,7 +1438,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::XOR, ISD::SHL, ISD::SRA,
                        ISD::SRL, ISD::MUL, ISD::FMA, ISD::SINT_TO_FP,
-                       ISD::BUILD_VECTOR});
+                       ISD::BUILD_VECTOR, ISD::SUB});
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine({ISD::LOAD, ISD::STORE, ISD::BR_CC});
@@ -17406,6 +17406,62 @@ static SDValue combineXorSelectCC(SDNode *N, SelectionDAG &DAG) {
       0);
 }
 
+// Combine (sub x, (zext (setcc ult a, b))) -> subc + subfe
+// The generic DAG combiner already canonicalizes
+// (add x, (sext (setcc ...))) to (sub x, (zext (setcc ...))),
+// so we only need to handle SUB here.
+static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG,
+                                           const PPCSubtarget &Subtarget) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  // On PPC64, i32 SUBC/SUBE are not directly selectable.
+  if (Subtarget.isPPC64() && VT == MVT::i32)
+    return SDValue();
+
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue OtherNode = N->getOperand(0);
+  SDValue ExtNode = N->getOperand(1);
+
+  if (ExtNode.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue SetCC = ExtNode.getOperand(0);
+  if (SetCC.getOpcode() != ISD::SETCC || !SetCC.hasOneUse())
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+  SDValue LHS = SetCC.getOperand(0);
+  SDValue RHS = SetCC.getOperand(1);
+
+  if (CC == ISD::SETUGT) {
+    std::swap(LHS, RHS);
+    CC = ISD::SETULT;
+  }
+
+  if (CC != ISD::SETULT)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // Generate SUBC to set carry: CA = (LHS >= RHS), i.e. CA=0 when LHS < RHS.
+  SDVTList CmpVTs = DAG.getVTList(VT, MVT::i32);
+  SDValue SubC = DAG.getNode(PPCISD::SUBC, DL, CmpVTs, LHS, RHS);
+  SDValue CarryFlag = SubC.getValue(1);
+
+  // Generate SUBE: result = ~RB + RA + CA => result = RA - RB + CA - 1.
+  // With RA=OtherNode, RB=0: result = OtherNode + CA - 1.
+  // If CA=0 (LHS < RHS): result = OtherNode - 1.
+  // If CA=1 (LHS >= RHS): result = OtherNode.
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+  return DAG.getNode(PPCISD::SUBE, DL, VTs, OtherNode,
+                     DAG.getConstant(0, DL, VT), CarryFlag);
+}
+
 SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17414,6 +17470,10 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   default: break;
   case ISD::ADD:
     return combineADD(N, DCI);
+  case ISD::SUB:
+    if (SDValue Val = performSubWithBorrowCombine(N, DAG, Subtarget))
+      return Val;
+    break;
   case ISD::AND: {
     // We don't want (and (zext (shift...)), C) if C fits in the width of the
     // original input as that will prevent us from selecting optimal rotates.
