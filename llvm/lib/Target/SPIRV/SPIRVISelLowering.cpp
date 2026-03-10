@@ -115,15 +115,15 @@ void SPIRVTargetLowering::getTgtMemIntrinsic(
     AlignIdx = 2;
     [[fallthrough]];
   case Intrinsic::spv_store: {
-    if (I.getNumOperands() >= AlignIdx + 1) {
-      auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
-      Info.align = Align(AlignOp->getZExtValue());
-    }
+    auto *AlignOp = cast<ConstantInt>(I.getOperand(AlignIdx));
+    Info.align = Align(AlignOp->getZExtValue());
     Info.flags = static_cast<MachineMemOperand::Flags>(
         cast<ConstantInt>(I.getOperand(AlignIdx - 1))->getZExtValue());
     Info.memVT = MVT::i64;
     // TODO: take into account opaque pointers (don't use getElementType).
     // MVT::getVT(PtrTy->getElementType());
+    Info.order = static_cast<AtomicOrdering>(
+        cast<ConstantInt>(I.getOperand(AlignIdx + 1))->getZExtValue());
     Infos.push_back(Info);
     return;
   }

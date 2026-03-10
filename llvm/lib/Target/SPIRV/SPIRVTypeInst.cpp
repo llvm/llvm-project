@@ -14,6 +14,8 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVInstrInfo.h"
 
+#include "SPIRV.h"
+
 namespace llvm {
 [[maybe_unused]] static bool definesATypeRegister(const MachineInstr &MI) {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -30,6 +32,22 @@ bool SPIRVTypeInst::isTypeIntN(unsigned N) const {
     return false;
   if (N)
     return MI->getOperand(1).getImm() == N;
+  return true;
+}
+
+bool SPIRVTypeInst::isTypeFloat(unsigned Width,
+                                std::optional<unsigned> Encoding) const {
+  if (MI->getOpcode() != SPIRV::OpTypeFloat)
+    return false;
+  if (Width)
+    return MI->getOperand(1).getImm() == Width;
+  if (Encoding) {
+    if (MI->getNumOperands() < 3)
+      return false;
+    const MachineOperand &EO = MI->getOperand(2);
+    assert(EO.isImm() && "Encoding operand must be an immediate");
+    return EO.getImm() == *Encoding;
+  }
   return true;
 }
 } // namespace llvm
