@@ -2485,9 +2485,9 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     SubRegs.clear();
     TopoSigs.reset();
     for (const CodeGenRegister *Super : RC->getMembers()) {
-      const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
       if (Super->Artificial)
         continue;
+      const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
       assert(Sub && "Missing sub-register");
       SubRegs.push_back(Sub);
       TopoSigs.set(Sub->getTopoSig());
