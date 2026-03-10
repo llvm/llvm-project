@@ -15,12 +15,8 @@ define i32 @test_basic_i32(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; CHECK-PPC32-LABEL: test_basic_i32:
 ; CHECK-PPC32:       # %bb.0:
-; CHECK-PPC32-NEXT:    cmplw 3, 4
-; CHECK-PPC32-NEXT:    li 3, 0
-; CHECK-PPC32-NEXT:    li 4, 1
-; CHECK-PPC32-NEXT:    isellt 3, 4, 3
-; CHECK-PPC32-NEXT:    sub 4, 5, 6
-; CHECK-PPC32-NEXT:    sub 3, 4, 3
+; CHECK-PPC32-NEXT:    subc 3, 3, 4
+; CHECK-PPC32-NEXT:    subfe 3, 6, 5
 ; CHECK-PPC32-NEXT:    blr
   %cc = icmp ult i32 %a, %b
   %carry = zext i1 %cc to i32
@@ -41,11 +37,9 @@ define i32 @test_only_borrow(i32 %a, i32 %b, i32 %x) {
 ;
 ; CHECK-PPC32-LABEL: test_only_borrow:
 ; CHECK-PPC32:       # %bb.0:
-; CHECK-PPC32-NEXT:    cmplw 3, 4
+; CHECK-PPC32-NEXT:    subc 3, 3, 4
 ; CHECK-PPC32-NEXT:    li 3, 0
-; CHECK-PPC32-NEXT:    li 4, 1
-; CHECK-PPC32-NEXT:    isellt 3, 4, 3
-; CHECK-PPC32-NEXT:    sub 3, 5, 3
+; CHECK-PPC32-NEXT:    subfe 3, 3, 5
 ; CHECK-PPC32-NEXT:    blr
   %cc = icmp ult i32 %a, %b
   %carry = zext i1 %cc to i32
@@ -66,12 +60,8 @@ define i32 @test_sext_add(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; CHECK-PPC32-LABEL: test_sext_add:
 ; CHECK-PPC32:       # %bb.0:
-; CHECK-PPC32-NEXT:    cmplw 3, 4
-; CHECK-PPC32-NEXT:    sub 3, 5, 6
-; CHECK-PPC32-NEXT:    li 4, 0
-; CHECK-PPC32-NEXT:    li 5, 1
-; CHECK-PPC32-NEXT:    isellt 4, 5, 4
-; CHECK-PPC32-NEXT:    sub 3, 3, 4
+; CHECK-PPC32-NEXT:    subc 3, 3, 4
+; CHECK-PPC32-NEXT:    subfe 3, 6, 5
 ; CHECK-PPC32-NEXT:    blr
   %cc = icmp ult i32 %a, %b
   %carry = sext i1 %cc to i32
@@ -93,12 +83,8 @@ define i32 @test_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; CHECK-PPC32-LABEL: test_ugt:
 ; CHECK-PPC32:       # %bb.0:
-; CHECK-PPC32-NEXT:    cmplw 3, 4
-; CHECK-PPC32-NEXT:    li 3, 0
-; CHECK-PPC32-NEXT:    li 4, 1
-; CHECK-PPC32-NEXT:    iselgt 3, 4, 3
-; CHECK-PPC32-NEXT:    sub 4, 5, 6
-; CHECK-PPC32-NEXT:    sub 3, 4, 3
+; CHECK-PPC32-NEXT:    subc 3, 4, 3
+; CHECK-PPC32-NEXT:    subfe 3, 6, 5
 ; CHECK-PPC32-NEXT:    blr
   %cc = icmp ugt i32 %a, %b
   %carry = zext i1 %cc to i32
@@ -110,11 +96,8 @@ define i32 @test_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
 define i64 @test_basic_i64(i64 %a, i64 %b, i64 %x, i64 %y) {
 ; CHECK-PPC64LE-LABEL: test_basic_i64:
 ; CHECK-PPC64LE:       # %bb.0:
-; CHECK-PPC64LE-NEXT:    subc 4, 3, 4
-; CHECK-PPC64LE-NEXT:    sub 4, 5, 6
-; CHECK-PPC64LE-NEXT:    subfe 3, 3, 3
-; CHECK-PPC64LE-NEXT:    neg 3, 3
-; CHECK-PPC64LE-NEXT:    sub 3, 4, 3
+; CHECK-PPC64LE-NEXT:    subc 3, 3, 4
+; CHECK-PPC64LE-NEXT:    subfe 3, 6, 5
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC32-LABEL: test_basic_i64:
@@ -142,10 +125,9 @@ define i64 @test_basic_i64(i64 %a, i64 %b, i64 %x, i64 %y) {
 define i64 @test_only_borrow_i64(i64 %a, i64 %b, i64 %x) {
 ; CHECK-PPC64LE-LABEL: test_only_borrow_i64:
 ; CHECK-PPC64LE:       # %bb.0:
-; CHECK-PPC64LE-NEXT:    subc 4, 3, 4
-; CHECK-PPC64LE-NEXT:    subfe 3, 3, 3
-; CHECK-PPC64LE-NEXT:    neg 3, 3
-; CHECK-PPC64LE-NEXT:    sub 3, 5, 3
+; CHECK-PPC64LE-NEXT:    subc 3, 3, 4
+; CHECK-PPC64LE-NEXT:    li 3, 0
+; CHECK-PPC64LE-NEXT:    subfe 3, 3, 5
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC32-LABEL: test_only_borrow_i64:
@@ -171,10 +153,7 @@ define i64 @test_ugt_i64(i64 %a, i64 %b, i64 %x, i64 %y) {
 ; CHECK-PPC64LE-LABEL: test_ugt_i64:
 ; CHECK-PPC64LE:       # %bb.0:
 ; CHECK-PPC64LE-NEXT:    subc 3, 4, 3
-; CHECK-PPC64LE-NEXT:    subfe 3, 4, 4
-; CHECK-PPC64LE-NEXT:    sub 4, 5, 6
-; CHECK-PPC64LE-NEXT:    neg 3, 3
-; CHECK-PPC64LE-NEXT:    sub 3, 4, 3
+; CHECK-PPC64LE-NEXT:    subfe 3, 6, 5
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC32-LABEL: test_ugt_i64:
@@ -396,13 +375,12 @@ define i32 @test_multiple_sub_uses(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-PPC32-NEXT:    .cfi_offset lr, 4
 ; CHECK-PPC32-NEXT:    .cfi_offset r30, -8
-; CHECK-PPC32-NEXT:    cmplw 3, 4
+; CHECK-PPC32-NEXT:    subc 3, 3, 4
 ; CHECK-PPC32-NEXT:    li 3, 0
-; CHECK-PPC32-NEXT:    li 4, 1
+; CHECK-PPC32-NEXT:    sub 5, 5, 6
 ; CHECK-PPC32-NEXT:    stw 30, 8(1) # 4-byte Folded Spill
-; CHECK-PPC32-NEXT:    isellt 4, 4, 3
-; CHECK-PPC32-NEXT:    sub 3, 5, 6
-; CHECK-PPC32-NEXT:    sub 30, 3, 4
+; CHECK-PPC32-NEXT:    subfe 30, 3, 5
+; CHECK-PPC32-NEXT:    mr 3, 5
 ; CHECK-PPC32-NEXT:    bl use
 ; CHECK-PPC32-NEXT:    mr 3, 30
 ; CHECK-PPC32-NEXT:    lwz 30, 8(1) # 4-byte Folded Reload

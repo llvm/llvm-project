@@ -1436,8 +1436,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
-  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::XOR, ISD::SHL, ISD::SRA,
-                       ISD::SRL, ISD::MUL, ISD::FMA, ISD::SINT_TO_FP,
+  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::SUB, ISD::XOR, ISD::SHL,
+                       ISD::SRA, ISD::SRL, ISD::MUL, ISD::FMA, ISD::SINT_TO_FP,
                        ISD::BUILD_VECTOR});
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
@@ -17233,6 +17233,73 @@ static bool isStoreConditional(SDValue Intrin, unsigned &StoreWidth) {
   return true;
 }
 
+// Attempt to combine the following patterns:
+//   SUB x, (ZEXT (SETCC a, b, ult)) -> SUBE x, 0, (SUBC a, b)
+//   SUB (SUB x, y), (ZEXT (SETCC a, b, ult)) -> SUBE x, y, (SUBC a, b)
+//   SUB x, (ZEXT (SETCC a, b, ugt)) -> SUBE x, 0, (SUBC b, a)
+//   SUB (SUB x, y), (ZEXT (SETCC a, b, ugt)) -> SUBE x, y, (SUBC b, a)
+// PPC carry (CA) is inverted: SUBFC sets CA=1 when there is NO borrow.
+// SUBFE computes ~RA + RB + CA. When CA=0 (borrow), this gives RB-RA-1,
+// which is exactly "subtract with borrow".
+static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG,
+                                           const PPCSubtarget &Subtarget) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != (Subtarget.isPPC64() ? MVT::i64 : MVT::i32))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Look through ZERO_EXTEND.
+  if (N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse())
+    N1 = N1.getOperand(0);
+
+  if (!N1.hasOneUse())
+    return SDValue();
+
+  // Only match pre-legalization ISD::SETCC with unsigned conditions.
+  if (N1.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+  SDValue LHS = N1.getOperand(0);
+  SDValue RHS = N1.getOperand(1);
+  if (CC == ISD::SETUGT) {
+    // ugt a, b -> ult b, a (swap operands for SUBC)
+    std::swap(LHS, RHS);
+  } else if (CC != ISD::SETULT) {
+    return SDValue();
+  }
+
+  // Don't combine SUB 0, (ZEXT SETCC) — that's just negating the borrow.
+  if (isNullConstant(N0))
+    return SDValue();
+
+  SDLoc DL(N);
+
+  SDValue N0LHS = N0;
+  SDValue N0RHS = DAG.getConstant(0, DL, VT);
+  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse()) {
+    N0LHS = N0.getOperand(0);
+    N0RHS = N0.getOperand(1);
+  }
+
+  // Generate SUBC to set carry: CA = (LHS >= RHS), i.e. CA=0 when LHS < RHS.
+  SDVTList CmpVTs = DAG.getVTList(VT, MVT::i32);
+  SDValue Borrow = DAG.getNode(PPCISD::SUBC, DL, CmpVTs, LHS, RHS);
+  SDValue CarryFlag = Borrow.getValue(1);
+
+  // Generate SUBE: result = ~Y + X + CA = X - Y - !CA.
+  // When CA=0 (borrow), this is X - Y - 1, which is the desired borrow.
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+  SDValue SubE = DAG.getNode(PPCISD::SUBE, DL, VTs, N0LHS, N0RHS, CarryFlag);
+
+  return SubE.getValue(0);
+}
+
 static SDValue DAGCombineAddc(SDNode *N,
                               llvm::PPCTargetLowering::DAGCombinerInfo &DCI) {
   if (N->getOpcode() == PPCISD::ADDC && N->hasAnyUseOfValue(1)) {
@@ -17414,6 +17481,10 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   default: break;
   case ISD::ADD:
     return combineADD(N, DCI);
+  case ISD::SUB:
+    if (SDValue Val = performSubWithBorrowCombine(N, DAG, Subtarget))
+      return Val;
+    break;
   case ISD::AND: {
     // We don't want (and (zext (shift...)), C) if C fits in the width of the
     // original input as that will prevent us from selecting optimal rotates.
