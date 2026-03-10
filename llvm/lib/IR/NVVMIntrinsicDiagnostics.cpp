@@ -120,3 +120,7 @@ struct ProviderRegistrar {
 static ProviderRegistrar TheRegistrar;
 
 } // anonymous namespace
+
+// Provide a hook to ensure the containing object file is linked when using
+// static libraries.  Call this from the NVPTX target initializer.
+void llvm::linkNVVMIntrinsicDiagnostics() {}

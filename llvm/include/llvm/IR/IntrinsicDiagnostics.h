@@ -67,6 +67,10 @@ public:
                                   FunctionType *ExpectedFTy, raw_ostream &OS);
 };
 
+/// Force-links the NVVM intrinsic diagnostics provider when building with
+/// static libraries.  Call from \c LLVMInitializeNVPTXTarget.
+LLVM_ABI void linkNVVMIntrinsicDiagnostics();
+
 } // namespace llvm
 
 #endif // LLVM_IR_INTRINSICDIAGNOSTICS_H
