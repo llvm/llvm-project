@@ -874,7 +874,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
             }
           });
 
-  MDC.Controller.finalizeModuleInvocation(MDC.ScanInstance, CI, MD);
+  (void)MDC.Controller.finalizeModuleInvocation(MDC.ScanInstance, CI, MD);
 
   // Compute the cache key, if needed. Requires dependencies.
   if (MDC.ScanInstance.getFrontendOpts().CacheCompileJob) {

@@ -965,14 +965,14 @@ bool DependencyScanningAction::runInvocation(
       Service, *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
       StableDirs, EmitDependencyFile);
 
-  ReadPCHAndPreprocessAction Action;
-
   // Normally this would be handled by GeneratePCHAction
   if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
     ScanInstance.getLangOpts().CompilingPCH = true;
 
   if (!Controller.initialize(ScanInstance, *OriginalInvocation))
     return false;
+
+  ReadPCHAndPreprocessAction Action;
 
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
