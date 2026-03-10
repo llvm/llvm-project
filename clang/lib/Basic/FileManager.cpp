@@ -501,17 +501,21 @@ bool FileManager::fixupRelativePath(const FileSystemOptions &FileSystemOpts,
 
   SmallString<128> NewPath(FileSystemOpts.WorkingDir);
   llvm::sys::path::append(NewPath, pathRef);
-  Path = NewPath;
+  Path = std::move(NewPath);
   return true;
 }
 
-bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path) const {
+bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path,
+                                   bool Canonicalize) const {
   bool Changed = FixupRelativePath(Path);
 
   if (!llvm::sys::path::is_absolute(StringRef(Path.data(), Path.size()))) {
     FS->makeAbsolute(Path);
     Changed = true;
   }
+
+  if (Canonicalize)
+    Changed |= llvm::sys::path::remove_dots(Path);
 
   return Changed;
 }

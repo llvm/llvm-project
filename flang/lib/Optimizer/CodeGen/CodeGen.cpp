@@ -112,6 +112,22 @@ static unsigned getLenParamFieldId(mlir::Type ty) {
   return getTypeDescFieldId(ty) + 1;
 }
 
+/// Set LLVM alignment operand attributes on a memcpy op using the ABI
+/// alignment of the given type (for dst and src; size has no alignment).
+static void setMemcpyAlignmentArgAttrs(
+    mlir::LLVM::MemcpyOp memcpy, mlir::ConversionPatternRewriter &rewriter,
+    const mlir::DataLayout &dataLayout, mlir::Type llvmType) {
+  unsigned alignValue = dataLayout.getTypeABIAlignment(llvmType);
+  mlir::IntegerAttr alignAttr = rewriter.getI64IntegerAttr(alignValue);
+  mlir::NamedAttribute alignNamedAttr(
+      mlir::StringAttr::get(rewriter.getContext(),
+                            mlir::LLVM::LLVMDialect::getAlignAttrName()),
+      alignAttr);
+  mlir::DictionaryAttr alignDict = rewriter.getDictionaryAttr(alignNamedAttr);
+  memcpy.setArgAttrsAttr(rewriter.getArrayAttr(
+      {alignDict, alignDict, rewriter.getDictionaryAttr({})}));
+}
+
 static llvm::SmallVector<mlir::NamedAttribute>
 addLLVMOpBundleAttrs(mlir::ConversionPatternRewriter &rewriter,
                      llvm::ArrayRef<mlir::NamedAttribute> attrs,
@@ -319,7 +335,9 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
     unsigned allocaAs = getAllocaAddressSpace(rewriter);
     unsigned programAs = getProgramAddressSpace(rewriter);
 
-    if (mlir::isa<mlir::LLVM::ConstantOp>(size.getDefiningOp())) {
+    // A value defined by a block arg, such as fir.if for a
+    // optional assumed character dummy len, doesn't have a defining op.
+    if (mlir::isa_and_nonnull<mlir::LLVM::ConstantOp>(size.getDefiningOp())) {
       // Set the Block in which the llvm alloca should be inserted.
       mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
@@ -3487,11 +3505,13 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
           computeBoxSize(loc, boxTypePair, inputBoxStorage, rewriter);
       auto memcpy = mlir::LLVM::MemcpyOp::create(
           rewriter, loc, newBoxStorage, inputBoxStorage, boxSize, isVolatile);
+      setMemcpyAlignmentArgAttrs(memcpy, rewriter, getDataLayout(), llvmLoadTy);
 
       if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
         memcpy.setTBAATags(*optionalTag);
       else
         attachTBAATag(memcpy, boxTy, boxTy, nullptr);
+
       rewriter.replaceOp(load, newBoxStorage);
     } else {
       mlir::LLVM::LoadOp loadOp =

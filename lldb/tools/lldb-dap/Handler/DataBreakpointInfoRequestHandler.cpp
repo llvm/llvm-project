@@ -94,7 +94,8 @@ DataBreakpointInfoRequestHandler::Run(
     size = llvm::utostr(args.bytes.value_or(dap.target.GetAddressByteSize()));
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     if (llvm::StringRef(args.name).getAsInteger<lldb::addr_t>(0, load_addr))
-      return llvm::make_error<DAPError>(args.name + " is not a valid address",
+      return llvm::make_error<DAPError>(args.name.str() +
+                                            " is not a valid address",
                                         llvm::inconvertibleErrorCode(), false);
     addr = llvm::utohexstr(load_addr);
     if (!IsRW(dap, load_addr))

@@ -101,7 +101,7 @@ class RVInstVBase<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
 
   let UseNamedOperandTable = true;
 }
@@ -161,7 +161,6 @@ class RVInstVUnaryRd<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
 
   let UseNamedOperandTable = true;
 }
@@ -184,7 +183,7 @@ class RVInstVLoadBase<bits<3> nf, RISCVWidth width, RISCVMOP mop,
   let Inst{6-0} = OPC_LOAD_FP.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
 
   let UseNamedOperandTable = true;
 }

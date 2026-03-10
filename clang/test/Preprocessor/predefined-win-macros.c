@@ -63,6 +63,21 @@
 // CHECK-MS-CPP2C: #define _MSC_VER 1900
 // CHECK-MS-CPP2C: #define _MSVC_LANG 202400L
 
+// RUN: %clang_cc1 %s -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+// RUN:     -fms-compatibility-version=19.14 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MSVC-1914
+// CHECK-MSVC-1914: #define _MSC_VER 1914
+// CHECK-MSVC-1914-NOT: #define _MSVC_TRADITIONAL 1
+
+// RUN: %clang_cc1 %s -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+// RUN:     -fms-compatibility-version=19.15 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MSVC-1915
+// CHECK-MSVC-1915: #define _MSC_VER 1915
+// CHECK-MSVC-1915: #define _MSVC_TRADITIONAL 1
+
+// RUN: %clang_cc1 %s -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+// RUN:     -fms-compatibility-version=19.23 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MSVC-1923
+// CHECK-MSVC-1923: #define _MSC_VER 1923
+// CHECK-MSVC-1923: #define _MSVC_TRADITIONAL 1
+
 // RUN: %clang_cc1 -triple i386-windows %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-WIN
 

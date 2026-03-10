@@ -549,6 +549,8 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
     return failure();
   }
   uint64_t tripCountValue = tripCount->getZExtValue();
+  if (tripCountValue == 0)
+    return success();
   if (unrollJamFactor > tripCountValue) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
@@ -914,6 +916,15 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   scf::ForOp innermost = loops.back();
   scf::ForOp outermost = loops.front();
 
+  // Bail out if any loop has a known zero step, as normalization
+  // would result in a division by zero.
+  for (auto loop : loops) {
+    if (auto step = getConstantIntValue(loop.getStep())) {
+      if (step.value() == 0) {
+        return failure();
+      }
+    }
+  }
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
   for (auto loop : loops) {
@@ -948,7 +959,8 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
 
-  rewriter.setInsertionPointToStart(innermost.getBody());
+  // Insert delinearization at the start of the outermost loop body.
+  rewriter.setInsertionPointToStart(outermost.getBody());
   auto [delinearizeIvs, preservedUsers] = delinearizeInductionVariable(
       rewriter, loc, outermost.getInductionVar(), upperBounds);
   rewriter.replaceAllUsesExcept(outermost.getInductionVar(), delinearizeIvs[0],

@@ -227,6 +227,35 @@ TEST(DumpASTTests, UnbalancedBraces) {
   ASSERT_EQ(Node.range, Case.range("func"));
 }
 
+TEST(DumpASTTests, NestedTemplates) {
+  // Test that we don't crash while trying to dump AST of a template function
+  // with nested template names such as Foo<V>::template Bar<W>::Value.
+  const char *Code = R"cpp(
+template <typename T>
+struct TypeA {
+  template <typename U>
+  struct TypeB {
+    static U Value;
+  };
+};
+
+template <typename V, typename W>
+auto func() {
+  return TypeA<V>::template TypeB<W>::Value;
+}
+  )cpp";
+
+  ParsedAST AST = TestTU::withCode(Code).build();
+  const NamedDecl &Func = findDecl(AST, [](const NamedDecl &D) {
+    return isa<FunctionDecl>(D) && D.getNameAsString() == "func";
+  });
+
+  const ASTNode Node =
+      dumpAST(DynTypedNode::create(Func), AST.getTokens(), AST.getASTContext());
+
+  EXPECT_EQ(Node.kind, "Function");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

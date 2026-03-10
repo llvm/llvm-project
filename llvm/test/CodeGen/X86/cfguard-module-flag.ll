@@ -7,6 +7,12 @@
 ; Test that Control Flow Guard checks are not added in modules with the
 ; cfguard=1 flag (emit tables but no checks).
 
+; If no checks were inserted then the GuardCF bit shouldn't be set in @feat.00.
+; CHECK: "@feat.00" = 0
+; i686 has SafeSEH (0x1) but should NOT have GuardCF (0x800).
+; X86: @feat.00 = 1
+; x86_64 has no SafeSEH and should NOT have GuardCF.
+; X64: @feat.00 = 0
 
 declare void @target_func()
 

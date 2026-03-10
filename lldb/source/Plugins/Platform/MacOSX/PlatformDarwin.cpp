@@ -33,6 +33,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -89,8 +90,6 @@ PlatformDarwin::~PlatformDarwin() = default;
 static uint32_t g_initialize_count = 0;
 
 void PlatformDarwin::Initialize() {
-  Platform::Initialize();
-
   if (g_initialize_count++ == 0) {
     PluginManager::RegisterPlugin(PlatformDarwin::GetPluginNameStatic(),
                                   PlatformDarwin::GetDescriptionStatic(),
@@ -105,8 +104,6 @@ void PlatformDarwin::Terminate() {
       PluginManager::UnregisterPlugin(PlatformDarwin::CreateInstance);
     }
   }
-
-  Platform::Terminate();
 }
 
 llvm::StringRef PlatformDarwin::GetDescriptionStatic() {
@@ -199,7 +196,7 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
+FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
   FileSpecList file_list;
@@ -232,12 +229,13 @@ static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
     // .dSYM/Contents/Resources/DWARF/<basename> let us go to
     // .dSYM/Contents/Resources/Python/<basename>.py and see if the
     // file exists
-    path_string.Printf("%s/../Python/%s.py",
-                       symfile_spec.GetDirectory().GetCString(),
-                       module_basename.c_str());
-    original_path_string.Printf("%s/../Python/%s.py",
-                                symfile_spec.GetDirectory().GetCString(),
-                                original_module_basename.c_str());
+    path_string.Format("{0}/../Python/{1}.py",
+                       symfile_spec.GetDirectory().GetStringRef(),
+                       module_basename);
+    original_path_string.Format("{0}/../Python/{1}.py",
+                                symfile_spec.GetDirectory().GetStringRef(),
+                                original_module_basename);
+
     FileSpec script_fspec(path_string.GetString());
     FileSystem::Instance().Resolve(script_fspec);
     FileSpec orig_script_fspec(original_path_string.GetString());
@@ -252,24 +250,24 @@ static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
                                              ? "conflicts with a keyword"
                                              : "contains reserved characters";
       if (FileSystem::Instance().Exists(script_fspec))
-        feedback_stream.Printf(
-            "warning: the symbol file '%s' contains a debug "
+        feedback_stream.Format(
+            "warning: the symbol file '{0}' contains a debug "
             "script. However, its name"
-            " '%s' %s and as such cannot be loaded. LLDB will"
-            " load '%s' instead. Consider removing the file with "
+            " '{1}' {2} and as such cannot be loaded. LLDB will"
+            " load '{3}' instead. Consider removing the file with "
             "the malformed name to"
             " eliminate this warning.\n",
-            symfile_spec.GetPath().c_str(), original_path_string.GetData(),
-            reason_for_complaint, path_string.GetData());
+            symfile_spec.GetPath(), original_path_string.GetString(),
+            reason_for_complaint, path_string.GetString());
       else
-        feedback_stream.Printf(
-            "warning: the symbol file '%s' contains a debug "
+        feedback_stream.Format(
+            "warning: the symbol file '{0}' contains a debug "
             "script. However, its name"
-            " %s and as such cannot be loaded. If you intend"
-            " to have this script loaded, please rename '%s' to "
-            "'%s' and retry.\n",
-            symfile_spec.GetPath().c_str(), reason_for_complaint,
-            original_path_string.GetData(), path_string.GetData());
+            " {1} and as such cannot be loaded. If you intend"
+            " to have this script loaded, please rename '{2}' to "
+            "'{3}' and retry.\n",
+            symfile_spec.GetPath(), reason_for_complaint,
+            original_path_string.GetString(), path_string.GetString());
     }
 
     if (FileSystem::Instance().Exists(script_fspec)) {
@@ -421,6 +419,51 @@ Status PlatformDarwin::GetSharedModule(
   if (module_sp)
     module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
   return error;
+}
+Status PlatformDarwin::GetModuleFromSharedCaches(
+    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
+  Status err;
+
+  SymbolSharedCacheUse sc_mode =
+      ModuleList::GetGlobalModuleListProperties().GetSharedCacheBinaryLoading();
+  SharedCacheImageInfo image_info;
+  if (process && process->GetDynamicLoader()) {
+    addr_t sc_base_addr;
+    UUID sc_uuid;
+    LazyBool using_sc, private_sc;
+    FileSpec sc_path;
+    if (process->GetDynamicLoader()->GetSharedCacheInformation(
+            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
+      if (module_spec.GetUUID())
+        image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
+                                                       sc_uuid, sc_mode);
+      else
+        image_info = HostInfo::GetSharedCacheImageInfo(
+            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+    }
+  }
+  // Fall back to looking for the file in lldb's own shared cache.
+  if (!image_info.GetUUID())
+    image_info = HostInfo::GetSharedCacheImageInfo(
+        module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+
+  // If we found it and it has the correct UUID, let's proceed with
+  // creating a module from the memory contents.
+  if (image_info.GetUUID() && (!module_spec.GetUUID() ||
+                               module_spec.GetUUID() == image_info.GetUUID())) {
+    ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
+                                 image_info.GetUUID(),
+                                 image_info.GetExtractor());
+    err = ModuleList::GetSharedModule(shared_cache_spec, module_sp, old_modules,
+                                      did_create_ptr);
+    if (module_sp) {
+      Log *log = GetLog(LLDBLog::Platform | LLDBLog::Modules);
+      LLDB_LOGF(log, "module %s was found in a shared cache",
+                module_spec.GetFileSpec().GetPath().c_str());
+    }
+  }
+  return err;
 }
 
 size_t
@@ -640,7 +683,7 @@ static FileSpec GetXcodeSelectPath() {
       Status status =
           Host::RunShellCommand("/usr/bin/xcode-select --print-path",
                                 FileSpec(), // current working directory
-                                &exit_status, &signo, &command_output,
+                                &exit_status, &signo, &command_output, nullptr,
                                 std::chrono::seconds(2), // short timeout
                                 false);                  // don't run in a shell
       if (status.Success() && exit_status == 0 && !command_output.empty()) {

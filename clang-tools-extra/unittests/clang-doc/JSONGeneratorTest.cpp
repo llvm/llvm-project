@@ -64,6 +64,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
     {
       "Access": "public",
       "End": true,
+      "HasMembers": true,
       "HasPublicMembers": true,
       "HasPublicMethods": true,
       "InfoType": "record",
@@ -91,12 +92,10 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
             "Name": "",
             "QualName": "",
             "USR": "0000000000000000000000000000000000000000"
-          },
-          "USR": "0000000000000000000000000000000000000000"
+          }
         }
       ],
-      "TagType": "struct",
-      "USR": "0000000000000000000000000000000000000000"
+      "TagType": "struct"
     }
   ],
   "Enums": [
@@ -111,11 +110,11 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
         }
       ],
       "Name": "Color",
-      "Scoped": false,
-      "USR": "0000000000000000000000000000000000000000"
+      "Scoped": false
     }
   ],
   "HasEnums": true,
+  "HasMembers": true,
   "HasParents": true,
   "HasProtectedMembers": true,
   "HasPublicMethods": true,
@@ -159,8 +158,7 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
         "Name": "",
         "QualName": "",
         "USR": "0000000000000000000000000000000000000000"
-      },
-      "USR": "0000000000000000000000000000000000000000"
+      }
     }
   ],
   "Records": [
@@ -179,9 +177,9 @@ TEST_F(JSONGeneratorTest, emitRecordJSON) {
         "End": true,
         "Param": "class T"
       }
-    ]
+    ],
+    "VerticalDisplay": false
   },
-  "USR": "0000000000000000000000000000000000000000",
   "VirtualParents": [
     {
       "End": true,
@@ -225,8 +223,7 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
       "End": true,
       "InfoType": "enum",
       "Name": "OneEnum",
-      "Scoped": false,
-      "USR": "0000000000000000000000000000000000000000"
+      "Scoped": false
     }
   ],
   "Functions": [
@@ -241,8 +238,7 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
         "Name": "",
         "QualName": "",
         "USR": "0000000000000000000000000000000000000000"
-      },
-      "USR": "0000000000000000000000000000000000000000"
+      }
     }
   ],
   "HasEnums": true,
@@ -272,8 +268,7 @@ TEST_F(JSONGeneratorTest, emitNamespaceJSON) {
       "QualName": "path::to::A::Namespace::ChildStruct",
       "USR": "0000000000000000000000000000000000000000"
     }
-  ],
-  "USR": "0000000000000000000000000000000000000000"
+  ]
 })raw";
   EXPECT_EQ(Expected, Actual.str());
 }

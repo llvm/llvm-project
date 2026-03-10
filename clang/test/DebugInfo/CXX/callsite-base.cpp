@@ -2,6 +2,10 @@
 // RUN:            -debug-info-kind=standalone -dwarf-version=5 -O1 %s \
 // RUN: -o - | FileCheck %s -check-prefix CHECK-BASE
 
+// RUN: %clang_cc1 -triple=x86_64-linux -disable-llvm-passes -emit-llvm \
+// RUN:            -debug-info-kind=standalone -dwarf-version=4 -O1 %s \
+// RUN: -o - | FileCheck %s -check-prefix CHECK-BASE-DW4
+
 // Simple class with only virtual methods: inlined and not-inlined
 //
 // The following three scenarios are considered:
@@ -46,3 +50,21 @@ void bar(CBase *Base) {
 
 // CHECK-BASE: [[BASE_F1_DEF:![0-9]+]] = {{.*}}!DISubprogram(name: "f1", linkageName: "_ZN5CBase2f1Ev", {{.*}}DISPFlagDefinition
 // CHECK-BASE: [[BASE_F3_DEF:![0-9]+]] = {{.*}}!DISubprogram(name: "f3", linkageName: "_ZN5CBase2f3Ev", {{.*}}DISPFlagDefinition
+
+// CHECK-BASE-DW4: %struct.CBase = type { ptr }
+
+// CHECK-BASE-DW4: define {{.*}} @_Z3barP5CBase{{.*}} {
+// CHECK-BASE-DW4:   alloca %struct.CBase
+// CHECK-BASE-DW4:   call void %1{{.*}} !dbg {{![0-9]+}}
+// CHECK-BASE-DW4:   call void %3{{.*}} !dbg {{![0-9]+}}
+// CHECK-BASE-DW4:   call void %5{{.*}} !dbg {{![0-9]+}}
+// CHECK-BASE-DW4:   call void @_ZN5CBaseC1Ev{{.*}} !dbg {{![0-9]+}}
+// CHECK-BASE-DW4:   call void @_ZN5CBase2f1Ev{{.*}} !dbg {{![0-9]+}}
+// CHECK-BASE-DW4: }
+
+// CHECK-BASE-DW4: {{.*}}!DISubprogram(name: "f1", linkageName: "_ZN5CBase2f1Ev", {{.*}}containingType
+// CHECK-BASE-DW4: {{.*}}!DISubprogram(name: "f2", linkageName: "_ZN5CBase2f2Ev", {{.*}}containingType
+// CHECK-BASE-DW4: {{.*}}!DISubprogram(name: "f3", linkageName: "_ZN5CBase2f3Ev", {{.*}}containingType
+
+// CHECK-BASE-DW4: {{.*}}!DISubprogram(name: "f1", linkageName: "_ZN5CBase2f1Ev", {{.*}}DISPFlagDefinition
+// CHECK-BASE-DW4: {{.*}}!DISubprogram(name: "f3", linkageName: "_ZN5CBase2f3Ev", {{.*}}DISPFlagDefinition
