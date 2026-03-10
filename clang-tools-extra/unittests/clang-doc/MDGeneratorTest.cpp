@@ -301,7 +301,7 @@ TEST_F(MDGeneratorTest, emitCommentMD) {
   ParamIn->Children.back()->Kind = CommentKind::CK_ParagraphComment;
   ParamIn->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
+  ParamIn->Children.back()->Children.back()->Text = "is a parameter.";
   ParamIn->Children.back()->Children.emplace_back(
       std::make_unique<CommentInfo>());
   ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
