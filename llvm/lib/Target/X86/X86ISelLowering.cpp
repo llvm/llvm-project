@@ -1891,6 +1891,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SRL, MVT::i512, Custom);
     setOperationAction(ISD::SHL, MVT::i512, Custom);
     setOperationAction(ISD::SRA, MVT::i512, Custom);
+    setOperationAction(ISD::FSHR, MVT::i256, Custom);
+    setOperationAction(ISD::FSHL, MVT::i256, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
@@ -2953,6 +2955,8 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::XOR:
     case ISD::ADD:
     case ISD::SUB:
+    case ISD::FSHL:
+    case ISD::FSHR:
       return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
              mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
     case ISD::SELECT:
@@ -34517,6 +34521,35 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                     DAG.getSplatBuildVector(
                         VecVT, dl, DAG.getZExtOrTrunc(Amt, dl, MVT::i64)));
     Results.push_back(DAG.getBitcast(VT, Res));
+    return;
+  }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    EVT VT = N->getValueType(0);
+    SDValue Op0 = N->getOperand(0);
+    SDValue Op1 = N->getOperand(1);
+    SDValue Amt = N->getOperand(2);
+    assert(Subtarget.useAVX512Regs() && "AVX512F required");
+    assert(VT == MVT::i256 && "Unexpected VT!");
+    if (!mayFoldIntoVector(Op0, DAG, Subtarget) ||
+        !mayFoldIntoVector(Op1, DAG, Subtarget))
+      return;
+
+    // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z & (bw-1))) >> bw.
+    // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))).
+    SDValue Res = DAG.getBitcast(
+        MVT::i512, concatSubVectors(DAG.getBitcast(MVT::v4i64, Op1),
+                                    DAG.getBitcast(MVT::v4i64, Op0), DAG, dl));
+    Amt = DAG.getNode(ISD::AND, dl, Amt.getValueType(), Amt,
+                      DAG.getConstant(255, dl, Amt.getValueType()));
+    if (Opc == ISD::FSHL) {
+      Res = DAG.getNode(ISD::SHL, dl, MVT::i512, Res, Amt);
+      Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res,
+                        DAG.getShiftAmountConstant(256, MVT::i512, dl));
+    } else {
+      Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res, Amt);
+    }
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i256, Res));
     return;
   }
   case ISD::CTPOP: {

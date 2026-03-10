@@ -15,8 +15,8 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SHA1.h"
 

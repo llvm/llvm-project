@@ -11,6 +11,9 @@
 # RUN: llvm-jitlink -waiting-on-graph-replay %t/capture.txt \
 # RUN:   | FileCheck --check-prefix=REPLAY %s
 
+# JITLink does not support ARM64 COFF files.
+# UNSUPPORTED: target=aarch64-{{.*}}-windows-{{.*}}
+
 # CAPTURE: simplify-and-emit
 # CAPTURE: end
 
