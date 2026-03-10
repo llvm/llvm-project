@@ -24943,10 +24943,8 @@ bool SLPVectorizerPass::vectorizeStores(
         const unsigned MaxTotalNum = std::min<unsigned>(
             Operands.size(),
             static_cast<unsigned>(
-                End -
-                std::distance(RangeSizes.begin(),
-                              find_if(RangeSizes, IsNotVectorized)) +
-                1));
+                End - std::distance(RangeSizes.begin(),
+                                    find_if(RangeSizes, IsNotVectorized))));
         unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
         if (VF > MaxTotalNum || VF >= StoresLimit)
           break;
