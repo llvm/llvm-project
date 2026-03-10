@@ -12,7 +12,6 @@
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "flang/Runtime/coarray.h"
 #include "mlir/IR/BuiltinOps.h"
 
 static constexpr llvm::StringRef coarrayHandleSuffix = "_coarray_handle";

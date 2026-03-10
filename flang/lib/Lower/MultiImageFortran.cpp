@@ -324,17 +324,16 @@ Fortran::lower::genUpperCoBounds(Fortran::lower::AbstractConverter &converter,
           sym.GetUltimate()
               .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     size_t corank = object->coshape().size();
+    // PRIF take an array of size corank-1 for ucobound.
     mlir::Type arrayType = fir::SequenceType::get(
-        {static_cast<fir::SequenceType::Extent>(corank)}, i64Ty);
+        {static_cast<fir::SequenceType::Extent>(corank - 1)}, i64Ty);
     ucobounds = builder.createTemporary(loc, arrayType);
     mlir::Value ucovalue;
-    for (size_t i = 0; i < corank; i++) {
+    for (size_t i = 0; i < corank - 1; i++) {
       if (auto ub = object->coshape()[i].lbound().GetExplicit()) {
         auto ubExpr = ignoreEvConvert(*ub);
         ucovalue = fir::getBase(converter.genExprValue(loc, ubExpr, stmtCtx));
-      } else if (object->coshape()[i].ubound().isStar())
-        ucovalue = builder.createIntegerConstant(loc, i64Ty, -1);
-      else {
+      } else {
         if (auto lb = object->coshape()[i].lbound().GetExplicit()) {
           auto lbExpr = ignoreEvConvert(*lb);
           ucovalue = fir::getBase(converter.genExprValue(
@@ -371,7 +370,9 @@ genCoBounds(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   mlir::Type arrayType = fir::SequenceType::get(
       {static_cast<fir::SequenceType::Extent>(corank)}, i64Ty);
   mlir::Value lcobounds = builder.createTemporary(loc, arrayType);
-  mlir::Value ucobounds = builder.createTemporary(loc, arrayType);
+  mlir::Type arrayType2 = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(corank - 1)}, i64Ty);
+  mlir::Value ucobounds = builder.createTemporary(loc, arrayType2);
   size_t i = 0;
   for (const Fortran::parser::AllocateCoshapeSpec &coshapeSpec : coshapeSpecs) {
     const std::optional<Fortran::parser::BoundExpr> &lbExpr =
@@ -402,7 +403,7 @@ genCoBounds(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     fir::StoreOp::create(builder, loc, ub, ucoaddr);
     i++;
   }
-  // Last cobound;
+  // Last lcobound;
   {
     mlir::Value lb = one;
     if (const std::optional<Fortran::parser::BoundExpr> &lastCobound =
@@ -414,10 +415,7 @@ genCoBounds(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
         builder.createIntegerConstant(loc, builder.getIndexType(), i);
     mlir::Value lcoaddr =
         fir::CoordinateOp::create(builder, loc, addrType, lcobounds, index);
-    mlir::Value ucoaddr =
-        fir::CoordinateOp::create(builder, loc, addrType, ucobounds, index);
     fir::StoreOp::create(builder, loc, lb, lcoaddr);
-    fir::StoreOp::create(builder, loc, lb, ucoaddr);
   }
 
   lcobounds = builder.createBox(loc, lcobounds);
