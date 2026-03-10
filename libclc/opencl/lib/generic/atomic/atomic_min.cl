@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/atomic/atomic_min.h>
+#include <clc/atomic/clc_atomic_fetch_min.h>
 
-#define __CLC_IMPL(TYPE, AS, OP)                                               \
+#define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_min(volatile AS TYPE *p, TYPE val) {      \
-    return __sync_fetch_and_##OP(p, val);                                      \
+    return __clc_atomic_fetch_min((AS TYPE *)p, val, __ATOMIC_RELAXED,         \
+                                  __MEMORY_SCOPE_DEVICE);                      \
   }
 
-__CLC_IMPL(int, global, min)
-__CLC_IMPL(unsigned int, global, umin)
-__CLC_IMPL(int, local, min)
-__CLC_IMPL(unsigned int, local, umin)
+__CLC_IMPL(int, global)
+__CLC_IMPL(unsigned int, global)
+__CLC_IMPL(int, local)
+__CLC_IMPL(unsigned int, local)
 #undef __CLC_IMPL

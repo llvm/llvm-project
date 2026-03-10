@@ -104,7 +104,7 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                                       hasCastKind(CK_UserDefinedConversion)))),
                             hasParent(callExpr(
                                 callee(functionDecl(
-                                    DurationFactoryFunction(),
+                                    durationFactoryFunction(),
                                     unless(hasParent(functionTemplateDecl())))),
                                 hasArgument(0, expr().bind("arg")))))
                             .bind("OuterExpr")),
@@ -117,10 +117,10 @@ void UpgradeDurationConversionsCheck::check(
       "implicit conversion to 'int64_t' is deprecated in this context; use an "
       "explicit cast instead";
 
-  TraversalKindScope RAII(*Result.Context, TK_AsIs);
+  const TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>("arg");
-  SourceLocation Loc = ArgExpr->getBeginLoc();
+  const SourceLocation Loc = ArgExpr->getBeginLoc();
 
   const auto *OuterExpr = Result.Nodes.getNodeAs<Expr>("OuterExpr");
 
@@ -139,13 +139,13 @@ void UpgradeDurationConversionsCheck::check(
 
   // We gather source locations from template matches not in template
   // instantiations for future matches.
-  internal::Matcher<Stmt> IsInsideTemplate =
+  const internal::Matcher<Stmt> IsInsideTemplate =
       hasAncestor(decl(anyOf(classTemplateDecl(), functionTemplateDecl())));
   if (!match(IsInsideTemplate, *ArgExpr, *Result.Context).empty())
     MatchedTemplateLocations.insert(Loc);
 
-  DiagnosticBuilder Diag = diag(Loc, Message);
-  CharSourceRange SourceRange = Lexer::makeFileCharRange(
+  const DiagnosticBuilder Diag = diag(Loc, Message);
+  const CharSourceRange SourceRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(ArgExpr->getSourceRange()),
       *Result.SourceManager, Result.Context->getLangOpts());
   if (SourceRange.isInvalid())

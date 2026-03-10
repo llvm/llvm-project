@@ -122,7 +122,7 @@ unsigned int load_field_unsigned(A* s) {
   return s->more_bits;
 }
 
-//CIR: cir.func dso_local @load_field_unsigned
+//CIR: cir.func {{.*}} @load_field_unsigned
 //CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["s", init] {alignment = 8 : i64}
 //CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
 //CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][3] {name = "more_bits"} : !cir.ptr<!rec_A> -> !cir.ptr<!u16i>
@@ -228,7 +228,7 @@ void get_volatile(V* v) {
   v->b = 3;
 }
 
-// CIR: cir.func dso_local @get_volatile
+// CIR: cir.func {{.*}} @get_volatile
 // CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_V>, !cir.ptr<!cir.ptr<!rec_V>>, ["v", init] {alignment = 8 : i64}
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_V>>, !cir.ptr<!rec_V>
@@ -255,7 +255,7 @@ void get_volatile(V* v) {
 void set_volatile(V* v) {
   v->b = 3;
 }
-//CIR: cir.func dso_local @set_volatile
+//CIR: cir.func {{.*}} @set_volatile
 //CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_V>, !cir.ptr<!cir.ptr<!rec_V>>, ["v", init] {alignment = 8 : i64}
 //CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 //CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_V>>, !cir.ptr<!rec_V>
@@ -335,7 +335,7 @@ void binOp(S* s) {
 // CIR:   [[TMP0:%.*]] = cir.const #cir.int<42> : !s32i
 // CIR:   [[TMP1:%.*]] = cir.get_member {{.*}}[0] {name = "d"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP2:%.*]] = cir.get_bitfield align(4) (#bfi_d, [[TMP1]] : !cir.ptr<!u64i>) -> !s32i
-// CIR:   [[TMP3:%.*]] = cir.binop(or, [[TMP2]], [[TMP0]]) : !s32i
+// CIR:   [[TMP3:%.*]] = cir.or [[TMP2]], [[TMP0]] : !s32i
 // CIR:   cir.set_bitfield align(4) (#bfi_d, [[TMP1]] : !cir.ptr<!u64i>, [[TMP3]] : !s32i)
 
 // LLVM: define {{.*@binOp}}

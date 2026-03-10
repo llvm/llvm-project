@@ -67,7 +67,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i64 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP22]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

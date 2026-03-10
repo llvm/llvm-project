@@ -8,6 +8,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm-c/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
@@ -469,6 +470,27 @@ TEST(Error, createStringError) {
   auto Res = errorToErrorCode(createStringError(EC, "foo%s", Bar));
   EXPECT_EQ(Res, EC)
     << "Failed to convert createStringError() result to error_code.";
+}
+
+TEST(Error, createStringErrorV) {
+  static const char *Bar = "bar";
+  static const std::error_code EC = errc::invalid_argument;
+  std::string Msg;
+  raw_string_ostream S(Msg);
+  logAllUnhandledErrors(createStringErrorV(EC, "foo{0}{1}{2:x}", Bar, 1, 0xff),
+                        S);
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() log result";
+
+  Msg.clear();
+  auto Res = errorToErrorCode(createStringError(EC, "foo{0}", Bar));
+  EXPECT_EQ(Res, EC)
+      << "Failed to convert createStringError() result to error_code.";
+
+  Msg.clear();
+  logAllUnhandledErrors(createStringErrorV("foo{0}{1}{2:x}", Bar, 1, 0xff), S);
+  EXPECT_EQ(Msg, "foobar10xff\n")
+      << "Unexpected createStringError() (no EC overload) log result";
 }
 
 // Test that the ExitOnError utility works as expected.

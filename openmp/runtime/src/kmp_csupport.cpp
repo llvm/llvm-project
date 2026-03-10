@@ -1780,7 +1780,7 @@ void __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid,
   if (ompt_enabled.ompt_callback_mutex_released) {
     ompt_callbacks.ompt_callback(ompt_callback_mutex_released)(
         ompt_mutex_critical, (ompt_wait_id_t)(uintptr_t)lck,
-        OMPT_LOAD_RETURN_ADDRESS(0));
+        OMPT_LOAD_RETURN_ADDRESS(global_tid));
   }
 #endif
 

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-invariant-load-hoisting=true '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s --allow-empty
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-invariant-load-hoisting=true '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s | FileCheck %s --allow-empty
 
 ;#include <string.h>
 ;#include <stdio.h>

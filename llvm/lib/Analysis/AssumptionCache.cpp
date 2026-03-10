@@ -32,7 +32,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;

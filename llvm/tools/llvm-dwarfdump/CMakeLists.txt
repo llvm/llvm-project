@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   DebugInfoDWARFLowLevel
   AllTargetsDescs
@@ -10,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-dwarfdump
+  Coverage.cpp
   SectionSizes.cpp
   Statistics.cpp
   llvm-dwarfdump.cpp

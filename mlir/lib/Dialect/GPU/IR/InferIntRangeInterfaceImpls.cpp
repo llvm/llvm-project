@@ -30,7 +30,7 @@ static ConstantIntRanges getIndexRange(uint64_t umin, uint64_t umax) {
 }
 
 namespace {
-enum class LaunchDims : uint32_t { Block = 0, Grid = 1 };
+enum class LaunchDims : uint32_t { Block = 0, Grid = 1, Cluster = 2 };
 } // end namespace
 
 /// If the operation `op` is in a context that is annotated with maximum
@@ -63,6 +63,9 @@ getKnownLaunchAttr(GPUFuncOp func, LaunchDims dims, Dimension dim) {
   case LaunchDims::Grid:
     bounds = func.getKnownGridSizeAttr();
     break;
+  case LaunchDims::Cluster:
+    bounds = func.getKnownClusterSizeAttr();
+    break;
   }
   if (!bounds)
     return std::nullopt;
@@ -94,6 +97,13 @@ static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
     case LaunchDims::Grid:
       bounds = launch.getGridSizeOperandValues();
       break;
+    case LaunchDims::Cluster:
+      if (launch.hasClusterSize()) {
+        auto clusterBounds = launch.getClusterSizeOperandValues();
+        if (clusterBounds)
+          bounds = *clusterBounds;
+      }
+      break;
     }
     Value maybeBound = valueByDim(bounds, dim);
     APInt value;
@@ -115,6 +125,9 @@ static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
     case LaunchDims::Grid:
       attrName = GPUDialect::KnownGridSizeAttrHelper::getNameStr();
       break;
+    case LaunchDims::Cluster:
+      attrName = GPUDialect::KnownClusterSizeAttrHelper::getNameStr();
+      break;
     }
     auto discardableAttr = getKnownLaunchAttr(func, attrName, dim);
     if (discardableAttr)
@@ -133,6 +146,9 @@ void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void ClusterDimBlocksOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                            SetIntRangeFn setResultRange) {
+  if (auto known = getKnownLaunchDim(*this, LaunchDims::Cluster))
+    return setResultRange(getResult(), getIndexRange(*known, *known));
+
   uint64_t max = kMaxClusterDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
@@ -150,6 +166,8 @@ void ClusterIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 void ClusterBlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                          SetIntRangeFn setResultRange) {
   uint64_t max = kMaxClusterDim;
+  if (auto known = getKnownLaunchDim(*this, LaunchDims::Cluster))
+    max = *known;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
   setResultRange(getResult(), getIndexRange(0, max - 1ULL));

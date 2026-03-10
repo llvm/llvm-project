@@ -44,6 +44,7 @@ void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS,
 
 void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
                                      llvm::TimerGroup &TG) {
+  assert(Storage && "We should have a filename.");
   OS << "{\n";
   OS << R"("file": ")" << Storage->SourceFilename << "\",\n";
   OS << R"("timestamp": ")" << Storage->Timestamp << "\",\n";
@@ -56,10 +57,10 @@ void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
 
 void ClangTidyProfiling::storeProfileData(llvm::TimerGroup &TG) {
   assert(Storage && "We should have a filename.");
-
   llvm::SmallString<256> OutputDirectory(Storage->StoreFilename);
   llvm::sys::path::remove_filename(OutputDirectory);
-  if (std::error_code EC = llvm::sys::fs::create_directories(OutputDirectory)) {
+  if (const std::error_code EC =
+          llvm::sys::fs::create_directories(OutputDirectory)) {
     llvm::errs() << "Unable to create output directory '" << OutputDirectory
                  << "': " << EC.message() << "\n";
     return;

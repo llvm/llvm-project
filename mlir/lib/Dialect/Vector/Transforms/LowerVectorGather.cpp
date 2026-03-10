@@ -50,7 +50,7 @@ namespace {
 ///
 /// Supports vector types with a fixed leading dimension.
 struct UnrollGather : OpRewritePattern<vector::GatherOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
@@ -98,7 +98,7 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
 /// ATM this is effectively limited to reading a 1D Vector from a 2D MemRef,
 /// but should be fairly straightforward to extend beyond that.
 struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
@@ -164,7 +164,7 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
 /// `tensor.extract`s. To avoid out-of-bounds memory accesses, these
 /// loads/extracts are made conditional using `scf.if` ops.
 struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {

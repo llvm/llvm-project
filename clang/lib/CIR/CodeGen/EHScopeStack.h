@@ -18,6 +18,7 @@
 #ifndef CLANG_LIB_CIR_CODEGEN_EHSCOPESTACK_H
 #define CLANG_LIB_CIR_CODEGEN_EHSCOPESTACK_H
 
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang::CIRGen {
@@ -101,16 +102,43 @@ public:
 
     virtual ~Cleanup() = default;
 
+    /// Generation flags.
+    class Flags {
+      enum {
+        F_IsForEH = 0x1,
+        F_IsNormalCleanupKind = 0x2,
+        F_IsEHCleanupKind = 0x4,
+        F_HasExitSwitch = 0x8,
+      };
+      unsigned flags = 0;
+
+    public:
+      Flags() = default;
+
+      /// isForEH - true if the current emission is for an EH cleanup.
+      bool isForEHCleanup() const { return flags & F_IsForEH; }
+      bool isForNormalCleanup() const { return !isForEHCleanup(); }
+      void setIsForEHCleanup() { flags |= F_IsForEH; }
+
+      bool isNormalCleanupKind() const { return flags & F_IsNormalCleanupKind; }
+      void setIsNormalCleanupKind() { flags |= F_IsNormalCleanupKind; }
+
+      /// isEHCleanupKind - true if the cleanup was pushed as an EH
+      /// cleanup.
+      bool isEHCleanupKind() const { return flags & F_IsEHCleanupKind; }
+      void setIsEHCleanupKind() { flags |= F_IsEHCleanupKind; }
+
+      bool hasExitSwitch() const { return flags & F_HasExitSwitch; }
+      void setHasExitSwitch() { flags |= F_HasExitSwitch; }
+    };
+
     /// Emit the cleanup.  For normal cleanups, this is run in the
     /// same EH context as when the cleanup was pushed, i.e. the
     /// immediately-enclosing context of the cleanup scope.  For
     /// EH cleanups, this is run in a terminate context.
     ///
     // \param flags cleanup kind.
-    virtual void emit(CIRGenFunction &cgf) = 0;
-
-    // This is a placeholder until EHScope is implemented.
-    virtual size_t getSize() const = 0;
+    virtual void emit(CIRGenFunction &cgf, Flags flags) = 0;
   };
 
 private:
@@ -128,6 +156,12 @@ private:
 
   /// The first valid entry in the buffer.
   char *startOfData = nullptr;
+
+  /// The innermost normal cleanup on the stack.
+  stable_iterator innermostNormalCleanup = stable_end();
+
+  /// The innermost EH scope on the stack.
+  stable_iterator innermostEHScope = stable_end();
 
   /// The CGF this Stack belong to
   CIRGenFunction *cgf = nullptr;
@@ -153,6 +187,25 @@ public:
     [[maybe_unused]] Cleanup *obj = new (buffer) T(a...);
   }
 
+  /// Push a cleanup with non-constant storage requirements on the
+  /// stack.  The cleanup type must provide an additional static method:
+  ///   static size_t getExtraSize(size_t);
+  /// The argument to this method will be the value N, which will also
+  /// be passed as the first argument to the constructor.
+  ///
+  /// The data stored in the extra storage must obey the same
+  /// restrictions as normal cleanup member data.
+  ///
+  /// The pointer returned from this method is valid until the cleanup
+  /// stack is modified.
+  template <class T, class... As>
+  T *pushCleanupWithExtra(CleanupKind kind, size_t n, As... a) {
+    static_assert(alignof(T) <= ScopeStackAlignment,
+                  "Cleanup's alignment is too large.");
+    void *buffer = pushCleanup(kind, sizeof(T) + T::getExtraSize(n));
+    return new (buffer) T(n, a...);
+  }
+
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }
 
   /// Pops a cleanup scope off the stack.  This is private to CIRGenCleanup.cpp.
@@ -161,12 +214,31 @@ public:
   /// Determines whether the exception-scopes stack is empty.
   bool empty() const { return startOfData == endOfBuffer; }
 
+  bool requiresCatchOrCleanup() const;
+
+  /// Determines whether there are any normal cleanups on the stack.
+  bool hasNormalCleanups() const {
+    return innermostNormalCleanup != stable_end();
+  }
+
+  /// Returns the innermost normal cleanup on the stack, or
+  /// stable_end() if there are no normal cleanups.
+  stable_iterator getInnermostNormalCleanup() const {
+    return innermostNormalCleanup;
+  }
+  stable_iterator getInnermostActiveNormalCleanup() const;
+
+  stable_iterator getInnermostEHScope() const { return innermostEHScope; }
+
   /// An unstable reference to a scope-stack depth.  Invalidated by
   /// pushes but not pops.
   class iterator;
 
   /// Returns an iterator pointing to the innermost EH scope.
   iterator begin() const;
+
+  /// Returns an iterator pointing to the outermost EH scope.
+  iterator end() const;
 
   /// Create a stable reference to the top of the EH stack.  The
   /// returned reference is valid until that scope is popped off the
@@ -177,6 +249,10 @@ public:
 
   /// Create a stable reference to the bottom of the EH stack.
   static stable_iterator stable_end() { return stable_iterator(0); }
+
+  /// Turn a stable reference to a scope depth into a unstable pointer
+  /// to the EH stack.
+  iterator find(stable_iterator savePoint) const;
 };
 
 } // namespace clang::CIRGen

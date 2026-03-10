@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
-// RUN: mlir-opt %s -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -canonicalize | FileCheck -check-prefix=CANON %s
 
 // CHECK: emitc.include <"test.h">
 // CHECK: emitc.include "test.h"
@@ -213,6 +213,28 @@ func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
   return %r : i32
 }
 
+// CANON-LABEL:   func.func @test_expression_recurring_operands(
+// CANON-SAME:      %[[ARG0:.*]]: i32,
+// CANON-SAME:      %[[ARG1:.*]]: i32) -> i32 {
+// CANON:           %[[EXPRESSION_0:.*]] = emitc.expression %[[ARG0]], %[[ARG1]] : (i32, i32) -> i32 {
+// CANON:             %[[VAL_0:.*]] = rem %[[ARG0]], %[[ARG1]] : (i32, i32) -> i32
+// CANON:             %[[VAL_1:.*]] = add %[[VAL_0]], %[[ARG0]] : (i32, i32) -> i32
+// CANON:             %[[VAL_2:.*]] = mul %[[VAL_1]], %[[VAL_0]] : (i32, i32) -> i32
+// CANON:             yield %[[VAL_2]] : i32
+// CANON:           }
+// CANON:           return %[[EXPRESSION_0]] : i32
+// CANON:         }
+func.func @test_expression_recurring_operands(%arg0: i32, %arg1: i32) -> i32 {
+  %r = emitc.expression %arg0, %arg1, %arg0 : (i32, i32, i32) -> i32 {
+  ^bb0(%x: i32, %y: i32, %z: i32):
+    %a = emitc.rem %x, %y : (i32, i32) -> i32
+    %b = emitc.add %a, %z : (i32, i32) -> i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
+  }
+  return %r : i32
+}
+
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 {
     %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
@@ -334,4 +356,34 @@ emitc.class final @finalClass {
     %3 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
     return
   }
+}
+
+func.func @do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+  %3 = emitc.literal "3" : i32
+
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2, %3 : (i32, i32, i32) -> i1 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      %cmp = emitc.cmp eq, %add, %3 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+    
+    emitc.yield %r : i1
+  }
+
+  return
+}
+
+func.func @address_of(%arg0: !emitc.lvalue<i32>) {
+  %1 = emitc.address_of %arg0 : !emitc.lvalue<i32>
+  return
+}
+
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  %1 = emitc.dereference %arg0 : !emitc.ptr<i32>
+  return
 }

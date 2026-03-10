@@ -66,6 +66,19 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
   message(FATAL_ERROR
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
+set(LIBCXX_SUPPORTED_ASSERTION_SEMANTICS hardening_dependent ignore observe quick_enforce enforce)
+set(LIBCXX_ASSERTION_SEMANTIC "hardening_dependent" CACHE STRING
+  "Specify the default assertion semantic to use. This semantic will be used
+  inside the compiled library and will be the default when compiling user code.
+  Note that users can override this setting in their own code. This does not
+  affect the ABI. Supported values are ${LIBCXX_SUPPORTED_ASSERTION_SEMANTICS}.
+  `hardening_dependent` is a special value that instructs the library to select
+  the assertion semantic based on the hardening mode in effect.")
+
+if (NOT "${LIBCXX_ASSERTION_SEMANTIC}" IN_LIST LIBCXX_SUPPORTED_ASSERTION_SEMANTICS)
+  message(FATAL_ERROR
+    "Unsupported assertion semantic: '${LIBCXX_ASSERTION_SEMANTIC}'. Supported values are ${LIBCXX_SUPPORTED_ASSERTION_SEMANTICS}.")
+endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
   "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
@@ -205,6 +218,9 @@ set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI 
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
   message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, got '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
+set(LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
+  "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
+   version must correspond to the major version of an LLVM release.")
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 
@@ -523,6 +539,7 @@ function(cxx_add_basic_build_flags target)
   # Let the library headers know they are currently being used to build the
   # library.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_BUILDING_LIBRARY)
+  target_compile_definitions(${target} PRIVATE -D_LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION=${LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION})
 
   # Make sure the library can be build without transitive includes. This makes
   # it easier to upgrade the library to a newer language standard without build
@@ -632,7 +649,7 @@ target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 # will not be compiled into it, resulting in false positives.
 # For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
 string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
-if (NOT "${building_with_asan}" STREQUAL "-1")
+if ("${building_with_asan}" STREQUAL "0")
   config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
 else()
   config_define(OFF _LIBCPP_INSTRUMENTED_WITH_ASAN)
@@ -750,10 +767,20 @@ config_define(${LIBCXX_ENABLE_WIDE_CHARACTERS} _LIBCPP_HAS_WIDE_CHARACTERS)
 config_define(${LIBCXX_ENABLE_TIME_ZONE_DATABASE} _LIBCPP_HAS_TIME_ZONE_DATABASE)
 config_define(${LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS} _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS)
 
-# TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.
-if (LIBCXX_ENABLE_ASSERTIONS)
-  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been removed. Please use LIBCXX_HARDENING_MODE instead.")
+# Set C library in use
+if (RUNTIMES_USE_LIBC STREQUAL "picolibc")
+  config_define(1 _LIBCPP_LIBC_PICOLIBC)
+  # picolibc is derived from newlib and behaves the same in regards to libc++
+  # so setting both here:
+  # * _LIBCPP_LIBC_NEWLIB is used now
+  # * _LIBCPP_LIBC_PICOLIBC can be used for further customizations later
+  config_define(1 _LIBCPP_LIBC_NEWLIB)
+elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
+  config_define(1 _LIBCPP_LIBC_NEWLIB)
+elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
+  config_define(1 _LIBCPP_LIBC_LLVM_LIBC)
 endif()
+
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
   config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "fast")
@@ -762,6 +789,17 @@ elseif (LIBCXX_HARDENING_MODE STREQUAL "extensive")
   config_define(16 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)
+endif()
+if (LIBCXX_ASSERTION_SEMANTIC STREQUAL "hardening_dependent")
+  config_define(2 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "ignore")
+  config_define(4 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "observe")
+  config_define(8 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "quick_enforce")
+  config_define(16 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
+elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "enforce")
+  config_define(32 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
 endif()
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "serial")

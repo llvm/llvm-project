@@ -20,7 +20,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -422,7 +422,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
     Fragments.append(getFragmentsForNNS(TagTy->getQualifier(), Context, After));
 
-    const TagDecl *Decl = TagTy->getOriginalDecl();
+    const TagDecl *Decl = TagTy->getDecl();
     // Anonymous decl, skip this fragment.
     if (Decl->getName().empty())
       return Fragments.append("{ ... }",
@@ -633,7 +633,10 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
                 DeclarationFragments::FragmentKind::InternalParam);
   } else {
     Fragments.append(std::move(TypeFragments));
-    if (!T->isAnyPointerType() && !T->isBlockPointerType())
+    // If the type is a type alias, append the space
+    // even if the underlying type is a pointer type.
+    if (T->isTypedefNameType() ||
+        (!T->isAnyPointerType() && !T->isBlockPointerType()))
       Fragments.appendSpace();
     Fragments
         .append(Param->getName(),

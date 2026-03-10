@@ -80,17 +80,17 @@ void UnintendedCharOstreamOutputCheck::check(
   const Expr *Value = Call->getArg(1);
   const SourceRange SourceRange = Value->getSourceRange();
 
-  DiagnosticBuilder Builder =
+  const DiagnosticBuilder Builder =
       diag(Call->getOperatorLoc(),
            "%0 passed to 'operator<<' outputs as character instead of integer. "
            "cast to 'unsigned int' to print numeric value or cast to 'char' to "
            "print as character")
       << Value->getType() << SourceRange;
 
-  QualType T = Value->getType();
+  const QualType T = Value->getType();
   const Type *UnqualifiedDesugaredType = T->getUnqualifiedDesugaredType();
 
-  llvm::StringRef CastType = CastTypeName.value_or(
+  const llvm::StringRef CastType = CastTypeName.value_or(
       UnqualifiedDesugaredType->isSpecificBuiltinType(BuiltinType::SChar)
           ? "int"
           : "unsigned int");

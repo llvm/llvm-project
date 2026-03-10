@@ -341,7 +341,7 @@ define i8 @add_i8_monotonic(ptr %mem, i8 %operand) {
 ; PPC32-NEXT:    and r8, r8, r6
 ; PPC32-NEXT:    or r8, r8, r9
 ; PPC32-NEXT:    stwcx. r8, 0, r5
-; PPC32-NEXT:    bne cr0, .LBB12_1
+; PPC32-NEXT:    bne- cr0, .LBB12_1
 ; PPC32-NEXT:  # %bb.2:
 ; PPC32-NEXT:    srw r3, r7, r3
 ; PPC32-NEXT:    clrlwi r3, r3, 24
@@ -362,7 +362,7 @@ define i8 @add_i8_monotonic(ptr %mem, i8 %operand) {
 ; PPC64-NEXT:    and r8, r8, r6
 ; PPC64-NEXT:    or r8, r8, r9
 ; PPC64-NEXT:    stwcx. r8, 0, r5
-; PPC64-NEXT:    bne cr0, .LBB12_1
+; PPC64-NEXT:    bne- cr0, .LBB12_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    srw r3, r7, r3
 ; PPC64-NEXT:    clrlwi r3, r3, 24
@@ -388,7 +388,7 @@ define i16 @xor_i16_seq_cst(ptr %mem, i16 %operand) {
 ; PPC32-NEXT:    and r8, r8, r6
 ; PPC32-NEXT:    or r8, r8, r9
 ; PPC32-NEXT:    stwcx. r8, 0, r3
-; PPC32-NEXT:    bne cr0, .LBB13_1
+; PPC32-NEXT:    bne- cr0, .LBB13_1
 ; PPC32-NEXT:  # %bb.2:
 ; PPC32-NEXT:    srw r3, r7, r5
 ; PPC32-NEXT:    clrlwi r3, r3, 16
@@ -412,7 +412,7 @@ define i16 @xor_i16_seq_cst(ptr %mem, i16 %operand) {
 ; PPC64-NEXT:    and r8, r8, r6
 ; PPC64-NEXT:    or r8, r8, r9
 ; PPC64-NEXT:    stwcx. r8, 0, r3
-; PPC64-NEXT:    bne cr0, .LBB13_1
+; PPC64-NEXT:    bne- cr0, .LBB13_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    srw r3, r7, r5
 ; PPC64-NEXT:    clrlwi r3, r3, 16
@@ -428,7 +428,7 @@ define i32 @xchg_i32_acq_rel(ptr %mem, i32 %operand) {
 ; CHECK-NEXT:  .LBB14_1:
 ; CHECK-NEXT:    lwarx r5, 0, r3
 ; CHECK-NEXT:    stwcx. r4, 0, r3
-; CHECK-NEXT:    bne cr0, .LBB14_1
+; CHECK-NEXT:    bne- cr0, .LBB14_1
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    mr r3, r5
 ; CHECK-NEXT:    lwsync
@@ -458,7 +458,7 @@ define i64 @and_i64_release(ptr %mem, i64 %operand) {
 ; PPC64-NEXT:    ldarx r5, 0, r3
 ; PPC64-NEXT:    and r6, r4, r5
 ; PPC64-NEXT:    stdcx. r6, 0, r3
-; PPC64-NEXT:    bne cr0, .LBB15_1
+; PPC64-NEXT:    bne- cr0, .LBB15_1
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    mr r3, r5
 ; PPC64-NEXT:    blr
@@ -469,39 +469,20 @@ define i64 @and_i64_release(ptr %mem, i64 %operand) {
 define half @load_atomic_f16__seq_cst(ptr %ptr) {
 ; PPC32-LABEL: load_atomic_f16__seq_cst:
 ; PPC32:       # %bb.0:
-; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stwu r1, -16(r1)
-; PPC32-NEXT:    stw r0, 20(r1)
-; PPC32-NEXT:    .cfi_def_cfa_offset 16
-; PPC32-NEXT:    .cfi_offset lr, 4
 ; PPC32-NEXT:    sync
 ; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    cmpw cr7, r3, r3
 ; PPC32-NEXT:    bne- cr7, .+4
 ; PPC32-NEXT:    isync
-; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    lwz r0, 20(r1)
-; PPC32-NEXT:    addi r1, r1, 16
-; PPC32-NEXT:    mtlr r0
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: load_atomic_f16__seq_cst:
 ; PPC64:       # %bb.0:
-; PPC64-NEXT:    mflr r0
-; PPC64-NEXT:    stdu r1, -112(r1)
-; PPC64-NEXT:    std r0, 128(r1)
-; PPC64-NEXT:    .cfi_def_cfa_offset 112
-; PPC64-NEXT:    .cfi_offset lr, 16
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:    lhz r3, 0(r3)
 ; PPC64-NEXT:    cmpd cr7, r3, r3
 ; PPC64-NEXT:    bne- cr7, .+4
 ; PPC64-NEXT:    isync
-; PPC64-NEXT:    bl __extendhfsf2
-; PPC64-NEXT:    nop
-; PPC64-NEXT:    addi r1, r1, 112
-; PPC64-NEXT:    ld r0, 16(r1)
-; PPC64-NEXT:    mtlr r0
 ; PPC64-NEXT:    blr
   %val = load atomic half, ptr %ptr seq_cst, align 2
   ret half %val
@@ -575,44 +556,11 @@ define double @load_atomic_f64__seq_cst(ptr %ptr) {
 }
 
 define void @store_atomic_f16__seq_cst(ptr %ptr, half %val1) {
-; PPC32-LABEL: store_atomic_f16__seq_cst:
-; PPC32:       # %bb.0:
-; PPC32-NEXT:    mflr r0
-; PPC32-NEXT:    stwu r1, -16(r1)
-; PPC32-NEXT:    stw r0, 20(r1)
-; PPC32-NEXT:    .cfi_def_cfa_offset 16
-; PPC32-NEXT:    .cfi_offset lr, 4
-; PPC32-NEXT:    .cfi_offset r30, -8
-; PPC32-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
-; PPC32-NEXT:    mr r30, r3
-; PPC32-NEXT:    bl __truncsfhf2
-; PPC32-NEXT:    sync
-; PPC32-NEXT:    sth r3, 0(r30)
-; PPC32-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
-; PPC32-NEXT:    lwz r0, 20(r1)
-; PPC32-NEXT:    addi r1, r1, 16
-; PPC32-NEXT:    mtlr r0
-; PPC32-NEXT:    blr
-;
-; PPC64-LABEL: store_atomic_f16__seq_cst:
-; PPC64:       # %bb.0:
-; PPC64-NEXT:    mflr r0
-; PPC64-NEXT:    stdu r1, -128(r1)
-; PPC64-NEXT:    std r0, 144(r1)
-; PPC64-NEXT:    .cfi_def_cfa_offset 128
-; PPC64-NEXT:    .cfi_offset lr, 16
-; PPC64-NEXT:    .cfi_offset r30, -16
-; PPC64-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
-; PPC64-NEXT:    mr r30, r3
-; PPC64-NEXT:    bl __truncsfhf2
-; PPC64-NEXT:    nop
-; PPC64-NEXT:    sync
-; PPC64-NEXT:    sth r3, 0(r30)
-; PPC64-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
-; PPC64-NEXT:    addi r1, r1, 128
-; PPC64-NEXT:    ld r0, 16(r1)
-; PPC64-NEXT:    mtlr r0
-; PPC64-NEXT:    blr
+; CHECK-LABEL: store_atomic_f16__seq_cst:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sync
+; CHECK-NEXT:    sth r4, 0(r3)
+; CHECK-NEXT:    blr
   store atomic half %val1, ptr %ptr seq_cst, align 2
   ret void
 }

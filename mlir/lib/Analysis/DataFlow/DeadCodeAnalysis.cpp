@@ -149,6 +149,14 @@ LogicalResult DeadCodeAnalysis::initialize(Operation *top) {
            << OpWithFlags(top, OpPrintingFlags().skipRegions());
   }
 
+  // If the top level op is a callable, we cannot identify all of its callers.
+  if (isa<CallableOpInterface>(top)) {
+    auto *state = getOrCreate<PredecessorState>(getProgramPointAfter(top));
+    propagateIfChanged(state, state->setHasUnknownPredecessors());
+    LDBG() << "[init] Marked callable root as having unknown predecessors: "
+           << OpWithFlags(top, OpPrintingFlags().skipRegions());
+  }
+
   // Mark as overdefined the predecessors of symbol callables with potentially
   // unknown predecessors.
   initializeSymbolCallables(top);
@@ -267,8 +275,8 @@ LogicalResult DeadCodeAnalysis::initializeRecursively(Operation *op) {
     // has one. If so, update the flag to allow for resolving callables in
     // nested regions.
     bool savedHasSymbolTable = hasSymbolTable;
-    auto restoreHasSymbolTable =
-        llvm::make_scope_exit([&]() { hasSymbolTable = savedHasSymbolTable; });
+    llvm::scope_exit restoreHasSymbolTable(
+        [&]() { hasSymbolTable = savedHasSymbolTable; });
     if (!hasSymbolTable && op->hasTrait<OpTrait::SymbolTable>())
       hasSymbolTable = true;
 
@@ -501,11 +509,10 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
     return;
 
   SmallVector<RegionSuccessor> successors;
-  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
-    terminator.getSuccessorRegions(*operands, successors);
-  else
-    branch.getSuccessorRegions(op->getParentRegion(), successors);
-
+  auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
+  if (!terminator)
+    return;
+  terminator.getSuccessorRegions(*operands, successors);
   visitRegionBranchEdges(branch, op, successors);
 }
 
@@ -515,21 +522,22 @@ void DeadCodeAnalysis::visitRegionBranchEdges(
   for (const RegionSuccessor &successor : successors) {
     // The successor can be either an entry block or the parent operation.
     ProgramPoint *point =
-        successor.getSuccessor()
-            ? getProgramPointBefore(&successor.getSuccessor()->front())
-            : getProgramPointAfter(regionBranchOp);
+        successor.isParent()
+            ? getProgramPointAfter(regionBranchOp)
+            : getProgramPointBefore(&successor.getSuccessor()->front());
 
     // Mark the entry block as executable.
     auto *state = getOrCreate<Executable>(point);
     propagateIfChanged(state, state->setToLive());
-    LDBG() << "Marked region successor live: " << point;
+    LDBG() << "Marked region successor live: " << *point;
 
     // Add the parent op as a predecessor.
     auto *predecessors = getOrCreate<PredecessorState>(point);
     propagateIfChanged(
         predecessors,
-        predecessors->join(predecessorOp, successor.getSuccessorInputs()));
-    LDBG() << "Added region branch as predecessor for successor: " << point;
+        predecessors->join(predecessorOp,
+                           regionBranchOp.getSuccessorInputs(successor)));
+    LDBG() << "Added region branch as predecessor for successor: " << *point;
   }
 }
 

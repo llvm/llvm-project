@@ -2043,7 +2043,8 @@ static bool WantTypesInContext(SemaCodeCompletion::ParserCompletionContext CCC,
 static PrintingPolicy getCompletionPrintingPolicy(const ASTContext &Context,
                                                   const Preprocessor &PP) {
   PrintingPolicy Policy = Sema::getPrintingPolicy(Context, PP);
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   Policy.SuppressStrongLifetime = true;
   Policy.SuppressUnwrittenScope = true;
   Policy.CleanUglifiedParameters = true;
@@ -2070,7 +2071,7 @@ static const char *GetCompletionTypeString(QualType T, ASTContext &Context,
 
     // Anonymous tag types are constant strings.
     if (const TagType *TagT = dyn_cast<TagType>(T))
-      if (TagDecl *Tag = TagT->getOriginalDecl())
+      if (TagDecl *Tag = TagT->getDecl())
         if (!Tag->hasNameForLinkage()) {
           switch (Tag->getTagKind()) {
           case TagTypeKind::Struct:
@@ -8442,6 +8443,11 @@ void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
   // If necessary, apply function/array conversion to the receiver.
   // C99 6.7.5.3p[7,8].
   if (RecExpr) {
+    // If the receiver expression has no type (e.g., a parenthesized C-style
+    // cast that hasn't been resolved), bail out to avoid dereferencing a null
+    // type.
+    if (RecExpr->getType().isNull())
+      return;
     ExprResult Conv = SemaRef.DefaultFunctionArrayLvalueConversion(RecExpr);
     if (Conv.isInvalid()) // conversion failed. bail.
       return;
@@ -10208,6 +10214,24 @@ void SemaCodeCompletion::CodeCompletePreprocessorDirective(bool InConditional) {
   Builder.AddPlaceholderChunk("message");
   Results.AddResult(Builder.TakeString());
 
+  if (getLangOpts().C23) {
+    // #embed "file"
+    Builder.AddTypedTextChunk("embed");
+    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    Builder.AddTextChunk("\"");
+    Builder.AddPlaceholderChunk("file");
+    Builder.AddTextChunk("\"");
+    Results.AddResult(Builder.TakeString());
+
+    // #embed <file>
+    Builder.AddTypedTextChunk("embed");
+    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    Builder.AddTextChunk("<");
+    Builder.AddPlaceholderChunk("file");
+    Builder.AddTextChunk(">");
+    Results.AddResult(Builder.TakeString());
+  }
+
   // Note: #ident and #sccs are such crazy anachronisms that we don't provide
   // completions for them. And __include_macros is a Clang-internal extension
   // that we don't want to encourage anyone to use.
@@ -10348,7 +10372,8 @@ void SemaCodeCompletion::CodeCompleteIncludedFile(llvm::StringRef Dir,
     const StringRef &Dirname = llvm::sys::path::filename(Dir);
     const bool isQt = Dirname.starts_with("Qt") || Dirname == "ActiveQt";
     const bool ExtensionlessHeaders =
-        IsSystem || isQt || Dir.ends_with(".framework/Headers");
+        IsSystem || isQt || Dir.ends_with(".framework/Headers") ||
+        IncludeDir.ends_with("/include") || IncludeDir.ends_with("\\include");
     std::error_code EC;
     unsigned Count = 0;
     for (auto It = FS.dir_begin(Dir, EC);

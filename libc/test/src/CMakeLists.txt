@@ -87,6 +87,10 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(termios)
 endif()
 
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_subdirectory(mathvec)
+endif()
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -96,6 +100,7 @@ add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(dirent)
 add_subdirectory(locale)
+add_subdirectory(nl_types)
 add_subdirectory(signal)
 add_subdirectory(spawn)
 

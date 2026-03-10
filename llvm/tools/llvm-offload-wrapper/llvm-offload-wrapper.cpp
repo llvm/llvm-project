@@ -64,7 +64,7 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
 
   LLVMContext Context;
   Module M("offload.wrapper.module", Context);
-  M.setTargetTriple(Triple());
+  M.setTargetTriple(llvm::Triple(TheTriple));
 
   switch (Kind) {
   case llvm::object::OFK_OpenMP:
@@ -82,6 +82,10 @@ static Error wrapImages(ArrayRef<ArrayRef<char>> BuffersToWrap) {
   case llvm::object::OFK_HIP:
     if (Error Err = offloading::wrapHIPBinary(
             M, BuffersToWrap.front(), offloading::getOffloadEntryArray(M)))
+      return Err;
+    break;
+  case llvm::object::OFK_SYCL:
+    if (Error Err = offloading::wrapSYCLBinaries(M, BuffersToWrap.front()))
       return Err;
     break;
   default:

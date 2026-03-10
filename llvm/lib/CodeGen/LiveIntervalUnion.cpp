@@ -79,6 +79,19 @@ void LiveIntervalUnion::extract(const LiveInterval &VirtReg,
   }
 }
 
+void LiveIntervalUnion::clearAllSegmentsReferencing(
+    const LiveInterval &VirtRegLI) {
+  ++Tag;
+
+  // Remove all segments referencing VirtReg.
+  for (SegmentIter SegPos = Segments.begin(); SegPos.valid();) {
+    if (SegPos.value()->reg() == VirtRegLI.reg())
+      SegPos.erase();
+    else
+      ++SegPos;
+  }
+}
+
 void
 LiveIntervalUnion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
   if (empty()) {

@@ -43,8 +43,8 @@ using namespace mlir::sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 #ifndef NDEBUG
-LLVM_ATTRIBUTE_UNUSED static void dumpIndexMemRef(OpBuilder &builder,
-                                                  Location loc, Value memref) {
+[[maybe_unused]] static void dumpIndexMemRef(OpBuilder &builder, Location loc,
+                                             Value memref) {
   memref = memref::CastOp::create(
       builder, loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
   createFuncCall(builder, loc, "printMemrefInd", TypeRange{},
@@ -344,7 +344,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
       // Reverse queue into a stack.
       std::reverse(remDepStack[t][lvl].begin(), remDepStack[t][lvl].end());
       for (auto [loop, coeff] : dependentLvlMap[t][lvl])
-        depRedOrder.emplace_back(std::make_tuple(loop, t, lvl));
+        depRedOrder.emplace_back(loop, t, lvl);
     }
 
     if (depRedOrder.empty())

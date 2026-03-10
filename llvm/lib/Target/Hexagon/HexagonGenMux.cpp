@@ -43,7 +43,6 @@
 #include <cassert>
 #include <iterator>
 #include <limits>
-#include <utility>
 
 #define DEBUG_TYPE "hexmux"
 

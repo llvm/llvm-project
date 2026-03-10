@@ -9,7 +9,8 @@
 @B = external addrspace(3) global [0 x i32]
 
 define amdgpu_kernel void @kernel_0() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_0() #0 !llvm.amdgcn.lds.kernel.id !1 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_0
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {{.*}}.amdgcn.lds.kernel.id [[META1:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_0.lds) ]
 ; CHECK-NEXT:    call void @call_store_A()
 ; CHECK-NEXT:    ret void
@@ -19,7 +20,8 @@ define amdgpu_kernel void @kernel_0() {
 }
 
 define amdgpu_kernel void @kernel_1() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_1() !llvm.amdgcn.lds.kernel.id !2 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_1
+; CHECK-SAME: () {{.*}}.amdgcn.lds.kernel.id [[META2:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel_1.dynlds) ]
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_B_ptr()
 ; CHECK-NEXT:    ret void
@@ -29,7 +31,8 @@ define amdgpu_kernel void @kernel_1() {
 }
 
 define amdgpu_kernel void @kernel_2() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_2() #0 !llvm.amdgcn.lds.kernel.id !3 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_2
+; CHECK-SAME: () #[[ATTR0]] {{.*}}.amdgcn.lds.kernel.id [[META3:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_2.lds) ]
 ; CHECK-NEXT:    call void @store_A()
 ; CHECK-NEXT:    ret void
@@ -39,7 +42,8 @@ define amdgpu_kernel void @kernel_2() {
 }
 
 define amdgpu_kernel void @kernel_3() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_3() !llvm.amdgcn.lds.kernel.id !4 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_3
+; CHECK-SAME: () {{.*}}.amdgcn.lds.kernel.id [[META4:![0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel_3.dynlds) ]
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_B_ptr()
 ; CHECK-NEXT:    ret void
@@ -60,9 +64,8 @@ define private void @call_store_A() {
 define private void @store_A() {
 ; CHECK-LABEL: define private void @store_A() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [4 x [1 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[A]], align 4
-; CHECK-NEXT:    [[A1:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [4 x [1 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[A]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(3) [[A1]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP3]], ptr null, align 8
 ; CHECK-NEXT:    ret void
@@ -74,9 +77,8 @@ define private void @store_A() {
 define private ptr @get_B_ptr() {
 ; CHECK-LABEL: define private ptr @get_B_ptr() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[B]], align 4
-; CHECK-NEXT:    [[B1:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [4 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[B1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[B]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(3) [[B1]] to ptr
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;

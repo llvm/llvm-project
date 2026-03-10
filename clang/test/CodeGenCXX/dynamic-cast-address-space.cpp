@@ -24,11 +24,9 @@ B fail;
 // CHECK-LABEL: define dso_local noundef nonnull align 8 dereferenceable(8) ptr @_Z1fP1A(
 // CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[EXN_SLOT:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
@@ -61,11 +59,9 @@ B fail;
 // WITH-NONZERO-DEFAULT-AS-LABEL: define spir_func noundef align 8 dereferenceable(8) ptr addrspace(4) @_Z1fP1A(
 // WITH-NONZERO-DEFAULT-AS-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] personality ptr addrspace(4) @__gxx_personality_v0 {
 // WITH-NONZERO-DEFAULT-AS-NEXT:  entry:
-// WITH-NONZERO-DEFAULT-AS-NEXT:    [[RETVAL:%.*]] = alloca ptr addrspace(4), align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[EXN_SLOT:%.*]] = alloca ptr addrspace(4), align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[EHSELECTOR_SLOT:%.*]] = alloca i32, align 4
-// WITH-NONZERO-DEFAULT-AS-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
 // WITH-NONZERO-DEFAULT-AS-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
 // WITH-NONZERO-DEFAULT-AS-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
@@ -118,10 +114,8 @@ const B& f(A *a) {
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR4]] = { noreturn }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // WITH-NONZERO-DEFAULT-AS: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// WITH-NONZERO-DEFAULT-AS: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// WITH-NONZERO-DEFAULT-AS: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// WITH-NONZERO-DEFAULT-AS: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

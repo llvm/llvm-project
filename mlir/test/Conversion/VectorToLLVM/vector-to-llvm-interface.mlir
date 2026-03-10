@@ -726,6 +726,20 @@ func.func @insert_scalar_into_vec_2d_f32_dynamic_idx_fail(%arg0: vector<2x16xf32
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/177829:
+// Inserting a 1D sub-vector at a dynamic position into a 2D vector must not
+// crash. llvm.insertvalue does not support dynamic dimensions, so the pattern
+// must bail out gracefully.
+func.func @insert_vec_1d_into_vec_2d_dynamic_idx_fail(%arg0: vector<4xi1>, %arg1: vector<2x4xi1>, %idx: index) -> vector<2x4xi1> {
+  %0 = vector.insert %arg0, %arg1[%idx] : vector<4xi1> into vector<2x4xi1>
+  return %0 : vector<2x4xi1>
+}
+
+// CHECK-LABEL: @insert_vec_1d_into_vec_2d_dynamic_idx_fail
+//       CHECK:   vector.insert
+
+// -----
+
 func.func @insert_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg : vector<4x1xf32>) -> vector<4x1xf32> {
   %0 = arith.constant 0 : index
   %1 = arith.constant 1.0 : f32
@@ -2213,23 +2227,6 @@ func.func @compress_store_op_with_alignment(%arg0: memref<?xindex>, %arg1: vecto
 }
 // CHECK-LABEL: func @compress_store_op_with_alignment
 // CHECK: "llvm.intr.masked.compressstore"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{}, {llvm.align = 8 : i64}, {}]}> : (vector<11xi64>, !llvm.ptr, vector<11xi1>) -> ()
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// vector.splat
-//===----------------------------------------------------------------------===//
-
-// vector.splat is converted to vector.broadcast. Then, vector.broadcast is converted to LLVM.
-// CHECK-LABEL: @splat_0d
-// CHECK-NOT: splat
-// CHECK: return
-func.func @splat_0d(%elt: f32) -> (vector<f32>, vector<4xf32>, vector<[4]xf32>) {
-  %a = vector.splat %elt : vector<f32>
-  %b = vector.splat %elt : vector<4xf32>
-  %c = vector.splat %elt : vector<[4]xf32>
-  return %a, %b, %c : vector<f32>, vector<4xf32>, vector<[4]xf32>
-}
 
 // -----
 

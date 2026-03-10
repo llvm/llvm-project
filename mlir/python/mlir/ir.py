@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from ._mlir_libs._mlir.ir import *
@@ -12,7 +12,7 @@ from ._mlir_libs._mlir.ir import _GlobalDebug
 from ._mlir_libs._mlir import (
     register_type_caster,
     register_value_caster,
-    globals,
+    globals as _globals,
 )
 from ._mlir_libs import (
     get_dialect_registry,
@@ -22,7 +22,7 @@ from ._mlir_libs import (
 
 
 @contextmanager
-def loc_tracebacks(*, max_depth: int | None = None) -> Iterable[None]:
+def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None]:
     """Enables automatic traceback-based locations for MLIR operations.
 
     Operations created within this context will have their location
@@ -32,17 +32,18 @@ def loc_tracebacks(*, max_depth: int | None = None) -> Iterable[None]:
       max_depth: Maximum number of frames to include in the location.
         If None, the default limit is used.
     """
-    old_enabled = globals.loc_tracebacks_enabled()
-    old_limit = globals.loc_tracebacks_frame_limit()
+    old_enabled = _globals.loc_tracebacks_enabled()
+    old_limit = _globals.loc_tracebacks_frame_limit()
+    max_depth = old_limit if max_depth is None else max_depth
     try:
-        globals.set_loc_tracebacks_frame_limit(max_depth)
+        _globals.set_loc_tracebacks_frame_limit(max_depth)
         if not old_enabled:
-            globals.set_loc_tracebacks_enabled(True)
-            yield
+            _globals.set_loc_tracebacks_enabled(True)
+        yield
     finally:
         if not old_enabled:
-            globals.set_loc_tracebacks_enabled(False)
-        globals.set_loc_tracebacks_frame_limit(old_limit)
+            _globals.set_loc_tracebacks_enabled(False)
+        _globals.set_loc_tracebacks_frame_limit(old_limit)
 
 
 # Convenience decorator for registering user-friendly Attribute builders.

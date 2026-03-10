@@ -126,8 +126,7 @@ hash_code hash_value(const ComplexValue &Arg) {
 } // end namespace
 typedef SmallVector<struct ComplexValue, 2> ComplexValues;
 
-namespace llvm {
-template <> struct DenseMapInfo<ComplexValue> {
+template <> struct llvm::DenseMapInfo<ComplexValue> {
   static inline ComplexValue getEmptyKey() {
     return {DenseMapInfo<Value *>::getEmptyKey(),
             DenseMapInfo<Value *>::getEmptyKey()};
@@ -144,7 +143,6 @@ template <> struct DenseMapInfo<ComplexValue> {
     return LHS.Real == RHS.Real && LHS.Imag == RHS.Imag;
   }
 };
-} // end namespace llvm
 
 namespace {
 template <typename T, typename IterT>
@@ -160,10 +158,7 @@ public:
   static char ID;
 
   ComplexDeinterleavingLegacyPass(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {
-    initializeComplexDeinterleavingLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), TM(TM) {}
 
   StringRef getPassName() const override {
     return "Complex Deinterleaving Pass";
@@ -2436,7 +2431,7 @@ void ComplexDeinterleavingGraph::processReductionSingle(
 
   Value *NewInit = nullptr;
   if (auto *C = dyn_cast<Constant>(Init)) {
-    if (C->isZeroValue())
+    if (C->isNullValue())
       NewInit = Constant::getNullValue(NewVTy);
   }
 
@@ -2477,8 +2472,10 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *FinalReductionReal = ReductionInfo[Real].second;
   auto *FinalReductionImag = ReductionInfo[Imag].second;
 
-  Builder.SetInsertPoint(
-      &*FinalReductionReal->getParent()->getFirstInsertionPt());
+  auto *Br = cast<BranchInst>(BackEdge->getTerminator());
+  BasicBlock *ExitBB = Br->getSuccessor(Br->getSuccessor(0) == BackEdge);
+  Builder.SetInsertPoint(&*ExitBB->getFirstInsertionPt());
+
   auto *Deinterleave = Builder.CreateIntrinsic(Intrinsic::vector_deinterleave2,
                                                OperationReplacement->getType(),
                                                OperationReplacement);

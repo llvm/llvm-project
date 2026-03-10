@@ -135,7 +135,6 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 add_subdirectory(BLAKE3)
-add_subdirectory(LSP)
 
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
@@ -149,6 +148,7 @@ add_llvm_component_library(LLVMSupport
   AArch64BuildAttributes.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
+  AllocToken.cpp
   Allocator.cpp
   AutoConvert.cpp
   Base64.cpp
@@ -201,12 +201,14 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
+  Hash.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp
   InstructionCost.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
+  Jobserver.cpp
   JSON.cpp
   KnownBits.cpp
   KnownFPClass.cpp
@@ -233,6 +235,7 @@ add_llvm_component_library(LLVMSupport
   PluginLoader.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
+  IntegerInclusiveInterval.cpp
   Regex.cpp
   RewriteBuffer.cpp
   RewriteRope.cpp
@@ -309,6 +312,7 @@ add_llvm_component_library(LLVMSupport
   Threading.cpp
   Valgrind.cpp
   Watchdog.cpp
+  zOSLibFunctions.cpp
 
   ADDITIONAL_HEADER_DIRS
   Unix
@@ -316,6 +320,9 @@ add_llvm_component_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ADT
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
+
+  PRECOMPILE_HEADERS
+  [["llvm/Support/pch.h"]]
 
   LINK_LIBS
   ${system_libs} ${imported_libs} ${delayload_flags}
@@ -391,3 +398,6 @@ target_include_directories(LLVMSupport
   PRIVATE
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
 )
+
+# SupportLSP depends on Support and therefore must be included afterwards.
+add_subdirectory(LSP)

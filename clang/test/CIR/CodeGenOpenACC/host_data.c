@@ -38,7 +38,7 @@ void acc_host_data(int cond, int var1, int var2, int *arr) {
   // CHECK-NEXT: %[[USE_DEV1:.*]] = acc.use_device varPtr(%[[V1]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "var1"}
   // CHECK-NEXT: %[[USE_DEV2:.*]] = acc.use_device varPtr(%[[V2]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "var2"}
   // CHECK-NEXT: %[[LOAD_COND:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[COND_BOOL:.*]] = cir.cast(int_to_bool, %[[LOAD_COND]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[COND_BOOL:.*]] = cir.cast int_to_bool %[[LOAD_COND]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[COND_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_BOOL]] : !cir.bool to i1
   // CHECK-NEXT: acc.host_data if(%[[COND_CAST]]) dataOperands(%[[USE_DEV1]], %[[USE_DEV2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
@@ -49,7 +49,7 @@ void acc_host_data(int cond, int var1, int var2, int *arr) {
   // CHECK-NEXT: %[[USE_DEV1:.*]] = acc.use_device varPtr(%[[V1]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "var1"}
   // CHECK-NEXT: %[[USE_DEV2:.*]] = acc.use_device varPtr(%[[V2]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "var2"}
   // CHECK-NEXT: %[[LOAD_COND:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[COND_BOOL:.*]] = cir.cast(int_to_bool, %[[LOAD_COND]] : !s32i), !cir.bool
+  // CHECK-NEXT: %[[COND_BOOL:.*]] = cir.cast int_to_bool %[[LOAD_COND]] : !s32i -> !cir.bool
   // CHECK-NEXT: %[[COND_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_BOOL]] : !cir.bool to i1
   // CHECK-NEXT: acc.host_data if(%[[COND_CAST]]) dataOperands(%[[USE_DEV1]], %[[USE_DEV2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator

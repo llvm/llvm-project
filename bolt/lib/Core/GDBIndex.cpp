@@ -100,10 +100,19 @@ void GDBIndex::updateGdbIndexSection(
   Data += SymbolTableOffset - CUTypesOffset;
 
   // Calculate the size of the new address table.
+  const auto IsValidAddressRange = [](const DebugAddressRange &Range) {
+    return Range.HighPC > Range.LowPC;
+  };
+
   uint32_t NewAddressTableSize = 0;
   for (const auto &CURangesPair : ARangesSectionWriter.getCUAddressRanges()) {
     const SmallVector<DebugAddressRange, 2> &Ranges = CURangesPair.second;
-    NewAddressTableSize += Ranges.size() * 20;
+    NewAddressTableSize +=
+        llvm::count_if(Ranges,
+                       [&IsValidAddressRange](const DebugAddressRange &Range) {
+                         return IsValidAddressRange(Range);
+                       }) *
+        20;
   }
 
   // Difference between old and new table (and section) sizes.
@@ -201,10 +210,15 @@ void GDBIndex::updateGdbIndexSection(
     const uint32_t UpdatedCUIndex = RemapCUIndex(OriginalCUIndex);
     const DebugAddressRangesVector &Ranges = CURangesPair.second;
     for (const DebugAddressRange &Range : Ranges) {
-      write64le(Buffer, Range.LowPC);
-      write64le(Buffer + 8, Range.HighPC);
-      write32le(Buffer + 16, UpdatedCUIndex);
-      Buffer += 20;
+      // Don't emit ranges that break gdb,
+      // https://sourceware.org/bugzilla/show_bug.cgi?id=33247.
+      // We've seen [0, 0) ranges here, for instance.
+      if (IsValidAddressRange(Range)) {
+        write64le(Buffer, Range.LowPC);
+        write64le(Buffer + 8, Range.HighPC);
+        write32le(Buffer + 16, UpdatedCUIndex);
+        Buffer += 20;
+      }
     }
   }
 

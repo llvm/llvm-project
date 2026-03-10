@@ -378,6 +378,8 @@ struct ScalarEnumerationTraits<TargetStackID::Value> {
     IO.enumCase(ID, "default", TargetStackID::Default);
     IO.enumCase(ID, "sgpr-spill", TargetStackID::SGPRSpill);
     IO.enumCase(ID, "scalable-vector", TargetStackID::ScalableVector);
+    IO.enumCase(ID, "scalable-predicate-vector",
+                TargetStackID::ScalablePredicateVector);
     IO.enumCase(ID, "wasm-local", TargetStackID::WasmLocal);
     IO.enumCase(ID, "noalloc", TargetStackID::NoAlloc);
   }
@@ -829,6 +831,7 @@ struct MachineFunction {
   MachineJumpTable JumpTableInfo;
   std::vector<StringValue> MachineMetadataNodes;
   std::vector<CalledGlobal> CalledGlobals;
+  std::vector<FlowStringValue> PrefetchTargets;
   BlockStringValue Body;
 };
 
@@ -890,6 +893,10 @@ template <> struct MappingTraits<MachineFunction> {
     if (!YamlIO.outputting() || !MF.CalledGlobals.empty())
       YamlIO.mapOptional("calledGlobals", MF.CalledGlobals,
                          std::vector<CalledGlobal>());
+    if (!YamlIO.outputting() || !MF.PrefetchTargets.empty())
+      YamlIO.mapOptional("prefetch-targets", MF.PrefetchTargets,
+                         std::vector<FlowStringValue>());
+
     YamlIO.mapOptional("body", MF.Body, BlockStringValue());
   }
 };

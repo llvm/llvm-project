@@ -615,7 +615,7 @@ std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
     if (!GV->getValueType()->isSized() || GV->hasExternalWeakLinkage() ||
         !GV->hasInitializer() || GV->isInterposable())
       return std::nullopt;
-    return Align(DL.getTypeAllocSize(GV->getValueType()), GV->getAlign());
+    return Align(TypeSize::getFixed(GV->getGlobalSize(DL)), GV->getAlign());
   }
 
   if (auto *A = dyn_cast<Argument>(Ptr)) {
@@ -707,8 +707,8 @@ Value *llvm::lowerObjectSizeCall(
 
       // The non-constant size expression cannot evaluate to -1.
       if (!isa<Constant>(Size) || !isa<Constant>(Offset))
-        Builder.CreateAssumption(
-            Builder.CreateICmpNE(Ret, ConstantInt::get(ResultType, -1)));
+        Builder.CreateAssumption(Builder.CreateICmpNE(
+            Ret, ConstantInt::getAllOnesValue(ResultType)));
 
       return Ret;
     }
@@ -739,29 +739,30 @@ combinePossibleConstantValues(std::optional<APInt> LHS,
 }
 
 static std::optional<APInt> aggregatePossibleConstantValuesImpl(
-    const Value *V, ObjectSizeOpts::Mode EvalMode, unsigned recursionDepth) {
+    const Value *V, ObjectSizeOpts::Mode EvalMode, unsigned BitWidth,
+    unsigned recursionDepth) {
   constexpr unsigned maxRecursionDepth = 4;
   if (recursionDepth == maxRecursionDepth)
     return std::nullopt;
 
   if (const auto *CI = dyn_cast<ConstantInt>(V)) {
-    return CI->getValue();
+    return CI->getValue().sextOrTrunc(BitWidth);
   } else if (const auto *SI = dyn_cast<SelectInst>(V)) {
     return combinePossibleConstantValues(
         aggregatePossibleConstantValuesImpl(SI->getTrueValue(), EvalMode,
-                                            recursionDepth + 1),
+                                            BitWidth, recursionDepth + 1),
         aggregatePossibleConstantValuesImpl(SI->getFalseValue(), EvalMode,
-                                            recursionDepth + 1),
+                                            BitWidth, recursionDepth + 1),
         EvalMode);
   } else if (const auto *PN = dyn_cast<PHINode>(V)) {
     unsigned Count = PN->getNumIncomingValues();
     if (Count == 0)
       return std::nullopt;
     auto Acc = aggregatePossibleConstantValuesImpl(
-        PN->getIncomingValue(0), EvalMode, recursionDepth + 1);
+        PN->getIncomingValue(0), EvalMode, BitWidth, recursionDepth + 1);
     for (unsigned I = 1; Acc && I < Count; ++I) {
       auto Tmp = aggregatePossibleConstantValuesImpl(
-          PN->getIncomingValue(I), EvalMode, recursionDepth + 1);
+          PN->getIncomingValue(I), EvalMode, BitWidth, recursionDepth + 1);
       Acc = combinePossibleConstantValues(Acc, Tmp, EvalMode);
     }
     return Acc;
@@ -771,9 +772,10 @@ static std::optional<APInt> aggregatePossibleConstantValuesImpl(
 }
 
 static std::optional<APInt>
-aggregatePossibleConstantValues(const Value *V, ObjectSizeOpts::Mode EvalMode) {
+aggregatePossibleConstantValues(const Value *V, ObjectSizeOpts::Mode EvalMode,
+                                unsigned BitWidth) {
   if (auto *CI = dyn_cast<ConstantInt>(V))
-    return CI->getValue();
+    return CI->getValue().sextOrTrunc(BitWidth);
 
   if (EvalMode != ObjectSizeOpts::Mode::Min &&
       EvalMode != ObjectSizeOpts::Mode::Max)
@@ -782,7 +784,7 @@ aggregatePossibleConstantValues(const Value *V, ObjectSizeOpts::Mode EvalMode) {
   // Not using computeConstantRange here because we cannot guarantee it's not
   // doing optimization based on UB which we want to avoid when expanding
   // __builtin_object_size.
-  return aggregatePossibleConstantValuesImpl(V, EvalMode, 0u);
+  return aggregatePossibleConstantValuesImpl(V, EvalMode, BitWidth, 0u);
 }
 
 /// Align \p Size according to \p Alignment. If \p Size is greater than
@@ -844,9 +846,14 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
         Options.EvalMode == ObjectSizeOpts::Mode::Min
             ? ObjectSizeOpts::Mode::Max
             : ObjectSizeOpts::Mode::Min;
-    auto OffsetRangeAnalysis = [EvalMode](Value &VOffset, APInt &Offset) {
+    // For a GEPOperator the indices are first converted to offsets in the
+    // pointer’s index type, so we need to provide the index type to make sure
+    // the min/max operations are performed in correct type.
+    unsigned IdxTyBits = DL.getIndexTypeSizeInBits(V->getType());
+    auto OffsetRangeAnalysis = [EvalMode, IdxTyBits](Value &VOffset,
+                                                     APInt &Offset) {
       if (auto PossibleOffset =
-              aggregatePossibleConstantValues(&VOffset, EvalMode)) {
+              aggregatePossibleConstantValues(&VOffset, EvalMode, IdxTyBits)) {
         Offset = *PossibleOffset;
         return true;
       }
@@ -956,8 +963,9 @@ OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
     return OffsetSpan(Zero, align(Size, I.getAlign()));
 
   Value *ArraySize = I.getArraySize();
-  if (auto PossibleSize =
-          aggregatePossibleConstantValues(ArraySize, Options.EvalMode)) {
+  if (auto PossibleSize = aggregatePossibleConstantValues(
+          ArraySize, Options.EvalMode,
+          ArraySize->getType()->getScalarSizeInBits())) {
     APInt NumElems = *PossibleSize;
     if (!CheckedZextOrTrunc(NumElems))
       return ObjectSizeOffsetVisitor::unknown();
@@ -988,8 +996,8 @@ OffsetSpan ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
     if (!V->getType()->isIntegerTy())
       return V;
 
-    if (auto PossibleBound =
-            aggregatePossibleConstantValues(V, Options.EvalMode))
+    if (auto PossibleBound = aggregatePossibleConstantValues(
+            V, Options.EvalMode, V->getType()->getScalarSizeInBits()))
       return ConstantInt::get(V->getType(), *PossibleBound);
 
     return V;
@@ -1040,7 +1048,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV) {
        Options.EvalMode != ObjectSizeOpts::Mode::Min))
     return ObjectSizeOffsetVisitor::unknown();
 
-  APInt Size(IntTyBits, DL.getTypeAllocSize(GV.getValueType()));
+  APInt Size(IntTyBits, GV.getGlobalSize(DL));
   return OffsetSpan(Zero, align(Size, GV.getAlign()));
 }
 
@@ -1338,15 +1346,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
-  Value *ArraySize = Builder.CreateZExtOrTrunc(
-      I.getArraySize(),
-      DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace()));
-  assert(ArraySize->getType() == Zero->getType() &&
+  Type *IndexTy = DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace());
+  assert(IndexTy == Zero->getType() &&
          "Expected zero constant to have pointer index type");
 
-  Value *Size = Builder.CreateTypeSize(
-      ArraySize->getType(), DL.getTypeAllocSize(I.getAllocatedType()));
-  Size = Builder.CreateMul(Size, ArraySize);
+  Value *Size = Builder.CreateAllocationSize(IndexTy, &I);
   return SizeOffsetValue(Size, Zero);
 }
 

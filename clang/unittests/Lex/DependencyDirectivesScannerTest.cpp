@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
 
@@ -640,7 +641,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
   EXPECT_STREQ("@import A;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A\n;", Out));
-  EXPECT_STREQ("@import A\n;\n", Out.data());
+  EXPECT_STREQ("@import A;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A.B;\n", Out));
   EXPECT_STREQ("@import A.B;\n", Out.data());
@@ -685,18 +686,19 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ImportFailures) {
       minimizeSourceToDependencyDirectives("@import MACRO(A);\n", Out));
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import \" \";\n", Out));
 
-  ASSERT_FALSE(minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives("import <Foo.h>;\n"
                                                     "@import Foo;",
                                                     Out));
-  EXPECT_STREQ("@import Foo;\n", Out.data());
+  EXPECT_STREQ("import<Foo.h>;\n@import Foo;\n", Out.data());
 
   ASSERT_FALSE(
-      minimizeSourceToDependencyDirectives("import <Foo.h>\n"
+      minimizeSourceToDependencyDirectives("import <Foo.h>;\n"
                                            "#import <Foo.h>\n"
                                            "@;\n"
                                            "#pragma clang module import Foo",
                                            Out));
-  EXPECT_STREQ("#import <Foo.h>\n"
+  EXPECT_STREQ("import<Foo.h>;\n"
+               "#import <Foo.h>\n"
                "#pragma clang module import Foo\n",
                Out.data());
 }
@@ -1000,6 +1002,22 @@ int z = 128'78;
   EXPECT_STREQ("#include <test.h>\n", Out.data());
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, CharacterLiteralInPreprocessor) {
+  SmallVector<char, 128> Out;
+  SmallVector<dependency_directives_scan::Token, 8> Tokens;
+  SmallVector<Directive, 4> Directives;
+
+  StringRef Source = R"(
+    #if 1'2 == 12
+    #endif
+    )";
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
+  ASSERT_GE(Tokens.size(), 4u);
+  EXPECT_EQ(Tokens[2].Kind, tok::numeric_constant);
+  EXPECT_EQ(Tokens[3].Kind, tok::equalequal);
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, PragmaOnce) {
   SmallVector<char, 128> Out;
   SmallVector<dependency_directives_scan::Token, 4> Tokens;
@@ -1213,6 +1231,43 @@ TEST(MinimizeSourceToDependencyDirectivesTest, TokensBeforeEOF) {
     )";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
   EXPECT_STREQ("#ifndef A\n#define A\n#endif\n<TokBeforeEOF>\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, PreprocessedModule) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives("export __preprocessed_module M;\n"
+                                           "struct import {};\n"
+                                           "import foo;\n"
+                                           "__preprocessed_import bar;\n",
+                                           Out));
+  EXPECT_STREQ("export __preprocessed_module M;\n"
+               "__preprocessed_import bar;\n",
+               Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, ScanningPreprocessedModuleFile) {
+  StringRef Source = R"(
+    export __preprocessed_module M;
+    struct import {};
+    import foo;
+    )";
+
+  ASSERT_TRUE(clang::isPreprocessedModuleFile(Source));
+
+  Source = R"(
+    export module M;
+    struct import {};
+    import foo;
+    )";
+
+  ASSERT_FALSE(clang::isPreprocessedModuleFile(Source));
+
+  Source = R"(
+    __preprocessed_import foo;
+    )";
+  ASSERT_TRUE(clang::isPreprocessedModuleFile(Source));
 }
 
 } // end anonymous namespace

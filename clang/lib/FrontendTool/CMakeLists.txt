@@ -4,9 +4,11 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(link_libs
+  clangAnalysisScalable
   clangBasic
   clangCodeGen
   clangDriver
+  clangOptions
   clangExtractAPI
   clangFrontend
   clangRewriteFrontend

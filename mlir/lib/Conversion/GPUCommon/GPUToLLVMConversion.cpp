@@ -549,7 +549,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   // Populate all patterns from all dialects that implement the
   // `ConvertToLLVMPatternInterface` interface.
   for (Dialect *dialect : context->getLoadedDialects()) {
-    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
     if (!iface)
       continue;
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
@@ -976,6 +976,16 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   // Note: If `useBarePtrCallConv` is set in the type converter's options,
   // the value of `kernelBarePtrCallConv` will be ignored.
   OperandRange origArguments = launchOp.getKernelOperands();
+  bool effectiveBarePtr = kernelBarePtrCallConv ||
+                          getTypeConverter()->getOptions().useBarePtrCallConv;
+  if (effectiveBarePtr) {
+    for (Value arg : origArguments) {
+      if (isa<UnrankedMemRefType>(arg.getType()))
+        return rewriter.notifyMatchFailure(
+            loc, "unranked memref kernel argument is not supported with "
+                 "the bare-pointer calling convention");
+    }
+  }
   SmallVector<Value, 8> llvmArguments = getTypeConverter()->promoteOperands(
       loc, origArguments, adaptor.getKernelOperands(), rewriter,
       /*useBarePtrCallConv=*/kernelBarePtrCallConv);

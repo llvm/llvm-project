@@ -43,7 +43,7 @@ namespace {
 class HexagonTfrCleanup : public MachineFunctionPass {
 public:
   static char ID;
-  HexagonTfrCleanup() : MachineFunctionPass(ID), HII(0), TRI(0) {}
+  HexagonTfrCleanup() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "Hexagon TFR Cleanup"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -52,8 +52,8 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  const HexagonInstrInfo *HII;
-  const TargetRegisterInfo *TRI;
+  const HexagonInstrInfo *HII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
   typedef DenseMap<unsigned, uint64_t> ImmediateMap;
 

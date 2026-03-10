@@ -422,7 +422,7 @@ llvm.func @test_byval(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = readwrite, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -436,7 +436,7 @@ llvm.func @test_byval_read_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite>} {
+llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = write, inaccessibleMem = readwrite, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -451,7 +451,7 @@ llvm.func @test_byval_write_only(%ptr : !llvm.ptr) {
 
 // -----
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -472,7 +472,7 @@ llvm.func @test_byval_input_aligned(%unaligned : !llvm.ptr, %aligned : !llvm.ptr
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -496,7 +496,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -524,7 +524,7 @@ module attributes {
 
 llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
@@ -550,7 +550,7 @@ llvm.func @test_alignment_exceeded_anyway() {
 llvm.mlir.global private @unaligned_global(42 : i64) : i64
 llvm.mlir.global private @aligned_global(42 : i64) { alignment = 64 } : i64
 
-llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem  = none, targetMem0 = none, targetMem1 = none>} {
   llvm.return
 }
 
@@ -565,6 +565,52 @@ llvm.func @test_byval_global() {
   llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
   %aligned = llvm.mlir.addressof @aligned_global : !llvm.ptr
   llvm.call @aligned_byval_arg(%aligned) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+// Check that alignment information is preserved in the memcpy when inlining
+// byval arguments.
+
+llvm.func @byval_aligned_arg(%ptr : !llvm.ptr { llvm.byval = i32, llvm.align = 16 }) {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_memcpy_alignment
+// CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
+llvm.func @test_byval_memcpy_alignment(%ptr : !llvm.ptr) {
+  // Verify the memcpy carries the alignment info from the byval attribute.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
+  // CHECK-SAME: {llvm.align = 16 : i64}
+  llvm.call @byval_aligned_arg(%ptr) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
+// Check that inlining does not hoist byval allocas out of automatic allocation
+// scopes, such as parallel forall regions. Each parallel iteration must have
+// its own private copy of the byval argument.
+
+llvm.func @byval_in_parallel(%ptr : !llvm.ptr { llvm.byval = f32 }) {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_in_parallel_region
+// CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
+llvm.func @test_byval_in_parallel_region(%ptr : !llvm.ptr) {
+  %c0 = arith.constant 0 : index
+  // Verify the alloca is not hoisted out of the allocation scope.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.alloca_scope_region
+  test.alloca_scope_region {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f32
+    // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
+    llvm.call @byval_in_parallel(%ptr) : (!llvm.ptr) -> ()
+    test.region_yield %c0 : index
+  }
   llvm.return
 }
 
@@ -708,4 +754,43 @@ func.func @llvm_ret(%arg0 : i32) -> i32 {
   %res = call @func(%arg0) : (i32) -> (i32)
   // CHECK: return %[[R]]
   return %res : i32
+}
+
+// -----
+// Regression test for https://github.com/llvm/llvm-project/issues/118766
+// A callee whose body block ends with an unregistered (non-terminator) op used
+// to crash the inliner. The inliner should skip such callees instead.
+
+llvm.func @callee_malformed_terminator() -> i64 attributes {llvm.emit_c_interface} {
+  // Unregistered op acting as a fake terminator -- the function has no llvm.return.
+  "test.foo"() : () -> ()
+}
+
+// CHECK-LABEL: @caller_malformed_terminator
+llvm.func @caller_malformed_terminator() -> i64 attributes {llvm.emit_c_interface} {
+  // CHECK: llvm.call @callee_malformed_terminator
+  %0 = llvm.call @callee_malformed_terminator() : () -> i64
+  llvm.return %0 : i64
+}
+
+// -----
+// Complement to the above: a callee whose block ends with a registered
+// non-LLVM terminator that genuinely has the IsTerminator trait (cf.br) does
+// NOT trigger the guard. The call is inlined normally via the multi-block path
+// (handleTerminator uses dyn_cast for non-llvm.return ops, so cf.br is left
+// as-is and control flow reaches the llvm.return in the successor block).
+
+llvm.func @callee_cf_br_terminator(%arg0 : i64) -> i64 {
+  cf.br ^exit(%arg0 : i64)
+^exit(%val : i64):
+  llvm.return %val : i64
+}
+
+// CHECK-LABEL: @caller_cf_br_terminator
+llvm.func @caller_cf_br_terminator(%arg0 : i64) -> i64 {
+  // cf.br has IsTerminator, so isLegalToInline allows inlining.
+  // CHECK-NOT: llvm.call @callee_cf_br_terminator
+  // CHECK: llvm.return %arg0
+  %0 = llvm.call @callee_cf_br_terminator(%arg0) : (i64) -> i64
+  llvm.return %0 : i64
 }

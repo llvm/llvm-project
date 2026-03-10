@@ -33,7 +33,7 @@ using namespace sema;
 
 static bool hasMatchingEnvironmentOrNone(const ASTContext &Context,
                                          const AvailabilityAttr *AA) {
-  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  const IdentifierInfo *IIEnvironment = AA->getEnvironment();
   auto Environment = Context.getTargetInfo().getTriple().getEnvironment();
   if (!IIEnvironment || Environment == llvm::Triple::UnknownEnvironment)
     return true;
@@ -102,7 +102,7 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
       break;
     for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
       if (auto *TT = dyn_cast<TagType>(T)) {
-        D = TT->getOriginalDecl()->getDefinitionOrSelf();
+        D = TT->getDecl()->getDefinitionOrSelf();
       } else if (isa<SubstTemplateTypeParmType>(T)) {
         // A Subst* node represents a use through a template.
         // Any uses of the underlying declaration happened through it's template
@@ -676,10 +676,11 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   struct AllowWarningInSystemHeaders {
     AllowWarningInSystemHeaders(DiagnosticsEngine &E,
                                 bool AllowWarningInSystemHeaders)
-        : Engine(E), Prev(E.getSuppressSystemWarnings()) {
-      E.setSuppressSystemWarnings(!AllowWarningInSystemHeaders);
+        : Engine(E), Prev(E.getForceSystemWarnings()) {
+      if (AllowWarningInSystemHeaders)
+        Engine.setForceSystemWarnings(true);
     }
-    ~AllowWarningInSystemHeaders() { Engine.setSuppressSystemWarnings(Prev); }
+    ~AllowWarningInSystemHeaders() { Engine.setForceSystemWarnings(Prev); }
 
   private:
     DiagnosticsEngine &Engine;
@@ -1019,7 +1020,7 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
     return true;
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
-    TagDecl *TD = TT->getOriginalDecl()->getDefinitionOrSelf();
+    TagDecl *TD = TT->getDecl()->getDefinitionOrSelf();
     DiagnoseDeclAvailability(TD, Range);
 
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {

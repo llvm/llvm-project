@@ -1,0 +1,20 @@
+# Test that -waiting-on-graph-capture and -waiting-on-graph-replay round-trip.
+#
+# Compile a trivial program, run it under llvm-jitlink with
+# -waiting-on-graph-capture to produce a capture file, then replay that file
+# with -waiting-on-graph-replay.
+
+# RUN: rm -rf %t && mkdir %t
+# RUN: llc -filetype=obj -o %t/main.o %S/Inputs/main-ret-0.ll
+# RUN: llvm-jitlink -noexec -waiting-on-graph-capture %t/capture.txt %t/main.o
+# RUN: FileCheck --check-prefix=CAPTURE %s < %t/capture.txt
+# RUN: llvm-jitlink -waiting-on-graph-replay %t/capture.txt \
+# RUN:   | FileCheck --check-prefix=REPLAY %s
+
+# JITLink does not support ARM64 COFF files.
+# UNSUPPORTED: target=aarch64-{{.*}}-windows-{{.*}}
+
+# CAPTURE: simplify-and-emit
+# CAPTURE: end
+
+# REPLAY: Replaying WaitingOnGraph operations

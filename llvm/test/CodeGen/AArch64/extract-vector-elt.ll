@@ -605,7 +605,7 @@ define i32 @extract_v4i32_select(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %c
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
@@ -634,7 +634,7 @@ define i32 @extract_v4i32_select_const(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x 
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_0
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI23_0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
+; CHECK-GI-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    mov s0, v0.s[2]
 ; CHECK-GI-NEXT:    fmov w0, s0
@@ -1037,10 +1037,11 @@ entry:
 define i32 @extract_v4i32_phi(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-SD-LABEL: extract_v4i32_phi:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, #1 // =0x1
 ; CHECK-SD-NEXT:    dup v1.2s, w0
-; CHECK-SD-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-SD-NEXT:    movi v0.2s, #16
-; CHECK-SD-NEXT:    ldr d2, [x8, :lo12:.LCPI41_0]
+; CHECK-SD-NEXT:    movk x8, #2, lsl #32
+; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    add v1.2s, v1.2s, v2.2s
 ; CHECK-SD-NEXT:  .LBB41_1: // %loop
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1

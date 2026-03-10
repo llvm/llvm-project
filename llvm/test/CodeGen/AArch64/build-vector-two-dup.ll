@@ -188,11 +188,11 @@ entry:
 define <8 x i8> @test11(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test11:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.8b }, [x0]
-; CHECK-NEXT:    ld1r { v2.8b }, [x1]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NEXT:    ld1r { v0.8b }, [x0]
+; CHECK-NEXT:    ld1r { v1.8b }, [x1]
+; CHECK-NEXT:    fmov d2, d0
+; CHECK-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-NEXT:    mov v0.h[3], v2.h[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:

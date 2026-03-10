@@ -269,7 +269,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       return __empty{};
     }
 
-    using _Value = __iter_value_type<_RandomAccessIterator>;
+    using _Value = __iterator_value_type<_RandomAccessIterator>;
 
     auto __destroy = [__size](_Value* __ptr) {
       std::destroy_n(__ptr, __size);
@@ -282,7 +282,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
     // Initialize all elements to a moved-from state
     // TODO: Don't do this - this can be done in the first merge - see https://llvm.org/PR63928
     std::__construct_at(__values.get(), std::move(*__first));
-    for (__iter_diff_t<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
+    for (__iterator_difference_type<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
       std::__construct_at(__values.get() + __i, std::move(__values.get()[__i - 1]));
     }
     *__first = std::move(__values.get()[__size - 1]);

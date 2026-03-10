@@ -385,7 +385,7 @@ bool HexagonMCChecker::checkSlots() {
 bool HexagonMCChecker::checkPredicates() {
   // Check for proper use of new predicate registers.
   for (const auto &I : NewPreds) {
-    unsigned P = I;
+    MCRegister P = I;
 
     if (!Defs.count(P) || LatePreds.count(P) || Defs.count(Hexagon::P3_0)) {
       // Error out if the new predicate register is not defined,
@@ -398,7 +398,7 @@ bool HexagonMCChecker::checkPredicates() {
 
   // Check for proper use of auto-anded of predicate registers.
   for (const auto &I : LatePreds) {
-    unsigned P = I;
+    MCRegister P = I;
 
     if (LatePreds.count(P) > 1 || Defs.count(P)) {
       // Error out if predicate register defined "late" multiple times or
@@ -607,7 +607,7 @@ void HexagonMCChecker::checkRegisterCurDefs() {
 bool HexagonMCChecker::checkRegisters() {
   // Check for proper register definitions.
   for (const auto &I : Defs) {
-    unsigned R = I.first;
+    MCRegister R = I.first;
 
     if (isLoopRegister(R) && Defs.count(R) > 1 &&
         (HexagonMCInstrInfo::isInnerLoop(MCB) ||
@@ -620,8 +620,8 @@ bool HexagonMCChecker::checkRegisters() {
     if (SoftDefs.count(R)) {
       // Error out for explicit changes to registers also weakly defined
       // (e.g., "{ usr = r0; r0 = sfadd(...) }").
-      unsigned UsrR = Hexagon::USR; // Silence warning about mixed types in ?:.
-      unsigned BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
+      MCRegister UsrR = Hexagon::USR;
+      MCRegister BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
       reportErrorRegisters(BadR);
       return false;
     }
@@ -633,8 +633,8 @@ bool HexagonMCChecker::checkRegisters() {
       if (PM.count(Unconditional)) {
         // Error out on an unconditional change when there are any other
         // changes, conditional or not.
-        unsigned UsrR = Hexagon::USR;
-        unsigned BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
+        MCRegister UsrR = Hexagon::USR;
+        MCRegister BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
         reportErrorRegisters(BadR);
         return false;
       }
@@ -664,7 +664,7 @@ bool HexagonMCChecker::checkRegisters() {
 
   // Check for use of temporary definitions.
   for (const auto &I : TmpDefs) {
-    unsigned R = I;
+    MCRegister R = I;
 
     if (!Uses.count(R)) {
       // special case for vhist
@@ -765,12 +765,12 @@ void HexagonMCChecker::compoundRegisterMap(unsigned &Register) {
   }
 }
 
-void HexagonMCChecker::reportErrorRegisters(unsigned Register) {
+void HexagonMCChecker::reportErrorRegisters(MCRegister Register) {
   reportError("register `" + Twine(RI.getName(Register)) +
               "' modified more than once");
 }
 
-void HexagonMCChecker::reportErrorNewValue(unsigned Register) {
+void HexagonMCChecker::reportErrorNewValue(MCRegister Register) {
   reportError("register `" + Twine(RI.getName(Register)) +
               "' used with `.new' "
               "but not validly modified in the same packet");

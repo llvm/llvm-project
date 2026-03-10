@@ -148,13 +148,7 @@ public:
   /// Mangled name get accessor.
   ///
   /// \return
-  ///     A reference to the mangled name string object.
-  ConstString &GetMangledName() { return m_mangled; }
-
-  /// Mangled name get accessor.
-  ///
-  /// \return
-  ///     A const reference to the mangled name string object.
+  ///     The mangled name string object.
   ConstString GetMangledName() const { return m_mangled; }
 
   /// Best name get accessor.
@@ -251,7 +245,7 @@ public:
   /// \return
   ///     eManglingSchemeNone if no known mangling scheme could be identified
   ///     for s, otherwise the enumerator for the mangling scheme detected.
-  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef name);
 
   static bool IsMangledName(llvm::StringRef name);
 

@@ -20,7 +20,6 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cosh(__CLC_GENTYPE x) {
   const __CLC_GENTYPE max_cosh_arg = 0x1.65a9fap+6f;
   const __CLC_GENTYPE small_threshold = 0x1.0a2b24p+3f;
 
-  __CLC_UINTN ux = __CLC_AS_UINTN(x);
   __CLC_GENTYPE y = __clc_fabs(x);
   __CLC_UINTN aux = __CLC_AS_UINTN(y);
 

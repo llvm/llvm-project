@@ -192,7 +192,7 @@ struct AllocaDerivedValueTracker {
   SmallPtrSet<Instruction *, 32> AllocaUsers;
   SmallPtrSet<Instruction *, 32> EscapePoints;
 };
-}
+} // namespace
 
 static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
   if (F.callsFunctionThatReturnsTwice())
@@ -967,7 +967,7 @@ struct TailCallElim : public FunctionPass {
         /*BFI=*/nullptr);
   }
 };
-}
+} // namespace
 
 char TailCallElim::ID = 0;
 INITIALIZE_PASS_BEGIN(TailCallElim, "tailcallelim", "Tail Call Elimination",

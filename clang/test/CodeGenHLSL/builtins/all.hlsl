@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
+// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:   -DFNATTRS="hidden spir_func noundef" -DTARGET=spv
@@ -8,7 +8,7 @@
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK \
 // RUN:   -DFNATTRS="hidden spir_func noundef" -DTARGET=spv
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:   -DFNATTRS="hidden noundef" -DTARGET=dx

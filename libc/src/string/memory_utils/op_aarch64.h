@@ -84,8 +84,7 @@ template <size_t Size> struct Bcmp {
       uint8x16_t a = vld1q_u8(_p1);
       uint8x16_t n = vld1q_u8(_p2);
       uint8x16_t an = veorq_u8(a, n);
-      uint32x2_t an_reduced = vqmovn_u64(vreinterpretq_u64_u8(an));
-      return vmaxv_u32(an_reduced);
+      return vmaxvq_u32(vreinterpretq_u32_u8(an));
     } else if constexpr (Size == 32) {
       auto _p1 = as_u8(p1);
       auto _p2 = as_u8(p2);
@@ -97,12 +96,9 @@ template <size_t Size> struct Bcmp {
       uint8x16_t bo = veorq_u8(b, o);
       // anbo = (a ^ n) | (b ^ o).  At least one byte is nonzero if there is
       // a difference between the two buffers.  We reduce this value down to 4
-      // bytes in two steps. First, calculate the saturated move value when
-      // going from 2x64b to 2x32b. Second, compute the max of the 2x32b to get
-      // a single 32 bit nonzero value if a mismatch occurred.
+      // bytes using the UMAXV instruction to compute the max across the vector.
       uint8x16_t anbo = vorrq_u8(an, bo);
-      uint32x2_t anbo_reduced = vqmovn_u64(vreinterpretq_u64_u8(anbo));
-      return vmaxv_u32(anbo_reduced);
+      return vmaxvq_u32(vreinterpretq_u32_u8(anbo));
     } else if constexpr ((Size % BlockSize) == 0) {
       for (size_t offset = 0; offset < Size; offset += BlockSize)
         if (auto value = Bcmp<BlockSize>::block(p1 + offset, p2 + offset))
@@ -129,8 +125,7 @@ template <size_t Size> struct Bcmp {
       uint8x16_t bo = veorq_u8(b, o);
       // anbo = (a ^ n) | (b ^ o)
       uint8x16_t anbo = vorrq_u8(an, bo);
-      uint32x2_t anbo_reduced = vqmovn_u64(vreinterpretq_u64_u8(anbo));
-      return vmaxv_u32(anbo_reduced);
+      return vmaxvq_u32(vreinterpretq_u32_u8(anbo));
     } else if constexpr (Size == 32) {
       auto _p1 = as_u8(p1);
       auto _p2 = as_u8(p2);
@@ -150,9 +145,8 @@ template <size_t Size> struct Bcmp {
       uint8x16_t cpdq = vorrq_u8(cp, dq);
       // abnocpdq = ((a ^ n) | (b ^ o)) | ((c ^ p) | (d ^ q)).  Reduce this to
       // a nonzero 32 bit value if a mismatch occurred.
-      uint64x2_t abnocpdq = vreinterpretq_u64_u8(anbo | cpdq);
-      uint32x2_t abnocpdq_reduced = vqmovn_u64(abnocpdq);
-      return vmaxv_u32(abnocpdq_reduced);
+      uint8x16_t abnocpdq = anbo | cpdq;
+      return vmaxvq_u32(vreinterpretq_u32_u8(abnocpdq));
     } else {
       static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }

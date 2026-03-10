@@ -98,7 +98,8 @@ protected:
   // TODO: Use a PointerIntPair for SubclassID and I.
   /// For isa/dyn_cast etc.
   DGNodeID SubclassID;
-  /// The number of unscheduled successors.
+  /// The number of unscheduled successors. This is meaningless after a node
+  /// gets scheduled.
   unsigned UnscheduledSuccs = 0;
   /// This is true if this node has been scheduled.
   bool Scheduled = false;
@@ -305,7 +306,7 @@ public:
     return make_range(MemSuccs.begin(), MemSuccs.end());
   }
 #ifndef NDEBUG
-  virtual void print(raw_ostream &OS, bool PrintDeps = true) const override;
+  void print(raw_ostream &OS, bool PrintDeps = true) const override;
 #endif // NDEBUG
 };
 

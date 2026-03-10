@@ -36,7 +36,7 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
                   isConstQualified(),
                   hasCanonicalType(matchers::isExpensiveToCopy()),
                   unless(hasDeclaration(namedDecl(
-                      matchers::matchesAnyListedName(AllowedTypes)))))))
+                      matchers::matchesAnyListedRegexName(AllowedTypes)))))))
           .bind("vardecl");
 
   // A matcher for a `DstT::DstT(const Src&)` where DstT also has a

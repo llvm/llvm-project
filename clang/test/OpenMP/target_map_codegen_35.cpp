@@ -63,10 +63,13 @@ void ref_map() {
   // CK35-DAG: store ptr [[S_ADDR]], ptr [[P0]],
   // CK35-DAG: store i64 [[S_SIZE:%.+]], ptr [[S0]],
 
-  // CK35-DAG: [[S_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK35-DAG: [[SZ]] = sub i64 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
-  // CK35-DAG: [[S_1_INTPTR]] = ptrtoint ptr [[S_1_VOID:%.+]] to i64
-  // CK35-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_VOID:%.+]] to i64
+  // CK35-64-DAG: [[S_SIZE]] = sub i64 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK35-64-DAG: [[S_1_INTPTR]] = ptrtoaddr ptr [[S_1_VOID:%.+]] to i64
+  // CK35-64-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_VOID:%.+]] to i64
+  // CK35-32-DAG: [[S_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK35-32-DAG: [[SZ]] = sub i32 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK35-32-DAG: [[S_1_INTPTR]] = ptrtoaddr ptr [[S_1_VOID:%.+]] to i32
+  // CK35-32-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_VOID:%.+]] to i32
   // CK35-DAG: [[S_1:%.+]] = getelementptr %class.S, ptr [[S_ADDR]], i32 1
 
   // pass MEMBER_OF_1 | TO {&s, &s, ((ptr)(&s.a+1)-(ptr)&s)} to copy the data of s.a.
@@ -80,10 +83,13 @@ void ref_map() {
   // CK35-DAG: store ptr [[S_ADDR]], ptr [[P1]],
   // CK35-DAG: store i64 [[A_SIZE:%.+]], ptr [[S1]],
 
-  // CK35-DAG: [[A_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK35-DAG: [[SZ]] = sub i64 [[B_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
-  // CK35-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_VOID:%.+]] to i64
-  // CK35-DAG: [[B_BEGIN_INTPTR]] = ptrtoint ptr [[B_BEGIN_VOID:%.+]] to i64
+  // CK35-64-DAG: [[A_SIZE]] = sub i64 [[B_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK35-64-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_VOID:%.+]] to i64
+  // CK35-64-DAG: [[B_BEGIN_INTPTR]] = ptrtoaddr ptr [[B_BEGIN_VOID:%.+]] to i64
+  // CK35-32-DAG: [[A_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK35-32-DAG: [[SZ]] = sub i32 [[B_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK35-32-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_VOID:%.+]] to i32
+  // CK35-32-DAG: [[B_BEGIN_INTPTR]] = ptrtoaddr ptr [[B_BEGIN_VOID:%.+]] to i32
   // CK35-DAG: [[B_ADDR:%.+]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   // pass MEMBER_OF_1 | PTR_AND_OBJ | TO {&s, &s.b, 8|4} to copy the data of s.b.
@@ -125,10 +131,13 @@ void ref_map() {
   // CK35-DAG: store ptr [[SB_ADDR:%.+]], ptr [[P0]],
   // CK35-DAG: store i64 [[B_SIZE:%.+]], ptr [[S0]],
 
-  // CK35-DAG: [[B_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK35-DAG: [[SZ]] = sub i64 [[SB_1_INTPTR:%.+]], [[SB_INTPTR:%.+]]
-  // CK35-DAG: [[SB_1_INTPTR]] = ptrtoint ptr [[SB_1_VOID:%.+]] to i64
-  // CK35-DAG: [[SB_INTPTR]] = ptrtoint ptr [[SB_VOID:%.+]] to i64
+  // CK35-64-DAG: [[B_SIZE]] = sub i64 [[SB_1_INTPTR:%.+]], [[SB_INTPTR:%.+]]
+  // CK35-64-DAG: [[SB_1_INTPTR]] = ptrtoaddr ptr [[SB_1_VOID:%.+]] to i64
+  // CK35-64-DAG: [[SB_INTPTR]] = ptrtoaddr ptr [[SB_VOID:%.+]] to i64
+  // CK35-32-DAG: [[B_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK35-32-DAG: [[SZ]] = sub i32 [[SB_1_INTPTR:%.+]], [[SB_INTPTR:%.+]]
+  // CK35-32-DAG: [[SB_1_INTPTR]] = ptrtoaddr ptr [[SB_1_VOID:%.+]] to i32
+  // CK35-32-DAG: [[SB_INTPTR]] = ptrtoaddr ptr [[SB_VOID:%.+]] to i32
   // CK35-DAG: [[SB_ADDR:%.+]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
   // CK35-DAG: [[SB_1:%.+]] = getelementptr ptr, ptr [[SB_ADDR]], i{{.+}} 1
 

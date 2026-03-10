@@ -13,9 +13,11 @@
 #ifndef FORTRAN_SEMANTICS_OPENMP_UTILS_H
 #define FORTRAN_SEMANTICS_OPENMP_UTILS_H
 
+#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -25,17 +27,34 @@
 #include <type_traits>
 #include <utility>
 
+namespace Fortran::parser::omp {
+struct ExecutionPartIterator;
+struct LoopNestIterator;
+template <typename T> struct ExecutionPartRange;
+using BlockRange = ExecutionPartRange<ExecutionPartIterator>;
+using LoopRange = ExecutionPartRange<LoopNestIterator>;
+} // namespace Fortran::parser::omp
+
 namespace Fortran::semantics {
+class Scope;
 class SemanticsContext;
 class Symbol;
 
 // Add this namespace to avoid potential conflicts
 namespace omp {
+using Fortran::parser::omp::BlockRange;
+using Fortran::parser::omp::ExecutionPartIterator;
+using Fortran::parser::omp::LoopNestIterator;
+using Fortran::parser::omp::LoopRange;
+
 template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
   return U(t);
 }
 
 template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
+
+const Scope &GetScopingUnit(const Scope &scope);
+const Scope &GetProgramUnit(const Scope &scope);
 
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
@@ -66,12 +85,20 @@ const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
+bool IsTypeParamInquiry(const Symbol &sym);
+bool IsStructureComponent(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
+
+bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr);
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
+template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
+  return GetEvaluateExpr(parser::UnwrapRef<parser::Expr>(inp));
+}
+
 std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
 
@@ -85,8 +112,15 @@ const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
-const parser::Block &GetInnermostExecPart(const parser::Block &block);
-bool IsStrictlyStructuredBlock(const parser::Block &block);
+
+MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
+
+std::optional<int64_t> GetNumGeneratedNestsFrom(
+    const parser::ExecutionPartConstruct &epc,
+    std::optional<int64_t> nestedCount);
 } // namespace omp
 } // namespace Fortran::semantics
 

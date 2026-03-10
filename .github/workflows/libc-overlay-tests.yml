@@ -16,7 +16,7 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-14]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2022, windows-2025, macos-15]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
@@ -35,13 +35,13 @@ jobs:
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-          - os: macos-14
+          - os: macos-15
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
     
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
@@ -51,7 +51,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+      uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
       with:
         max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}

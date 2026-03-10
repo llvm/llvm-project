@@ -88,7 +88,7 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
 //     reinterpret_cast<InitCallback *>(*start)();
 // }
 //
-// void call_init_array_callbacks() {
+// void call_fini_array_callbacks() {
 //   size_t fini_array_size = __fini_array_end - __fini_array_start;
 //   for (size_t i = fini_array_size; i > 0; --i)
 //     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
@@ -138,22 +138,16 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   Value *BeginVal = IRB.CreateLoad(Begin->getType(), Begin, "begin");
   Value *EndVal = IRB.CreateLoad(Begin->getType(), End, "stop");
   if (!IsCtor) {
-    auto *BeginInt = IRB.CreatePtrToInt(BeginVal, IntegerType::getInt64Ty(C));
-    auto *EndInt = IRB.CreatePtrToInt(EndVal, IntegerType::getInt64Ty(C));
-    auto *SubInst = IRB.CreateSub(EndInt, BeginInt);
-    auto *Offset = IRB.CreateAShr(
-        SubInst, ConstantInt::get(IntegerType::getInt64Ty(C), 3), "offset",
-        /*IsExact=*/true);
-    auto *ValuePtr = IRB.CreateGEP(PointerType::get(C, 0), BeginVal,
-                                   ArrayRef<Value *>({Offset}));
-    EndVal = BeginVal;
-    BeginVal = IRB.CreateInBoundsGEP(
-        PointerType::get(C, 0), ValuePtr,
-        ArrayRef<Value *>(ConstantInt::get(IntegerType::getInt64Ty(C), -1)),
-        "start");
+    Value *OldBeginVal = BeginVal;
+    BeginVal =
+        IRB.CreateInBoundsGEP(PointerType::get(C, 0), EndVal,
+                              ArrayRef<Value *>(ConstantInt::getAllOnesValue(
+                                  IntegerType::getInt64Ty(C))),
+                              "start");
+    EndVal = OldBeginVal;
   }
   IRB.CreateCondBr(
-      IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGT, BeginVal,
+      IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGE, BeginVal,
                     EndVal),
       LoopBB, ExitBB);
   IRB.SetInsertPoint(LoopBB);

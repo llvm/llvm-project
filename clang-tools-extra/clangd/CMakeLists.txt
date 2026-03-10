@@ -165,6 +165,7 @@ clang_target_link_libraries(clangDaemon
   clangBasic
   clangDependencyScanning
   clangDriver
+  clangOptions
   clangFormat
   clangFrontend
   clangIndex
@@ -176,6 +177,7 @@ clang_target_link_libraries(clangDaemon
   clangToolingInclusions
   clangToolingInclusionsStdlib
   clangToolingSyntax
+  clangUnifiedSymbolResolution
   )
 
 target_link_libraries(clangDaemon

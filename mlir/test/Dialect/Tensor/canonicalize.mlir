@@ -398,6 +398,34 @@ func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
 
 // -----
 
+// Ensure tensor.from_elements with poison values doesn't crash.
+// CHECK-LABEL: func @from_elements_with_poison
+func.func @from_elements_with_poison() -> tensor<1xindex> {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[POISON]] : tensor<1xindex>
+  // CHECK: return %[[TENSOR]]
+  %0 = ub.poison : index
+  %1 = tensor.from_elements %0 : tensor<1xindex>
+  return %1 : tensor<1xindex>
+}
+
+// -----
+
+// Ensure tensor.from_elements with a vector element type doesn't crash
+// when the elements fold to constants (DenseElementsAttr does not support
+// non-scalar element types via the Attribute overload).
+// CHECK-LABEL: func @from_elements_with_vector_element_type
+func.func @from_elements_with_vector_element_type() -> tensor<1xvector<1xi1>> {
+  // CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<1xi1>
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[CST]] : tensor<1xvector<1xi1>>
+  // CHECK: return %[[TENSOR]]
+  %0 = vector.constant_mask [1] : vector<1xi1>
+  %1 = tensor.from_elements %0 : tensor<1xvector<1xi1>>
+  return %1 : tensor<1xvector<1xi1>>
+}
+
+// -----
+
 // Ensure the optimization doesn't segfault from bad constants
 // CHECK-LABEL: func @extract_negative_from_tensor.from_elements
 func.func @extract_negative_from_tensor.from_elements(%element : index) -> index {
@@ -564,6 +592,23 @@ func.func @rank_reducing_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : i
 //  CHECK-SAME:      : tensor<?x?x?xf32> to tensor<4x?xf32>
 //       CHECK:   %[[RESULT:.+]] = tensor.cast %[[SLICE]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @rank_reducing_slice_preserve_dropped_dims(
+    %arg0 : tensor<1x1x8x1xf16>, %arg1 : index) -> tensor<1x4xf16> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.extract_slice %arg0[%c0, 0, %arg1, 0] [1, 1, 4, 1] [1, 1, 1, 1]
+    : tensor<1x1x8x1xf16> to tensor<1x4xf16>
+  return %0 : tensor<1x4xf16>
+}
+// CHECK-LABEL: func @rank_reducing_slice_preserve_dropped_dims
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<1x1x8x1xf16>
+//  CHECK-SAME:   %[[ARG1:.+]]: index
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//  CHECK-SAME:      [0, 0, %[[ARG1]], 0] [1, 1, 4, 1] [1, 1, 1, 1]
+//  CHECK-SAME:      : tensor<1x1x8x1xf16> to tensor<1x4xf16>
+//       CHECK:   return %[[SLICE]]
 
 // -----
 
@@ -1264,7 +1309,7 @@ func.func @compose_collapse_of_expand_partially_dynamic(%arg0: tensor<?xf16>, %a
 //  CHECK-SAME:   %[[ORIG_D2:.[a-zA-Z0-9]+]]
 //  CHECK-SAME:   %[[ORIG_D3:.[a-zA-Z0-9]+]]
 //   CHECK-DAG:   %[[C32:.+]] = arith.constant 32
-//       CHECK:   %[[COLLAPSED_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]]
+//       CHECK:   %[[COLLAPSED_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]] overflow<nsw>
 //       CHECK:   %[[RESULT:.+]] = tensor.expand_shape %[[SRC]]
 //  CHECK-SAME:     [0, 1, 2]
 //  CHECK-SAME:     output_shape [8, %[[ORIG_D2]], %[[COLLAPSED_D2]]]
@@ -1334,7 +1379,7 @@ func.func @compose_expand_of_collapse_dynamic(%arg0 : tensor<4x?x10x64x2xf16>, %
 
 func.func @no_compose_collapse_of_expand_dynamic(%arg0 : tensor<?x8x128x?xf16>, %arg1: index) -> tensor<?x128x?xf16> {
   %collapse = tensor.collapse_shape %arg0 [[0, 1, 2, 3]] : tensor<?x8x128x?xf16> into tensor<?xf16>
-  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 8, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
+  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 128, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
   return %expanded_19 : tensor<?x128x?xf16>
 }
 // CHECK-LABEL: func @no_compose_collapse_of_expand_dynamic
@@ -1639,6 +1684,22 @@ func.func @reshape_splat_constant_float64() -> tensor<2x4x2xf64> {
 //       CHECK:   %[[CST:.*]] = arith.constant dense<{{.*}}> : tensor<2x4x2xf64>
 //   CHECK-NOT:   tensor.expand_shape
 //       CHECK:   return %[[CST]]
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177845:
+// tensor.expand_shape of a constant to a dynamic shape must not crash.
+// FoldReshapeWithConstant must not call DenseElementsAttr::getFromRawBuffer
+// when the result type is dynamic (getFromRawBuffer requires static shape).
+
+// CHECK-LABEL: @expand_shape_splat_constant_dynamic_result
+//       CHECK:   arith.constant
+//       CHECK:   tensor.expand_shape
+func.func @expand_shape_splat_constant_dynamic_result(%n: index) -> tensor<?xi32> {
+  %cst = arith.constant dense<1> : tensor<i32>
+  %result = tensor.expand_shape %cst [] output_shape [%n] : tensor<i32> into tensor<?xi32>
+  return %result : tensor<?xi32>
+}
 
 // -----
 

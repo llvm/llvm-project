@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINEHOSTILERAIICHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINEHOSTILERAIICHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -46,8 +46,11 @@ private:
   // List of fully qualified awaitable types which are considered safe to
   // co_await.
   std::vector<StringRef> AllowedAwaitablesList;
+  // List of callees whose return values are considered safe to directly
+  // co_await.
+  std::vector<StringRef> AllowedCallees;
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINEHOSTILERAIICHECK_H

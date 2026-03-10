@@ -25,12 +25,11 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
-#include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
+class DataLayout;
 class TargetMachine;
 
 void clearAnnotationCache(const Module *);
@@ -75,6 +74,21 @@ inline MaybeAlign getAlign(const Function &F, unsigned Index) {
 MaybeAlign getAlign(const CallInst &, unsigned);
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
+/// Since function arguments are passed via .param space, we may want to
+/// increase their alignment in a way that ensures that we can effectively
+/// vectorize their loads & stores. We can increase alignment only if the
+/// function has internal or private linkage as for other linkage types callers
+/// may already rely on default alignment. To allow using 128-bit vectorized
+/// loads/stores, this function ensures that alignment is 16 or greater.
+Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
+                                     const DataLayout &DL);
+
+Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
+                                   const DataLayout &DL);
+
+Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
+                                 Align InitialAlign, const DataLayout &DL);
+
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.
 inline unsigned promoteScalarArgumentSize(unsigned size) {
@@ -99,14 +113,14 @@ namespace NVPTX {
 // register. NOTE: This must be kept in sync with the register classes
 // defined in NVPTXRegisterInfo.td.
 inline auto packed_types() {
-  static const auto PackedTypes = {MVT::v4i8, MVT::v2f16, MVT::v2bf16,
-                                   MVT::v2i16, MVT::v2f32};
+  static const auto PackedTypes = {MVT::v4i8,  MVT::v2f16, MVT::v2bf16,
+                                   MVT::v2i16, MVT::v2f32, MVT::v2i32};
   return PackedTypes;
 }
 
 // Checks if the type VT can fit into a single register.
 inline bool isPackedVectorTy(EVT VT) {
-  return any_of(packed_types(), [VT](EVT OVT) { return OVT == VT; });
+  return any_of(packed_types(), equal_to(VT));
 }
 
 // Checks if two or more of the type ET can fit into a single register.

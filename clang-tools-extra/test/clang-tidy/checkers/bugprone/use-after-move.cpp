@@ -1,10 +1,21 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
+
+#include <utility>
 
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-typedef unsigned size_t;
 
 template <typename T>
 struct unique_ptr {
@@ -101,41 +112,6 @@ DECLARE_STANDARD_CONTAINER(unordered_multiset);
 DECLARE_STANDARD_CONTAINER(unordered_multimap);
 
 typedef basic_string<char> string;
-
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
-  return static_cast<typename remove_reference<_Tp>::type &&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
 
 } // namespace std
 
@@ -1645,3 +1621,114 @@ void create() {
 }
 
 } // namespace issue82023
+
+namespace custom_invalidation
+{
+
+template<class T = int>
+struct Database {
+  template<class...>
+  void CloseConnection(T = T()) {}
+  template<class...>
+  static void StaticCloseConnection(Database&, T = T()) {}
+  template<class...>
+  friend void FriendCloseConnection(Database&, T = T()) {}
+  void Query();
+};
+
+void FreeCloseConnection(Database<int>&) {}
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  db1.CloseConnection();
+  db1.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db1' used after it was invalidated by 'CloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
+
+  DB db2;
+  DB::StaticCloseConnection(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was invalidated by 'StaticCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db3;
+  DB().StaticCloseConnection(db3);
+  db3.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db3' used after it was invalidated by 'StaticCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db4;
+  FriendCloseConnection(db4);
+  db4.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db4' used after it was invalidated by 'FriendCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db5;
+  FriendCloseConnection(db5, /*disconnect timeout*/ 5);
+  db5.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db5' used after it was invalidated by 'FriendCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db6;
+  FreeCloseConnection(db6);
+  db6.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db6' used after it was invalidated by 'FreeCloseConnection'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+}
+
+} // namespace custom_invalidation
+
+namespace custom_reinitialization {
+
+template <class T = int>
+struct Database {
+  template <class... Args>
+  void Reset(T = T(), Args &&...) {}
+  template <class... Args>
+  static void StaticReset(Database &, T = T(), Args &&...) {}
+  template <class... Args>
+  friend void FriendReset(Database &, T = T(), Args &&...) {}
+  void Query(T = T()) {}
+};
+
+template <class T = int>
+void RegularReset(Database<T> &d, T = T()) {}
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  std::move(db1);
+  db1.Reset();
+  db1.Query();
+
+  DB db2;
+  std::move(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+  db2.Reset();
+
+  DB db3;
+  std::move(db3);
+  DB::StaticReset(db3);
+  db3.Query();
+
+  DB db4;
+  std::move(db4);
+  FriendReset(db4);
+  db4.Query();
+
+  DB db5;
+  std::move(db5);
+  db5.Reset(0, 1.5, "extra");
+  db5.Query();
+
+  DB db6;
+  std::move(db6);
+  RegularReset(db6);
+  db6.Query();
+}
+} // namespace custom_reinitialization

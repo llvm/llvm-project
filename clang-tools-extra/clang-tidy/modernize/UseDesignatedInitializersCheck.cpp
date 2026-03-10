@@ -40,13 +40,18 @@ static constexpr char StrictCppStandardComplianceName[] =
     "StrictCppStandardCompliance";
 static constexpr bool StrictCppStandardComplianceDefault = true;
 
+static unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
+  return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
+    return isa<DesignatedInitExpr>(InitExpr);
+  });
+}
+
 namespace {
 
 struct Designators {
-
   Designators(const InitListExpr *InitList) : InitList(InitList) {
     assert(InitList->isSyntacticForm());
-  };
+  }
 
   unsigned size() { return getCached().size(); }
 
@@ -73,12 +78,6 @@ private:
                                    utils::getUnwrittenDesignators(InitList));
   }
 };
-
-unsigned getNumberOfDesignated(const InitListExpr *SyntacticInitList) {
-  return llvm::count_if(*SyntacticInitList, [](auto *InitExpr) {
-    return isa<DesignatedInitExpr>(InitExpr);
-  });
-}
 
 AST_MATCHER(CXXRecordDecl, isAggregate) {
   return Node.hasDefinition() && Node.isAggregate();
@@ -152,7 +151,7 @@ void UseDesignatedInitializersCheck::check(
     if (IgnoreMacros && InitList->getBeginLoc().isMacroID())
       return;
     {
-      DiagnosticBuilder Diag =
+      const DiagnosticBuilder Diag =
           diag(InitList->getLBraceLoc(),
                "use designated initializer list to initialize %0");
       Diag << InitList->getType() << InitList->getSourceRange();

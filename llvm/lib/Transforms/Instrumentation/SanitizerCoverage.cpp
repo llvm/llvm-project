@@ -318,6 +318,18 @@ private:
 };
 } // namespace
 
+SanitizerCoveragePass::SanitizerCoveragePass(
+    SanitizerCoverageOptions Options, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    const std::vector<std::string> &AllowlistFiles,
+    const std::vector<std::string> &BlocklistFiles)
+    : Options(std::move(Options)),
+      VFS(VFS ? std::move(VFS) : vfs::getRealFileSystem()) {
+  if (AllowlistFiles.size() > 0)
+    Allowlist = SpecialCaseList::createOrDie(AllowlistFiles, *this->VFS);
+  if (BlocklistFiles.size() > 0)
+    Blocklist = SpecialCaseList::createOrDie(BlocklistFiles, *this->VFS);
+}
+
 PreservedAnalyses SanitizerCoveragePass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -1084,8 +1096,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto ThenTerm = SplitBlockAndInsertIfThen(
         IRB.CreateIsNull(Load), &*IP, false,
         MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-    IRBuilder<> ThenIRB(ThenTerm);
+    InstrumentationIRBuilder ThenIRB(ThenTerm);
     auto Store = ThenIRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
+    if (EntryLoc)
+      Store->setDebugLoc(EntryLoc);
     Load->setNoSanitizeMetadata();
     Store->setNoSanitizeMetadata();
   }
@@ -1110,17 +1124,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           InsertBefore = AI->getNextNode();
 
           // Make an estimate on the stack usage.
-          if (AI->isStaticAlloca()) {
-            uint32_t Bytes = DL.getTypeAllocSize(AI->getAllocatedType());
-            if (AI->isArrayAllocation()) {
-              if (const ConstantInt *arraySize =
-                      dyn_cast<ConstantInt>(AI->getArraySize())) {
-                Bytes *= arraySize->getZExtValue();
-              } else {
-                HasDynamicAlloc = true;
-              }
-            }
-            EstimatedStackSize += Bytes;
+          if (auto AllocaSize = AI->getAllocationSize(DL)) {
+            if (AllocaSize->isFixed())
+              EstimatedStackSize += AllocaSize->getFixedValue();
+            else
+              HasDynamicAlloc = true;
           } else {
             HasDynamicAlloc = true;
           }
@@ -1131,7 +1139,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           EstimatedStackSize >= Options.StackDepthCallbackMin) {
         if (InsertBefore)
           IRB.SetInsertPoint(InsertBefore);
-        IRB.CreateCall(SanCovStackDepthCallback)->setCannotMerge();
+        auto Call = IRB.CreateCall(SanCovStackDepthCallback);
+        if (EntryLoc)
+          Call->setDebugLoc(EntryLoc);
+        Call->setCannotMerge();
       }
     } else {
       // Check stack depth.  If it's the deepest so far, record it.
@@ -1144,8 +1155,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       auto ThenTerm = SplitBlockAndInsertIfThen(
           IsStackLower, &*IP, false,
           MDBuilder(IRB.getContext()).createUnlikelyBranchWeights());
-      IRBuilder<> ThenIRB(ThenTerm);
+      InstrumentationIRBuilder ThenIRB(ThenTerm);
       auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
+      if (EntryLoc)
+        Store->setDebugLoc(EntryLoc);
       LowestStack->setNoSanitizeMetadata();
       Store->setNoSanitizeMetadata();
     }
@@ -1207,7 +1220,7 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
         if (CB->isIndirectCall()) {
           // TODO(navidem): handle indirect calls, for now mark its existence.
           CFs.push_back((Constant *)IRB.CreateIntToPtr(
-              ConstantInt::get(IntptrTy, -1), PtrTy));
+              ConstantInt::getAllOnesValue(IntptrTy), PtrTy));
         } else {
           auto CalledF = CB->getCalledFunction();
           if (CalledF && !CalledF->isIntrinsic())

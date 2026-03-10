@@ -467,6 +467,13 @@ fir.type_info @cpinfo : !fir.type<cpinfo{comp_i:!fir.array<10x20xi32>}> componen
   fir.dt_component "component_info" lbs [2, 3]
 }
 
+// CHECK-LABEL: fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+// CHECK: fir.dt_entry "deferred_method", @deferred_impl deferred
+// CHECK: }
+fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+  fir.dt_entry "deferred_method", @deferred_impl deferred
+}
+
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: complex<f128>, [[VAL_152:%.*]]: complex<f128>) {
 func.func @compare_complex(%a : complex<f128>, %b : complex<f128>) {
@@ -1039,5 +1046,17 @@ func.func @test_if_weights(%cond: i1) {
   fir.if %cond weights ([99,1]) {
   } else {
   }
+  return
+}
+
+// CHECK-LABEL: func @test_declare_value(
+// CHECK-SAME: %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: !fir.dscope) {
+func.func @test_declare_value(%arg0: i32, %scope: !fir.dscope) {
+// CHECK: fir.declare_value %[[VAL_0]] {uniq_name = "test"} : i32
+  fir.declare_value %arg0 {uniq_name = "test"} : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "test"} : i32
+  fir.declare_value %arg0 dummy_scope %scope {uniq_name = "test"} : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] arg 1 {uniq_name = "test"} : i32
+  fir.declare_value %arg0 dummy_scope %scope arg 1 {uniq_name = "test"} : i32
   return
 }

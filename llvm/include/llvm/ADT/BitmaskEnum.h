@@ -11,9 +11,9 @@
 
 #include <cassert>
 #include <type_traits>
-#include <utility>
 
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/MathExtras.h"
 
 /// LLVM_MARK_AS_BITMASK_ENUM lets you opt in an individual enum type so you can
@@ -105,7 +105,7 @@ struct is_bitmask_enum : std::false_type {};
 
 template <typename E>
 struct is_bitmask_enum<
-    E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>>
+    E, std::void_t<decltype(E::LLVM_BITMASK_LARGEST_ENUMERATOR)>>
     : std::true_type {};
 
 /// Trait class to determine bitmask enumeration largest bit.
@@ -113,7 +113,7 @@ template <typename E, typename Enable = void> struct largest_bitmask_enum_bit;
 
 template <typename E>
 struct largest_bitmask_enum_bit<
-    E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>> {
+    E, std::void_t<decltype(E::LLVM_BITMASK_LARGEST_ENUMERATOR)>> {
   using UnderlyingTy = std::underlying_type_t<E>;
   static constexpr UnderlyingTy value =
       static_cast<UnderlyingTy>(E::LLVM_BITMASK_LARGEST_ENUMERATOR);
@@ -136,10 +136,6 @@ template <typename E> constexpr std::underlying_type_t<E> Underlying(E Val) {
   assert(U >= 0 && "Negative enum values are not allowed.");
   assert(U <= Mask<E>() && "Enum value too large (or largest val too small?)");
   return U;
-}
-
-constexpr unsigned bitWidth(uint64_t Value) {
-  return Value ? 1 + bitWidth(Value >> 1) : 0;
 }
 
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
@@ -220,7 +216,7 @@ e &operator>>=(e &lhs, e rhs) {
 // Enable bitmask enums in namespace ::llvm and all nested namespaces.
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
-constexpr unsigned BitWidth = BitmaskEnumDetail::bitWidth(
+constexpr unsigned BitWidth = llvm::bit_width_constexpr(
     uint64_t{llvm::to_underlying(E::LLVM_BITMASK_LARGEST_ENUMERATOR)});
 
 } // namespace llvm
