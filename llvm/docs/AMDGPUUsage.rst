@@ -2323,6 +2323,8 @@ callable functions (i.e. those that do not correspond to hardware entry points):
   are in an indeterminate state.
 * On return from a function, all dependency counters must be zero except for
   ``VScnt``/``STOREcnt``.
+* Inactive lanes of all VGPRs are preserved so they have the same value at
+  function exit as they did at the corresponding function entry.
 
 For entry points, the ABI conventions are dictated by the hardware behavior at
 wave launch and wave termination:
