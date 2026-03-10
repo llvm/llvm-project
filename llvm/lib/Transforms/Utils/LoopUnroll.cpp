@@ -555,13 +555,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   if (CompletelyUnroll)
     ULO.Runtime = false;
 
-  // LCSSA allows lifetime intrinsics and tokens to directly use loop
-  // instructions, as they cannot use a phi.
-  // Cloning loop blocks requires a phi join; just remove the problematic
-  // instructions.
-  if (cleanupDanglingLifetimeUsers(L, *DT))
-    LLVM_DEBUG(dbgs() << "Unroll: removed dangling lifetime users.\n");
-
   // Go through all exits of L and see if there are any phi-nodes there. We just
   // conservatively assume that they're inserted to preserve LCSSA form, which
   // means that complete unrolling might break this form. We need to either fix
@@ -612,6 +605,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       return LoopUnrollResult::Unmodified;
     }
   }
+
+  // LCSSA allows lifetime intrinsics and tokens to directly use loop
+  // instructions, as they cannot use a phi.
+  // Cloning loop blocks requires a phi join; just remove the problematic
+  // instructions.
+  if (cleanupDanglingLifetimeUsers(L, *DT))
+    LLVM_DEBUG(dbgs() << "Unroll: removed dangling lifetime users.\n");
 
   using namespace ore;
   // Report the unrolling decision.
