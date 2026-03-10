@@ -98,8 +98,14 @@ void mlir::tosa::addTosaToLinalgPasses(
   pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass(
       {options.aggressiveReduceConstant}));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  if (attachTargetOptions)
-    pm.addPass(tosa::createTosaAttachTarget(*attachTargetOptions));
+  if (!attachTargetOptions) {
+    attachTargetOptions = TosaAttachTargetOptions();
+    attachTargetOptions->profiles = {"pro_int", "pro_fp"};
+    // TODO: populate with all the extensions that the tosa->linalg conversion
+    // supports
+    attachTargetOptions->extensions = {"doubleround"};
+  }
+  pm.addPass(tosa::createTosaAttachTarget(*attachTargetOptions));
   if (validationOptions)
     pm.addPass(tosa::createTosaValidation(*validationOptions));
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
@@ -118,15 +124,11 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
       [](OpPassManager &pm) {
         TosaToLinalgOptions tosaToLinalgOptions;
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
-        TosaAttachTargetOptions tosaAttachTargetOptions;
-        tosaAttachTargetOptions.profiles = {"pro_int", "pro_fp"};
-        // TODO: Populate all the extensions that this conversion supports
-        tosaAttachTargetOptions.extensions = {"doubleround"};
         TosaValidationOptions validationOptions;
         validationOptions.strictOpSpecAlignment = false;
         validationOptions.allowInvalidOpDatatypeCombinations = false;
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
-                                    tosaToLinalgNamedOptions, validationOptions,
-                                    tosaAttachTargetOptions);
+                                    tosaToLinalgNamedOptions,
+                                    validationOptions);
       });
 }
