@@ -1800,10 +1800,8 @@ static bool isRemainderZero(const SCEVConstant *Dividend,
 //
 // If i is not an integer, there's no dependence.
 // If i < 0 or > UB, there's no dependence.
-// If i = 0, the direction is >= and peeling the
-// 1st iteration will break the dependence.
-// If i = UB, the direction is <= and peeling the
-// last iteration will break the dependence.
+// If i = 0, the direction is >=.
+// If i = UB, the direction is <=.
 // Otherwise, the direction is *.
 //
 // Can prove independence. Failing that, we can sometimes refine
@@ -1913,10 +1911,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 //
 // If i is not an integer, there's no dependence.
 // If i < 0 or > UB, there's no dependence.
-// If i = 0, the direction is <= and peeling the
-// 1st iteration will break the dependence.
-// If i = UB, the direction is >= and peeling the
-// last iteration will break the dependence.
+// If i = 0, the direction is <=.
+// If i = UB, the direction is >=.
 // Otherwise, the direction is *.
 //
 // Can prove independence. Failing that, we can sometimes refine
@@ -2012,7 +2008,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
 // where i and j are induction variable, c1 and c2 are loop invariant,
 // and a and b are constants.
 // Returns true if any possible dependence is disproved.
-// Marks the result as inconsistent.
 // Works in some cases that symbolicRDIVtest doesn't, and vice versa.
 bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                    const SCEV *SrcConst, const SCEV *DstConst,
@@ -2434,7 +2429,6 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // gcdMIVtest -
 // Tests an MIV subscript pair for dependence.
 // Returns true if any possible dependence is disproved.
-// Marks the result as inconsistent.
 // Can sometimes disprove the equal direction for 1 or more loops,
 // as discussed in Michael Wolfe's book,
 // High Performance Compilers for Parallel Computing, page 235.

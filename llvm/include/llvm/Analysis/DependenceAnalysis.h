@@ -478,7 +478,6 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// If the dependence isn't proven to exist,
-  /// marks the Result as inconsistent.
   bool testZIV(const SCEV *Src, const SCEV *Dst, FullDependence &Result) const;
 
   /// testSIV - Tests the SIV subscript pair (Src and Dst) for dependence.
@@ -490,7 +489,6 @@ private:
   /// Sets appropriate direction vector entry and, when possible,
   /// the distance vector entry.
   /// If the dependence isn't proven to exist,
-  /// marks the Result as inconsistent.
   bool testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                FullDependence &Result, bool UnderRuntimeAssumptions);
 
@@ -502,7 +500,6 @@ private:
   /// [c1 + a1*i + a2*j][c2].
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
-  /// Marks the Result as inconsistent.
   bool testRDIV(const SCEV *Src, const SCEV *Dst, FullDependence &Result) const;
 
   /// testMIV - Tests the MIV subscript pair (Src and Dst) for dependence.
@@ -531,7 +528,6 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
   bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
                            const SCEV *DstConst, const Loop *CurrentSrcLoop,
                            const Loop *CurrentDstLoop, unsigned Level,
@@ -545,7 +541,6 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
   bool exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                     const SCEV *SrcConst, const SCEV *DstConst,
                     const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop,
@@ -559,8 +554,6 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  /// If loop peeling will break the dependence, mark appropriately.
   bool weakZeroSrcSIVtest(const SCEV *DstCoeff, const SCEV *SrcConst,
                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
                           const Loop *CurrentDstLoop, unsigned Level,
@@ -574,8 +567,6 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  /// Set consistent to false.
-  /// If loop peeling will break the dependence, mark appropriately.
   bool weakZeroDstSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
                           const SCEV *DstConst, const Loop *CurrentSrcLoop,
                           const Loop *CurrentDstLoop, unsigned Level,
@@ -586,7 +577,6 @@ private:
   /// where i and j are induction variable, c1 and c2 are loop invariant,
   /// and a and b are constants.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Works in some cases that symbolicRDIVtest doesn't,
   /// and vice versa.
   bool exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
@@ -599,7 +589,6 @@ private:
   /// where i and j are induction variable, c1 and c2 are loop invariant,
   /// and a and b are constants.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Works in some cases that exactRDIVtest doesn't,
   /// and vice versa. Can also be used as a backup for
   /// ordinary SIV tests.
@@ -609,7 +598,6 @@ private:
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Can sometimes disprove the equal direction for 1 or more loops.
   //  Can handle some symbolics that even the SIV tests don't get,
   /// so we use it as a backup for everything.
@@ -618,7 +606,6 @@ private:
 
   /// banerjeeMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
-  /// Marks the result as inconsistent.
   /// Computes directions.
   bool banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                        const SmallBitVector &Loops,
