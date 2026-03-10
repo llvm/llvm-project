@@ -8,9 +8,11 @@ func makeIt() -> PublicBase {
   return PrivateSubclass()
 }
 
-func main() {
-  let x = makeIt()
-  print("break here \(x)")
+class Main {
+  func main() {
+    let x = makeIt()
+    print("break here \(x)")
+  }
 }
 
-main()
+Main().main()

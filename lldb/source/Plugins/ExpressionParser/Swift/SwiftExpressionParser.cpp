@@ -1456,34 +1456,36 @@ SwiftExpressionParser::ParseAndImport(
         local_context_is_swift = false;
     }
 
-    if (local_context_is_swift) {
-      llvm::Error error = AddRequiredAliases(
-          m_sc.block, stack_frame_sp, m_swift_ast_ctx, *code_manipulator,
-          m_options.GetUseDynamic(), m_options.GetBindGenericTypes());
-      if (error)
-        return error;
+    if (!m_options.GetUseContextFreeSwiftPrintObject()) {
+      if (local_context_is_swift) {
+        llvm::Error error = AddRequiredAliases(
+            m_sc.block, stack_frame_sp, m_swift_ast_ctx, *code_manipulator,
+            m_options.GetUseDynamic(), m_options.GetBindGenericTypes());
+        if (error)
+          return error;
+      }
+      //
+      // Register all magic variables.
+      llvm::SmallVector<swift::Identifier, 2> special_names;
+      llvm::StringRef persistent_var_prefix;
+      if (!repl)
+        persistent_var_prefix = "$";
+
+      code_manipulator->FindSpecialNames(special_names, persistent_var_prefix);
+
+      ResolveSpecialNames(m_sc, *m_exe_scope, m_swift_ast_ctx, special_names,
+                          m_local_variables);
+
+      code_manipulator->AddExternalVariables(m_local_variables);
+
+      auto type_aliases = AddArchetypeTypeAliases(
+          code_manipulator, *stack_frame_sp.get(), m_swift_ast_ctx);
+      if (!type_aliases)
+        diagnostic_manager.PutString(eSeverityWarning,
+                                     llvm::toString(type_aliases.takeError()));
+      else
+        external_lookup->RegisterTypeAliases(*type_aliases);
     }
-    //
-    // Register all magic variables.
-    llvm::SmallVector<swift::Identifier, 2> special_names;
-    llvm::StringRef persistent_var_prefix;
-    if (!repl)
-      persistent_var_prefix = "$";
-
-    code_manipulator->FindSpecialNames(special_names, persistent_var_prefix);
-
-    ResolveSpecialNames(m_sc, *m_exe_scope, m_swift_ast_ctx, special_names,
-                        m_local_variables);
-
-    code_manipulator->AddExternalVariables(m_local_variables);
-
-    auto type_aliases = AddArchetypeTypeAliases(
-        code_manipulator, *stack_frame_sp.get(), m_swift_ast_ctx);
-    if (!type_aliases)
-      diagnostic_manager.PutString(eSeverityWarning,
-                                   llvm::toString(type_aliases.takeError()));
-    else
-      external_lookup->RegisterTypeAliases(*type_aliases);
     stack_frame_sp.reset();
   }
 
