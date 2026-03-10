@@ -904,7 +904,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
         CharUnits alignment =
             cgm.getNaturalTypeAlignment(e->getType(),
                                         /*BaseInfo=*/nullptr,
-                                        /* forPointeeType= */ true);
+                                        /*forPointeeType=*/true);
         // Classic codegen passes TBAA as null-ptr to the above function, so it
         // probably needs to deal with that.
         assert(!cir::MissingFeatures::opTBAA());
