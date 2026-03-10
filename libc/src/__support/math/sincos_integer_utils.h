@@ -86,8 +86,8 @@ LIBC_INLINE_VAR constexpr Frac128 PI_OVER_2_M1({0x898c'c517'01b8'39a2,
 //   x_frac: |x - k * pi/2|
 // Return:
 //   x_frac_is_neg.
-LIBC_INLINE constexpr bool trig_range_reduction(uint64_t x_u, unsigned x_e,
-                                                unsigned &k, Frac128 &x_frac) {
+LIBC_INLINE bool trig_range_reduction(uint64_t x_u, unsigned x_e, unsigned &k,
+                                      Frac128 &x_frac) {
   using FPBits = typename fputil::FPBits<double>;
   bool x_frac_is_neg = false;
   // We do multiplication x * (2/pi)

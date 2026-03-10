@@ -17,39 +17,39 @@ namespace LIBC_NAMESPACE_DECL {
 struct Frac128 : public UInt<128> {
   using UInt<128>::UInt;
 
-  constexpr Frac128 operator~() const {
+  LIBC_INLINE constexpr Frac128 operator~() const {
     Frac128 r;
     r.val[0] = ~val[0];
     r.val[1] = ~val[1];
     return r;
   }
 
-  constexpr Frac128 operator+(const Frac128 &other) const {
+  LIBC_INLINE constexpr Frac128 operator+(const Frac128 &other) const {
     UInt<128> r = UInt<128>(*this) + (UInt<128>(other));
     return Frac128(r.val);
   }
 
-  constexpr Frac128 operator-(const Frac128 &other) const {
+  LIBC_INLINE constexpr Frac128 operator-(const Frac128 &other) const {
     UInt<128> r = UInt<128>(*this) - (UInt<128>(other));
     return Frac128(r.val);
   }
 
-  constexpr Frac128 operator*(const Frac128 &other) const {
+  LIBC_INLINE constexpr Frac128 operator*(const Frac128 &other) const {
     UInt<128> r = UInt<128>::quick_mul_hi(UInt<128>(other));
     return Frac128(r.val);
   }
 
-  constexpr Frac128 &operator+=(const Frac128 &other) {
+  LIBC_INLINE constexpr Frac128 &operator+=(const Frac128 &other) {
     *this = *this + other;
     return *this;
   }
 
-  constexpr Frac128 &operator-=(const Frac128 &other) {
+  LIBC_INLINE constexpr Frac128 &operator-=(const Frac128 &other) {
     *this = *this - other;
     return *this;
   }
 
-  constexpr Frac128 &operator*=(const Frac128 &other) {
+  LIBC_INLINE constexpr Frac128 &operator*=(const Frac128 &other) {
     *this = *this * other;
     return *this;
   }
