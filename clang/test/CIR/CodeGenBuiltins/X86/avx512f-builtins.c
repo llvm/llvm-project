@@ -178,7 +178,7 @@ __mmask16 test_mm512_kand(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kand
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_kand
@@ -200,7 +200,7 @@ __mmask16 test_mm512_kandn(__mmask16 A, __mmask16 B) {
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_kandn
@@ -223,7 +223,7 @@ __mmask16 test_mm512_kor(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kor
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.binop(or, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.or {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_kor
@@ -245,7 +245,7 @@ __mmask16 test_mm512_kxnor(__mmask16 A, __mmask16 B) {
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_kxnor
@@ -268,7 +268,7 @@ __mmask16 test_mm512_kxor(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kxor
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_kxor
@@ -949,7 +949,7 @@ __m512i test_mm512_mul_epi32(__m512i __A, __m512i __B) {
   // CIR: [[ASHR_A:%.*]] = cir.shift(right, [[SHL_A]] : !cir.vector<8 x !s64i>, [[SV]] : !cir.vector<8 x !s64i>)
   // CIR: [[SHL_B:%.*]]  = cir.shift(left, [[B64]] : !cir.vector<8 x !s64i>, [[SV]] : !cir.vector<8 x !s64i>)
   // CIR: [[ASHR_B:%.*]] = cir.shift(right, [[SHL_B]] : !cir.vector<8 x !s64i>, [[SV]] : !cir.vector<8 x !s64i>)
-  // CIR: [[MUL:%.*]]    = cir.binop(mul, [[ASHR_A]], [[ASHR_B]])
+  // CIR: [[MUL:%.*]]    = cir.mul [[ASHR_A]], [[ASHR_B]]
 
   // LLVM-LABEL: _mm512_mul_epi32
   // LLVM: shl <8 x i64> %{{.*}}, splat (i64 32)
@@ -974,9 +974,9 @@ __m512i test_mm512_mul_epu32(__m512i __A, __m512i __B) {
   // CIR: [[BC_B:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !s64i>
   // CIR: [[MASK_SCALAR:%.*]] = cir.const #cir.int<4294967295> : !s64i
   // CIR: [[MASK_VEC:%.*]] = cir.vec.splat [[MASK_SCALAR]] : !s64i, !cir.vector<8 x !s64i>
-  // CIR: [[AND_A:%.*]] = cir.binop(and, [[BC_A]], [[MASK_VEC]])
-  // CIR: [[AND_B:%.*]] = cir.binop(and, [[BC_B]], [[MASK_VEC]])
-  // CIR: [[MUL:%.*]]   = cir.binop(mul, [[AND_A]], [[AND_B]])
+  // CIR: [[AND_A:%.*]] = cir.and [[BC_A]], [[MASK_VEC]]
+  // CIR: [[AND_B:%.*]] = cir.and [[BC_B]], [[MASK_VEC]]
+  // CIR: [[MUL:%.*]]   = cir.mul [[AND_A]], [[AND_B]]
 
   // LLVM-LABEL: _mm512_mul_epu32
   // LLVM: and <8 x i64> %{{.*}}, splat (i64 4294967295)
@@ -996,9 +996,9 @@ int test_mm512_kortestc(__mmask16 __A, __mmask16 __B) {
   // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<65535> : !u16i
   // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: %[[OR:.*]] = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]] = cir.or %[[LHS]], %[[RHS]] : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u16i, !cir.bool
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[OR_INT]], %[[ALL_ONES]] : !u16i
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 
   // LLVM-LABEL: _mm512_kortestc
@@ -1025,9 +1025,9 @@ int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u16i
   // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: %[[OR:.*]] = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]] = cir.or %[[LHS]], %[[RHS]] : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ZERO]]) : !u16i, !cir.bool
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[OR_INT]], %[[ZERO]] : !u16i
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
 
   // LLVM-LABEL: _mm512_kortestz

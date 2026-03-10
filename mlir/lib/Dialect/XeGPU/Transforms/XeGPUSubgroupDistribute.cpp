@@ -1963,7 +1963,8 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
                        "does not have 2D layout");
     ArrayRef<int64_t> perm = transposeOp.getPermutation();
     // Result layout must be a transpose of source layout.
-    if (!resultLayout.isTransposeOf(sourceLayout, perm))
+    if (!resultLayout.isTransposeOf(sourceLayout, perm,
+                                    xegpu::LayoutKind::Lane))
       return rewriter.notifyMatchFailure(
           transposeOp,
           "the source or result vector layouts must be 2D transposes of each "
@@ -2060,6 +2061,27 @@ struct VectorStepSliceDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+struct ConvertLayoutDistribution
+    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
+                                PatternRewriter &rewriter) const override {
+    auto inputLayout = op.getInputLayoutAttr();
+    auto targetLayout = op.getTargetLayoutAttr();
+
+    if (!inputLayout || !targetLayout)
+      return rewriter.notifyMatchFailure(op, "missing layout attributes");
+
+    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+      return rewriter.notifyMatchFailure(
+          op, "lowering incompatible convert_layout not yet supported");
+    }
+    rewriter.replaceOp(op, op.getSource());
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -2077,7 +2099,7 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
                GpuBarrierDistribution, VectorMultiReductionDistribution,
                LoadDistribution, StoreDistribution, VectorTransposeDistribution,
                VectorBitcastDistribution, LoadMatrixDistribution,
-               StoreMatrixDistribution,
+               StoreMatrixDistribution, ConvertLayoutDistribution,
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
       /*pattern benefit=*/PatternHierarchy::Regular);

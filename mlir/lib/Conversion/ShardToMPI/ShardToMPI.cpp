@@ -26,7 +26,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Shard/IR/ShardDialect.h"
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
-#include "mlir/Dialect/Shard/Transforms/Simplifications.h"
+#include "mlir/Dialect/Shard/Transforms/Simplify.h"
 #include "mlir/Dialect/Shard/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -618,6 +618,156 @@ struct ConvertAllReduceOp : public CommOpPattern<AllReduceOp> {
   }
 };
 
+struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
+  using CommOpPattern::CommOpPattern;
+
+  // shard.reduce_scatter reduces and then scatters along a specified
+  // scatter-dim. mpi.reduce_scatter_block always scatters along the first
+  // dimension. Hence, if scatter-dim != 0, we need to rearrange the input
+  // data by expanding the scatter-dim into {nRanks, output_scatter_dim} and
+  // transposing nRanks to the first dimension.
+
+  LogicalResult
+  matchAndRewrite(ReduceScatterOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto gridAxes = adaptor.getGridAxes();
+    int64_t scatterDim = adaptor.getScatterDimAttr().getInt();
+
+    SymbolTableCollection symbolTableCollection;
+    FailureOr<GridOp> gridOp = checkGrid(op, symbolTableCollection);
+    if (failed(gridOp))
+      return failure();
+
+    ImplicitLocOpBuilder ib(op.getLoc(), rewriter);
+    Value rawInput = adaptor.getInput();
+    auto inShapedType = cast<ShapedType>(rawInput.getType());
+    MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
+    auto elemType = outType.getElementType();
+    auto inputShape = inShapedType.getShape();
+    auto outputShape = outType.getShape();
+    int64_t inputDimOnAxis = inputShape[scatterDim];
+    int64_t outputDimOnAxis = outputShape[scatterDim];
+
+    for (size_t i = 0; i < outputShape.size(); ++i)
+      if (outputShape[i] != inputShape[i] &&
+          i != static_cast<size_t>(scatterDim))
+        return op.emitError(
+            "Result and input shapes must match along non-scatter axes.");
+    if (outputDimOnAxis == 0)
+      return op.emitError(
+          "Output size along the scatter axis must be non-zero.");
+    if (inputDimOnAxis % outputDimOnAxis != 0)
+      return op.emitError(
+          "Input size along the scatter axis must be an exact "
+          "multiple of the output size along the scatter axis.");
+
+    if (!memref::isStaticShapeAndContiguousRowMajor(outType))
+      return op.emitError("Result must be a statically shaped memref in "
+                          "contiguous row-major layout.");
+
+    int64_t nRanks = inputDimOnAxis / outputDimOnAxis;
+
+    // Verify that nRanks matches the number of devices along the grid axes.
+    int64_t gridGroupSize =
+        collectiveProcessGroupSize(gridAxes, gridOp->getShape());
+    if (nRanks != gridGroupSize)
+      return op.emitError()
+             << "Expected the scatter factor (" << nRanks
+             << ") to match the number of devices along grid_axes ("
+             << gridGroupSize << ").";
+
+    // Get the right communicator.
+    Value comm = getComm(*gridOp, gridAxes, ib);
+
+    Value mpiInput;
+    if (scatterDim == 0) {
+      // scatter_dim == 0 maps directly to MPI_Reduce_scatter_block.
+      // Input must be contiguous for MPI.
+      Value input = getAsMemref(rawInput, ib);
+      MemRefType inType = cast<MemRefType>(input.getType());
+      if (!memref::isStaticShapeAndContiguousRowMajor(inType))
+        return op.emitError("Input must be a statically shaped memref in "
+                            "contiguous row-major layout.");
+      mpiInput = input;
+    } else {
+      // For scatter_dim != 0 we rearrange the input so the scatter factor
+      // becomes the first dimension.
+      //
+      // 1. Get a tensor representation of the input (avoid memref->tensor
+      //    round-trip if the input is already a tensor).
+      Value tensorInput = rawInput;
+      if (!isa<RankedTensorType>(rawInput.getType())) {
+        auto inTensorType = RankedTensorType::get(inputShape, elemType);
+        tensorInput =
+            bufferization::ToTensorOp::create(ib, inTensorType, rawInput, true);
+      }
+
+      // 2. Expand the scatter dim from {d0, ..., d_sd, ..., dN} to
+      //    {d0, ..., nRanks, o_sd, ..., dN}.
+      SmallVector<int64_t> expandedShape;
+      SmallVector<ReassociationIndices> expandReassociation;
+      int64_t expandedIdx = 0;
+      for (int64_t i = 0; i < static_cast<int64_t>(inputShape.size()); ++i) {
+        if (i == scatterDim) {
+          expandedShape.push_back(nRanks);
+          expandedShape.push_back(outputDimOnAxis);
+          expandReassociation.push_back({expandedIdx, expandedIdx + 1});
+          expandedIdx += 2;
+        } else {
+          expandedShape.push_back(inputShape[i]);
+          expandReassociation.push_back({expandedIdx});
+          expandedIdx += 1;
+        }
+      }
+      auto expandedType = RankedTensorType::get(expandedShape, elemType);
+      tensorInput = tensor::ExpandShapeOp::create(ib, expandedType, tensorInput,
+                                                  expandReassociation);
+
+      // 3. Transpose to move nRanks (at position scatterDim) to position 0:
+      //    {d0, ..., nRanks, o_sd, ..., dN} -> {nRanks, d0, ..., o_sd, ..., dN}
+      SmallVector<int64_t> permutation, transposedShape;
+      permutation.emplace_back(scatterDim);
+      for (int64_t i = 0; i < scatterDim; ++i)
+        permutation.emplace_back(i);
+      for (int64_t i = scatterDim + 1; i < (int64_t)expandedShape.size(); ++i)
+        permutation.emplace_back(i);
+      for (auto p : permutation)
+        transposedShape.emplace_back(expandedShape[p]);
+
+      Value permOutput = tensor::EmptyOp::create(ib, transposedShape, elemType);
+      tensorInput =
+          linalg::TransposeOp::create(ib, tensorInput, permOutput, permutation)
+              ->getResult(0);
+
+      // 4. Materialize as contiguous memref for MPI by copying into a
+      //    freshly allocated buffer.
+      auto mpiInType = MemRefType::get(transposedShape, elemType);
+      Value transposedBuf =
+          bufferization::ToBufferOp::create(ib, mpiInType, tensorInput);
+      mpiInput = memref::AllocOp::create(ib, mpiInType);
+      linalg::CopyOp::create(ib, transposedBuf, mpiInput);
+    }
+
+    // Allocate output buffer.
+    Value output = memref::AllocOp::create(ib, outType);
+    // Create the MPI ReduceScatter operation.
+    mpi::ReduceScatterBlockOp::create(
+        ib, TypeRange(), mpiInput, output,
+        getMPIReductionOp(adaptor.getReductionAttr()), comm);
+
+    // Deallocate the temporary input buffer if we allocated one.
+    if (scatterDim != 0)
+      memref::DeallocOp::create(ib, mpiInput);
+
+    // If the destination is a tensor, cast it to a tensor.
+    if (isa<RankedTensorType>(op.getType()))
+      output =
+          bufferization::ToTensorOp::create(ib, op.getType(), output, true);
+    rewriter.replaceOp(op, output);
+    return success();
+  }
+};
+
 struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
   using CommOpPattern::CommOpPattern;
 
@@ -1048,7 +1198,7 @@ struct ConvertShardToMPIPass
 
     patterns.add<ConvertUpdateHaloOp, ConvertNeighborsLinearIndicesOp,
                  ConvertGetShardingOp, ConvertShardingOp, ConvertShardShapeOp,
-                 ConvertAllGatherOp, ConvertAllReduceOp,
+                 ConvertAllGatherOp, ConvertAllReduceOp, ConvertReduceScatterOp,
                  ConvertProcessLinearIndexOp>(typeConverter, ctxt);
     SymbolTableCollection stc;
     populateProcessMultiIndexOpLoweringPatterns(patterns, stc);

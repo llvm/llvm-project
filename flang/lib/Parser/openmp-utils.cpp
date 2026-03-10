@@ -16,12 +16,24 @@
 #include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
 namespace Fortran::parser::omp {
+
+std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
+
+std::string GetUpperName(llvm::omp::Directive id, unsigned version) {
+  llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
+  return parser::ToUpperCaseLetters(name);
+}
 
 const OpenMPDeclarativeConstruct *GetOmp(const DeclarationConstruct &x) {
   if (auto *y = std::get_if<SpecificationConstruct>(&x.u)) {
@@ -133,6 +145,16 @@ const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x) {
   return &std::get<OmpObjectList>(x.t);
 }
 
+const OmpClause *FindClause(
+    const OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId) {
+  for (auto &clause : spec.Clauses().v) {
+    if (clause.Id() == clauseId) {
+      return &clause;
+    }
+  }
+  return nullptr;
+}
+
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc) {
   // ExecutionPartConstruct -> ExecutableConstruct
@@ -221,8 +243,7 @@ void ExecutionPartIterator::step() {
     } else if (auto *loop{GetDoConstruct(*where)}) {
       stack_.emplace_back(std::get<Block>(loop->t), &*where);
     } else {
-      stack_.back().range =
-          IteratorRange(std::next(where), stack_.back().range.end());
+      ++stack_.back().location.at;
     }
     adjust();
   }
@@ -232,8 +253,7 @@ void ExecutionPartIterator::next() {
   // Advance the iterator to the next legal position. If the current
   // position is a DO-loop or a loop construct, step over it.
   if (valid()) {
-    stack_.back().range =
-        IteratorRange(std::next(at()), stack_.back().range.end());
+    ++stack_.back().location.at;
     adjust();
   }
 }
@@ -242,11 +262,10 @@ void ExecutionPartIterator::adjust() {
   // If the iterator is not at a legal location, keep advancing it until
   // it lands at a legal location or becomes invalid.
   while (valid()) {
-    if (stack_.back().range.empty()) {
+    if (stack_.back().location.atEnd()) {
       stack_.pop_back();
       if (valid()) {
-        stack_.back().range =
-            IteratorRange(std::next(at()), stack_.back().range.end());
+        ++stack_.back().location.at;
       }
     } else if (auto *block{GetFortranBlockConstruct(*at())}) {
       stack_.emplace_back(std::get<Block>(block->t), &*at());

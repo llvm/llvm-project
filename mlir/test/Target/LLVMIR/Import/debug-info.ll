@@ -115,7 +115,8 @@ define i32 @lexical_block_file(i32 %arg1) {
 ; CHECK-DAG: #[[NULL:.+]] = #llvm.di_null_type
 ; CHECK-DAG: #[[INT1:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int1">
 ; CHECK-DAG: #[[INT2:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int2", sizeInBits = 32, encoding = DW_ATE_signed>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[NULL]], #[[INT1]], #[[INT2]]>
+; CHECK-DAG: #[[INT3:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[NULL]], #[[INT1]], #[[INT2]], #[[INT3]]>
 
 define void @basic_type() !dbg !3 {
   ret void
@@ -128,9 +129,10 @@ define void @basic_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "basic_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{null, !6, !7}
+!5 = !{null, !6, !7, !8}
 !6 = !DIBasicType(name: "int1")
 !7 = !DIBasicType(name: "int2", encoding: DW_ATE_signed, size: 32)
+!8 = !DIBasicType()
 
 ; // -----
 
@@ -767,9 +769,7 @@ define void @class_field(ptr %arg1) !dbg !18 {
 
 ; Verify the string type is handled correctly
 
-define void @string_type(ptr %arg1) {
-  call void @llvm.dbg.value(metadata ptr %arg1, metadata !4, metadata !DIExpression()), !dbg !10
-  call void @llvm.dbg.value(metadata ptr %arg1, metadata !9, metadata !DIExpression()), !dbg !10
+define void @string_type() !dbg !3 {
   ret void
 }
 
@@ -778,23 +778,20 @@ define void @string_type(ptr %arg1) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!4 = !DILocalVariable(scope: !5, name: "string_size", file: !2, type: !3);
-!5 = distinct !DISubprogram(name: "test", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
-!6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
-!7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!3 = distinct !DISubprogram(name: "string_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!6, !9}
+!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10)
+!7 = !DILocalVariable(scope: !3, name: "string_size", file: !2, type: !11)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
-!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6, flags: 64);
-!10 = !DILocation(line: 1, column: 2, scope: !5)
+!9 = !DIStringType()
+!10 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
-; CHECK: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
-; CHECK: #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)"
-; CHECK-SAME: sizeInBits = 32
-; CHECK-SAME: alignInBits = 8
-; CHECK-SAME: stringLength = #[[VAR]]
-; CHECK-SAME: stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>
-; CHECK-SAME: stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
-; CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "str", file = #di_file, type = #di_string_type, flags = Artificial>
+; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
+; CHECK-DAG: #[[STR1:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)", sizeInBits = 32, alignInBits = 8, stringLength = #[[VAR]], stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+; CHECK-DAG: #[[STR2:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[STR1]], #[[STR2]]>
 
 ; // -----
 

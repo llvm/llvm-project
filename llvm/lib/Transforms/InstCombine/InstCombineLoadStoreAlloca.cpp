@@ -210,7 +210,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
   }
 
   if (isa<UndefValue>(AI.getArraySize()))
-    return IC.replaceInstUsesWith(AI, Constant::getNullValue(AI.getType()));
+    return IC.replaceInstUsesWith(AI, PoisonValue::get(AI.getType()));
 
   // Ensure that the alloca array size argument has type equal to the offset
   // size of the alloca() pointer, which, in the tyical case, is intptr_t,

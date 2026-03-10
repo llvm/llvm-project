@@ -659,3 +659,160 @@ svfloat64_t test_svdup_n_f64_x(svbool_t pg, float64_t op) MODE_ATTR
 // LLVM_OGCG_CIR-NEXT:    ret <vscale x 2 x double> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f64_x,)(pg, op);
 }
+
+//===------------------------------------------------------===//
+// 5. SVDUP_LANE
+//===------------------------------------------------------===//
+// ALL-LABEL: @test_svdup_lane_s8(
+svint8_t test_svdup_lane_s8(svint8_t data, uint8_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u8i, !cir.vector<[16] x !u8i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[16] x !s8i>, !cir.vector<[16] x !u8i>) -> !cir.vector<[16] x !s8i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i8> [[DATA:%.*]], i8{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 16 x i8> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_s8,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_s16(
+svint16_t test_svdup_lane_s16(svint16_t data, uint16_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[8] x !s16i>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !s16i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 8 x i16> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 8 x i16> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_s16,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_s32(
+svint32_t test_svdup_lane_s32(svint32_t data, uint32_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[4] x !s32i>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !s32i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 4 x i32> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 4 x i32> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_s32,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_s64(
+svint64_t test_svdup_lane_s64(svint64_t data, uint64_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[2] x !s64i>, !cir.vector<[2] x !u64i>) -> !cir.vector<[2] x !s64i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 2 x i64> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 2 x i64> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_s64,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_u8(
+svuint8_t test_svdup_lane_u8(svuint8_t data, uint8_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u8i, !cir.vector<[16] x !u8i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[16] x !u8i>, !cir.vector<[16] x !u8i>) -> !cir.vector<[16] x !u8i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i8> [[DATA:%.*]], i8{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 16 x i8> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_u8,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_u16(
+svuint16_t test_svdup_lane_u16(svuint16_t data, uint16_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[8] x !u16i>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !u16i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 8 x i16> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 8 x i16> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_u16,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_u32(
+svuint32_t test_svdup_lane_u32(svuint32_t data, uint32_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !u32i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 4 x i32> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 4 x i32> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_u32,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_u64(
+svuint64_t test_svdup_lane_u64(svuint64_t data, uint64_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[2] x !u64i>, !cir.vector<[2] x !u64i>) -> !cir.vector<[2] x !u64i>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 2 x i64> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 2 x i64> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_u64,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_f16(
+svfloat16_t test_svdup_lane_f16(svfloat16_t data, uint16_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[8] x !cir.f16>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !cir.f16>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 8 x half> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tbl.nxv8f16(<vscale x 8 x half> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 8 x half> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_f16,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_f32(
+svfloat32_t test_svdup_lane_f32(svfloat32_t data, uint32_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[4] x !cir.float>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !cir.float>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 4 x float> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tbl.nxv4f32(<vscale x 4 x float> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 4 x float> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_f32,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_f64(
+svfloat64_t test_svdup_lane_f64(svfloat64_t data, uint64_t index) MODE_ATTR
+{
+// CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
+// CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[2] x !cir.double>, !cir.vector<[2] x !u64i>) -> !cir.vector<[2] x !cir.double>
+
+// LLVM_OGCG_CIR-SAME:    <vscale x 2 x double> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
+// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
+// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tbl.nxv2f64(<vscale x 2 x double> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
+// LLVM_OGCG_CIR:    ret <vscale x 2 x double> [[RES]]
+  return SVE_ACLE_FUNC(svdup_lane,_f64,,)(data, index);
+}
