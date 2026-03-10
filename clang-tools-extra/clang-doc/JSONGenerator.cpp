@@ -399,8 +399,9 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   Obj["HasContexts"] = true;
 }
 
-static void serializeDescription(llvm::ArrayRef<CommentInfo> Description, json::Object &Obj, StringRef Key = "") {
-  if(Description.empty())
+static void serializeDescription(llvm::ArrayRef<CommentInfo> Description,
+                                 json::Object &Obj, StringRef Key = "") {
+  if (Description.empty())
     return;
 
   // Skip straight to the FullComment's children
