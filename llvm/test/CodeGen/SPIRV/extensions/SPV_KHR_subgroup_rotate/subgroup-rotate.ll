@@ -329,7 +329,7 @@ declare spir_func double @_Z16sub_group_rotatedi(double noundef, i32 noundef) #1
 ; Function Attrs: convergent nounwind
 declare spir_func double @_Z26sub_group_clustered_rotatedij(double noundef, i32 noundef, i32 noundef) #1
 
-attributes #0 = { convergent noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+attributes #0 = { convergent noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #2 = { convergent nounwind }
 

@@ -426,6 +426,7 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
              "with")
 
 VALUE_LANGOPT(FunctionAlignment, 5, 0, Compatible, "Default alignment for functions")
+VALUE_LANGOPT(PreferredFunctionAlignment, 5, 0, Compatible, "Preferred alignment for functions")
 VALUE_LANGOPT(LoopAlignment, 32, 0, Compatible, "Default alignment for loops")
 
 LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
@@ -447,6 +448,8 @@ VALUE_LANGOPT(MaxMatrixDimension, 32, (1 << 20) - 1, NotCompatible, "maximum all
 LANGOPT(CXXAssumptions, 1, 1, NotCompatible, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
 
 LANGOPT(RawStringLiterals, 1, 1, NotCompatible, "Enable or disable raw string literals")
+
+LANGOPT(AllowLiteralDigitSeparator, 1, 0, NotCompatible, "Allow literal digit seperator in source")
 
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default, NotCompatible,

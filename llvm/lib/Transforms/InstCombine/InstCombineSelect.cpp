@@ -608,7 +608,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
     // have preserved the exact NaN bit-pattern.
     // Avoid the folding if the false value might be a NaN.
     if (isa<FPMathOperator>(&SI) &&
-        !computeKnownFPClass(FalseVal, FMF, fcNan, &SI).isKnownNeverNaN())
+        !computeKnownFPClass(FalseVal, FMF, fcNan, SQ.getWithInstruction(&SI))
+             .isKnownNeverNaN())
       return nullptr;
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), Swapped ? C : OOp,
@@ -4114,7 +4115,8 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
 
 bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                                         const Instruction *CtxI) const {
-  KnownFPClass Known = computeKnownFPClass(MulVal, FMF, fcNegative, CtxI);
+  KnownFPClass Known =
+      computeKnownFPClass(MulVal, FMF, fcNegative, SQ.getWithInstruction(CtxI));
 
   return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity() &&
          (FMF.noSignedZeros() || Known.signBitIsZeroOrNaN());

@@ -42,13 +42,13 @@ struct CancelArguments {
   /// is cancelled.
   ///
   /// Both a `requestId` and a `progressId` can be specified in one request.
-  std::optional<int64_t> requestId;
+  uint64_t requestId = 0;
 
   /// The ID (attribute `progressId`) of the progress to cancel. If missing no
   /// progress is cancelled.
   ///
   /// Both a `requestId` and a `progressId` can be specified in one request.
-  std::optional<int64_t> progressId;
+  std::string progressId;
 };
 bool fromJSON(const llvm::json::Value &, CancelArguments &, llvm::json::Path);
 
