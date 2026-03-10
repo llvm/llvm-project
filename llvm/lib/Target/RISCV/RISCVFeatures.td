@@ -490,13 +490,6 @@ def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
 def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
                   AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
 
-def FeatureStdExtZbc
-    : RISCVExtension<1, 0, "Carry-Less Multiplication">,
-      RISCVExtensionBitmask<0, 29>;
-def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
-                   AssemblerPredicate<(all_of FeatureStdExtZbc),
-                                      "'Zbc' (Carry-Less Multiplication)">;
-
 def FeatureStdExtZbs
     : RISCVExtension<1, 0, "Single-Bit Instructions">,
       RISCVExtensionBitmask<0, 33>;
@@ -544,6 +537,14 @@ def HasStdExtZbkc
     : Predicate<"Subtarget->hasStdExtZbkc()">,
       AssemblerPredicate<(all_of FeatureStdExtZbkc),
           "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+
+def FeatureStdExtZbc
+    : RISCVExtension<1, 0, "Carry-Less Multiplication",
+                     [FeatureStdExtZbkc]>,
+      RISCVExtensionBitmask<0, 29>;
+def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
+                   AssemblerPredicate<(all_of FeatureStdExtZbc),
+                                      "'Zbc' (Carry-Less Multiplication)">;
 
 def HasStdExtZbcOrZbkc
     : Predicate<"Subtarget->hasStdExtZbc() || Subtarget->hasStdExtZbkc()">,
