@@ -90,4 +90,10 @@ add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
    SKIP "^clang-doc"
   )
 
+add_lit_testsuite(check-clang-doc-unit "Running clang-doc unit tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit
+  EXCLUDE_FROM_CHECK_ALL
+  ARGS --filter=ClangDocTests
+  )
+
 add_subdirectory(clang-doc)
