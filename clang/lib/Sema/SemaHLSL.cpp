@@ -571,7 +571,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 // - zero-sized arrays
 // - non-variable declarations
 // The layout struct will be added to the HLSLBufferDecl declarations.
-void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
+static void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   ASTContext &AST = S.getASTContext();
   IdentifierInfo *II = getHostLayoutStructName(S, BufDecl, true);
 
@@ -589,20 +589,27 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
       continue;
     const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
 
-    QualType NewTy;
-    if (FieldDecl *FD =
-            createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS)) {
-      // add the field decl to the layout struct
+    FieldDecl *FD =
+        createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS);
+    // Declarations collected for the default $Globals constant buffer have
+    // already been checked to have non-empty cbuffer layout, so
+    // createFieldForHostLayoutStruct should always succeed. These declarations
+    // already have their address space set to hlsl_constant.
+    // For declarations in a named cbuffer block
+    // createFieldForHostLayoutStruct can still return nullptr if the type
+    // is empty (does not have a cbuffer layout).
+    assert((FD || VD->getType().getAddressSpace() != LangAS::hlsl_constant) &&
+           "host layout field for $Globals decl failed to be created");
+    if (FD) {
+      // Add the field decl to the layout struct.
       LS->addDecl(FD);
-      // update address space of the original decl to hlsl_constant
-      NewTy = AST.getAddrSpaceQualType(VD->getType(), LangAS::hlsl_constant);
-    } else {
-      // Declarations in default cbuffer $Globals had the address space set to
-      // hlsl_constant earlier. It needs to be removed now since it does not
-      // have a representable cbuffer layout.
-      NewTy = AST.removeAddrSpaceQualType(VD->getType());
+      if (VD->getType().getAddressSpace() != LangAS::hlsl_constant) {
+        // Update address space of the original decl to hlsl_constant.
+        QualType NewTy =
+            AST.getAddrSpaceQualType(VD->getType(), LangAS::hlsl_constant);
+        VD->setType(NewTy);
+      }
     }
-    VD->setType(NewTy);
   }
   LS->completeDefinition();
   BufDecl->addLayoutStruct(LS);
@@ -4405,6 +4412,38 @@ QualType SemaHLSL::getInoutParameterType(QualType Ty) {
   return Ty;
 }
 
+// Returns true if the type has a non-empty constant buffer layout (if it is
+// scalar, vector or matrix, or if it contains any of these.
+static bool hasConstantBufferLayout(QualType QT) {
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
+  if (Ty->isScalarType() || Ty->isVectorType() || Ty->isMatrixType())
+    return true;
+
+  if (Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray())
+    return false;
+
+  if (const auto *RD = Ty->getAsCXXRecordDecl()) {
+    for (const auto *FD : RD->fields()) {
+      if (hasConstantBufferLayout(FD->getType()))
+        return true;
+    }
+    assert(RD->getNumBases() <= 1 &&
+           "HLSL doesn't support multiple inheritance");
+    return RD->getNumBases()
+               ? hasConstantBufferLayout(RD->bases_begin()->getType())
+               : false;
+  }
+
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+      if (isZeroSizedArray(CAT))
+        return false;
+    return hasConstantBufferLayout(AT->getElementType());
+  }
+
+  return false;
+}
+
 static bool IsDefaultBufferConstantDecl(const ASTContext &Ctx, VarDecl *VD) {
   bool IsVulkan =
       Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::Vulkan;
@@ -4414,7 +4453,7 @@ static bool IsDefaultBufferConstantDecl(const ASTContext &Ctx, VarDecl *VD) {
          QT.getAddressSpace() == LangAS::Default &&
          VD->getStorageClass() != SC_Static &&
          !VD->hasAttr<HLSLVkConstantIdAttr>() && !IsVKPushConstant &&
-         !isInvalidConstantBufferLeafElementType(QT.getTypePtr());
+         hasConstantBufferLayout(QT);
 }
 
 void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
