@@ -21,19 +21,12 @@ void InstructionCost::print(raw_ostream &OS) const {
   if (isValid()) {
     CostType WholeNumber = Value / CostGranularity;
     CostType Remainder = Value % CostGranularity;
+    CostType RemainderHundreds = (Remainder * 100) / CostGranularity;
+    while (RemainderHundreds % 10 == 0 && RemainderHundreds)
+      RemainderHundreds /= 10;
     OS << WholeNumber;
-    assert(CostGranularity == 4 && "Hardcoded for CostGranularity=4");
-    switch (Remainder) {
-    case 1:
-      OS << ".25";
-      break;
-    case 2:
-      OS << ".5";
-      break;
-    case 3:
-      OS << ".75";
-      break;
-    }
+    if (RemainderHundreds)
+      OS << "." << RemainderHundreds;
   } else {
     OS << "Invalid";
   }
