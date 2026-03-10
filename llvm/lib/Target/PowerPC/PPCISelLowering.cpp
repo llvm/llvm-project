@@ -1436,8 +1436,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
-  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::XOR, ISD::SHL, ISD::SRA,
-                       ISD::SRL, ISD::MUL, ISD::FMA, ISD::SINT_TO_FP,
+  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::SUB, ISD::XOR, ISD::SHL,
+                       ISD::SRA, ISD::SRL, ISD::MUL, ISD::FMA, ISD::SINT_TO_FP,
                        ISD::BUILD_VECTOR});
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
@@ -17412,6 +17412,22 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   SDLoc dl(N);
   switch (N->getOpcode()) {
   default: break;
+  case ISD::SUB: {
+    // Normalize (sub x, (sext (setcc ...))) -> (add x, (zext (setcc ...)))
+    // since sext(i1) = -zext(i1), so sub x, sext(cond) = add x, zext(cond).
+    // This allows combineADDToADDZE to optimize the pattern to use addze.
+    SDValue Op1 = N->getOperand(1);
+    if (Op1.getOpcode() == ISD::SIGN_EXTEND && Op1.hasOneUse() &&
+        Op1.getOperand(0).getOpcode() == ISD::SETCC &&
+        Op1.getOperand(0).getValueType() == MVT::i1) {
+      SDValue SetCC = Op1.getOperand(0);
+      SDValue ZExt =
+          DAG.getNode(ISD::ZERO_EXTEND, dl, Op1.getValueType(), SetCC);
+      return DAG.getNode(ISD::ADD, dl, N->getValueType(0), N->getOperand(0),
+                         ZExt);
+    }
+    break;
+  }
   case ISD::ADD:
     return combineADD(N, DCI);
   case ISD::AND: {
