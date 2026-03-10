@@ -1154,7 +1154,7 @@ static bool CheckConstraintSatisfaction(
     return false;
   }
 
-  if (TemplateArgsLists.isAnyArgInstantiationDependent(S.Context)) {
+  if (TemplateArgsLists.isAnyArgDependent(S.Context)) {
     // No need to check satisfaction for dependent constraint expressions.
     Satisfaction.IsSatisfied = true;
     return false;
