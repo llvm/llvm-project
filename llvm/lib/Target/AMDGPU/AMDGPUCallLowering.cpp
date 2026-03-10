@@ -62,7 +62,8 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
 
     // If this is a scalar return, insert a readfirstlane just in case the value
@@ -117,13 +118,11 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     return AddrReg.getReg(0);
   }
 
-  void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
-    markPhysRegUsed(PhysReg);
-
+  void copyToReg(Register ValVReg, Register PhysReg, const CCValAssign &VA) {
     if (VA.getLocVT().getSizeInBits() < 32) {
-      // 16-bit types are reported as legal for 32-bit registers. We need to do
-      // a 32-bit copy, and truncate to avoid the verifier complaining about it.
+      // 16-bit types are reported as legal for 32-bit registers. We need to
+      // do a 32-bit copy, and truncate to avoid the verifier complaining
+      // about it.
       auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
 
       // If we have signext/zeroext, it applies to the whole 32-bit register
@@ -135,6 +134,50 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     }
 
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
+  }
+
+  void readLaneToSGPR(Register ValVReg, Register PhysReg,
+                      const CCValAssign &VA) {
+    // Handle inreg parameters passed through VGPRs due to SGPR exhaustion.
+    // When SGPRs are exhausted, the calling convention may allocate inreg
+    // parameters to VGPRs. We insert readfirstlane to move the value from
+    // VGPR to SGPR, as required by the inreg ABI.
+    //
+    // FIXME: This may increase instruction count in some cases. If the
+    // readfirstlane result is subsequently copied back to a VGPR, we cannot
+    // optimize away the unnecessary VGPR->SGPR->VGPR sequence in later passes
+    // because the inreg attribute information is not preserved in MIR. We could
+    // use WWM_COPY (or similar instructions) and mark it as foldable to enable
+    // later optimization passes to eliminate the redundant readfirstlane.
+    auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
+    if (VA.getLocVT().getSizeInBits() < 32) {
+      auto ToSGPR = MIRBuilder
+                        .buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
+                                        {MRI.getType(Copy.getReg(0))})
+                        .addReg(Copy.getReg(0));
+      auto Extended =
+          buildExtensionHint(VA, ToSGPR.getReg(0), LLT(VA.getLocVT()));
+      MIRBuilder.buildTrunc(ValVReg, Extended);
+      return;
+    }
+
+    MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, ValVReg)
+        .addReg(Copy.getReg(0));
+  }
+
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
+    markPhysRegUsed(PhysReg);
+
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+
+    // Inreg flag should be the same across SplitArg[i]
+    if (Flags.isInReg() && TRI->isVGPR(MRI, PhysReg))
+      readLaneToSGPR(ValVReg, PhysReg, VA);
+    else
+      copyToReg(ValVReg, PhysReg, VA);
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,

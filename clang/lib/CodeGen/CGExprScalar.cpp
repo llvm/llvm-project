@@ -2450,6 +2450,20 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     llvm::Value *Init = llvm::Constant::getNullValue(EltTy);
     V = Builder.CreateInsertElement(V, Init, Idx, "vecinit");
   }
+
+  // Matrix initializer lists are in row-major order but the memory layout for
+  // codegen is determined by the -fmatrix-memory-layout flag (default:
+  // column-major). When the memory layout is column-major, we need to shuffle
+  // the elements from row-major to column-major order.
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
+      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                LangOptions::MatrixMemoryLayout::MatrixColMajor) {
+    SmallVector<int, 16> Mask;
+    for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I)
+      Mask.push_back(MT->mapColumnMajorToRowMajorFlattenedIndex(I));
+    V = Builder.CreateShuffleVector(V, Mask, "matrix.rowmajor2colmajor");
+  }
+
   return V;
 }
 
@@ -2525,7 +2539,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
                                       QualType DestTy, SourceLocation Loc) {
   SmallVector<LValue, 16> LoadList;
   CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
-  // Dest is either a vector or a builtin?
+  // Dest is either a vector, constant matrix, or a builtin
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = DestTy->getAs<VectorType>()) {
     assert(LoadList.size() >= VecTy->getNumElements() &&
@@ -2550,20 +2564,26 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
+    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
-    // V is an allocated temporary to build the truncated matrix into.
-    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
-      unsigned ColMajorIndex =
-          (I % MatTy->getNumRows()) * MatTy->getNumColumns() +
-          (I / MatTy->getNumRows());
-      RValue RVal = CGF.EmitLoadOfLValue(LoadList[ColMajorIndex], Loc);
-      assert(RVal.isScalar() &&
-             "All flattened source values should be scalars.");
-      llvm::Value *Cast = CGF.EmitScalarConversion(
-          RVal.getScalarVal(), LoadList[ColMajorIndex].getType(),
-          MatTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    // V is an allocated temporary for constructing the matrix.
+    for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
+      for (unsigned Col = 0, CE = MatTy->getNumColumns(); Col < CE; Col++) {
+        // When interpreted as a matrix, \p LoadList is *always* row-major order
+        // regardless of the default matrix memory layout.
+        unsigned LoadIdx = MatTy->getRowMajorFlattenedIndex(Row, Col);
+        RValue RVal = CGF.EmitLoadOfLValue(LoadList[LoadIdx], Loc);
+        assert(RVal.isScalar() &&
+               "All flattened source values should be scalars.");
+        llvm::Value *Cast = CGF.EmitScalarConversion(
+            RVal.getScalarVal(), LoadList[LoadIdx].getType(),
+            MatTy->getElementType(), Loc);
+        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
+      }
     }
     return V;
   }
@@ -3101,18 +3121,19 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
            "Destination type must be a matrix or builtin type.");
     Value *Mat = Visit(E);
     if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
-      SmallVector<int> Mask;
+      SmallVector<int> Mask(MatTy->getNumElementsFlattened());
       unsigned NumCols = MatTy->getNumColumns();
       unsigned NumRows = MatTy->getNumRows();
-      unsigned ColOffset = NumCols;
-      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
-        ColOffset = SrcMatTy->getNumColumns();
-      for (unsigned R = 0; R < NumRows; R++) {
-        for (unsigned C = 0; C < NumCols; C++) {
-          unsigned I = R * ColOffset + C;
-          Mask.push_back(I);
-        }
-      }
+      auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>();
+      assert(SrcMatTy && "Source type must be a matrix type.");
+      assert(NumRows <= SrcMatTy->getNumRows());
+      assert(NumCols <= SrcMatTy->getNumColumns());
+      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      for (unsigned R = 0; R < NumRows; R++)
+        for (unsigned C = 0; C < NumCols; C++)
+          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }

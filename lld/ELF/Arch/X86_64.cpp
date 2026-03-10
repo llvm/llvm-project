@@ -28,6 +28,7 @@ namespace {
 class X86_64 : public TargetInfo {
 public:
   X86_64(Ctx &);
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -83,7 +84,7 @@ X86_64::X86_64(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_X86_64_JUMP_SLOT;
   relativeRel = R_X86_64_RELATIVE;
   iRelativeRel = R_X86_64_IRELATIVE;
-  symbolicRel = R_X86_64_64;
+  symbolicRel = ctx.arg.is64 ? R_X86_64_64 : R_X86_64_32;
   tlsDescRel = R_X86_64_TLSDESC;
   tlsGotRel = R_X86_64_TPOFF64;
   tlsModuleIndexRel = R_X86_64_DTPMOD64;
@@ -355,6 +356,13 @@ bool X86_64::relaxOnce(int pass) const {
   return changed;
 }
 
+void X86_64::initTargetSpecificSections() {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    ctx.in.ibtPlt = std::make_unique<IBTPltSection>(ctx);
+    ctx.inputSections.push_back(ctx.in.ibtPlt.get());
+  }
+}
+
 // Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
                            const uint8_t *loc) const {
@@ -437,8 +445,7 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 RelType X86_64::getDynRel(RelType type) const {
-  if (type == R_X86_64_64 || type == R_X86_64_PC64 || type == R_X86_64_SIZE32 ||
-      type == R_X86_64_SIZE64)
+  if (type == symbolicRel || type == R_X86_64_SIZE32 || type == R_X86_64_SIZE64)
     return type;
   return R_X86_64_NONE;
 }

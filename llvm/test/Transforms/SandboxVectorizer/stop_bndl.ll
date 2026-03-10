@@ -14,8 +14,8 @@ define void @stop_bndl(ptr %ptr) {
 ; STOP0-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
 ; STOP0-NEXT:    [[ADD0:%.*]] = fadd float [[LD0]], 0.000000e+00
 ; STOP0-NEXT:    [[ADD1:%.*]] = fadd float [[LD1]], 0.000000e+00
-; STOP0-NEXT:    store float [[ADD0]], ptr [[PTR0]], align 4
-; STOP0-NEXT:    store float [[ADD1]], ptr [[PTR1]], align 4
+; STOP0-NEXT:    store float [[ADD0]], ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; STOP0-NEXT:    store float [[ADD1]], ptr [[PTR1]], align 4, !sandboxvec [[META0]]
 ; STOP0-NEXT:    ret void
 ;
 ; STOP1-LABEL: define void @stop_bndl(
@@ -26,9 +26,9 @@ define void @stop_bndl(ptr %ptr) {
 ; STOP1-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
 ; STOP1-NEXT:    [[ADD0:%.*]] = fadd float [[LD0]], 0.000000e+00
 ; STOP1-NEXT:    [[ADD1:%.*]] = fadd float [[LD1]], 0.000000e+00
-; STOP1-NEXT:    [[PACK:%.*]] = insertelement <2 x float> poison, float [[ADD0]], i32 0
-; STOP1-NEXT:    [[PACK1:%.*]] = insertelement <2 x float> [[PACK]], float [[ADD1]], i32 1
-; STOP1-NEXT:    store <2 x float> [[PACK1]], ptr [[PTR0]], align 4
+; STOP1-NEXT:    [[PACK:%.*]] = insertelement <2 x float> poison, float [[ADD0]], i32 0, !sandboxvec [[META0:![0-9]+]]
+; STOP1-NEXT:    [[PACK1:%.*]] = insertelement <2 x float> [[PACK]], float [[ADD1]], i32 1, !sandboxvec [[META0]]
+; STOP1-NEXT:    store <2 x float> [[PACK1]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; STOP1-NEXT:    ret void
 ;
 ; STOP2-LABEL: define void @stop_bndl(
@@ -37,26 +37,26 @@ define void @stop_bndl(ptr %ptr) {
 ; STOP2-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; STOP2-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
 ; STOP2-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
-; STOP2-NEXT:    [[PACK:%.*]] = insertelement <2 x float> poison, float [[LD0]], i32 0
-; STOP2-NEXT:    [[PACK1:%.*]] = insertelement <2 x float> [[PACK]], float [[LD1]], i32 1
-; STOP2-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[PACK1]], zeroinitializer
-; STOP2-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
+; STOP2-NEXT:    [[PACK:%.*]] = insertelement <2 x float> poison, float [[LD0]], i32 0, !sandboxvec [[META0:![0-9]+]]
+; STOP2-NEXT:    [[PACK1:%.*]] = insertelement <2 x float> [[PACK]], float [[LD1]], i32 1, !sandboxvec [[META0]]
+; STOP2-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[PACK1]], zeroinitializer, !sandboxvec [[META0]]
+; STOP2-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; STOP2-NEXT:    ret void
 ;
 ; STOP3-LABEL: define void @stop_bndl(
 ; STOP3-SAME: ptr [[PTR:%.*]]) {
 ; STOP3-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; STOP3-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
-; STOP3-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[VECL]], zeroinitializer
-; STOP3-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
+; STOP3-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; STOP3-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[VECL]], zeroinitializer, !sandboxvec [[META0]]
+; STOP3-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; STOP3-NEXT:    ret void
 ;
 ; NOSTOP-LABEL: define void @stop_bndl(
 ; NOSTOP-SAME: ptr [[PTR:%.*]]) {
 ; NOSTOP-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; NOSTOP-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
-; NOSTOP-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[VECL]], zeroinitializer
-; NOSTOP-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
+; NOSTOP-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; NOSTOP-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[VECL]], zeroinitializer, !sandboxvec [[META0]]
+; NOSTOP-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; NOSTOP-NEXT:    ret void
 ;
   %ptr0 = getelementptr float, ptr %ptr, i32 0
@@ -69,3 +69,14 @@ define void @stop_bndl(ptr %ptr) {
   store float %add1, ptr %ptr1
   ret void
 }
+;.
+; STOP0: [[META0]] = distinct !{!"sandboxregion"}
+;.
+; STOP1: [[META0]] = distinct !{!"sandboxregion"}
+;.
+; STOP2: [[META0]] = distinct !{!"sandboxregion"}
+;.
+; STOP3: [[META0]] = distinct !{!"sandboxregion"}
+;.
+; NOSTOP: [[META0]] = distinct !{!"sandboxregion"}
+;.

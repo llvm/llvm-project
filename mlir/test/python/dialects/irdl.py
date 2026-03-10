@@ -134,6 +134,22 @@ def testIRDLTypes():
         # CHECK: unit
         t2.params[1].dump()
 
+        # CHECK: True
+        print(
+            t2.typeid == DynamicType.lookup_typeid("irdl_type_test.type2"),
+            file=sys.stderr,
+        )
+        # CHECK: False
+        print(
+            t1.typeid == DynamicType.lookup_typeid("irdl_type_test.type2"),
+            file=sys.stderr,
+        )
+        # CHECK: True
+        print(
+            t1.typeid == DynamicType.lookup_typeid("irdl_type_test.type1"),
+            file=sys.stderr,
+        )
+
         m = Module.create()
         with InsertionPoint(m.body):
             Operation.create("irdl_type_test.op1", results=[t1])
@@ -210,6 +226,22 @@ def testIRDLAttrs():
         a2.params[0].dump()
         # CHECK: unit
         a2.params[1].dump()
+
+        # CHECK: True
+        print(
+            a2.typeid == DynamicAttr.lookup_typeid("irdl_attr_test.attr2"),
+            file=sys.stderr,
+        )
+        # CHECK: False
+        print(
+            a1.typeid == DynamicAttr.lookup_typeid("irdl_attr_test.attr2"),
+            file=sys.stderr,
+        )
+        # CHECK: True
+        print(
+            a1.typeid == DynamicAttr.lookup_typeid("irdl_attr_test.attr1"),
+            file=sys.stderr,
+        )
 
         m = Module.create()
         with InsertionPoint(m.body):

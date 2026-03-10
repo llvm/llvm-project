@@ -11,7 +11,6 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
 
@@ -74,7 +73,7 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       unaryOperator(
-          unless(isExpansionInSystemHeader()), hasOperatorName("&"),
+          hasOperatorName("&"),
           hasUnaryOperand(expr(
               anyOf(cxxOperatorCallExpr(SubscriptOperator, argumentCountIs(2),
                                         hasArgument(0, ContainerExpr),

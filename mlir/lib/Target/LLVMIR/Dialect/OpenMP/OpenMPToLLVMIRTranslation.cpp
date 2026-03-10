@@ -354,10 +354,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getOrder() || op.getOrderMod())
       result = todo("order");
   };
-  auto checkParLevelSimd = [&todo](auto op, LogicalResult &result) {
-    if (op.getParLevelSimd())
-      result = todo("parallelization-level");
-  };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if (!op.getPrivateVars().empty() || op.getPrivateSyms())
       result = todo("privatization");
@@ -396,7 +392,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkOrder(op, result);
       })
-      .Case([&](omp::OrderedRegionOp op) { checkParLevelSimd(op, result); })
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
@@ -1473,14 +1468,18 @@ static LogicalResult createReductionsAndCleanup(
   if (!contInsertPoint->getBlock())
     return op->emitOpError() << "failed to convert reductions";
 
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-      ompBuilder->createBarrier(*contInsertPoint, llvm::omp::OMPD_for);
+  llvm::OpenMPIRBuilder::InsertPointTy afterIP = *contInsertPoint;
+  if (!isTeamsReduction) {
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy barrierIP =
+        ompBuilder->createBarrier(*contInsertPoint, llvm::omp::OMPD_for);
 
-  if (failed(handleError(afterIP, *op)))
-    return failure();
+    if (failed(handleError(barrierIP, *op)))
+      return failure();
+    afterIP = *barrierIP;
+  }
 
   tempTerminator->eraseFromParent();
-  builder.restoreIP(*afterIP);
+  builder.restoreIP(afterIP);
 
   // after the construct, deallocate private reduction variables
   SmallVector<Region *> reductionRegions;
@@ -3515,9 +3514,26 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   linearClauseProcessor.emitStoresForLinearVar(builder);
-  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
+
+  // Check if this SIMD loop contains ordered regions
+  bool hasOrderedRegions = false;
+  simdOp.getRegion().walk([&](omp::OrderedRegionOp orderedOp) {
+    hasOrderedRegions = true;
+    return WalkResult::interrupt();
+  });
+
+  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
     linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
                                          index);
+    if (hasOrderedRegions) {
+      // Also rewrite uses in ordered regions so they read the current value
+      linearClauseProcessor.rewriteInPlace(builder, "omp.ordered.region",
+                                           index);
+      // Also rewrite uses in finalize blocks (code after ordered regions)
+      linearClauseProcessor.rewriteInPlace(builder, "omp_region.finalize",
+                                           index);
+    }
+  }
 
   // We now need to reduce the per-simd-lane reduction variable into the
   // original variable. This works a bit differently to other reductions (e.g.

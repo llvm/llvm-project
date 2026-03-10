@@ -2181,6 +2181,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
        SMEABI_LibCalls_PreserveMost_From_X2,
+       DefaultSafeStackGlobals,
        LibcSafestackPointerAddress)
 >;
 
@@ -3160,6 +3161,7 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 }
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
+  def ___memccpy64 : RuntimeLibcallImpl<MEMCCPY>;
   def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
@@ -3171,6 +3173,7 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
+  def ___memccpy : RuntimeLibcallImpl<MEMCCPY>;
   def ___memcmp : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;

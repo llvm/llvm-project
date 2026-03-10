@@ -8176,9 +8176,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // general, fsel-based lowering of select is a finite-math-only optimization.
   // For more information, see section F.3 of the 2.06 ISA specification.
   // With ISA 3.0
-  if (!Flags.hasNoInfs() ||
-      (!DAG.getTarget().Options.NoNaNsFPMath && !Flags.hasNoNaNs()) ||
-      ResVT == MVT::f128)
+  if (!Flags.hasNoInfs() || !Flags.hasNoNaNs() || ResVT == MVT::f128)
     return Op;
 
   // If the RHS of the comparison is a 0.0, we don't need to do the
@@ -11530,6 +11528,49 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return Flags;
 }
 
+SDValue PPCTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  unsigned IntrinsicID = Op.getConstantOperandVal(1);
+  SDLoc dl(Op);
+  switch (IntrinsicID) {
+  case Intrinsic::ppc_amo_lwat_csne:
+  case Intrinsic::ppc_amo_ldat_csne:
+    SDValue Chain = Op.getOperand(0);
+    SDValue Ptr = Op.getOperand(2);
+    SDValue CmpVal = Op.getOperand(3);
+    SDValue NewVal = Op.getOperand(4);
+
+    EVT VT = IntrinsicID == Intrinsic::ppc_amo_ldat_csne ? MVT::i64 : MVT::i32;
+    Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+    Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+
+    TargetLowering::ArgListTy Args;
+    Args.emplace_back(DAG.getUNDEF(MVT::i64),
+                      Type::getInt64Ty(*DAG.getContext()));
+    Args.emplace_back(CmpVal, Ty);
+    Args.emplace_back(NewVal, Ty);
+    Args.emplace_back(Ptr, IntPtrTy);
+
+    // Lower to dummy call to use ABI for consecutive register allocation.
+    // Places return value, compare value, and new value in X3/X4/X5 as required
+    // by lwat/ldat FC=16, avoiding a new register class for 3 adjacent
+    // registers.
+    const char *SymName = IntrinsicID == Intrinsic::ppc_amo_ldat_csne
+                              ? "__ldat_csne_pseudo"
+                              : "__lwat_csne_pseudo";
+    SDValue Callee =
+        DAG.getExternalSymbol(SymName, getPointerTy(DAG.getDataLayout()));
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(CallingConv::C, Ty, Callee,
+                                                     std::move(Args));
+
+    auto Result = LowerCallTo(CLI);
+    return DAG.getMergeValues({Result.first, Result.second}, dl);
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                SelectionDAG &DAG) const {
   // SelectionDAGBuilder::visitTargetIntrinsic may insert one extra chain to
@@ -12732,7 +12773,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   // For counter-based loop handling.
   case ISD::INTRINSIC_W_CHAIN:
-    return SDValue();
+    return LowerINTRINSIC_W_CHAIN(Op, DAG);
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 
@@ -19276,7 +19317,6 @@ SDValue PPCTargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     if (!Op.hasOneUse() || !isTypeLegal(VT))
       break;
 
-    const TargetOptions &Options = getTargetMachine().Options;
     SDValue N0 = Op.getOperand(0);
     SDValue N1 = Op.getOperand(1);
     SDValue N2 = Op.getOperand(2);
@@ -19293,7 +19333,7 @@ SDValue PPCTargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     // (fneg (fnmsub a b c)) => (fnmsub a (fneg b) (fneg c))
     // These transformations may change sign of zeroes. For example,
     // -(-ab-(-c))=-0 while -(-(ab-c))=+0 when a=b=c=1.
-    if (Flags.hasNoSignedZeros() || Options.NoSignedZerosFPMath) {
+    if (Flags.hasNoSignedZeros()) {
       // Try and choose the cheaper one to negate.
       NegatibleCost N0Cost = NegatibleCost::Expensive;
       SDValue NegN0 = getNegatedExpression(N0, DAG, LegalOps, OptForSize,
@@ -19869,7 +19909,6 @@ SDValue PPCTargetLowering::combineFMALike(SDNode *N,
   SDNodeFlags Flags = N->getFlags();
   EVT VT = N->getValueType(0);
   SelectionDAG &DAG = DCI.DAG;
-  const TargetOptions &Options = getTargetMachine().Options;
   unsigned Opc = N->getOpcode();
   bool CodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
   bool LegalOps = !DCI.isBeforeLegalizeOps();
@@ -19880,7 +19919,7 @@ SDValue PPCTargetLowering::combineFMALike(SDNode *N,
 
   // Allowing transformation to FNMSUB may change sign of zeroes when ab-c=0
   // since (fnmsub a b c)=-0 while c-ab=+0.
-  if (!Flags.hasNoSignedZeros() && !Options.NoSignedZerosFPMath)
+  if (!Flags.hasNoSignedZeros())
     return SDValue();
 
   // (fma (fneg a) b c) => (fnmsub a b c)

@@ -122,8 +122,7 @@ public:
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
     return ST->hasVInstructions();
   }
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const override {
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
@@ -358,10 +357,6 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataTy, Align Alignment) const override;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override {
-    return TLI->isVScaleKnownToBeAPowerOfTwo();
-  }
-
   /// \returns How the target needs this vector-predicated operation to be
   /// transformed.
   TargetTransformInfo::VPLegalization
@@ -511,6 +506,9 @@ public:
   bool
   shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
                                        const Attribute &Attr) const override;
+
+  std::optional<Instruction *>
+  instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
 };
 
 } // end namespace llvm
