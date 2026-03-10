@@ -5806,6 +5806,9 @@ static bool paddingIsNotNeeded(PackOp op) {
   if (llvm::any_of(op.getInnerDimsPos(),
                    [&](int64_t pos) { return srcType.isDynamicDim(pos); }))
     return false;
+  if (llvm::any_of(op.getStaticInnerTiles(),
+                   [](int64_t tile) { return tile == 0; }))
+    return false;
   if (ShapedType::isDynamicShape(op.getStaticInnerTiles()))
     return false;
   return !PackOp::requirePaddingValue(
