@@ -50,17 +50,20 @@ function(add_libclc_builtin_library target_name)
     ${ARGN}
   )
 
-  set(_inc_dirs)
+  # Append each source's parent directory as an include path to COMPILE_OPTIONS.
   foreach(f ${ARG_SOURCES})
-    get_filename_component(dir ${f} DIRECTORY)
-    list(APPEND _inc_dirs ${dir})
+    cmake_path(GET f PARENT_PATH parent_dir)
+    get_property(_existing SOURCE "${f}" DIRECTORY ${LIBCLC_SOURCE_DIR} PROPERTY COMPILE_OPTIONS)
+    if(NOT "-I${parent_dir}" IN_LIST _existing)
+      set_property(SOURCE "${f}" DIRECTORY ${LIBCLC_SOURCE_DIR}
+        APPEND PROPERTY COMPILE_OPTIONS "-I${parent_dir}")
+    endif()
   endforeach()
-  list(REMOVE_DUPLICATES _inc_dirs)
 
   add_library(${target_name} STATIC ${ARG_SOURCES})
   target_compile_options(${target_name} PRIVATE ${ARG_COMPILE_OPTIONS})
   target_include_directories(${target_name} PRIVATE
-    ${ARG_INCLUDE_DIRS} ${_inc_dirs}
+    ${ARG_INCLUDE_DIRS}
   )
   target_compile_definitions(${target_name} PRIVATE ${ARG_COMPILE_DEFINITIONS})
   set_target_properties(${target_name} PROPERTIES
