@@ -19,16 +19,16 @@ __global char *__printf_alloc(uint bytes) {
   __global char *ptr = (__global char *)args->printf_buffer;
 
   uint size = ((__global uint *)ptr)[1];
-  uint offset = __opencl_atomic_load((__global atomic_uint *)ptr,
-                                     memory_order_relaxed, memory_scope_device);
+  uint offset = __scoped_atomic_load_n((__global uint *)ptr, __ATOMIC_RELAXED,
+                                       __MEMORY_SCOPE_DEVICE);
 
   for (;;) {
     if (OFFSET + offset + bytes > size)
       return NULL;
 
-    if (__opencl_atomic_compare_exchange_strong(
-            (__global atomic_uint *)ptr, &offset, offset + bytes,
-            memory_order_relaxed, memory_order_relaxed, memory_scope_device))
+    if (__scoped_atomic_compare_exchange_n(
+            (__global uint *)ptr, &offset, offset + bytes, false,
+            __ATOMIC_RELAXED, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE))
       break;
   }
 

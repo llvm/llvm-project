@@ -249,7 +249,7 @@ void MCStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
 MCSymbol *MCStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   if (!Table.getLabel()) {
-    StringRef Prefix = Context.getAsmInfo()->getPrivateGlobalPrefix();
+    StringRef Prefix = Context.getAsmInfo()->getInternalSymbolPrefix();
     Table.setLabel(
         Context.getOrCreateSymbol(Prefix + "line_table_start" + Twine(CUID)));
   }
