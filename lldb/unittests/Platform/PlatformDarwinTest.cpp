@@ -52,7 +52,8 @@ public:
   static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
 
   bool IsReservedWord(const char *word) override {
-    return llvm::is_contained({"import"}, llvm::StringRef(word));
+    return llvm::is_contained({"import", "mykeyword_1_1_1"},
+                              llvm::StringRef(word));
   }
 
   static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger) {
@@ -494,4 +495,97 @@ TEST_F(
   EXPECT_EQ(fspecs.GetSize(), 1u);
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_1_1_1.py");
   EXPECT_TRUE(ss.GetString().empty());
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeywordAfterReplacement) {
+  // Test case where the module name contains "special characters" but after
+  // LLDB replaces those the filename is still a keyword. We ensure this by a
+  // special case in MockScriptInterpreterPython::IsReservedWord.
+
+  // Create dummy module file at <test-root>/mykeyword-1.1 1.o
+  FileSpec module_fspec(CreateFile("mykeyword-1.1 1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/mykeyword-1.1 1.o
+  FileSpec dsym_module_fpec(
+      CreateFile("mykeyword-1.1 1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("mykeyword-1.1 1.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 0u);
+  EXPECT_TRUE(ss.GetString().contains(
+      "its name conflicts with a keyword and as such cannot be loaded"));
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeywordAfterReplacement_Match_Warning) {
+  // Like
+  // LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeywordAfterReplacement
+  // but we place a script with all the replacement characters into the module
+  // directory so LLDB loads it. That will still produce a warning.
+
+  // Create dummy module file at <test-root>/mykeyword-1.1 1.o
+  FileSpec module_fspec(CreateFile("mykeyword-1.1 1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/mykeyword-1.1 1.o
+  FileSpec dsym_module_fpec(
+      CreateFile("mykeyword-1.1 1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("mykeyword-1.1 1.py", m_tmp_dsym_python_dir);
+  CreateFile("_mykeyword_1_1_1.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_mykeyword_1_1_1.py");
+  EXPECT_TRUE(
+      ss.GetString().contains("Consider removing the file with the malformed "
+                              "name to eliminate this warning."));
+}
+
+TEST_F(
+    PlatformDarwinLocateTest,
+    LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeywordAfterReplacement_Match_NoWarning) {
+  // Like
+  // LocateExecutableScriptingResourcesFromDSYM_ModuleNameIsKeywordAfterReplacement_Match_Warning
+  // but we place a script with all the replacement characters into the module
+  // directory so LLDB loads it (but no script that matches the original module
+  // name, and hence generates no warning).
+
+  // Create dummy module file at <test-root>/mykeyword-1.1 1.o
+  FileSpec module_fspec(CreateFile("mykeyword-1.1 1.o", m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/mykeyword-1.1 1.o
+  FileSpec dsym_module_fpec(
+      CreateFile("mykeyword-1.1 1.o", m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile("_mykeyword_1_1_1.py", m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 1u);
+  EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_mykeyword_1_1_1.py");
+  EXPECT_TRUE(ss.Empty());
 }
