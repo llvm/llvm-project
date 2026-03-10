@@ -217,6 +217,7 @@ Naming benchmarks
 Libc++ contains several benchmarks. It is helpful to observe some consistency when naming benchmarks since it makes it
 easier to search for and filter benchmark names from various other tools like LNT. In particular, we name benchmarks
 after the function they are measuring, with a few transformations to help filtering:
+
 - Constructors are named ``ctor`` to make the name independent on the container being benchmarked.
 - Copy and move operations use ``Self`` instead of the container type, again to make their name independent from the
   container being benchmarked.
