@@ -1546,7 +1546,7 @@ public:
 
     if (Action == LegalizeAction::Custom) {
       return getCustomLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType,
-                               Atomic);
+                                 Atomic);
     }
 
     return Action;
