@@ -48187,7 +48187,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
     case ISD::SETOLE:
       // Converting this to a min would handle comparisons between positive
       // and negative zero incorrectly.
-      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+      if (!N->getFlags().hasNoSignedZeros() &&
           !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
         break;
       Opcode = X86ISD::FMIN;
@@ -48216,7 +48216,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
       // the operands would cause it to handle comparisons between positive
       // and negative zero incorrectly.
       if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+        if (!N->getFlags().hasNoSignedZeros() &&
             !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
           break;
         std::swap(LHS, RHS);
