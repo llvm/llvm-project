@@ -2564,9 +2564,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
         emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i)));
   }
 
-  auto theSISDMap = ArrayRef(AArch64SISDIntrinsicMap);
   const ARMVectorIntrinsicInfo *builtin = findARMVectorIntrinsicInMap(
-      theSISDMap, builtinID, aarch64SISDIntrinsicsProvenSorted);
+      AArch64SISDIntrinsicMap, builtinID, aarch64SISDIntrinsicsProvenSorted);
   if (builtin)
     return emitCommonNeonSISDBuiltinExpr(*this, *builtin, ops, expr);
 
