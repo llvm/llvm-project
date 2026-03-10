@@ -1873,17 +1873,6 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicFMaxEXT:
     AddAtomicFloatRequirements(MI, Reqs, ST);
     break;
-  case SPIRV::OpConvertPtrToU:
-  case SPIRV::OpConvertUToPtr: {
-    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    SPIRVTypeInst ResultType = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if (ResultType->getOpcode() == SPIRV::OpTypeVector &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
-      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
-    }
-    break;
-  }
   case SPIRV::OpConvertBF16ToFINTEL:
   case SPIRV::OpConvertFToBF16INTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion)) {
