@@ -1907,4 +1907,11 @@ namespace lambda_captures {
     lambda2();
     return lambda;
   }
+
+  auto capture_static_address() {
+      static int local = 1;
+      int* p = &local;
+      auto lambda = [p]() { return p; };
+      return lambda;
+  }
 } // namespace lambda_captures
