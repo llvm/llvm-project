@@ -121,8 +121,8 @@ static void test_reduce_min_max() {
   EXPECT_EQ(__gpu_lane_min_u32(mask, n - 1 - id), 0u);
   EXPECT_EQ(__gpu_lane_max_u32(mask, n - 1 - id), n - 1);
 
-  EXPECT_EQ(__gpu_lane_min_f32(mask, static_cast<float>(id)), 0.0f);
-  EXPECT_EQ(__gpu_lane_max_f32(mask, static_cast<float>(id)),
+  EXPECT_EQ(__gpu_lane_fmin_f32(mask, static_cast<float>(id)), 0.0f);
+  EXPECT_EQ(__gpu_lane_fmax_f32(mask, static_cast<float>(id)),
             static_cast<float>(n - 1));
 }
 
@@ -153,9 +153,9 @@ static void test_scan_min_max() {
   EXPECT_EQ(__gpu_prefix_scan_min_u32(mask, id), 0u);
   EXPECT_EQ(__gpu_prefix_scan_max_u32(mask, n - 1 - id), n - 1);
 
-  EXPECT_EQ(__gpu_prefix_scan_min_f32(mask, static_cast<float>(n - 1 - id)),
+  EXPECT_EQ(__gpu_prefix_scan_fmin_f32(mask, static_cast<float>(n - 1 - id)),
             static_cast<float>(n - 1 - id));
-  EXPECT_EQ(__gpu_prefix_scan_max_f32(mask, static_cast<float>(id)),
+  EXPECT_EQ(__gpu_prefix_scan_fmax_f32(mask, static_cast<float>(id)),
             static_cast<float>(id));
 }
 
@@ -165,34 +165,34 @@ static void test_float_min_max() {
   uint32_t n = gpu::get_lane_size();
 
   float centered = static_cast<float>(id) - static_cast<float>(n / 2);
-  EXPECT_EQ(__gpu_lane_min_f32(mask, centered), -static_cast<float>(n / 2));
-  EXPECT_EQ(__gpu_lane_max_f32(mask, centered), static_cast<float>(n / 2 - 1));
+  EXPECT_EQ(__gpu_lane_fmin_f32(mask, centered), -static_cast<float>(n / 2));
+  EXPECT_EQ(__gpu_lane_fmax_f32(mask, centered), static_cast<float>(n / 2 - 1));
 
   float alt =
       id % 2 == 0 ? static_cast<float>(id + 1) : -static_cast<float>(id + 1);
-  EXPECT_EQ(__gpu_lane_min_f32(mask, alt), -static_cast<float>(n));
-  EXPECT_EQ(__gpu_lane_max_f32(mask, alt), static_cast<float>(n - 1));
+  EXPECT_EQ(__gpu_lane_fmin_f32(mask, alt), -static_cast<float>(n));
+  EXPECT_EQ(__gpu_lane_fmax_f32(mask, alt), static_cast<float>(n - 1));
 
   float v_val = id < n / 2 ? static_cast<float>(n / 2 - id)
                            : static_cast<float>(id - n / 2);
   float min_expected = id < n / 2 ? static_cast<float>(n / 2 - id) : 0.0f;
-  EXPECT_EQ(__gpu_prefix_scan_min_f32(mask, v_val), min_expected);
+  EXPECT_EQ(__gpu_prefix_scan_fmin_f32(mask, v_val), min_expected);
 
   float inv_v =
       id < n / 2 ? static_cast<float>(id) : static_cast<float>(n - 1 - id);
   float max_expected =
       id < n / 2 ? static_cast<float>(id) : static_cast<float>(n / 2 - 1);
-  EXPECT_EQ(__gpu_prefix_scan_max_f32(mask, inv_v), max_expected);
+  EXPECT_EQ(__gpu_prefix_scan_fmax_f32(mask, inv_v), max_expected);
 
   double d_centered = static_cast<double>(id) - static_cast<double>(n / 2);
-  EXPECT_EQ(__gpu_lane_min_f64(mask, d_centered), -static_cast<double>(n / 2));
-  EXPECT_EQ(__gpu_lane_max_f64(mask, d_centered),
+  EXPECT_EQ(__gpu_lane_fmin_f64(mask, d_centered), -static_cast<double>(n / 2));
+  EXPECT_EQ(__gpu_lane_fmax_f64(mask, d_centered),
             static_cast<double>(n / 2 - 1));
 
   double desc = static_cast<double>(n - 1 - id);
-  EXPECT_EQ(__gpu_prefix_scan_min_f64(mask, desc),
+  EXPECT_EQ(__gpu_prefix_scan_fmin_f64(mask, desc),
             static_cast<double>(n - 1 - id));
-  EXPECT_EQ(__gpu_prefix_scan_max_f64(mask, desc), static_cast<double>(n - 1));
+  EXPECT_EQ(__gpu_prefix_scan_fmax_f64(mask, desc), static_cast<double>(n - 1));
 }
 
 TEST_MAIN(int, char **, char **) {

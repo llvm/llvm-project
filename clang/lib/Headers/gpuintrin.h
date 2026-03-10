@@ -271,15 +271,27 @@ __DO_LANE_OPS(uint64_t, __GPU_OP, 0, xor, u64);
 #define __GPU_OP(__x, __y) ((__x) < (__y) ? (__x) : (__y))
 __DO_LANE_OPS(uint32_t, __GPU_OP, UINT32_MAX, min, u32);
 __DO_LANE_OPS(uint64_t, __GPU_OP, UINT64_MAX, min, u64);
-__DO_LANE_OPS(float, __GPU_OP, __builtin_inff(), min, f32);
-__DO_LANE_OPS(double, __GPU_OP, __builtin_inf(), min, f64);
 #undef __GPU_OP
 
 #define __GPU_OP(__x, __y) ((__x) > (__y) ? (__x) : (__y))
 __DO_LANE_OPS(uint32_t, __GPU_OP, 0, max, u32);
 __DO_LANE_OPS(uint64_t, __GPU_OP, 0, max, u64);
-__DO_LANE_OPS(float, __GPU_OP, -__builtin_inff(), max, f32);
-__DO_LANE_OPS(double, __GPU_OP, -__builtin_inf(), max, f64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_fminf((__x), (__y))
+__DO_LANE_OPS(float, __GPU_OP, __builtin_inff(), fmin, f32);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_fmin((__x), (__y))
+__DO_LANE_OPS(double, __GPU_OP, __builtin_inf(), fmin, f64);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_fmaxf((__x), (__y))
+__DO_LANE_OPS(float, __GPU_OP, -__builtin_inff(), fmax, f32);
+#undef __GPU_OP
+
+#define __GPU_OP(__x, __y) __builtin_fmax((__x), (__y))
+__DO_LANE_OPS(double, __GPU_OP, -__builtin_inf(), fmax, f64);
 #undef __GPU_OP
 
 #undef __DO_LANE_OPS
