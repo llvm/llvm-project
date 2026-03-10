@@ -1,4 +1,4 @@
-//===-- Exhaustive test for fmabf16 ---------------------------------------===//
+//===-- Exhaustive tests for fmabf16 --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,56 +6,65 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "exhaustive_test.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fmabf16.h"
 #include "test/UnitTest/FPMatcher.h"
-#include "test/UnitTest/Test.h"
+#include "utils/MPFRWrapper/MPCommon.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcFmaBf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
-
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::fputil::BFloat16;
 
-// Normal range: [+0, +int]
+struct FmaBf16Checker : public virtual LIBC_NAMESPACE::testing::Test {
+
+  using FloatType = BFloat16;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
+  using StorageType = typename FPBits::StorageType;
+
+  uint64_t check(uint16_t x_start, uint16_t x_stop,
+                 [[maybe_unused]] uint16_t y_start, uint16_t y_stop,
+                 mpfr::RoundingMode rounding) {
+
+    mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return true;
+    uint16_t xbits = x_start;
+    uint64_t failed = 0;
+    do {
+      BFloat16 x = FPBits(xbits).get_val();
+      uint16_t ybits = xbits;
+      do {
+        BFloat16 y = FPBits(ybits).get_val();
+        BFloat16 z = FPBits(uint16_t(0x3F80)).get_val();
+        mpfr::TernaryInput<BFloat16> input{x, y, z};
+        bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
+            mpfr::Operation::Fma, input, LIBC_NAMESPACE::fmabf16(x, y, z), 0.5,
+            rounding);
+        failed += (!correct);
+
+      } while (ybits++ < y_stop);
+    } while (xbits++ < x_stop);
+    return failed;
+  }
+};
+
+using LlvmLibcBfloat16ExhaustiveFmaTest =
+    LlvmLibcExhaustiveMathTest<FmaBf16Checker, 1 << 2>;
+
+// range: [0, inf]
 static constexpr uint16_t POS_START = 0x0000U;
 static constexpr uint16_t POS_STOP = 0x7f80U;
 
-// Normal range: [-0, -int]
+// range: [-0, -inf]
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U;
 
-TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
-  constexpr bfloat16 VALUES[] = {zero,    neg_zero,   inf,
-                                 neg_inf, min_normal, max_normal};
-  for (uint16_t v1 = POS_START; v1 <= POS_STOP; v1++) {
-    for (uint16_t v2 = v1; v2 <= POS_STOP; v2++) {
-
-      bfloat16 x = FPBits(v1).get_val();
-      bfloat16 y = FPBits(v2).get_val();
-      for (const bfloat16 &z : VALUES) {
-        mpfr::TernaryInput<bfloat16> input{x, y, z};
-
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                       LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
-      }
-    }
-  }
+TEST_F(LlvmLibcBfloat16ExhaustiveFmaTest, PositiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP, POS_START, POS_STOP);
 }
 
-TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
-  constexpr bfloat16 VALUES[] = {zero,    neg_zero,   inf,
-                                 neg_inf, min_normal, max_normal};
-  for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; v1++) {
-    for (uint16_t v2 = v1; v2 <= NEG_STOP; v2++) {
-
-      bfloat16 x = FPBits(v1).get_val();
-      bfloat16 y = FPBits(v2).get_val();
-      for (const bfloat16 &z : VALUES) {
-        mpfr::TernaryInput<bfloat16> input{x, y, z};
-
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                       LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
-      }
-    }
-  }
+TEST_F(LlvmLibcBfloat16ExhaustiveFmaTest, PositiveNegative) {
+  test_full_range_all_roundings(POS_START, POS_STOP, NEG_START, NEG_STOP);
 }

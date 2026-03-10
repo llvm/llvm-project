@@ -301,6 +301,8 @@ add_fp_unittest(
     libc_math_exhaustive_tests
   SRCS
     fmabf16_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.math.fmabf16
