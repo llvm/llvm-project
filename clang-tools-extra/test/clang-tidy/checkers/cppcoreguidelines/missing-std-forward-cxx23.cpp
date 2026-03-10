@@ -2,6 +2,14 @@
 
 // NOLINTBEGIN
 #include <utility>
+// TODO: move this to <concept>
+namespace std {
+template <class T, class U>
+concept derived_from = true;
+
+template <class T>
+concept integral = true;
+} // namespace std
 // NOLINTEND
 
 // Tests for constrained explicit object parameters (GH#180362).
