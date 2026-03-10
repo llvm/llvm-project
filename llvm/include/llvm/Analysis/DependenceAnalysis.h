@@ -105,11 +105,8 @@ public:
     };
     unsigned char Direction : 3; // Init to ALL, then refine.
     bool Scalar : 1;             // Init to true.
-    bool PeelFirst : 1; // Peeling the first iteration will break dependence.
-    bool PeelLast : 1;  // Peeling the last iteration will break the dependence.
     const SCEV *Distance = nullptr; // NULL implies no distance available.
-    DVEntry()
-        : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false) {}
+    DVEntry() : Direction(ALL), Scalar(true) {}
   };
 
   /// getSrc - Returns the source instruction for this dependence.
@@ -144,10 +141,6 @@ public:
   /// (the compiler understands nothing and makes worst-case assumptions).
   virtual bool isConfused() const { return true; }
 
-  /// isConsistent - Returns true if this dependence is consistent
-  /// (occurs every time the source and destination are executed).
-  virtual bool isConsistent() const { return false; }
-
   /// getLevels - Returns the number of common loops surrounding the
   /// source and destination of the dependence.
   virtual unsigned getLevels() const { return 0; }
@@ -181,18 +174,6 @@ public:
   /// Src and Dst, plus reversing the dependence directions and distances
   /// in the vector.
   virtual bool normalize(ScalarEvolution *SE) { return false; }
-
-  /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  virtual bool isPeelFirst(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
-
-  /// isPeelLast - Returns true if peeling the last iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  virtual bool isPeelLast(unsigned Level, bool SameSD = false) const {
-    return false;
-  }
 
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
@@ -260,10 +241,6 @@ public:
   /// assumptions).
   bool isConfused() const override { return false; }
 
-  /// isConsistent - Returns true if this dependence is consistent
-  /// (occurs every time the source and destination are executed).
-  bool isConsistent() const override { return Consistent; }
-
   /// getLevels - Returns the number of common loops surrounding the
   /// source and destination of the dependence.
   unsigned getLevels() const override { return Levels; }
@@ -304,14 +281,6 @@ public:
   /// in the vector.
   bool normalize(ScalarEvolution *SE) override;
 
-  /// isPeelFirst - Returns true if peeling the first iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  bool isPeelFirst(unsigned Level, bool SameSD = false) const override;
-
-  /// isPeelLast - Returns true if peeling the last iteration from
-  /// this regular or SameSD loop level will break this dependence.
-  bool isPeelLast(unsigned Level, bool SameSD = false) const override;
-
   /// inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
   /// performed across two separate loop nests that have the Same Iteration and
   /// Depth.
@@ -326,7 +295,6 @@ private:
   unsigned short Levels;
   unsigned short SameSDLevels;
   bool LoopIndependent;
-  bool Consistent; // Init to true, then refine.
   std::unique_ptr<DVEntry[]> DV;
   std::unique_ptr<DVEntry[]> DVSameSD; // DV entries on SameSD levels
   friend class DependenceInfo;

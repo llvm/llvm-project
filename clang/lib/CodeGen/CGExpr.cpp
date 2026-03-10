@@ -7026,7 +7026,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   //
   // This is used for the indirect function case, virtual function case is
   // handled in ItaniumCXXABI.cpp
-  if (getLangOpts().OpenMPIsTargetDevice &&
+  if (getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU() &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     const Expr *CalleeExpr = E->getCallee()->IgnoreParenImpCasts();
     const DeclRefExpr *DRE = nullptr;

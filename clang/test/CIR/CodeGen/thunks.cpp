@@ -69,6 +69,28 @@ D::~D() {}
 
 } // namespace Test3
 
+namespace Test4 {
+// Non-virtual this-adjusting thunk for a method with a by-value parameter.
+// This exercises the case where emitDelegateCallArg is called with an invalid
+// SourceLocation during thunk generation, which requires getLoc to handle
+// a null currSrcLoc gracefully.
+
+struct A {
+  virtual void f();
+};
+
+struct B {
+  virtual void g(int x);
+};
+
+struct C : A, B {
+  void g(int x) override;
+};
+
+void C::g(int x) {}
+
+} // namespace Test4
+
 // In CIR, all globals are emitted before functions.
 
 // Test1 vtable: C's vtable references the thunk for B's entry.
@@ -80,6 +102,11 @@ D::~D() {}
 // CIR-DAG: cir.global "private" external @_ZTVN5Test21CE = #cir.vtable<{
 // CIR-DAG:   #cir.global_view<@_ZN5Test21C1gEv> : !cir.ptr<!u8i>
 // CIR-DAG:   #cir.global_view<@_ZThn8_N5Test21C1gEv> : !cir.ptr<!u8i>
+
+// Test4 vtable: C's vtable references the thunk for B's entry.
+// CIR-DAG: cir.global "private" external @_ZTVN5Test41CE = #cir.vtable<{
+// CIR-DAG:   #cir.global_view<@_ZN5Test41C1gEi> : !cir.ptr<!u8i>
+// CIR-DAG:   #cir.global_view<@_ZThn8_N5Test41C1gEi> : !cir.ptr<!u8i>
 
 // Test3 vtable: D's vtable references D1, D0, and their thunks.
 // CIR-DAG: cir.global "private" external @_ZTVN5Test31DE = #cir.vtable<{
@@ -141,6 +168,21 @@ D::~D() {}
 // CIR:   cir.call @_ZN5Test31DD0Ev(%[[T3B_RESULT]])
 // CIR:   cir.return
 
+// --- Test4: by-value parameter thunk ---
+
+// CIR: cir.func {{.*}} @_ZN5Test41C1gEi
+
+// The thunk adjusts 'this' by -8 bytes, forwards the int arg, and calls C::g().
+// CIR: cir.func {{.*}} @_ZThn8_N5Test41C1gEi(%arg0: !cir.ptr<
+// CIR:   %[[T4_THIS:.*]] = cir.load
+// CIR:   %[[T4_CAST:.*]] = cir.cast bitcast %[[T4_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
+// CIR:   %[[T4_OFFSET:.*]] = cir.const #cir.int<-8> : !s64i
+// CIR:   %[[T4_ADJUSTED:.*]] = cir.ptr_stride %[[T4_CAST]], %[[T4_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+// CIR:   %[[T4_RESULT:.*]] = cir.cast bitcast %[[T4_ADJUSTED]] : !cir.ptr<!u8i> -> !cir.ptr<
+// CIR:   %[[T4_ARG:.*]] = cir.load
+// CIR:   cir.call @_ZN5Test41C1gEi(%[[T4_RESULT]], %[[T4_ARG]])
+// CIR:   cir.return
+
 // --- LLVM checks ---
 
 // LLVM: @_ZTVN5Test11CE = global { [3 x ptr], [3 x ptr] } {
@@ -156,6 +198,11 @@ D::~D() {}
 // LLVM: @_ZTVN5Test31DE = global { [4 x ptr], [4 x ptr] } {
 // LLVM-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test31DD1Ev, ptr @_ZN5Test31DD0Ev],
 // LLVM-SAME: [4 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test31DD1Ev, ptr @_ZThn8_N5Test31DD0Ev]
+// LLVM-SAME: }
+
+// LLVM: @_ZTVN5Test41CE = global { [4 x ptr], [3 x ptr] } {
+// LLVM-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test41A1fEv, ptr @_ZN5Test41C1gEi],
+// LLVM-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test41C1gEi]
 // LLVM-SAME: }
 
 // LLVM: define {{.*}} void @_ZThn8_N5Test11C1fEv(ptr{{.*}})
@@ -178,6 +225,12 @@ D::~D() {}
 // LLVM:   %[[L3B_ADJ:.*]] = getelementptr i8, ptr %[[L3B_THIS]], i64 -8
 // LLVM:   call void @_ZN5Test31DD0Ev(ptr{{.*}} %[[L3B_ADJ]])
 
+// LLVM: define {{.*}} void @_ZThn8_N5Test41C1gEi(ptr{{.*}}, i32{{.*}})
+// LLVM:   %[[L4_THIS:.*]] = load ptr, ptr
+// LLVM:   %[[L4_ADJ:.*]] = getelementptr i8, ptr %[[L4_THIS]], i64 -8
+// LLVM:   %[[L4_ARG:.*]] = load i32, ptr
+// LLVM:   call void @_ZN5Test41C1gEi(ptr{{.*}} %[[L4_ADJ]], i32{{.*}} %[[L4_ARG]])
+
 // --- OGCG checks ---
 
 // OGCG: @_ZTVN5Test11CE = unnamed_addr constant { [3 x ptr], [3 x ptr] } {
@@ -193,6 +246,11 @@ D::~D() {}
 // OGCG: @_ZTVN5Test31DE = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
 // OGCG-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test31DD1Ev, ptr @_ZN5Test31DD0Ev],
 // OGCG-SAME: [4 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test31DD1Ev, ptr @_ZThn8_N5Test31DD0Ev]
+// OGCG-SAME: }
+
+// OGCG: @_ZTVN5Test41CE = unnamed_addr constant { [4 x ptr], [3 x ptr] } {
+// OGCG-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test41A1fEv, ptr @_ZN5Test41C1gEi],
+// OGCG-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test41C1gEi]
 // OGCG-SAME: }
 
 // OGCG: define {{.*}} void @_ZThn8_N5Test11C1fEv(ptr{{.*}})
@@ -214,3 +272,9 @@ D::~D() {}
 // OGCG:   %[[O3B_THIS:.*]] = load ptr, ptr
 // OGCG:   %[[O3B_ADJ:.*]] = getelementptr inbounds i8, ptr %[[O3B_THIS]], i64 -8
 // OGCG:   call void @_ZN5Test31DD0Ev(ptr{{.*}} %[[O3B_ADJ]])
+
+// OGCG: define {{.*}} void @_ZThn8_N5Test41C1gEi(ptr{{.*}}, i32{{.*}})
+// OGCG:   %[[O4_THIS:.*]] = load ptr, ptr
+// OGCG:   %[[O4_ADJ:.*]] = getelementptr inbounds i8, ptr %[[O4_THIS]], i64 -8
+// OGCG:   %[[O4_ARG:.*]] = load i32, ptr
+// OGCG:   {{.*}}call void @_ZN5Test41C1gEi(ptr{{.*}} %[[O4_ADJ]], i32{{.*}} %[[O4_ARG]])

@@ -1,6 +1,5 @@
 ; RUN: llc < %s -mtriple=mipsel-unknown-linux-gnu | FileCheck %s --check-prefixes=MIPS32
 ; RUN: llc < %s -mtriple=mips64el-unknown-linux-gnuabi64 | FileCheck %s --check-prefixes=MIPS64
-; RUN: llc < %s -mtriple=mips64el-unknown-linux-gnuabi64 | FileCheck %s --check-prefixes=MIPS64
 
 define i32 @shl_32(i32 %a, i32 %b) {
 ; MIPS32-LABEL:   shl_32:

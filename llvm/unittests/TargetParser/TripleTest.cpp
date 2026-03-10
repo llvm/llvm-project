@@ -1386,15 +1386,21 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::LiteOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
-  T = Triple("x86_64-pc-serenity");
+  T = Triple("x86_64-unknown-serenity");
   EXPECT_EQ(Triple::x86_64, T.getArch());
-  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Serenity, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
-  T = Triple("aarch64-pc-serenity");
+  T = Triple("aarch64-unknown-serenity");
   EXPECT_EQ(Triple::aarch64, T.getArch());
-  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Serenity, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-serenity");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Serenity, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
@@ -3391,6 +3397,28 @@ TEST(DataLayoutTest, UEFI) {
 
   // Test UEFI X86_64 Mangling Component.
   EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
+TEST(TripleTest, DefaultWCharSize) {
+  EXPECT_EQ(4u, Triple("x86_64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("aarch64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("riscv64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("amdgcn-amd-amdhsa").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("nvptx64-nvidia-cuda").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("armv7-unknown-linux-gnueabi").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("s390x-none-zos").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("powerpc64-ibm-aix").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("").getDefaultWCharSize());
+
+  EXPECT_EQ(2u, Triple("x86_64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("aarch64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-w64-windows-gnu").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-unknown-uefi").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps4").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps5").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
+
+  EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
 }
 
 } // end anonymous namespace
