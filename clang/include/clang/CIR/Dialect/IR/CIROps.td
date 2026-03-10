@@ -2031,27 +2031,40 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
 ]>;
 
 def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
-  let summary = "Compare values two values and produce a boolean result";
+  let summary = "Compare two values and produce a boolean result";
   let description = [{
-    `cir.cmp` compares two input operands of the same type and produces a
-    `cir.bool` result. The kinds of comparison available are:
-    [lt,gt,ge,eq,ne]
+    The `cir.cmp` operation compares two operands of the same type and produces
+    a `!cir.bool` result. It supports integral, floating-point, and pointer
+    types.
+
+    The following comparison predicates are available:
+
+    - `lt`: less than
+    - `le`: less than or equal
+    - `gt`: greater than
+    - `ge`: greater than or equal
+    - `eq`: equal
+    - `ne`: not equal
+
+    For floating-point comparisons, the predicate follows C semantics (e.g.
+    NaN comparisons return false for all predicates except `ne`).
 
     ```mlir
-    %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
+    %0 = cir.cmp gt %1, %2 : !s32i
+    %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
     ```
   }];
 
   let arguments = (ins
     CIR_CmpOpKind:$kind,
-    CIR_AnyType:$lhs,
-    CIR_AnyType:$rhs
+    CIR_ComparableType:$lhs,
+    CIR_ComparableType:$rhs
   );
 
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
+    $kind $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
 
   let isLLVMLoweringRecursive = true;
@@ -3966,7 +3979,35 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
   }];
 }
 
-// TODO: MemMoveOp
+def CIR_MemMoveOp : CIR_MemOp<"libc.memmove"> {
+  let summary = "Equivalent to libc's `memmove`";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.libc.memmove` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
+
+    similiar to `cir.libc.memcpy` but accounts for overlapping memory.
+
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a record:
+      %2 = cir.const #cir.int<2> : !u32i
+      cir.libc.memmove %2 bytes from %arr to %record : !cir.ptr<!void>, !u64i
+    ```
+  }];
+
+  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` qualified(type($dst)) `,` type($len)
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    cir::IntType getLenTy() { return getLen().getType(); }
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // MemSetOp
@@ -6191,7 +6232,15 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
 // Variadic Operations
 //===----------------------------------------------------------------------===//
 
-def CIR_VAStartOp : CIR_Op<"va_start"> {
+class CIR_VAOp<string mnemonic> : CIR_Op<mnemonic> {
+  let arguments = (ins CIR_PointerType:$arg_list);
+
+  let assemblyFormat = [{
+    $arg_list attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VAStartOp : CIR_VAOp<"va_start"> {
   let summary = "Starts a variable argument list";
   let description = [{
     The cir.va_start operation models the C/C++ va_start macro by
@@ -6220,14 +6269,9 @@ def CIR_VAStartOp : CIR_Op<"va_start"> {
     cir.va_start %p : !cir.ptr<!rec___va_list_tag>
     ```
   }];
-  let arguments = (ins CIR_PointerType:$arg_list);
-
-  let assemblyFormat = [{
-    $arg_list attr-dict `:` type(operands)
-  }];
 }
 
-def CIR_VAEndOp : CIR_Op<"va_end"> {
+def CIR_VAEndOp : CIR_VAOp<"va_end"> {
   let summary = "Ends a variable argument list";
   let description = [{
     The `cir.va_end` operation models the C/C++ va_end macro by finalizing
@@ -6254,12 +6298,6 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
           -> !cir.ptr<!rec___va_list_tag>
     cir.va_end %p : !cir.ptr<!rec___va_list_tag>
     ```
-  }];
-
-  let arguments = (ins CIR_PointerType:$arg_list);
-
-  let assemblyFormat = [{
-    $arg_list attr-dict `:` type(operands)
   }];
 }
 

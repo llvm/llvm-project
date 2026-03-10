@@ -12,22 +12,21 @@
 include "PPCOperands.td"
 
 let Namespace = "PPC" in {
-def sub_lt : SubRegIndex<1>;
-def sub_gt : SubRegIndex<1, 1>;
-def sub_eq : SubRegIndex<1, 2>;
-def sub_un : SubRegIndex<1, 3>;
-def sub_32 : SubRegIndex<32>;
-def sub_32_hi_phony : SubRegIndex<32,32>;
-def sub_64 : SubRegIndex<64>;
-def sub_64_hi_phony : SubRegIndex<64,64>;
-def sub_vsx0 : SubRegIndex<128>;
-def sub_vsx1 : SubRegIndex<128, 128>;
-def sub_gp8_x0 : SubRegIndex<64>;
-def sub_gp8_x1 : SubRegIndex<64, 64>;
-def sub_fp0 : SubRegIndex<64>;
-def sub_fp1 : SubRegIndex<64, 64>;
+  def sub_lt : SubRegIndex<1>;
+  def sub_gt : SubRegIndex<1, 1>;
+  def sub_eq : SubRegIndex<1, 2>;
+  def sub_un : SubRegIndex<1, 3>;
+  def sub_32 : SubRegIndex<32>;
+  def sub_32_hi_phony : SubRegIndex<32,32>;
+  def sub_64 : SubRegIndex<64>;
+  def sub_64_hi_phony : SubRegIndex<64,64>;
+  def sub_vsx0 : SubRegIndex<128>;
+  def sub_vsx1 : SubRegIndex<128, 128>;
+  def sub_gp8_x0 : SubRegIndex<64>;
+  def sub_gp8_x1 : SubRegIndex<64, 64>;
+  def sub_fp0 : SubRegIndex<64>;
+  def sub_fp1 : SubRegIndex<64, 64>;
 }
-
 
 class PPCReg<string n> : Register<n> {
   let Namespace = "PPC";
@@ -151,7 +150,6 @@ foreach Index = 0-31 in {
 
 }
 
-
 // Floating-point registers
 foreach Index = 0-31 in {
   def F#Index : FPR<Index, "f"#Index>,
@@ -188,17 +186,16 @@ foreach Index = 0-31 in {
 }
 
 let CoveredBySubRegs = 1 in {
-// Vector registers
-foreach Index = 0-31 in {
-  def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
-                DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
-}
-
-// VSX registers
-foreach Index = 0-31 in {
-  def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
-                  DwarfRegAlias<!cast<FPR>("F"#Index)>;
-}
+  // Vector registers
+  foreach Index = 0-31 in {
+    def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
+                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
+  }
+  // VSX registers
+  foreach Index = 0-31 in {
+    def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
+                    DwarfRegAlias<!cast<FPR>("F"#Index)>;
+  }
 }
 
 // Dummy VSX registers, this defines string: "vs32"-"vs63", and is only used for
@@ -231,8 +228,8 @@ foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in
 
 // The representation of r0 when treated as the constant 0.
 let isConstant = true in {
-def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
-def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
+  def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
+  def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
 } // isConstant = true
 
 // Representations of the frame pointer used by ISD::FRAMEADDR.
@@ -279,14 +276,14 @@ def CR7UN : CRBIT<31, "31">;
 
 // Condition registers
 let SubRegIndices = [sub_lt, sub_gt, sub_eq, sub_un] in {
-def CR0 : CR<0, "cr0", [CR0LT, CR0GT, CR0EQ, CR0UN]>, DwarfRegNum<[68, 68]>;
-def CR1 : CR<1, "cr1", [CR1LT, CR1GT, CR1EQ, CR1UN]>, DwarfRegNum<[69, 69]>;
-def CR2 : CR<2, "cr2", [CR2LT, CR2GT, CR2EQ, CR2UN]>, DwarfRegNum<[70, 70]>;
-def CR3 : CR<3, "cr3", [CR3LT, CR3GT, CR3EQ, CR3UN]>, DwarfRegNum<[71, 71]>;
-def CR4 : CR<4, "cr4", [CR4LT, CR4GT, CR4EQ, CR4UN]>, DwarfRegNum<[72, 72]>;
-def CR5 : CR<5, "cr5", [CR5LT, CR5GT, CR5EQ, CR5UN]>, DwarfRegNum<[73, 73]>;
-def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
-def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
+  def CR0 : CR<0, "cr0", [CR0LT, CR0GT, CR0EQ, CR0UN]>, DwarfRegNum<[68, 68]>;
+  def CR1 : CR<1, "cr1", [CR1LT, CR1GT, CR1EQ, CR1UN]>, DwarfRegNum<[69, 69]>;
+  def CR2 : CR<2, "cr2", [CR2LT, CR2GT, CR2EQ, CR2UN]>, DwarfRegNum<[70, 70]>;
+  def CR3 : CR<3, "cr3", [CR3LT, CR3GT, CR3EQ, CR3UN]>, DwarfRegNum<[71, 71]>;
+  def CR4 : CR<4, "cr4", [CR4LT, CR4GT, CR4EQ, CR4UN]>, DwarfRegNum<[72, 72]>;
+  def CR5 : CR<5, "cr5", [CR5LT, CR5GT, CR5EQ, CR5UN]>, DwarfRegNum<[73, 73]>;
+  def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
+  def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 }
 
 // Link register

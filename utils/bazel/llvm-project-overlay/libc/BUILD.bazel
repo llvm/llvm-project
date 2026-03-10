@@ -319,6 +319,11 @@ libc_support_library(
     hdrs = ["hdr/stdint_proxy.h"],
 )
 
+libc_support_library(
+    name = "hdr_sys_auxv_macros",
+    hdrs = ["hdr/sys_auxv_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -1723,6 +1728,7 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":__support_threads_callonce",
         ":hdr_fcntl_macros",
+        ":hdr_sys_auxv_macros",
     ],
 )
 
