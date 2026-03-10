@@ -144,7 +144,11 @@ insertPrefetchHints(MachineFunction &MF,
           // against undefined prefetch target symbol by emitting a fallback
           // symbol with weak linkage right after the prefetch instruction. If
           // there is no strong symbol, the fallback will be used and we
-          // prefetch the next address.
+          // prefetch the next address:
+          //
+          // prefetchit1 __llvm_prefetch_target_foo_x_y(%rip)
+          // .weak __llvm_prefetch_target_foo_x_y
+          // __llvm_prefetch_target_foo_x_y:
           MCSymbolELF *WeakFallbackSym = static_cast<MCSymbolELF *>(
               MF.getContext().getOrCreateSymbol(TargetSymbolName));
           WeakFallbackSym->setIsWeakref();

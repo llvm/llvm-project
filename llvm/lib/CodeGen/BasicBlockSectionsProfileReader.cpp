@@ -203,7 +203,8 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // +----------------------------------+
 //
 // A prefetch hint specified in function "bar" as "120,1 foo,10,2" results
-// in a a hint inserted after the first call in block #120 of bar:
+// in a hint inserted after the first call in block #120 of bar:
+//
 // B
 // +----------------------------------------------------+
 // | Instruction 1                                      |
