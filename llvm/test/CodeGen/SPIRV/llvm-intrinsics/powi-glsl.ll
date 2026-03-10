@@ -33,5 +33,11 @@ define internal float @test_powi_f32_i64(float %x, i64 %n) {
   ret float %res
 }
 
+define void @main() #0 {
+  ret void
+}
+
 declare float @llvm.powi.f32.i32(float, i32)
 declare float @llvm.powi.f32.i64(float, i64)
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
