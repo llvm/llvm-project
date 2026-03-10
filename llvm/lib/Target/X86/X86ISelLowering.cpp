@@ -34554,7 +34554,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       if (IsFSHL) {
         Res = DAG.getNode(ISD::SHL, dl, MVT::i512, Res, Amt);
         Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res,
-                          DAG.getShiftAmountConstant(256, MVT::i512, dl));
+                          DAG.getConstant(256, dl, AmtVT));
       } else {
         Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res, Amt);
       }
