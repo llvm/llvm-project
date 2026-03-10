@@ -1400,19 +1400,19 @@ def testGetParentOfType():
         ctx.allow_unregistered_dialects = True
         idx = IndexType.get()
         # Build: func.func -> scf.for -> custom.base_op
-        func_op = func.FuncOp("test_fn", ([], []))
+        func_op: func.FuncOp = func.FuncOp("test_fn", ([], []))
         with InsertionPoint(func_op.add_entry_block()):
             lower_bound = arith.ConstantOp(idx, 0)
             upper_bound = arith.ConstantOp(idx, 10)
             step = arith.ConstantOp(idx, 1)
-            for_op = scf.ForOp(lower_bound, upper_bound, step)
+            for_op: scf.ForOp = scf.ForOp(lower_bound, upper_bound, step)
             with InsertionPoint(for_op.body):
-                base_op = Operation.create("custom.base_op")
+                base_op: Operation = Operation.create("custom.base_op")
                 scf.YieldOp([])
             func.ReturnOp([])
 
         # CHECK: get_parent_of_type detached->func.func: None
-        detached = Operation.create("custom.detached")
+        detached: Operation = Operation.create("custom.detached")
         res = get_parent_of_type(detached, func.FuncOp)
         print(f"get_parent_of_type detached->func.func: {res}")
         assert res is None
