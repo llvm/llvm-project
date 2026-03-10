@@ -298,6 +298,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cosbf16
+  SRCS
+    cosbf16.cpp
+  HDRS
+    ../cosbf16.h
+  DEPENDS
+    libc.src.__support.math.cosbf16
+)
+
+add_entrypoint_object(
   cosf16
   SRCS
     cosf16.cpp
