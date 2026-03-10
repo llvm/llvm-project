@@ -18,17 +18,23 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "amdgpu-mc-resource-usage"
 
 using namespace llvm;
 
+static cl::opt<bool> LocalizeResourceSymbols(
+    "amdgpu-localize-resource-symbols", cl::Hidden,
+    cl::desc("Localize all resource information symbols."), cl::init(true));
+
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                                     MCContext &OutContext, bool IsLocal) {
   auto GOCS = [FuncName, &OutContext, IsLocal](StringRef Suffix) {
-    StringRef Prefix =
-        IsLocal ? OutContext.getAsmInfo()->getInternalSymbolPrefix() : "";
+    StringRef Prefix = LocalizeResourceSymbols || IsLocal
+                           ? OutContext.getAsmInfo()->getInternalSymbolPrefix()
+                           : "";
     return OutContext.getOrCreateSymbol(Twine(Prefix) + FuncName +
                                         Twine(Suffix));
   };

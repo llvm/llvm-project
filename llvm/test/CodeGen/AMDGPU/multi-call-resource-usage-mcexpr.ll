@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -amdgpu-localize-resource-symbols=false < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}qux
 ; CHECK: .set qux.num_vgpr, 13

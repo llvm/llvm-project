@@ -1,6 +1,6 @@
 ; Test generation of _dvgpr$ symbol for an amdgpu_cs_chain function with dynamic vgprs.
 
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefixes=DVGPR %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -amdgpu-localize-resource-symbols=false < %s | FileCheck -check-prefixes=DVGPR %s
 
 ; Function with 0 VGPRs, which counts as 1 block.
 ;
