@@ -22,11 +22,16 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
+  bool isFPConstrained = false;
+  llvm::fp::ExceptionBehavior defaultConstrainedExcept = llvm::fp::ebStrict;
+  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
+
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
 
@@ -38,7 +43,8 @@ public:
   /// Note: This is different from what is returned by
   /// mlir::Builder::getStringAttr() which is an mlir::StringAttr.
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
-                            std::optional<size_t> size) {
+                            std::optional<size_t> size,
+                            bool ensureNullTerm = true) {
     size_t finalSize = size.value_or(str.size());
 
     size_t lastNonZeroPos = str.find_last_not_of('\0');
@@ -48,18 +54,24 @@ public:
       auto arrayTy = cir::ArrayType::get(eltTy, finalSize);
       return cir::ZeroAttr::get(arrayTy);
     }
-    // We emit trailing zeros only if there are multiple trailing zeros.
-    size_t trailingZerosNum = 0;
-    if (finalSize > lastNonZeroPos + 2)
-      trailingZerosNum = finalSize - lastNonZeroPos - 1;
+
+    // We emit trailing zeros for all trailing zeros, so the null-terminator in
+    // a constant is always in trailing zeros, and the null-terminator is
+    // skipped in the CIR representation.
+    size_t trailingZerosNum = finalSize - lastNonZeroPos - 1;
     auto truncatedArrayTy =
         cir::ArrayType::get(eltTy, finalSize - trailingZerosNum);
+    auto strAttr = mlir::StringAttr::get(str.drop_back(trailingZerosNum),
+                                         truncatedArrayTy);
+
+    // Most C strings are null terminated, so if we are ensuring there is one,
+    // grow the array size by 1 to add a trailing zero if necessary. The 'auto'
+    // calculation of trailing zeros (the difference between the provided string
+    // and the type) will ensure we get the count correct.
+    finalSize += (ensureNullTerm && trailingZerosNum == 0);
+
     auto fullArrayTy = cir::ArrayType::get(eltTy, finalSize);
-    return cir::ConstArrayAttr::get(
-        fullArrayTy,
-        mlir::StringAttr::get(str.drop_back(trailingZerosNum),
-                              truncatedArrayTy),
-        trailingZerosNum);
+    return cir::ConstArrayAttr::get(fullArrayTy, strAttr);
   }
 
   cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
@@ -104,6 +116,43 @@ public:
     }
 
     return baseName + "." + std::to_string(recordNames[baseName]++);
+  }
+
+  //
+  // Floating point specific helpers
+  // -------------------------------
+  //
+
+  /// Enable/Disable use of constrained floating point math. When enabled the
+  /// CreateF<op>() calls instead create constrained floating point intrinsic
+  /// calls. Fast math flags are unaffected by this setting.
+  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
+
+  /// Query for the use of constrained floating point math
+  bool getIsFPConstrained() const { return isFPConstrained; }
+
+  /// Set the exception handling to be used with constrained floating point
+  void setDefaultConstrainedExcept(llvm::fp::ExceptionBehavior newExcept) {
+    assert(llvm::convertExceptionBehaviorToStr(newExcept) &&
+           "Garbage strict exception behavior!");
+    defaultConstrainedExcept = newExcept;
+  }
+
+  /// Get the exception handling used with constrained floating point
+  llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() const {
+    return defaultConstrainedExcept;
+  }
+
+  /// Set the rounding mode handling to be used with constrained floating point
+  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
+    assert(llvm::convertRoundingModeToStr(newRounding) &&
+           "Garbage strict rounding mode!");
+    defaultConstrainedRounding = newRounding;
+  }
+
+  /// Get the rounding mode handling used with constrained floating point
+  llvm::RoundingMode getDefaultConstrainedRounding() const {
+    return defaultConstrainedRounding;
   }
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
@@ -198,10 +247,22 @@ public:
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
   }
 
+  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
+                               mlir::Value src, mlir::Value len) {
+    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  }
+
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
                              mlir::Value val, mlir::Value len) {
     assert(val.getType() == getUInt8Ty());
-    return cir::MemSetOp::create(*this, loc, dst, val, len);
+    return cir::MemSetOp::create(*this, loc, dst, {}, val, len);
+  }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, Address dst, mlir::Value val,
+                             mlir::Value len) {
+    mlir::IntegerAttr align = getAlignmentAttr(dst.getAlignment());
+    assert(val.getType() == getUInt8Ty());
+    return cir::MemSetOp::create(*this, loc, dst.getPointer(), align, val, len);
   }
   // ---------------------------
 
@@ -407,7 +468,7 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Sub, lhs, rhs);
+    return cir::SubOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -415,7 +476,7 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
+    return cir::AddOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -423,14 +484,14 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Mul, lhs, rhs);
+    return cir::MulOp::create(*this, loc, lhs, rhs);
   }
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
+    return cir::DivOp::create(*this, loc, lhs, rhs);
   }
 
   //===--------------------------------------------------------------------===//

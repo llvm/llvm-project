@@ -8,12 +8,14 @@
 
 #include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -53,8 +55,10 @@ TEST(SerializationFormatRegistryTest, isFormatRegistered) {
 
 TEST(SerializationFormatRegistryTest, EnumeratingRegistryEntries) {
   auto Formats = SerializationFormatRegistry::entries();
-  ASSERT_EQ(std::distance(Formats.begin(), Formats.end()), 1U);
-  EXPECT_EQ(Formats.begin()->getName(), "MockSerializationFormat");
+  ASSERT_GE(std::distance(Formats.begin(), Formats.end()), 1U);
+  EXPECT_TRUE(llvm::any_of(Formats, [](const auto &Entry) {
+    return StringRef(Entry.getName()) == "MockSerializationFormat";
+  }));
 }
 
 TEST(SerializationFormatRegistryTest, Roundtrip) {
@@ -87,7 +91,9 @@ TEST(SerializationFormatRegistryTest, Roundtrip) {
       makeFormat("MockSerializationFormat");
   ASSERT_TRUE(Format);
 
-  TUSummary LoadedSummary = Format->readTUSummary(InputDir);
+  auto LoadedSummaryOrErr = Format->readTUSummary(InputDir);
+  ASSERT_THAT_EXPECTED(LoadedSummaryOrErr, Succeeded());
+  TUSummary LoadedSummary = std::move(*LoadedSummaryOrErr);
 
   // Create a temporary output directory
   SmallString<128> OutputDir;
@@ -96,7 +102,8 @@ TEST(SerializationFormatRegistryTest, Roundtrip) {
   llvm::scope_exit CleanupOnExit(
       [&] { sys::fs::remove_directories(OutputDir); });
 
-  Format->writeTUSummary(LoadedSummary, OutputDir);
+  auto WriteErr = Format->writeTUSummary(LoadedSummary, OutputDir);
+  ASSERT_THAT_ERROR(std::move(WriteErr), Succeeded());
 
   EXPECT_EQ(readFilesFromDir(OutputDir),
             (std::map<std::string, std::string>{

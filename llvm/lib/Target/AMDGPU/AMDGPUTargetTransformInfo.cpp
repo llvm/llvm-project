@@ -217,13 +217,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
         // a variable, most likely we will be unable to combine it.
         // Do not unroll too deep inner loops for local memory to give a chance
         // to unroll an outer loop for a more important reason.
-        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2)
+        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2 ||
+            (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
+             !isa<Argument>(GEP->getPointerOperand())))
           continue;
-
-        const Value *V = getUnderlyingObject(GEP->getPointerOperand());
-        if (!isa<GlobalVariable>(V) && !isa<Argument>(V))
-          continue;
-
         LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
                           << *L << " due to LDS use.\n");
         UP.Runtime = UnrollRuntimeLocal;
@@ -286,8 +283,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
     AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
-    AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
-    AMDGPU::FeatureUnalignedAccessMode,
+    AMDGPU::FeatureUnalignedScratchAccess, AMDGPU::FeatureUnalignedAccessMode,
 
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
 
@@ -735,18 +731,71 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
 
+  Type *RetTy = ICA.getReturnType();
+
+  Intrinsic::ID IID = ICA.getID();
+  switch (IID) {
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+  case Intrinsic::exp10: {
+    // Legalize the type.
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+    MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+    unsigned NElts =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+
+    if (SLT == MVT::f64) {
+      unsigned NumOps = 20;
+      if (IID == Intrinsic::exp)
+        ++NumOps;
+      else if (IID == Intrinsic::exp10)
+        NumOps += 3;
+
+      return LT.first * NElts * NumOps * get64BitInstrCost(CostKind);
+    }
+
+    if (SLT == MVT::f32) {
+      unsigned NumFullRateOps = 0;
+      // v_exp_f32 (quarter rate).
+      unsigned NumQuarterRateOps = 1;
+
+      if (!ICA.getFlags().approxFunc() && IID != Intrinsic::exp2) {
+        // Non-AFN exp/exp10: range reduction + v_exp_f32 + ldexp +
+        // overflow/underflow checks (lowerFEXP). Denorm is also handled.
+        // FMA preamble: ~13 full-rate ops; non-FMA: ~17.
+        NumFullRateOps = ST->hasFastFMAF32() ? 13 : 17;
+      } else {
+        if (IID == Intrinsic::exp) {
+          // lowerFEXPUnsafe: fmul (base conversion) + v_exp_f32.
+          NumFullRateOps = 1;
+        } else if (IID == Intrinsic::exp10) {
+          // lowerFEXP10Unsafe: 3 fmul + 2 v_exp_f32 (double-exp2).
+          NumFullRateOps = 3;
+          NumQuarterRateOps = 2;
+        }
+        // Denorm scaling adds setcc + select + fadd + select + fmul.
+        if (HasFP32Denormals)
+          NumFullRateOps += 5;
+      }
+
+      InstructionCost Cost =
+          NumFullRateOps * getFullRateInstrCost() +
+          NumQuarterRateOps * getQuarterRateInstrCost(CostKind);
+      return LT.first * NElts * Cost;
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
   if (!intrinsicHasPackedVectorBenefit(ICA.getID()))
     return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
-  Type *RetTy = ICA.getReturnType();
-
-  // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
-
-  unsigned NElts = LT.second.isVector() ?
-    LT.second.getVectorNumElements() : 1;
-
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+  unsigned NElts = LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
 
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
@@ -1631,8 +1680,8 @@ void GCNTTIImpl::collectKernelLaunchBounds(
 
 GCNTTIImpl::KnownIEEEMode
 GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
-  if (!ST->hasIEEEMode()) // Only mode on gfx12
-    return KnownIEEEMode::On;
+  if (!ST->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode))
+    return KnownIEEEMode::On; // Only mode on gfx1170+
 
   const Function *F = I.getFunction();
   if (!F)

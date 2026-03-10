@@ -69,9 +69,9 @@ Debugging Tools
 .. toctree::
    :maxdepth: 1
 
-   bugpoint
    llvm-extract
    llvm-bcanalyzer
+   llvm-reduce
 
 Developer Tools
 ~~~~~~~~~~~~~~~

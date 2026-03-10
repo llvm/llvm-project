@@ -278,15 +278,19 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
           op.getLoc(),
           "only public and private visibility is currently supported");
     }
-    // We are explicit in specifing the linkage because the default linkage
+    // We are explicit in specifying the linkage because the default linkage
     // for constants is different in C and C++.
     bool staticSpecifier = visibility == SymbolTable::Visibility::Private;
     bool externSpecifier = !staticSpecifier;
 
     Attribute initialValue = operands.getInitialValueAttr();
     if (opTy.getRank() == 0) {
-      auto elementsAttr = llvm::cast<ElementsAttr>(*op.getInitialValue());
-      initialValue = elementsAttr.getSplatValue<Attribute>();
+      // special case for `variable : memref<i32> = dense<-1>`
+      if (std::optional<Attribute> initValueAttr = op.getInitialValue()) {
+        if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(*initValueAttr)) {
+          initialValue = elementsAttr.getSplatValue<Attribute>();
+        }
+      }
     }
     if (isa_and_present<UnitAttr>(initialValue))
       initialValue = {};

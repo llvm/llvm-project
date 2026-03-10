@@ -885,7 +885,7 @@ static void writeWhyExtract() {
 // Equivalent of demote demoteSharedAndLazySymbols() in the ELF linker
 static void demoteLazySymbols() {
   for (Symbol *sym : symtab->symbols()) {
-    if (auto* s = dyn_cast<LazySymbol>(sym)) {
+    if (auto *s = dyn_cast<LazySymbol>(sym)) {
       if (s->signature) {
         LLVM_DEBUG(llvm::dbgs()
                    << "demoting lazy func: " << s->getName() << "\n");
@@ -1026,15 +1026,15 @@ static void processStubLibrariesPreLTO() {
   for (auto &stub_file : ctx.stubFiles) {
     LLVM_DEBUG(llvm::dbgs()
                << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps]: stub_file->symbolDependencies) {
-      auto* sym = symtab->find(name);
+    for (auto [name, deps] : stub_file->symbolDependencies) {
+      auto *sym = symtab->find(name);
       // If the symbol is not present at all (yet), or if it is present but
       // undefined, then mark the dependent symbols as used by a regular
       // object so they will be preserved and exported by the LTO process.
       if (!sym || sym->isUndefined()) {
         for (const auto dep : deps) {
-          auto* needed = symtab->find(dep);
-          if (needed ) {
+          auto *needed = symtab->find(dep);
+          if (needed) {
             needed->isUsedInRegularObj = true;
             // Like with handleLibcall we have to extract any LTO archive
             // members that might need to be exported due to stub library
@@ -1106,8 +1106,8 @@ static void processStubLibraries() {
 
       // First look for any imported symbols that directly match
       // the names of the stub imports
-      for (auto [name, deps]: stub_file->symbolDependencies) {
-        auto* sym = symtab->find(name);
+      for (auto [name, deps] : stub_file->symbolDependencies) {
+        auto *sym = symtab->find(name);
         if (sym && sym->isUndefined() && sym->isUsedInRegularObj) {
           depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
         } else {

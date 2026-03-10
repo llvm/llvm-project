@@ -528,22 +528,6 @@ public:
                                     const FileSpec *crash_file_path,
                                     bool can_connect);
 
-  /// Static function that can be used with the \b host function
-  /// Host::StartMonitoringChildProcess ().
-  ///
-  /// This function can be used by lldb_private::Process subclasses when they
-  /// want to watch for a local process and have its exit status automatically
-  /// set when the host child process exits. Subclasses should call
-  /// Host::StartMonitoringChildProcess () with:
-  ///     callback = Process::SetHostProcessExitStatus
-  ///     pid = Process::GetID()
-  ///     monitor_signals = false
-  static bool
-  SetProcessExitStatus(lldb::pid_t pid, // The process ID we want to monitor
-                       bool exited,
-                       int signo,   // Zero for no signal
-                       int status); // Exit value of process if signal is zero
-
   lldb::ByteOrder GetByteOrder() const;
 
   uint32_t GetAddressByteSize() const;
@@ -2561,15 +2545,10 @@ void PruneThreadPlans();
   /// When data is successfully read from the ConPTY, it is stored in
   /// m_stdout_data. There is no differentiation between stdout and stderr.
   ///
-  /// \param[in] pty
-  ///     The ConPTY to use for process STDIO communication. It's
-  ///     assumed to be valid.
-  ///
   /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
   /// \see lldb_private::IOHandlerProcessSTDIOWindows
   /// \see lldb_private::PseudoConsole
-  virtual void
-  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) {};
+  virtual void SetPseudoConsoleHandle() {};
 #endif
 
   /// Associates a file descriptor with the process' STDIO handling

@@ -292,9 +292,9 @@ EntryBlock:
 define <vscale x 2 x i64> @h3(i1 %A, <vscale x 4 x i32> %B) {
 ; CHECK-LABEL: @h3(
 ; CHECK-NEXT:  EntryBlock:
-; CHECK-NEXT:    [[CF:%.*]] = select i1 [[A:%.*]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[B:%.*]]
-; CHECK-NEXT:    [[BC:%.*]] = bitcast <vscale x 4 x i32> [[CF]] to <vscale x 2 x i64>
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[BC]]
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <vscale x 4 x i32> [[CF:%.*]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = select i1 [[A:%.*]], <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> [[BC]]
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[BC1]]
 ;
 EntryBlock:
   %cf = select i1 %A, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> %B

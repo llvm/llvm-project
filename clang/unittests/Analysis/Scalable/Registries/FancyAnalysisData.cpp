@@ -18,22 +18,19 @@ using SpecialFileRepresentation =
     MockSerializationFormat::SpecialFileRepresentation;
 
 namespace {
-struct FancyAnalysisData final
-    : llvm::RTTIExtends<FancyAnalysisData, EntitySummary> {
+struct FancyAnalysisData final : EntitySummary {
   SummaryName getSummaryName() const override {
     return SummaryName("FancyAnalysis");
   }
 
   std::string Text;
-  static char ID;
 };
-char FancyAnalysisData::ID = 0;
 } // namespace
 
 static SpecialFileRepresentation
 serializeFancyAnalysis(const EntitySummary &Data,
                        MockSerializationFormat &Format) {
-  const auto &FancyAnalysis = llvm::cast<FancyAnalysisData>(Data);
+  const auto &FancyAnalysis = static_cast<const FancyAnalysisData &>(Data);
   return SpecialFileRepresentation{/*MockRepresentation=*/FancyAnalysis.Text};
 }
 
@@ -47,7 +44,7 @@ deserializeFancyAnalysis(const SpecialFileRepresentation &File,
 
 namespace {
 using FormatInfo = MockSerializationFormat::FormatInfo;
-struct FancyAnalysisFormatInfo : FormatInfo {
+struct FancyAnalysisFormatInfo final : FormatInfo {
   FancyAnalysisFormatInfo()
       : FormatInfo{
             SummaryName("FancyAnalysis"),

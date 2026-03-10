@@ -221,8 +221,8 @@ define <4 x i16> @test_multisource(ptr %B) nounwind {
 ; CHECK-NEXT:    vld1.16 {d20, d21}, [r0:128]!
 ; CHECK-NEXT:    vorr d23, d20, d20
 ; CHECK-NEXT:    vldr d22, [r0]
-; CHECK-NEXT:    vzip.16 d23, d22
 ; CHECK-NEXT:    vtrn.16 d16, d18
+; CHECK-NEXT:    vzip.16 d23, d22
 ; CHECK-NEXT:    vext.16 d18, d20, d23, #2
 ; CHECK-NEXT:    vext.16 d16, d18, d16, #2
 ; CHECK-NEXT:    vext.16 d16, d16, d16, #2

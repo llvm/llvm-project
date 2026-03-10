@@ -10,8 +10,6 @@ permissions:
 
 jobs:
   auto-subscribe:
-    # See https://github.blog/changelog/2025-11-07-actions-pull_request_target-and-environment-branch-protections-changes/
-    environment: main-branch-only
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:

@@ -55,8 +55,6 @@ jobs:
   automate-prs-labels:
     # Greet first so that only the author gets that notification.
     needs: greeter
-    # See https://github.blog/changelog/2025-11-07-actions-pull_request_target-and-environment-branch-protections-changes/
-    environment: main-branch-only
     runs-on: ubuntu-24.04
     # Ignore PRs with more than 10 commits.  Pull requests with a lot of
     # commits tend to be accidents usually when someone made a mistake while trying

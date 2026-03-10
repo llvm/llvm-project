@@ -31,6 +31,9 @@ module __fortran_builtins
   intrinsic :: __builtin_f_c_string
   public :: __builtin_f_c_string
 
+  intrinsic :: __builtin_c_f_strpointer
+  public :: __builtin_c_f_strpointer
+
   intrinsic :: __builtin_show_descriptor
   public :: __builtin_show_descriptor
 

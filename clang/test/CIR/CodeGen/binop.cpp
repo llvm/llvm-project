@@ -17,18 +17,18 @@ void b0(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z2b0ii(
-// CIR: %{{.+}} = cir.binop(mul, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(div, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(rem, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(add, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(sub, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(and, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(xor, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(or, %{{.+}}, %{{.+}}) : !s32i
+// CIR: %{{.+}} = cir.mul nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.div %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.rem %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.add nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.sub nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.and %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.xor %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.or %{{.+}}, %{{.+}} : !s32i
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z2b0ii(
-// LLVM-SAME: i32 %[[A:.*]], i32 %[[B:.*]])
+// LLVM-SAME: i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
@@ -134,14 +134,14 @@ void testFloatingPointBinOps(float a, float b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z23testFloatingPointBinOpsff(
-// CIR: cir.binop(mul, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(div, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(add, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
+// CIR: cir.mul %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.div %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.add %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.sub %{{.+}}, %{{.+}} : !cir.float
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(
-// LLVM-SAME: float %[[A:.*]], float %[[B:.*]])
+// LLVM-SAME: float {{.*}} %[[A:.*]], float {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca float, i64 1
 // LLVM:         %[[B_ADDR:.*]] = alloca float, i64 1
 // LLVM:         store float %[[A]], ptr %[[A_ADDR]]
@@ -216,7 +216,7 @@ void signed_shift(int a, int b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z12signed_shiftii
-// LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
@@ -282,7 +282,7 @@ void unsigned_shift(unsigned a, unsigned b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z14unsigned_shiftjj
-// LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
@@ -350,7 +350,7 @@ void zext_shift_example(int a, unsigned char b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z18zext_shift_exampleih
-// LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
 // LLVM:         %[[X:.*]] = alloca i32
@@ -422,7 +422,7 @@ void sext_shift_example(int a, signed char b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z18sext_shift_exampleia
-// LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
 // LLVM:         %[[X:.*]] = alloca i32
@@ -494,7 +494,7 @@ void long_shift_example(long long a, short b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z18long_shift_examplexs
-// LLVM-SAME: (i64 %[[A:.*]], i16 %[[B:.*]])
+// LLVM-SAME: (i64 {{.*}} %[[A:.*]], i16 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i64
 // LLVM:         %[[B_ADDR:.*]] = alloca i16
 // LLVM:         %[[X:.*]] = alloca i64
@@ -575,7 +575,7 @@ void b1(bool a, bool b) {
 
 
 // LLVM-LABEL: define{{.*}} void @_Z2b1bb(
-// LLVM-SAME: i1 %[[ARG0:.+]], i1 %[[ARG1:.+]])
+// LLVM-SAME: i1 {{.*}} %[[ARG0:.+]], i1 {{.*}} %[[ARG1:.+]])
 // LLVM: %[[A_ADDR:.*]] = alloca i8
 // LLVM: %[[B_ADDR:.*]] = alloca i8
 // LLVM: %[[X:.*]] = alloca i8
@@ -663,11 +663,11 @@ void b3(int a, int b, int c, int d) {
 // CIR: cir.store %[[ARG3]], [[D]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[AVAL1:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[BVAL1:%[0-9]+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP1:%[0-9]+]] = cir.cmp(eq, [[AVAL1]], [[BVAL1]]) : !s32i, !cir.bool
+// CIR: [[CMP1:%[0-9]+]] = cir.cmp eq [[AVAL1]], [[BVAL1]] : !s32i
 // CIR: [[AND_RESULT:%[0-9]+]] = cir.ternary([[CMP1]], true {
 // CIR: [[CVAL1:%[0-9]+]] = cir.load align(4) [[C]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[DVAL1:%[0-9]+]] = cir.load align(4) [[D]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP2:%[0-9]+]] = cir.cmp(eq, [[CVAL1]], [[DVAL1]]) : !s32i, !cir.bool
+// CIR: [[CMP2:%[0-9]+]] = cir.cmp eq [[CVAL1]], [[DVAL1]] : !s32i
 // CIR: cir.yield [[CMP2]] : !cir.bool
 // CIR: }, false {
 // CIR: [[FALSE:%[0-9]+]] = cir.const #false
@@ -676,14 +676,14 @@ void b3(int a, int b, int c, int d) {
 // CIR: cir.store align(1) [[AND_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: [[AVAL2:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[BVAL2:%[0-9]+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP3:%[0-9]+]] = cir.cmp(eq, [[AVAL2]], [[BVAL2]]) : !s32i, !cir.bool
+// CIR: [[CMP3:%[0-9]+]] = cir.cmp eq [[AVAL2]], [[BVAL2]] : !s32i
 // CIR: [[OR_RESULT:%[0-9]+]] = cir.ternary([[CMP3]], true {
 // CIR: [[TRUE:%[0-9]+]] = cir.const #true
 // CIR: cir.yield [[TRUE]] : !cir.bool
 // CIR: }, false {
 // CIR: [[CVAL2:%[0-9]+]] = cir.load align(4) [[C]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[DVAL2:%[0-9]+]] = cir.load align(4) [[D]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP4:%[0-9]+]] = cir.cmp(eq, [[CVAL2]], [[DVAL2]]) : !s32i, !cir.bool
+// CIR: [[CMP4:%[0-9]+]] = cir.cmp eq [[CVAL2]], [[DVAL2]] : !s32i
 // CIR: cir.yield [[CMP4]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
 // CIR: cir.store align(1) [[OR_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -691,7 +691,7 @@ void b3(int a, int b, int c, int d) {
 
 
 // LLVM-LABEL: define{{.*}} void @_Z2b3iiii(
-// LLVM-SAME: i32 %[[ARG0:.+]], i32 %[[ARG1:.+]], i32 %[[ARG2:.+]], i32 %[[ARG3:.+]])
+// LLVM-SAME: i32 {{.*}} %[[ARG0:.+]], i32 {{.*}} %[[ARG1:.+]], i32 {{.*}} %[[ARG2:.+]], i32 {{.*}} %[[ARG3:.+]])
 // LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1
 // LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1
 // LLVM: %[[C_ADDR:.*]] = alloca i32, i64 1

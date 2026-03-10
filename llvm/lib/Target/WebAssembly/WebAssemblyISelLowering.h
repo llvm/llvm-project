@@ -75,6 +75,12 @@ private:
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
 
+  bool isProfitableToCombineMinNumMaxNum(EVT VT) const override {
+    // Prefer leaving cmp + select alone to form pmin/pmax,
+    // or relaxed_fmin/relaxed_fmax with appropriate FMF.
+    return false;
+  }
+
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,

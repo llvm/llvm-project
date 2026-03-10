@@ -271,11 +271,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // There is no i8x16.mul instruction
     setOperationAction(ISD::MUL, MVT::v16i8, Expand);
 
-    // There is no vector conditional select instruction
-    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-                   MVT::v2f64})
-      setOperationAction(ISD::SELECT_CC, T, Expand);
-
     // Expand integer operations supported for scalars but not SIMD
     for (auto Op :
          {ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM, ISD::ROTL, ISD::ROTR})
@@ -369,6 +364,16 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   for (auto T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
     for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
       setOperationAction(Op, T, Expand);
+
+  if (Subtarget->hasReferenceTypes())
+    for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
+      for (auto T : {MVT::externref, MVT::funcref})
+        setOperationAction(Op, T, Expand);
+
+  // There is no vector conditional select instruction
+  for (auto T :
+       {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64, MVT::v2f64})
+    setOperationAction(ISD::SELECT_CC, T, Expand);
 
   // We have custom switch handling.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
@@ -3354,12 +3359,11 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     SDLoc DL(N);
-    SDValue Ret = DAG.getZExtOrTrunc(
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-                    {DAG.getConstant(InPost, DL, MVT::i32), LHS}),
-        DL, MVT::i1);
+    SDValue Ret = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                              {DAG.getConstant(InPost, DL, MVT::i32), LHS});
     if (SetType == ISD::SETEQ)
-      Ret = DAG.getNOT(DL, Ret, MVT::i1);
+      Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
+                        DAG.getConstant(1, DL, MVT::i32));
     return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
   };
 
@@ -3392,13 +3396,13 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(N);
-  SDValue Ret = DAG.getZExtOrTrunc(
+  SDValue Ret =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                   {DAG.getConstant(Intrin, DL, MVT::i32),
-                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)}),
-      DL, MVT::i1);
+                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)});
   if (RequiresNegate)
-    Ret = DAG.getNOT(DL, Ret, MVT::i1);
+    Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
+                      DAG.getConstant(1, DL, MVT::i32));
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 

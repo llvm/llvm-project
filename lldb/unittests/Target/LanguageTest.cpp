@@ -26,11 +26,7 @@ TEST_F(LanguageTest, SourceLanguage_GetDescription) {
     auto lang_type = static_cast<lldb::LanguageType>(i);
     SourceLanguage lang(lang_type);
 
-    // eLanguageTypeHIP is not implemented as a DW_LNAME because of a conflict.
-    if (lang_type == lldb::eLanguageTypeHIP)
-      EXPECT_FALSE(lang);
-    else
-      EXPECT_TRUE(lang);
+    EXPECT_TRUE(lang);
   }
 
   EXPECT_EQ(SourceLanguage(eLanguageTypeC_plus_plus).GetDescription(),

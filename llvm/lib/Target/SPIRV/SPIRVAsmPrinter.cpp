@@ -194,7 +194,7 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // Do not emit anything if it's an internal service function.
-  if (MBB.empty())
+  if (MBB.empty() || isHidden())
     return;
 
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so
@@ -821,7 +821,7 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // Get the global subtarget to output module-level info.
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
   TII = ST->getInstrInfo();
-  MAI = &SPIRVModuleAnalysis::MAI;
+  MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension

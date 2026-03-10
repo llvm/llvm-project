@@ -14,10 +14,11 @@ let Definition = "modulelist", Path = "symbols" in {
     DefaultEnumValue<"eSymbolDownloadOff">,
     EnumValues<"OptionEnumValues(g_auto_download_enum_values)">,
     Desc<"On macOS, automatically download symbols with dsymForUUID (or an equivalent script/binary) for relevant images in the debug session.">;
-  def SharedCacheBinaryLoading: Property<"shared-cache-binary-loading", "Boolean">,
+  def SharedCacheBinaryLoading: Property<"shared-cache-binary-loading", "Enum">,
     Global,
-    DefaultTrue,
-    Desc<"On macOS, load the binaries from a shared cache blob directly, instead of loading them from lldb's own in-process shared cache.">;
+    DefaultEnumValue<"eSymbolSharedCacheUseHostAndInferiorSharedCache">,
+    EnumValues<"OptionEnumValues(g_shared_cache_use_enum_values)">,
+    Desc<"On macOS, lldb can use its own in-memory shared cache, or operate on shared cache binaries directly, this setting controls which are used.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -128,6 +129,10 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will highlight the displayed source code.">;
+  def MarkHiddenFrames: Property<"mark-hidden-frames", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, LLDB will add a marker to delimit hidden frames in backtraces.">;
   def StopShowColumn: Property<"stop-show-column", "Enum">,
     DefaultEnumValue<"eStopShowColumnAnsiOrCaret">,
     EnumValues<"OptionEnumValues(s_stop_show_column_values)">,

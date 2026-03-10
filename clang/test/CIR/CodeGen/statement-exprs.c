@@ -9,6 +9,9 @@ int f19(void) {
   return ({ 3;;4; });
 }
 
+// CIR-DAG: cir.global "private" constant cir_private @[[TEST3_S:.*]] = #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
+// LLVM-DAG: @[[TEST3_S:.*]] = private constant %struct.S { i32 1 }
+
 // CIR: cir.func {{.*}} @f19() -> !s32i
 // CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   %[[TMP:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
@@ -232,8 +235,8 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR:     %[[TMP:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["tmp"]
 // CIR:     cir.scope {
 // CIR:       %[[S:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
-// CIR:       %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<1> : !s32i}> : !rec_S
-// CIR:       cir.store{{.*}} %[[CONST]], %[[S]] : !rec_S, !cir.ptr<!rec_S>
+// CIR:       %[[CONST:.*]] = cir.get_global @[[TEST3_S]] : !cir.ptr<!rec_S>
+// CIR:       cir.copy %[[CONST]] to %[[S]] : !cir.ptr<!rec_S>
 // CIR:       cir.copy %[[S]] to %[[REF_TMP0]] : !cir.ptr<!rec_S>
 // CIR:     }
 // CIR:     %[[GEP_X_TMP:.+]] = cir.get_member %[[REF_TMP0]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
@@ -252,8 +255,8 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // LLVM: [[LBL5]]:
 // LLVM:     br label %[[LBL6:.+]]
 // LLVM: [[LBL6]]:
-// LLVM:     store %struct.S { i32 1 }, ptr %[[VAR3]]
-// LLVM:     call void @llvm.memcpy.p0.p0.i32(ptr %[[VAR1]], ptr %[[VAR3]], i32 4, i1 false)
+// LLVM:     call void @llvm.memcpy{{.*}}(ptr %[[VAR3]], ptr @[[TEST3_S]], i64 4, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr %[[VAR1]], ptr %[[VAR3]], i64 4, i1 false)
 // LLVM:     br label %[[LBL8:.+]]
 // LLVM: [[LBL8]]:
 // LLVM:     %[[GEP_VAR1:.+]] = getelementptr %struct.S, ptr %[[VAR1]], i32 0, i32 0
