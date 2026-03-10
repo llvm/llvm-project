@@ -2176,6 +2176,9 @@ multiclass sve_int_dup_mask_imm<string asm> {
             (!cast<Instruction>(NAME) i64:$imm)>;
   def : Pat<(nxv2bf16 (splat_vector (bf16 (SVELogicalBFPImmPat i64:$imm)))),
             (!cast<Instruction>(NAME) i64:$imm)>;
+
+  def : Pat<(v2i64 (AArch64dup (i64 (SVELogicalImm64Pat i64:$imm)))),
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME) i64:$imm), zsub)>;
 }
 
 //===----------------------------------------------------------------------===//
