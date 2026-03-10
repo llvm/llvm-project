@@ -191,18 +191,16 @@ def DICompositeTypeAttr : DialectAttribute<(attr
 // DIDerivedTypeAttr
 //===----------------------------------------------------------------------===//
 
-def DIDerivedTypeAttr : DialectAttribute<(attr
-  VarInt:$tag,
-  OptionalAttribute<"StringAttr">:$name,
-  OptionalAttribute<"DITypeAttr">:$baseType,
-  VarInt:$sizeInBits,
-  VarInt:$alignInBits,
-  VarInt:$offsetInBits,
-  OptionalInt<"unsigned">:$dwarfAddressSpace,
-  EnumClassFlag<"DIFlags", "getFlags()">:$_rawflags,
-  LocalVar<"DIFlags", "(DIFlags)_rawflags">:$flags,
-  OptionalAttribute<"DINodeAttr">:$extraData
-)>;
+def DIDerivedTypeAttr
+    : DialectAttribute<(attr VarInt:$tag, OptionalAttribute<"StringAttr">:$name,
+          OptionalAttribute<"DIFileAttr">:$file, VarInt:$line,
+          OptionalAttribute<"DIScopeAttr">:$scope,
+          OptionalAttribute<"DITypeAttr">:$baseType, VarInt:$sizeInBits,
+          VarInt:$alignInBits, VarInt:$offsetInBits,
+          OptionalInt<"unsigned">:$dwarfAddressSpace,
+          EnumClassFlag<"DIFlags", "getFlags()">:$_rawflags,
+          LocalVar<"DIFlags", "(DIFlags)_rawflags">:$flags,
+          OptionalAttribute<"DINodeAttr">:$extraData)>;
 
 //===----------------------------------------------------------------------===//
 // DIImportedEntityAttr

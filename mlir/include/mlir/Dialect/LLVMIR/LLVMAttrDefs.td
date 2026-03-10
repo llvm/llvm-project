@@ -512,17 +512,18 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
 
 def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
                                        /*traits=*/[], "DITypeAttr"> {
-  let parameters = (ins
-    LLVM_DITagParameter:$tag,
-    OptionalParameter<"StringAttr">:$name,
-    OptionalParameter<"DITypeAttr">:$baseType,
-    OptionalParameter<"uint64_t">:$sizeInBits,
-    OptionalParameter<"uint32_t">:$alignInBits,
-    OptionalParameter<"uint64_t">:$offsetInBits,
-    OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
-    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
-    OptionalParameter<"DINodeAttr">:$extraData
-  );
+  let parameters = (ins LLVM_DITagParameter:$tag,
+      OptionalParameter<"StringAttr">:$name,
+      OptionalParameter<"DIFileAttr">:$file,
+      OptionalParameter<"uint32_t">:$line,
+      OptionalParameter<"DIScopeAttr">:$scope,
+      OptionalParameter<"DITypeAttr">:$baseType,
+      OptionalParameter<"uint64_t">:$sizeInBits,
+      OptionalParameter<"uint32_t">:$alignInBits,
+      OptionalParameter<"uint64_t">:$offsetInBits,
+      OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
+      OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
+      OptionalParameter<"DINodeAttr">:$extraData);
   let assemblyFormat = "`<` struct(params) `>`";
 
   // Generate mnemonic alias for the attribute.
