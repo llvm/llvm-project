@@ -218,7 +218,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
 
   // Check if image is an inner OffloadBinary (nested format)
   if (identify_magic(Image.getBuffer()) == file_magic::offload_binary) {
-    ODBG(OLDT_Module) << "Processing nested OffloadBinary image\n";
+    ODBG(OLDT_Module) << "Processing nested OffloadBinary image";
 
     // Parse inner OffloadBinary
     auto InnerBinariesOrErr = llvm::object::OffloadBinary::create(Image);
@@ -260,18 +260,18 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
         Options += " " + LinkOpts.str();
       replaceDriverOptsWithBackendOpts(l0Device, Options);
       ODBG(OLDT_Module) << "Using compile options: " << CompileOpts
-                        << ", link options: " << LinkOpts << "\n";
+                        << ", link options: " << LinkOpts;
     }
 
     // Determine module format based on image kind
     ze_module_format_t ModuleFormat;
     if (ImageKind == llvm::object::IMG_SPIRV) {
       // SPIR-V intermediate language
-      ODBG(OLDT_Module) << "Loading SPIR-V module\n";
+      ODBG(OLDT_Module) << "Loading SPIR-V module";
       ModuleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
     } else if (ImageKind == llvm::object::IMG_Object) {
       // Native binary format
-      ODBG(OLDT_Module) << "Loading native binary module\n";
+      ODBG(OLDT_Module) << "Loading native binary module";
       ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
     } else {
       return Plugin::error(ErrorCode::UNKNOWN,
@@ -284,7 +284,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   }
 
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
-    ODBG(OLDT_Module) << "Processing raw SPIR-V image\n";
+    ODBG(OLDT_Module) << "Processing raw SPIR-V image";
     const uint8_t *ImgBegin =
         reinterpret_cast<const uint8_t *>(Image.getBufferStart());
     return addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
@@ -296,7 +296,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     ODBG(OLDT_Module) << "Warning: image is not a valid oneAPI OpenMP image.";
     return Plugin::error(ErrorCode::UNKNOWN, "Invalid oneAPI OpenMP image");
   }
-  ODBG(OLDT_Module) << "Processing ELF-wrapped SPIR-V image\n";
+  ODBG(OLDT_Module) << "Processing ELF-wrapped SPIR-V image";
 
   // Iterate over the images and pick the first one that fits.
   uint64_t ImageCount = 0;
