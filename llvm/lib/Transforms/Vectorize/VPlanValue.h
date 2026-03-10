@@ -435,7 +435,7 @@ public:
 /// VPRecipeValues with a retrievable VPlan are tracked; other VPValue types
 /// work but are not poisoned. Does *not* follow RAUW.
 class LLVM_ABI_FOR_TEST PoisoningVPValueHandle {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+#if !defined(NDEBUG)
   const VPValue *VP = nullptr;
   const VPlan *Plan = nullptr;
   bool Poisoned = false;
@@ -473,7 +473,7 @@ class LLVM_ABI_FOR_TEST PoisoningVPValueHandle {
 #endif
 
   const VPValue *getValPtr() const {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+#if !defined(NDEBUG)
     assert(!Poisoned && "Accessed a poisoned VPValue handle!");
 #endif
     return VP;
@@ -482,13 +482,13 @@ class LLVM_ABI_FOR_TEST PoisoningVPValueHandle {
 public:
   PoisoningVPValueHandle() = default;
   PoisoningVPValueHandle(const VPValue *V) : VP(V) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+#if !defined(NDEBUG)
     if (isValid(VP))
       addToList();
 #endif
   }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+#if !defined(NDEBUG)
   PoisoningVPValueHandle(const PoisoningVPValueHandle &RHS)
       : VP(RHS.VP), Poisoned(RHS.Poisoned) {
     if (isValid(VP) && !Poisoned)
@@ -522,15 +522,11 @@ public:
 
 template <> struct DenseMapInfo<PoisoningVPValueHandle> {
   static inline PoisoningVPValueHandle getEmptyKey() {
-    PoisoningVPValueHandle Res;
-    Res.setRawValPtr(DenseMapInfo<const VPValue *>::getEmptyKey());
-    return Res;
+    return {DenseMapInfo<const VPValue *>::getEmptyKey()};
   }
 
   static inline PoisoningVPValueHandle getTombstoneKey() {
-    PoisoningVPValueHandle Res;
-    Res.setRawValPtr(DenseMapInfo<const VPValue *>::getTombstoneKey());
-    return Res;
+    return {DenseMapInfo<const VPValue *>::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const PoisoningVPValueHandle &Val) {
@@ -542,7 +538,7 @@ template <> struct DenseMapInfo<PoisoningVPValueHandle> {
     if (!DenseMapInfo<const VPValue *>::isEqual(LHS.getRawValPtr(),
                                                 RHS.getRawValPtr()))
       return false;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+#if !defined(NDEBUG)
     assert(!LHS.Poisoned && !RHS.Poisoned &&
            "Accessed a poisoned VPValue handle!");
 #endif
@@ -557,7 +553,7 @@ template <> struct DenseMapInfo<PoisoningVPValueHandle> {
   static bool isEqual(const VPValue *LHS, const PoisoningVPValueHandle &RHS) {
     if (!DenseMapInfo<const VPValue *>::isEqual(LHS, RHS.getRawValPtr()))
       return false;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
+#if !defined(NDEBUG)
     assert(!RHS.Poisoned && "Accessed a poisoned VPValue handle!");
 #endif
     return true;
