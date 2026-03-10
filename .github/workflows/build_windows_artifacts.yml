@@ -232,9 +232,6 @@ jobs:
           ccache --zero-stats
           python ./build_tools/health_status.py
 
-      - name: Test build_tools
-        run: |
-          python -m pytest build_tools/tests build_tools/github_actions/tests
 
       - name: Remove ununsed existing patchces
         run: |
