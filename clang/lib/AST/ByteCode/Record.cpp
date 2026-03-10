@@ -24,13 +24,13 @@ Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
 
   for (Base &B : Bases) {
     BaseMap[B.Decl] = &B;
-    if (!HasPtrField)
-      HasPtrField |= B.R->hasPtrField();
+    if (!this->HasPtrField)
+      this->HasPtrField |= B.R->hasPtrField();
   }
   for (Base &V : VirtualBases) {
     VirtualBaseMap[V.Decl] = &V;
-    if (!HasPtrField)
-      HasPtrField |= V.R->hasPtrField();
+    if (!this->HasPtrField)
+      this->HasPtrField |= V.R->hasPtrField();
   }
 }
 

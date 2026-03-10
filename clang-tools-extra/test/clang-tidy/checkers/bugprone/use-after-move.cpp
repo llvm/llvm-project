@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
@@ -11,10 +11,11 @@
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
+#include <utility>
+
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-typedef unsigned size_t;
 
 template <typename T>
 struct unique_ptr {
@@ -111,41 +112,6 @@ DECLARE_STANDARD_CONTAINER(unordered_multiset);
 DECLARE_STANDARD_CONTAINER(unordered_multimap);
 
 typedef basic_string<char> string;
-
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
-  return static_cast<typename remove_reference<_Tp>::type &&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
 
 } // namespace std
 

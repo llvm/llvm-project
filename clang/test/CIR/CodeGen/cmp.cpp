@@ -22,28 +22,28 @@ void c0(int a, int b) {
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]]
-// CIR: %{{.*}} = cir.cmp(gt, %[[A1]], %[[B1]]) : !s32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp gt %[[A1]], %[[B1]] : !s32i
 // CIR: cir.store{{.*}} {{.*}}, %[[X_PTR]]
 
 // CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]]
-// CIR: %{{.*}} = cir.cmp(lt, %[[A2]], %[[B2]]) : !s32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp lt %[[A2]], %[[B2]] : !s32i
 
 // CIR: %[[A3:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR: %[[B3:.*]] = cir.load{{.*}} %[[B_PTR]]
-// CIR: %{{.*}} = cir.cmp(le, %[[A3]], %[[B3]]) : !s32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp le %[[A3]], %[[B3]] : !s32i
 
 // CIR: %[[A4:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR: %[[B4:.*]] = cir.load{{.*}} %[[B_PTR]]
-// CIR: %{{.*}} = cir.cmp(ge, %[[A4]], %[[B4]]) : !s32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp ge %[[A4]], %[[B4]] : !s32i
 
 // CIR: %[[A5:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR: %[[B5:.*]] = cir.load{{.*}} %[[B_PTR]]
-// CIR: %{{.*}} = cir.cmp(ne, %[[A5]], %[[B5]]) : !s32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp ne %[[A5]], %[[B5]] : !s32i
 
 // CIR: %[[A6:.*]] = cir.load{{.*}} %[[A_PTR]]
 // CIR: %[[B6:.*]] = cir.load{{.*}} %[[B_PTR]]
-// CIR: %{{.*}} = cir.cmp(eq, %[[A6]], %[[B6]]) : !s32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp eq %[[A6]], %[[B6]] : !s32i
 
 // LLVM-LABEL: define{{.*}} void @_Z2c0ii(i32 {{.*}} %0, i32 {{.*}} %1){{.*}} {
 // LLVM: %[[PTR1:.*]] = alloca i32, i64 1
@@ -148,27 +148,27 @@ void c0_unsigned(unsigned int a, unsigned int b) {
 
 // CIR: %[[UA1:.*]] = cir.load{{.*}} %[[U_A_PTR]]
 // CIR: %[[UB1:.*]] = cir.load{{.*}} %[[U_B_PTR]]
-// CIR: %{{.*}} = cir.cmp(gt, %[[UA1]], %[[UB1]]) : !u32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp gt %[[UA1]], %[[UB1]] : !u32i
 
 // CIR: %[[UA2:.*]] = cir.load{{.*}} %[[U_A_PTR]]
 // CIR: %[[UB2:.*]] = cir.load{{.*}} %[[U_B_PTR]]
-// CIR: %{{.*}} = cir.cmp(lt, %[[UA2]], %[[UB2]]) : !u32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp lt %[[UA2]], %[[UB2]] : !u32i
 
 // CIR: %[[UA3:.*]] = cir.load{{.*}} %[[U_A_PTR]]
 // CIR: %[[UB3:.*]] = cir.load{{.*}} %[[U_B_PTR]]
-// CIR: %{{.*}} = cir.cmp(le, %[[UA3]], %[[UB3]]) : !u32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp le %[[UA3]], %[[UB3]] : !u32i
 
 // CIR: %[[UA4:.*]] = cir.load{{.*}} %[[U_A_PTR]]
 // CIR: %[[UB4:.*]] = cir.load{{.*}} %[[U_B_PTR]]
-// CIR: %{{.*}} = cir.cmp(ge, %[[UA4]], %[[UB4]]) : !u32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp ge %[[UA4]], %[[UB4]] : !u32i
 
 // CIR: %[[UA5:.*]] = cir.load{{.*}} %[[U_A_PTR]]
 // CIR: %[[UB5:.*]] = cir.load{{.*}} %[[U_B_PTR]]
-// CIR: %{{.*}} = cir.cmp(ne, %[[UA5]], %[[UB5]]) : !u32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp ne %[[UA5]], %[[UB5]] : !u32i
 
 // CIR: %[[UA6:.*]] = cir.load{{.*}} %[[U_A_PTR]]
 // CIR: %[[UB6:.*]] = cir.load{{.*}} %[[U_B_PTR]]
-// CIR: %{{.*}} = cir.cmp(eq, %[[UA6]], %[[UB6]]) : !u32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp eq %[[UA6]], %[[UB6]] : !u32i
 
 // LLVM-LABEL: define{{.*}} void @_Z11c0_unsignedjj(i32 {{.*}} %0, i32 {{.*}} %1){{.*}} {
 // LLVM: %[[U_PTR1:.*]] = alloca i32, i64 1
@@ -275,32 +275,32 @@ void c0_float(float a, float b) {
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.float>, !cir.float
-// CIR: %[[CMP1:.*]] = cir.cmp(gt, %[[A1]], %[[B1]]) : !cir.float, !cir.bool
+// CIR: %[[CMP1:.*]] = cir.cmp gt %[[A1]], %[[B1]] : !cir.float
 // CIR: cir.store{{.*}} %[[CMP1]], %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.float>, !cir.float
-// CIR: %[[CMP2:.*]] = cir.cmp(lt, %[[A2]], %[[B2]]) : !cir.float, !cir.bool
+// CIR: %[[CMP2:.*]] = cir.cmp lt %[[A2]], %[[B2]] : !cir.float
 // CIR: cir.store{{.*}} %[[CMP2]], %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR: %[[A3:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[B3:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.float>, !cir.float
-// CIR: %[[CMP3:.*]] = cir.cmp(le, %[[A3]], %[[B3]]) : !cir.float, !cir.bool
+// CIR: %[[CMP3:.*]] = cir.cmp le %[[A3]], %[[B3]] : !cir.float
 // CIR: cir.store{{.*}} %[[CMP3]], %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR: %[[A4:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[B4:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.float>, !cir.float
-// CIR: %[[CMP4:.*]] = cir.cmp(ge, %[[A4]], %[[B4]]) : !cir.float, !cir.bool
+// CIR: %[[CMP4:.*]] = cir.cmp ge %[[A4]], %[[B4]] : !cir.float
 // CIR: cir.store{{.*}} %[[CMP4]], %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR: %[[A5:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[B5:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.float>, !cir.float
-// CIR: %[[CMP5:.*]] = cir.cmp(ne, %[[A5]], %[[B5]]) : !cir.float, !cir.bool
+// CIR: %[[CMP5:.*]] = cir.cmp ne %[[A5]], %[[B5]] : !cir.float
 // CIR: cir.store{{.*}} %[[CMP5]], %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR: %[[A6:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[B6:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.float>, !cir.float
-// CIR: %[[CMP6:.*]] = cir.cmp(eq, %[[A6]], %[[B6]]) : !cir.float, !cir.bool
+// CIR: %[[CMP6:.*]] = cir.cmp eq %[[A6]], %[[B6]] : !cir.float
 // CIR: cir.store{{.*}} %[[CMP6]], %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // LLVM-LABEL: define{{.*}} void @_Z8c0_floatff(float {{.*}} %0, float {{.*}} %1){{.*}} {
@@ -352,13 +352,13 @@ void pointer_cmp(int *a, int *b) {
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR: %{{.*}} = cir.cmp(gt, %[[A1]], %[[B1]]) : !cir.ptr<!s32i>, !cir.bool
+// CIR: %{{.*}} = cir.cmp gt %[[A1]], %[[B1]] : !cir.ptr<!s32i>
 
-// CIR: cir.cmp(lt, {{.*}}, {{.*}}) : !cir.ptr<!s32i>, !cir.bool
-// CIR: cir.cmp(ge, {{.*}}, {{.*}}) : !cir.ptr<!s32i>, !cir.bool
-// CIR: cir.cmp(le, {{.*}}, {{.*}}) : !cir.ptr<!s32i>, !cir.bool
-// CIR: cir.cmp(eq, {{.*}}, {{.*}}) : !cir.ptr<!s32i>, !cir.bool
-// CIR: cir.cmp(ne, {{.*}}, {{.*}}) : !cir.ptr<!s32i>, !cir.bool
+// CIR: cir.cmp lt {{.*}}, {{.*}} : !cir.ptr<!s32i>
+// CIR: cir.cmp ge {{.*}}, {{.*}} : !cir.ptr<!s32i>
+// CIR: cir.cmp le {{.*}}, {{.*}} : !cir.ptr<!s32i>
+// CIR: cir.cmp eq {{.*}}, {{.*}} : !cir.ptr<!s32i>
+// CIR: cir.cmp ne {{.*}}, {{.*}} : !cir.ptr<!s32i>
 
 // LLVM-LABEL: define{{.*}} void @_Z11pointer_cmpPiS_(ptr {{.*}} %0, ptr {{.*}} %1){{.*}} {
 // LLVM: %[[A_PTR:.*]] = alloca ptr
@@ -410,14 +410,14 @@ void bool_cmp(bool a, bool b) {
 // CIR: %[[A1_INT:.*]] = cir.cast bool_to_int %[[A1]] : !cir.bool -> !s32i
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[B1_INT:.*]] = cir.cast bool_to_int %[[B1]] : !cir.bool -> !s32i
-// CIR: %{{.*}} = cir.cmp(gt, %[[A1_INT]], %[[B1_INT]]) : !s32i, !cir.bool
+// CIR: %{{.*}} = cir.cmp gt %[[A1_INT]], %[[B1_INT]] : !s32i
 // CIR: cir.store{{.*}} {{.*}}, %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// CIR: cir.cmp(lt
-// CIR: cir.cmp(ge
-// CIR: cir.cmp(le
-// CIR: cir.cmp(eq
-// CIR: cir.cmp(ne
+// CIR: cir.cmp lt
+// CIR: cir.cmp ge
+// CIR: cir.cmp le
+// CIR: cir.cmp eq
+// CIR: cir.cmp ne
 
 // LLVM-LABEL: define{{.*}} void @_Z8bool_cmpbb(i1 {{.*}} %0, i1 {{.*}} %1){{.*}} {
 // LLVM: %[[A_PTR:.*]] = alloca i8

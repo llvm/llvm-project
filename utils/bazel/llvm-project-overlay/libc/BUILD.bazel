@@ -319,6 +319,11 @@ libc_support_library(
     hdrs = ["hdr/stdint_proxy.h"],
 )
 
+libc_support_library(
+    name = "hdr_sys_auxv_macros",
+    hdrs = ["hdr/sys_auxv_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -1723,6 +1728,7 @@ libc_support_library(
         ":__support_osutil_syscall",
         ":__support_threads_callonce",
         ":hdr_fcntl_macros",
+        ":hdr_sys_auxv_macros",
     ],
 )
 
@@ -3912,6 +3918,17 @@ libc_support_library(
     deps = [
         ":__support_fputil_fma",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ffmaf128",
+    hdrs = ["src/__support/math/ffmaf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -6694,7 +6711,7 @@ libc_math_function(
 libc_math_function(
     name = "ffmaf128",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_ffmaf128",
     ],
 )
 
