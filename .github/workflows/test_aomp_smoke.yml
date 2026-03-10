@@ -123,7 +123,7 @@ jobs:
           AMD_LOG_LEVEL: 4
         run: |
           set -x
-          git clone https://github.com/ROCm/aomp -b aomp-dev --depth 1
+          git clone https://github.com/ROCm/aomp -b amd-staging --depth 1
           cd aomp/bin
           export AOMP=${OUTPUT_ARTIFACTS_DIR}/llvm
           echo ${AOMP}
