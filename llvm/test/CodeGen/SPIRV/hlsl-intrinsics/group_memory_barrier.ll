@@ -3,7 +3,7 @@
 
 ; CHECK: OpMemoryModel Logical GLSL450
 
-define void @test_group_memory_barrier() {
+define void @test_group_memory_barrier() #0 {
 entry:
   ; CHECK: %[[#TY:]] = OpTypeInt 32 0
   ; CHECK-DAG: %[[#MEM_SEM:]] = OpConstant %[[#TY]] 16
@@ -12,3 +12,5 @@ entry:
   call void @llvm.spv.group.memory.barrier()
   ret void
 }
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

@@ -4185,9 +4185,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_firstbitlow: // There is no CL equivlent of FindILsb
     return selectFirstBitLow(ResVReg, ResType, I);
   case Intrinsic::spv_group_memory_barrier:
-    return selectBarrierInst(I, SPIRV::Scope::Workgroup, false);
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup, /*WithGroupSync*/false);
   case Intrinsic::spv_group_memory_barrier_with_group_sync:
-    return selectBarrierInst(I, SPIRV::Scope::Workgroup, true);
+    return selectBarrierInst(I, SPIRV::Scope::Workgroup, /*WithGroupSync*/true);
   case Intrinsic::spv_generic_cast_to_ptr_explicit: {
     Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
     SPIRV::StorageClass::StorageClass ResSC =
