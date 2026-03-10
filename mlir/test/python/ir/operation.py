@@ -1391,3 +1391,49 @@ def testIndexSwitch():
                 assert len([i for i in switch_op.caseRegions]) == 3
                 assert len(switch_op.caseRegions[1:]) == 2
                 assert len([i for i in switch_op.caseRegions[1:]]) == 2
+
+
+# CHECK-LABEL: TEST: testGetParentOfType
+@run
+def testGetParentOfType():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        idx = IndexType.get()
+        # Build: func.func -> scf.for -> custom.base_op
+        func_op: func.FuncOp = func.FuncOp("test_fn", ([], []))
+        with InsertionPoint(func_op.add_entry_block()):
+            lower_bound = arith.ConstantOp(idx, 0)
+            upper_bound = arith.ConstantOp(idx, 10)
+            step = arith.ConstantOp(idx, 1)
+            for_op: scf.ForOp = scf.ForOp(lower_bound, upper_bound, step)
+            with InsertionPoint(for_op.body):
+                base_op: Operation = Operation.create("custom.base_op")
+                scf.YieldOp([])
+            func.ReturnOp([])
+
+        # CHECK: get_parent_of_type detached->func.func: None
+        detached: Operation = Operation.create("custom.detached")
+        res = get_parent_of_type(detached, func.FuncOp)
+        print(f"get_parent_of_type detached->func.func: {res}")
+        assert res is None
+
+        # CHECK: get_parent_of_type base_op->func.func: func.func
+        res = get_parent_of_type(base_op, func.FuncOp)
+        print(f"get_parent_of_type base_op->func.func: {res.operation.name}")
+        assert isinstance(res, func.FuncOp)
+
+        # CHECK: get_parent_of_type func_op->func.func: None
+        res = get_parent_of_type(func_op, func.FuncOp)
+        print(f"get_parent_of_type func_op->func.func: {res}")
+        assert res is None
+
+        # CHECK: get_parent_of_type base_op->scf.if: None
+        res = get_parent_of_type(base_op, scf.IfOp)
+        print(f"get_parent_of_type base_op->scf.if: {res}")
+        assert res is None
+
+        try:
+            get_parent_of_type(base_op, int)
+            assert False, "expected TypeError"
+        except TypeError:
+            pass

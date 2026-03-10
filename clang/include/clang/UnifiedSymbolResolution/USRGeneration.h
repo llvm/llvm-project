@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_INDEX_USRGENERATION_H
-#define LLVM_CLANG_INDEX_USRGENERATION_H
+#ifndef LLVM_CLANG_UNIFIEDSYMBOLRESOLUTION_USRGENERATION_H
+#define LLVM_CLANG_UNIFIEDSYMBOLRESOLUTION_USRGENERATION_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,9 +24,7 @@ class QualType;
 
 namespace index {
 
-static inline StringRef getUSRSpacePrefix() {
-  return "c:";
-}
+static inline StringRef getUSRSpacePrefix() { return "c:"; }
 
 /// Generate a USR for a Decl, including the USR prefix.
 /// \returns true if the results should be ignored, false otherwise.
@@ -54,7 +52,8 @@ void generateUSRForObjCMethod(StringRef Sel, bool IsInstanceMethod,
                               raw_ostream &OS);
 
 /// Generate a USR fragment for an Objective-C property.
-void generateUSRForObjCProperty(StringRef Prop, bool isClassProp, raw_ostream &OS);
+void generateUSRForObjCProperty(StringRef Prop, bool isClassProp,
+                                raw_ostream &OS);
 
 /// Generate a USR fragment for an Objective-C protocol.
 void generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS,
@@ -99,9 +98,7 @@ bool generateUSRFragmentForModule(const Module *Mod, raw_ostream &OS);
 /// \returns true on error, false on success.
 bool generateUSRFragmentForModuleName(StringRef ModName, raw_ostream &OS);
 
-
 } // namespace index
 } // namespace clang
 
-#endif // LLVM_CLANG_INDEX_USRGENERATION_H
-
+#endif // LLVM_CLANG_UNIFIEDSYMBOLRESOLUTION_USRGENERATION_H
