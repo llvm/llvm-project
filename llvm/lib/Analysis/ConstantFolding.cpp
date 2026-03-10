@@ -3798,7 +3798,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
   if (IntrinsicID == Intrinsic::experimental_cttz_elts) {
     auto *FVTy = dyn_cast<FixedVectorType>(Operands[0]->getType());
-    auto *Op2 = cast<ConstantInt>(Operands[1]);
+    bool ZeroIsPoison = cast<ConstantInt>(Operands[1])->isOne();
     if (!FVTy)
       return nullptr;
     unsigned Width = Ty->getIntegerBitWidth();
@@ -3812,7 +3812,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         continue;
       return ConstantInt::get(Ty, I);
     }
-    if (Op2->isOne())
+    if (ZeroIsPoison)
       return PoisonValue::get(Ty);
     return ConstantInt::get(Ty, FVTy->getNumElements());
   }
