@@ -519,6 +519,7 @@ def setupSysPath():
     toolsLLDBDAP = os.path.join(scriptPath, "tools", "lldb-dap")
     toolsLLDBServerPath = os.path.join(scriptPath, "tools", "lldb-server")
     intelpt = os.path.join(scriptPath, "tools", "intelpt")
+    armetm = os.path.join(scriptPath, "tools", "armetm")
 
     # Insert script dir, plugin dir and lldb-server dir to the sys.path.
     sys.path.insert(0, pluginPath)
@@ -531,6 +532,9 @@ def setupSysPath():
     # Adding test/tools/intelpt to the path makes it easy
     # to "import intelpt_testcase" from the lldb-server tests
     sys.path.insert(0, intelpt)
+    # Adding test/tools/armetm to the path makes it easy
+    # to "import armetm_testcase" from the lldb-server tests
+    sys.path.insert(0, armetm)
 
     # This is the root of the lldb git/svn checkout
     # When this changes over to a package instead of a standalone script, this

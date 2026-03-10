@@ -1,4 +1,4 @@
-//===-- TraceIntelPTBundleLoader.h ----------------------------*- C++ //-*-===//
+//===-- TraceArmETMBundleLoader.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,32 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLELOADER_H
-#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLELOADER_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACE_ARM_ETM_TRACEARMETMBUNDLELOADER_H
+#define LLDB_SOURCE_PLUGINS_TRACE_ARM_ETM_TRACEARMETMBUNDLELOADER_H
 
 #include "../common/ThreadPostMortemTrace.h"
 #include "../common/TraceBundleLoader.h"
-#include "TraceIntelPTJSONStructs.h"
+#include "TraceArmETMJSONStructs.h"
 
 namespace lldb_private {
-namespace trace_intel_pt {
+namespace trace_arm_etm {
 
-class TraceIntelPT;
+class TraceArmETM;
 
-class TraceIntelPTBundleLoader : public TraceBundleLoader {
+class TraceArmETMBundleLoader : public TraceBundleLoader {
 public:
   /// \param[in] debugger
   ///   The debugger that will own the targets to create.
   ///
   /// \param[in] bundle_description
   ///   The JSON description of a trace bundle that follows the schema of the
-  ///   intel pt trace plug-in.
+  ///   arm etm trace plug-in.
   ///
   /// \param[in] bundle_dir
   ///   The folder where the trace bundle is located.
-  TraceIntelPTBundleLoader(Debugger &debugger,
-                           const llvm::json::Value &bundle_description,
-                           llvm::StringRef bundle_dir)
+  TraceArmETMBundleLoader(Debugger &debugger,
+                          const llvm::json::Value &bundle_description,
+                          llvm::StringRef bundle_dir)
       : TraceBundleLoader(debugger, bundle_dir),
         m_bundle_description(bundle_description) {}
 
@@ -56,8 +56,8 @@ private:
   /// Given a bundle description and a list of fully parsed processes,
   /// create an actual Trace instance that "traces" these processes.
   llvm::Expected<lldb::TraceSP>
-  CreateTraceIntelPTInstance(JSONTraceBundleDescription &bundle_description,
-                             std::vector<ParsedProcess> &parsed_processes);
+  CreateTraceArmETMInstance(JSONTraceBundleDescription &bundle_description,
+                            std::vector<ParsedProcess> &parsed_processes);
 
   /// Create the corresponding Threads and Process objects given the JSON
   /// process definition.
@@ -65,10 +65,6 @@ private:
   /// \param[in] process
   ///   The JSON process definition
   llvm::Expected<ParsedProcess> ParseProcess(const JSONProcess &process);
-
-  /// Create a kernel process and cpu threads given the JSON kernel definition.
-  llvm::Expected<ParsedProcess>
-  ParseKernel(const JSONTraceBundleDescription &bundle_description);
 
   /// Create a user-friendly error message upon a JSON-parsing failure using the
   /// \a json::ObjectMapper functionality.
@@ -89,24 +85,14 @@ private:
   llvm::Expected<std::vector<ParsedProcess>>
   LoadBundle(const JSONTraceBundleDescription &bundle_description);
 
-  /// When applicable, augment the list of threads in the trace bundle by
-  /// inspecting the context switch trace. This only applies for threads of
-  /// processes already specified in this bundle description.
-  ///
-  /// \return
-  ///   An \a llvm::Error in case if failures, or \a llvm::Error::success
-  ///   otherwise.
-  llvm::Error AugmentThreadsFromContextSwitches(
-      JSONTraceBundleDescription &bundle_description);
-
-  /// Modifiy the bundle description by normalizing all the paths relative to
+  /// Modify the bundle description by normalizing all the paths relative to
   /// the session file directory.
   void NormalizeAllPaths(JSONTraceBundleDescription &bundle_description);
 
   const llvm::json::Value &m_bundle_description;
 };
 
-} // namespace trace_intel_pt
+} // namespace trace_arm_etm
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLELOADER_H
+#endif // LLDB_SOURCE_PLUGINS_TRACE_ARM_ETM_TRACEARMETMBUNDLELOADER_H
