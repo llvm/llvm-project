@@ -48,5 +48,5 @@ add_entrypoint_object(
     iswspace.h
   DEPENDS
     libc.src.__support.wctype_utils
-    libc.hdr.types.wint_t  
+    libc.hdr.types.wint_t
 )
