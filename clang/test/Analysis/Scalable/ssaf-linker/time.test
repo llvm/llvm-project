@@ -1,9 +1,9 @@
-// Test the --time/-t flag of ssaf-linker.
+// Test the --time/-t flag of clang-ssaf-linker.
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 
-// RUN: ssaf-linker --time %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
+// RUN: clang-ssaf-linker --time %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
 // RUN:           | FileCheck %s --match-full-lines
 // CHECK:      ===-------------------------------------------------------------------------===
 // CHECK-NEXT: {{[ ]+}}SSAF Linker

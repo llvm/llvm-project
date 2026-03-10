@@ -3,11 +3,11 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_tool(ssaf-linker
+add_clang_tool(clang-ssaf-linker
   SSAFLinker.cpp
   )
 
-clang_target_link_libraries(ssaf-linker
+clang_target_link_libraries(clang-ssaf-linker
   PRIVATE
   clangAnalysisScalable
   clangBasic
