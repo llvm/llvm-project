@@ -1371,7 +1371,7 @@ struct GenericPluginTy {
     return false;
   }
 
-  /// Indicate if an imaget is compatible with the plugin devices. This is
+  /// Indicate if an image is compatible with the plugin devices. This is
   /// called if the image is not recognized as compatible by the common layer.
   /// This gives the plugin a chance to inspect the image and decide if it is
   /// compatible. Notice that this function may be called before actually
