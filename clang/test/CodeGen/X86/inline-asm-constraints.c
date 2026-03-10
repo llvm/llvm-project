@@ -56,8 +56,10 @@ __m512 testZMM0(void) {
 
 // CHECK-LABEL: test_a_p(
 // CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(ptr %0)
-void test_a_p(int *ptr) {
+// CHECK: call void asm sideeffect "lea ${0:a}, %eax", "p,~{eax},~{dirflag},~{fpsr},~{flags}"(i32 %add)
+void test_a_p(int *ptr, int i) {
   asm("lea %a0, %%eax" :: "p"(ptr) : "eax");
+  asm("lea %a0, %%eax" :: "p"(0x1480 + i * 8) : "eax");
 }
 
 extern int var, arr[4];
