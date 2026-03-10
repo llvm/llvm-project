@@ -21,7 +21,7 @@
 ; CHECK-DAG: OpName [[v3SGT:%.*]] "test_v3_sgt"
 ; CHECK-DAG: OpName [[v3UGE:%.*]] "test_v3_uge"
 ; CHECK-DAG: OpName [[v3SGE:%.*]] "test_v3_sge"
-; CHECK-DAG: OpName [[FOO:%.*]] "foo"
+; CHECK-DAG: OpName [[v16NE:%.*]] "test_v16_ne"
 
 ; CHECK:      [[EQ]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
@@ -263,13 +263,13 @@ define <3 x i1> @test_v3_sge(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK:      [[FOO]] = OpFunction
+; CHECK:      [[v16NE]] = OpFunction
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: [[R:%.*]] = OpLogicalNotEqual {{%.+}} {{%.*}} {{%.*}}
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
 
-define spir_func <16 x i1> @foo() addrspace(4) {
+define spir_func <16 x i1> @test_v16_ne() addrspace(4) {
   %A = icmp ne <16 x i1> zeroinitializer, zeroinitializer
   ret <16 x i1> %A
 }
