@@ -119,3 +119,197 @@ loop.latch:
 exit:
   ret i32 1
 }
+
+; Tests that when an early-exit inner loop has multiple exits and all exits
+; leave the outer loop.
+define i32 @multi_early_exit_all_leave_outer_loop(i1 %c) {
+; CHECK-LABEL: Loop info for function 'multi_early_exit_all_leave_outer_loop':
+; CHECK: Loop at depth 1 containing: %outer.header<header>,%outer.latch<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
+; CHECK:    {{.*}}Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ 0, %outer.header ], [ %iv.next, %inner.latch ]
+  br i1 %c, label %early.exit.1, label %inner.body
+
+inner.body:
+  %trunc = trunc i64 %iv to i16
+  %cmp = icmp ult i16 %trunc, 0
+  br i1 %cmp, label %early.exit.2, label %inner.latch
+
+inner.latch:
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp ult i64 %iv, 1
+  br i1 %exit.cond, label %inner.header, label %outer.latch
+
+outer.latch:
+  br i1 %c, label %early.exit.1, label %outer.header
+
+early.exit.1:
+  ret i32 1
+
+early.exit.2:
+  ret i32 0
+}
+
+; Tests that when an inner loop has two early exits at different loop levels
+; (one staying in the outer loop, one leaving all loops).
+define i32 @multi_early_exit_different_loop_levels(i1 %c) {
+; CHECK-LABEL: Loop info for function 'multi_early_exit_different_loop_levels':
+; CHECK: Loop at depth 1 containing: %outer.header<header>,%early.exit.outer,%outer.latch<latch>,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.0
+; CHECK:    {{.*}}Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ 0, %outer.header ], [ %iv.next, %inner.latch ]
+  br i1 %c, label %early.exit.outer, label %inner.body
+
+inner.body:
+  %trunc = trunc i64 %iv to i16
+  %cmp = icmp ult i16 %trunc, 0
+  br i1 %cmp, label %early.exit.leave, label %inner.latch
+
+inner.latch:
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp ult i64 %iv, 1
+  br i1 %exit.cond, label %inner.header, label %outer.latch
+
+outer.latch:
+  br label %outer.header
+
+early.exit.outer:
+  br label %outer.latch
+
+early.exit.leave:
+  ret i32 0
+}
+
+; Same as above, but the early exit order is reversed: the first early exit
+; leaves all loops and the second stays in the outer loop.
+define i32 @multi_early_exit_different_loop_levels_reversed(i1 %c) {
+; CHECK-LABEL: Loop info for function 'multi_early_exit_different_loop_levels_reversed':
+; CHECK: Loop at depth 1 containing: %outer.header<header>,%early.exit.outer,%outer.latch<latch>,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.1
+; CHECK:    {{.*}}Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ 0, %outer.header ], [ %iv.next, %inner.latch ]
+  br i1 %c, label %early.exit.leave, label %inner.body
+
+inner.body:
+  %trunc = trunc i64 %iv to i16
+  %cmp = icmp ult i16 %trunc, 0
+  br i1 %cmp, label %early.exit.outer, label %inner.latch
+
+inner.latch:
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp ult i64 %iv, 1
+  br i1 %exit.cond, label %inner.header, label %outer.latch
+
+outer.latch:
+  br label %outer.header
+
+early.exit.outer:
+  br label %outer.latch
+
+early.exit.leave:
+  ret i32 0
+}
+
+; Tests that when an inner loop has two early exits at different loop levels
+; (one going to a middle loop, one going to the outer loop).
+define i32 @multi_early_exit_two_different_loops(i1 %c) {
+; CHECK-LABEL: Loop info for function 'multi_early_exit_two_different_loops':
+; CHECK: Loop at depth 1 containing: %outer.header<header>,%middle.header,%early.exit.outer,%early.exit.middle,%middle.latch,%outer.latch<latch>,%middle.latch.loopexit,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check,%vector.early.exit.1,%vector.early.exit.0
+; CHECK:    {{.*}}Loop at depth 2 containing: %middle.header<header>,%early.exit.middle,%middle.latch<latch><exiting>,%middle.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.0
+; CHECK:        {{.*}}Loop at depth 3 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %middle.header
+
+middle.header:
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ 0, %middle.header ], [ %iv.next, %inner.latch ]
+  br i1 %c, label %early.exit.middle, label %inner.body
+
+inner.body:
+  %trunc = trunc i64 %iv to i16
+  %cmp = icmp ult i16 %trunc, 0
+  br i1 %cmp, label %early.exit.outer, label %inner.latch
+
+inner.latch:
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp ult i64 %iv, 1
+  br i1 %exit.cond, label %inner.header, label %middle.latch
+
+middle.latch:
+  br i1 %c, label %middle.header, label %outer.latch
+
+outer.latch:
+  br label %outer.header
+
+early.exit.middle:
+  br label %middle.latch
+
+early.exit.outer:
+  br label %outer.latch
+}
+
+; Same as above, but the early exit order is reversed: the first early exit
+; goes to the outer loop and the second goes to the middle loop.
+define i32 @multi_early_exit_two_different_loops_reversed(i1 %c) {
+; CHECK-LABEL: Loop info for function 'multi_early_exit_two_different_loops_reversed':
+; CHECK: Loop at depth 1 containing: %outer.header<header>,%middle.header,%early.exit.middle,%middle.latch,%early.exit.outer,%outer.latch<latch>,%middle.latch.loopexit,%outer.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check,%vector.early.exit.1,%vector.early.exit.0
+; CHECK:    {{.*}}Loop at depth 2 containing: %middle.header<header>,%early.exit.middle,%middle.latch<latch><exiting>,%middle.latch.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit.check<exiting>,%vector.early.exit.1
+; CHECK:        {{.*}}Loop at depth 3 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %middle.header
+
+middle.header:
+  br label %inner.header
+
+inner.header:
+  %iv = phi i64 [ 0, %middle.header ], [ %iv.next, %inner.latch ]
+  br i1 %c, label %early.exit.outer, label %inner.body
+
+inner.body:
+  %trunc = trunc i64 %iv to i16
+  %cmp = icmp ult i16 %trunc, 0
+  br i1 %cmp, label %early.exit.middle, label %inner.latch
+
+inner.latch:
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp ult i64 %iv, 1
+  br i1 %exit.cond, label %inner.header, label %middle.latch
+
+middle.latch:
+  br i1 %c, label %middle.header, label %outer.latch
+
+outer.latch:
+  br label %outer.header
+
+early.exit.middle:
+  br label %middle.latch
+
+early.exit.outer:
+  br label %outer.latch
+}
