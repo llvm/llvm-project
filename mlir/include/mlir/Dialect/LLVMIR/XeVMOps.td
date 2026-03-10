@@ -596,19 +596,25 @@ def XeVM_MMAOp
   let hasVerifier = 1;
 }
 
-def XeVM_ConversionTypesAttr
-    : XeVM_Attr<"ConversionTypes", "conversion_types"> {
-  let description = [{
-    This attribute is used to specify source and destination types for conversion operations.
-  }];
-  let parameters = (ins "xevm::ElemType":$src_type, "xevm::ElemType":$dst_type);
-  let assemblyFormat = "`<` struct(params) `>`";
+def XeVM_TruncfDstElemTypes
+    : I32EnumAttr<"TruncfDstElemTypes",
+                  "Destination element type for xevm.truncf",
+                  [XeVM_ET_BF8, XeVM_ET_F8, XeVM_ET_E2M1]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
+  let parameters = (ins "xevm::TruncfDstElemTypes":$etype);
+  let assemblyFormat = "`etype` `=` $etype";
 }
 
 def XeVM_TruncfOp
     : XeVM_Op<"truncf">,
-      Results<(outs AnyTypeOf<[I8]>:$res)>,
-      Arguments<(ins AnyTypeOf<[I16]>:$arg, XeVM_ConversionTypesAttr:$types)> {
+      Results<(outs AnyTypeOf<[VectorOfRankAndType<[1], [I8, I<4>]>, I8,
+                               I<4>]>:$dst)>,
+      Arguments<(ins AnyTypeOf<[VectorOfRankAndType<[1], [F16, BF16]>, F16,
+                                BF16]>:$arg,
+          XeVM_TruncfDstElemTypeAttr:$dst_etype)> {
   let summary = "Floating point truncation from f16/bf16 to f8/bf8/f4";
   let description = [{
     The `xevm.truncf` operation truncates a floating point value from
@@ -616,7 +622,7 @@ def XeVM_TruncfOp
   }];
 
   let assemblyFormat = [{
-    $arg ` ` `{` `types` `=` $types `}` attr-dict `:` functional-type(operands, results)
+    $arg ` ` `{` $dst_etype `}` attr-dict `:` functional-type(operands, results)
   }];
 }
 
