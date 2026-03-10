@@ -5415,17 +5415,22 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     return LValue::MakeExtVectorElt(Base.getAddress(), CV, type,
                                     Base.getBaseInfo(), TBAAAccessInfo());
   }
+
   if (Base.isMatrixRow()) {
     if (auto *RowIdx =
             llvm::dyn_cast<llvm::ConstantInt>(Base.getMatrixRowIdx())) {
       llvm::SmallVector<llvm::Constant *> MatIndices;
       QualType MatTy = Base.getType();
       const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
-      unsigned NumCols = MT->getNumColumns();
+      unsigned NumCols = Indices.size();
       unsigned NumRows = MT->getNumRows();
-      MatIndices.reserve(NumCols);
-
       unsigned Row = RowIdx->getZExtValue();
+      QualType VecQT = E->getBase()->getType();
+      if (NumCols != MT->getNumColumns()) {
+        const auto *EVT = VecQT->getAs<ExtVectorType>();
+        QualType ElemQT = EVT->getElementType();
+        VecQT = getContext().getExtVectorType(ElemQT, NumCols);
+      }
       for (unsigned C = 0; C < NumCols; ++C) {
         unsigned Col = Indices[C];
         unsigned Linear = Col * NumRows + Row;
@@ -5433,8 +5438,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
       }
 
       llvm::Constant *ConstIdxs = llvm::ConstantVector::get(MatIndices);
-      return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs,
-                                      E->getBase()->getType(),
+      return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs, VecQT,
                                       Base.getBaseInfo(), TBAAAccessInfo());
     }
     llvm::Constant *Cols =

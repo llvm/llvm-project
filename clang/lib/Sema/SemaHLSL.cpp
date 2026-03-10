@@ -2142,6 +2142,24 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     break;
   }
 
+  case ParsedAttr::AT_HLSLResourceDimension: {
+    StringRef Identifier;
+    SourceLocation ArgLoc;
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Identifier, &ArgLoc))
+      return false;
+
+    // Validate resource dimension value
+    llvm::dxil::ResourceDimension RD;
+    if (!HLSLResourceDimensionAttr::ConvertStrToResourceDimension(Identifier,
+                                                                  RD)) {
+      Diag(ArgLoc, diag::warn_attribute_type_not_supported)
+          << "ResourceDimension" << Identifier;
+      return false;
+    }
+    A = HLSLResourceDimensionAttr::Create(getASTContext(), RD, ACI);
+    break;
+  }
+
   case ParsedAttr::AT_HLSLROV:
     A = HLSLROVAttr::Create(getASTContext(), ACI);
     break;
@@ -3875,6 +3893,49 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_mul: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    Expr *Arg0 = TheCall->getArg(0);
+    Expr *Arg1 = TheCall->getArg(1);
+    QualType Ty0 = Arg0->getType();
+    QualType Ty1 = Arg1->getType();
+
+    auto getElemType = [](QualType T) -> QualType {
+      if (const auto *VTy = T->getAs<VectorType>())
+        return VTy->getElementType();
+      if (const auto *MTy = T->getAs<ConstantMatrixType>())
+        return MTy->getElementType();
+      return T;
+    };
+
+    QualType EltTy0 = getElemType(Ty0);
+
+    bool IsVec0 = Ty0->isVectorType();
+    bool IsMat0 = Ty0->isConstantMatrixType();
+    bool IsVec1 = Ty1->isVectorType();
+    bool IsMat1 = Ty1->isConstantMatrixType();
+
+    QualType RetTy;
+
+    if (IsVec0 && IsMat1) {
+      auto *MatTy = Ty1->castAs<ConstantMatrixType>();
+      RetTy = getASTContext().getExtVectorType(EltTy0, MatTy->getNumColumns());
+    } else if (IsMat0 && IsVec1) {
+      auto *MatTy = Ty0->castAs<ConstantMatrixType>();
+      RetTy = getASTContext().getExtVectorType(EltTy0, MatTy->getNumRows());
+    } else {
+      assert(IsMat0 && IsMat1);
+      auto *MatTy0 = Ty0->castAs<ConstantMatrixType>();
+      auto *MatTy1 = Ty1->castAs<ConstantMatrixType>();
+      RetTy = getASTContext().getConstantMatrixType(
+          EltTy0, MatTy0->getNumRows(), MatTy1->getNumColumns());
+    }
+
+    TheCall->setType(RetTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_normalize: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
@@ -3936,7 +3997,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_wave_active_max:
   case Builtin::BI__builtin_hlsl_wave_active_min:
-  case Builtin::BI__builtin_hlsl_wave_active_sum: {
+  case Builtin::BI__builtin_hlsl_wave_active_sum:
+  case Builtin::BI__builtin_hlsl_wave_active_product: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -5547,4 +5609,52 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   }
   Init = C;
   return true;
+}
+
+QualType SemaHLSL::ActOnTemplateShorthand(TemplateDecl *Template,
+                                          SourceLocation NameLoc) {
+  if (!Template)
+    return QualType();
+
+  DeclContext *DC = Template->getDeclContext();
+  if (!DC->isNamespace() || !cast<NamespaceDecl>(DC)->getIdentifier() ||
+      cast<NamespaceDecl>(DC)->getName() != "hlsl")
+    return QualType();
+
+  TemplateParameterList *Params = Template->getTemplateParameters();
+  if (!Params || Params->size() != 1)
+    return QualType();
+
+  if (!Template->isImplicit())
+    return QualType();
+
+  // We manually extract default arguments here instead of letting
+  // CheckTemplateIdType handle it. This ensures that for resource types that
+  // lack a default argument (like Buffer), we return a null QualType, which
+  // triggers the "requires template arguments" error rather than a less
+  // descriptive "too few template arguments" error.
+  TemplateArgumentListInfo TemplateArgs(NameLoc, NameLoc);
+  for (NamedDecl *P : *Params) {
+    if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(P)) {
+      if (TTP->hasDefaultArgument()) {
+        TemplateArgs.addArgument(TTP->getDefaultArgument());
+        continue;
+      }
+    } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
+      if (NTTP->hasDefaultArgument()) {
+        TemplateArgs.addArgument(NTTP->getDefaultArgument());
+        continue;
+      }
+    } else if (auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(P)) {
+      if (TTPD->hasDefaultArgument()) {
+        TemplateArgs.addArgument(TTPD->getDefaultArgument());
+        continue;
+      }
+    }
+    return QualType();
+  }
+
+  return SemaRef.CheckTemplateIdType(
+      ElaboratedTypeKeyword::None, TemplateName(Template), NameLoc,
+      TemplateArgs, nullptr, /*ForNestedNameSpecifier=*/false);
 }
