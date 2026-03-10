@@ -2601,7 +2601,7 @@ bool CIRGenItaniumCXXABI::hasAnyUnusedVirtualInlineFunction(
 
     StringRef name = cgm.getMangledName(
         vtableComponent.getGlobalDecl(/*HasVectorDeletingDtors=*/false));
-    auto entry = cgm.getGlobalValue(name);
+    auto entry = dyn_cast_or_null<cir::GlobalOp>(cgm.getGlobalValue(name));
     // This checks if virtual inline function has already been emitted.
     // Note that it is possible that this inline function would be emitted
     // after trying to emit vtable speculatively. Because of this we do
