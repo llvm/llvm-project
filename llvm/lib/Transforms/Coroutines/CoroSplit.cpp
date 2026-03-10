@@ -63,6 +63,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Coroutines/MaterializationUtils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -2100,7 +2101,8 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   auto &Shape = ABI.Shape;
   assert(Shape.CoroBegin);
 
-  if (Shape.ABI == coro::ABI::Switch)
+  if (Shape.ABI == coro::ABI::Switch &&
+      F.getParent()->getTargetTriple().isOSWindows())
     enforceDominationByCoroBegin(F, Shape);
 
   lowerAwaitSuspends(F, Shape);

@@ -2,6 +2,8 @@
 ; crashed after first phase of fix because the terminator cleanupret was not implemented on predecessor fixer at the time
 ; RUN: opt < %s -passes='coro-split' -S
 
+target triple = "x86_64-pc-windows-msvc"
+
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete@H@std@@@std@@0@Z"(ptr %0) #0 personality ptr null {
   invoke void @llvm.seh.scope.begin()

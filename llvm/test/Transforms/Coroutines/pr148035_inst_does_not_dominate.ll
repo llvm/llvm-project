@@ -2,6 +2,8 @@
 ; crashed before fix because of the validation mismatch of Instruction does not dominate all uses!
 ; RUN: opt < %s -passes='coro-split' -S
 
+target triple = "x86_64-pc-windows-msvc"
+
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(ptr %0) #0 personality ptr null {
   invoke void @llvm.seh.scope.begin()
