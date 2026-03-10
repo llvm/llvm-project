@@ -117,6 +117,10 @@ protected:
         << "Failed to create test dSYM Python directory.";
   };
 
+  void TearDown() override {
+    ASSERT_FALSE(llvm::sys::fs::remove_directories(m_tmp_root_dir));
+  }
+
   DebuggerSP m_debugger_sp;
   PlatformSP m_platform_sp;
   TargetSP m_target_sp;
