@@ -382,7 +382,7 @@ readWaitingOnGraphOpsFromBuffer(StringRef InputBuffer, Error &Err) {
         SNs.push_back(
             std::make_unique<SuperNode>(std::move(*Defs), std::move(*Deps)));
       }
-      return SNs;
+      return std::move(SNs);
     }
 
     static Expected<ContainerElementsMap>
@@ -445,7 +445,7 @@ readWaitingOnGraphOpsFromBuffer(StringRef InputBuffer, Error &Err) {
         }
       }
 
-      return M;
+      return std::move(M);
     }
   };
 
