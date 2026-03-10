@@ -10,9 +10,9 @@
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     1.00                        bfcvt	h0, s0
-# CHECK-NEXT:  1      3     1.00                        bfcvtn	v0.4h, v0.4s
-# CHECK-NEXT:  1      3     1.00                        bfcvtn2	v0.8h, v0.4s
+# CHECK-NEXT:  1      3     0.25                        bfcvt	h0, s0
+# CHECK-NEXT:  1      3     0.25                        bfcvtn	v0.4h, v0.4s
+# CHECK-NEXT:  1      3     0.25                        bfcvtn2	v0.8h, v0.4s
 # CHECK-NEXT:  1      2     0.17                        bfdot	v0.2s, v24.4h, v14.2h[2]
 # CHECK-NEXT:  1      4     0.17                        bfdot	v0.2s, v0.4h, v0.4h
 # CHECK-NEXT:  1      4     0.17                        bfdot	v0.4s, v0.8h, v0.8h
@@ -54,13 +54,13 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.83   2.83   1.33   4.33   4.33   1.33
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.08   2.08   1.33   2.08   2.08   1.33
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     bfcvt	h0, s0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     bfcvtn	v0.4h, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     bfcvtn2	v0.8h, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     bfcvt	h0, s0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     bfcvtn	v0.4h, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     bfcvtn2	v0.8h, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfdot	v0.2s, v24.4h, v14.2h[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfdot	v0.2s, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfdot	v0.4s, v0.8h, v0.8h

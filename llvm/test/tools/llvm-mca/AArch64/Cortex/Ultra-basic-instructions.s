@@ -37,8 +37,8 @@
 # CHECK-NEXT:  1      1     0.25                        cmn	wsp, #1365
 # CHECK-NEXT:  1      1     0.25                        cmn	sp, #1092, lsl #12
 # CHECK-NEXT:  1      1     0.13                        mov	x10, #-63432
-# CHECK-NEXT:  1      2     0.25                        add	wsp, wsp, w10
-# CHECK-NEXT:  1      2     0.25                        add	x25, x9, w25, uxtb
+# CHECK-NEXT:  1      1     0.25                        add	wsp, wsp, w10
+# CHECK-NEXT:  1      1     0.25                        add	x25, x9, w25, uxtb
 # CHECK-NEXT:  1      1     0.13                        add	w3, w5, w7
 # CHECK-NEXT:  1      1     0.13                        add	wzr, w3, w5
 # CHECK-NEXT:  1      1     0.13                        add	w20, wzr, w4
@@ -66,8 +66,8 @@
 # CHECK-NEXT:  1      2     0.13                        add	x5, x6, x7, asr #21
 # CHECK-NEXT:  1      2     0.13                        add	x8, x9, x10, asr #63
 # CHECK-NEXT:  1      1     0.13                        adds	w3, w5, w7
-# CHECK-NEXT:  1      2     0.25                        adds	w17, wsp, w25
-# CHECK-NEXT:  1      2     0.25                        adds	x13, x23, w8, uxtb
+# CHECK-NEXT:  1      1     0.25                        adds	w17, wsp, w25
+# CHECK-NEXT:  1      1     0.25                        adds	x13, x23, w8, uxtb
 # CHECK-NEXT:  1      1     0.13                        cmn	w3, w5
 # CHECK-NEXT:  1      1     0.13                        adds	w20, wzr, w4
 # CHECK-NEXT:  1      1     0.13                        adds	w4, w6, wzr
@@ -117,9 +117,9 @@
 # CHECK-NEXT:  1      2     0.13                        sub	x2, x3, x4, asr #0
 # CHECK-NEXT:  1      2     0.13                        sub	x5, x6, x7, asr #21
 # CHECK-NEXT:  1      2     0.13                        sub	x8, x9, x10, asr #63
-# CHECK-NEXT:  1      2     0.25                        sub	w13, wsp, w10
-# CHECK-NEXT:  1      2     0.25                        sub	x16, x2, w19, uxtb
-# CHECK-NEXT:  1      2     0.25                        subs	x13, x15, x14, sxtx #1
+# CHECK-NEXT:  1      1     0.25                        sub	w13, wsp, w10
+# CHECK-NEXT:  1      1     0.25                        sub	x16, x2, w19, uxtb
+# CHECK-NEXT:  1      1     0.25                        subs	x13, x15, x14, sxtx #1
 # CHECK-NEXT:  1      1     0.13                        subs	w3, w5, w7
 # CHECK-NEXT:  1      1     0.13                        cmp	w3, w5
 # CHECK-NEXT:  1      1     0.13                        subs	w4, w6, wzr
@@ -178,8 +178,8 @@
 # CHECK-NEXT:  1      2     0.13                        cmp	w18, w19, asr #0
 # CHECK-NEXT:  1      2     0.13                        cmp	w20, w21, asr #22
 # CHECK-NEXT:  1      2     0.13                        cmp	w22, w23, asr #31
-# CHECK-NEXT:  1      2     0.25                        cmp	wsp, w26
-# CHECK-NEXT:  1      2     0.25                        cmp	x16, w27, uxtb
+# CHECK-NEXT:  1      1     0.25                        cmp	wsp, w26
+# CHECK-NEXT:  1      1     0.25                        cmp	x16, w27, uxtb
 # CHECK-NEXT:  1      1     0.13                        cmp	x0, x3
 # CHECK-NEXT:  1      1     0.13                        cmp	xzr, x4
 # CHECK-NEXT:  1      1     0.13                        cmp	x5, xzr
@@ -312,16 +312,16 @@
 # CHECK-NEXT:  1      1     0.13                        lsr	w11, w12, #31
 # CHECK-NEXT:  1      1     0.13                        lsr	w13, w14, #29
 # CHECK-NEXT:  1      1     0.13                        ubfx	xzr, xzr, #10, #11
-# CHECK-NEXT:  1      1     0.33                        cbz	w5, #4
-# CHECK-NEXT:  1      1     0.33                        cbz	x5, #0
-# CHECK-NEXT:  1      1     0.33                        cbnz	x2, #-4
-# CHECK-NEXT:  1      1     0.33                        cbnz	x26, #1048572
-# CHECK-NEXT:  1      1     0.33                        cbz	wzr, #0
-# CHECK-NEXT:  1      1     0.33                        cbnz	xzr, #0
-# CHECK-NEXT:  1      1     0.33                        cbnz	w21, test
-# CHECK-NEXT:  1      1     0.33                        b.ne	#4
-# CHECK-NEXT:  1      1     0.33                        b.ge	#1048572
-# CHECK-NEXT:  1      1     0.33                        b.ge	#-4
+# CHECK-NEXT:  1      2     0.33                        cbz	w5, #4
+# CHECK-NEXT:  1      2     0.33                        cbz	x5, #0
+# CHECK-NEXT:  1      2     0.33                        cbnz	x2, #-4
+# CHECK-NEXT:  1      2     0.33                        cbnz	x26, #1048572
+# CHECK-NEXT:  1      2     0.33                        cbz	wzr, #0
+# CHECK-NEXT:  1      2     0.33                        cbnz	xzr, #0
+# CHECK-NEXT:  1      2     0.33                        cbnz	w21, test
+# CHECK-NEXT:  1      2     0.33                        b.ne	#4
+# CHECK-NEXT:  1      2     0.33                        b.ge	#1048572
+# CHECK-NEXT:  1      2     0.33                        b.ge	#-4
 # CHECK-NEXT:  1      1     0.25                        ccmp	w1, #31, #0, eq
 # CHECK-NEXT:  1      1     0.25                        ccmp	w3, #0, #15, hs
 # CHECK-NEXT:  1      1     0.25                        ccmp	wzr, #15, #13, hs
@@ -540,38 +540,38 @@
 # CHECK-NEXT:  1      2     0.17                        fneg	h2, h9
 # CHECK-NEXT:  1      2     0.17                        fneg	s4, s5
 # CHECK-NEXT:  1      8     1.00                        fsqrt	s6, s7
-# CHECK-NEXT:  1      3     1.00                        fcvt	d8, s9
-# CHECK-NEXT:  1      3     1.00                        fcvt	h10, s11
-# CHECK-NEXT:  1      2     1.00                        frintn	h12, h3
-# CHECK-NEXT:  1      2     1.00                        frintn	s12, s13
-# CHECK-NEXT:  1      2     1.00                        frintp	h17, h31
-# CHECK-NEXT:  1      2     1.00                        frintp	s14, s15
-# CHECK-NEXT:  1      2     1.00                        frintm	h0, h21
-# CHECK-NEXT:  1      2     1.00                        frintm	s16, s17
-# CHECK-NEXT:  1      2     1.00                        frintz	h10, h29
-# CHECK-NEXT:  1      2     1.00                        frintz	s18, s19
-# CHECK-NEXT:  1      2     1.00                        frinta	h22, h10
-# CHECK-NEXT:  1      2     1.00                        frinta	s20, s21
-# CHECK-NEXT:  1      2     1.00                        frintx	h4, h5
-# CHECK-NEXT:  1      2     1.00                        frintx	s22, s23
-# CHECK-NEXT:  1      2     1.00                        frinti	s24, s25
-# CHECK-NEXT:  1      2     1.00                        frinti	h31, h14
+# CHECK-NEXT:  1      3     0.25                        fcvt	d8, s9
+# CHECK-NEXT:  1      3     0.25                        fcvt	h10, s11
+# CHECK-NEXT:  1      2     0.25                        frintn	h12, h3
+# CHECK-NEXT:  1      2     0.25                        frintn	s12, s13
+# CHECK-NEXT:  1      2     0.25                        frintp	h17, h31
+# CHECK-NEXT:  1      2     0.25                        frintp	s14, s15
+# CHECK-NEXT:  1      2     0.25                        frintm	h0, h21
+# CHECK-NEXT:  1      2     0.25                        frintm	s16, s17
+# CHECK-NEXT:  1      2     0.25                        frintz	h10, h29
+# CHECK-NEXT:  1      2     0.25                        frintz	s18, s19
+# CHECK-NEXT:  1      2     0.25                        frinta	h22, h10
+# CHECK-NEXT:  1      2     0.25                        frinta	s20, s21
+# CHECK-NEXT:  1      2     0.25                        frintx	h4, h5
+# CHECK-NEXT:  1      2     0.25                        frintx	s22, s23
+# CHECK-NEXT:  1      2     0.25                        frinti	s24, s25
+# CHECK-NEXT:  1      2     0.25                        frinti	h31, h14
 # CHECK-NEXT:  1      2     0.17                        fmov	d0, d1
 # CHECK-NEXT:  1      2     0.17                        fabs	d2, d3
 # CHECK-NEXT:  1      2     0.17                        fneg	d4, d5
 # CHECK-NEXT:  1      5     1.00                        fsqrt	h13, h24
 # CHECK-NEXT:  1      12    1.00                        fsqrt	d6, d7
-# CHECK-NEXT:  1      3     1.00                        fcvt	s8, d9
-# CHECK-NEXT:  1      3     1.00                        fcvt	h10, d11
-# CHECK-NEXT:  1      2     1.00                        frintn	d12, d13
-# CHECK-NEXT:  1      2     1.00                        frintp	d14, d15
-# CHECK-NEXT:  1      2     1.00                        frintm	d16, d17
-# CHECK-NEXT:  1      2     1.00                        frintz	d18, d19
-# CHECK-NEXT:  1      2     1.00                        frinta	d20, d21
-# CHECK-NEXT:  1      2     1.00                        frintx	d22, d23
-# CHECK-NEXT:  1      2     1.00                        frinti	d24, d25
-# CHECK-NEXT:  1      3     1.00                        fcvt	s26, h27
-# CHECK-NEXT:  1      3     1.00                        fcvt	d28, h29
+# CHECK-NEXT:  1      3     0.25                        fcvt	s8, d9
+# CHECK-NEXT:  1      3     0.25                        fcvt	h10, d11
+# CHECK-NEXT:  1      2     0.25                        frintn	d12, d13
+# CHECK-NEXT:  1      2     0.25                        frintp	d14, d15
+# CHECK-NEXT:  1      2     0.25                        frintm	d16, d17
+# CHECK-NEXT:  1      2     0.25                        frintz	d18, d19
+# CHECK-NEXT:  1      2     0.25                        frinta	d20, d21
+# CHECK-NEXT:  1      2     0.25                        frintx	d22, d23
+# CHECK-NEXT:  1      2     0.25                        frinti	d24, d25
+# CHECK-NEXT:  1      3     0.25                        fcvt	s26, h27
+# CHECK-NEXT:  1      3     0.25                        fcvt	d28, h29
 # CHECK-NEXT:  1      3     0.17                        fmul	s20, s19, s17
 # CHECK-NEXT:  1      5     1.00                        fdiv	h1, h26, h23
 # CHECK-NEXT:  1      8     1.00                        fdiv	s1, s2, s3
@@ -1107,12 +1107,12 @@
 # CHECK-NEXT:  2      1     0.50           *            stp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  2      4     0.25    *                   ldp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  2      4     0.25    *                   ldp	w9, w10, [sp, #4]
-# CHECK-NEXT:  3      5     0.25    *                   ldpsw	x9, x10, [sp, #4]
-# CHECK-NEXT:  3      5     0.25    *                   ldpsw	x9, x10, [x2, #-256]
-# CHECK-NEXT:  3      5     0.25    *                   ldpsw	x20, x30, [sp, #252]
-# CHECK-NEXT:  2      4     0.25    *                   ldp	x21, x29, [x2, #504]
-# CHECK-NEXT:  2      4     0.25    *                   ldp	x22, x23, [x3, #-512]
-# CHECK-NEXT:  2      4     0.25    *                   ldp	x24, x25, [x4, #8]
+# CHECK-NEXT:  2      5     0.50    *                   ldpsw	x9, x10, [sp, #4]
+# CHECK-NEXT:  2      5     0.50    *                   ldpsw	x9, x10, [x2, #-256]
+# CHECK-NEXT:  2      5     0.50    *                   ldpsw	x20, x30, [sp, #252]
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x21, x29, [x2, #504]
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x22, x23, [x3, #-512]
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x24, x25, [x4, #8]
 # CHECK-NEXT:  2      6     0.25    *                   ldp	s29, s28, [sp, #252]
 # CHECK-NEXT:  1      2     0.50           *            stp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  2      6     0.25    *                   ldp	s1, s2, [x3, #44]
@@ -1128,12 +1128,12 @@
 # CHECK-NEXT:  3      1     0.50           *            stp	wzr, w9, [sp], #252
 # CHECK-NEXT:  3      4     0.25    *                   ldp	w2, wzr, [sp], #-256
 # CHECK-NEXT:  3      4     0.25    *                   ldp	w9, w10, [sp], #4
-# CHECK-NEXT:  4      5     0.25    *                   ldpsw	x9, x10, [sp], #4
-# CHECK-NEXT:  4      5     0.25    *                   ldpsw	x9, x10, [x2], #-256
-# CHECK-NEXT:  4      5     0.25    *                   ldpsw	x20, x30, [sp], #252
-# CHECK-NEXT:  3      4     0.25    *                   ldp	x21, x29, [x2], #504
-# CHECK-NEXT:  3      4     0.25    *                   ldp	x22, x23, [x3], #-512
-# CHECK-NEXT:  3      4     0.25    *                   ldp	x24, x25, [x4], #8
+# CHECK-NEXT:  3      5     0.50    *                   ldpsw	x9, x10, [sp], #4
+# CHECK-NEXT:  3      5     0.50    *                   ldpsw	x9, x10, [x2], #-256
+# CHECK-NEXT:  3      5     0.50    *                   ldpsw	x20, x30, [sp], #252
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x21, x29, [x2], #504
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x22, x23, [x3], #-512
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x24, x25, [x4], #8
 # CHECK-NEXT:  4      6     0.25    *                   ldp	s29, s28, [sp], #252
 # CHECK-NEXT:  2      2     0.50           *            stp	s27, s26, [sp], #-256
 # CHECK-NEXT:  4      6     0.25    *                   ldp	s1, s2, [x3], #44
@@ -1142,17 +1142,17 @@
 # CHECK-NEXT:  4      6     0.25    *                   ldp	d2, d3, [x30], #-8
 # CHECK-NEXT:  1      2     0.50           *            stp	q3, q5, [sp], #0
 # CHECK-NEXT:  1      2     0.50           *            stp	q17, q19, [sp], #1008
-# CHECK-NEXT:  4      6     0.25    *                   ldp	q23, q29, [x1], #-1024
+# CHECK-NEXT:  3      6     0.50    *                   ldp	q23, q29, [x1], #-1024
 # CHECK-NEXT:  3      4     0.25    *                   ldp	w3, w5, [sp, #0]!
 # CHECK-NEXT:  3      1     0.50           *            stp	wzr, w9, [sp, #252]!
 # CHECK-NEXT:  3      4     0.25    *                   ldp	w2, wzr, [sp, #-256]!
 # CHECK-NEXT:  3      4     0.25    *                   ldp	w9, w10, [sp, #4]!
-# CHECK-NEXT:  4      5     0.25    *                   ldpsw	x9, x10, [sp, #4]!
-# CHECK-NEXT:  4      5     0.25    *                   ldpsw	x9, x10, [x2, #-256]!
-# CHECK-NEXT:  4      5     0.25    *                   ldpsw	x20, x30, [sp, #252]!
-# CHECK-NEXT:  3      4     0.25    *                   ldp	x21, x29, [x2, #504]!
-# CHECK-NEXT:  3      4     0.25    *                   ldp	x22, x23, [x3, #-512]!
-# CHECK-NEXT:  3      4     0.25    *                   ldp	x24, x25, [x4, #8]!
+# CHECK-NEXT:  3      5     0.50    *                   ldpsw	x9, x10, [sp, #4]!
+# CHECK-NEXT:  3      5     0.50    *                   ldpsw	x9, x10, [x2, #-256]!
+# CHECK-NEXT:  3      5     0.50    *                   ldpsw	x20, x30, [sp, #252]!
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x21, x29, [x2, #504]!
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x22, x23, [x3, #-512]!
+# CHECK-NEXT:  1      4     0.50    *                   ldp	x24, x25, [x4, #8]!
 # CHECK-NEXT:  4      6     0.25    *                   ldp	s29, s28, [sp, #252]!
 # CHECK-NEXT:  2      2     0.50           *            stp	s27, s26, [sp, #-256]!
 # CHECK-NEXT:  4      6     0.25    *                   ldp	s1, s2, [x3, #44]!
@@ -1161,14 +1161,14 @@
 # CHECK-NEXT:  4      6     0.25    *                   ldp	d2, d3, [x30, #-8]!
 # CHECK-NEXT:  1      2     0.50           *            stp	q3, q5, [sp, #0]!
 # CHECK-NEXT:  1      2     0.50           *            stp	q17, q19, [sp, #1008]!
-# CHECK-NEXT:  4      6     0.25    *                   ldp	q23, q29, [x1, #-1024]!
+# CHECK-NEXT:  3      6     0.50    *                   ldp	q23, q29, [x1, #-1024]!
 # CHECK-NEXT:  2      4     0.25    *                   ldnp	w3, w5, [sp]
 # CHECK-NEXT:  2      1     0.50           *            stnp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  2      4     0.25    *                   ldnp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  2      4     0.25    *                   ldnp	w9, w10, [sp, #4]
-# CHECK-NEXT:  2      4     0.25    *                   ldnp	x21, x29, [x2, #504]
-# CHECK-NEXT:  2      4     0.25    *                   ldnp	x22, x23, [x3, #-512]
-# CHECK-NEXT:  2      4     0.25    *                   ldnp	x24, x25, [x4, #8]
+# CHECK-NEXT:  1      4     0.50    *                   ldnp	x21, x29, [x2, #504]
+# CHECK-NEXT:  1      4     0.50    *                   ldnp	x22, x23, [x3, #-512]
+# CHECK-NEXT:  1      4     0.50    *                   ldnp	x24, x25, [x4, #8]
 # CHECK-NEXT:  2      6     0.25    *                   ldnp	s29, s28, [sp, #252]
 # CHECK-NEXT:  1      2     0.50           *            stnp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  2      6     0.25    *                   ldnp	s1, s2, [x3, #44]
@@ -1233,22 +1233,22 @@
 # CHECK-NEXT:  1      1     0.13                        adr	x2, #1600
 # CHECK-NEXT:  1      1     0.13                        adrp	x21, #6553600
 # CHECK-NEXT:  1      1     0.13                        adr	x0, #262144
-# CHECK-NEXT:  1      1     0.33                        tbz	x12, #62, #0
-# CHECK-NEXT:  1      1     0.33                        tbz	x12, #62, #4
-# CHECK-NEXT:  1      1     0.33                        tbz	x12, #62, #-32768
-# CHECK-NEXT:  1      1     0.33                        tbz	w17, #16, test
-# CHECK-NEXT:  1      1     0.33                        tbnz	x12, #60, #32764
-# CHECK-NEXT:  1      1     0.33                        tbnz	w3, #28, test
-# CHECK-NEXT:  1      1     0.33                        b	#4
-# CHECK-NEXT:  1      1     0.33                        b	#-4
-# CHECK-NEXT:  1      1     0.33                        b	#134217724
+# CHECK-NEXT:  1      2     0.33                        tbz	x12, #62, #0
+# CHECK-NEXT:  1      2     0.33                        tbz	x12, #62, #4
+# CHECK-NEXT:  1      2     0.33                        tbz	x12, #62, #-32768
+# CHECK-NEXT:  1      2     0.33                        tbz	w17, #16, test
+# CHECK-NEXT:  1      2     0.33                        tbnz	x12, #60, #32764
+# CHECK-NEXT:  1      2     0.33                        tbnz	w3, #28, test
+# CHECK-NEXT:  1      2     0.33                        b	#4
+# CHECK-NEXT:  1      2     0.33                        b	#-4
+# CHECK-NEXT:  1      2     0.33                        b	#134217724
 # CHECK-NEXT:  2      2     0.33                        bl	test
-# CHECK-NEXT:  1      1     0.33                        br	x20
+# CHECK-NEXT:  1      2     0.33                        br	x20
 # CHECK-NEXT:  2      2     0.33                        blr	xzr
-# CHECK-NEXT:  1      1     0.33                  U     ret	x10
-# CHECK-NEXT:  1      1     0.33                  U     ret
-# CHECK-NEXT:  1      1     0.33                  U     eret
-# CHECK-NEXT:  1      1     0.33                  U     drps
+# CHECK-NEXT:  1      2     0.33                  U     ret	x10
+# CHECK-NEXT:  1      2     0.33                  U     ret
+# CHECK-NEXT:  1      2     0.33                  U     eret
+# CHECK-NEXT:  1      2     0.33                  U     drps
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - C1UUnitB
@@ -1282,7 +1282,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]
-# CHECK-NEXT: 8.67   8.67   8.67    -     34.00  34.00  33.75  33.75  33.75  33.75  69.00  69.00  140.00 140.00 237.38 107.88 105.21 92.71  105.21 92.71  105.21 92.71  123.17 129.17 9.17   36.17  36.17  9.17
+# CHECK-NEXT: 8.67   8.67   8.67    -     34.00  34.00  33.75  33.75  33.75  33.75  74.75  74.75  145.75 145.75 237.38 107.88 105.21 92.71  105.21 92.71  105.21 92.71  116.42 122.42 9.17   15.92  15.92  9.17
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   Instructions:
@@ -1816,38 +1816,38 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fneg	h2, h9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fneg	s4, s5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     fsqrt	s6, s7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     fcvt	d8, s9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     fcvt	h10, s11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintn	h12, h3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintn	s12, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintp	h17, h31
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintp	s14, s15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintm	h0, h21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintm	s16, s17
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintz	h10, h29
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintz	s18, s19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frinta	h22, h10
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frinta	s20, s21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintx	h4, h5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintx	s22, s23
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frinti	s24, s25
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frinti	h31, h14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvt	d8, s9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvt	h10, s11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintn	h12, h3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintn	s12, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintp	h17, h31
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintp	s14, s15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintm	h0, h21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintm	s16, s17
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintz	h10, h29
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintz	s18, s19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frinta	h22, h10
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frinta	s20, s21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintx	h4, h5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintx	s22, s23
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frinti	s24, s25
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frinti	h31, h14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fmov	d0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fabs	d2, d3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fneg	d4, d5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     fsqrt	h13, h24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     fsqrt	d6, d7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     fcvt	s8, d9
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     fcvt	h10, d11
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintn	d12, d13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintp	d14, d15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintm	d16, d17
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintz	d18, d19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frinta	d20, d21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frintx	d22, d23
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frinti	d24, d25
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     fcvt	s26, h27
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     fcvt	d28, h29
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvt	s8, d9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvt	h10, d11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintn	d12, d13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintp	d14, d15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintm	d16, d17
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintz	d18, d19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frinta	d20, d21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintx	d22, d23
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frinti	d24, d25
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvt	s26, h27
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvt	d28, h29
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fmul	s20, s19, s17
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     fdiv	h1, h26, h23
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     fdiv	s1, s2, s3
@@ -2383,12 +2383,12 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     stp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	w9, w10, [sp, #4]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldpsw	x9, x10, [sp, #4]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldpsw	x9, x10, [x2, #-256]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldpsw	x20, x30, [sp, #252]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	x21, x29, [x2, #504]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	x22, x23, [x3, #-512]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	x24, x25, [x4, #8]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldpsw	x9, x10, [sp, #4]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldpsw	x9, x10, [x2, #-256]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldpsw	x20, x30, [sp, #252]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	x21, x29, [x2, #504]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	x22, x23, [x3, #-512]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	x24, x25, [x4, #8]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	s29, s28, [sp, #252]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     stp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldp	s1, s2, [x3, #44]
@@ -2404,12 +2404,12 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     stp	wzr, w9, [sp], #252
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	w2, wzr, [sp], #-256
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	w9, w10, [sp], #4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [sp], #4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [x2], #-256
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x20, x30, [sp], #252
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x21, x29, [x2], #504
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x22, x23, [x3], #-512
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x24, x25, [x4], #8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [sp], #4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [x2], #-256
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x20, x30, [sp], #252
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x21, x29, [x2], #504
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x22, x23, [x3], #-512
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x24, x25, [x4], #8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	s29, s28, [sp], #252
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.50   0.50    -      -      -      -     stp	s27, s26, [sp], #-256
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	s1, s2, [x3], #44
@@ -2418,17 +2418,17 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	d2, d3, [x30], #-8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.50   0.50    -      -      -      -     stp	q3, q5, [sp], #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.50   0.50    -      -      -      -     stp	q17, q19, [sp], #1008
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	q23, q29, [x1], #-1024
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	q23, q29, [x1], #-1024
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	w3, w5, [sp, #0]!
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     stp	wzr, w9, [sp, #252]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	w2, wzr, [sp, #-256]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	w9, w10, [sp, #4]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [sp, #4]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [x2, #-256]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x20, x30, [sp, #252]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x21, x29, [x2, #504]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x22, x23, [x3, #-512]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x24, x25, [x4, #8]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [sp, #4]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x9, x10, [x2, #-256]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldpsw	x20, x30, [sp, #252]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x21, x29, [x2, #504]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x22, x23, [x3, #-512]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldp	x24, x25, [x4, #8]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	s29, s28, [sp, #252]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.50   0.50    -      -      -      -     stp	s27, s26, [sp, #-256]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	s1, s2, [x3, #44]!
@@ -2437,14 +2437,14 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	d2, d3, [x30, #-8]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.50   0.50    -      -      -      -     stp	q3, q5, [sp, #0]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.50   0.50    -      -      -      -     stp	q17, q19, [sp, #1008]!
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	q23, q29, [x1, #-1024]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.25   0.25   0.25   0.25   0.25   0.25   0.25   0.25    -      -      -      -      -      -     ldp	q23, q29, [x1, #-1024]!
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	w3, w5, [sp]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     stnp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	w9, w10, [sp, #4]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	x21, x29, [x2, #504]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	x22, x23, [x3, #-512]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	x24, x25, [x4, #8]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	x21, x29, [x2, #504]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	x22, x23, [x3, #-512]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	x24, x25, [x4, #8]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	s29, s28, [sp, #252]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     stnp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldnp	s1, s2, [x3, #44]

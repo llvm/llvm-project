@@ -10,18 +10,18 @@
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     1.00                        frint32x	v0.2d, v0.2d
-# CHECK-NEXT:  1      3     1.00                        frint32x	v0.2s, v0.2s
-# CHECK-NEXT:  1      3     1.00                        frint32x	v0.4s, v0.4s
-# CHECK-NEXT:  1      3     1.00                        frint32z	v0.2d, v0.2d
-# CHECK-NEXT:  1      3     1.00                        frint32z	v0.2s, v0.2s
-# CHECK-NEXT:  1      3     1.00                        frint32z	v0.4s, v0.4s
-# CHECK-NEXT:  1      3     1.00                        frint64x	v0.2d, v0.2d
-# CHECK-NEXT:  1      3     1.00                        frint64x	v0.2s, v0.2s
-# CHECK-NEXT:  1      3     1.00                        frint64x	v0.4s, v0.4s
-# CHECK-NEXT:  1      3     1.00                        frint64z	v0.2d, v0.2d
-# CHECK-NEXT:  1      3     1.00                        frint64z	v0.2s, v0.2s
-# CHECK-NEXT:  1      3     1.00                        frint64z	v0.4s, v0.4s
+# CHECK-NEXT:  1      3     0.25                        frint32x	v0.2d, v0.2d
+# CHECK-NEXT:  1      3     0.25                        frint32x	v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.25                        frint32x	v0.4s, v0.4s
+# CHECK-NEXT:  1      3     0.25                        frint32z	v0.2d, v0.2d
+# CHECK-NEXT:  1      3     0.25                        frint32z	v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.25                        frint32z	v0.4s, v0.4s
+# CHECK-NEXT:  1      3     0.25                        frint64x	v0.2d, v0.2d
+# CHECK-NEXT:  1      3     0.25                        frint64x	v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.25                        frint64x	v0.4s, v0.4s
+# CHECK-NEXT:  1      3     0.25                        frint64z	v0.2d, v0.2d
+# CHECK-NEXT:  1      3     0.25                        frint64z	v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.25                        frint64z	v0.4s, v0.4s
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - C1UUnitB
@@ -55,19 +55,19 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     6.00   6.00    -     12.00  12.00   -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     3.00   3.00    -     3.00   3.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint32x	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint32x	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint32x	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint32z	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint32z	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint32z	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint64x	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint64x	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint64x	v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint64z	v0.2d, v0.2d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint64z	v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     1.00   1.00    -     frint64z	v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint32x	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint32x	v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint32x	v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint32z	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint32z	v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint32z	v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint64x	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint64x	v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint64x	v0.4s, v0.4s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint64z	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint64z	v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frint64z	v0.4s, v0.4s
