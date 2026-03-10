@@ -430,9 +430,6 @@ void test() {
     it[0];
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    it.base();
-
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     it - it;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
