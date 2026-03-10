@@ -3618,10 +3618,21 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     on each array element before deallocation.
   }];
 
-  let arguments = (ins CIR_PointerType:$address,
-                       FlatSymbolRefAttr:$delete_fn,
-                       CIR_UsualDeleteParamsAttr:$delete_params,
-                       OptionalAttr<FlatSymbolRefAttr>:$element_dtor);
+  let arguments = (ins
+    CIR_PointerType:$address,
+    FlatSymbolRefAttr:$delete_fn,
+    CIR_UsualDeleteParamsAttr:$delete_params,
+    OptionalAttr<FlatSymbolRefAttr>:$element_dtor
+  );
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$address,
+                   "mlir::FlatSymbolRefAttr":$delete_fn,
+                   "cir::UsualDeleteParamsAttr":$delete_params), [{
+      build($_builder, $_state, address, delete_fn, delete_params,
+            /*element_dtor=*/mlir::FlatSymbolRefAttr{});
+    }]>
+  ];
 
   let assemblyFormat = [{
     $address `:` qualified(type($address)) attr-dict
