@@ -360,7 +360,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
     MO.getMBB()->getSymbol()->print(O, MAI);
     return;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
       << MO.getIndex();
     return;
   case MachineOperand::MO_BlockAddress:

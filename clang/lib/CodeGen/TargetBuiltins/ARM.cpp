@@ -1188,6 +1188,17 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vxarq_u64, aarch64_crypto_xar, 0),
 };
 
+// Single-Instruction-Single-Data (SISD) intrinsics.
+//
+// The name is somewhat misleading: not all intrinsics in this table are
+// strictly SISD. While many builtins operate on scalars,
+//   * some take vector operands (e.g. reduction builtins such as
+//     `vminvq_u16` and `vaddvq_s32`), and
+//   * some take both scalar and vector operands (e.g. crypto builtins
+//     such as `vsha1cq_u32`).
+//
+// TODO: Either rename this table to better reflect its contents, or
+// restrict it to true SISD intrinsics only.
 static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vabdd_f64, aarch64_sisd_fabd, Add1ArgType),
   NEONMAP1(vabds_f32, aarch64_sisd_fabd, Add1ArgType),
@@ -1732,12 +1743,9 @@ Function *CodeGenFunction::LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
 static Value *EmitCommonNeonSISDBuiltinExpr(
     CodeGenFunction &CGF, const ARMVectorIntrinsicInfo &SISDInfo,
     SmallVectorImpl<Value *> &Ops, const CallExpr *E) {
-  unsigned BuiltinID = SISDInfo.BuiltinID;
-  unsigned int Int = SISDInfo.LLVMIntrinsic;
-  unsigned Modifier = SISDInfo.TypeModifier;
-  const char *s = SISDInfo.NameHint;
+  assert(SISDInfo.LLVMIntrinsic && "Generic code assumes a valid intrinsic");
 
-  switch (BuiltinID) {
+  switch (SISDInfo.BuiltinID) {
   case NEON::BI__builtin_neon_vcled_s64:
   case NEON::BI__builtin_neon_vcled_u64:
   case NEON::BI__builtin_neon_vcles_f32:
@@ -1757,12 +1765,10 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
     break;
   }
 
-  assert(Int && "Generic code assumes a valid intrinsic");
-
   // Determine the type(s) of this overloaded AArch64 intrinsic.
-  const Expr *Arg = E->getArg(0);
-  llvm::Type *ArgTy = CGF.ConvertType(Arg->getType());
-  Function *F = CGF.LookupNeonLLVMIntrinsic(Int, Modifier, ArgTy, E);
+  llvm::Type *ArgTy = CGF.ConvertType(E->getArg(0)->getType());
+  Function *F = CGF.LookupNeonLLVMIntrinsic(SISDInfo.LLVMIntrinsic,
+                                            SISDInfo.TypeModifier, ArgTy, E);
 
   int j = 0;
   ConstantInt *C0 = ConstantInt::get(CGF.SizeTy, 0);
@@ -1772,8 +1778,10 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
     if (Ops[j]->getType()->getPrimitiveSizeInBits() ==
              ArgTy->getPrimitiveSizeInBits())
       continue;
+    assert(
+        ArgTy->isVectorTy() && !Ops[j]->getType()->isVectorTy() &&
+        "Expecting vector LLVM intrinsic type and scalar Clang builtin type!");
 
-    assert(ArgTy->isVectorTy() && !Ops[j]->getType()->isVectorTy());
     // The constant argument to an _n_ intrinsic always has Int32Ty, so truncate
     // it before inserting.
     Ops[j] = CGF.Builder.CreateTruncOrBitCast(
@@ -1782,13 +1790,13 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
         CGF.Builder.CreateInsertElement(PoisonValue::get(ArgTy), Ops[j], C0);
   }
 
-  Value *Result = CGF.EmitNeonCall(F, Ops, s);
+  Value *Result = CGF.EmitNeonCall(F, Ops, SISDInfo.NameHint);
   llvm::Type *ResultType = CGF.ConvertType(E->getType());
   if (ResultType->getPrimitiveSizeInBits().getFixedValue() <
       Result->getType()->getPrimitiveSizeInBits().getFixedValue())
     return CGF.Builder.CreateExtractElement(Result, C0);
 
-  return CGF.Builder.CreateBitCast(Result, ResultType, s);
+  return CGF.Builder.CreateBitCast(Result, ResultType, SISDInfo.NameHint);
 }
 
 Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
@@ -6212,10 +6220,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         ICmpInst::FCMP_OLT, "vcltz");
 
   case NEON::BI__builtin_neon_vceqzd_u64: {
-    Ops[0] = Builder.CreateBitCast(Ops[0], Int64Ty);
-    Ops[0] =
-        Builder.CreateICmpEQ(Ops[0], llvm::Constant::getNullValue(Int64Ty));
-    return Builder.CreateSExt(Ops[0], Int64Ty, "vceqzd");
+    return EmitAArch64CompareBuiltinExpr(
+        Ops[0], ConvertType(E->getCallReturnType(getContext())),
+        ICmpInst::ICMP_EQ, "vceqzd");
   }
   case NEON::BI__builtin_neon_vceqd_f64:
   case NEON::BI__builtin_neon_vcled_f64:

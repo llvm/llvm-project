@@ -119,30 +119,30 @@ multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
                                                        (i32 timm:$src3)))]>,
                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
       }
-      defm rri : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
-                                 (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+      defm rri : AVX512_maskable_scalar<0x53, MRMSrcReg, _, (outs _.RC:$dst),
+                                 (ins _.RC:$src1, _.RC:$src2, i32u8imm:$src3),
                                   OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
                                   (_.VT (OpNode (_.VT _.RC:$src1), (_.VT _.RC:$src2),
                                                 (i32 timm:$src3))),
-                                 0, 0, 0, vselect_mask, "", "_Int">,
+                                  "_Int">,
                        Sched<[WriteFMAX]>;
 
-      defm rmi : AVX512_maskable<0x53, MRMSrcMem, _, (outs VR128X:$dst),
-                                 (ins VR128X:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
+      defm rmi : AVX512_maskable_scalar<0x53, MRMSrcMem, _, (outs _.RC:$dst),
+                                 (ins _.RC:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
                                   OpStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
                                   (_.VT (OpNode (_.VT _.RC:$src1), (_.ScalarIntMemFrags addr:$src2),
                                                 (i32 timm:$src3))),
-                                 0, 0, 0, vselect_mask, "", "_Int">,
+                                  "_Int">,
                        Sched<[WriteFMAX.Folded, WriteFMAX.ReadAfterFold]>;
     }
     let Uses = []<Register>, mayRaiseFPException = 0 in
-      defm rrib : AVX512_maskable<0x53, MRMSrcReg, _, (outs VR128X:$dst),
-                                  (ins VR128X:$src1, VR128X:$src2, i32u8imm:$src3),
+      defm rrib : AVX512_maskable_scalar<0x53, MRMSrcReg, _, (outs _.RC:$dst),
+                                  (ins _.RC:$src1, _.RC:$src2, i32u8imm:$src3),
                                    OpStr, "$src3, {sae}, $src2, $src1",
                                    "$src1, $src2, {sae}, $src3",
                                    (_.VT (OpNodeSAE (_.VT _.RC:$src1), (_.VT _.RC:$src2),
                                                     (i32 timm:$src3))),
-                                  0, 0, 0, vselect_mask, "", "_Int">,
+                                  "_Int">,
                        Sched<[WriteFMAX]>, EVEX_B;
   }
 }
@@ -164,11 +164,11 @@ defm VMINMAXPS : avx10_minmax_packed<"vminmaxps", avx512vl_f32_info, X86vminmax>
                  avx10_minmax_packed_sae<"vminmaxps", avx512vl_f32_info, X86vminmaxSae>,
                  AVX512PDIi8Base, TA, EVEX_CD8<32, CD8VF>;
 
-defm VMINMAXSD : avx10_minmax_scalar<"vminmaxsd", v2f64x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSD : avx10_minmax_scalar<"vminmaxsd", f64x_info, X86vminmaxs, X86vminmaxsSae>,
                  AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<64, CD8VT1>, REX_W;
-defm VMINMAXSH : avx10_minmax_scalar<"vminmaxsh", v8f16x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSH : avx10_minmax_scalar<"vminmaxsh", f16x_info, X86vminmaxs, X86vminmaxsSae>,
                  AVX512PSIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<16, CD8VT1>, TA;
-defm VMINMAXSS : avx10_minmax_scalar<"vminmaxss", v4f32x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSS : avx10_minmax_scalar<"vminmaxss", f32x_info, X86vminmaxs, X86vminmaxsSae>,
                  AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<32, CD8VT1>;
 
 //-------------------------------------------------
