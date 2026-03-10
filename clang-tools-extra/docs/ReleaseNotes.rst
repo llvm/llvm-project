@@ -157,6 +157,12 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- Renamed :doc:`hicpp-ignored-remove-result
+  <clang-tidy/checks/hicpp/ignored-remove-result>`
+  to :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>`.
+  The `hicpp-ignored-remove-result` name is kept as an alias.
+
 - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
   to :doc:`portability-no-assembler
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
@@ -215,6 +221,10 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
+
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by fixing
+  a false positive for constrained template parameters.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
@@ -295,8 +305,13 @@ Changes in existing checks
   when a member expression has a non-identifier name.
 
 - Improved :doc:`readability-else-after-return
-  <clang-tidy/checks/readability/else-after-return>` check by fixing missed
-  diagnostics when ``if`` statements appear in unbraced ``switch`` case labels.
+  <clang-tidy/checks/readability/else-after-return>` check:
+
+  - Fixed missed diagnostics when ``if`` statements appear in unbraced
+    ``switch`` case labels.
+
+  - Added support for handling attributed ``if`` then-branches such as
+    ``[[likely]]`` and ``[[unlikely]]``.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message

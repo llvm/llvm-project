@@ -280,9 +280,7 @@ public:
     /// Returns true if SuperNodeDeps was changed.
     bool hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
                    ElemToSuperNodeMap &ElemToSN) {
-      bool SuperNodeDepsChanged = false;
-
-      Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
+      return Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
         auto I = ElemToSN.find(Container);
         if (I == ElemToSN.end())
           return false;
@@ -294,15 +292,11 @@ public:
             return false;
 
           auto *DefSN = J->second;
-          if (DefSN != this) {
-            SuperNodeDepsChanged = true;
+          if (DefSN != this)
             SuperNodeDeps[DefSN].insert(this);
-          }
           return true;
         });
       });
-
-      return SuperNodeDepsChanged;
     }
   };
 
@@ -737,6 +731,7 @@ private:
             FailedSNs.insert(SN.get());
             return true;
           };
+          llvm_unreachable("Unknown ExternalState enum");
         });
       });
 

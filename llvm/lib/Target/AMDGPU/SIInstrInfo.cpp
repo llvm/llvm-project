@@ -5302,7 +5302,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
     if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
-        Opcode != AMDGPU::V_MOV_B64_PSEUDO) {
+        Opcode != AMDGPU::V_MOV_B64_PSEUDO && !isSpill(MI)) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -10279,7 +10279,7 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX10:
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
-    return SIEncodingFamily::GFX11;
+    return ST.isGFX1170() ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
@@ -10378,6 +10378,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.isGFX1170())
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
