@@ -280,5 +280,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     COMPILE_DEFINITIONS ${_common_defs}
     INTERNALIZE_LIBRARIES ${clc_lib}
     OPT_FLAGS ${opt_flags}
+    OUTPUT_FILENAME libclc
+    PARENT_TARGET libclc-opencl-builtins
   )
 endforeach()
