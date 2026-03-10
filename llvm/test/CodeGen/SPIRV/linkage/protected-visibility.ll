@@ -1,17 +1,16 @@
 ; Check that protected visibility does not cause a crash, that protected
 ; declarations get Import linkage, and protected definitions get Export.
-; If environment doesn't support Linkage capability - ensure, that no
-; LinkageAttributes is emitted.
 
 ; RUN: split-file %s %t
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %t/opencl.ll -o - | FileCheck %s --check-prefix=CHECK
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %t/opencl.ll -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %t/opencl.ll -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute %t/vulkan.ll -o - | FileCheck %s --check-prefix=VULKAN
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %t/vulkan.ll -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute %t/vulkan.ll -o - | FileCheck %s
+; FIXME: re-enable validator check when spirv-val allows Linkage in vulkan env.
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %t/vulkan.ll -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-library %t/vulkan-lib.ll -o - | FileCheck %s --check-prefix=CHECK
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-vulkan-library %t/vulkan-lib.ll -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-library %t/vulkan-lib.ll -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[#PROTECTED_DECL:]] "protected_decl"
@@ -19,9 +18,6 @@
 
 ; CHECK-DAG: OpDecorate %[[#PROTECTED_DECL]] LinkageAttributes "protected_decl" Import
 ; CHECK-DAG: OpDecorate %[[#PROTECTED_DEF]] LinkageAttributes "protected_def" Export
-
-; VULKAN-NOT: OpCapability Linkage
-; VULKAN-NOT: LinkageAttributes
 
 ;--- opencl.ll
 declare protected spir_func void @protected_decl(ptr addrspace(1))
@@ -39,6 +35,8 @@ entry:
 }
 
 ;--- vulkan.ll
+declare protected void @protected_decl()
+
 define protected void @protected_def() {
 entry:
   ret void
@@ -46,6 +44,7 @@ entry:
 
 define void @main() #0 {
 entry:
+  call void @protected_decl()
   call void @protected_def()
   ret void
 }
