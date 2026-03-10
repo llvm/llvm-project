@@ -4731,11 +4731,12 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // pressure at high LMUL.
     bool IsScalar = all_of(Op->ops().drop_front(),
                            [](const SDUse &U) { return U.get().isUndef(); });
-    unsigned Opc = VT.isFloatingPoint()
-        ? (IsScalar ? RISCVISD::VFMV_S_F_VL : RISCVISD::VFMV_V_F_VL)
-        : (IsScalar ? RISCVISD::VMV_S_X_VL  : RISCVISD::VMV_V_X_VL);
-    Splat = DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                        Splat, VL);
+    unsigned Opc =
+        VT.isFloatingPoint()
+            ? (IsScalar ? RISCVISD::VFMV_S_F_VL : RISCVISD::VFMV_V_F_VL)
+            : (IsScalar ? RISCVISD::VMV_S_X_VL : RISCVISD::VMV_V_X_VL);
+    Splat =
+        DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Splat, VL);
     return convertFromScalableVector(VT, Splat, DAG, Subtarget);
   }
 
