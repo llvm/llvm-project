@@ -4,9 +4,6 @@
 ; Verify that ADD(SBB(Y,0,flags),C) folds to SBB(Y,-C,flags).
 ; SBB(Y,0) = Y - CF; adding C gives Y - CF + C = Y - (-C) - CF = SBB(Y,-C).
 
-declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64)
-declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32)
-
 ; Fold should fire, adding with constant
 define i64 @g_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: g_i64:
