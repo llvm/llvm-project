@@ -40,6 +40,7 @@ enum Size : uint8_t {
 // JSON-INDEX-NEXT:          ],
 // JSON-INDEX-NEXT:          "HasBriefComments": true
 // JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        "End": true,
 // JSON-INDEX-NEXT:        "HasComments": true,
 // JSON-INDEX-NEXT:        "InfoType": "enum",
 // JSON-INDEX-NEXT:        "Location": {
@@ -123,7 +124,6 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:    "Enums": [
 // JSON-VEHICLES-INDEX-NEXT:      {
 // JSON-VEHICLES-INDEX-NEXT:        "Description": {
-// JSON-VEHICLES-INDEX-NEXT:        "Description": {
 // JSON-VEHICLES-INDEX-NEXT:          "BriefComments": [
 // JSON-VEHICLES-INDEX-NEXT:            [
 // JSON-VEHICLES-INDEX-NEXT:              {
@@ -138,7 +138,7 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:        "InfoType": "enum",
 // JSON-VEHICLES-INDEX-NEXT:        "Location": {
 // JSON-VEHICLES-INDEX-NEXT:          "Filename": "{{.*}}enum.cpp",
-// JSON-VEHICLES-INDEX-NEXT:          "LineNumber": 114
+// JSON-VEHICLES-INDEX-NEXT:          "LineNumber": 115
 // JSON-VEHICLES-INDEX-NEXT:        },
 // JSON-VEHICLES-INDEX-NEXT:        "Members": [
 // JSON-VEHICLES-INDEX-NEXT:          {
