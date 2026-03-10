@@ -2784,7 +2784,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
   // If we write (or read-write) to a single destination and there are no other
   // reads in this loop then is it safe to vectorize. The safety here is
-  // guaranteed by the fact that the vectorizez version of the store would
+  // guaranteed by the fact that the vectorized version of the store would
   // preserve the ordering (either replication or @llvm.masked.scatter that has
   // order-preserving guarantee).
   if (NumReadWrites == 1 && NumReads == 0) {
