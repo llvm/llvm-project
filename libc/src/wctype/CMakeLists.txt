@@ -9,6 +9,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  iswcntrl
+  SRCS
+    iswcntrl.cpp
+  HDRS
+    iswcntrl.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
   iswdigit
   SRCS
     iswdigit.cpp
