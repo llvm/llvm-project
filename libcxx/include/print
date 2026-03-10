@@ -69,7 +69,7 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 // Note the function is only implemented on the Windows platform.
 _LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(FILE* __stream, wstring_view __view);
 #    endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#  endif // _LIBCPP_WIN32API
+#  endif   // _LIBCPP_WIN32API
 
 #  if _LIBCPP_STD_VER >= 23
 
@@ -195,17 +195,17 @@ inline constexpr bool __use_unicode_execution_charset = _MSVC_EXECUTION_CHARACTE
 inline constexpr bool __use_unicode_execution_charset = true;
 #    endif
 
+#    if defined(_LIBCPP_WIN32API) && _LIBCPP_AVAILABILITY_HAS_PRINT
 _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream) {
   // The macro _LIBCPP_TESTING_PRINT_IS_TERMINAL is used to change
   // the behavior in the test. This is not part of the public API.
-#    ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
+#      ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
   return _LIBCPP_TESTING_PRINT_IS_TERMINAL(__stream);
-#    elif _LIBCPP_AVAILABILITY_HAS_PRINT && _LIBCPP_HAS_TERMINAL && defined(_LIBCPP_WIN32API)
+#      else
   return std::__is_windows_terminal(__stream);
-#    else
-  return false;
-#    endif
+#      endif
 }
+#    endif
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
