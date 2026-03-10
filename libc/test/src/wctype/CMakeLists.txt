@@ -21,3 +21,13 @@ add_libc_test(
     libc.src.wctype.iswdigit
     libc.src.__support.wctype_utils
 )
+
+add_libc_test(
+  iswxdigit_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswxdigit_test.cpp
+  DEPENDS
+    libc.src.wctype.iswxdigit
+)
