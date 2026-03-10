@@ -1891,6 +1891,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SRL, MVT::i512, Custom);
     setOperationAction(ISD::SHL, MVT::i512, Custom);
     setOperationAction(ISD::SRA, MVT::i512, Custom);
+    setOperationAction(ISD::FSHR, MVT::i256, Custom);
+    setOperationAction(ISD::FSHL, MVT::i256, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
@@ -2953,6 +2955,8 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::XOR:
     case ISD::ADD:
     case ISD::SUB:
+    case ISD::FSHL:
+    case ISD::FSHR:
       return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
              mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
     case ISD::SELECT:
@@ -34519,6 +34523,34 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getBitcast(VT, Res));
     return;
   }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    SDValue Op0 = N->getOperand(0);
+    SDValue Op1 = N->getOperand(1);
+    SDValue Amt = N->getOperand(2);
+    assert(Subtarget.useAVX512Regs() && "AVX512F required");
+    assert(N->getValueType(0) == MVT::i256 && "Unexpected VT!");
+    if (!mayFoldIntoVector(Op0, DAG, Subtarget) ||
+        !mayFoldIntoVector(Op1, DAG, Subtarget))
+      return;
+
+    // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z & (bw-1))) >> bw.
+    // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))).
+    SDValue Res = DAG.getBitcast(
+        MVT::i512, concatSubVectors(DAG.getBitcast(MVT::v4i64, Op1),
+                                    DAG.getBitcast(MVT::v4i64, Op0), DAG, dl));
+    Amt = DAG.getNode(ISD::AND, dl, Amt.getValueType(), Amt,
+                      DAG.getConstant(255, dl, Amt.getValueType()));
+    if (Opc == ISD::FSHL) {
+      Res = DAG.getNode(ISD::SHL, dl, MVT::i512, Res, Amt);
+      Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res,
+                        DAG.getShiftAmountConstant(256, MVT::i512, dl));
+    } else {
+      Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res, Amt);
+    }
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i256, Res));
+    return;
+  }
   case ISD::CTPOP: {
     SDValue N0 = N->getOperand(0);
     EVT VT = N->getValueType(0);
@@ -48139,6 +48171,182 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
 }
 
+// If we have SSE[12] support, try to form min/max nodes. SSE min/max
+// instructions match the semantics of the common C idiom x<y?x:y but not
+// x<=y?x:y, because of how they handle negative zero (which can be
+// ignored in unsafe-math mode).
+// We also try to create v2f32 min/max nodes, which we later widen to v4f32.
+static SDValue combineSelectToMinMax(SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget, SDNode *N) {
+  SDLoc DL(N);
+  SDValue Cond = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  EVT VT = LHS.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if ((Cond.getOpcode() != ISD::SETCC &&
+       Cond.getOpcode() != ISD::STRICT_FSETCCS) ||
+      !VT.isFloatingPoint() || VT == MVT::f80 || VT == MVT::f128 ||
+      isSoftF16(VT, Subtarget) || (!TLI.isTypeLegal(VT) && VT != MVT::v2f32) ||
+      ((VT == MVT::v8f16 || VT == MVT::v16f16) && !Subtarget.hasVLX()) ||
+      (!Subtarget.hasSSE2() &&
+       (!Subtarget.hasSSE1() || VT.getScalarType() != MVT::f32)))
+    return SDValue();
+
+  bool IsStrict = Cond->isStrictFPOpcode();
+  ISD::CondCode CC =
+      cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
+  SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
+  SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
+
+  unsigned Opcode = 0;
+  // Check for x CC y ? x : y.
+  if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETULT:
+      // Converting this to a min would handle NaNs incorrectly, and swapping
+      // the operands would cause it to handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETOLE:
+      // Converting this to a min would handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
+        break;
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETULE:
+      // Converting this to a min would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOLT:
+    case ISD::SETLT:
+    case ISD::SETLE:
+      Opcode = X86ISD::FMIN;
+      break;
+
+    case ISD::SETOGE:
+      // Converting this to a max would handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
+        break;
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETUGT:
+      // Converting this to a max would handle NaNs incorrectly, and swapping
+      // the operands would cause it to handle comparisons between positive
+      // and negative zero incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETUGE:
+      // Converting this to a max would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOGT:
+    case ISD::SETGT:
+    case ISD::SETGE:
+      Opcode = X86ISD::FMAX;
+      break;
+    }
+    // Check for x CC y ? y : x -- a min/max with reversed arms.
+  } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETOGE:
+      // Converting this to a min would handle comparisons between positive
+      // and negative zero incorrectly, and swapping the operands would
+      // cause it to handle NaNs incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS))) {
+        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETUGT:
+      // Converting this to a min would handle NaNs incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+        break;
+      Opcode = X86ISD::FMIN;
+      break;
+    case ISD::SETUGE:
+      // Converting this to a min would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOGT:
+    case ISD::SETGT:
+    case ISD::SETGE:
+      Opcode = X86ISD::FMIN;
+      break;
+
+    case ISD::SETULT:
+      // Converting this to a max would handle NaNs incorrectly.
+      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+        break;
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETOLE:
+      // Converting this to a max would handle comparisons between positive
+      // and negative zero incorrectly, and swapping the operands would
+      // cause it to handle NaNs incorrectly.
+      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS)) {
+        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
+          break;
+        std::swap(LHS, RHS);
+      }
+      Opcode = X86ISD::FMAX;
+      break;
+    case ISD::SETULE:
+      // Converting this to a max would handle both negative zeros and NaNs
+      // incorrectly, but we can swap the operands to fix both.
+      std::swap(LHS, RHS);
+      [[fallthrough]];
+    case ISD::SETOLT:
+    case ISD::SETLT:
+    case ISD::SETLE:
+      Opcode = X86ISD::FMAX;
+      break;
+    }
+  }
+
+  if (!Opcode)
+    return SDValue();
+
+  // Propagate fast-math-flags.
+  SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
+  if (IsStrict) {
+    SDValue Ret = DAG.getNode(
+        Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN : X86ISD::STRICT_FMAX, DL,
+        {N->getValueType(0), MVT::Other}, {Cond.getOperand(0), LHS, RHS});
+    DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
+    return Ret;
+  }
+  return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
+}
+
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -48236,173 +48444,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we have SSE[12] support, try to form min/max nodes. SSE min/max
-  // instructions match the semantics of the common C idiom x<y?x:y but not
-  // x<=y?x:y, because of how they handle negative zero (which can be
-  // ignored in unsafe-math mode).
-  // We also try to create v2f32 min/max nodes, which we later widen to v4f32.
-  if ((Cond.getOpcode() == ISD::SETCC ||
-       Cond.getOpcode() == ISD::STRICT_FSETCCS) &&
-      VT.isFloatingPoint() && VT != MVT::f80 && VT != MVT::f128 &&
-      !isSoftF16(VT, Subtarget) && (TLI.isTypeLegal(VT) || VT == MVT::v2f32) &&
-      ((VT != MVT::v8f16 && VT != MVT::v16f16) || Subtarget.hasVLX()) &&
-      (Subtarget.hasSSE2() ||
-       (Subtarget.hasSSE1() && VT.getScalarType() == MVT::f32))) {
-    bool IsStrict = Cond->isStrictFPOpcode();
-    ISD::CondCode CC =
-        cast<CondCodeSDNode>(Cond.getOperand(IsStrict ? 3 : 2))->get();
-    SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
-    SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
-
-    unsigned Opcode = 0;
-    // Check for x CC y ? x : y.
-    if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
-      switch (CC) {
-      default: break;
-      case ISD::SETULT:
-        // Converting this to a min would handle NaNs incorrectly, and swapping
-        // the operands would cause it to handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-          if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-              !(DAG.isKnownNeverZeroFloat(LHS) ||
-                DAG.isKnownNeverZeroFloat(RHS)))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETOLE:
-        // Converting this to a min would handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-          break;
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETULE:
-        // Converting this to a min would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOLT:
-      case ISD::SETLT:
-      case ISD::SETLE:
-        Opcode = X86ISD::FMIN;
-        break;
-
-      case ISD::SETOGE:
-        // Converting this to a max would handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-          break;
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETUGT:
-        // Converting this to a max would handle NaNs incorrectly, and swapping
-        // the operands would cause it to handle comparisons between positive
-        // and negative zero incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-          if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-              !(DAG.isKnownNeverZeroFloat(LHS) ||
-                DAG.isKnownNeverZeroFloat(RHS)))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETUGE:
-        // Converting this to a max would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOGT:
-      case ISD::SETGT:
-      case ISD::SETGE:
-        Opcode = X86ISD::FMAX;
-        break;
-      }
-    // Check for x CC y ? y : x -- a min/max with reversed arms.
-    } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
-      switch (CC) {
-      default: break;
-      case ISD::SETOGE:
-        // Converting this to a min would handle comparisons between positive
-        // and negative zero incorrectly, and swapping the operands would
-        // cause it to handle NaNs incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !(DAG.isKnownNeverZeroFloat(LHS) ||
-              DAG.isKnownNeverZeroFloat(RHS))) {
-          if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETUGT:
-        // Converting this to a min would handle NaNs incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        Opcode = X86ISD::FMIN;
-        break;
-      case ISD::SETUGE:
-        // Converting this to a min would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOGT:
-      case ISD::SETGT:
-      case ISD::SETGE:
-        Opcode = X86ISD::FMIN;
-        break;
-
-      case ISD::SETULT:
-        // Converting this to a max would handle NaNs incorrectly.
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETOLE:
-        // Converting this to a max would handle comparisons between positive
-        // and negative zero incorrectly, and swapping the operands would
-        // cause it to handle NaNs incorrectly.
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-            !DAG.isKnownNeverZeroFloat(LHS) &&
-            !DAG.isKnownNeverZeroFloat(RHS)) {
-          if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-            break;
-          std::swap(LHS, RHS);
-        }
-        Opcode = X86ISD::FMAX;
-        break;
-      case ISD::SETULE:
-        // Converting this to a max would handle both negative zeros and NaNs
-        // incorrectly, but we can swap the operands to fix both.
-        std::swap(LHS, RHS);
-        [[fallthrough]];
-      case ISD::SETOLT:
-      case ISD::SETLT:
-      case ISD::SETLE:
-        Opcode = X86ISD::FMAX;
-        break;
-      }
-    }
-
-    if (Opcode) {
-      // Propagate fast-math-flags.
-      SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
-      if (IsStrict) {
-        SDValue Ret = DAG.getNode(Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN
-                                                         : X86ISD::STRICT_FMAX,
-                                  DL, {N->getValueType(0), MVT::Other},
-                                  {Cond.getOperand(0), LHS, RHS});
-        DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Ret.getValue(1));
-        return Ret;
-      }
-      return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
-    }
-  }
+  if (SDValue Res = combineSelectToMinMax(DAG, Subtarget, N))
+    return Res;
 
   // Some mask scalar intrinsics rely on checking if only one bit is set
   // and implement it in C code like this:

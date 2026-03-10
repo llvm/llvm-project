@@ -283,7 +283,18 @@ template <class _ValueType,
 #  endif
           >
 class __deque_iterator {
-  typedef _MapPointer __map_iterator;
+  using __map_iterator _LIBCPP_NODEBUG = __rebind_pointer_t<_Pointer, const __rebind_pointer_t<_Pointer, _ValueType> >;
+
+// TODO(LLVM 25): Remove this check
+#  ifndef _LIBCPP_ABI_DEQUE_ITERATORS
+  static_assert(
+      sizeof(__map_iterator) == sizeof(_MapPointer) && _LIBCPP_ALIGNOF(__map_iterator) == _LIBCPP_ALIGNOF(_MapPointer),
+      "It looks like you are using fancy pointers such that FancyPtr<const FancyPtr<const value_type>> is not "
+      "layout-compatible with FancyPtr<FancyPtr<value_type>> or FancyPtr<const FancyPtr<value_type>>. "
+      "This means that your ABI is being broken between LLVM 22 and LLVM 23 if deque::iterator or "
+      "deque::const_iterator is used. If you don't care about your ABI being broken, define the "
+      "_LIBCPP_ABI_DEQUE_ITERATORS macro to silence this diagnostic.");
+#  endif
 
 public:
   typedef _Pointer pointer;
@@ -459,7 +470,7 @@ private:
       __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, _DiffType, _BlockSize>;
 
 public:
-  using __segment_iterator _LIBCPP_NODEBUG = _MapPointer;
+  using __segment_iterator _LIBCPP_NODEBUG = typename _Iterator::__map_iterator;
   using __local_iterator _LIBCPP_NODEBUG   = _Pointer;
 
   static _LIBCPP_HIDE_FROM_ABI __segment_iterator __segment(_Iterator __iter) { return __iter.__m_iter_; }
@@ -725,24 +736,24 @@ public:
   // iterators:
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT {
-    __map_pointer __mp = __map_.begin() + __start_ / __block_size;
+    auto __mp = __map_.begin() + __start_ / __block_size;
     return iterator(__mp, __map_.empty() ? 0 : *__mp + __start_ % __block_size);
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT {
-    __map_const_pointer __mp = static_cast<__map_const_pointer>(__map_.begin() + __start_ / __block_size);
+    auto __mp = __map_.begin() + __start_ / __block_size;
     return const_iterator(__mp, __map_.empty() ? 0 : *__mp + __start_ % __block_size);
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT {
-    size_type __p      = size() + __start_;
-    __map_pointer __mp = __map_.begin() + __p / __block_size;
+    size_type __p = size() + __start_;
+    auto __mp     = __map_.begin() + __p / __block_size;
     return iterator(__mp, __map_.empty() ? 0 : *__mp + __p % __block_size);
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT {
-    size_type __p            = size() + __start_;
-    __map_const_pointer __mp = static_cast<__map_const_pointer>(__map_.begin() + __p / __block_size);
+    size_type __p = size() + __start_;
+    auto __mp     = __map_.begin() + __p / __block_size;
     return const_iterator(__mp, __map_.empty() ? 0 : *__mp + __p % __block_size);
   }
 
@@ -2220,7 +2231,7 @@ deque<_Tp, _Allocator>::__move_and_check(iterator __f, iterator __l, iterator __
       __fe = __fb + __bs;
     }
     if (__fb <= __vt && __vt < __fe)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__f.__m_iter_), __vt) -= __f - __r).__ptr_;
+      __vt = (const_iterator(__f.__m_iter_, __vt) -= __f - __r).__ptr_;
     __r = std::move(__fb, __fe, __r);
     __n -= __bs;
     __f += __bs;
@@ -2247,7 +2258,7 @@ deque<_Tp, _Allocator>::__move_backward_and_check(iterator __f, iterator __l, it
       __lb = __le - __bs;
     }
     if (__lb <= __vt && __vt < __le)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__l.__m_iter_), __vt) += __r - __l - 1).__ptr_;
+      __vt = (const_iterator(__l.__m_iter_, __vt) += __r - __l - 1).__ptr_;
     __r = std::move_backward(__lb, __le, __r);
     __n -= __bs;
     __l -= __bs - 1;
@@ -2273,7 +2284,7 @@ void deque<_Tp, _Allocator>::__move_construct_and_check(iterator __f, iterator _
       __fe = __fb + __bs;
     }
     if (__fb <= __vt && __vt < __fe)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__f.__m_iter_), __vt) += __r - __f).__ptr_;
+      __vt = (const_iterator(__f.__m_iter_, __vt) += __r - __f).__ptr_;
     for (; __fb != __fe; ++__fb, ++__r, ++__size())
       __alloc_traits::construct(__a, std::addressof(*__r), std::move(*__fb));
     __n -= __bs;
@@ -2305,7 +2316,7 @@ void deque<_Tp, _Allocator>::__move_construct_backward_and_check(
       __lb = __le - __bs;
     }
     if (__lb <= __vt && __vt < __le)
-      __vt = (const_iterator(static_cast<__map_const_pointer>(__l.__m_iter_), __vt) -= __l - __r + 1).__ptr_;
+      __vt = (const_iterator(__l.__m_iter_, __vt) -= __l - __r + 1).__ptr_;
     while (__le != __lb) {
       __alloc_traits::construct(__a, std::addressof(*--__r), std::move(*--__le));
       --__start_;

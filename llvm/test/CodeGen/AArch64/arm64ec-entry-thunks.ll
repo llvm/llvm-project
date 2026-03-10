@@ -359,6 +359,7 @@ define [3 x i64] @large_array([3 x i64] %0, [2 x double], [2 x [2 x i64]]) nounw
 ; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
 ; CHECK-NEXT:     str     x2, [x19, #16]
 ; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     mov     x8, x19
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr  168
@@ -568,6 +569,7 @@ define <8 x i16> @large_vector(<8 x i16> %0) {
 ; CHECK-NEXT:     adrp	x8, __os_arm64x_dispatch_ret
 ; CHECK-NEXT:     str	q0, [x19]
 ; CHECK-NEXT:     ldr	x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     mov	x8, x19
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp	x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr	168

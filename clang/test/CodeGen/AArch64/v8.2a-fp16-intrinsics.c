@@ -7,14 +7,6 @@
 
 #include <arm_fp16.h>
 
-// CHECK-LABEL: test_vceqzh_f16
-// CHECK:  [[TMP1:%.*]] = fcmp oeq half %a, 0xH0000
-// CHECK:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
-// CHECK:  ret i16 [[TMP2]]
-uint16_t test_vceqzh_f16(float16_t a) {
-  return vceqzh_f16(a);
-}
-
 // CHECK-LABEL: test_vcgezh_f16
 // CHECK:  [[TMP1:%.*]] = fcmp oge half %a, 0xH0000
 // CHECK:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
