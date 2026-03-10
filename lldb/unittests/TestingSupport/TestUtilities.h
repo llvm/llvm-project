@@ -68,11 +68,10 @@ private:
 };
 
 /// Check if the debugger supports the given platform.
-bool DebuggerSupportsPlatform(lldb::SBDebugger &debugger,
-                              llvm::StringRef platform);
+bool DebuggerSupportsLLVMTarget(llvm::StringRef target);
 
-#define SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, platform)                     \
-  if (!::lldb_private::DebuggerSupportsPlatform(debugger, platform)) {         \
+#define SKIP_IF_LLVM_TARGET_MISSING(platform)                                  \
+  if (!::lldb_private::DebuggerSupportsLLVMTarget(platform)) {                 \
     GTEST_SKIP() << "Unsupported platform";                                    \
   }
 

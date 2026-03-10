@@ -1,4 +1,4 @@
-//===-- TestBase.cpp ------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,6 @@
 #include "Handler/ResponseHandler.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
-#include "lldb/API/SBStructuredData.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Pipe.h"
 #include "llvm/ADT/StringRef.h"
@@ -95,8 +94,9 @@ void DAPTestBase::CreateDebugger() {
   dap->debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
 }
 
-void DAPTestBase::LoadCore() {
+void DAPTestBase::LoadCore(llvm::StringRef binary_path,
+                           llvm::StringRef core_path) {
   lldb::SBProcess process;
   std::tie(dap->target, process) =
-      lldb_private::LoadCore(dap->debugger, k_linux_binary, k_linux_core);
+      lldb_private::LoadCore(dap->debugger, binary_path, core_path);
 }

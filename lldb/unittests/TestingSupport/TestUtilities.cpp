@@ -65,17 +65,14 @@ llvm::Expected<llvm::sys::fs::TempFile> TestFile::writeToTemporaryFile() {
   return std::move(*Temp);
 }
 
-bool lldb_private::DebuggerSupportsPlatform(lldb::SBDebugger &debugger,
-                                            llvm::StringRef platform) {
-  EXPECT_TRUE(debugger);
-
-  lldb::SBStructuredData data =
-      debugger.GetBuildConfiguration().GetValueForKey("targets").GetValueForKey(
-          "value");
+bool lldb_private::DebuggerSupportsLLVMTarget(llvm::StringRef target) {
+  lldb::SBStructuredData data = lldb::SBDebugger::GetBuildConfiguration()
+                                    .GetValueForKey("targets")
+                                    .GetValueForKey("value");
   for (size_t i = 0; i < data.GetSize(); i++) {
     char buf[100] = {0};
     size_t size = data.GetItemAtIndex(i).GetStringValue(buf, sizeof(buf));
-    if (llvm::StringRef(buf, size) == platform)
+    if (llvm::StringRef(buf, size) == target)
       return true;
   }
 

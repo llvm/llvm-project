@@ -8,8 +8,8 @@
 
 #include "DAP.h"
 #include "Handler/RequestHandler.h"
-#include "Protocol/ProtocolBase.h"
 #include "TestBase.h"
+#include "TestUtilities.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/lldb-enumerations.h"
@@ -38,9 +38,10 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
 // Is flaky on Linux, see https://github.com/llvm/llvm-project/issues/154763.
 #ifndef __linux__
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
+  SKIP_IF_LLVM_TARGET_MISSING("X86");
+
   CreateDebugger();
-  SKIP_UNLESS_PLATFORM_SUPPORTED(dap->debugger, "X86");
-  LoadCore();
+  LoadCore(k_linux_x86_64_binary, k_linux_x86_64_core);
 
   DisconnectRequestHandler handler(*dap);
 

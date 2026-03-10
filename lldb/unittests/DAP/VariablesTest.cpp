@@ -10,6 +10,7 @@
 #include "DAPLog.h"
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolTypes.h"
+#include "TestUtilities.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBFrame.h"
@@ -17,11 +18,11 @@
 #include "lldb/API/SBValue.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <optional>
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
+using namespace lldb_dap_tests;
 using namespace lldb_dap::protocol;
 
 class VariablesTest : public ::testing::Test {
@@ -49,10 +50,6 @@ protected:
   lldb::SBTarget target;
   lldb::SBProcess process;
 
-  static constexpr llvm::StringLiteral k_binary_x86_64 =
-      "linux-x86_64.out.yaml";
-  static constexpr llvm::StringLiteral k_core_x86_64 = "linux-x86_64.core.yaml";
-
   void CreateDebugger() {
     debugger = lldb::SBDebugger::Create(/*source_init_files*/ false);
   }
@@ -69,10 +66,11 @@ protected:
 };
 
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
+  SKIP_IF_LLVM_TARGET_MISSING("X86");
+
   CreateDebugger();
-  SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, "X86");
-  std::tie(target, process) =
-      lldb_private::LoadCore(debugger, k_binary_x86_64, k_core_x86_64);
+  std::tie(target, process) = lldb_private::LoadCore(
+      debugger, k_linux_x86_64_binary, k_linux_x86_64_core);
   auto x15 = target.CreateValueFromExpression("x", "15");
   auto y42 = target.CreateValueFromExpression("y", "42");
   auto gzero = target.CreateValueFromExpression("$0", "42");
@@ -122,10 +120,11 @@ TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
 }
 
 TEST_F(VariablesTest, VariablesStore) {
+  SKIP_IF_LLVM_TARGET_MISSING("X86");
+
   CreateDebugger();
-  SKIP_UNLESS_PLATFORM_SUPPORTED(debugger, "X86");
-  std::tie(target, process) =
-      lldb_private::LoadCore(debugger, k_binary_x86_64, k_core_x86_64);
+  std::tie(target, process) = lldb_private::LoadCore(
+      debugger, k_linux_x86_64_binary, k_linux_x86_64_core);
 
   lldb::SBFrame frame = process.GetSelectedThread().GetSelectedFrame();
 
