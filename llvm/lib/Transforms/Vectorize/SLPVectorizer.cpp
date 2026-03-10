@@ -190,7 +190,13 @@ static cl::opt<unsigned> MinProfitableStridedLoads(
     cl::desc("The minimum number of loads, which should be considered strided, "
              "if the stride is > 1 or is runtime value"));
 
-static cl::opt<unsigned> MaxProfitableLoadStride(
+static cl::opt<unsigned> MinProfitableStridedStores(
+    "slp-min-strided-stores", cl::init(2), cl::Hidden,
+    cl::desc(
+        "The minimum number of stores, which should be considered strided, "
+        "if the stride is > 1 or is runtime value"));
+
+static cl::opt<unsigned> MaxProfitableStride(
     "slp-max-stride", cl::init(8), cl::Hidden,
     cl::desc("The maximum stride, considered to be profitable."));
 
@@ -2347,10 +2353,11 @@ public:
   /// `0, 1, 2, 3, ...` we return empty vector for `SortedIndicies`.
   /// \param SPtrInfo If the function return `true`, it also sets all the fields
   /// of `SPtrInfo` necessary to generate the strided load later.
+  /// \param IsLoad Is this a strided load (true) or strided store (false)
   bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ScalarTy,
                                 Align CommonAlignment,
                                 SmallVectorImpl<unsigned> &SortedIndices,
-                                StridedPtrInfo &SPtrInfo) const;
+                                StridedPtrInfo &SPtrInfo, bool IsLoad) const;
 
   /// Checks if the given array of loads can be represented as a vectorized,
   /// scatter or just simple gather.
@@ -7136,7 +7143,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// PointerOps:
 /// 1. Target with strided load support is detected.
 /// 2. The number of loads is greater than MinProfitableStridedLoads, or the
-/// potential stride <= MaxProfitableLoadStride and the potential stride is
+/// potential stride <= MaxProfitableStride and the potential stride is
 /// power-of-2 (to avoid perf regressions for the very small number of loads)
 /// and max distance > number of loads, or potential stride is -1.
 /// 3. The loads are ordered, or number of unordered loads <=
@@ -7163,8 +7170,8 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   if (IsAnyPointerUsedOutGraph ||
       (AbsoluteDiff > Sz &&
        (Sz > MinProfitableStridedLoads ||
-        (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
-         AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
+        (AbsoluteDiff <= MaxProfitableStride * Sz && AbsoluteDiff % Sz == 0 &&
+         has_single_bit(AbsoluteDiff / Sz)))) ||
       Diff == -(static_cast<int64_t>(Sz) - 1)) {
     int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
     if (Diff != Stride * static_cast<int64_t>(Sz - 1))
@@ -7278,7 +7285,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
 bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        Type *ScalarTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
-                                       StridedPtrInfo &SPtrInfo) const {
+                                       StridedPtrInfo &SPtrInfo,
+                                       bool IsLoad) const {
   // If each value in `PointerOps` is of the form `%x + Offset` where `Offset`
   // is constant, we partition `PointerOps` sequence into subsequences of
   // pointers with the same offset. For each offset we record values from
@@ -7325,7 +7333,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         DL->getTypeSizeInBits(ScalarTy).getFixedValue() * NumOffsets);
   }
   FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
-  if (Sz <= MinProfitableStridedLoads || !TTI->isTypeLegal(StridedLoadTy) ||
+  unsigned MinProfitableStridedOps =
+      IsLoad ? MinProfitableStridedLoads : MinProfitableStridedStores;
+  if (Sz <= MinProfitableStridedOps || !TTI->isTypeLegal(StridedLoadTy) ||
       !TTI->isLegalStridedLoadStore(StridedLoadTy, CommonAlignment))
     return false;
 
@@ -7523,7 +7533,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted) {
     if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment, Order,
-                                 SPtrInfo))
+                                 SPtrInfo, /*isLoad*/ true))
       return LoadsState::StridedVectorize;
 
     if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
