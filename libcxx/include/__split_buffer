@@ -802,7 +802,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
       __d                 = (__d + 1) / 2;
       auto __new_end      = __end + __d;
       if (static_cast<size_type>(__d) >= size()) {
-        auto __new_begin = __begin() + __d;
+        auto __new_begin = begin() + __d;
         std::__uninitialized_allocator_relocate(__get_allocator(), begin(), __end, __new_begin);
         __set_valid_range(__new_begin, __new_end);
       } else {
@@ -832,7 +832,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
     if (__front_spare() > 0) {
       difference_type __d = __front_spare();
       __d                 = (__d + 1) / 2;
-      auto __new_begin    = __begin() - __d;
+      auto __new_begin    = begin() - __d;
       if (static_cast<size_type>(__d) >= size()) {
         std::__uninitialized_allocator_relocate(__get_allocator(), begin(), __end, __new_begin);
         __set_valid_range(__new_begin, __end - __d);
