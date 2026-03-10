@@ -2358,8 +2358,10 @@ static unsigned getBoolCmpOpcode(unsigned PredNum) {
   switch (Pred) {
   case CmpInst::ICMP_EQ:
     return SPIRV::OpLogicalEqual;
-  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_NE: {
+    abort();
     return SPIRV::OpLogicalNotEqual;
+  }
   default:
     llvm_unreachable("Unknown predicate type for Bool comparison");
   }
