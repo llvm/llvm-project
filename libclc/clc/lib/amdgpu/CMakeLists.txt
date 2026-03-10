@@ -14,7 +14,6 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   math/clc_native_exp.cl
   math/clc_native_exp2.cl
   math/clc_native_log10.cl
-  math/clc_sqrt.cl
   mem_fence/clc_mem_fence.cl
   subgroup/subgroup.cl
   subgroup/sub_group_broadcast.cl
