@@ -298,6 +298,12 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   Args.ClaimAllArgs(options::OPT_static_libgcc);
 
   CmdArgs.push_back("--eh-frame-hdr");
+
+  if (const char *LDMOption = getLDMOption(HTC.getTriple(), Args)) {
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(LDMOption);
+  }
+
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------

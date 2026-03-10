@@ -9,6 +9,7 @@
 // RUN:   -fuse-ld=lld \
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree %s 2>&1 | FileCheck -check-prefix=CHECK000 %s
 // CHECK000-NOT:  {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
+// CHECK000:      "-m" "hexagonlinux"
 // CHECK000:      "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK000:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
 // CHECK000:      "-lc" "-lclang_rt.builtins-hexagon"
