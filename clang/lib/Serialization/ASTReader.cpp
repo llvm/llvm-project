@@ -240,7 +240,7 @@ bool ChainedASTReaderListener::needsSystemInputFileVisitation() {
   Second->needsSystemInputFileVisitation();
 }
 
-void ChainedASTReaderListener::visitModuleFile(StringRef Filename,
+void ChainedASTReaderListener::visitModuleFile(ModuleFileName Filename,
                                                ModuleKind Kind) {
   First->visitModuleFile(Filename, Kind);
   Second->visitModuleFile(Filename, Kind);
@@ -3193,8 +3193,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   if (HSOpts.ModulesValidateOncePerBuildSession && IsImplicitModule) {
     if (F.InputFilesValidationTimestamp >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
-    if (static_cast<uint64_t>(F.File.getModificationTime()) >=
-        HSOpts.BuildSessionTimestamp)
+    if (static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
       return {std::nullopt, IgnoreError};
   }
 
@@ -4593,10 +4592,11 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     uint16_t Len = endian::readNext<uint16_t, llvm::endianness::little>(Data);
     StringRef Name = StringRef((const char*)Data, Len);
     Data += Len;
-    ModuleFile *OM = (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
-                              Kind == MK_ImplicitModule
-                          ? ModuleMgr.lookupByModuleName(Name)
-                          : ModuleMgr.lookupByFileName(Name));
+    ModuleFile *OM =
+        (Kind == MK_PrebuiltModule || Kind == MK_ExplicitModule ||
+                 Kind == MK_ImplicitModule
+             ? ModuleMgr.lookupByModuleName(Name)
+             : ModuleMgr.lookupByFileName(ModuleFileName::makeExplicit(Name)));
     if (!OM) {
       std::string Msg = "refers to unknown module, cannot find ";
       Msg.append(std::string(Name));

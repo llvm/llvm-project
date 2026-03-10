@@ -15,6 +15,7 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-pch.json.in > %t/compile-pch.json
 // RUN: clang-scan-deps -compilation-database %t/compile-pch.json \
 // RUN:   -j 1 -format experimental-full > %t/deps_pch.db
+// FIXME: We can't just build the PCH implicitly and use it in the scan.
 // RUN: %clang -x c-header -c %t/prebuild.h -isysroot %t/MacOSX.sdk \
 // RUN:   -I%t/BuildDir -ivfsoverlay %t/overlay.json \
 // RUN:   -I %t/MacOSX.sdk/usr/include -fmodules -fmodules-cache-path=%t/module-cache \
