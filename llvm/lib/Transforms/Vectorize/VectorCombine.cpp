@@ -159,6 +159,7 @@ private:
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
+  bool foldContiguousLoads(Instruction &I);
 
   void replaceValue(Instruction &Old, Value &New, bool Erase = true) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -6053,6 +6054,91 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   return true;
 }
 
+/// Check if a vector instruction's lanes originate from contiguous memory
+/// accesses. Fold the original loads and shuffles into a single vector load
+/// if it is profitable. For example:
+///     shufflevector(load <4 x float> ptr), poison, <2, 3>
+///       -> load <2 x float> (ptradd ptr, 8)
+/// Cost model calculations take into account the cost of the original
+/// unique load(s) and the target instruction versus the cost of the new
+/// aligned vector load.
+bool VectorCombine::foldContiguousLoads(Instruction &I) {
+  auto *VT = dyn_cast<FixedVectorType>(I.getType());
+  if (!VT || I.use_empty())
+    return false;
+
+  unsigned ElementSize = VT->getElementType()->getScalarSizeInBits();
+  unsigned NumElts = VT->getNumElements();
+  Type *EltTy = VT->getElementType();
+  Value *CommonBase = nullptr;
+  int64_t ExpectedBaseBitOffset = 0, FirstLoadOffset = 0;
+  LoadInst *FirstLI = nullptr;
+  SmallPtrSet<LoadInst *, 4> Loads;
+  for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
+    InstLane IL = lookThroughShuffles(&*I.use_begin(), Lane);
+    if (!IL.first)
+      return false;
+
+    auto *LI = dyn_cast<LoadInst>(IL.first->get());
+    if (!LI)
+      return false;
+
+    if (!LI->isSimple() || !LI->hasOneUse())
+      return false;
+
+    auto *LIVTy = dyn_cast<FixedVectorType>(LI->getType());
+    if (!LIVTy || LIVTy->getElementType() != EltTy)
+      return false;
+
+    int64_t ConstantOffset = 0;
+    Value *Base = GetPointerBaseWithConstantOffset(LI->getPointerOperand(),
+                                                   ConstantOffset, *DL);
+    int64_t AbsoluteBitOffset =
+        (ConstantOffset * 8) + (IL.second * ElementSize);
+    if (Lane == 0) {
+      if (AbsoluteBitOffset % 8 != 0)
+        return false;
+
+      CommonBase = Base;
+      ExpectedBaseBitOffset = AbsoluteBitOffset;
+      FirstLI = LI;
+      FirstLoadOffset = ConstantOffset;
+    } else {
+      if (Base != CommonBase)
+        return false;
+
+      if (AbsoluteBitOffset != ExpectedBaseBitOffset + (Lane * ElementSize))
+        return false;
+    }
+
+    Loads.insert(LI);
+  }
+
+  InstructionCost OldCost = TTI.getInstructionCost(&I, CostKind);
+  for (LoadInst *LI : Loads)
+    OldCost += TTI.getInstructionCost(LI, CostKind);
+
+  int64_t StartByteOffset = ExpectedBaseBitOffset / 8;
+  int64_t OffsetFromFirstLoad = StartByteOffset - FirstLoadOffset;
+  Align NewAlign = commonAlignment(FirstLI->getAlign(), OffsetFromFirstLoad);
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, VT, NewAlign, CostKind);
+  LLVM_DEBUG(dbgs() << "Found contiguous loads to fold: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (OldCost < NewCost)
+    return false;
+
+  Value *NewBasePtr =
+      Builder.CreatePtrAdd(CommonBase, Builder.getInt64(StartByteOffset));
+  LoadInst *NewLoad = Builder.CreateAlignedLoad(VT, NewBasePtr, NewAlign);
+  NewLoad->copyMetadata(*FirstLI);
+  replaceValue(I, *NewLoad);
+
+  return true;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -6152,6 +6238,8 @@ bool VectorCombine::run() {
         if (foldSelectShuffle(I))
           return true;
         if (foldShuffleToIdentity(I))
+          return true;
+        if (foldContiguousLoads(I))
           return true;
         break;
       case Instruction::Load:
