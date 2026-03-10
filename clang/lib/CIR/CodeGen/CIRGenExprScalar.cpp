@@ -1196,19 +1196,25 @@ public:
         result = builder.createCompare(loc, kind, lhs, rhs);
       }
     } else {
-      // Complex Comparison: can only be an equality comparison.
-      assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
-      BinOpInfo boInfo = emitBinOps(e);
-      mlir::Value lhs = boInfo.lhs;
-      if (!lhsTy->isAnyComplexType()) {
-        lhs = builder.createComplexCreate(
-            loc, lhs, builder.getNullValue(lhs.getType(), loc));
+      assert((e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE) &&
+             "Complex Comparison: can only be an equality comparison");
+
+      mlir::Value lhs;
+      if (lhsTy->isAnyComplexType()) {
+        lhs = cgf.emitComplexExpr(e->getLHS());
+      } else {
+        mlir::Value lhsReal = Visit(e->getLHS());
+        mlir::Value lhsImag = builder.getNullValue(convertType(lhsTy), loc);
+        lhs = builder.createComplexCreate(loc, lhsReal, lhsImag);
       }
 
-      mlir::Value rhs = boInfo.rhs;
-      if (!rhsTy->isAnyComplexType()) {
-        rhs = builder.createComplexCreate(
-            loc, rhs, builder.getNullValue(rhs.getType(), loc));
+      mlir::Value rhs;
+      if (rhsTy->isAnyComplexType()) {
+        rhs = cgf.emitComplexExpr(e->getRHS());
+      } else {
+        mlir::Value rhsReal = Visit(e->getRHS());
+        mlir::Value rhsImag = builder.getNullValue(convertType(rhsTy), loc);
+        rhs = builder.createComplexCreate(loc, rhsReal, rhsImag);
       }
 
       result = builder.createCompare(loc, kind, lhs, rhs);

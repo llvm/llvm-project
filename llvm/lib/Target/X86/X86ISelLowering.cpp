@@ -22928,8 +22928,7 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
                        DAG.getUNDEF(MVT::v4i32), In,
                        DAG.getVectorIdxConstant(0, DL));
       In = DAG.getBitcast(MVT::v8i16, In);
-      Res = DAG.getNode(X86ISD::CVTPH2PS, DL, MVT::v4f32, In,
-                        DAG.getTargetConstant(4, DL, MVT::i32));
+      Res = DAG.getNode(X86ISD::CVTPH2PS, DL, MVT::v4f32, In);
     }
     Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Res,
                       DAG.getVectorIdxConstant(0, DL));
@@ -34525,12 +34524,11 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::FSHL:
   case ISD::FSHR: {
-    EVT VT = N->getValueType(0);
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     SDValue Amt = N->getOperand(2);
     assert(Subtarget.useAVX512Regs() && "AVX512F required");
-    assert(VT == MVT::i256 && "Unexpected VT!");
+    assert(N->getValueType(0) == MVT::i256 && "Unexpected VT!");
     if (!mayFoldIntoVector(Op0, DAG, Subtarget) ||
         !mayFoldIntoVector(Op1, DAG, Subtarget))
       return;

@@ -76,7 +76,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case X86ISD::VTRUNCSTORES:
   case X86ISD::FSETCCM_SAE:
     // invalid number of operands; expected 3, got 4
-  case X86ISD::CVTPH2PS:
   case X86ISD::CVTTP2SI_SAE:
   case X86ISD::CVTTP2UI_SAE:
   case X86ISD::CVTTP2IBS_SAE:

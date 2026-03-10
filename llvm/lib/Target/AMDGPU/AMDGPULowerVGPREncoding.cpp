@@ -155,6 +155,11 @@ private:
   /// Last hard clause instruction.
   MachineInstr *Clause;
 
+  /// S_SET_VGPR_MSB immediately after S_SETREG_IMM32_B32 targeting MODE is
+  /// silently dropped on GFX1250. When set, the next S_SET_VGPR_MSB insertion
+  /// must be preceded by S_NOP to avoid the hazard.
+  bool NeedNopBeforeSetVGPRMSB;
+
   /// Insert mode change before \p I. \returns true if mode was changed.
   bool setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
 
@@ -251,6 +256,14 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
 
   I = handleClause(I);
   I = handleCoissue(I);
+  // Case 2 match in handleSetregMode: the setreg's imm[12:19] matched
+  // current MSBs, but the next VALU needs different MSBs, so this
+  // S_SET_VGPR_MSB would land right after the setreg. Insert S_NOP to
+  // prevent it from being silently dropped.
+  if (NeedNopBeforeSetVGPRMSB) {
+    BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_NOP)).addImm(0);
+    NeedNopBeforeSetVGPRMSB = false;
+  }
   MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(NewMode.encode() | OldModeBits);
   LLVM_DEBUG(dbgs() << "    -> inserted new S_SET_VGPR_MSB: "
@@ -508,14 +521,18 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
     // via piggybacking (bits[12:19] are meaningful), so if CurrentMode changes,
     // a new s_set_vgpr_msb will be inserted after this instruction.
     MostRecentModeSet = nullptr;
+    NeedNopBeforeSetVGPRMSB = true;
     LLVM_DEBUG(dbgs() << "    -> bits[12:19] already correct, "
                          "invalidated MostRecentModeSet\n");
     return false;
   }
 
   // imm32[12:19] doesn't match VGPR MSBs - insert s_set_vgpr_msb after
-  // the original instruction to restore the correct value.
+  // the original instruction to restore the correct value. Insert S_NOP
+  // to avoid the GFX1250 hazard where S_SET_VGPR_MSB immediately after
+  // S_SETREG_IMM32_B32(MODE) is silently dropped.
   MachineBasicBlock::iterator InsertPt = std::next(MI.getIterator());
+  BuildMI(*MBB, InsertPt, MI.getDebugLoc(), TII->get(AMDGPU::S_NOP)).addImm(0);
   MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
                               TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(ModeValue);
@@ -540,6 +557,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   CurrentMode = {};
   for (auto &MBB : MF) {
     MostRecentModeSet = nullptr;
+    NeedNopBeforeSetVGPRMSB = false;
     this->MBB = &MBB;
 
     LLVM_DEBUG(dbgs() << "BB#" << MBB.getNumber() << ' ' << MBB.getName()
@@ -556,6 +574,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
           CurrentMode = {};
         else
           resetMode(MI.getIterator());
+        NeedNopBeforeSetVGPRMSB = false;
         continue;
       }
 
@@ -563,6 +582,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << "  inline asm: " << MI);
         if (TII->hasVGPRUses(MI))
           resetMode(MI.getIterator());
+        NeedNopBeforeSetVGPRMSB = false;
         continue;
       }
 
@@ -584,6 +604,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
       }
 
       Changed |= runOnMachineInstr(MI);
+      NeedNopBeforeSetVGPRMSB = false;
 
       if (ClauseRemaining)
         --ClauseRemaining;

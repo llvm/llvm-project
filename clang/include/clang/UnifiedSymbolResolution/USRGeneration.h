@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_INDEX_USRGENERATION_H
-#define LLVM_CLANG_INDEX_USRGENERATION_H
+#ifndef LLVM_CLANG_UNIFIEDSYMBOLRESOLUTION_USRGENERATION_H
+#define LLVM_CLANG_UNIFIEDSYMBOLRESOLUTION_USRGENERATION_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
@@ -101,4 +101,4 @@ bool generateUSRFragmentForModuleName(StringRef ModName, raw_ostream &OS);
 } // namespace index
 } // namespace clang
 
-#endif // LLVM_CLANG_INDEX_USRGENERATION_H
+#endif // LLVM_CLANG_UNIFIEDSYMBOLRESOLUTION_USRGENERATION_H
