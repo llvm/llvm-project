@@ -31,6 +31,7 @@
 #include "ShrinkToFitCheck.h"
 #include "TypeTraitsCheck.h"
 #include "UnaryStaticAssertCheck.h"
+#include "UseAggregateCheck.h"
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
 #include "UseConstraintsCheck.h"
@@ -116,6 +117,7 @@ public:
     CheckFactories.registerCheck<TypeTraitsCheck>("modernize-type-traits");
     CheckFactories.registerCheck<UnaryStaticAssertCheck>(
         "modernize-unary-static-assert");
+    CheckFactories.registerCheck<UseAggregateCheck>("modernize-use-aggregate");
     CheckFactories.registerCheck<UseAutoCheck>("modernize-use-auto");
     CheckFactories.registerCheck<UseBoolLiteralsCheck>(
         "modernize-use-bool-literals");
