@@ -1064,9 +1064,9 @@ define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX1250-NEXT:    v_pk_max3_num_f16 v0, v2, v0, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
-  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
-  %max1 = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %c, <2 x half> %max)
-  %res = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %max1, <2 x half> %d)
+  %max = call nnan <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
+  %max1 = call nnan <2 x half> @llvm.maxnum.v2f16(<2 x half> %c, <2 x half> %max)
+  %res = call nnan <2 x half> @llvm.maxnum.v2f16(<2 x half> %max1, <2 x half> %d)
   ret <2 x half> %res
 }
 
@@ -1077,4 +1077,4 @@ declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { nounwind "no-nans-fp-math"="true" }
+attributes #2 = { nounwind }
