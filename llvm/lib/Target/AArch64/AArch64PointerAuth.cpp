@@ -45,8 +45,6 @@ private:
 
   void authenticateLR(MachineFunction &MF,
                       MachineBasicBlock::iterator MBBI) const;
-
-  bool checkAuthenticatedLR(MachineBasicBlock::iterator TI) const;
 };
 
 } // end anonymous namespace
