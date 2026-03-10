@@ -20,7 +20,7 @@ struct foo *bar(void);
 // CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[COUNT]], align 8, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { ptr, ptr } poison, ptr [[TMP0]], 0
 // CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { ptr, ptr } [[DOTFCA_0_INSERT]], ptr [[ADD_PTR]], 1
 // CHECK-NEXT:    ret { ptr, ptr } [[DOTFCA_1_INSERT]]

@@ -24,7 +24,7 @@
 // CHECK-O2-NEXT:    ret void
 // CHECK-O2:       for.body:
 // CHECK-O2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[CONT1_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT1]] ]
-// CHECK-O2-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[BUF:%.*]], i64 [[INDVARS_IV]]
+// CHECK-O2-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[BUF:%.*]], i64 [[INDVARS_IV]]
 // CHECK-O2-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 // CHECK-O2-NEXT:    store i32 [[TMP1]], ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-O2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1

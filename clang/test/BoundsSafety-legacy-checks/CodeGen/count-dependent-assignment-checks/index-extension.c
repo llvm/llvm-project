@@ -8,18 +8,18 @@
 // CHECK-LABEL: @idx_char(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i8 [[IDX:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2:[0-9]+]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_char(int *__counted_by(n) dst, unsigned n, char idx) {
@@ -30,18 +30,18 @@ void idx_char(int *__counted_by(n) dst, unsigned n, char idx) {
 // CHECK-LABEL: @idx_unsigned_char(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = zext i8 [[IDX:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_unsigned_char(int *__counted_by(n) dst, unsigned n, unsigned char idx) {
@@ -52,18 +52,18 @@ void idx_unsigned_char(int *__counted_by(n) dst, unsigned n, unsigned char idx) 
 // CHECK-LABEL: @idx_short_int(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i16 [[IDX:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_short_int(int *__counted_by(n) dst, unsigned n, short int idx) {
@@ -74,18 +74,18 @@ void idx_short_int(int *__counted_by(n) dst, unsigned n, short int idx) {
 // CHECK-LABEL: @idx_short_unsigned(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = zext i16 [[IDX:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_short_unsigned(int *__counted_by(n) dst, unsigned n, short unsigned idx) {
@@ -96,18 +96,18 @@ void idx_short_unsigned(int *__counted_by(n) dst, unsigned n, short unsigned idx
 // CHECK-LABEL: @idx_int(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_int(int *__counted_by(n) dst, unsigned n, int idx) {
@@ -118,18 +118,18 @@ void idx_int(int *__counted_by(n) dst, unsigned n, int idx) {
 // CHECK-LABEL: @idx_unsigned(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[IDX:%.*]] to i64
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_unsigned(int *__counted_by(n) dst, unsigned n, unsigned idx) {
@@ -140,17 +140,17 @@ void idx_unsigned(int *__counted_by(n) dst, unsigned n, unsigned idx) {
 // CHECK-LABEL: @idx_long_int(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDX:%.*]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDX:%.*]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_long_int(int *__counted_by(n) dst, unsigned n, long int idx) {
@@ -161,17 +161,17 @@ void idx_long_int(int *__counted_by(n) dst, unsigned n, long int idx) {
 // CHECK-LABEL: @idx_long_unsigned(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDX:%.*]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDX:%.*]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_long_unsigned(int *__counted_by(n) dst, unsigned n, long unsigned idx) {
@@ -182,17 +182,17 @@ void idx_long_unsigned(int *__counted_by(n) dst, unsigned n, long unsigned idx) 
 // CHECK-LABEL: @idx_long_unsigned_counted_by_int(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDX:%.*]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDX:%.*]]
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
 void idx_long_unsigned_counted_by_int(int *__counted_by(n) dst, int n, long unsigned idx) {

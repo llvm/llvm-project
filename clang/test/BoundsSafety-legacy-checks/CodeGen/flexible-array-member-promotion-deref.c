@@ -21,7 +21,7 @@ flex_t g_flex = {2, {1, 2}};
 // CHECK-NEXT:    [[AGG_TEMP14:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @g_flex, align 4
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr getelementptr inbounds nuw ([[STRUCT_FLEX_T:%.*]], ptr @g_flex, i32 0, i32 1), i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr getelementptr inbounds nuw (i8, ptr @g_flex, i64 4), i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP1]], i32 0, i32 0
 // CHECK-NEXT:    store ptr @g_flex, ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP1]], i32 0, i32 1
@@ -38,7 +38,7 @@ flex_t g_flex = {2, {1, 2}};
 // CHECK-NEXT:    [[FLEX_BASE_NULL_CHECK:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK]], label [[FLEX_BASE_NONNULL:%.*]], label %[[CONT32:.*]], {{!annotation ![0-9]+}}
 // CHECK:       flex.base.nonnull:
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR]], i64 1
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr %struct.flex_t, ptr [[WIDE_PTR_PTR]], i64 1
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP5]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
@@ -52,7 +52,7 @@ flex_t g_flex = {2, {1, 2}};
 // CHECK-NEXT:    [[WIDE_PTR_UB7:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR6]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP3]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB9:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR8]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR5]], i64 1
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr %struct.flex_t, ptr [[WIDE_PTR_PTR5]], i64 1
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp ule ptr [[TMP6]], [[WIDE_PTR_UB7]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT11:.*]], label %[[TRAP10:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP10]]:
@@ -65,7 +65,7 @@ flex_t g_flex = {2, {1, 2}};
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
 // CHECK:       [[CONT13]]:
-// CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR5]], i32 0, i32 1
+// CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR5]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x i32], ptr [[ELEMS]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP14]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR15:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP14]], i32 0, i32 0
@@ -74,7 +74,7 @@ flex_t g_flex = {2, {1, 2}};
 // CHECK-NEXT:    [[WIDE_PTR_UB18:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR17]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR19:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP14]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB20:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR19]], align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR16]], i64 1
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr %struct.flex_t, ptr [[WIDE_PTR_PTR16]], i64 1
 // CHECK-NEXT:    [[TMP10:%.*]] = icmp ule ptr [[TMP9]], [[WIDE_PTR_UB18]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP10]], label %[[CONT22:.*]], label %[[TRAP21:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP21]]:
@@ -87,7 +87,7 @@ flex_t g_flex = {2, {1, 2}};
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
 // CHECK:       [[CONT24]]:
-// CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR16]], i32 0, i32 0
+// CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR16]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[COUNT]], align 4
 // CHECK-NEXT:    [[FLEX_COUNT_MINUS:%.*]] = icmp sle i32 0, [[TMP12]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[FLEX_COUNT_MINUS]], label %[[CONT26:.*]], label %[[TRAP25:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
@@ -153,7 +153,7 @@ flex_t *addrof_g(void) {
 // CHECK-NEXT:    [[AGG_TEMP5:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @g_flex, align 4
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr getelementptr inbounds nuw ([[STRUCT_FLEX_T]], ptr @g_flex, i32 0, i32 1), i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr getelementptr inbounds nuw (i8, ptr @g_flex, i64 4), i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP2]], i32 0, i32 0
 // CHECK-NEXT:    store ptr @g_flex, ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP2]], i32 0, i32 1
@@ -178,11 +178,11 @@ flex_t *addrof_g(void) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
 // CHECK:       [[CONT4]]:
-// CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR]], i32 0, i32 1
+// CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x i32], ptr [[ELEMS]], i64 0, i64 0
-// CHECK-NEXT:    [[ELEMS6:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR]], i32 0, i32 1
+// CHECK-NEXT:    [[ELEMS6:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYDECAY7:%.*]] = getelementptr inbounds [0 x i32], ptr [[ELEMS6]], i64 0, i64 0
-// CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR]], i32 0, i32 0
+// CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[COUNT]], align 4
 // CHECK-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[TMP6]] to i64
 // CHECK-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY7]], i64 [[IDX_EXT8]]
@@ -254,7 +254,7 @@ int addrof_deref_g(void) {
 // CHECK-NEXT:    [[FLEX_BASE_NULL_CHECK:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[FLEX_BASE_NULL_CHECK]], label [[FLEX_BASE_NONNULL:%.*]], label [[CONT32:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       flex.base.nonnull:
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR]], i64 1
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr %struct.flex_t, ptr [[WIDE_PTR_PTR]], i64 1
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP1]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
@@ -268,7 +268,7 @@ int addrof_deref_g(void) {
 // CHECK-NEXT:    [[WIDE_PTR_UB7:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR6]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP3]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB9:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR8]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR5]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr %struct.flex_t, ptr [[WIDE_PTR_PTR5]], i64 1
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[TMP2]], [[WIDE_PTR_UB7]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP3]], label [[CONT11:%.*]], label [[TRAP10:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap10:
@@ -281,7 +281,7 @@ int addrof_deref_g(void) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
 // CHECK:       cont13:
-// CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR5]], i32 0, i32 1
+// CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR5]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x i32], ptr [[ELEMS]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP14]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR15:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP14]], i32 0, i32 0
@@ -290,7 +290,7 @@ int addrof_deref_g(void) {
 // CHECK-NEXT:    [[WIDE_PTR_UB18:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR17]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR19:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP14]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB20:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR19]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR16]], i64 1
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr %struct.flex_t, ptr [[WIDE_PTR_PTR16]], i64 1
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[TMP5]], [[WIDE_PTR_UB18]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP6]], label [[CONT22:%.*]], label [[TRAP21:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap21:
@@ -303,7 +303,7 @@ int addrof_deref_g(void) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
 // CHECK:       cont24:
-// CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR16]], i32 0, i32 0
+// CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR16]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[COUNT]], align 4
 // CHECK-NEXT:    [[FLEX_COUNT_MINUS:%.*]] = icmp sle i32 0, [[TMP8]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[FLEX_COUNT_MINUS]], label [[CONT26:%.*]], label [[TRAP25:%.*]], {{!annotation ![0-9]+}}
@@ -361,9 +361,9 @@ int addrof_deref_g(void) {
 // CHECK-NEXT:    [[TMP15:%.*]] = icmp ne ptr [[TMP14]], null, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[TMP15]], label %[[BOUNDSCHECK_NOTNULL46:.*]], label [[BOUNDSCHECK_NULL:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       [[BOUNDSCHECK_NOTNULL46]]:
-// CHECK-NEXT:    [[ELEMS47:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[TMP14]], i32 0, i32 1
+// CHECK-NEXT:    [[ELEMS47:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[TMP14]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYDECAY48:%.*]] = getelementptr inbounds [0 x i32], ptr [[ELEMS47]], i64 0, i64 0
-// CHECK-NEXT:    [[COUNT49:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[TMP14]], i32 0, i32 0
+// CHECK-NEXT:    [[COUNT49:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[TMP14]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[COUNT49]], align 4
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP16]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY48]], i64 [[IDX_EXT]]
@@ -401,11 +401,11 @@ int addrof_deref_g(void) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable
 // CHECK:       [[CONT59]]:
-// CHECK-NEXT:    [[ELEMS60:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR51]], i32 0, i32 1
+// CHECK-NEXT:    [[ELEMS60:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR51]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYDECAY61:%.*]] = getelementptr inbounds [0 x i32], ptr [[ELEMS60]], i64 0, i64 0
-// CHECK-NEXT:    [[ELEMS63:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR51]], i32 0, i32 1
+// CHECK-NEXT:    [[ELEMS63:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR51]], i32 0, i32 1
 // CHECK-NEXT:    [[ARRAYDECAY64:%.*]] = getelementptr inbounds [0 x i32], ptr [[ELEMS63]], i64 0, i64 0
-// CHECK-NEXT:    [[COUNT65:%.*]] = getelementptr inbounds nuw [[STRUCT_FLEX_T]], ptr [[WIDE_PTR_PTR51]], i32 0, i32 0
+// CHECK-NEXT:    [[COUNT65:%.*]] = getelementptr inbounds nuw %struct.flex_t, ptr [[WIDE_PTR_PTR51]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[COUNT65]], align 4
 // CHECK-NEXT:    [[IDX_EXT66:%.*]] = sext i32 [[TMP25]] to i64
 // CHECK-NEXT:    [[ADD_PTR67:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY64]], i64 [[IDX_EXT66]]

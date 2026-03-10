@@ -69,7 +69,7 @@
 // CHECK-O2-LABEL: @ind(
 // CHECK-O2-NEXT:  entry:
 // CHECK-O2-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX:%.*]] to i64
-// CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i32, ptr [[P_COERCE0:%.*]], i64 [[IDXPROM]]
+// CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr [[P_COERCE0:%.*]], i64 [[IDXPROM]]
 // CHECK-O2-NEXT:    [[DOTNOT:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[P_COERCE0]], {{!annotation ![0-9]+}}
 // CHECK-O2-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT:%.*]], {{!annotation ![0-9]+}}
 // CHECK-O2:       trap:
@@ -126,7 +126,7 @@ int *__indexable ind(int *__indexable p, int index) {
 // CHECK-O2-LABEL: @bidi(
 // CHECK-O2-NEXT:  entry:
 // CHECK-O2-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX:%.*]] to i64
-// CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i32, ptr [[P_COERCE0:%.*]], i64 [[IDXPROM]]
+// CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr [[P_COERCE0:%.*]], i64 [[IDXPROM]]
 // CHECK-O2-NEXT:    store ptr [[BOUND_PTR_ARITH]], ptr [[AGG_RESULT:%.*]], align 8
 // CHECK-O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_RESULT]], i64 8
 // CHECK-O2-NEXT:    store ptr [[P_COERCE1:%.*]], ptr [[TMP0]], align 8

@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
 // IR-LABEL: @foo
 // IR: entry
 // IR-NEXT:   %[[COUNT_EXT:[a-z0-9.]+]] = zext i32 {{.*}} to i64, !dbg ![[LOC_10_5:[0-9]+]]
-// IR-NEXT:   %[[UPPER_BOUND:[a-z0-9.]+]] = getelementptr inbounds nuw i32, ptr %[[ARR:[a-z0-9.]+]], i64 %[[COUNT_EXT]], !dbg ![[LOC_10_5]]
+// IR-NEXT:   %[[UPPER_BOUND:[a-z0-9.]+]] = getelementptr inbounds nuw [4 x i8], ptr %[[ARR:[a-z0-9.]+]], i64 %[[COUNT_EXT]], !dbg ![[LOC_10_5]]
 // IR-NEXT:   %[[IDX_EXT:[a-z0-9.]+]] = zext i32 {{.*}} to i64, !dbg ![[LOC_10_16:[0-9]+]]
-// IR-NEXT:   %[[PTR:[a-z0-9.]+]] = getelementptr i32, ptr %[[ARR]], i64 %[[IDX_EXT]], !dbg ![[LOC_10_16]]
+// IR-NEXT:   %[[PTR:[a-z0-9.]+]] = getelementptr [4 x i8], ptr %[[ARR]], i64 %[[IDX_EXT]], !dbg ![[LOC_10_16]]
 // IR-NEXT:   %[[UPPER_CHECK:[a-z0-9.]+]] = icmp ult ptr %[[PTR]], %[[UPPER_BOUND]], !dbg ![[LOC_10_16]], !annotation ![[ANNOT_LT_UB:[0-9]+]]
 // IR-NEXT:   %[[LOWER_CHECK:[a-z0-9.]+]] = icmp uge ptr %[[PTR]], %[[ARR]], !dbg ![[LOC_10_16]], !annotation ![[ANNOT_GE_LB:[0-9]+]]
 // TODO: The condition and branch should also be ANNOT_LT_UB_OR_GT_LB (rdar://109089053)

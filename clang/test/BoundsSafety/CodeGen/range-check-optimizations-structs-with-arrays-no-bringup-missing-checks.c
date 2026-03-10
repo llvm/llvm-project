@@ -87,7 +87,7 @@ struct buf_var_size {
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -107,18 +107,18 @@ void array_member_access_can_remove_variable(struct buf_var_size *bp) {
 // CHECK-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw i8, ptr [[BP:%.*]], i64 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[BP]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[ARR]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARR]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT8:%.*]] ]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[ARR]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[ARR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8]], label [[TRAP:%.*]], !prof [[PROF10:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}

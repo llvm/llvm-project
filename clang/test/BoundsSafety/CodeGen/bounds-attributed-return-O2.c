@@ -12,26 +12,26 @@
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_1_0_COPYLOAD]], !annotation [[META6:![0-9]+]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_LHS_TRUE:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_1_0_COPYLOAD]], !annotation [[META5:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_LHS_TRUE:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_LHS_TRUE]]:
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP4_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP4_SROA_1_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[AGG_TEMP4_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP4_SROA_1_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META10:![0-9]+]]
-// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META6]]
-// CHECK-NEXT:    [[CMP25:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META6]]
-// CHECK-NEXT:    [[CMP28:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META6]]
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META9:![0-9]+]]
+// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP25:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META5]]
+// CHECK-NEXT:    [[CMP28:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP28]], [[CMP25]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF12:![0-9]+]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF11:![0-9]+]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]]
 //
@@ -44,19 +44,19 @@ int *__counted_by(count) cb_in_from_bidi(int count, int *__bidi_indexable p) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] [[P_COERCE]], 0
 // CHECK-NEXT:    [[P_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i64] [[P_COERCE]], 1
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt i64 [[P_COERCE_FCA_0_EXTRACT]], [[P_COERCE_FCA_1_EXTRACT]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_RHS:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt i64 [[P_COERCE_FCA_0_EXTRACT]], [[P_COERCE_FCA_1_EXTRACT]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_RHS:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub nuw i64 [[P_COERCE_FCA_1_EXTRACT]], [[P_COERCE_FCA_0_EXTRACT]], !annotation [[META10]]
-// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META6]]
-// CHECK-NEXT:    [[CMP34:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META6]]
-// CHECK-NEXT:    [[CMP37:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META6]]
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub nuw i64 [[P_COERCE_FCA_1_EXTRACT]], [[P_COERCE_FCA_0_EXTRACT]], !annotation [[META9]]
+// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP34:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META5]]
+// CHECK-NEXT:    [[CMP37:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP37]], [[CMP34]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF12]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF11]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[P_COERCE_FCA_0_EXTRACT]] to ptr
 // CHECK-NEXT:    ret ptr [[TMP0]]
@@ -69,10 +69,10 @@ int *__counted_by(count) cb_in_from_indexable(int count, int *__indexable p) {
 // CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = icmp ult i32 [[COUNT]], 2
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF12]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF11]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -83,11 +83,11 @@ int *__counted_by(count) cb_in_from_single(int count, int *__single p) {
 // CHECK-LABEL: define dso_local noundef ptr @cb_in_from_cb(
 // CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[COUNT]], 0, !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[COUNT]], 0, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -98,13 +98,13 @@ int *__counted_by(count) cb_in_from_cb(int count, int *__counted_by(count) p) {
 // CHECK-LABEL: define dso_local noundef ptr @cb_in_from_cb2(
 // CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN]], 0, !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN]], 0, !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT_NOT:%.*]] = icmp ugt i32 [[COUNT]], [[LEN]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[SPEC_SELECT_NOT]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF13:![0-9]+]], !annotation [[META6]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[SPEC_SELECT_NOT]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF12:![0-9]+]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -115,24 +115,24 @@ int *__counted_by(count) cb_in_from_cb2(int count, int *__counted_by(len) p, int
 // CHECK-LABEL: define dso_local noundef ptr @cb_in_from_cbn(
 // CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef returned [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META14:![0-9]+]]
+// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META13:![0-9]+]]
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[COUNT]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[TMP_SROA_9_0:%.*]] = select i1 [[DOTNOT]], ptr null, ptr [[ADD_PTR]]
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[P]], [[TMP_SROA_9_0]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_RHS:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[P]], [[TMP_SROA_9_0]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_RHS:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[TMP_SROA_9_0]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[P]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META10]]
-// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META6]]
-// CHECK-NEXT:    [[CMP25:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[IDX_EXT]], !annotation [[META6]]
-// CHECK-NEXT:    [[CMP28:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META6]]
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[TMP_SROA_9_0]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[P]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META9]]
+// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP25:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[IDX_EXT]], !annotation [[META5]]
+// CHECK-NEXT:    [[CMP28:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP28]], [[CMP25]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF12]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF11]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -143,25 +143,25 @@ int *__counted_by(count) cb_in_from_cbn(int count, int *__counted_by_or_null(cou
 // CHECK-LABEL: define dso_local noundef ptr @cb_in_from_cbn2(
 // CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef returned [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META14]]
+// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META13]]
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[LEN]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[TMP_SROA_9_0:%.*]] = select i1 [[DOTNOT]], ptr null, ptr [[ADD_PTR]]
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[P]], [[TMP_SROA_9_0]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_RHS:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[P]], [[TMP_SROA_9_0]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_RHS:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[TMP_SROA_9_0]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[P]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META10]]
-// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META6]]
-// CHECK-NEXT:    [[CMP25:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META6]]
-// CHECK-NEXT:    [[CMP28:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META6]]
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[TMP_SROA_9_0]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[P]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META9]]
+// CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = ashr exact i64 [[SUB_PTR_SUB]], 2, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP25:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META5]]
+// CHECK-NEXT:    [[CMP28:%.*]] = icmp sgt i32 [[COUNT]], -1, !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP28]], [[CMP25]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF12]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF11]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -172,12 +172,12 @@ int *__counted_by(count) cb_in_from_cbn2(int count, int *__counted_by_or_null(le
 // CHECK-LABEL: define dso_local noundef ptr @cb_out_from_single(
 // CHECK-SAME: ptr noundef readonly captures(none) [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult i32 [[TMP0]], 2, !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF15:![0-9]+]], !annotation [[META6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 4, !tbaa [[TBAA1:![0-9]+]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult i32 [[TMP0]], 2, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF14:![0-9]+]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -188,13 +188,13 @@ int *__counted_by(*count) cb_out_from_single(int *__single count, int *__single 
 // CHECK-LABEL: define dso_local noundef ptr @cbn_in_from_single(
 // CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned captures(address_is_null, ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META6]]
+// CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = icmp ult i32 [[COUNT]], 2
-// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[SPEC_SELECT]], [[TOBOOL_NOT]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF16:![0-9]+]], !annotation [[META6]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[SPEC_SELECT]], [[TOBOOL_NOT]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF15:![0-9]+]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -208,25 +208,25 @@ int *__counted_by_or_null(count) cbn_in_from_single(int count, int *__single p) 
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_1_0_COPYLOAD]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_LHS_TRUE:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_1_0_COPYLOAD]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_LHS_TRUE:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_LHS_TRUE]]:
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[AGG_TEMP4_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA17:![0-9]+]]
-// CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP4_SROA_1_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[AGG_TEMP4_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_P_SROA_IDX]], align 8, !tbaa [[TBAA16:![0-9]+]]
+// CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP4_SROA_1_0_COPYLOAD]], [[AGG_TEMP_SROA_0_0_COPYLOAD]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[SIZE]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64, !annotation [[META6]]
-// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META10]]
-// CHECK-NEXT:    [[CMP32:%.*]] = icmp sge i64 [[SUB_PTR_SUB]], [[CONV]], !annotation [[META6]]
-// CHECK-NEXT:    [[CMP35:%.*]] = icmp sgt i32 [[SIZE]], -1, !annotation [[META6]]
+// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[SIZE]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_1_0_COPYLOAD]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]] to i64, !annotation [[META5]]
+// CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]], !annotation [[META9]]
+// CHECK-NEXT:    [[CMP32:%.*]] = icmp sge i64 [[SUB_PTR_SUB]], [[CONV]], !annotation [[META5]]
+// CHECK-NEXT:    [[CMP35:%.*]] = icmp sgt i32 [[SIZE]], -1, !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP35]], [[CMP32]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF12]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP]], !prof [[PROF11]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]]
 //
@@ -238,10 +238,10 @@ void *__sized_by(size) sb_in_from_bidi(int size, void *__bidi_indexable p) {
 // CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = icmp ult i32 [[SIZE]], 5
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF12]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF11]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -255,19 +255,19 @@ void *__sized_by(size) sb_in_from_single(int size, int *__single p) {
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_1_0_P_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[END]], [[AGG_TEMP_SROA_1_0_COPYLOAD]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_LHS_TRUE:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[END]], [[AGG_TEMP_SROA_1_0_COPYLOAD]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[LAND_LHS_TRUE:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_LHS_TRUE]]:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[CMP4_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[END]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP4_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META6]]
+// CHECK-NEXT:    [[CMP4_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[END]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP4_NOT]], label %[[TRAP]], label %[[LAND_RHS:.*]], !annotation [[META5]]
 // CHECK:       [[LAND_RHS]]:
-// CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8, !tbaa [[TBAA17]]
-// CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF18:![0-9]+]], !annotation [[META6]]
+// CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_P_SROA_IDX]], align 8, !tbaa [[TBAA16]]
+// CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF17:![0-9]+]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]]
 //
@@ -278,14 +278,14 @@ void *__ended_by(end) eb_in_from_bidi(void *__single end, void *__bidi_indexable
 // CHECK-LABEL: define dso_local noundef ptr @eb_in_from_single(
 // CHECK-SAME: ptr noundef readnone captures(address) [[END:%.*]], ptr noundef readnone returned captures(address, ret: address, provenance) [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4, !annotation [[META6]]
-// CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[END]], [[UPPER]], !annotation [[META6]]
-// CHECK-NEXT:    [[CMP1:%.*]] = icmp ule ptr [[P]], [[END]], !annotation [[META6]]
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4, !annotation [[META5]]
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[END]], [[UPPER]], !annotation [[META5]]
+// CHECK-NEXT:    [[CMP1:%.*]] = icmp ule ptr [[P]], [[END]], !annotation [[META5]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP1]], [[CMP]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF12]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF11]], !annotation [[META5]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META6]]
-// CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    ret ptr [[P]]
 //
@@ -294,21 +294,21 @@ int *__ended_by(end) eb_in_from_single(int *__single end, int *__single p) {
 }
 
 //.
-// CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META6]] = !{!"bounds-safety-generic"}
-// CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK: [[META8]] = !{!"p1 int", [[META9:![0-9]+]], i64 0}
-// CHECK: [[META9]] = !{!"any pointer", [[META4]], i64 0}
-// CHECK: [[META10]] = !{!"bounds-safety-generic", [[META11:![0-9]+]]}
-// CHECK: [[META11]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
-// CHECK: [[PROF12]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[PROF13]] = !{!"branch_weights", i32 1048577, i32 1048575}
-// CHECK: [[META14]] = !{!"bounds-safety-check-ptr-neq-null"}
-// CHECK: [[PROF15]] = !{!"branch_weights", i32 1048575, i32 1048577}
-// CHECK: [[PROF16]] = !{!"branch_weights", i32 2097151, i32 1}
-// CHECK: [[TBAA17]] = !{[[META9]], [[META9]], i64 0}
-// CHECK: [[PROF18]] = !{!"branch_weights", i32 1, i32 1048575}
+// CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
+// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META5]] = !{!"bounds-safety-generic"}
+// CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK: [[META7]] = !{!"p1 int", [[META8:![0-9]+]], i64 0}
+// CHECK: [[META8]] = !{!"any pointer", [[META3]], i64 0}
+// CHECK: [[META9]] = !{!"bounds-safety-generic", [[META10:![0-9]+]]}
+// CHECK: [[META10]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
+// CHECK: [[PROF11]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[PROF12]] = !{!"branch_weights", i32 1048577, i32 1048575}
+// CHECK: [[META13]] = !{!"bounds-safety-check-ptr-neq-null"}
+// CHECK: [[PROF14]] = !{!"branch_weights", i32 1048575, i32 1048577}
+// CHECK: [[PROF15]] = !{!"branch_weights", i32 2097151, i32 1}
+// CHECK: [[TBAA16]] = !{[[META8]], [[META8]], i64 0}
+// CHECK: [[PROF17]] = !{!"branch_weights", i32 1, i32 1048575}
 //.

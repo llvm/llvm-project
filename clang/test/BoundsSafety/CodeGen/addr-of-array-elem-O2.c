@@ -10,7 +10,7 @@ int v;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @v, align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i32, ptr @arr, i64 [[IDXPROM]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr @arr, i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[BOUND_PTR_ARITH]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], getelementptr inbounds nuw (i8, ptr @arr, i64 40), {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH]], [[TMP1]], {{!annotation ![0-9]+}}
