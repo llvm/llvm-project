@@ -4,6 +4,8 @@
 # RUN: llvm-readelf --file-headers %t | FileCheck --check-prefix=CHECK %s
 # RUN: ld.lld -m hexagonelf %t.o -o %t
 # RUN: llvm-readelf --file-headers %t | FileCheck --check-prefix=CHECK %s
+# RUN: ld.lld -m hexagonlinux %t.o -o %t
+# RUN: llvm-readelf --file-headers %t | FileCheck --check-prefix=CHECK %s
 
 # RUN: echo 'OUTPUT_FORMAT(elf32-littlehexagon)' > %t.script
 # RUN: ld.lld %t.script %t.o -o %t
