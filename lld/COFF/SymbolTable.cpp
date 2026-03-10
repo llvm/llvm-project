@@ -1437,6 +1437,10 @@ void SymbolTable::compileBitcodeFiles() {
   if (bitcodeFileInstances.empty())
     return;
 
+  // Note that this assumes that the set of possible libfuncs is roughly
+  // equivalent for all bitcode translation units.
+  llvm::Triple tt =
+      llvm::Triple(bitcodeFileInstances.front()->obj->getTargetTriple());
   ScopedTimer t(ctx.ltoTimer);
   lto.reset(new BitcodeCompiler(ctx));
   {
@@ -1444,6 +1448,23 @@ void SymbolTable::compileBitcodeFiles() {
     for (BitcodeFile *f : bitcodeFileInstances)
       lto->add(*f);
   }
+
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver)) {
+    if (Symbol *sym = find(libFunc)) {
+      if (auto *l = dyn_cast<LazyArchive>(sym)) {
+        if (isBitcode(l->getMemberBuffer()))
+          bitcodeLibFuncs.push_back(libFunc);
+      } else if (auto *o = dyn_cast<LazyObject>(sym)) {
+        if (isBitcode(o->file->mb))
+          bitcodeLibFuncs.push_back(libFunc);
+      }
+    }
+  }
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
+
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);
     obj->parse();
