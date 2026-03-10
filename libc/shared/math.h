@@ -85,6 +85,7 @@
 #include "math/copysignf80.h"
 #include "math/copysignl.h"
 #include "math/cos.h"
+#include "math/cosbf16.h"
 #include "math/cosf.h"
 #include "math/cosf16.h"
 #include "math/cosh.h"

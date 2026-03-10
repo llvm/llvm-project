@@ -603,6 +603,7 @@ alias(
         "copysignf80",
         "copysignf16",
         "cos",
+        "cosbf16",
         "cosf",
         "cosf16",
         "cosh",

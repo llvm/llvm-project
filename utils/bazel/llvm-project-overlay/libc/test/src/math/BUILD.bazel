@@ -181,6 +181,13 @@ math_mpfr_test(
 math_mpfr_test(name = "cos")
 
 math_mpfr_test(
+    name = "cosbf16",
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "cosf",
     hdrs = ["sdcomp26094.h"],
     deps = [
