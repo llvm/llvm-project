@@ -9276,7 +9276,7 @@ public:
   /// \param DC - The DeclContext containing the lambda expression or
   /// block literal.
   std::tuple<MangleNumberingContext *, Decl *>
-  getCurrentMangleNumberContext(const DeclContext *DC);
+  getCurrentMangleNumberContext(const DeclContext *DC, bool Force = false);
 
   ///@}
 

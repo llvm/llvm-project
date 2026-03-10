@@ -262,7 +262,7 @@ Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
 }
 
 std::tuple<MangleNumberingContext *, Decl *>
-Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
+Sema::getCurrentMangleNumberContext(const DeclContext *DC, bool Force) {
   // Compute the context for allocating mangling numbers in the current
   // expression, if the ABI requires them.
   Decl *ManglingContextDecl = ExprEvalContexts.back().ManglingContextDecl;
@@ -356,13 +356,15 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   //   types in different translation units to "correspond":
   switch (Kind) {
   case Normal: {
+    const bool ManglingNumberingMandated = (IsInNonspecializedTemplate &&
+         !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
+        IsInFunctionThatRequiresMangling(CurContext);
+
     //  -- the bodies of inline or templated functions
     //  -- the bodies of externally visible functions in a module purview
     //     (note: this is not yet part of the Itanium ABI, see the linked Github
     //     discussion above)
-    if ((IsInNonspecializedTemplate &&
-         !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        IsInFunctionThatRequiresMangling(CurContext)) {
+    if (Force || ManglingNumberingMandated) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);

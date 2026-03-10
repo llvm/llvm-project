@@ -5037,7 +5037,7 @@ void Sema::handleTagNumbering(const TagDecl *Tag, Scope *TagScope) {
   MangleNumberingContext *MCtx;
   Decl *ManglingContextDecl;
   std::tie(MCtx, ManglingContextDecl) =
-      getCurrentMangleNumberContext(Tag->getDeclContext());
+      getCurrentMangleNumberContext(Tag->getDeclContext(), /*Force=*/llvm::isa<CXXRecordDecl>(Tag) && !llvm::cast<CXXRecordDecl>(Tag)->isLambda());
   if (MCtx) {
     Context.setManglingNumber(
         Tag, MCtx->getManglingNumber(

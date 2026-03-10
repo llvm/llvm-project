@@ -5032,12 +5032,11 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
           Param->print(OS, Policy);
       OS << ')';
     } else {
-      if (CXX->isExternallyVisible()) {
+      // TODO: ItaniumCXXABI tracks ID via getAnonymousStructId
+      // TODO: should we re-use MSCurManglingNumber to get mangling number for internal linkage?
+      //if (CXX->isExternallyVisible()) {
         OS << getASTContext().getManglingNumber(this);
-      } else {
-        // TODO: ItaniumCXXABI tracks ID via getAnonymousStructId
-        // TODO: should we re-use MSCurManglingNumber to get mangling number for internal linkage?
-      }
+      //}
     }
   }
 
