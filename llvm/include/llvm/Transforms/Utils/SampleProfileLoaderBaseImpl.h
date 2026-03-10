@@ -108,7 +108,7 @@ public:
       for (const auto &Func : M) {
         if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
           auto GUID = Function::getGUIDAssumingExternalLinkage(
-                FunctionSamples::getCanonicalFnName(Func));
+              FunctionSamples::getCanonicalFnName(Func));
           if (GUIDToProbeDescMap.contains(GUID))
             GUIDIsWeakSymbol.insert(GUID);
         }
