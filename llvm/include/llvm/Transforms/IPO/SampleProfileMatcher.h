@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 
 #include <unordered_set>
@@ -238,6 +239,8 @@ private:
   // which are supposed to be new functions. We use them as the targets for
   // call graph matching.
   void findFunctionsWithoutProfile();
+  // Emit optimization remarks for per-function profile matching status.
+  void emitMatchingRemarks();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm

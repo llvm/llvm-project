@@ -907,6 +907,82 @@ void SampleProfileMatcher::runOnModule() {
     distributeIRToProfileLocationMap();
 
   computeAndReportProfileStaleness();
+  emitMatchingRemarks();
+}
+
+void SampleProfileMatcher::emitMatchingRemarks() {
+  LLVMContext &Ctx = M.getContext();
+  if (!OptimizationRemarkEmitter::allowExtraAnalysis(Ctx, DEBUG_TYPE))
+    return;
+
+  for (auto &F : M) {
+    if (F.isDeclaration() || skipProfileForFunction(F))
+      continue;
+    if (GlobalValue::isAvailableExternallyLinkage(F.getLinkage()))
+      continue;
+
+    auto CGIt = FuncToProfileNameMap.find(const_cast<Function *>(&F));
+    const auto *FS = Reader.getSamplesFor(F);
+
+    if (CGIt != FuncToProfileNameMap.end()) {
+      // CG-recovered match — function was renamed but recovered via
+      // call-graph matching.
+      uint64_t Samples = FS ? FS->getTotalSamples() : 0;
+      Ctx.diagnose(
+          OptimizationRemark(DEBUG_TYPE, "SampleProfileRecovered", &F)
+          << "sample profile recovered for "
+          << ore::NV("Function", &F)
+          << " matched to profile '"
+          << ore::NV("ProfileName", CGIt->second.stringRef())
+          << "' with " << ore::NV("TotalSamples", Samples)
+          << " total samples (method: call-graph matching)");
+    } else if (FS) {
+      bool IsHashMismatch = false;
+      if (FunctionSamples::ProfileIsProbeBased) {
+        const auto *FuncDesc = ProbeManager->getDesc(FS->getGUID());
+        if (FuncDesc &&
+            ProbeManager->profileIsHashMismatched(*FuncDesc, *FS))
+          IsHashMismatch = true;
+      }
+      if (IsHashMismatch) {
+        // Matched by name but profile body is stale (checksum mismatch).
+        // Function still gets samples but they may be inaccurate.
+        Ctx.diagnose(
+            OptimizationRemarkAnalysis(DEBUG_TYPE,
+                                       "SampleProfileHashMismatch", &F)
+            << "sample profile matched for "
+            << ore::NV("Function", &F)
+            << " but profile is stale (hash mismatch); "
+            << ore::NV("TotalSamples", FS->getTotalSamples())
+            << " samples potentially affected");
+      } else {
+        // Clean match by name, no staleness.
+        Ctx.diagnose(
+            OptimizationRemark(DEBUG_TYPE, "SampleProfileMatched", &F)
+            << "sample profile matched for "
+            << ore::NV("Function", &F)
+            << " with " << ore::NV("TotalSamples", FS->getTotalSamples())
+            << " total samples");
+      }
+    }
+  }
+
+  // Unmatched orphan functions — in FunctionsWithoutProfile and not
+  // CG-recovered. These are functions not in the profile NameTable (truly
+  // new or renamed without recovery).
+  for (const auto &I : FunctionsWithoutProfile) {
+    Function *F = I.second;
+    if (!F || F->isDeclaration())
+      continue;
+    if (GlobalValue::isAvailableExternallyLinkage(F->getLinkage()))
+      continue;
+    if (FuncToProfileNameMap.count(F))
+      continue;
+    Ctx.diagnose(
+        OptimizationRemarkMissed(DEBUG_TYPE, "SampleProfileNotMatched", F)
+        << "no sample profile matched for "
+        << ore::NV("Function", F));
+  }
 }
 
 void SampleProfileMatcher::distributeIRToProfileLocationMap(
