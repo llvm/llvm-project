@@ -12,9 +12,51 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRCXXABI.h"
+#include "LowerModule.h"
 
 namespace cir {
 
+CIRCXXABI::CIRCXXABI(LowerModule &lm) : lm(lm) {
+  mlir::MLIRContext *ctx = lm.getMLIRContext();
+  ptrSizeInBits = lm.getTarget().getPointerWidth(clang::LangAS::Default);
+  u8Ty = cir::IntType::get(ctx, 8, /*isSigned=*/false);
+  u8PtrTy = cir::PointerType::get(u8Ty);
+  voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
+  sizeTy = cir::IntType::get(ctx, ptrSizeInBits, /*isSigned=*/false);
+  ptrDiffTy = cir::IntType::get(ctx, ptrSizeInBits, /*isSigned=*/true);
+}
+
 CIRCXXABI::~CIRCXXABI() {}
+
+void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
+                                const mlir::DataLayout &dataLayout,
+                                mlir::OpBuilder &builder,
+                                mlir::Value &numElements,
+                                mlir::Value &allocPtr,
+                                clang::CharUnits &cookieSize) const {
+  auto ptrTy = mlir::cast<cir::PointerType>(elementPtr.getType());
+  cookieSize = getArrayCookieSizeImpl(ptrTy.getPointee(), dataLayout);
+
+  mlir::Value bytePtr = cir::CastOp::create(builder, loc, u8PtrTy,
+                                             cir::CastKind::bitcast,
+                                             elementPtr);
+
+  mlir::Value negCookieSize = cir::ConstantOp::create(
+      builder, loc,
+      cir::IntAttr::get(ptrDiffTy, -cookieSize.getQuantity()));
+  mlir::Value allocBytePtr = cir::PtrStrideOp::create(builder, loc, u8PtrTy,
+                                                       bytePtr, negCookieSize);
+
+  allocPtr = cir::CastOp::create(builder, loc, voidPtrTy,
+                                 cir::CastKind::bitcast, allocBytePtr);
+
+  // cookieSize is always a multiple of the element ABI alignment (both are
+  // powers of 2 and cookieSize >= elementAlign), so subtracting it preserves
+  // alignment. The cookie alignment therefore equals the element alignment.
+  clang::CharUnits cookieAlignment = clang::CharUnits::fromQuantity(
+      dataLayout.getTypeABIAlignment(ptrTy.getPointee()));
+  numElements = readArrayCookieImpl(loc, allocBytePtr, cookieSize,
+                                    cookieAlignment, dataLayout, builder);
+}
 
 } // namespace cir

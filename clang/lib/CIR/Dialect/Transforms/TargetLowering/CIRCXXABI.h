@@ -15,6 +15,7 @@
 #define CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRCXXABI_H
 
 #include "mlir/Transforms/DialectConversion.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -29,10 +30,24 @@ class CIRCXXABI {
 protected:
   LowerModule &lm;
 
-  CIRCXXABI(LowerModule &lm) : lm(lm) {}
+  unsigned ptrSizeInBits;
+  cir::IntType u8Ty;
+  cir::PointerType u8PtrTy;
+  cir::PointerType voidPtrTy;
+  cir::IntType sizeTy;    // unsigned, pointer-width (models size_t)
+  cir::IntType ptrDiffTy; // signed, pointer-width (models ptrdiff_t)
+
+  CIRCXXABI(LowerModule &lm);
 
 public:
   virtual ~CIRCXXABI();
+
+  unsigned getPtrSizeInBits() const { return ptrSizeInBits; }
+  cir::IntType getU8Ty() const { return u8Ty; }
+  cir::PointerType getU8PtrTy() const { return u8PtrTy; }
+  cir::PointerType getVoidPtrTy() const { return voidPtrTy; }
+  cir::IntType getSizeTy() const { return sizeTy; }
+  cir::IntType getPtrDiffTy() const { return ptrDiffTy; }
 
   /// Lower the given data member pointer type to its ABI type. The returned
   /// type is also a CIR type.
@@ -126,6 +141,36 @@ public:
   virtual mlir::Value
   lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
                          mlir::OpBuilder &builder) const = 0;
+
+  /// Read the array cookie for a dynamically-allocated array whose first
+  /// element is at \p elementPtr. Returns the number of elements, the
+  /// original allocation pointer (before the cookie) as a void*, and the
+  /// cookie size in bytes. Delegates to getArrayCookieSizeImpl and
+  /// readArrayCookieImpl.
+  void readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
+                       const mlir::DataLayout &dataLayout,
+                       mlir::OpBuilder &builder, mlir::Value &numElements,
+                       mlir::Value &allocPtr,
+                       clang::CharUnits &cookieSize) const;
+
+protected:
+  /// Returns the cookie size in bytes for a dynamically-allocated array of
+  /// elements with the given type. Only called when a cookie is required.
+  virtual clang::CharUnits
+  getArrayCookieSizeImpl(mlir::Type elementType,
+                         const mlir::DataLayout &dataLayout) const = 0;
+
+  /// Reads the element count from an array cookie. \p allocPtr is a byte
+  /// pointer to the start of the allocation (the beginning of the cookie).
+  /// \p cookieSize is the value returned by getArrayCookieSizeImpl.
+  /// \p cookieAlignment is the alignment at the cookie start, derived from
+  /// the element type's ABI alignment.
+  virtual mlir::Value
+  readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
+                      clang::CharUnits cookieSize,
+                      clang::CharUnits cookieAlignment,
+                      const mlir::DataLayout &dataLayout,
+                      mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.
