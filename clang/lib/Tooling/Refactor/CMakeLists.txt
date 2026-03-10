@@ -41,6 +41,7 @@ add_clang_library(clangToolingRefactor
   clangLex
   clangToolingCore
   clangRewrite
+  clangUnifiedSymbolResolution
   )
 
 if(MSVC)

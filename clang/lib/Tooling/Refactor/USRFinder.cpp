@@ -15,10 +15,10 @@
 #include "SourceLocationUtilities.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/DependentASTVisitor.h"
 #include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/SmallVector.h"
 #include <functional>
 

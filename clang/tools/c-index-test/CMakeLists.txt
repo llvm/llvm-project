@@ -42,6 +42,7 @@ else()
     clangFrontend
     clangIndex
     clangSerialization
+    clangUnifiedSymbolResolution
     ${CINDEXTEST_LIBS}
   )
 endif()

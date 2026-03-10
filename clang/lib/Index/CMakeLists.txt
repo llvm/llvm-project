@@ -21,7 +21,6 @@ add_clang_library(clangIndex
   IndexTypeSourceInfo.cpp
   IndexUnitReader.cpp
   IndexUnitWriter.cpp
-  USRGeneration.cpp
 
   ADDITIONAL_HEADERS
   IndexingContext.h
@@ -35,6 +34,7 @@ add_clang_library(clangIndex
   clangSema
   clangSerialization
   clangToolingCore
+  clangUnifiedSymbolResolution
 
   DEPENDS
   omp_gen
