@@ -221,8 +221,8 @@ LIBC_INLINE_VAR constexpr Frac128 COS_COEFF[] = {
 };
 
 // Compute sin(x) with relative errors ~ 2^-54.
-LIBC_INLINE double sin_eval(const Frac128 &x_frac, unsigned k,
-                                      bool is_neg, bool x_frac_is_neg) {
+LIBC_INLINE double sin_eval(const Frac128 &x_frac, unsigned k, bool is_neg,
+                            bool x_frac_is_neg) {
   // cos when k = 1, 3
   bool is_cos = ((k & 1) == 1);
   // flip sign when k = 2, 3
