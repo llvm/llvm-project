@@ -132,6 +132,7 @@
 #include "math/floorf128.h"
 #include "math/floorf16.h"
 #include "math/floorl.h"
+#include "math/fmabf16.h"
 #include "math/fmax.h"
 #include "math/fmaxbf16.h"
 #include "math/fmaxf.h"

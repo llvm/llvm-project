@@ -4292,6 +4292,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmabf16
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

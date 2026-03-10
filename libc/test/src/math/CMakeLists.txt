@@ -2013,17 +2013,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  fma_test
+  fmabf16_test
   NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
-    fma_test.cpp
-  HDRS
-    FmaTest.h
+    fmabf16_test.cpp
   DEPENDS
-    libc.src.__support.FPUtil.bfloat16
     libc.src.math.fmabf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

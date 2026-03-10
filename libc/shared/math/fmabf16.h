@@ -1,4 +1,4 @@
-//===-- Implementation of fmabf16 function --------------------------------===//
+//===-- Shared fmabf16 function ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmabf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FMABF16_H
+#define LLVM_LIBC_SHARED_MATH_FMABF16_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/fmabf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, fmabf16, (bfloat16 x, bfloat16 y, bfloat16 z)) {
-  return math::fmabf16(x, y, z);
-}
+using math::fmabf16;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FMABF16_H
