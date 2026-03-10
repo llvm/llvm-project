@@ -290,7 +290,7 @@ TEST_F(MDGeneratorTest, emitCommentMD) {
   ParamOut->Children.back()->Children.emplace_back(allocatePtr<CommentInfo>());
   ParamOut->Children.back()->Children.back()->Kind =
       CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
+  ParamOut->Children.back()->Children.back()->Text = "is a parameter.";
 
   Top.Children.emplace_back(allocatePtr<CommentInfo>());
   CommentInfo *ParamIn = Top.Children.back().get();
@@ -352,7 +352,7 @@ TEST_F(MDGeneratorTest, emitCommentMD) {
 
 **J** is a parameter.
 
-**return**void
+**return** void
 
 )raw";
 

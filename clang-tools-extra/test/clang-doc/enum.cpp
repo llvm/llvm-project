@@ -89,7 +89,7 @@ enum Color {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p> For specifying RGB colors</p>
+// HTML-INDEX-NEXT:           <p>For specifying RGB colors</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-62]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -167,7 +167,7 @@ enum class Shapes {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p> Shape Types</p>
+// HTML-INDEX-NEXT:           <p>Shape Types</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-64]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -245,7 +245,7 @@ enum Size : uint8_t {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p> Specify the size</p>
+// HTML-INDEX-NEXT:           <p>Specify the size</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-71]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -289,7 +289,7 @@ enum : long long {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p> Very long number</p>
+// HTML-INDEX-NEXT:           <p>Very long number</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-38]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -362,7 +362,7 @@ public:
 // HTML-PERM-NEXT:       </table>
 // HTML-PERM-NEXT:       <div class="doc-card">
 // HTML-PERM-NEXT:         <div class="nested-delimiter-container">
-// HTML-PERM-NEXT:             <p> File permission flags</p>
+// HTML-PERM-NEXT:             <p>File permission flags</p>
 // HTML-PERM-NEXT:         </div>
 // HTML-PERM-NEXT:       </div>
 // HTML-PERM-NEXT:         <p>Defined at line [[@LINE-63]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -432,7 +432,7 @@ public:
 // HTML-ANIMAL-NEXT:         </table>
 // HTML-ANIMAL-NEXT:         <div class="doc-card">
 // HTML-ANIMAL-NEXT:             <div class="nested-delimiter-container">
-// HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
+// HTML-ANIMAL-NEXT:                 <p>specify what animal the class is</p>
 // HTML-ANIMAL-NEXT:             </div>
 // HTML-ANIMAL-NEXT:         </div>
 // HTML-ANIMAL-NEXT:         <p>Defined at line [[@LINE-57]] of file {{.*}}enum.cpp</p>
@@ -530,7 +530,7 @@ enum Car {
 // HTML-VEHICLES-NEXT:      </table>
 // HTML-VEHICLES-NEXT:      <div class="doc-card">
 // HTML-VEHICLES-NEXT:        <div class="nested-delimiter-container">
-// HTML-VEHICLES-NEXT:           <p> specify type of car</p>
+// HTML-VEHICLES-NEXT:           <p>specify type of car</p>
 // HTML-VEHICLES-NEXT:        </div>
 // HTML-VEHICLES-NEXT:      </div>
 // HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-72]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
