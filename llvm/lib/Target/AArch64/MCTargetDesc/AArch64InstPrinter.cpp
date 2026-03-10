@@ -96,9 +96,10 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
-    // Ok, so we should preserve compatibility when printing with the historic
-    // SYSP short form, when Rt encodes XZR (no explicit pair operand)
-    if (MI->getOperand(4).getReg() == AArch64::XZR) {
+    // Preserve the historic SYSP short form for the XZR/XZR encoding, but
+    // only when aliases are enabled. In no-alias mode we must print the full
+    // canonical operand list.
+    if (PrintAliases && MI->getOperand(4).getReg() == AArch64::XZR) {
       O << "\tsysp\t";
       markup(O, Markup::Immediate) << "#" << MI->getOperand(0).getImm();
       O << ", c" << MI->getOperand(1).getImm();
