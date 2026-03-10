@@ -80,6 +80,7 @@ set(LIBS
   clangTooling
   clangToolingRefactor
   clangToolingSyntax
+  clangUnifiedSymbolResolution
 )
 
 if (HAVE_LIBDL)

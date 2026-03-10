@@ -24,7 +24,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Refactor/IndexerQuery.h"
 #include "clang/Tooling/Refactor/RefactoringActionFinder.h"
@@ -36,6 +35,7 @@
 #include "clang/Tooling/Refactor/SymbolOccurrenceFinder.h"
 #include "clang/Tooling/Refactor/USRFinder.h"
 #include "clang/Tooling/Tooling.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include <set>
