@@ -226,6 +226,12 @@ class BytecodeSection:
         output.write(_to_uleb(len(bin)))
         output.write(self._to_binary())
 
+    def write_source(self, output: TextIO, language: str) -> None:
+        if language == "c":
+            self.write_c(output)
+        elif language == "swift":
+            self.write_swift(output)
+
     class _CBuilder:
         """Helper class for emitting binary data as a C-string literal."""
 
@@ -248,7 +254,7 @@ class BytecodeSection:
         def add_string(self, string: str, comment: str) -> None:
             self.entries.append((f'"{string}"', comment))
 
-    def write_source(self, output: TextIO) -> None:
+    def write_c(self, output: TextIO) -> None:
         self.validate()
 
         size = len(self._to_binary())
@@ -281,12 +287,81 @@ class BytecodeSection:
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char _{var_name}_synthetic[] =", file=output)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in b.entries:
             print(f"{indent}// {comment}", file=output)
             print(f"{indent}{string}", file=output)
         print(";", file=output)
+
+    class _SwiftBuilder:
+        """Helper class for emitting binary data as a Swift tuple literal."""
+
+        entries: list[Tuple[bytes, str]]
+
+        def __init__(self) -> None:
+            self.entries = []
+
+        def add_byte(self, x: int, comment: str) -> None:
+            self.add_bytes(_to_byte(x), comment)
+
+        def add_uleb(self, x: int, comment: str) -> None:
+            self.add_bytes(_to_uleb(x), comment)
+
+        def add_bytes(self, x: bytes, comment: str) -> None:
+            self.entries.append((x, comment))
+
+        def add_string(self, string: str, comment: str) -> None:
+            self.add_bytes(string.encode(), comment)
+
+        @property
+        def type_decl(self):
+            total_bytes = sum((len(bs) for bs, _ in self.entries))
+            element_list = ", ".join(["UInt8"] * total_bytes)
+            return f"({element_list})"
+
+    def write_swift(self, output: TextIO) -> None:
+        self.validate()
+
+        size = len(self._to_binary())
+
+        builder = self._SwiftBuilder()
+        builder.add_byte(BINARY_VERSION, "version")
+        builder.add_uleb(size, "remaining record size")
+        builder.add_uleb(len(self.type_name), "type name size")
+        builder.add_string(self.type_name, f'type name: "{self.type_name}"')
+        builder.add_byte(self.flags, "flags")
+        for sig, bc in self.signatures:
+            builder.add_byte(SIGNATURES[sig], f"sig_{sig}")
+            builder.add_uleb(len(bc), "program size")
+            builder.add_bytes(bc, "program")
+
+        darwin = ("macOS", "iOS", "watchOS", "tvOS", "visionOS")
+        darwin_list = " || ".join(f"os({_os})" for _os in darwin)
+        print(
+            textwrap.dedent(
+                f"""
+                @used
+                #if {darwin_list}
+                @section("__TEXT,__lldbsummaries")
+                #else
+                @section(".lldbsummaries")
+                #endif
+                """
+            ),
+            file=output,
+        )
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(
+            f"static let _{var_name}_formatter: {builder.type_decl} = (",
+            file=output,
+        )
+        indent = "    "
+        for bs, comment in builder.entries:
+            print(f"{indent}// {comment}", file=output)
+            byte_list = ", ".join(f"0x{b:02x}" for b in bs)
+            print(f"{indent}{byte_list},", file=output)
+        print(")", file=output)
 
 
 def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
@@ -1110,7 +1185,7 @@ def _main():
     parser.add_argument(
         "-f",
         "--format",
-        choices=("binary", "c"),
+        choices=("binary", "c", "swift"),
         default="binary",
         help="output file format",
     )
@@ -1133,9 +1208,9 @@ def _main():
         if args.format == "binary":
             with open(args.output, "wb") as output:
                 section.write_binary(output)
-        else:  # args.format == "c"
+        else:
             with open(args.output, "w") as output:
-                section.write_source(output)
+                section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:
             parser.error("--type-name is required with --assemble")
