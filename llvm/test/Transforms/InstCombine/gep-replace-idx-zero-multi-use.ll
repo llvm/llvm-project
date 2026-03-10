@@ -4,6 +4,7 @@
 %struct.pair = type { i64, i64 }
 
 declare void @init(ptr)
+declare void @use_ptr(ptr)
 
 ; When a variable-indexed inbounds GEP into a single-element allocation is
 ; dereferenced, the index is provably zero. If the GEP and the dereference
@@ -48,5 +49,73 @@ define i64 @gep_idx_zero_multi_use_store(i64 %idx, i64 %val) {
   store i64 %val, ptr %gep, align 16
   %off = getelementptr inbounds i8, ptr %gep, i64 8
   %load = load i64, ptr %off, align 8
+  ret i64 %load
+}
+
+; -------------------------- NEGATIVE CASES --------------------------
+
+; When the GEP and the dereference are in different basic blocks, the
+; dereference does not prove the index is zero on all paths (the GEP
+; could be reached without being dereferenced). replaceGEPIdxWithZero
+; must NOT replace the GEP for all users; only the triggering load
+; gets a zero-indexed clone. Here, the else branch passes %gep to a
+; call where %idx could validly be 1 (one-past-the-end, not
+; dereferenced), so the original GEP must be preserved.
+define i64 @gep_idx_zero_different_bb(i64 %idx, i1 %cond) {
+; CHECK-LABEL: define i64 @gep_idx_zero_different_bb(
+; CHECK-SAME: i64 [[IDX:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[BASE:%.*]] = alloca [1 x [[STRUCT_PAIR:%.*]]], align 16
+; CHECK-NEXT:    call void @init(ptr nonnull [[BASE]])
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[BASE]], align 16
+; CHECK-NEXT:    ret i64 [[LOAD]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x [[STRUCT_PAIR]]], ptr [[BASE]], i64 [[IDX]]
+; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[GEP]])
+; CHECK-NEXT:    ret i64 0
+;
+  %base = alloca [1 x %struct.pair], align 16
+  call void @init(ptr %base)
+  %gep = getelementptr inbounds [1 x %struct.pair], ptr %base, i64 %idx
+  br i1 %cond, label %then, label %else
+
+then:
+  %load = load i64, ptr %gep, align 16
+  ret i64 %load
+
+else:
+  call void @use_ptr(ptr %gep)
+  ret i64 0
+}
+
+; Same basic block, but a potentially-throwing call between the GEP and
+; the load prevents isGuaranteedToTransferExecutionToSuccessor from
+; proving the load always executes when the GEP does. @nounwind_use is
+; nounwind+willreturn so it doesn't block the transfer check; only
+; @may_throw does. Without @may_throw, RAUW would fire and @nounwind_use
+; would receive the zero-indexed pointer. With @may_throw, the GEP must
+; be preserved because @nounwind_use could observe a validly non-zero
+; index on a path where @may_throw throws before the load is reached.
+declare void @may_throw()
+declare void @nounwind_use(ptr) nounwind willreturn
+
+define i64 @gep_idx_zero_may_throw(i64 %idx) {
+; CHECK-LABEL: define i64 @gep_idx_zero_may_throw(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:    [[BASE:%.*]] = alloca [1 x [[STRUCT_PAIR:%.*]]], align 16
+; CHECK-NEXT:    call void @init(ptr nonnull [[BASE]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x [[STRUCT_PAIR]]], ptr [[BASE]], i64 [[IDX]]
+; CHECK-NEXT:    call void @nounwind_use(ptr nonnull [[GEP]])
+; CHECK-NEXT:    call void @may_throw()
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[BASE]], align 16
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+  %base = alloca [1 x %struct.pair], align 16
+  call void @init(ptr %base)
+  %gep = getelementptr inbounds [1 x %struct.pair], ptr %base, i64 %idx
+  call void @nounwind_use(ptr %gep)
+  call void @may_throw()
+  %load = load i64, ptr %gep, align 16
   ret i64 %load
 }
