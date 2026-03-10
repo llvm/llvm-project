@@ -6,24 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DAP.h"
-#include "DAPLog.h"
-#include "Handler/RequestHandler.h"
-#include "Handler/ResponseHandler.h"
 #include "Protocol/ProtocolBase.h"
-#include "TestingSupport/Host/JSONTransportTestUtilities.h"
-#include "TestingSupport/SubsystemRAII.h"
-#include "Transport.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
-#include "lldb/Host/MainLoop.h"
-#include "lldb/Host/MainLoopBase.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <memory>
 #include <optional>
 
 /// Helpers for gtest printing.

@@ -25,6 +25,10 @@ using namespace lldb_dap;
 using namespace lldb_dap_tests;
 using namespace lldb_dap::protocol;
 
+static lldb::SBDebugger CreateDebugger() {
+  return lldb::SBDebugger::Create(/*source_init_files*/ false);
+}
+
 class VariablesTest : public ::testing::Test {
 
 public:
@@ -50,10 +54,6 @@ protected:
   lldb::SBTarget target;
   lldb::SBProcess process;
 
-  void CreateDebugger() {
-    debugger = lldb::SBDebugger::Create(/*source_init_files*/ false);
-  }
-
   static const protocol::Scope *
   FindScope(const std::vector<protocol::Scope> &scopes,
             const protocol::String &name) {
@@ -68,7 +68,7 @@ protected:
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
   SKIP_IF_LLVM_TARGET_MISSING("X86");
 
-  CreateDebugger();
+  debugger = CreateDebugger();
   std::tie(target, process) = lldb_private::LoadCore(
       debugger, k_linux_x86_64_binary, k_linux_x86_64_core);
   auto x15 = target.CreateValueFromExpression("x", "15");
@@ -122,7 +122,7 @@ TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
 TEST_F(VariablesTest, VariablesStore) {
   SKIP_IF_LLVM_TARGET_MISSING("X86");
 
-  CreateDebugger();
+  debugger = CreateDebugger();
   std::tie(target, process) = lldb_private::LoadCore(
       debugger, k_linux_x86_64_binary, k_linux_x86_64_core);
 

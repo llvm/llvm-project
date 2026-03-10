@@ -40,7 +40,7 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   SKIP_IF_LLVM_TARGET_MISSING("X86");
 
-  CreateDebugger();
+  ConfigureDebugger();
   LoadCore(k_linux_x86_64_binary, k_linux_x86_64_core);
 
   DisconnectRequestHandler handler(*dap);

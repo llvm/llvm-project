@@ -69,10 +69,11 @@ void DAPTestBase::SetUpTestSuite() {
   lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
   EXPECT_TRUE(error.Success());
 }
+
 void DAPTestBase::TearDownTestSuite() { SBDebugger::Terminate(); }
 
-void DAPTestBase::CreateDebugger() {
-  dap->debugger = lldb::SBDebugger::Create();
+void DAPTestBase::ConfigureDebugger() {
+  dap->debugger = lldb::SBDebugger::Create(/*source_init_files=*/false);
   ASSERT_TRUE(dap->debugger);
   dap->target = dap->debugger.GetDummyTarget();
 
@@ -96,7 +97,6 @@ void DAPTestBase::CreateDebugger() {
 
 void DAPTestBase::LoadCore(llvm::StringRef binary_path,
                            llvm::StringRef core_path) {
-  lldb::SBProcess process;
   std::tie(dap->target, process) =
       lldb_private::LoadCore(dap->debugger, binary_path, core_path);
 }

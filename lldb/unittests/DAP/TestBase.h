@@ -53,13 +53,14 @@ class DAPTestBase : public TransportBase {
 protected:
   std::optional<llvm::sys::fs::TempFile> core;
   std::optional<llvm::sys::fs::TempFile> binary;
+  lldb::SBProcess process;
 
   static void SetUpTestSuite();
   static void TearDownTestSuite();
   void SetUp() override;
   void TearDown() override;
 
-  void CreateDebugger();
+  void ConfigureDebugger();
   void LoadCore(llvm::StringRef binary_path, llvm::StringRef core_path);
 };
 
