@@ -3104,6 +3104,53 @@ LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
 
 LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
 
+LogicalResult NVVM::FmaOp::verify() {
+  auto opType = getRes().getType();
+  mlir::NVVM::FPRoundingMode rndMode = getRnd();
+  mlir::NVVM::SaturationMode satMode = getSat();
+  bool isFTZ = getFtz();
+  bool isRelu = getRelu();
+  bool hasOOB = getOob();
+
+  auto getBaseFType = [](Type type) -> Type {
+    if (isa<VectorType>(type))
+      return cast<VectorType>(type).getElementType();
+    return type;
+  };
+
+  auto opBaseType = getBaseFType(opType);
+
+  if (rndMode == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode must be specified");
+
+  if (isRelu && satMode == NVVM::SaturationMode::SAT)
+    return emitOpError("relu and saturation are not supported together");
+
+  if (hasOOB && (satMode == NVVM::SaturationMode::SAT || isFTZ))
+    return emitOpError("oob is not supported with saturation or FTZ");
+
+  if (!(opBaseType.isF16() || opBaseType.isBF16()) && (isRelu || hasOOB))
+    return emitOpError("relu and oob are only supported for f16 and bf16");
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return emitOpError("FTZ and saturation are not supported for f64 type");
+
+  if (opBaseType.isF16() && rndMode != NVVM::FPRoundingMode::RN)
+    return emitOpError(
+        "only RN rounding mode is supported for f16 and vector<2xf16>");
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN)
+      return emitOpError(
+          "only RN rounding mode is supported for bf16 and vector<2xbf16>");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return emitOpError(
+          "FTZ and saturation are not supported for bf16 and vector<2xbf16>");
+  }
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *

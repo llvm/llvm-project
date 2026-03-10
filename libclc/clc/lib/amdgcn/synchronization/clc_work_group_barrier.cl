@@ -15,14 +15,13 @@ __clc_work_group_barrier(int memory_scope,
   if (memory_semantics == 0) {
     __builtin_amdgcn_s_barrier();
   } else {
-    int memory_order_before =
-        memory_semantics & (__CLC_MEMORY_GLOBAL | __CLC_MEMORY_LOCAL)
-            ? __ATOMIC_SEQ_CST
-            : __ATOMIC_RELEASE;
-    int memory_order_after =
-        memory_semantics & (__CLC_MEMORY_GLOBAL | __CLC_MEMORY_LOCAL)
-            ? __ATOMIC_SEQ_CST
-            : __ATOMIC_ACQUIRE;
+    uint seq_cst_mask = __CLC_MEMORY_GLOBAL | __CLC_MEMORY_LOCAL;
+    int memory_order_before = (memory_semantics & seq_cst_mask) == seq_cst_mask
+                                  ? __ATOMIC_SEQ_CST
+                                  : __ATOMIC_RELEASE;
+    int memory_order_after = (memory_semantics & seq_cst_mask) == seq_cst_mask
+                                 ? __ATOMIC_SEQ_CST
+                                 : __ATOMIC_ACQUIRE;
 
     __clc_mem_fence(memory_scope, memory_order_before, memory_semantics);
     __builtin_amdgcn_s_barrier();

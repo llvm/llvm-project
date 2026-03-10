@@ -201,67 +201,55 @@ __gpu_shuffle_idx_f64(uint64_t __lane_mask, uint32_t __idx, double __x,
                             __builtin_bit_cast(uint64_t, __x), __width));
 }
 
-// Gets the accumulator scan of the threads in the warp or wavefront.
-#define __DO_LANE_SCAN(__type, __bitmask_type, __suffix)                       \
-  _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_lane_scan_##__suffix(     \
-      uint64_t __lane_mask, uint32_t __x) {                                    \
-    uint64_t __first = __lane_mask >> __builtin_ctzll(__lane_mask);            \
-    bool __divergent = __gpu_read_first_lane_##__suffix(                       \
-        __lane_mask, __first & (__first + 1));                                 \
-    if (__divergent) {                                                         \
-      __type __accum = 0;                                                      \
-      for (uint64_t __mask = __lane_mask; __mask; __mask &= __mask - 1) {      \
-        __type __index = __builtin_ctzll(__mask);                              \
-        __type __tmp = __gpu_shuffle_idx_##__suffix(__lane_mask, __index, __x, \
-                                                    __gpu_num_lanes());        \
-        __x = __gpu_lane_id() == __index ? __accum + __tmp : __x;              \
-        __accum += __tmp;                                                      \
-      }                                                                        \
-    } else {                                                                   \
-      for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {     \
-        uint32_t __index = __gpu_lane_id() - __step;                           \
-        __bitmask_type bitmask = __gpu_lane_id() >= __step;                    \
-        __x += __builtin_bit_cast(                                             \
-            __type,                                                            \
-            -bitmask & __builtin_bit_cast(__bitmask_type,                      \
-                                          __gpu_shuffle_idx_##__suffix(        \
-                                              __lane_mask, __index, __x,       \
-                                              __gpu_num_lanes())));            \
-      }                                                                        \
+// Implements scan and reduction operations across a GPU warp or wavefront.
+//
+// Both scans work by iterating log2(N) steps. The bitmask tracks the currently
+// unprocessed lanes, above or below the current lane in the case of a suffix or
+// prefix scan. Each iteration we shuffle in the unprocessed neighbors and then
+// clear the bits that this operation handled.
+#define __DO_LANE_OP(__type, __op, __identity, __prefix, __suffix)             \
+  _DEFAULT_FN_ATTRS static __inline__ __type                                   \
+  __gpu_suffix_scan_##__prefix##_##__suffix(uint64_t __lane_mask,              \
+                                            __type __x) {                      \
+    uint64_t __above = __lane_mask & -(2ull << __gpu_lane_id());               \
+    for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
+      uint32_t __src = __above ? __builtin_ctzg(__above) : __gpu_lane_id();    \
+      __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
+                                                     __gpu_num_lanes());       \
+      __x = __x __op(__above ? __result : (__type)__identity);                 \
+      for (uint32_t __i = 0; __i < __step; ++__i)                              \
+        __above &= __above - 1;                                                \
     }                                                                          \
     return __x;                                                                \
-  }
-__DO_LANE_SCAN(uint32_t, uint32_t, u32); // uint32_t __gpu_lane_scan_u32(m, x)
-__DO_LANE_SCAN(uint64_t, uint64_t, u64); // uint64_t __gpu_lane_scan_u64(m, x)
-__DO_LANE_SCAN(float, uint32_t, f32);    // float __gpu_lane_scan_f32(m, x)
-__DO_LANE_SCAN(double, uint64_t, f64);   // double __gpu_lane_scan_f64(m, x)
-#undef __DO_LANE_SCAN
-
-// Gets the sum of all lanes inside the warp or wavefront.
-#define __DO_LANE_SUM(__type, __suffix)                                        \
-  _DEFAULT_FN_ATTRS static __inline__ __type __gpu_lane_sum_##__suffix(        \
-      uint64_t __lane_mask, __type __x) {                                      \
-    uint64_t __first = __lane_mask >> __builtin_ctzll(__lane_mask);            \
-    bool __divergent = __gpu_read_first_lane_##__suffix(                       \
-        __lane_mask, __first & (__first + 1));                                 \
-    if (__divergent) {                                                         \
-      return __gpu_shuffle_idx_##__suffix(                                     \
-          __lane_mask, 63 - __builtin_clzll(__lane_mask),                      \
-          __gpu_lane_scan_##__suffix(__lane_mask, __x), __gpu_num_lanes());    \
-    } else {                                                                   \
-      for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {     \
-        uint32_t __index = __step + __gpu_lane_id();                           \
-        __x += __gpu_shuffle_idx_##__suffix(__lane_mask, __index, __x,         \
-                                            __gpu_num_lanes());                \
-      }                                                                        \
-      return __gpu_read_first_lane_##__suffix(__lane_mask, __x);               \
+  }                                                                            \
+                                                                               \
+  _DEFAULT_FN_ATTRS static __inline__ __type                                   \
+  __gpu_prefix_scan_##__prefix##_##__suffix(uint64_t __lane_mask,              \
+                                            __type __x) {                      \
+    uint64_t __below = __lane_mask & ((1ull << __gpu_lane_id()) - 1);          \
+    for (uint32_t __step = 1; __step < __gpu_num_lanes(); __step *= 2) {       \
+      uint32_t __src =                                                         \
+          __below ? (63 - __builtin_clzg(__below)) : __gpu_lane_id();          \
+      __type __result = __gpu_shuffle_idx_##__suffix(__lane_mask, __src, __x,  \
+                                                     __gpu_num_lanes());       \
+      __x = __x __op(__below ? __result : (__type)__identity);                 \
+      for (uint32_t __i = 0; __i < __step; ++__i)                              \
+        __below ^= (1ull << (63 - __builtin_clzg(__below, 0))) & __below;      \
     }                                                                          \
+    return __x;                                                                \
+  }                                                                            \
+                                                                               \
+  _DEFAULT_FN_ATTRS static __inline__ __type                                   \
+  __gpu_lane_##__prefix##_##__suffix(uint64_t __lane_mask, __type __x) {       \
+    return __gpu_read_first_lane_##__suffix(                                   \
+        __lane_mask,                                                           \
+        __gpu_suffix_scan_##__prefix##_##__suffix(__lane_mask, __x));          \
   }
-__DO_LANE_SUM(uint32_t, u32); // uint32_t __gpu_lane_sum_u32(m, x)
-__DO_LANE_SUM(uint64_t, u64); // uint64_t __gpu_lane_sum_u64(m, x)
-__DO_LANE_SUM(float, f32);    // float __gpu_lane_sum_f32(m, x)
-__DO_LANE_SUM(double, f64);   // double __gpu_lane_sum_f64(m, x)
-#undef __DO_LANE_SUM
+__DO_LANE_OP(uint32_t, +, 0, sum, u32);
+__DO_LANE_OP(uint64_t, +, 0, sum, u64);
+__DO_LANE_OP(float, +, 0, sum, f32);
+__DO_LANE_OP(double, +, 0, sum, f64);
+#undef __DO_LANE_OP
 
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
