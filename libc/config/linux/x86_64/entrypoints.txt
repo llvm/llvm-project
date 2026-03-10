@@ -251,6 +251,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
+    # sys/ipc.h entrypoints
+    libc.src.sys.ipc.ftok
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
@@ -415,6 +418,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
+    libc.src.wctype.iswcntrl
+    libc.src.wctype.iswdigit
+    libc.src.wctype.iswlower
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -469,6 +475,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.acospif
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
@@ -483,6 +490,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
+    libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill

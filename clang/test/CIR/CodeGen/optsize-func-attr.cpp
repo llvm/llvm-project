@@ -71,4 +71,4 @@ extern "C" {
 // OGCG-NOT: minsize
 //
 // to block the 'NOT'.
-// BOTH: llvm.module.flags
+// BOTH: !llvm.

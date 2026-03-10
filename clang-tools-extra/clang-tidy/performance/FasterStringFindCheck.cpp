@@ -42,16 +42,6 @@ makeCharacterLiteral(const StringLiteral *Literal) {
   return Result;
 }
 
-namespace {
-
-AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<Expr>,
-                     hasSubstitutedType) {
-  return hasType(qualType(anyOf(substTemplateTypeParmType(),
-                                hasDescendant(substTemplateTypeParmType()))));
-}
-
-} // namespace
-
 FasterStringFindCheck::FasterStringFindCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -66,21 +56,26 @@ void FasterStringFindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
   const auto SingleChar =
-      expr(ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal")));
+      ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal"));
+
+  const auto StringExpr = expr(hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(recordDecl(hasAnyName(StringLikeClasses)))))));
 
   const auto InterestingStringFunction = hasAnyName(
       "find", "rfind", "find_first_of", "find_first_not_of", "find_last_of",
-      "find_last_not_of", "starts_with", "ends_with", "contains");
+      "find_last_not_of", "starts_with", "ends_with", "contains", "operator+=");
 
   Finder->addMatcher(
       cxxMemberCallExpr(
           callee(functionDecl(InterestingStringFunction).bind("func")),
           anyOf(argumentCountIs(1), argumentCountIs(2)),
-          hasArgument(0, SingleChar),
-          on(expr(hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                      recordDecl(hasAnyName(StringLikeClasses)))))),
-                  unless(hasSubstitutedType())))),
+          hasArgument(0, SingleChar), on(StringExpr)),
       this);
+
+  Finder->addMatcher(cxxOperatorCallExpr(hasOperatorName("+="),
+                                         hasLHS(StringExpr), hasRHS(SingleChar),
+                                         callee(functionDecl().bind("func"))),
+                     this);
 }
 
 void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {

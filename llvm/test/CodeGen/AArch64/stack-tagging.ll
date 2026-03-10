@@ -143,4 +143,34 @@ l:
 ; CHECK-NOT: @llvm.aarch64.irg.sp
 ; CHECK:     ret void
 
+define void @DoubleEnd(i32 %b) sanitize_memtag {
+entry:
+  %x = alloca i32, align 4
+  %tobool = icmp eq i32 %b, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x)
+  call void @use8(ptr %x) #3
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+
+; CHECK-LABEL: define void @DoubleEnd(
+; CHECK:  br i1
+; CHECK:  call void @llvm.lifetime.start.p0(
+; CHECK:  call void @llvm.aarch64.settag(
+; CHECK:  call void @use8(
+; CHECK:  call void @llvm.aarch64.settag(
+; CHECK:  call void @llvm.lifetime.end.p0(
+; CHECK:  br label
+; CHECK:  ret void
+
+
+
 !0 = !{}

@@ -1190,3 +1190,80 @@ define void @foo(i8 %v0, i8 %v1) {
   Add1->setOperand(0, Add0);
   EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
 }
+
+// Make sure we maintain the unscheduled succs when the use-def edges cross the
+// DAG boundaries, i.e., when have an external user.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsExtUser) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v1
+  %add1 = add i8 %add0, %v1
+  %extUser = add i8 %v0, 0   ; This is not in the DAG
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *ExtUser = cast<sandboxir::BinaryOperator>(&*It++);
+  // DAG does not contain extUser
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1});
+  auto *Add0N = DAG.getNode(Add0);
+  EXPECT_EQ(DAG.getNode(ExtUser), nullptr);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+
+  // Adding the use Add0->ExtUser shouldn't change Add's unscheduled succs.
+  ExtUser->setOperand(0, Add0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  ExtUser->setOperand(0, Arg0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+
+  // Same with RUOW.
+  ExtUser->replaceUsesOfWith(Arg0, Add0);
+  EXPECT_EQ(ExtUser->getOperand(0), Add0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  ExtUser->setOperand(0, Arg0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+}
+
+// Don't udpate the unscheduled succs if nodes have already been scheduled.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsWhenScheduled) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0) {
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %v0, 1
+  %modify = add i8 %add0, 1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Modify = cast<sandboxir::BinaryOperator>(&*It++);
+  // DAG contains all Add0, Add1 and Modify
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1, Modify});
+  auto *Add0N = DAG.getNode(Add0);
+  auto *Add1N = DAG.getNode(Add1);
+  // Mark Add0N and Add1N as scheduled.
+  Add0N->setScheduled(true);
+  Add1N->setScheduled(true);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+
+  // Change Modify's operand and make sure we won't update Add0N's or Add1N's
+  // unscheduled succs.
+  Modify->setOperand(0, Add1);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+}

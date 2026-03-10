@@ -20,7 +20,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Utils/VerificationUtils.h"
@@ -497,7 +497,7 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  if (isa<ub::PoisonAttrInterface>(value))
+  if (matchPattern(value, ub::m_Poison()))
     return value.getDialect().materializeConstant(builder, value, type, loc);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
@@ -2112,7 +2112,7 @@ static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
 
 /// Fold a vector extract from is a poison source.
 static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
-  if (isa_and_nonnull<ub::PoisonAttr>(srcAttr))
+  if (matchPattern(srcAttr, ub::m_Poison()))
     return srcAttr;
 
   return {};
@@ -2298,6 +2298,70 @@ public:
   }
 };
 
+// Pattern to rewrite a ExtractOp(ConstantMask) -> ConstantMask.
+class ExtractOpFromConstantMask final : public OpRewritePattern<ExtractOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto constantMaskOp =
+        extractOp.getSource().getDefiningOp<vector::ConstantMaskOp>();
+    if (!constantMaskOp)
+      return failure();
+
+    Type resultType = extractOp.getResult().getType();
+    auto extractedMaskType = dyn_cast<VectorType>(resultType);
+
+    ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
+    ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
+
+    VectorType maskType = constantMaskOp.getVectorType();
+
+    // Check if any extracted position is outside the mask bounds.
+    for (size_t dimIdx = 0; dimIdx < extractOpPos.size(); dimIdx++) {
+      int64_t pos = extractOpPos[dimIdx];
+      if (pos == ShapedType::kDynamic) {
+        // If the dim is all-true, a dynamic index is fine — any position
+        // is within the masked region.
+        if (maskDimSizes[dimIdx] == maskType.getDimSize(dimIdx))
+          continue;
+        // Otherwise we don't know if the position is inside or outside of
+        // the masked area, so bail out.
+        return failure();
+      }
+
+      // If the position is statically outside of the masked area, the result
+      // will be all-false.
+      if (pos >= maskDimSizes[dimIdx]) {
+        if (extractedMaskType) {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, DenseElementsAttr::get(extractedMaskType, false));
+        } else {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, rewriter.getIntegerAttr(resultType, false));
+        }
+        return success();
+      }
+    }
+
+    // All positions are within the mask bounds.
+    if (extractedMaskType) {
+      // Vector result: the result is a constant_mask with the remaining
+      // dimensions.
+      rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
+          extractOp, extractedMaskType,
+          maskDimSizes.drop_front(extractOpPos.size()));
+    } else {
+      // Scalar result: all positions are within the masked region, so the
+      // result is true.
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          extractOp, rewriter.getIntegerAttr(resultType, true));
+    }
+    return success();
+  }
+};
+
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
@@ -2405,9 +2469,8 @@ struct ExtractToShapeCast final : OpRewritePattern<vector::ExtractOp> {
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results
-      .add<ExtractOpFromBroadcast, ExtractOpFromCreateMask, ExtractToShapeCast>(
-          context);
+  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask,
+              ExtractOpFromConstantMask, ExtractToShapeCast>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
@@ -2496,6 +2559,13 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &results) {
   if (succeeded(foldToElementsFromElements(*this, results)))
     return success();
+
+  // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
+  if (auto shapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
+    setOperand(shapeCast.getSource());
+    return success();
+  }
+
   return foldToElementsOfBroadcast(*this, results);
 }
 
@@ -2649,7 +2719,7 @@ static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
                                                ArrayRef<Attribute> elements) {
   // Check for null or poison attributes before any processing.
   if (llvm::any_of(elements, [](Attribute attr) {
-        return !attr || isa<ub::PoisonAttrInterface>(attr);
+        return !attr || matchPattern(attr, ub::m_Poison());
       }))
     return {};
 
@@ -3098,7 +3168,7 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
-  if (llvm::dyn_cast<ub::PoisonAttr>(adaptor.getSource()))
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
   return {};
 }
@@ -3253,8 +3323,8 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     return {};
 
   // Fold shuffle poison, poison -> poison.
-  bool isV1Poison = isa<ub::PoisonAttr>(v1Attr);
-  bool isV2Poison = isa<ub::PoisonAttr>(v2Attr);
+  bool isV1Poison = matchPattern(v1Attr, ub::m_Poison());
+  bool isV2Poison = matchPattern(v2Attr, ub::m_Poison());
   if (isV1Poison && isV2Poison)
     return ub::PoisonAttr::get(getContext());
 
@@ -4022,7 +4092,8 @@ public:
       return failure();
 
     // TODO: Support poison.
-    if (isa<ub::PoisonAttr>(vectorDestCst) || isa<ub::PoisonAttr>(sourceCst))
+    if (matchPattern(vectorDestCst, ub::m_Poison()) ||
+        matchPattern(sourceCst, ub::m_Poison()))
       return failure();
 
     // TODO: Handle non-unit strides when they become available.
@@ -6514,7 +6585,7 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
     return denseAttr.reshape(getType());
 
   // shape_cast(poison) -> poison
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource()))
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   return {};
@@ -6660,13 +6731,43 @@ public:
   }
 };
 
+/// Pattern to rewrite Y = ShapeCast(FromElements(X)) as Y = FromElements(X)
+///
+/// BEFORE:
+///    %1 = vector.from_elements %c1, %c2, %c3 : vector<3xf32>
+///    %2 = vector.shape_cast %1 : vector<3xf32> to vector<1x3xf32>
+/// AFTER:
+///    %2 = vector.from_elements %c1, %c2, %c3 : vector<1x3xf32>
+///
+/// Note: this transformation is implemented as an OpRewritePattern, not as a
+/// fold, because we have to create new op FromElementsOp with updated result
+/// type. This cannot be done with a fold, because fold cannot create new ops
+/// and the existing FromElementsOp result type differs from the ShapeCastOp
+/// result type. Mutating the FromElementsOp (not root op) would violate the
+/// fold contract and break other users.
+class FoldShapeCastOfFromElements final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElements = shapeCastOp.getSource().getDefiningOp<FromElementsOp>();
+    if (!fromElements)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(
+        shapeCastOp, shapeCastOp.getResultVectorType(),
+        fromElements.getElements());
+    return success();
+  }
+};
+
 } // namespace
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results
-      .add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
-          context);
+  results.add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder,
+              FoldShapeCastOfFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6840,7 +6941,7 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
     return splat.reshape(getResultVectorType());
 
   // Eliminate poison transpose ops.
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
+  if (matchPattern(adaptor.getVector(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   // Eliminate identity transposes, and more generally any transposes that

@@ -63,7 +63,7 @@
 #define DEBUG_TYPE "remove-dead-values"
 
 namespace mlir {
-#define GEN_PASS_DEF_REMOVEDEADVALUES
+#define GEN_PASS_DEF_REMOVEDEADVALUESPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -764,7 +764,10 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   LDBG() << "Finished cleanup of dead values";
 }
 
-struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
+struct RemoveDeadValues
+    : public impl::RemoveDeadValuesPassBase<RemoveDeadValues> {
+  using impl::RemoveDeadValuesPassBase<
+      RemoveDeadValues>::RemoveDeadValuesPassBase;
   void runOnOperation() override;
 };
 } // namespace
@@ -822,8 +825,4 @@ void RemoveDeadValues::runOnOperation() {
     module->emitError("greedy pattern rewrite failed to converge");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
-  return std::make_unique<RemoveDeadValues>();
 }

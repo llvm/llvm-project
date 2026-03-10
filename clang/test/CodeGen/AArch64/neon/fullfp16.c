@@ -9,6 +9,13 @@
 //
 // Tests for unconstrained intrinsics that require the fullfp16 extension.
 //
+// This file contains tests that were originally located in
+//  *  clang/test/CodeGen/AArch64/v8.2a-fp16-intrinsics.c
+// The main difference is the use of RUN lines that enable ClangIR lowering;
+// therefore only builtins currently supported by ClangIR are tested here.
+// Once ClangIR support is complete, this file is intended to replace the
+// original test file.
+//
 // These intrinsics expand to code containing multiple compound and declaration
 // statements rather than just plain function calls, which leads to:
 //  * "scopes" at the CIR level, and then
@@ -17,19 +24,31 @@
 // hence for CIR we use `opt -passes=simplifycfg` to reduce the control flow
 // and to make LLVM IR match for all paths.
 //
-// Minor differences between RUN lines (e.g., the presence of `noundef` on
-// arguments or the `align` attribute on pointers) are matched using
-// catch-alls such as `{{.*}}`.
+// ACLE section headings based on v2025Q2 of the ACLE specification:
+//  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#bitwise-equal-to-zero
 //
 // TODO: Remove `-simplifycfg` once CIR lowering includes the relevant
 //       optimizations to reduce the CFG.
-//
-// TODO: Merge this file with
-//        * clang/test/CodeGen/AArch64/v8.2a-fp16-intrinsics.c
-//       (the source of these tests).
 //=============================================================================
 
 #include <arm_fp16.h>
+
+//===------------------------------------------------------===//
+// 2.5.2.1.  Bitwise equal to zero
+//===------------------------------------------------------===//
+// LLVM-LABEL: test_vceqzh_f16
+uint16_t test_vceqzh_f16(float16_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.f16
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
+
+// LLVM-SAME: (half {{.*}} [[A:%.*]])
+// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0xH0000
+// LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
+// LLVM:  ret i16 [[TMP2]]
+  return vceqzh_f16(a);
+}
 
 // ALL-LABEL: @test_vabsh_f16
 float16_t test_vabsh_f16(float16_t a) {

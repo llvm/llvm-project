@@ -1086,3 +1086,20 @@ func.func @warp_mismatch_rank(%laneid: index) {
   }
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/181450:
+// gpu.warp_execute_on_lane_0 with a wrong terminator used to crash with an
+// unchecked cast in getTerminator(). The verifier should now emit a proper
+// error instead.
+func.func @warp_execute_wrong_terminator() {
+  %laneid = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %v = vector.create_mask %c0 : vector<4xi1>
+  // expected-error @+1 {{'gpu.warp_execute_on_lane_0' op expected body to be terminated with 'gpu.yield'}}
+  %out = gpu.warp_execute_on_lane_0(%laneid)[32] -> vector<4xi1> {
+    affine.yield %v : vector<4xi1>
+  }
+  return
+}

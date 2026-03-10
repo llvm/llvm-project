@@ -55,6 +55,9 @@ Deprecations and Removals
 - The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
   It will be removed in LLVM 25.
 
+- ``__wrap_iter``'s (iterator type for ``array``, ``span``, ``string``, ``string_view`` and ``vector``) ``base()``
+  method has been removed as it was non-standard.
+
 Potentially breaking changes
 ----------------------------
 
@@ -71,6 +74,19 @@ ABI Affecting Changes
 - ``bitset::operator[]`` returns ``bool`` since LLVM 22, making libc++ conforming. The behaviour can be reverted by
   defining ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this
   flag, since it will be removed in LLVM 24 if there is no evidence that it's required.
+
+- ``vector::iterator`` and ``string::iterator`` no longer use ``__bounded_iter<__wrap_iter<Iter>>``, but instead
+  ``__bounded_iter<Iter>`` directly if ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` and
+  ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` are defined.
+
+- The ``const_iterator`` member type of ``std::deque`` is now corrected to hold a (possibly fancy) pointer to the
+  (possibly fancy) pointer allocated in the internal map. E.g. when the allocators use fancy pointers, the internal map
+  stores ``FancyPtr<T>`` objects, and the previous strategy accessed these objects via ``const FancyPtr<const T>``
+  lvalues, causing undefined behavior. Now ``const_iterator`` stores ``FancyPtr<const FancyPtr<T>>`` instead of
+  ``FancyPtr<const FancyPtr<const T>>``, which is technically an ABI break when these two types have incompatible
+  layouts.  The ``iterator`` member type is also changed to store ``FancyPtr<const FancyPtr<T>>`` because the internal
+  map is never modified via an ``iterator``. This is necessary for reducing undefined behavior and for adding
+  ``constexpr`` support for ``deque`` in C++26, so we do not provide any way to opt-out of that behavior.
 
 Build System Changes
 --------------------

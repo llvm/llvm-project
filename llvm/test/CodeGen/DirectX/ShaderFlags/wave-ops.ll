@@ -42,6 +42,13 @@ entry:
   ret i1 %ret
 }
 
+define noundef i1 @wave_all_equal(i1 %x) {
+entry:
+  ; CHECK: Function wave_all_equal : [[WAVE_FLAG]]
+  %ret = call i1 @llvm.dx.wave.all.equal(i1 %x)
+  ret i1 %ret
+}
+
 define noundef i1 @wave_readlane(i1 %x, i32 %idx) {
 entry:
   ; CHECK: Function wave_readlane : [[WAVE_FLAG]]
@@ -60,6 +67,20 @@ define noundef i32 @wave_reduce_usum(i32 noundef %x) {
 entry:
   ; CHECK: Function wave_reduce_usum : [[WAVE_FLAG]]
   %ret = call i32 @llvm.dx.wave.reduce.usum.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_product(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_product : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.product.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_uproduct(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_uproduct : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.uproduct.i32(i32 %x)
   ret i32 %ret
 }
 
