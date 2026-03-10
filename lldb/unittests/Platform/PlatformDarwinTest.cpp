@@ -354,11 +354,10 @@ TEST_F(PlatformDarwinLocateTest,
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/_import.py").str();
   std::string expected = llvm::formatv(
-      "the symbol file '{0}' contains a debug script. However, its "
-      "name conflicts with a keyword and as such cannot be loaded. If you "
-      "intend to have this script loaded, please rename '{1}' to '{2}' and "
-      "retry.\n",
-      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+      "found a debug script '{0}'. However, its name conflicts with a keyword "
+      "and as such cannot be loaded. If you intend to have this script loaded, "
+      "please rename it to '{1}' and retry.\n",
+      orig_script, fixed_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
 
@@ -394,11 +393,10 @@ TEST_F(PlatformDarwinLocateTest,
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/_import.py").str();
   std::string expected = llvm::formatv(
-      "the symbol file '{0}' contains a debug script. However, its "
-      "name '{1}' conflicts with a keyword and as such cannot be loaded. LLDB "
-      "will load '{2}' instead. Consider removing the file with the malformed "
-      "name to eliminate this warning.\n",
-      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+      "found a debug script '{0}'. However, its name conflicts with a keyword "
+      "and as such cannot be loaded. LLDB will load '{1}' instead. Consider "
+      "removing the file with the malformed name to eliminate this warning.\n",
+      orig_script, fixed_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
 
@@ -461,11 +459,10 @@ TEST_F(
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/TestModule_1_1_1.py").str();
   std::string expected = llvm::formatv(
-      "the symbol file '{0}' contains a debug script. However, its "
-      "name contains reserved characters and as such cannot be loaded. If you "
-      "intend to have this script loaded, please rename '{1}' to '{2}' and "
-      "retry.\n",
-      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+      "found a debug script '{0}'. However, its name contains reserved "
+      "characters and as such cannot be loaded. If you intend to have this "
+      "script loaded, please rename it to '{1}' and retry.\n",
+      orig_script, fixed_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
 
@@ -501,12 +498,12 @@ TEST_F(
       (m_tmp_dsym_dwarf_dir + "/../Python/TestModule-1.1 1.py").str();
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/TestModule_1_1_1.py").str();
-  std::string expected = llvm::formatv(
-      "the symbol file '{0}' contains a debug script. However, its "
-      "name '{1}' contains reserved characters and as such cannot be loaded. "
-      "LLDB will load '{2}' instead. Consider removing the file with the "
-      "malformed name to eliminate this warning.\n",
-      dsym_module_fpec.GetPath(), orig_script, fixed_script);
+  std::string expected =
+      llvm::formatv("found a debug script '{0}'. However, its name contains "
+                    "reserved characters and as such cannot be loaded. LLDB "
+                    "will load '{1}' instead. Consider removing the file with "
+                    "the malformed name to eliminate this warning.\n",
+                    orig_script, fixed_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
 

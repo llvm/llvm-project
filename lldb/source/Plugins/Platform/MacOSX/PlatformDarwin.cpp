@@ -287,23 +287,20 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                              : "contains reserved characters";
       if (FileSystem::Instance().Exists(script_fspec))
         feedback_stream.Format(
-            "the symbol file '{0}' contains a debug "
-            "script. However, its name"
-            " '{1}' {2} and as such cannot be loaded. LLDB will"
-            " load '{3}' instead. Consider removing the file with "
-            "the malformed name to"
-            " eliminate this warning.\n",
-            symfile_spec.GetPath(), original_path_string.GetString(),
-            reason_for_complaint, path_string.GetString());
+            "found a debug script '{0}'. However, its name"
+            " {1} and as such cannot be loaded. LLDB will"
+            " load '{2}' instead. Consider removing the file with"
+            " the malformed name to eliminate this warning.\n",
+            original_path_string.GetString(), reason_for_complaint,
+            path_string.GetString());
       else
         feedback_stream.Format(
-            "the symbol file '{0}' contains a debug "
-            "script. However, its name"
+            "found a debug script '{0}'. However, its name"
             " {1} and as such cannot be loaded. If you intend"
-            " to have this script loaded, please rename '{2}' to "
-            "'{3}' and retry.\n",
-            symfile_spec.GetPath(), reason_for_complaint,
-            original_path_string.GetString(), path_string.GetString());
+            " to have this script loaded, please rename it to "
+            "'{2}' and retry.\n",
+            original_path_string.GetString(), reason_for_complaint,
+            path_string.GetString());
     }
 
     if (FileSystem::Instance().Exists(script_fspec)) {
