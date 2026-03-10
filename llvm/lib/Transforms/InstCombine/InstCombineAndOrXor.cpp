@@ -20,6 +20,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -2389,17 +2390,28 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
                                                  Instruction &I, bool IsAnd,
                                                  bool RHSIsLogical) {
   Instruction::BinaryOps Opcode = IsAnd ? Instruction::And : Instruction::Or;
+  Value *Folded = nullptr;
   // LHS bop (X lop Y) --> (LHS bop X) lop Y
   // LHS bop (X bop Y) --> (LHS bop X) bop Y
   if (Value *Res = foldBooleanAndOr(LHS, X, I, IsAnd, /*IsLogical=*/false))
-    return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y)
-                        : Builder.CreateBinOp(Opcode, Res, Y);
+    Folded = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y)
+                          : Builder.CreateBinOp(Opcode, Res, Y);
   // LHS bop (X bop Y) --> X bop (LHS bop Y)
   // LHS bop (X lop Y) --> X lop (LHS bop Y)
-  if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
-    return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
-                        : Builder.CreateBinOp(Opcode, X, Res);
-  return nullptr;
+  else if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
+    Folded = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
+                          : Builder.CreateBinOp(Opcode, X, Res);
+  if (SelectInst *SI = dyn_cast_or_null<SelectInst>(Folded);
+      SI != nullptr && !ProfcheckDisableMetadataFixes)
+    // If the bop I was originally a lop, we could recover branch weight
+    // information using that lop's weights. However, InstCombine usually
+    // replaces the lop with a bop by the time we get here, deleting the branch
+    // weight information. Therefore, we can only assume unknown branch weights.
+    // TODO: see if it's possible to recover branch weight information from the
+    // original lop (https://github.com/llvm/llvm-project/issues/183864).
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE,
+                                                I.getFunction());
+  return Folded;
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
