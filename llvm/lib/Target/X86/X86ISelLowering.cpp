@@ -34525,12 +34525,11 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::FSHL:
   case ISD::FSHR: {
-    EVT VT = N->getValueType(0);
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     SDValue Amt = N->getOperand(2);
     assert(Subtarget.useAVX512Regs() && "AVX512F required");
-    assert(VT == MVT::i256 && "Unexpected VT!");
+    assert(N->getValueType(0) == MVT::i256 && "Unexpected VT!");
     if (!mayFoldIntoVector(Op0, DAG, Subtarget) ||
         !mayFoldIntoVector(Op1, DAG, Subtarget))
       return;
