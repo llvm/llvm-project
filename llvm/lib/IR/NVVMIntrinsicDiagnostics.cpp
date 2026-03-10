@@ -48,8 +48,7 @@ public:
       OS << ")";
     } else if (DeclFTy->getNumParams() != CallFTy->getNumParams()) {
       OS << "\nwrong number of arguments (expected " << DeclFTy->getNumParams()
-         << ", got " << CallFTy->getNumParams()
-         << "), expected signature: ";
+         << ", got " << CallFTy->getNumParams() << "), expected signature: ";
       DeclFTy->print(OS);
       OS << ", got signature: ";
       CallFTy->print(OS);

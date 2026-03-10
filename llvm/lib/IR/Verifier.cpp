@@ -3936,8 +3936,8 @@ void Verifier::visitCallBase(CallBase &Call) {
     if (DeclFTy != FTy) {
       std::string Msg = "Intrinsic called with incompatible signature";
       raw_string_ostream SS(Msg);
-      IntrinsicDiagnosticsProvider::querySignatureMismatch(
-          Callee->getName(), DeclFTy, FTy, SS);
+      IntrinsicDiagnosticsProvider::querySignatureMismatch(Callee->getName(),
+                                                           DeclFTy, FTy, SS);
       CheckFailed(Msg, Call);
       return;
     }

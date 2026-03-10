@@ -21,9 +21,10 @@ void IntrinsicDiagnosticsProvider::registerProvider(
   getProviders().push_back(P);
 }
 
-void IntrinsicDiagnosticsProvider::querySignatureMismatch(
-    StringRef IntrName, FunctionType *DeclFTy, FunctionType *CallFTy,
-    raw_ostream &OS) {
+void IntrinsicDiagnosticsProvider::querySignatureMismatch(StringRef IntrName,
+                                                          FunctionType *DeclFTy,
+                                                          FunctionType *CallFTy,
+                                                          raw_ostream &OS) {
   for (auto *P : getProviders())
     P->getSignatureMismatch(IntrName, DeclFTy, CallFTy, OS);
 }
@@ -42,10 +43,9 @@ void IntrinsicDiagnosticsProvider::queryArgTypeMismatch(StringRef IntrName,
     P->getArgTypeMismatch(IntrName, IFTy, OS);
 }
 
-void IntrinsicDiagnosticsProvider::queryParserMismatch(StringRef IntrName,
-                                                       FunctionType *CallFTy,
-                                                       FunctionType *ExpectedFTy,
-                                                       raw_ostream &OS) {
+void IntrinsicDiagnosticsProvider::queryParserMismatch(
+    StringRef IntrName, FunctionType *CallFTy, FunctionType *ExpectedFTy,
+    raw_ostream &OS) {
   for (auto *P : getProviders())
     P->getParserMismatch(IntrName, CallFTy, ExpectedFTy, OS);
 }
