@@ -49,7 +49,7 @@ class MockedSymStore:
         if self._test.getDebugInfo() == "pdb":
             key = self.get_key_pdb(self._exe)
         self._test.assertIsNotNone(key)
-        self._tmp = tempfile.mkdtemp()
+        self._tmp = self._test.getBuildArtifact("tmp")
         pdb_dir = os.path.join(self._tmp, self._pdb, key)
         os.makedirs(pdb_dir)
         shutil.move(
@@ -63,8 +63,8 @@ class MockedSymStore:
         Clean up and delete original exe so next make won't skip link command.
         """
         shutil.rmtree(self._tmp)
-        self._test.runCmd("settings clear plugin.symbol-locator.symstore")
         os.remove(self._test.getBuildArtifact(self._exe))
+        self._test.runCmd("settings clear plugin.symbol-locator.symstore")
 
 
 class SymStoreLocalTests(TestBase):
@@ -109,7 +109,7 @@ class SymStoreLocalTests(TestBase):
             )
             self.try_breakpoint(exe, ext_lookup=False, should_have_loc=False)
 
-    def test_basic(self):
+    def test_local_dir(self):
         """
         Check that breakpoint resolves with local SymStore.
         """
