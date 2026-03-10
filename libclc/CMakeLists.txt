@@ -32,9 +32,7 @@ option(
 
 # List of all supported targets.
 set( LIBCLC_TARGETS_ALL
-  amdgcn--
   amdgcn-amd-amdhsa-llvm
-  amdgcn-mesa-mesa3d
   clspv--
   clspv64--
   nvptx64--
@@ -125,14 +123,13 @@ foreach( tool IN ITEMS opt llvm-link )
 endforeach()
 
 add_subdirectory(clc/lib/generic)
-add_subdirectory(clc/lib/amdgcn)
 add_subdirectory(clc/lib/amdgpu)
 add_subdirectory(clc/lib/ptx-nvidiacl)
 add_subdirectory(clc/lib/spirv)
 add_subdirectory(clc/lib/clspv)
 
 add_subdirectory(opencl/lib/generic)
-add_subdirectory(opencl/lib/amdgcn)
+add_subdirectory(opencl/lib/amdgpu)
 add_subdirectory(opencl/lib/clspv)
 add_subdirectory(opencl/lib/spirv)
 
@@ -208,7 +205,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   # Collect CLC sources; target-specific sources override generic ones by basename.
   set(_clc_overrides)
   if(ARCH STREQUAL amdgcn)
-    list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES} ${CLC_AMDGCN_SOURCES})
+    list(APPEND _clc_overrides ${CLC_AMDGPU_SOURCES})
   elseif(ARCH STREQUAL nvptx64 AND (OS STREQUAL nvidiacl OR OS STREQUAL cuda))
     list(APPEND _clc_overrides ${CLC_PTX_NVIDIACL_SOURCES})
   elseif(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)

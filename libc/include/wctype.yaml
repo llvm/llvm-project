@@ -8,3 +8,15 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswcntrl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswlower
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t

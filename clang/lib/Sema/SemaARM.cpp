@@ -1627,7 +1627,8 @@ bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
           return BT->getKind() == BuiltinType::SveBool;
         else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
           return VT->getElementType().getCanonicalType() ==
-                 FirstType->getSveEltType(Context);
+                     FirstType->getSveEltType(Context) &&
+                 BT->getKind() != BuiltinType::SveBool;
         else if (VT->getVectorKind() == VectorKind::Generic)
           return Context.getTypeSize(SecondType) ==
                      getSVETypeSize(Context, BT, IsStreaming) &&
