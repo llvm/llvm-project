@@ -19,6 +19,9 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace lldb_private {
 
@@ -444,7 +447,7 @@ public:
   ///     otherwise.
   bool GetContextAtIndex(size_t idx, SymbolContext &sc) const;
 
-  /// Direct reference accessor for a symbol context at index \a idx.
+  /// Direct const reference accessor for a symbol context at index \a idx.
   ///
   /// The index \a idx must be a valid index, no error checking will be done
   /// to ensure that it is valid.
@@ -453,11 +456,18 @@ public:
   ///     The zero based index into the symbol context list.
   ///
   /// \return
-  ///     A const reference to the symbol context to fill in.
-  SymbolContext &operator[](size_t idx) { return m_symbol_contexts[idx]; }
-
+  ///     A const reference to the symbol context.
   const SymbolContext &operator[](size_t idx) const {
     return m_symbol_contexts[idx];
+  }
+
+  /// Replace the symbol in the symbol context at index \a idx.
+  ///
+  /// The symbol field is excluded from the hash and equality used by the
+  /// internal set, so this is the only mutation that is safe to perform on
+  /// an element that is already in the list.
+  void SetSymbolAtIndex(size_t idx, Symbol *symbol) {
+    const_cast<SymbolContext &>(m_symbol_contexts[idx]).symbol = symbol;
   }
 
   bool RemoveContextAtIndex(size_t idx);
@@ -475,10 +485,10 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
                       Target *target) const;
 
-protected:
-  typedef std::vector<SymbolContext>
-      collection; ///< The collection type for the list.
-  typedef collection::const_iterator const_iterator;
+private:
+  using collection =
+      llvm::SetVector<SymbolContext, llvm::SmallVector<SymbolContext>>;
+  using const_iterator = collection::const_iterator;
 
   // Member variables.
   collection m_symbol_contexts; ///< The list of symbol contexts.
@@ -487,10 +497,10 @@ public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }
   const_iterator end() const { return m_symbol_contexts.end(); }
 
-  typedef llvm::iterator_range<collection::const_iterator>
-      SymbolContextIterable;
+  typedef llvm::iterator_range<const_iterator> SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {
-    return SymbolContextIterable(m_symbol_contexts);
+    return SymbolContextIterable(m_symbol_contexts.begin(),
+                                 m_symbol_contexts.end());
   }
 };
 
@@ -501,5 +511,59 @@ bool operator==(const SymbolContextList &lhs, const SymbolContextList &rhs);
 bool operator!=(const SymbolContextList &lhs, const SymbolContextList &rhs);
 
 } // namespace lldb_private
+
+namespace llvm {
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<lldb_private::SymbolContext> {
+  static inline lldb_private::SymbolContext getEmptyKey() {
+    lldb_private::SymbolContext sc;
+    sc.function = DenseMapInfo<lldb_private::Function *>::getEmptyKey();
+    return sc;
+  }
+
+  static inline lldb_private::SymbolContext getTombstoneKey() {
+    lldb_private::SymbolContext sc;
+    sc.function = DenseMapInfo<lldb_private::Function *>::getTombstoneKey();
+    return sc;
+  }
+
+  static unsigned getHashValue(const lldb_private::SymbolContext &sc) {
+    // Hash all fields EXCEPT symbol, since
+    // CompareConsideringPossiblyNullSymbol ignores it.
+    auto line_entry_hash =
+        sc.line_entry.IsValid()
+            ? hash_combine(
+                  sc.line_entry.range.GetBaseAddress().GetFileAddress(),
+                  sc.line_entry.range.GetByteSize(),
+                  sc.line_entry.is_terminal_entry, sc.line_entry.line,
+                  sc.line_entry.column)
+            : hash_value(0);
+    return static_cast<unsigned>(hash_combine(
+        sc.function, sc.module_sp.get(), sc.comp_unit, sc.target_sp.get(),
+        line_entry_hash, sc.variable, sc.block));
+  }
+
+  static bool isEqual(const lldb_private::SymbolContext &lhs,
+                      const lldb_private::SymbolContext &rhs) {
+    // Check for empty/tombstone keys first, since these are invalid pointers we
+    // don't want to accidentally dereference them in
+    // CompareConsideringPossiblyNullSymbol.
+    if (lhs.function == DenseMapInfo<lldb_private::Function *>::getEmptyKey() ||
+        rhs.function == DenseMapInfo<lldb_private::Function *>::getEmptyKey() ||
+        lhs.function ==
+            DenseMapInfo<lldb_private::Function *>::getTombstoneKey() ||
+        rhs.function ==
+            DenseMapInfo<lldb_private::Function *>::getTombstoneKey())
+      return lhs.function == rhs.function;
+
+    return lldb_private::SymbolContext::CompareConsideringPossiblyNullSymbol(
+        lhs, rhs);
+  }
+};
+/// \}
+
+} // namespace llvm
 
 #endif // LLDB_SYMBOL_SYMBOLCONTEXT_H

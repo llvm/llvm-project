@@ -13,8 +13,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -62,8 +61,7 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1111, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1111, [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1111, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -114,8 +112,7 @@ define void @narrow_interleave_tc_16_vf_4_if_4(ptr noalias %data) vscale_range(2
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 16, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 16, [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 16, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -406,6 +403,61 @@ loop.latch:
   %dst.iv.next = getelementptr i8, ptr %dst.iv, i64 16
   %ec = icmp eq i32 %iv, %N
   br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; Test case for https://github.com/llvm/llvm-project/issues/183345.
+define void @interleave_group_with_gather(ptr %indices, ptr %src, i64 %n) {
+; CHECK-LABEL: define void @interleave_group_with_gather(
+; CHECK-SAME: ptr [[INDICES:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OUT_GEP:%.*]] = getelementptr { double, double }, ptr null, i64 [[IV]]
+; CHECK-NEXT:    [[IDX_GEP:%.*]] = getelementptr i32, ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[IDX:%.*]] = load i32, ptr [[IDX_GEP]], align 4
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[SRC_VAL:%.*]] = load double, ptr [[SRC_GEP]], align 8
+; CHECK-NEXT:    [[OUT_M1_0_GEP:%.*]] = getelementptr i8, ptr [[OUT_GEP]], i64 -16
+; CHECK-NEXT:    [[OUT_M1_0:%.*]] = load double, ptr [[OUT_M1_0_GEP]], align 8
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd double 1.000000e+01, [[SRC_VAL]]
+; CHECK-NEXT:    store double [[ADD_0]], ptr [[OUT_M1_0_GEP]], align 8
+; CHECK-NEXT:    [[OUT_M1_1_GEP:%.*]] = getelementptr i8, ptr [[OUT_GEP]], i64 -8
+; CHECK-NEXT:    [[OUT_M1_1:%.*]] = load double, ptr [[OUT_M1_1_GEP]], align 8
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd double 1.000000e+01, [[SRC_VAL]]
+; CHECK-NEXT:    store double [[ADD_1]], ptr [[OUT_M1_1_GEP]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %out.gep = getelementptr { double, double }, ptr null, i64 %iv
+  %idx.gep = getelementptr i32, ptr %indices, i64 %iv
+  %idx = load i32, ptr %idx.gep, align 4
+  %idx.ext = sext i32 %idx to i64
+  %src.gep = getelementptr double, ptr %src, i64 %idx.ext
+  %src.val = load double, ptr %src.gep, align 8
+  %out.m1.0.gep = getelementptr i8, ptr %out.gep, i64 -16
+  %out.m1.0 = load double, ptr %out.m1.0.gep, align 8
+  %add.0 = fadd double 10.0, %src.val
+  store double %add.0, ptr %out.m1.0.gep, align 8
+  %out.m1.1.gep = getelementptr i8, ptr %out.gep, i64 -8
+  %out.m1.1 = load double, ptr %out.m1.1.gep, align 8
+  %add.1 = fadd double 10.0, %src.val
+  store double %add.1, ptr %out.m1.1.gep, align 8
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv, %n
+  br i1 %exit.cond, label %exit, label %loop
 
 exit:
   ret void

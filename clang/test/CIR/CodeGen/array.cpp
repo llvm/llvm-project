@@ -86,6 +86,29 @@ int g[16] = {1, 2, 3, 4, 5, 6, 7, 8};
 // OGCG-SAME:               i32 5, i32 6, i32 7, i32 8],
 // OGCG-SAME:             [8 x i32] zeroinitializer }>
 
+// If we have explicit trailing zeros, those should still be combined into
+// a zero initializer array.
+int h[16] = {1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0};
+
+// CIR:      cir.global external @h = #cir.const_record<{
+// CIR-SAME:   #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME:                     #cir.int<3> : !s32i, #cir.int<4> : !s32i,
+// CIR-SAME:                     #cir.int<5> : !s32i, #cir.int<6> : !s32i,
+// CIR-SAME:                     #cir.int<7> : !s32i, #cir.int<8> : !s32i]>
+// CIR-SAME:                     : !cir.array<!s32i x 8>,
+// CIR-SAME:   #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct1
+
+// LLVM:       @h = global <{ [8 x i32], [8 x i32] }>
+// LLVM-SAME:          <{ [8 x i32]
+// LLVM-SAME:              [i32 1, i32 2, i32 3, i32 4,
+// LLVM-SAME:               i32 5, i32 6, i32 7, i32 8],
+// LLVM-SAME:             [8 x i32] zeroinitializer }>
+
+// OGCG:       @h = global <{ [8 x i32], [8 x i32] }>
+// OGCG-SAME:          <{ [8 x i32]
+// OGCG-SAME:              [i32 1, i32 2, i32 3, i32 4,
+// OGCG-SAME:               i32 5, i32 6, i32 7, i32 8],
+// OGCG-SAME:             [8 x i32] zeroinitializer }>
 
 extern int b[10];
 // CIR: cir.global "private" external @b : !cir.array<!s32i x 10>
@@ -325,7 +348,7 @@ void func8(int arr[10]) {
 // CIR:  %[[TMP_4:.*]] = cir.load{{.*}} %[[ELE_1]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_4]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define{{.*}} void @_Z5func8Pi(ptr %[[ARG:.*]]){{.*}}
+// LLVM: define{{.*}} void @_Z5func8Pi(ptr {{.*}} %[[ARG:.*]]){{.*}}
 // LLVM:  %[[ARR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
 // LLVM:  %[[INIT_2:.*]] = alloca i32, i64 1, align 4
@@ -368,7 +391,7 @@ void func9(int arr[10][5]) {
 // CIR:  %[[TMP_2:.*]] = cir.load{{.*}} %[[ARR_1_2]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define{{.*}} void @_Z5func9PA5_i(ptr %[[ARG:.*]]){{.*}}
+// LLVM: define{{.*}} void @_Z5func9PA5_i(ptr {{.*}} %[[ARG:.*]]){{.*}}
 // LLVM:  %[[ARR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8
@@ -401,7 +424,7 @@ void func10(int *a) {
 // CIR: %[[TMP_2:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define{{.*}} void @_Z6func10Pi(ptr %[[ARG:.*]]){{.*}} {
+// LLVM: define{{.*}} void @_Z6func10Pi(ptr {{.*}} %[[ARG:.*]]){{.*}} {
 // LLVM:  %[[ARR:.*]] = alloca ptr, i64 1, align 8
 // LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8

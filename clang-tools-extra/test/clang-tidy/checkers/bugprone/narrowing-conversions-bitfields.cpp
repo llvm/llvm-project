@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-narrowing-conversions %t \
-// RUN:   -std=c++17 -- -target x86_64-unknown-linux
+// RUN:   -std=c++17-or-later -- -target x86_64-unknown-linux
 
 #define CHAR_BITS 8
 static_assert(sizeof(unsigned int) == 32 / CHAR_BITS);

@@ -94,12 +94,14 @@ RPC_ATTRS constexpr void prepare_arg(rpc::Client::Port &port, Tuple &t,
   if constexpr (rpc::is_marshalled_ptr_v<ArgTy>) {
     // We assume all constant character arrays are C-strings.
     uint64_t size{};
-    if constexpr (rpc::is_same_v<ArgTy, const char *>)
-      size = rpc::string_length(rpc::get<Idx>(t));
-    else if constexpr (rpc::is_span_v<CallArgTy>)
-      size = rpc::get<Idx>(ct).size * sizeof(rpc::remove_pointer_t<ArgTy>);
-    else
-      size = sizeof(rpc::remove_pointer_t<ArgTy>);
+    if (rpc::get<Idx>(t)) {
+      if constexpr (rpc::is_span_v<CallArgTy>)
+        size = rpc::get<Idx>(ct).size * sizeof(rpc::remove_pointer_t<ArgTy>);
+      else if constexpr (rpc::is_same_v<ArgTy, const char *>)
+        size = rpc::string_length(rpc::get<Idx>(t));
+      else
+        size = sizeof(rpc::remove_pointer_t<ArgTy>);
+    }
     port.send_n(rpc::get<Idx>(t), size);
     port.recv([&](rpc::Buffer *buffer, uint32_t) {
       ArgTy val;
@@ -117,7 +119,8 @@ RPC_ATTRS constexpr void prepare_arg(rpc::Server::Port &port, State &&state) {
   if constexpr (rpc::is_marshalled_ptr_v<ArgTy>) {
     auto &ptrs = state.ptrs[rpc::marshalled_index_v<Tuple, Idx>];
     auto &sizes = state.sizes[rpc::marshalled_index_v<Tuple, Idx>];
-    port.recv_n(ptrs, sizes, [](uint64_t size) { return malloc(size); });
+    port.recv_n(ptrs, sizes,
+                [](uint64_t size) { return size ? malloc(size) : 0; });
     port.send([&](rpc::Buffer *buffer, uint32_t id) {
       ArgTy val = static_cast<ArgTy>(ptrs[id]);
       rpc::rpc_memcpy(buffer->data, &val, sizeof(ArgTy));

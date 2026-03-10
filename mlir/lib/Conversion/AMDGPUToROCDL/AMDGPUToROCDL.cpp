@@ -2530,8 +2530,10 @@ struct AMDGPUSwizzleBitModeLowering
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
     unsigned andMask = op.getAndMask();
     unsigned orMask = op.getOrMask();
     unsigned xorMask = op.getXorMask();
@@ -2573,8 +2575,10 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
 
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
 
     SmallVector<Value> permuted;
     for (Value v : decomposed) {
@@ -3694,8 +3698,12 @@ struct AMDGPUTensorLoadStoreOpLowering
       return op->emitOpError("is only supported on gfx1250");
 
     ValueRange desc = adaptor.getDesc();
+    // Create a <v8 x i32> 0 as the fifth argument to match llvm intrinsic. It
+    // will move into the TDM descriptor once it becomes relevant for future use
+    auto v8i32 = VectorType::get(8, rewriter.getI32Type());
+    Value dgroup4 = LLVM::ZeroOp::create(rewriter, op.getLoc(), v8i32);
     rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
-                                          desc[3], /*cachePolicy=*/0,
+                                          desc[3], dgroup4, /*cachePolicy=*/0,
                                           /*alias_scopes=*/nullptr,
                                           /*noalias_scopes=*/nullptr,
                                           /*tbaa=*/nullptr);

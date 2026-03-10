@@ -226,6 +226,9 @@ def MMX_MOVQ64mr : MMXI<0x7F, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
 
 def MMX_X86movdq2q : SDNode<"X86ISD::MOVDQ2Q", SDTypeProfile<1, 1,
                             [SDTCisVT<0, x86mmx>, SDTCisVT<1, v2i64>]>>;
+
+// Copies a 64-bit value from the low word of an XMM vector
+// to an MMX vector.
 def MMX_X86movq2dq : SDNode<"X86ISD::MOVQ2DQ", SDTypeProfile<1, 1,
                             [SDTCisVT<0, v2i64>, SDTCisVT<1, x86mmx>]>>;
 

@@ -2638,6 +2638,7 @@ class N2VLInt<bits<2> op24_23, bits<2> op21_20, bits<2> op19_18,
         [(set QPR:$Vd, (TyQ (IntOp (TyD DPR:$Vm))))]>;
 
 // 2-register shuffles (VTRN/VZIP/VUZP), both double- and quad-register.
+let hasSideEffects = 0 in {
 class N2VDShuffle<bits<2> op19_18, bits<5> op11_7, string OpcodeStr, string Dt>
   : N2V<0b11, 0b11, op19_18, 0b10, op11_7, 0, 0, (outs DPR:$Vd, DPR:$Vm),
         (ins DPR:$src1, DPR:$src2), IIC_VPERMD,
@@ -2648,6 +2649,7 @@ class N2VQShuffle<bits<2> op19_18, bits<5> op11_7,
   : N2V<0b11, 0b11, op19_18, 0b10, op11_7, 1, 0, (outs QPR:$Vd, QPR:$Vm),
         (ins QPR:$src1, QPR:$src2), itin, OpcodeStr, Dt, "$Vd, $Vm",
         "$src1 = $Vd, $src2 = $Vm", []>;
+}
 
 // Basic 3-register operations: double- and quad-register.
 class N3VD<bit op24, bit op23, bits<2> op21_20, bits<4> op11_8, bit op4,
@@ -4867,6 +4869,7 @@ multiclass DOTI<string opc, string dt, bit Q, bit U, RegisterClass Ty,
     let Constraints = "$dst = $Vd";
     let Predicates = [HasDotProd];
     let DecoderNamespace = "VFPV8";
+    let hasSideEffects = 0;
   }
 
   def : Pat<
@@ -5087,9 +5090,11 @@ multiclass N3VCP8ComplexTiedLane<bit op4, string OpcodeStr> {
   }
 }
 
+let hasSideEffects = 0 in {
 defm VCMLA : N3VCP8ComplexTied<1, 0, "vcmla">;
 defm VCADD : N3VCP8ComplexOdd<1, 0, 0, "vcadd">;
 defm VCMLA : N3VCP8ComplexTiedLane<0, "vcmla">;
+}
 
 let Predicates = [HasNEON,HasV8_3a,HasFullFP16] in {
   def : Pat<(v4f16 (int_arm_neon_vcadd_rot90 (v4f16 DPR:$Rn), (v4f16 DPR:$Rm))),
@@ -5627,6 +5632,8 @@ def : Pat<(v2i64 (or (and QPR:$Vn, QPR:$Vd),
           (VBSPq QPR:$Vd, QPR:$Vn, QPR:$Vm)>;
 }
 
+let hasSideEffects = 0 in {
+
 //   VBSL     : Vector Bitwise Select
 def  VBSLd    : N3VX<1, 0, 0b01, 0b0001, 0, 1, (outs DPR:$Vd),
                      (ins DPR:$src1, DPR:$Vn, DPR:$Vm),
@@ -5665,6 +5672,8 @@ def  VBITq    : N3VX<1, 0, 0b10, 0b0001, 1, 1,
                      N3RegFrm, IIC_VBINiQ,
                      "vbit", "$Vd, $Vn, $Vm", "$src1 = $Vd",
                      []>;
+
+} // hasSideEffects = 0
 
 // Vector Absolute Differences.
 
@@ -9233,6 +9242,7 @@ multiclass BF16VDOTI<bit Q, RegisterClass RegTy, string opc, ValueType AccumTy,
     let Constraints = "$dst = $Vd";
     let AsmString = !strconcat(opc, ".bf16", "\t$Vd, $Vn, $Vm$lane");
     let DecoderNamespace = "VFPV8";
+    let hasSideEffects = 0;
   }
 
   def : Pat<
@@ -9289,6 +9299,7 @@ multiclass VBF16MALQI<bit T, string suffix, SDPatternOperator OpNode> {
   let Inst{3} = idx{0};
   let Constraints = "$dst = $Vd";
   let DecoderNamespace = "VFPV8";
+  let hasSideEffects = 0;
   }
 
   def : Pat<
@@ -9306,8 +9317,9 @@ multiclass VBF16MALQI<bit T, string suffix, SDPatternOperator OpNode> {
 defm VBF16MALTQI: VBF16MALQI<1, "t", int_arm_neon_bfmlalt>;
 defm VBF16MALBQI: VBF16MALQI<0, "b", int_arm_neon_bfmlalb>;
 
+let hasSideEffects = 0 in
 def BF16_VCVT :  N2V<0b11, 0b11, 0b01, 0b10, 0b01100, 1, 0,
                     (outs DPR:$Vd), (ins QPR:$Vm),
                     NoItinerary, "vcvt", "bf16.f32", "$Vd, $Vm", "", []>;
-}
+} // Predicates = [HasBF16, HasNEON]
 // End of BFloat16 instructions
