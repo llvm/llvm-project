@@ -6084,7 +6084,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
   if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue()))) ||
       match(Op, m_FPExt(m_FMul(m_VPValue(), m_VPValue())))) {
-    auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
+    auto *CastRecipe = dyn_cast<VPWidenCastRecipe>(Op);
     if (!CastRecipe)
       return std::nullopt;
     auto CastOp = static_cast<Instruction::CastOps>(CastRecipe->getOpcode());
