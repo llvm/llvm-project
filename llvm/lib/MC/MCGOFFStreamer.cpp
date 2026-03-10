@@ -35,9 +35,10 @@ MCGOFFStreamer::~MCGOFFStreamer() = default;
 
 void MCGOFFStreamer::finishImpl() {
   // The root SD symbol.
-  MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(
-                            getContext().getObjectFileInfo()->getTextSection())
-                            ->getParent();
+  MCSectionGOFF *RootSD =
+      static_cast<MCSectionGOFF *>(
+          getContext().getObjectFileInfo()->getTextSection())
+          ->getParent();
   // Special ED symbol required for external data references.
   MCSectionGOFF *ExternalED = getContext().getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,

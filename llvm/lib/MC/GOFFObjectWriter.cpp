@@ -304,7 +304,8 @@ class GOFFWriter {
 
 public:
   GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm, MCSectionGOFF *RootSD,
-             MCSectionGOFF *ExternalED, std::vector<GOFFRelocationEntry> &Relocations);
+             MCSectionGOFF *ExternalED,
+             std::vector<GOFFRelocationEntry> &Relocations);
   uint64_t writeObject();
 };
 } // namespace
