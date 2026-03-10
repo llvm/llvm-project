@@ -1624,31 +1624,6 @@ Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
   return M.getTargetTriple().getArch() == getTripleArch();
 }
 
-Expected<bool> GenericPluginTy::checkOffloadBinaryImage(StringRef Image) const {
-  // Check if the image has OffloadBinary magic bytes
-  if (identify_magic(Image) != file_magic::offload_binary)
-    return false;
-
-  // Parse the OffloadBinary to check triple compatibility
-  MemoryBufferRef Buffer(Image, "offload_binary");
-  auto BinariesOrErr = OffloadBinary::create(Buffer);
-  if (!BinariesOrErr)
-    return BinariesOrErr.takeError();
-
-  // Check if any of the binaries match this plugin's architecture
-  auto &Binaries = *BinariesOrErr;
-  Triple::ArchType PluginArch = getTripleArch();
-
-  for (const auto &Binary : Binaries) {
-    StringRef Triple = Binary->getTriple();
-    llvm::Triple T(Triple);
-    if (T.getArch() == PluginArch)
-      return true;
-  }
-
-  return false;
-}
-
 int32_t GenericPluginTy::is_initialized() const { return Initialized; }
 
 int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {

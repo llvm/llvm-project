@@ -1358,10 +1358,6 @@ struct GenericPluginTy {
   /// target architecture.
   Expected<bool> checkBitcodeImage(StringRef Image) const;
 
-  /// Return true if the \p Image has OffloadBinary magic bytes.
-  /// The actual compatibility and parsing will be handled by the runtime.
-  Expected<bool> checkOffloadBinaryImage(StringRef Image) const;
-
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So
   /// we could not move this function into GenericDeviceTy.
