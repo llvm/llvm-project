@@ -1221,9 +1221,9 @@ def _main():
         if args.format == "binary":
             with open(args.output, "wb") as output:
                 section.write_binary(output)
-        else:  # args.format == "c"
+        else:
             with open(args.output, "w") as output:
-                section.write_source(output)
+                section.write_source(output, language=args.format)
     elif args.disassemble:
         if args.output:
             with (
@@ -1317,11 +1317,11 @@ if __name__ == "__main__":
                 ],
             )
             out = io.StringIO()
-            section.write_source(out)
+            section.write_source(out, language="c")
             src = out.getvalue()
 
             self.assertIn("__attribute__((used, section(FORMATTER_SECTION)))", src)
-            self.assertIn("unsigned char _Account_synthetic[] =", src)
+            self.assertIn("unsigned char _Account_formatter[] =", src)
             self.assertIn('"\\x01"', src)  # version
             self.assertIn('"\\x15"', src)  # record size (21)
             self.assertIn('"\\x07"', src)  # type name size (7)
@@ -1340,7 +1340,7 @@ if __name__ == "__main__":
 
             # Non-identifier characters in the type name are replaced with '_'.
             out2 = io.StringIO()
-            BytecodeSection("std::vector<int>", 0, []).write_source(out2)
-            self.assertIn("_std__vector_int__synthetic[] =", out2.getvalue())
+            BytecodeSection("std::vector<int>", 0, []).write_source(out2, language="c")
+            self.assertIn("_std__vector_int__formatter[] =", out2.getvalue())
 
     unittest.main(argv=[__file__])
