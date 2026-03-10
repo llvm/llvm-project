@@ -23,6 +23,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  iswcntrl_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswcntrl_test.cpp
+  DEPENDS
+    libc.src.wctype.iswcntrl
+)
+
+add_libc_test(  
   iswlower_test
   SUITE
     libc_wctype_unittests
