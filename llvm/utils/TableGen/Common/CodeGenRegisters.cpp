@@ -844,24 +844,21 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
 bool CodeGenRegisterClass::Key::operator<(
     const CodeGenRegisterClass::Key &B) const {
   assert(Members && B.Members);
-  if (!IgnoreArtificialMembers)
-    return std::tie(*Members, RSI) < std::tie(*B.Members, B.RSI);
 
-  // Do the same lexicographical comparison, but ignoring
-  // artificial registers.
+  // Lexicographical comparison. Ignores artificial registers when asked.
   auto IA = Members->begin(), EA = Members->end();
   auto IB = B.Members->begin(), EB = B.Members->end();
   for (;;) {
-    while (IA != EA && (*IA)->Artificial)
+    while (IgnoreArtificialMembers && IA != EA && (*IA)->Artificial)
       ++IA;
-    while (IB != EB && (*IB)->Artificial)
+    while (IgnoreArtificialMembers && IB != EB && (*IB)->Artificial)
       ++IB;
     if (IA == EA && IB == EB)
       break;
     if (IA == EA || IB == EB)
       return IA == EA;
-    if (*IA != *IB)
-      return *IA < *IB;
+    if (**IA != **IB)
+      return **IA < **IB;
     ++IA;
     ++IB;
   }
