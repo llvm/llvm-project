@@ -38,6 +38,20 @@ class MDBuilder {
   LLVMContext &Context;
 
 public:
+  /// The weight for a branch taken with high probability.
+  ///
+  /// This is the weight used for Likely branches, for example, as used by
+  /// __builtin_expect* or when profile indicates a branch is taken with very
+  /// high probability.
+  static constexpr uint32_t kLikelyBranchWeight = (1U << 20) - 1;
+
+  /// The weight for a branch taken with low probability.
+  ///
+  /// This is the weight used for unlikely branches, for example, as used by
+  /// __builtin_expect* or when profile indicates a branch is taken with very
+  /// low probability.
+  static constexpr uint32_t kUnlikelyBranchWeight = 1;
+
   MDBuilder(LLVMContext &context) : Context(context) {}
 
   /// Return the given string as metadata.

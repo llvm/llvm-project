@@ -4695,6 +4695,27 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
         return true;
     break;
 
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue InVec = Val.getOperand(0);
+    SDValue EltNo = Val.getOperand(1);
+    EVT VecVT = InVec.getValueType();
+
+    // Skip scalable vectors or implicit extensions.
+    if (VecVT.isScalableVector() ||
+        OpVT.getScalarSizeInBits() != VecVT.getScalarSizeInBits())
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
+    return isKnownToBeAPowerOfTwo(InVec, DemandedSrcElts, OrZero, Depth + 1);
+  }
+
   case ISD::AND: {
     // Looking for `x & -x` pattern:
     // If x == 0:
@@ -4702,22 +4723,21 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     // If x != 0:
     //    x & -x -> non-zero pow2
     // so if we find the pattern return whether we know `x` is non-zero.
-    // TODO OrZero handling
     SDValue X;
     if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
-      return isKnownNeverZero(X, Depth);
+      return OrZero || isKnownNeverZero(X, DemandedElts, Depth);
     break;
   }
 
   case ISD::SHL: {
     // A left-shift of a constant one will have exactly one bit set because
     // shifting the bit off the end is undefined.
-    auto *C = isConstOrConstSplat(Val.getOperand(0));
+    auto *C = isConstOrConstSplat(Val.getOperand(0), DemandedElts);
     if (C && C->getAPIntValue() == 1)
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
-                                  Depth + 1) &&
-           isKnownNeverZero(Val, Depth);
+    return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
   }
 
   case ISD::SRL: {
@@ -4733,7 +4753,11 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
 
   case ISD::ROTL:
   case ISD::ROTR:
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
+  case ISD::BSWAP:
+  case ISD::BITREVERSE:
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
                                   Depth + 1);
 
   case ISD::SMIN:
@@ -4757,11 +4781,33 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
                                   Depth + 1);
 
   case ISD::VSCALE:
-    // vscale(power-of-two) is a power-of-two for some targets
-    if (getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
-        isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false, Depth + 1))
-      return true;
-    break;
+    // vscale(power-of-two) is a power-of-two
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
+
+  case ISD::VECTOR_SHUFFLE: {
+    assert(!Val.getValueType().isScalableVector());
+    // Demanded elements with undef shuffle mask elements are unknown
+    // - we cannot guarantee they are a power of two, so return false.
+    APInt DemandedLHS, DemandedRHS;
+    const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Val);
+    assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS))
+      return false;
+
+    // All demanded elements from LHS must be known power of two.
+    if (!!DemandedLHS && !isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedLHS,
+                                                 OrZero, Depth + 1))
+      return false;
+
+    // All demanded elements from RHS must be known power of two.
+    if (!!DemandedRHS && !isKnownToBeAPowerOfTwo(Val.getOperand(1), DemandedRHS,
+                                                 OrZero, Depth + 1))
+      return false;
+
+    return true;
+  }
   }
 
   // More could be done here, though the above checks are enough
@@ -6147,15 +6193,36 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
 }
 
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
+  EVT VT = Op.getValueType();
+
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+
+  return isKnownNeverZero(Op, DemandedElts, Depth);
+}
+
+bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
+                                    unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
+
+  EVT OpVT = Op.getValueType();
+  unsigned BitWidth = OpVT.getScalarSizeInBits();
 
   assert(!Op.getValueType().isFloatingPoint() &&
          "Floating point types unsupported - use isKnownNeverZeroFloat");
 
   // If the value is a constant, we can obviously see if it is a zero or not.
-  if (ISD::matchUnaryPredicate(Op,
-                               [](ConstantSDNode *C) { return !C->isZero(); }))
+  auto IsNeverZero = [BitWidth](const ConstantSDNode *C) {
+    APInt V = C->getAPIntValue().zextOrTrunc(BitWidth);
+    return !V.isZero();
+  };
+
+  if (ISD::matchUnaryPredicate(Op, IsNeverZero))
     return true;
 
   // TODO: Recognize more cases here. Most of the cases are also incomplete to
@@ -6164,69 +6231,111 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   default:
     break;
 
+  case ISD::BUILD_VECTOR:
+    // Are all operands of a build vector constant non-zero?
+    if (all_of(enumerate(Op->ops()), [&](auto P) {
+          auto *C = dyn_cast<ConstantSDNode>(P.value());
+          return !DemandedElts[P.index()] || (C && IsNeverZero(C));
+        }))
+      return true;
+    break;
+
+  case ISD::SPLAT_VECTOR:
+    // Is the operand of a splat vector a constant non-zero?
+    if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(0)))
+      if (IsNeverZero(C))
+        return true;
+    break;
+
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue InVec = Op.getOperand(0);
+    SDValue EltNo = Op.getOperand(1);
+    EVT VecVT = InVec.getValueType();
+
+    // Skip scalable vectors or implicit extensions.
+    if (VecVT.isScalableVector() ||
+        OpVT.getScalarSizeInBits() != VecVT.getScalarSizeInBits())
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    return isKnownNeverZero(InVec, DemandedSrcElts, Depth + 1);
+  }
+
   case ISD::OR:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::VSELECT:
   case ISD::SELECT:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(2), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(2), DemandedElts, Depth + 1);
 
   case ISD::SHL: {
     if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits ValKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // 1 << X is never zero.
     if (ValKnown.One[0])
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1)
+                       .getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.shl(MaxCnt).isZero())
       return true;
     break;
   }
+
   case ISD::UADDSAT:
   case ISD::UMAX:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+
+  case ISD::UMIN:
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
     // For smin/smax: If either operand is known negative/positive
     // respectively we don't need the other to be known at all.
   case ISD::SMAX: {
-    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (Op1.isStrictlyPositive())
       return true;
 
-    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op0.isStrictlyPositive())
       return true;
 
     if (Op1.isNonZero() && Op0.isNonZero())
       return true;
 
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   }
   case ISD::SMIN: {
-    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (Op1.isNegative())
       return true;
 
-    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op0.isNegative())
       return true;
 
     if (Op1.isNonZero() && Op0.isNonZero())
       return true;
 
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   }
-  case ISD::UMIN:
-    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
-           isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::ROTL:
   case ISD::ROTR:
@@ -6234,17 +6343,19 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   case ISD::BSWAP:
   case ISD::CTPOP:
   case ISD::ABS:
-    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::SRA:
   case ISD::SRL: {
     if (Op->getFlags().hasExact())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits ValKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (ValKnown.isNegative())
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1)
+                       .getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.lshr(MaxCnt).isZero())
       return true;
@@ -6260,19 +6371,19 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
 
   case ISD::ADD:
     if (Op->getFlags().hasNoUnsignedWrap())
-      if (isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-          isKnownNeverZero(Op.getOperand(0), Depth + 1))
+      if (isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+          isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1))
         return true;
     // TODO: There are a lot more cases we can prove for add.
     break;
 
   case ISD::SUB: {
     if (isNullConstant(Op.getOperand(0)))
-      return isKnownNeverZero(Op.getOperand(1), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1);
 
-    std::optional<bool> ne =
-        KnownBits::ne(computeKnownBits(Op.getOperand(0), Depth + 1),
-                      computeKnownBits(Op.getOperand(1), Depth + 1));
+    std::optional<bool> ne = KnownBits::ne(
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1),
+        computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1));
     return ne && *ne;
   }
 
@@ -6285,7 +6396,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
 
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
-    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
   case ISD::VSCALE: {
     const Function &F = getMachineFunction().getFunction();
     const APInt &Multiplier = Op.getConstantOperandAPInt(0);
@@ -7612,12 +7723,8 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);
     case ISD::FMINNUM:
-      if (C1.isSignaling() || C2.isSignaling())
-        return SDValue();
       return getConstantFP(minnum(C1, C2), DL, VT);
     case ISD::FMAXNUM:
-      if (C1.isSignaling() || C2.isSignaling())
-        return SDValue();
       return getConstantFP(maxnum(C1, C2), DL, VT);
     case ISD::FMINIMUM:
       return getConstantFP(minimum(C1, C2), DL, VT);
@@ -9353,87 +9460,53 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrstr(SDValue Chain,
                                      RTLIB::STRSTR, this, TLI);
 }
 
+std::pair<SDValue, SDValue> SelectionDAG::getMemccpy(SDValue Chain,
+                                                     const SDLoc &dl,
+                                                     SDValue Dst, SDValue Src,
+                                                     SDValue C, SDValue Size,
+                                                     const CallInst *CI) {
+  PointerType *PT = PointerType::getUnqual(*getContext());
+
+  TargetLowering::ArgListTy Args = {
+      {Dst, PT},
+      {Src, PT},
+      {C, Type::getInt32Ty(*getContext())},
+      {Size, getDataLayout().getIntPtrType(*getContext())}};
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::MEMCCPY, this, TLI);
+}
+
 std::pair<SDValue, SDValue>
 SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
                         SDValue Mem1, SDValue Size, const CallInst *CI) {
-  RTLIB::LibcallImpl MemcmpImpl = Libcalls->getLibcallImpl(RTLIB::MEMCMP);
-  if (MemcmpImpl == RTLIB::Unsupported)
-    return {};
-
   PointerType *PT = PointerType::getUnqual(*getContext());
   TargetLowering::ArgListTy Args = {
       {Mem0, PT},
       {Mem1, PT},
       {Size, getDataLayout().getIntPtrType(*getContext())}};
-
-  TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall =
-      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
-
-  CLI.setDebugLoc(dl)
-      .setChain(Chain)
-      .setLibCallee(
-          Libcalls->getLibcallImplCallingConv(MemcmpImpl),
-          Type::getInt32Ty(*getContext()),
-          getExternalSymbol(MemcmpImpl, TLI->getPointerTy(getDataLayout())),
-          std::move(Args))
-      .setTailCall(IsTailCall);
-
-  return TLI->LowerCallTo(CLI);
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::MEMCMP, this, TLI);
 }
 
 std::pair<SDValue, SDValue> SelectionDAG::getStrcpy(SDValue Chain,
                                                     const SDLoc &dl,
                                                     SDValue Dst, SDValue Src,
                                                     const CallInst *CI) {
-  RTLIB::LibcallImpl LCImpl = Libcalls->getLibcallImpl(RTLIB::STRCPY);
-  if (LCImpl == RTLIB::Unsupported)
-    return {};
-
   PointerType *PT = PointerType::getUnqual(*getContext());
   TargetLowering::ArgListTy Args = {{Dst, PT}, {Src, PT}};
-
-  TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall =
-      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/true);
-
-  CLI.setDebugLoc(dl)
-      .setChain(Chain)
-      .setLibCallee(
-          Libcalls->getLibcallImplCallingConv(LCImpl), CI->getType(),
-          getExternalSymbol(LCImpl, TLI->getPointerTy(getDataLayout())),
-          std::move(Args))
-      .setTailCall(IsTailCall);
-
-  return TLI->LowerCallTo(CLI);
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::STRCPY, this, TLI);
 }
 
 std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
                                                     const SDLoc &dl,
                                                     SDValue Src,
                                                     const CallInst *CI) {
-  RTLIB::LibcallImpl StrlenImpl = Libcalls->getLibcallImpl(RTLIB::STRLEN);
-  if (StrlenImpl == RTLIB::Unsupported)
-    return {};
-
   // Emit a library call.
   TargetLowering::ArgListTy Args = {
       {Src, PointerType::getUnqual(*getContext())}};
-
-  TargetLowering::CallLoweringInfo CLI(*this);
-  bool IsTailCall =
-      isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg*/ true);
-
-  CLI.setDebugLoc(dl)
-      .setChain(Chain)
-      .setLibCallee(Libcalls->getLibcallImplCallingConv(StrlenImpl),
-                    CI->getType(),
-                    getExternalSymbol(
-                        StrlenImpl, TLI->getProgramPointerTy(getDataLayout())),
-                    std::move(Args))
-      .setTailCall(IsTailCall);
-
-  return TLI->LowerCallTo(CLI);
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::STRLEN, this, TLI);
 }
 
 SDValue SelectionDAG::getMemcpy(

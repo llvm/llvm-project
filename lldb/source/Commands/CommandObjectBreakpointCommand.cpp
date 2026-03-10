@@ -611,8 +611,8 @@ protected:
                                     result.GetOutputStream().GetIndentLevel() +
                                         2);
             } else {
-              result.AppendMessageWithFormat(
-                  "Breakpoint %s does not have an associated command.\n",
+              result.AppendMessageWithFormatv(
+                  "Breakpoint {0} does not have an associated command.",
                   id_str.GetData());
             }
           }

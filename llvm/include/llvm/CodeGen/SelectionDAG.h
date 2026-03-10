@@ -1292,6 +1292,12 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  /// Lower a memccpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue>
+  getMemccpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+             SDValue C, SDValue Size, const CallInst *CI);
+
   /// Lower a memcmp operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
@@ -2394,6 +2400,12 @@ public:
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Test whether the given SDValue is known to contain non-zero value(s).
+  /// The DemandedElts argument limits the check to the requested vector
+  /// elements.
+  LLVM_ABI bool isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
+                                 unsigned Depth = 0) const;
 
   /// Test whether the given float value is known to be positive. +0.0, +inf and
   /// +nan are considered positive, -0.0, -inf and -nan are not.

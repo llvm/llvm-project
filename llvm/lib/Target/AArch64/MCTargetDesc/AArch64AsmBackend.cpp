@@ -81,8 +81,6 @@ public:
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
@@ -495,15 +493,6 @@ void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     else
       Data[3] |= (1 << 6);
   }
-}
-
-bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                             uint64_t Value) const {
-  // FIXME:  This isn't correct for AArch64. Just moving the "generic" logic
-  // into the targets for now.
-  //
-  // Relax if the value is too big for a (signed) i8.
-  return int64_t(Value) != int64_t(int8_t(Value));
 }
 
 bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++23 %s misc-unconventional-assign-operator %t
+// RUN: %check_clang_tidy -std=c++23-or-later %s misc-unconventional-assign-operator %t
 
 struct BadArgument {
   BadArgument &operator=(this BadArgument& self, BadArgument &);

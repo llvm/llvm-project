@@ -523,4 +523,89 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
       },
       instance.u);
 }
+
+bool IsLoopTransforming(llvm::omp::Directive dir) {
+  switch (dir) {
+  // TODO case llvm::omp::Directive::OMPD_flatten:
+  case llvm::omp::Directive::OMPD_fuse:
+  case llvm::omp::Directive::OMPD_interchange:
+  case llvm::omp::Directive::OMPD_nothing:
+  case llvm::omp::Directive::OMPD_reverse:
+  // TODO case llvm::omp::Directive::OMPD_split:
+  case llvm::omp::Directive::OMPD_stripe:
+  case llvm::omp::Directive::OMPD_tile:
+  case llvm::omp::Directive::OMPD_unroll:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+
+  if (beginSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
+    return parser::omp::FindClause(
+               beginSpec, llvm::omp::Clause::OMPC_partial) == nullptr;
+  }
+  return false;
+}
+
+std::optional<int64_t> GetNumGeneratedNestsFrom(
+    const parser::ExecutionPartConstruct &epc,
+    std::optional<int64_t> nestedCount) {
+  if (parser::Unwrap<parser::DoConstruct>(epc)) {
+    return 1;
+  }
+
+  auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(epc))};
+  const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
+  llvm::omp::Directive dir{beginSpec.DirId()};
+  if (!IsLoopTransforming(dir)) {
+    return 0;
+  }
+
+  // TODO: Handle split, apply.
+  if (IsFullUnroll(omp)) {
+    return std::nullopt;
+  }
+
+  if (dir == llvm::omp::Directive::OMPD_fuse) {
+    // If there are no loops nested inside of FUSE, then the construct is
+    // invalid. This case will be diagnosed when analyzing the body of the FUSE
+    // construct itself, not when checking a construct in which the FUSE is
+    // nested.
+    // Returning std::nullopt prevents error messages caused by the same
+    // problem from being emitted for every enclosing loop construct, for
+    // example:
+    //   !$omp do         ! error: this should contain a loop (superfluous)
+    //   !$omp fuse       ! error: this should contain a loop
+    //   !$omp end fuse
+    if (!nestedCount || *nestedCount == 0) {
+      return std::nullopt;
+    }
+    auto *clause{
+        parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_looprange)};
+    if (!clause) {
+      return 1;
+    }
+
+    auto *loopRange{parser::Unwrap<parser::OmpLooprangeClause>(*clause)};
+    std::optional<int64_t> count{GetIntValue(std::get<1>(loopRange->t))};
+    if (!count || *count <= 0) {
+      return std::nullopt;
+    }
+    if (*count <= *nestedCount) {
+      return 1 + *nestedCount - *count;
+    }
+    return std::nullopt;
+  }
+
+  if (dir == llvm::omp::Directive::OMPD_nothing) {
+    return nestedCount;
+  }
+
+  // For every other loop construct return 1.
+  return 1;
+}
 } // namespace Fortran::semantics::omp

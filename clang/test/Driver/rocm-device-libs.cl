@@ -9,6 +9,12 @@
 // RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,COMMON-DEFAULT,GFX900,WAVE64 %s
 
 
+// RUN: %clang -### -target amdgcn-amd-amdhsa \
+// RUN:   -x cl -mcpu=gfx900 \
+// RUN:   --rocm-path=%S/Inputs/rocm-no-math-opt-libs \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,GFX900,WAVE64 %s
+
 
 // Make sure the different denormal default is respected for gfx8
 // RUN: %clang -### -target amdgcn-amd-amdhsa \
@@ -158,34 +164,29 @@
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/opencl.bc"
-// ASAN-SAME: "-mlink-bitcode-file" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
+// ASAN-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ocml.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ockl.bc"
 
 
 // COMMON-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_off.bc"
 // COMMON-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_off.bc"
-// COMMON-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 
 // COMMON-FINITE-ONLY-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_off.bc"
 // COMMON-FINITE-ONLY-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_on.bc"
-// COMMON-FINITE-ONLY-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 
 // COMMON-CORRECT-SQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_off.bc"
 // COMMON-CORRECT-SQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_off.bc"
-// COMMON-CORRECT-SQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_on.bc"
 
 
 // COMMON-FAST-RELAXED-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_on.bc"
 // COMMON-FAST-RELAXED-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_on.bc"
-// COMMON-FAST-RELAXED-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 
 // COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_on.bc"
 // COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_off.bc"
-// COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 // ASAN-SAME: "-fsanitize=address"
 
