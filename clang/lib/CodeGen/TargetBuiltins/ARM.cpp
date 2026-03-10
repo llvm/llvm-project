@@ -6220,10 +6220,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         ICmpInst::FCMP_OLT, "vcltz");
 
   case NEON::BI__builtin_neon_vceqzd_u64: {
-    Ops[0] = Builder.CreateBitCast(Ops[0], Int64Ty);
-    Ops[0] =
-        Builder.CreateICmpEQ(Ops[0], llvm::Constant::getNullValue(Int64Ty));
-    return Builder.CreateSExt(Ops[0], Int64Ty, "vceqzd");
+    return EmitAArch64CompareBuiltinExpr(
+        Ops[0], ConvertType(E->getCallReturnType(getContext())),
+        ICmpInst::ICMP_EQ, "vceqzd");
   }
   case NEON::BI__builtin_neon_vceqd_f64:
   case NEON::BI__builtin_neon_vcled_f64:

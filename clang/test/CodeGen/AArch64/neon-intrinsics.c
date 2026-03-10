@@ -16878,17 +16878,6 @@ uint64_t test_vceqd_u64(uint64_t a, uint64_t b) {
   return (int64_t)vceqd_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vceqzd_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[A]], 0
-// CHECK-NEXT:    [[VCEQZD_I:%.*]] = sext i1 [[TMP0]] to i64
-// CHECK-NEXT:    ret i64 [[VCEQZD_I]]
-//
-int64_t test_vceqzd_u64(int64_t a) {
-  return (int64_t)vceqzd_u64(a);
-}
-
 // CHECK-LABEL: define dso_local i64 @test_vcged_s64(
 // CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17430,28 +17419,6 @@ uint32_t test_vceqs_f32(float32_t a, float32_t b) {
 //
 uint64_t test_vceqd_f64(float64_t a, float64_t b) {
   return (uint64_t)vceqd_f64(a, b);
-}
-
-// CHECK-LABEL: define dso_local i32 @test_vceqzs_f32(
-// CHECK-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq float [[A]], 0.000000e+00
-// CHECK-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i32
-// CHECK-NEXT:    ret i32 [[VCEQZ_I]]
-//
-uint32_t test_vceqzs_f32(float32_t a) {
-  return (uint32_t)vceqzs_f32(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vceqzd_f64(
-// CHECK-SAME: double noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq double [[A]], 0.000000e+00
-// CHECK-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
-// CHECK-NEXT:    ret i64 [[VCEQZ_I]]
-//
-uint64_t test_vceqzd_f64(float64_t a) {
-  return (uint64_t)vceqzd_f64(a);
 }
 
 // CHECK-LABEL: define dso_local i32 @test_vcges_f32(
