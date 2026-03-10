@@ -150,6 +150,41 @@ func.func @if_load_into_store(%arg1 : i1) -> i32 {
 
 // -----
 
+// Check promotion of a load followed by a nested if containing a store of
+// the loaded value.
+
+// CHECK-LABEL: func.func @if_load_then_nested_if_store
+// CHECK-SAME: (%[[COND0:.*]]: i1, %[[COND1:.*]]: i1)
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.if %[[COND0]] -> (i32) {
+// CHECK:   %[[INNER:.*]] = scf.if %[[COND1]] -> (i32) {
+// CHECK:     scf.yield %[[C5]] : i32
+// CHECK:   } else {
+// CHECK:     scf.yield %[[C5]] : i32
+// CHECK:   }
+// CHECK:   scf.yield %[[INNER]] : i32
+// CHECK: } else {
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @if_load_then_nested_if_store(%cond0: i1, %cond1: i1) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.if %cond0 {
+    %loaded = memref.load %alloca[] : memref<i32>
+    scf.if %cond1 {
+      memref.store %loaded, %alloca[] : memref<i32>
+      scf.yield
+    }
+    scf.yield
+  }
+  %load = memref.load %alloca[] : memref<i32>
+  return %load : i32
+}
+
+// -----
+
 // Check load promotion through execute_region.
 
 func.func private @use(i32)
