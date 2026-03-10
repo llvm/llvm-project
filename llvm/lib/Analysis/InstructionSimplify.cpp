@@ -4411,9 +4411,13 @@ static bool areTheseAllTheValuesThatMayCausePoisonInValue(
     return true;
 
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
+    // Having a poison generating annotation means that it can be poison
+    // without any of the given values being poison.
     if (I->hasPoisonGeneratingAnnotations())
       return false;
 
+    // Filtering out the assumed poison values, so only the relevant ones are
+    // brought forward to the next recursive call.
     SmallVector<const Value *, 2> ValuesImplyingPoison;
     copy_if(ValuesAssumedPoison, std::back_inserter(ValuesImplyingPoison),
             [V](const auto *P) { return impliesPoison(P, V); });
@@ -4431,6 +4435,11 @@ static bool areTheseAllTheValuesThatMayCausePoisonInValue(
                         ValuesImplyingPoison, Op, Depth + 1);
                   });
   }
+
+  // A constant can't cause poison, unless it is itself a poison.
+  if (const Constant *C = dyn_cast<Constant>(V))
+    return !C->containsUndefOrPoisonElement();
+
   return false;
 }
 
@@ -4603,7 +4612,7 @@ static Value *simplifyWithOpsReplaced(Value *V,
         // refinment.
         if (NewOps[1] == NewOps[2] &&
             areTheseAllTheValuesThatMayCausePoisonInValue(
-                {SI->getFalseValue(), SI->getTrueValue()}, Cond))
+                {SI->getFalseValue(), SI->getTrueValue(), NewOps[1]}, Cond))
           SimplifiedValue = NewOps[1];
 
         // TODO: Implement more non refining select optimizations here!

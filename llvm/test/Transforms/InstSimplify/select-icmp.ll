@@ -338,11 +338,9 @@ define i32 @selectICmpSelectInArmSimplifiedDueToSameValues(i32 %1, i32 %2, i1 %s
 
 define i32 @selectICmpSelectInArmSimplifiedNoPoisonFlagOnCondUseDefChain(i32 %1, i32 %2, i1 %scond) {
 ; CHECK-LABEL: @selectICmpSelectInArmSimplifiedNoPoisonFlagOnCondUseDefChain(
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[WITHPOISONFLAG:%.*]] = or i32 [[TMP0]], 42
-; CHECK-NEXT:    [[SAMEVALUES:%.*]] = icmp ule i32 [[WITHPOISONFLAG]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[SAMEVALUES]], i32 [[TMP1]], i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP0]], i32 [[TMP3]]
+; CHECK-NEXT:    [[WITHPOISONFLAG:%.*]] = or i32 [[TMP0:%.*]], 42
+; CHECK-NEXT:    [[SAMEVALUES:%.*]] = icmp ule i32 [[WITHPOISONFLAG]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[SAMEVALUES]], i32 [[TMP1]], i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %4 = icmp eq i32 %1, %2
