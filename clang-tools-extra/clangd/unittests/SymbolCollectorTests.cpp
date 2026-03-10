@@ -493,24 +493,25 @@ TEST_F(SymbolCollectorTest, Template) {
     template struct $inst[[Tmpl]]<double, bool>;
   )");
   runSymbolCollector(Header.code(), /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(
-                  AllOf(qName("Tmpl"), declRange(Header.range()),
-                        forCodeCompletion(true)),
-                  AllOf(qName("Tmpl"), declRange(Header.range("specdecl")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl"), declRange(Header.range("partspecdecl")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl"), declRange(Header.range("extinst")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl"), declRange(Header.range("inst")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl::x"), declRange(Header.range("xdecl")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl<float, bool>::x"), declRange(Header.range("xdecl")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl<double, bool>::x"), declRange(Header.range("xdecl")),
-                        forCodeCompletion(false))));
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(qName("Tmpl"), declRange(Header.range()),
+                forCodeCompletion(true)),
+          AllOf(qName("Tmpl"), declRange(Header.range("specdecl")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl"), declRange(Header.range("partspecdecl")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl"), declRange(Header.range("extinst")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl"), declRange(Header.range("inst")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl::x"), declRange(Header.range("xdecl")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl<float, bool>::x"), declRange(Header.range("xdecl")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl<double, bool>::x"),
+                declRange(Header.range("xdecl")), forCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, templateArgs) {
