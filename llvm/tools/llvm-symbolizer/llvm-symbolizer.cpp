@@ -462,14 +462,31 @@ static object::BuildID parseBuildIDArg(const opt::InputArgList &Args, int ID) {
   return BuildID;
 }
 
-// Symbolize markup from stdin and write the result to stdout.
-static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symbolizer) {
-  MarkupFilter Filter(outs(), Symbolizer, parseColorArg(Args));
-  std::string InputString;
-  while (std::getline(std::cin, InputString)) {
-    InputString += '\n';
-    Filter.filter(std::move(InputString));
+// Reads an available chunk from IS: blocks for at least one character, and then
+// drains some immediately available characters without blocking. Returns false
+// on EOF.
+static bool readChunk(std::istream &IS, std::string &Result) {
+  Result.clear();
+  char C;
+  if (!IS.get(C))
+    return false;
+
+  Result += C;
+  if (C != '\n') {
+    char Buf[64];
+    if (std::streamsize N = IS.readsome(Buf, sizeof(Buf)))
+      Result.append(Buf, N);
   }
+  return true;
+}
+
+// Symbolize markup from stdin and write the result to stdout.
+static void filterMarkup(const opt::InputArgList &Args,
+                         LLVMSymbolizer &Symbolizer) {
+  MarkupFilter Filter(outs(), Symbolizer, parseColorArg(Args));
+  std::string Chunk;
+  while (readChunk(std::cin, Chunk))
+    Filter.filter(Chunk);
   Filter.finish();
 }
 
