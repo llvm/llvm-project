@@ -202,7 +202,7 @@ LLVM_ABI void PrintStatisticsJSON(raw_ostream &OS);
 /// statistics without needing to parse JSON.
 ///
 /// This function does not prevent statistics being updated by other threads
-/// during it's execution. It will return the value at the point that it is
+/// during its execution. It will return the value at the point that it is
 /// read. However, it will prevent new statistics from registering until it
 /// completes.
 LLVM_ABI std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
@@ -212,8 +212,8 @@ LLVM_ABI std::vector<std::pair<StringRef, uint64_t>> GetStatistics();
 ///
 /// When this function begins to call destructors prior to returning, all
 /// statistics will be zero and unregistered. However, that might not remain the
-/// case by the time this function finishes returning. Whether update from other
-/// threads are lost or merely deferred until during the function return is
+/// case by the time this function finishes returning. Whether updates from
+/// other threads are lost or merely deferred until the function returns is
 /// timing sensitive.
 ///
 /// Callers who intend to use this to measure statistics for a single
