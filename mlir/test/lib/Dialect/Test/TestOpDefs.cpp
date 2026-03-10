@@ -452,7 +452,7 @@ namespace {
 struct TestResource : public SideEffects::Resource::Base<TestResource> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestResource)
 
-  StringRef getName() final { return "<Test>"; }
+  StringRef getName() const final { return "<Test>"; }
 };
 } // namespace
 
@@ -479,6 +479,12 @@ void SideEffectOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -518,6 +524,12 @@ void SideEffectWithRegionOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -875,6 +887,20 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 //===----------------------------------------------------------------------===//
 // TestWithBoundsOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult TestWithBoundsOp::verify() {
+  Type type = getElementTypeOrSelf(getResult().getType());
+  unsigned expectedWidth = 0;
+  if (type.isIndex())
+    expectedWidth = IndexType::kInternalStorageBitWidth;
+  else if (auto intTy = llvm::dyn_cast<IntegerType>(type))
+    expectedWidth = intTy.getWidth();
+  if (expectedWidth != 0 && getUmin().getBitWidth() != expectedWidth)
+    return emitOpError("bound attribute width (")
+           << getUmin().getBitWidth() << ") does not match result type width ("
+           << expectedWidth << ")";
+  return success();
+}
 
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {

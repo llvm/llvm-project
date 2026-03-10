@@ -346,10 +346,12 @@ Bug Fixes to C++ Support
   and produce a warning. (#GH162640)
 
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
+- Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
+- Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

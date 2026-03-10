@@ -415,11 +415,12 @@ def warn_arm_interrupt_save_fp_without_vfp_unit : Warning<
    InGroup<DiagGroup<"arm-interrupt-save-fp-no-vfp-unit">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
-def warn_interrupt_signal_attribute_invalid : Warning<
-  "%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
-  "attribute only applies to functions that have "
-  "%select{no parameters|a 'void' return type}2">,
-  InGroup<IgnoredAttributes>;
+def warn_interrupt_signal_attribute_invalid
+    : Warning<"%select{MIPS|MSP430|RISC-V|AVR}0 '%select{interrupt|signal}1' "
+              "attribute only applies to functions that have "
+              "%select{no parameters|a 'void' return type}2">,
+      InGroup<IgnoredAttributes>,
+      LegacyStableIds<["warn_interrupt_attribute_invalid"]>;
 def warn_riscv_repeated_interrupt_attribute : Warning<
   "repeated RISC-V 'interrupt' attribute">, InGroup<IgnoredAttributes>;
 def note_riscv_repeated_interrupt_attribute : Note<
@@ -10957,6 +10958,16 @@ def warn_lifetime_safety_dangling_field_moved
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_global
+    : Warning<"address of stack memory escapes to global or static storage">,
+      InGroup<LifetimeSafetyDanglingGlobal>,
+      DefaultIgnore;
+def warn_lifetime_safety_dangling_global_moved
+    : Warning<"address of stack memory escapes to global or static storage. "
+      "This could be a false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
+      InGroup<LifetimeSafetyDanglingGlobalMoved>,
+      DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
@@ -10964,7 +10975,11 @@ def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
+def note_lifetime_safety_dangling_global_here: Note<"this global dangles">;
+def note_lifetime_safety_dangling_static_here: Note<"this static storage dangles">;
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
+def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
+def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
@@ -13556,6 +13571,13 @@ def err_hlsl_rootsignature_entry: Error<
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
+def warn_hlsl_groupshared_202x : Warning<
+  "support for groupshared parameter annotation not added until HLSL 202x">,
+  InGroup<HLSLAvailability>;
+def warn_hlsl_groupshared_inout : Warning<
+  "passing groupshared variable to a parameter annotated with inout. "
+  "See 'groupshared' parameter annotation added in 202x">,
+  InGroup<HLSLAvailability>;
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
 def err_hlsl_vector_compound_assignment_truncation : Error<
