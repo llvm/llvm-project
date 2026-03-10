@@ -34,4 +34,15 @@ static constexpr unsigned kDeviceToDevice = 2;
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
 
+#define CUDA_REPORT_IF_ERROR_LOC(expr, file, line) \
+  [](cudaError_t err, const char *sourceFile, int sourceLine) { \
+    if (err == cudaSuccess) \
+      return; \
+    const char *name = cudaGetErrorName(err); \
+    if (!name) \
+      name = "<unknown>"; \
+    Fortran::runtime::Terminator terminator{sourceFile, sourceLine}; \
+    terminator.Crash("'%s' failed with '%s'", #expr, name); \
+  }(expr, sourceFile, sourceLine)
+
 #endif // FORTRAN_RUNTIME_CUDA_COMMON_H_

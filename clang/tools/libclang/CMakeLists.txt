@@ -70,6 +70,7 @@ set(LIBS
   clangSema
   clangSerialization
   clangTooling
+  clangUnifiedSymbolResolution
 )
 
 if (HAVE_LIBDL)

@@ -996,7 +996,25 @@ cc_library(
         ":rewrite",
         ":sema",
         ":serialization",
+        ":unified_symbol_resolution",
         "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "unified_symbol_resolution",
+    srcs = glob([
+        "lib/UnifiedSymbolResolution/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/UnifiedSymbolResolution/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":lex",
         "//llvm:Support",
     ],
 )
@@ -1309,6 +1327,7 @@ cc_library(
         ":rewrite",
         ":tooling",
         ":tooling_core",
+        ":unified_symbol_resolution",
         "//llvm:Support",
     ],
 )
@@ -1399,6 +1418,7 @@ cc_library(
         ":driver",
         ":frontend",
         ":index",
+        ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1483,6 +1503,7 @@ cc_library(
         ":static_analyzer_checkers_gen",
         ":tooling",
         ":tooling_core",
+        ":unified_symbol_resolution",
         "//llvm:Support",
     ],
 )
@@ -2091,6 +2112,7 @@ cc_library(
         ":rewrite",
         ":sema",
         ":tooling",
+        ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -2124,6 +2146,7 @@ cc_plugin_library(
         ":rewrite",
         ":sema",
         ":tooling",
+        ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -2168,6 +2191,7 @@ cc_binary(
         ":lex",
         ":libclang",
         ":serialization",
+        ":unified_symbol_resolution",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -2556,6 +2580,7 @@ cc_library(
         ":index",
         ":install_api",
         ":lex",
+        ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",

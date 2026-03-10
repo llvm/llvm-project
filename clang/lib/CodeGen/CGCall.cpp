@@ -2611,28 +2611,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (DeviceKernelAttr::isOpenCLSpelling(
-            TargetDecl->getAttr<DeviceKernelAttr>()) &&
-        CallingConv != CallingConv::CC_C &&
-        CallingConv != CallingConv::CC_SpirFunction) {
-      // Check CallingConv to avoid adding uniform-work-group-size attribute to
-      // OpenCL Kernel Stub
-      if (getLangOpts().OpenCLVersion <= 120) {
-        // OpenCL v1.2 Work groups are always uniform
-        FuncAttrs.addAttribute("uniform-work-group-size");
-      } else {
-        // OpenCL v2.0 Work groups may be whether uniform or not.
-        // '-cl-uniform-work-group-size' compile option gets a hint
-        // to the compiler that the global work-size be a multiple of
-        // the work-group size specified to clEnqueueNDRangeKernel
-        // (i.e. work groups are uniform).
-        if (getLangOpts().OffloadUniformBlock)
-          FuncAttrs.addAttribute("uniform-work-group-size");
-      }
-    }
-
-    if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
-        getLangOpts().OffloadUniformBlock)
+    // OpenCL v2.0 Work groups may be whether uniform or not.
+    // '-cl-uniform-work-group-size' compile option gets a hint
+    // to the compiler that the global work-size be a multiple of
+    // the work-group size specified to clEnqueueNDRangeKernel
+    // (i.e. work groups are uniform).
+    if (getLangOpts().OffloadUniformBlock)
       FuncAttrs.addAttribute("uniform-work-group-size");
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())

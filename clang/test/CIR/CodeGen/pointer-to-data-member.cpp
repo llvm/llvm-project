@@ -12,6 +12,12 @@ struct Point {
   int z;
 };
 
+int Point::*ptr_none = nullptr;
+// CIR-BEFORE: cir.global external @ptr_none = #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
+// CIR-AFTER: cir.global external @ptr_none = #cir.int<-1> : !s64i
+// LLVM: @ptr_none = global i64 -1
+// OGCG: @ptr_none = global i64 -1
+
 int Point::*pt_member = &Point::z;
 // CIR-BEFORE: cir.global external @pt_member = #cir.data_member<2> : !cir.data_member<!s32i in !rec_Point>
 // CIR-AFTER: cir.global external @pt_member = #cir.int<8> : !s64i

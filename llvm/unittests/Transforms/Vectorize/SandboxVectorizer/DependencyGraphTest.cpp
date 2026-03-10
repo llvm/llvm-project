@@ -1231,3 +1231,39 @@ define void @foo(i8 %v0, i8 %v1) {
   ExtUser->setOperand(0, Arg0);
   EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
 }
+
+// Don't udpate the unscheduled succs if nodes have already been scheduled.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsWhenScheduled) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0) {
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %v0, 1
+  %modify = add i8 %add0, 1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Modify = cast<sandboxir::BinaryOperator>(&*It++);
+  // DAG contains all Add0, Add1 and Modify
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1, Modify});
+  auto *Add0N = DAG.getNode(Add0);
+  auto *Add1N = DAG.getNode(Add1);
+  // Mark Add0N and Add1N as scheduled.
+  Add0N->setScheduled(true);
+  Add1N->setScheduled(true);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+
+  // Change Modify's operand and make sure we won't update Add0N's or Add1N's
+  // unscheduled succs.
+  Modify->setOperand(0, Add1);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+}

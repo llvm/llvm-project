@@ -27,7 +27,7 @@ bool memfunc_to_bool(void (Foo::*func)(int)) {
 // CIR-AFTER:   %[[FUNC:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
 // CIR-AFTER:   %[[NULL_VAL:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER:   %[[FUNC_PTR:.*]] = cir.extract_member %[[FUNC]][0] : !rec_anon_struct -> !s64i
-// CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp(ne, %[[FUNC_PTR]], %[[NULL_VAL]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp ne %[[FUNC_PTR]], %[[NULL_VAL]] : !s64i
 
 // LLVM: define {{.*}} i1 @_Z15memfunc_to_boolM3FooFviE
 // LLVM:   %[[FUNC:.*]] = load { i64, i64 }, ptr %{{.*}}

@@ -403,7 +403,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     O << MO.getSymbolName();
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << "_"
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << "_"
       << MO.getIndex();
     break;
   case MachineOperand::MO_Metadata:

@@ -16,7 +16,7 @@ int main(int argc, char ** argv) {
 // CHECK:   store ptr @_Z4kern7TempValIjE, ptr %fptr, align 8
   return 0;
 }
-// CHECK:  define dso_local void @_Z19__device_stub__kern7TempValIjE(i32 %in_val.coerce) #1 {
+// CHECK:  define dso_local void @_Z19__device_stub__kern7TempValIjE(i32 %in_val.coerce) #{{[0-9]+}} {
 // CHECK:  %2 = call i32 @hipLaunchByPtr(ptr @_Z4kern7TempValIjE)
 
 // CHECK:  define internal void @__hip_register_globals(ptr %0) {

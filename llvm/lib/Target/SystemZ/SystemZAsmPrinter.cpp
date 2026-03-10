@@ -1925,6 +1925,9 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
         OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
     }
     OutStreamer->emitInt32(DSAAndFlags);
+
+    getTargetStreamer()->emitADA(CurrentFnSym,
+                                 getObjFileLowering().getADASection());
   }
 
   AsmPrinter::emitFunctionEntryLabel();

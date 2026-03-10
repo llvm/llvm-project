@@ -304,6 +304,10 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
     if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
       return false;
 
+    PrimType ElemT = FieldDesc->getPrimType();
+    if (!isIntegerType(ElemT))
+      return false;
+
     unsigned N = Ptr.getNumElems();
     if (Ptr.elemSize() == 1) {
       unsigned Size = N - Ptr.getIndex();
@@ -312,7 +316,6 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
       return Result != Size;
     }
 
-    PrimType ElemT = FieldDesc->getPrimType();
     Result = 0;
     for (unsigned I = Ptr.getIndex(); I != N; ++I) {
       INT_TYPE_SWITCH(ElemT, {
@@ -469,6 +472,9 @@ OptPrimType Context::classify(QualType T) const {
 
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
+
+  if (const auto *OBT = T.getCanonicalType()->getAs<OverflowBehaviorType>())
+    return classify(OBT->getUnderlyingType());
 
   if (T->isObjCObjectPointerType() || T->isBlockPointerType())
     return PT_Ptr;

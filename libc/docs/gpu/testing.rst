@@ -10,10 +10,6 @@ Testing the GPU C library
    out of resource errors, or indefinite hangs. limiting the number of threads
    used while testing using ``LIBC_GPU_TEST_JOBS=<N>`` is highly recommended.
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Testing infrastructure
 ======================
 

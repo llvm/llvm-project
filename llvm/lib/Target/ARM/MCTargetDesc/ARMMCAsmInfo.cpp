@@ -119,7 +119,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  PrivateGlobalPrefix = "$M";
+  InternalSymbolPrefix = "$M";
   PrivateLabelPrefix = "$M";
   CommentString = "@";
 
@@ -136,7 +136,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;

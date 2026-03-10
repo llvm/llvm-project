@@ -19,7 +19,7 @@ entry:
 
 ; Check the attributes on the function
 ; CHECK:       ENTRY calc
-; CHECK-NEXT: calc XATTR LINKAGE(XPLINK),REFERENCE(CODE),SCOPE(EXPORT)
+; CHECK-NEXT: calc XATTR LINKAGE(XPLINK),REFERENCE(CODE),PSECT(stdin#S),SCOPE(EXPORT)
 ; CHECK-NEXT: calc DS 0H
 
 ; Check the definition of the variable

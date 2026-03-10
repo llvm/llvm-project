@@ -28,16 +28,20 @@ void *RTDEF(CUFMemAlloc)(
   bytes = bytes ? bytes : 1;
   if (type == kMemTypeDevice) {
     if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
-      CUDA_REPORT_IF_ERROR(
-          cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
+      CUDA_REPORT_IF_ERROR_LOC(
+          cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal),
+          sourceFile, sourceLine);
     } else {
-      CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
+      CUDA_REPORT_IF_ERROR_LOC(
+          cudaMalloc((void **)&ptr, bytes), sourceFile, sourceLine);
     }
   } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
-    CUDA_REPORT_IF_ERROR(
-        cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
+    CUDA_REPORT_IF_ERROR_LOC(
+        cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal),
+        sourceFile, sourceLine);
   } else if (type == kMemTypePinned) {
-    CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&ptr, bytes));
+    CUDA_REPORT_IF_ERROR_LOC(
+        cudaMallocHost((void **)&ptr, bytes), sourceFile, sourceLine);
   } else {
     Terminator terminator{sourceFile, sourceLine};
     terminator.Crash("unsupported memory type");
@@ -51,9 +55,9 @@ void RTDEF(CUFMemFree)(
     return;
   if (type == kMemTypeDevice || type == kMemTypeManaged ||
       type == kMemTypeUnified) {
-    CUDA_REPORT_IF_ERROR(cudaFree(ptr));
+    CUDA_REPORT_IF_ERROR_LOC(cudaFree(ptr), sourceFile, sourceLine);
   } else if (type == kMemTypePinned) {
-    CUDA_REPORT_IF_ERROR(cudaFreeHost(ptr));
+    CUDA_REPORT_IF_ERROR_LOC(cudaFreeHost(ptr), sourceFile, sourceLine);
   } else {
     Terminator terminator{sourceFile, sourceLine};
     terminator.Crash("unsupported memory type");
@@ -81,7 +85,8 @@ void RTDEF(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     terminator.Crash("host to host copy not supported");
   }
   // TODO: Use cudaMemcpyAsync when we have support for stream.
-  CUDA_REPORT_IF_ERROR(cudaMemcpy(dst, src, bytes, kind));
+  CUDA_REPORT_IF_ERROR_LOC(
+      cudaMemcpy(dst, src, bytes, kind), sourceFile, sourceLine);
 }
 
 void RTDEF(CUFDataTransferPtrDesc)(void *addr, Descriptor *desc,

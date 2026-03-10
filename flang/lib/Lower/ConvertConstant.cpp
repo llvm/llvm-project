@@ -532,6 +532,12 @@ static mlir::Value genInlinedStructureCtorLitImpl(
   for (const auto &[sym, expr] : ctor.values()) {
     const Fortran::semantics::DerivedTypeSpec *componentParentType =
         sym->owner().derivedTypeSpec();
+    // TODO: This is not a complete fix. For some parameterized derived type
+    // component initializations, the component symbol owner does not have a
+    // derived type spec. Falling back to ctor.derivedTypeSpec() avoids the
+    // crash, but may not always represent the correct parent type.
+    if (!componentParentType)
+      TODO(loc, "parameterized derived types");
     assert(componentParentType && "failed to retrieve component parent type");
     if (!res) {
       mlir::Type parentType = converter.genType(*componentParentType);

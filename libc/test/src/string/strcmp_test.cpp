@@ -106,3 +106,10 @@ TEST(LlvmLibcStrCmpTest, Case) {
   result = LIBC_NAMESPACE::strcmp(s2, s1);
   ASSERT_GT(result, 0);
 }
+
+TEST(LlvmLibcStrCmpTest, CharactersGreaterThan127ShouldBePositive) {
+  const char s1[] = {static_cast<char>(128), '\0'};
+  const char s2[] = {'\0'};
+  int result = LIBC_NAMESPACE::strcmp(s1, s2);
+  ASSERT_GT(result, 0);
+}

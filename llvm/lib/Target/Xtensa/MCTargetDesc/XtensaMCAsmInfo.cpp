@@ -21,7 +21,7 @@ using namespace llvm;
 XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT) {
   CodePointerSize = 4;
   CalleeSaveStackSlotSize = 4;
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   CommentString = "#";
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";

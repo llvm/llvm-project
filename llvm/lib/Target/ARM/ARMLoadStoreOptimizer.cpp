@@ -98,9 +98,7 @@ namespace {
 
 /// Post- register allocation pass the combine load / store instructions to
 /// form ldm / stm instructions.
-struct ARMLoadStoreOpt : public MachineFunctionPass {
-  static char ID;
-
+struct ARMLoadStoreOpt {
   const MachineFunction *MF;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -114,15 +112,7 @@ struct ARMLoadStoreOpt : public MachineFunctionPass {
   bool RegClassInfoValid;
   bool isThumb1, isThumb2;
 
-  ARMLoadStoreOpt() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &Fn) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-
-  StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
+  bool runOnMachineFunction(MachineFunction &Fn);
 
 private:
   /// A set of load/store MachineInstrs with same base register sorted by
@@ -196,12 +186,26 @@ private:
   bool CombineMovBx(MachineBasicBlock &MBB);
 };
 
+struct ARMLoadStoreOptLegacy : public MachineFunctionPass {
+  static char ID;
+
+  ARMLoadStoreOptLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &Fn) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
+};
+
+char ARMLoadStoreOptLegacy::ID = 0;
+
 } // end anonymous namespace
 
-char ARMLoadStoreOpt::ID = 0;
-
-INITIALIZE_PASS(ARMLoadStoreOpt, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME, false,
-                false)
+INITIALIZE_PASS(ARMLoadStoreOptLegacy, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME,
+                false, false)
 
 static bool definesCPSR(const MachineInstr &MI) {
   for (const auto &MO : MI.operands()) {
@@ -2096,9 +2100,6 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 }
 
 bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
   MF = &Fn;
   STI = &Fn.getSubtarget<ARMSubtarget>();
   TL = STI->getTargetLowering();
@@ -2131,6 +2132,13 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   return Modified;
 }
 
+bool ARMLoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  ARMLoadStoreOpt Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
 #define ARM_PREALLOC_LOAD_STORE_OPT_NAME                                       \
   "ARM pre- register allocation load / store optimization pass"
 
@@ -2138,9 +2146,7 @@ namespace {
 
 /// Pre- register allocation pass that move load / stores from consecutive
 /// locations close to make it more likely they will be combined later.
-struct ARMPreAllocLoadStoreOpt : public MachineFunctionPass {
-  static char ID;
-
+struct ARMPreAllocLoadStoreOpt {
   AliasAnalysis *AA;
   const DataLayout *TD;
   const TargetInstrInfo *TII;
@@ -2150,20 +2156,8 @@ struct ARMPreAllocLoadStoreOpt : public MachineFunctionPass {
   MachineDominatorTree *DT;
   MachineFunction *MF;
 
-  ARMPreAllocLoadStoreOpt() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &Fn) override;
-
-  StringRef getPassName() const override {
-    return ARM_PREALLOC_LOAD_STORE_OPT_NAME;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  bool runOnMachineFunction(MachineFunction &Fn, AliasAnalysis *AA,
+                            MachineDominatorTree *DT);
 
 private:
   bool CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1, DebugLoc &dl,
@@ -2179,14 +2173,33 @@ private:
   bool DistributeIncrements(Register Base);
 };
 
+struct ARMPreAllocLoadStoreOptLegacy : public MachineFunctionPass {
+  static char ID;
+
+  ARMPreAllocLoadStoreOptLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &Fn) override;
+
+  StringRef getPassName() const override {
+    return ARM_PREALLOC_LOAD_STORE_OPT_NAME;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+char ARMPreAllocLoadStoreOptLegacy::ID = 0;
+
 } // end anonymous namespace
 
-char ARMPreAllocLoadStoreOpt::ID = 0;
-
-INITIALIZE_PASS_BEGIN(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
+INITIALIZE_PASS_BEGIN(ARMPreAllocLoadStoreOptLegacy, "arm-prera-ldst-opt",
                       ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
+INITIALIZE_PASS_END(ARMPreAllocLoadStoreOptLegacy, "arm-prera-ldst-opt",
                     ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
 
 // Limit the number of instructions to be rescheduled.
@@ -2194,24 +2207,37 @@ INITIALIZE_PASS_END(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
 static cl::opt<unsigned> InstReorderLimit("arm-prera-ldst-opt-reorder-limit",
                                           cl::init(8), cl::Hidden);
 
-bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (AssumeMisalignedLoadStores || skipFunction(Fn.getFunction()))
+bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn,
+                                                   AliasAnalysis *AAIn,
+                                                   MachineDominatorTree *DTIn) {
+  if (AssumeMisalignedLoadStores)
     return false;
 
+  AA = AAIn;
+  DT = DTIn;
   TD = &Fn.getDataLayout();
   STI = &Fn.getSubtarget<ARMSubtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &Fn.getRegInfo();
-  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MF  = &Fn;
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MF = &Fn;
 
   bool Modified = DistributeIncrements();
   for (MachineBasicBlock &MFI : Fn)
     Modified |= RescheduleLoadStoreInstrs(&MFI);
 
   return Modified;
+}
+
+bool ARMPreAllocLoadStoreOptLegacy::runOnMachineFunction(MachineFunction &Fn) {
+  if (skipFunction(Fn.getFunction()))
+    return false;
+
+  ARMPreAllocLoadStoreOpt Impl;
+  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MachineDominatorTree *DT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return Impl.runOnMachineFunction(Fn, AA, DT);
 }
 
 static bool IsSafeAndProfitableToMove(bool isLd, unsigned Base,
@@ -3299,8 +3325,37 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements() {
 }
 
 /// Returns an instance of the load / store optimization pass.
-FunctionPass *llvm::createARMLoadStoreOptimizationPass(bool PreAlloc) {
+FunctionPass *llvm::createARMLoadStoreOptLegacyPass(bool PreAlloc) {
   if (PreAlloc)
-    return new ARMPreAllocLoadStoreOpt();
-  return new ARMLoadStoreOpt();
+    return new ARMPreAllocLoadStoreOptLegacy();
+  return new ARMLoadStoreOptLegacy();
+}
+
+PreservedAnalyses
+ARMLoadStoreOptPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  ARMLoadStoreOpt Impl;
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+PreservedAnalyses
+ARMPreAllocLoadStoreOptPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  ARMPreAllocLoadStoreOpt Impl;
+  AliasAnalysis *AA =
+      &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+           .getManager()
+           .getResult<AAManager>(MF.getFunction());
+  MachineDominatorTree *DT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = Impl.runOnMachineFunction(MF, AA, DT);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

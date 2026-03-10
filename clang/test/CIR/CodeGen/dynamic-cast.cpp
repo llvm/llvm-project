@@ -80,7 +80,7 @@ Derived &ref_cast(Base &b) {
 // CIR-AFTER-NEXT:   %[[OFFSET_HINT:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER-NEXT:   %[[CASTED_PTR:.*]] = cir.call @__dynamic_cast(%[[SRC_VOID_PTR]], %[[SRC_RTTI]], %[[DEST_RTTI]], %[[OFFSET_HINT]]) : (!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
 // CIR-AFTER-NEXT:   %[[NULL_PTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
-// CIR-AFTER-NEXT:   %[[CASTED_PTR_IS_NULL:.*]] = cir.cmp(eq, %[[CASTED_PTR]], %[[NULL_PTR]]) : !cir.ptr<!void>, !cir.bool
+// CIR-AFTER-NEXT:   %[[CASTED_PTR_IS_NULL:.*]] = cir.cmp eq %[[CASTED_PTR]], %[[NULL_PTR]] : !cir.ptr<!void>
 // CIR-AFTER-NEXT:   cir.if %[[CASTED_PTR_IS_NULL]] {
 // CIR-AFTER-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
 // CIR-AFTER-NEXT:     cir.unreachable

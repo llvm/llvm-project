@@ -173,8 +173,8 @@ gpu.module @test {
     %c128 = arith.constant 128 : index
     %c8192 = arith.constant 8192 : index
     %c0 = arith.constant 0 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %0 = affine.apply affine_map<()[s0] -> (s0 * 128)>()[%block_id_x]
     %1 = affine.apply affine_map<()[s0] -> (s0 * 128)>()[%block_id_y]
     // CHECK: %2 = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (vector<128x128xf32>) {
@@ -222,8 +222,8 @@ gpu.module @test {
     %c16 = arith.constant 16 : index
     %c8192 = arith.constant 8192 : index
     %c0 = arith.constant 0 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %4 = xegpu.create_nd_tdesc %arg0 : memref<2048x8192xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
     %5 = xegpu.load_nd %4[%block_id_x, %c0]  : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<32x16xf16>
     %6 = xegpu.create_nd_tdesc %arg1 : memref<8192x4096xf16> -> !xegpu.tensor_desc<16x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>

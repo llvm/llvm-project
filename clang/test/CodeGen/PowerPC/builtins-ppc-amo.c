@@ -219,6 +219,82 @@ void test_signed_stwat(int *ptr, int value, int * resp) {
 void test_signed_stdat(long int *ptr, long int value, long int * resp) {
   __builtin_amo_stdat_s(ptr, value, 5);
 }
+
+// CHECK-LABEL: define dso_local void @test_unsigned_lwat_csne(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VAL1:%.*]], i32 noundef zeroext [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_unsigned_lwat_csne(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef zeroext [[VAL1:%.*]], i32 noundef zeroext [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA2]]
+// AIX-NEXT:    ret void
+//
+void test_unsigned_lwat_csne(unsigned int *ptr, unsigned int val1, unsigned int val2,  unsigned int * resp) {
+  unsigned int res = __builtin_amo_lwat_csne(ptr, val1, val2);
+  *resp = res;
+}
+
+// CHECK-LABEL: define dso_local void @test_unsigned_ldat_csne(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA6]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_unsigned_ldat_csne(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA6]]
+// AIX-NEXT:    ret void
+//
+void test_unsigned_ldat_csne(unsigned long int *ptr, unsigned long int val1, unsigned long int val2,  unsigned long int * resp) {
+  unsigned long int res = __builtin_amo_ldat_csne(ptr, val1, val2);
+  *resp = res;
+}
+
+// CHECK-LABEL: define dso_local void @test_unsigned_lwat_csne_s(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VAL1:%.*]], i32 noundef signext [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_unsigned_lwat_csne_s(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i32 noundef signext [[VAL1:%.*]], i32 noundef signext [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.ppc.amo.lwat.csne(ptr [[PTR]], i32 [[VAL1]], i32 [[VAL2]])
+// AIX-NEXT:    store i32 [[TMP0]], ptr [[RESP]], align 4, !tbaa [[INT_TBAA2]]
+// AIX-NEXT:    ret void
+//
+void test_unsigned_lwat_csne_s(signed int *ptr, signed int val1, signed int val2,  signed int * resp) {
+  signed int res = __builtin_amo_lwat_csne_s(ptr, val1, val2);
+  *resp = res;
+}
+
+// CHECK-LABEL: define dso_local void @test_unsigned_ldat_csne_s(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
+// CHECK-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA6]]
+// CHECK-NEXT:    ret void
+//
+// AIX-LABEL: define void @test_unsigned_ldat_csne_s(
+// AIX-SAME: ptr noundef [[PTR:%.*]], i64 noundef [[VAL1:%.*]], i64 noundef [[VAL2:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[RESP:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AIX-NEXT:  [[ENTRY:.*:]]
+// AIX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.ppc.amo.ldat.csne(ptr [[PTR]], i64 [[VAL1]], i64 [[VAL2]])
+// AIX-NEXT:    store i64 [[TMP0]], ptr [[RESP]], align 8, !tbaa [[LONG_TBAA6]]
+// AIX-NEXT:    ret void
+//
+void test_unsigned_ldat_csne_s(signed long int *ptr, signed long int val1, signed long int val2,  signed long int * resp) {
+  signed long int res = __builtin_amo_ldat_csne_s(ptr, val1, val2);
+  *resp = res;
+}
 //.
 // CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}

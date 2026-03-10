@@ -60,7 +60,7 @@ static void BM_EmitInfoFunction(benchmark::State &State) {
   Location Loc;
 
   for (auto _ : State) {
-    serialize::ClangDocSerializer Serializer;
+    serialize::Serializer Serializer;
     auto Result = Serializer.emitInfo(Func, FC, Loc, /*PublicOnly=*/false);
     benchmark::DoNotOptimize(Result);
   }

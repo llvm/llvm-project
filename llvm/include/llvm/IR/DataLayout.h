@@ -299,7 +299,7 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  StringRef getPrivateGlobalPrefix() const {
+  StringRef getInternalSymbolPrefix() const {
     switch (ManglingMode) {
     case MM_None:
       return "";

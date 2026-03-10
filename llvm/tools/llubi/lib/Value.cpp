@@ -44,9 +44,53 @@ void AnyValue::print(raw_ostream &OS) const {
     }
     OS << "i" << IntVal.getBitWidth() << ' ' << IntVal;
     break;
-  case StorageKind::Float:
-    OS << FloatVal;
+  case StorageKind::Float: {
+    switch (APFloat::SemanticsToEnum(FloatVal.getSemantics())) {
+    default:
+      llvm_unreachable("invalid fltSemantics");
+    case APFloatBase::S_IEEEhalf:
+      OS << "half ";
+      break;
+    case APFloatBase::S_BFloat:
+      OS << "bfloat ";
+      break;
+    case APFloatBase::S_IEEEsingle:
+      OS << "float ";
+      break;
+    case APFloatBase::S_IEEEdouble:
+      OS << "double ";
+      break;
+    case APFloatBase::S_x87DoubleExtended:
+      OS << "x86_fp80 ";
+      break;
+    case APFloatBase::S_IEEEquad:
+      OS << "fp128 ";
+      break;
+    case APFloatBase::S_PPCDoubleDouble:
+      OS << "ppc_fp128 ";
+      break;
+    }
+    // We cannot reuse Value::print due to lack of LLVMContext here.
+    // Similar to writeAPFloatInternal, output the FP constant value in
+    // exponential notation if it is lossless, otherwise output it in
+    // hexadecimal notation.
+    SmallString<16> StrVal;
+    FloatVal.toString(StrVal, /*FormatPrecision=*/6, /*FormatMaxPadding=*/0,
+                      /*TruncateZero=*/false);
+    if (APFloat(FloatVal.getSemantics(), StrVal).bitwiseIsEqual(FloatVal)) {
+      OS << StrVal;
+    } else {
+      StrVal.clear();
+      APInt Bits = FloatVal.bitcastToAPInt();
+      Bits.toStringUnsigned(StrVal, 16);
+      size_t MaxDigits = divideCeil(Bits.getBitWidth(), 4);
+      OS << "0x";
+      for (size_t Digits = StrVal.size(); Digits != MaxDigits; ++Digits)
+        OS << '0';
+      OS << StrVal;
+    }
     break;
+  }
   case StorageKind::Pointer:
     PtrVal.print(OS);
     break;

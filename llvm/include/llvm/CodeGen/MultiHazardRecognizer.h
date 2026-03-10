@@ -36,7 +36,7 @@ public:
   void EmitInstruction(MachineInstr *) override;
   unsigned PreEmitNoops(SUnit *) override;
   unsigned PreEmitNoops(MachineInstr *) override;
-  bool ShouldPreferAnother(SUnit *) override;
+  bool ShouldPreferAnother(SUnit *) const override;
   void AdvanceCycle() override;
   void RecedeCycle() override;
   void EmitNoop() override;

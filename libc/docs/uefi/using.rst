@@ -4,10 +4,6 @@
 Using libc for UEFI
 ===================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Using the UEFI C library
 ========================
 

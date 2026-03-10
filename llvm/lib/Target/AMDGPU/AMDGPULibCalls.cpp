@@ -1482,7 +1482,10 @@ bool AMDGPULibCalls::expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B,
   }
   case PowKind::RootN: {
     Value *CastY = B.CreateSIToFP(Y, X->getType());
-    Value *RcpY = B.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, CastY);
+
+    // This is afn anyway, so we will turn into rcp.
+    Value *RcpY = B.CreateFDiv(ConstantFP::get(X->getType(), 1.0), CastY);
+
     Value *ExpYLnX = emitFastExpYLnx(B, X, RcpY);
     Value *Fixed = emitPowFixup(B, X, Y, ExpYLnX, Kind);
     replaceCall(FPOp, Fixed);

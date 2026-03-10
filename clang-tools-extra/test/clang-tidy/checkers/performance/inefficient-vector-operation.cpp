@@ -1,8 +1,7 @@
 // RUN: %check_clang_tidy %s performance-inefficient-vector-operation %t -- \
 // RUN: -format-style=llvm \
 // RUN: -config='{CheckOptions: \
-// RUN:  {performance-inefficient-vector-operation.EnableProto: true}}' \
-// RUN: -- -isystem %clang_tidy_headers
+// RUN:  {performance-inefficient-vector-operation.EnableProto: true}}'
 #include <vector>
 
 namespace std {

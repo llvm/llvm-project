@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s boost-use-to-string %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s boost-use-to-string %t
 #include <string>
 
 namespace boost {

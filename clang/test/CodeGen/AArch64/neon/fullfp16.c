@@ -24,11 +24,31 @@
 // hence for CIR we use `opt -passes=simplifycfg` to reduce the control flow
 // and to make LLVM IR match for all paths.
 //
+// ACLE section headings based on v2025Q2 of the ACLE specification:
+//  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#bitwise-equal-to-zero
+//
 // TODO: Remove `-simplifycfg` once CIR lowering includes the relevant
 //       optimizations to reduce the CFG.
 //=============================================================================
 
 #include <arm_fp16.h>
+
+//===------------------------------------------------------===//
+// 2.5.2.1.  Bitwise equal to zero
+//===------------------------------------------------------===//
+// LLVM-LABEL: test_vceqzh_f16
+uint16_t test_vceqzh_f16(float16_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.f16
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
+
+// LLVM-SAME: (half {{.*}} [[A:%.*]])
+// LLVM:  [[TMP1:%.*]] = fcmp oeq half [[A]], 0xH0000
+// LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
+// LLVM:  ret i16 [[TMP2]]
+  return vceqzh_f16(a);
+}
 
 // ALL-LABEL: @test_vabsh_f16
 float16_t test_vabsh_f16(float16_t a) {

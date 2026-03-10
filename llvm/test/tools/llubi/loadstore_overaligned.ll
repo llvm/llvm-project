@@ -22,9 +22,9 @@ define void @main() {
 ; CHECK-NEXT:   %alloca = alloca [2 x i32], align 8 => ptr 0x8 [alloca]
 ; CHECK-NEXT:   store <4 x i32> zeroinitializer, ptr %alloca, align 8
 ; CHECK-NEXT:   store [2 x i32] [i32 1, i32 1], ptr %alloca, align 8
-; CHECK-NEXT:   %load1 = load <4 x i32>, ptr %alloca, align 8 => { i32 1, i32 -289830082, i32 1, i32 0 }
-; CHECK-NEXT:   %load2 = load <4 x i32>, ptr %alloca, align 8 => { i32 1, i32 -399511892, i32 1, i32 0 }
-; CHECK-NEXT:   %load3 = load <4 x i32>, ptr %alloca, align 8 => { i32 1, i32 -132966042, i32 1, i32 0 }
+; CHECK-NEXT:   %load1 = load <4 x i32>, ptr %alloca, align 8 => { i32 1, i32 -289830082, i32 1, i32 -399511892 }
+; CHECK-NEXT:   %load2 = load <4 x i32>, ptr %alloca, align 8 => { i32 1, i32 -132966042, i32 1, i32 1094190734 }
+; CHECK-NEXT:   %load3 = load <4 x i32>, ptr %alloca, align 8 => { i32 1, i32 -1670034957, i32 1, i32 -899485425 }
 ; CHECK-NEXT:   %load_arr = load [2 x i32], ptr %alloca, align 8 => { i32 1, i32 1 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

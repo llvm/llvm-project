@@ -16,7 +16,7 @@ void use(int x, unsigned int y, float f) {
   // CHECK-NEXT: %[[X_LOAD:.*]] = cir.load{{.*}} %[[X_ALLOC]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[X_CAST:.*]] = cir.cast integral %[[X_LOAD]] : !s32i -> !u32i
   // CHECK-NEXT: %[[Y_LOAD:.*]] = cir.load{{.*}} %[[Y_ALLOC]] : !cir.ptr<!u32i>, !u32i
-  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(eq, %[[X_CAST]], %[[Y_LOAD]]) : !u32i, !cir.bool
+  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp eq %[[X_CAST]], %[[Y_LOAD]] : !u32i
   // CHECK-NEXT: %[[CMP_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP]] : !cir.bool to i1
   // CHECK-NEXT: acc.atomic.read if(%[[CMP_CAST]]) %[[F_ALLOC]] = %[[Y_ALLOC]] : !cir.ptr<!cir.float>, !cir.ptr<!u32i>, !cir.float
 #pragma acc atomic read if (x == y)

@@ -1,8 +1,8 @@
-//--------------------------------------------------------------------------------------------------
-// Enable all supported extensions to focus the verification of expected profile requirement errors.
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
+// Check operations fail to validation when pro_int is not provided in the target.
+//--------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="profiles=pro_fp extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround" -tosa-validate="strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="profiles=pro_fp" -tosa-validate="strict-op-spec-alignment"
 
 // -----
 func.func @test_const_i1() -> tensor<3x11x11x3xi1> {
@@ -177,13 +177,6 @@ func.func @test_reduce_sum(%arg0: tensor<13x21x3xi32>) -> tensor<1x21x3xi32> {
   // expected-error@+1 {{'tosa.reduce_sum' op illegal: requires [pro_int] but not enabled in target}}
   %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<13x21x3xi32>) -> tensor<1x21x3xi32>
   return %0 : tensor<1x21x3xi32>
-}
-
-// -----
-func.func @test_concat(%arg0: tensor<13x21x3xi16>, %arg1: tensor<13x21x3xi16>) -> tensor<26x21x3xi16> {
-  // expected-error@+1 {{'tosa.concat' op illegal: requires [pro_int] to work with but not enabled in target}}
-  %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xi16>, tensor<13x21x3xi16>) -> tensor<26x21x3xi16>
-  return %0 : tensor<26x21x3xi16>
 }
 
 // -----

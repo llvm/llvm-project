@@ -11,268 +11,505 @@
 
 define void @exp10_f16() {
 ; BASE-LABEL: 'exp10_f16'
-; BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 336 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 714 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; BASE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8-LABEL: 'exp10_f16'
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-LABEL: 'exp10_f16'
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX10-LABEL: 'exp10_f16'
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; BASE-SIZE-LABEL: 'exp10_f16'
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 304 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 646 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8-SIZE-LABEL: 'exp10_f16'
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'exp10_f16'
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX10-SIZE-LABEL: 'exp10_f16'
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.exp10.f16(half poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
 ; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %f16 = call half @llvm.exp10.f16(half undef)
-  %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> undef)
-  %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> undef)
-  %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> undef)
-  %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> undef)
-  %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> undef)
-  %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> undef)
-  %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> undef)
+  %f16 = call half @llvm.exp10.f16(half poison)
+  %v2f16 = call <2 x half> @llvm.exp10.v2f16(<2 x half> poison)
+  %v3f16 = call <3 x half> @llvm.exp10.v3f16(<3 x half> poison)
+  %v4f16 = call <4 x half> @llvm.exp10.v4f16(<4 x half> poison)
+  %v5f16 = call <5 x half> @llvm.exp10.v5f16(<5 x half> poison)
+  %v8f16 = call <8 x half> @llvm.exp10.v8f16(<8 x half> poison)
+  %v16f16 = call <16 x half> @llvm.exp10.v16f16(<16 x half> poison)
+  %v17f16 = call <17 x half> @llvm.exp10.v17f16(<17 x half> poison)
   ret void
 }
 
 define void @exp10_bf16() {
 ; BASE-LABEL: 'exp10_bf16'
-; BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; BASE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 336 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 714 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; BASE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX8-LABEL: 'exp10_bf16'
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-LABEL: 'exp10_bf16'
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX10-LABEL: 'exp10_bf16'
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; GFX10-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; BASE-SIZE-LABEL: 'exp10_bf16'
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 304 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 646 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX8-SIZE-LABEL: 'exp10_bf16'
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'exp10_bf16'
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX10-SIZE-LABEL: 'exp10_bf16'
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
 ; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %bf16 = call bfloat @llvm.exp10.bf16(bfloat undef)
-  %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> undef)
-  %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> undef)
-  %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> undef)
-  %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> undef)
-  %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> undef)
-  %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> undef)
-  %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> undef)
+  %bf16 = call bfloat @llvm.exp10.bf16(bfloat poison)
+  %v2bf16 = call <2 x bfloat> @llvm.exp10.v2bf16(<2 x bfloat> poison)
+  %v3bf16 = call <3 x bfloat> @llvm.exp10.v3bf16(<3 x bfloat> poison)
+  %v4bf16 = call <4 x bfloat> @llvm.exp10.v4bf16(<4 x bfloat> poison)
+  %v5bf16 = call <5 x bfloat> @llvm.exp10.v5bf16(<5 x bfloat> poison)
+  %v8bf16 = call <8 x bfloat> @llvm.exp10.v8bf16(<8 x bfloat> poison)
+  %v16bf16 = call <16 x bfloat> @llvm.exp10.v16bf16(<16 x bfloat> poison)
+  %v17bf16 = call <17 x bfloat> @llvm.exp10.v17bf16(<17 x bfloat> poison)
   ret void
 }
 
 define void @exp10_f32() {
-; ALL-LABEL: 'exp10_f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.exp10.f32(float undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; BASE-LABEL: 'exp10_f32'
+; BASE-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 105 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 1008 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 2688 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; ALL-SIZE-LABEL: 'exp10_f32'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.exp10.f32(float undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; GFX8-LABEL: 'exp10_f32'
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 105 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1008 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2688 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-  %f32 = call float @llvm.exp10.f32(float undef)
-  %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> undef)
-  %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> undef)
-  %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> undef)
-  %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> undef)
-  %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> undef)
-  %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> undef)
-  %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> undef)
+; GFX9-LABEL: 'exp10_f32'
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 85 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 816 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 2176 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'exp10_f32'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 85 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 816 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2176 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; BASE-SIZE-LABEL: 'exp10_f32'
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 57 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2432 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; GFX8-SIZE-LABEL: 'exp10_f32'
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 57 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2432 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; GFX9-SIZE-LABEL: 'exp10_f32'
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 720 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1920 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; GFX10-SIZE-LABEL: 'exp10_f32'
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 720 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1920 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %f32 = call float @llvm.exp10.f32(float poison)
+  %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+  %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+  %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+  %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+  %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+  %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+  %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
   ret void
 }
 
 define void @exp10_f64() {
 ; ALL-LABEL: 'exp10_f64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %f64 = call double @llvm.exp10.f64(double undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 184 for instruction: %v2f64 = call <2 x double> @llvm.exp10.v2f64(<2 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 276 for instruction: %v3f64 = call <3 x double> @llvm.exp10.v3f64(<3 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 368 for instruction: %v4f64 = call <4 x double> @llvm.exp10.v4f64(<4 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2208 for instruction: %v5f64 = call <5 x double> @llvm.exp10.v5f64(<5 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2208 for instruction: %v8f64 = call <8 x double> @llvm.exp10.v8f64(<8 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 7360 for instruction: %v16f64 = call <16 x double> @llvm.exp10.v16f64(<16 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10304 for instruction: %v17f64 = call <17 x double> @llvm.exp10.v17f64(<17 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %f64 = call double @llvm.exp10.f64(double poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 184 for instruction: %v2f64 = call <2 x double> @llvm.exp10.v2f64(<2 x double> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 276 for instruction: %v3f64 = call <3 x double> @llvm.exp10.v3f64(<3 x double> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 368 for instruction: %v4f64 = call <4 x double> @llvm.exp10.v4f64(<4 x double> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2208 for instruction: %v5f64 = call <5 x double> @llvm.exp10.v5f64(<5 x double> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2208 for instruction: %v8f64 = call <8 x double> @llvm.exp10.v8f64(<8 x double> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 7360 for instruction: %v16f64 = call <16 x double> @llvm.exp10.v16f64(<16 x double> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10304 for instruction: %v17f64 = call <17 x double> @llvm.exp10.v17f64(<17 x double> poison)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'exp10_f64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %f64 = call double @llvm.exp10.f64(double undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %v2f64 = call <2 x double> @llvm.exp10.v2f64(<2 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 138 for instruction: %v3f64 = call <3 x double> @llvm.exp10.v3f64(<3 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 184 for instruction: %v4f64 = call <4 x double> @llvm.exp10.v4f64(<4 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1104 for instruction: %v5f64 = call <5 x double> @llvm.exp10.v5f64(<5 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1104 for instruction: %v8f64 = call <8 x double> @llvm.exp10.v8f64(<8 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3680 for instruction: %v16f64 = call <16 x double> @llvm.exp10.v16f64(<16 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 5152 for instruction: %v17f64 = call <17 x double> @llvm.exp10.v17f64(<17 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %f64 = call double @llvm.exp10.f64(double poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %v2f64 = call <2 x double> @llvm.exp10.v2f64(<2 x double> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 138 for instruction: %v3f64 = call <3 x double> @llvm.exp10.v3f64(<3 x double> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 184 for instruction: %v4f64 = call <4 x double> @llvm.exp10.v4f64(<4 x double> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1104 for instruction: %v5f64 = call <5 x double> @llvm.exp10.v5f64(<5 x double> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1104 for instruction: %v8f64 = call <8 x double> @llvm.exp10.v8f64(<8 x double> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3680 for instruction: %v16f64 = call <16 x double> @llvm.exp10.v16f64(<16 x double> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 5152 for instruction: %v17f64 = call <17 x double> @llvm.exp10.v17f64(<17 x double> poison)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %f64 = call double @llvm.exp10.f64(double undef)
-  %v2f64 = call <2 x double> @llvm.exp10.v2f64(<2 x double> undef)
-  %v3f64 = call <3 x double> @llvm.exp10.v3f64(<3 x double> undef)
-  %v4f64 = call <4 x double> @llvm.exp10.v4f64(<4 x double> undef)
-  %v5f64 = call <5 x double> @llvm.exp10.v5f64(<5 x double> undef)
-  %v8f64 = call <8 x double> @llvm.exp10.v8f64(<8 x double> undef)
-  %v16f64 = call <16 x double> @llvm.exp10.v16f64(<16 x double> undef)
-  %v17f64 = call <17 x double> @llvm.exp10.v17f64(<17 x double> undef)
+  %f64 = call double @llvm.exp10.f64(double poison)
+  %v2f64 = call <2 x double> @llvm.exp10.v2f64(<2 x double> poison)
+  %v3f64 = call <3 x double> @llvm.exp10.v3f64(<3 x double> poison)
+  %v4f64 = call <4 x double> @llvm.exp10.v4f64(<4 x double> poison)
+  %v5f64 = call <5 x double> @llvm.exp10.v5f64(<5 x double> poison)
+  %v8f64 = call <8 x double> @llvm.exp10.v8f64(<8 x double> poison)
+  %v16f64 = call <16 x double> @llvm.exp10.v16f64(<16 x double> poison)
+  %v17f64 = call <17 x double> @llvm.exp10.v17f64(<17 x double> poison)
   ret void
 }
+
+define void @exp10_f32_afn_ieee() #0 {
+; ALL-LABEL: 'exp10_f32_afn_ieee'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %f32 = call afn float @llvm.exp10.f32(float poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v2f32 = call afn <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v3f32 = call afn <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v4f32 = call afn <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v5f32 = call afn <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8f32 = call afn <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v16f32 = call afn <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2048 for instruction: %v17f32 = call afn <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'exp10_f32_afn_ieee'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %f32 = call afn float @llvm.exp10.f32(float poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v2f32 = call afn <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v3f32 = call afn <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f32 = call afn <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v5f32 = call afn <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v8f32 = call afn <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v16f32 = call afn <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1536 for instruction: %v17f32 = call afn <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %f32 = call afn float @llvm.exp10.f32(float poison)
+  %v2f32 = call afn <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+  %v3f32 = call afn <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+  %v4f32 = call afn <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+  %v5f32 = call afn <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+  %v8f32 = call afn <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+  %v16f32 = call afn <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+  %v17f32 = call afn <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+  ret void
+}
+
+define void @exp10_f32_afn_daz() #1 {
+; ALL-LABEL: 'exp10_f32_afn_daz'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %f32 = call afn float @llvm.exp10.f32(float poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v2f32 = call afn <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v3f32 = call afn <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %v4f32 = call afn <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %v5f32 = call afn <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v8f32 = call afn <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %v16f32 = call afn <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 1408 for instruction: %v17f32 = call afn <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'exp10_f32_afn_daz'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %f32 = call afn float @llvm.exp10.f32(float poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v2f32 = call afn <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %v3f32 = call afn <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v4f32 = call afn <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v5f32 = call afn <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v8f32 = call afn <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 336 for instruction: %v16f32 = call afn <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 896 for instruction: %v17f32 = call afn <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %f32 = call afn float @llvm.exp10.f32(float poison)
+  %v2f32 = call afn <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+  %v3f32 = call afn <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+  %v4f32 = call afn <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+  %v5f32 = call afn <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+  %v8f32 = call afn <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+  %v16f32 = call afn <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+  %v17f32 = call afn <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+  ret void
+}
+
+define void @exp10_f32_daz() #1 {
+; BASE-LABEL: 'exp10_f32_daz'
+; BASE-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 105 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 1008 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 2688 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; BASE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX8-LABEL: 'exp10_f32_daz'
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 105 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 1008 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2688 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX9-LABEL: 'exp10_f32_daz'
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 85 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 816 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 2176 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; GFX10-LABEL: 'exp10_f32_daz'
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 51 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 85 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 816 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 2176 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX10-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; BASE-SIZE-LABEL: 'exp10_f32_daz'
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 57 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2432 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; BASE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; GFX8-SIZE-LABEL: 'exp10_f32_daz'
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 57 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 912 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2432 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; GFX9-SIZE-LABEL: 'exp10_f32_daz'
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 720 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1920 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; GFX10-SIZE-LABEL: 'exp10_f32_daz'
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %f32 = call float @llvm.exp10.f32(float poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 120 for instruction: %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 720 for instruction: %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1920 for instruction: %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+; GFX10-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %f32 = call float @llvm.exp10.f32(float poison)
+  %v2f32 = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
+  %v3f32 = call <3 x float> @llvm.exp10.v3f32(<3 x float> poison)
+  %v4f32 = call <4 x float> @llvm.exp10.v4f32(<4 x float> poison)
+  %v5f32 = call <5 x float> @llvm.exp10.v5f32(<5 x float> poison)
+  %v8f32 = call <8 x float> @llvm.exp10.v8f32(<8 x float> poison)
+  %v16f32 = call <16 x float> @llvm.exp10.v16f32(<16 x float> poison)
+  %v17f32 = call <17 x float> @llvm.exp10.v17f32(<17 x float> poison)
+  ret void
+}
+
+attributes #0 = { nounwind denormal_fpenv(float: ieee|ieee) }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }

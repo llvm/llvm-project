@@ -741,18 +741,47 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // Legalize the type.
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
     MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+    unsigned NElts =
+        LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
 
     if (SLT == MVT::f64) {
-      int NumOps = 20;
+      unsigned NumOps = 20;
       if (IID == Intrinsic::exp)
         ++NumOps;
       else if (IID == Intrinsic::exp10)
         NumOps += 3;
 
-      unsigned NElts =
-          LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
-
       return LT.first * NElts * NumOps * get64BitInstrCost(CostKind);
+    }
+
+    if (SLT == MVT::f32) {
+      unsigned NumFullRateOps = 0;
+      // v_exp_f32 (quarter rate).
+      unsigned NumQuarterRateOps = 1;
+
+      if (!ICA.getFlags().approxFunc() && IID != Intrinsic::exp2) {
+        // Non-AFN exp/exp10: range reduction + v_exp_f32 + ldexp +
+        // overflow/underflow checks (lowerFEXP). Denorm is also handled.
+        // FMA preamble: ~13 full-rate ops; non-FMA: ~17.
+        NumFullRateOps = ST->hasFastFMAF32() ? 13 : 17;
+      } else {
+        if (IID == Intrinsic::exp) {
+          // lowerFEXPUnsafe: fmul (base conversion) + v_exp_f32.
+          NumFullRateOps = 1;
+        } else if (IID == Intrinsic::exp10) {
+          // lowerFEXP10Unsafe: 3 fmul + 2 v_exp_f32 (double-exp2).
+          NumFullRateOps = 3;
+          NumQuarterRateOps = 2;
+        }
+        // Denorm scaling adds setcc + select + fadd + select + fmul.
+        if (HasFP32Denormals)
+          NumFullRateOps += 5;
+      }
+
+      InstructionCost Cost =
+          NumFullRateOps * getFullRateInstrCost() +
+          NumQuarterRateOps * getQuarterRateInstrCost(CostKind);
+      return LT.first * NElts * Cost;
     }
 
     break;

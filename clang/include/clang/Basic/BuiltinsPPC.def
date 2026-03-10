@@ -1019,6 +1019,10 @@ TARGET_BUILTIN(__builtin_amo_stwat, "vUi*UiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_stdat, "vULi*ULiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_stwat_s, "vSi*SiIi", "", "isa-v30-instructions")
 TARGET_BUILTIN(__builtin_amo_stdat_s, "vSLi*SLiIi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_lwat_csne, "UiUi*UiUi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_ldat_csne, "ULiULi*ULiULi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_lwat_csne_s, "SiSi*SiSi", "", "isa-v30-instructions")
+TARGET_BUILTIN(__builtin_amo_ldat_csne_s, "SLiSLi*SLiSLi", "", "isa-v30-instructions")
 
 
 // Set the floating point rounding mode

@@ -9,6 +9,7 @@
 #include <cassert>
 #include <string>
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -469,11 +470,19 @@ void FactsGenerator::handleFullExprCleanup(
 }
 
 void FactsGenerator::handleExitBlock() {
-  // Creates FieldEscapeFacts for all field origins that remain live at exit.
   for (const Origin &O : FactMgr.getOriginMgr().getOrigins())
     if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl()))
+      // Create FieldEscapeFacts for all field origins that remain live at exit.
       EscapesInCurrentBlock.push_back(
           FactMgr.createFact<FieldEscapeFact>(O.ID, FD));
+    else if (auto *VD = dyn_cast_if_present<VarDecl>(O.getDecl())) {
+      // Create GlobalEscapeFacts for all origins with global-storage that
+      // remain live at exit.
+      if (VD->hasGlobalStorage()) {
+        EscapesInCurrentBlock.push_back(
+            FactMgr.createFact<GlobalEscapeFact>(O.ID, VD));
+      }
+    }
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {

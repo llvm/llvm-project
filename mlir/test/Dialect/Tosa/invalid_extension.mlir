@@ -187,6 +187,13 @@ func.func @test_concat(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x21x3xbf16>)
 }
 
 // -----
+func.func @test_concat(%arg0: tensor<13x21x3xi16>, %arg1: tensor<13x21x3xi16>) -> tensor<26x21x3xi16> {
+  // expected-error@+1 {{'tosa.concat' op illegal: requires [int16] but not enabled in target}}
+  %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xi16>, tensor<13x21x3xi16>) -> tensor<26x21x3xi16>
+  return %0 : tensor<26x21x3xi16>
+}
+
+// -----
 func.func @test_pad(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
   %padding = tosa.const_shape {values = dense<0> : tensor<6xindex>} : () -> !tosa.shape<6>
   // expected-error@+1 {{'tosa.const' op illegal: requires [bf16] but not enabled in target}}

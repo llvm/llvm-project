@@ -512,6 +512,7 @@ public:
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<UniqueBBID> &BBID);
   bool parseCallFrameSize(unsigned &CallFrameSize);
+  bool parsePrefetchTarget(CallsiteID &Target);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -678,17 +679,32 @@ bool MIParser::parseSectionID(std::optional<MBBSectionID> &SID) {
 
 // Parse Machine Basic Block ID.
 bool MIParser::parseBBID(std::optional<UniqueBBID> &BBID) {
-  assert(Token.is(MIToken::kw_bb_id));
+  if (Token.isNot(MIToken::kw_bb_id))
+    return error("expected 'bb_id'");
   lex();
   unsigned BaseID = 0;
   unsigned CloneID = 0;
-  if (getUnsigned(BaseID))
-    return error("Unknown BB ID");
-  lex();
-  if (Token.is(MIToken::IntegerLiteral)) {
-    if (getUnsigned(CloneID))
-      return error("Unknown Clone ID");
+  if (Token.is(MIToken::FloatingPointLiteral)) {
+    StringRef S = Token.range();
+    auto Parts = S.split('.');
+    if (Parts.first.getAsInteger(10, BaseID) ||
+        Parts.second.getAsInteger(10, CloneID))
+      return error("Unknown BB ID");
     lex();
+  } else {
+    if (getUnsigned(BaseID))
+      return error("Unknown BB ID");
+    lex();
+    if (Token.is(MIToken::comma) || Token.is(MIToken::dot)) {
+      lex();
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    } else if (Token.is(MIToken::IntegerLiteral)) {
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    }
   }
   BBID = {BaseID, CloneID};
   return false;
@@ -704,6 +720,17 @@ bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
   CallFrameSize = Value;
   lex();
   return false;
+}
+
+bool MIParser::parsePrefetchTarget(CallsiteID &Target) {
+  lex();
+  std::optional<UniqueBBID> BBID;
+  if (parseBBID(BBID))
+    return true;
+  Target.BBID = *BBID;
+  if (expectAndConsume(MIToken::comma))
+    return true;
+  return getUnsigned(Target.CallsiteIndex);
 }
 
 bool MIParser::parseBasicBlockDefinition(
@@ -3720,14 +3747,18 @@ bool llvm::parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
   return MIParser(PFS, Error, Src).parseStandaloneVirtualRegister(Info);
 }
 
-bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS,
-                                     int &FI, StringRef Src,
-                                     SMDiagnostic &Error) {
+bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
+                                     StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneStackObject(FI);
 }
 
-bool llvm::parseMDNode(PerFunctionMIParsingState &PFS,
-                       MDNode *&Node, StringRef Src, SMDiagnostic &Error) {
+bool llvm::parsePrefetchTarget(PerFunctionMIParsingState &PFS,
+                               CallsiteID &Target, StringRef Src,
+                               SMDiagnostic &Error) {
+  return MIParser(PFS, Error, Src).parsePrefetchTarget(Target);
+}
+bool llvm::parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
+                       StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
 }
 

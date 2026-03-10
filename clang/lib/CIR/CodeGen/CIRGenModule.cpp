@@ -1095,7 +1095,7 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
     str.resize(finalSize);
 
     mlir::Type eltTy = convertType(cat->getElementType());
-    return builder.getString(str, eltTy, finalSize);
+    return builder.getString(str, eltTy, finalSize, /*ensureNullTerm=*/false);
   }
 
   auto arrayTy = mlir::cast<cir::ArrayType>(convertType(e->getType()));

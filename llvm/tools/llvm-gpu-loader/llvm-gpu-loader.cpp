@@ -143,7 +143,7 @@ void *copyEnvironment(const char **Envp, ol_device_handle_t Device) {
 }
 
 ol_device_handle_t findDevice(MemoryBufferRef Binary) {
-  ol_device_handle_t Device;
+  ol_device_handle_t Device = nullptr;
   std::tuple Data = std::make_tuple(&Device, &Binary);
   OFFLOAD_ERR(olIterateDevices(
       [](ol_device_handle_t Device, void *UserData) {
@@ -201,7 +201,8 @@ int main(int argc, const char **argv, const char **envp) {
   cl::ParseCommandLineOptions(
       argc, argv,
       "A utility used to launch unit tests built for a GPU target. This is\n"
-      "intended to provide an intrface simular to cross-compiling emulators\n");
+      "intended to provide an interface similar to cross-compiling "
+      "emulators\n");
 
   if (Help) {
     cl::PrintHelpMessage();
@@ -250,7 +251,10 @@ int main(int argc, const char **argv, const char **envp) {
 
   OFFLOAD_ERR(olInit(&InitArgs));
   ol_device_handle_t Device = findDevice(Image);
+  if (!Device)
+    handleError(createStringError("No compatible device was found"));
   ol_device_handle_t Host = getHostDevice();
+  assert(Host && "Host device should always be present");
 
   ol_program_handle_t Program;
   OFFLOAD_ERR(olCreateProgram(Device, Image.getBufferStart(),

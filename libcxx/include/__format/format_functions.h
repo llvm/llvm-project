@@ -26,7 +26,7 @@
 #include <__format/format_string.h>
 #include <__format/format_to_n_result.h>
 #include <__format/formatter.h>
-#include <__format/formatter_bool.h>
+#include <__format/formatter_bool_impl.h>
 #include <__format/formatter_char.h>
 #include <__format/formatter_floating_point.h>
 #include <__format/formatter_integer.h>

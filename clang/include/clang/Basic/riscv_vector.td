@@ -2107,7 +2107,7 @@ multiclass RVVVDOTA4QBuiltinSet<list<list<string>> suffixes_prototypes> {
       HasMaskedOffOperand = false,
       OverloadedName = NAME,
       Log2LMUL = [-1, 0, 1, 2, 3] in {
-    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "i", suffixes_prototypes>;
+    defm NAME : RVVOutOp2BuiltinSet<NAME, "i", suffixes_prototypes>;
   }
 }
 
@@ -2115,13 +2115,13 @@ multiclass RVVVDOTA4QBuiltinSet<list<list<string>> suffixes_prototypes> {
 // four 8-bit integer bundles, we use unsigned type to represent all of them
 let RequiredFeatures = ["zvdot4a8i"] in {
   defm vdota4
-      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"],
-                              ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
+      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
+                              ["vx", "v", "vvUvUe"]]>;
   defm vdota4u
-      : RVVVDOTA4QBuiltinSet<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"],
-                              ["vx", "Uv", "UvUv(FixedSEW:8)UvUe"]]>;
+      : RVVVDOTA4QBuiltinSet<[["vv", "Uv", "UvUvUvUv"],
+                              ["vx", "Uv", "UvUvUvUe"]]>;
   defm vdota4su
-      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"],
-                              ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
-  defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vv(FixedSEW:8)UvUe"]]>;
+      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vvUvUv"],
+                              ["vx", "v", "vvUvUe"]]>;
+  defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vvUvUe"]]>;
 }

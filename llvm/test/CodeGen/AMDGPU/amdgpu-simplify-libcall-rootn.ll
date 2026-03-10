@@ -271,7 +271,7 @@ define half @test_rootn_f16_1(half %x) {
 define half @test_rootn_f16_2(half %x) {
 ; CHECK-LABEL: define half @test_rootn_f16_2(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.sqrt.f16(half [[X]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.sqrt.f16(half [[X]]), !fpmath [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = tail call half @_Z5rootnDhi(half %x, i32 2)
@@ -307,7 +307,7 @@ define half @test_rootn_f16_neg2(half %x) {
 ; CHECK-LABEL: define half @test_rootn_f16_neg2(
 ; CHECK-SAME: half [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract half @llvm.sqrt.f16(half [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract half 0xH3C00, [[TMP1]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract half 0xH3C00, [[TMP1]], !fpmath [[META1]]
 ; CHECK-NEXT:    ret half [[__ROOTN2RSQRT]]
 ;
   %call = tail call half @_Z5rootnDhi(half %x, i32 -2)
@@ -356,7 +356,7 @@ define <2 x half> @test_rootn_v2f16_1(<2 x half> %x) {
 define <2 x half> @test_rootn_v2f16_2(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_rootn_v2f16_2(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x half> @llvm.sqrt.v2f16(<2 x half> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x half> @llvm.sqrt.v2f16(<2 x half> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <2 x half> [[CALL]]
 ;
   %call = tail call <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half> %x, <2 x i32> <i32 2, i32 2>)
@@ -377,7 +377,7 @@ define <2 x half> @test_rootn_v2f16_neg2(<2 x half> %x) {
 ; CHECK-LABEL: define <2 x half> @test_rootn_v2f16_neg2(
 ; CHECK-SAME: <2 x half> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x half> @llvm.sqrt.v2f16(<2 x half> [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x half> splat (half 0xH3C00), [[TMP1]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x half> splat (half 0xH3C00), [[TMP1]], !fpmath [[META1]]
 ; CHECK-NEXT:    ret <2 x half> [[__ROOTN2RSQRT]]
 ;
   %call = tail call <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half> %x, <2 x i32> <i32 -2, i32 -2>)
@@ -618,7 +618,7 @@ define float @test_rootn_f32__y_2(float %x) {
 ; CHECK-LABEL: define float @test_rootn_f32__y_2(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -630,7 +630,7 @@ define float @test_rootn_f32__y_2_flags(float %x) {
 ; CHECK-LABEL: define float @test_rootn_f32__y_2_flags(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -643,7 +643,7 @@ define float @test_rootn_f32__y_2_fpmath_3(float %x) {
 ; CHECK-LABEL: define float @test_rootn_f32__y_2_fpmath_3(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[X]]), !fpmath [[META1:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[X]]), !fpmath [[META2:![0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -655,7 +655,7 @@ define <2 x float> @test_rootn_v2f32__y_2_flags(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_2_flags(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call nnan nsz <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nnan nsz <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
@@ -667,7 +667,7 @@ define <3 x float> @test_rootn_v3f32__y_2(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x float> @test_rootn_v3f32__y_2(
 ; CHECK-SAME: <3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call <3 x float> @llvm.sqrt.v3f32(<3 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <3 x float> @llvm.sqrt.v3f32(<3 x float> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <3 x float> [[CALL]]
 ;
 entry:
@@ -679,7 +679,7 @@ define <3 x float> @test_rootn_v3f32__y_2_undef(<3 x float> %x) {
 ; CHECK-LABEL: define <3 x float> @test_rootn_v3f32__y_2_undef(
 ; CHECK-SAME: <3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call <3 x float> @llvm.sqrt.v3f32(<3 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <3 x float> @llvm.sqrt.v3f32(<3 x float> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <3 x float> [[CALL]]
 ;
 entry:
@@ -691,7 +691,7 @@ define <4 x float> @test_rootn_v4f32__y_2(<4 x float> %x) {
 ; CHECK-LABEL: define <4 x float> @test_rootn_v4f32__y_2(
 ; CHECK-SAME: <4 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <4 x float> [[CALL]]
 ;
 entry:
@@ -703,7 +703,7 @@ define <8 x float> @test_rootn_v8f32__y_2(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @test_rootn_v8f32__y_2(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call <8 x float> @llvm.sqrt.v8f32(<8 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <8 x float> @llvm.sqrt.v8f32(<8 x float> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <8 x float> [[CALL]]
 ;
 entry:
@@ -715,7 +715,7 @@ define <16 x float> @test_rootn_v16f32__y_2(<16 x float> %x) {
 ; CHECK-LABEL: define <16 x float> @test_rootn_v16f32__y_2(
 ; CHECK-SAME: <16 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call <16 x float> @llvm.sqrt.v16f32(<16 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <16 x float> @llvm.sqrt.v16f32(<16 x float> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <16 x float> [[CALL]]
 ;
 entry:
@@ -775,7 +775,7 @@ define <2 x float> @test_rootn_v2f32__y_nonsplat_2_poison(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @test_rootn_v2f32__y_nonsplat_2_poison(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath [[META1]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
@@ -884,7 +884,7 @@ define float @test_rootn_f32__y_neg2(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract float 1.000000e+00, [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract float 1.000000e+00, [[TMP0]], !fpmath [[META1]]
 ; CHECK-NEXT:    ret float [[__ROOTN2RSQRT]]
 ;
 entry:
@@ -897,7 +897,7 @@ define float @test_rootn_f32__y_neg2__flags(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call nnan nsz contract float @llvm.sqrt.f32(float [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv nnan nsz contract float 1.000000e+00, [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv nnan nsz contract float 1.000000e+00, [[TMP0]], !fpmath [[META1]]
 ; CHECK-NEXT:    ret float [[__ROOTN2RSQRT]]
 ;
 entry:
@@ -946,7 +946,7 @@ define <2 x float> @test_rootn_v2f32__y_neg2(<2 x float> %x) {
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x float> splat (float 1.000000e+00), [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv contract <2 x float> splat (float 1.000000e+00), [[TMP0]], !fpmath [[META1]]
 ; CHECK-NEXT:    ret <2 x float> [[__ROOTN2RSQRT]]
 ;
 entry:
@@ -959,7 +959,7 @@ define <2 x float> @test_rootn_v2f32__y_neg2__flags(<2 x float> %x) {
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call nnan nsz contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv nnan nsz contract <2 x float> splat (float 1.000000e+00), [[TMP0]], !fpmath [[META0]]
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = fdiv nnan nsz contract <2 x float> splat (float 1.000000e+00), [[TMP0]], !fpmath [[META1]]
 ; CHECK-NEXT:    ret <2 x float> [[__ROOTN2RSQRT]]
 ;
 entry:
@@ -1010,7 +1010,7 @@ define float @test_rootn_afn_f32(float %x, i32 %y) {
 ; NOPRELINK-SAME: float [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[TMP0]])
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.log2.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = fmul afn float [[TMP1]], [[TMP3]]
@@ -1052,7 +1052,7 @@ define <2 x float> @test_rootn_afn_v2f32(<2 x float> %x, <2 x i32> %y) {
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp <2 x i32> [[Y]] to <2 x float>
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call afn <2 x float> @llvm.amdgcn.rcp.v2f32(<2 x float> [[TMP0]])
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan afn <2 x float> splat (float 1.000000e+00), [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = fmul afn <2 x float> [[TMP1]], [[TMP3]]
@@ -1142,7 +1142,7 @@ define float @test_rootn_afn_nnan_ninf_f32(float %x, i32 %y) {
 ; NOPRELINK-SAME: float [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn float @llvm.amdgcn.rcp.f32(float [[TMP0]])
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan ninf afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = fmul nnan ninf afn float [[TMP1]], [[TMP3]]
@@ -1181,7 +1181,7 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32(<2 x float> %x, <2 x i32> %y)
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp <2 x i32> [[Y]] to <2 x float>
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn <2 x float> @llvm.amdgcn.rcp.v2f32(<2 x float> [[TMP0]])
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan ninf afn <2 x float> splat (float 1.000000e+00), [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = fmul nnan ninf afn <2 x float> [[TMP1]], [[TMP3]]
@@ -1280,7 +1280,7 @@ define float @test_rootn_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; NOPRELINK-SAME: float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = call fast float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP0]]) #[[ATTR0]]
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.constrained.fdiv.f32(float 1.000000e+00, float [[TMP0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.fabs.f32(float [[X]]) #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.log2.f32(float [[TMP2]]) #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.experimental.constrained.fmul.f32(float [[TMP1]], float [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
@@ -1561,10 +1561,9 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_3(<2 x float> %x) {
 ; NOPRELINK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_3(
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = call nnan ninf afn <2 x float> @llvm.amdgcn.rcp.v2f32(<2 x float> splat (float 3.000000e+00))
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP1]])
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP0]], [[TMP2]]
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP2]], splat (float 0x3FD5555560000000)
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = call nnan ninf afn <2 x float> @llvm.copysign.v2f32(<2 x float> [[TMP4]], <2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf afn oeq <2 x float> [[X]], zeroinitializer
@@ -1588,10 +1587,9 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_4(<2 x float> %x) {
 ; NOPRELINK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_4(
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = call nnan ninf afn <2 x float> @llvm.amdgcn.rcp.v2f32(<2 x float> splat (float 4.000000e+00))
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP1]])
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP0]], [[TMP2]]
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP2]], splat (float 2.500000e-01)
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fcmp nnan ninf afn oeq <2 x float> [[X]], zeroinitializer
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = select nnan ninf afn <2 x i1> [[TMP5]], <2 x float> zeroinitializer, <2 x float> [[TMP4]]
@@ -1614,10 +1612,9 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg3(<2 x float> %x) {
 ; NOPRELINK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg3(
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = call nnan ninf afn <2 x float> @llvm.amdgcn.rcp.v2f32(<2 x float> splat (float -3.000000e+00))
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP1]])
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP0]], [[TMP2]]
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP2]], splat (float 0xBFD5555560000000)
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = call nnan ninf afn <2 x float> @llvm.copysign.v2f32(<2 x float> [[TMP4]], <2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf afn une <2 x float> [[X]], zeroinitializer
@@ -1641,10 +1638,9 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg4(<2 x float> %x) {
 ; NOPRELINK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_neg4(
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = call nnan ninf afn <2 x float> @llvm.amdgcn.rcp.v2f32(<2 x float> splat (float -4.000000e+00))
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP1]])
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP0]], [[TMP2]]
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP2]], splat (float -2.500000e-01)
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fcmp nnan ninf afn une <2 x float> [[X]], zeroinitializer
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = select nnan ninf afn <2 x i1> [[TMP5]], <2 x float> [[TMP4]], <2 x float> splat (float 0x7FF0000000000000)
@@ -1667,10 +1663,9 @@ define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_5(<2 x float> %x) {
 ; NOPRELINK-LABEL: define <2 x float> @test_rootn_afn_nnan_ninf_v2f32__y_5(
 ; NOPRELINK-SAME: <2 x float> [[X:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
-; NOPRELINK-NEXT:    [[TMP0:%.*]] = call nnan ninf afn <2 x float> @llvm.amdgcn.rcp.v2f32(<2 x float> splat (float 5.000000e+00))
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP1]])
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP0]], [[TMP2]]
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn <2 x float> [[TMP2]], splat (float 0x3FC99999A0000000)
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = call nnan ninf afn <2 x float> @llvm.copysign.v2f32(<2 x float> [[TMP4]], <2 x float> [[X]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf afn oeq <2 x float> [[X]], zeroinitializer
@@ -1707,7 +1702,7 @@ define float @test_rootn_afn_f32__x_known_positive(float nofpclass(ninf nsub nno
 ; NOPRELINK-SAME: float nofpclass(ninf nsub nnorm) [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[TMP0]])
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.log2.f32(float [[TMP2]])
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = fmul afn float [[TMP1]], [[TMP3]]
@@ -1746,7 +1741,7 @@ define float @test_rootn_afn_ninf_nnan_f32__x_known_positive(float nofpclass(nin
 ; NOPRELINK-SAME: float nofpclass(ninf nsub nnorm) [[X:%.*]], i32 [[Y:%.*]]) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call nnan ninf afn float @llvm.amdgcn.rcp.f32(float [[TMP0]])
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = fdiv nnan ninf afn float 1.000000e+00, [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn float [[TMP1]], [[TMP2]]
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP3]])
@@ -1836,10 +1831,9 @@ define float @test_fast_rootn_f32_y_known_even(float %x, i32 %y.arg) {
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[Y:%.*]] = shl i32 [[Y_ARG]], 1
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP0]])
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.log2.f32(float [[TMP2]])
-; NOPRELINK-NEXT:    [[TMP4:%.*]] = fmul fast float [[TMP1]], [[TMP3]]
+; NOPRELINK-NEXT:    [[TMP4:%.*]] = fdiv fast float [[TMP3]], [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.exp2.f32(float [[TMP4]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp fast oeq float [[X]], 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[Y]], 0
@@ -1871,9 +1865,9 @@ define float @test_fast_rootn_f32_known_positive_y_known_even(float nofpclass(ni
 ; NOPRELINK-NEXT:  entry:
 ; NOPRELINK-NEXT:    [[Y:%.*]] = shl i32 [[Y_ARG]], 1
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[Y]] to float
-; NOPRELINK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP0]])
-; NOPRELINK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.log2.f32(float [[X]])
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP1]], [[TMP2]]
+; NOPRELINK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
+; NOPRELINK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.log2.f32(float [[TMP1]])
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = fdiv fast float [[TMP2]], [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.exp2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fcmp fast oeq float [[X]], 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[Y]], 0
@@ -1972,9 +1966,11 @@ attributes #2 = { noinline }
 ; NOPRELINK: attributes #[[ATTR3]] = { noinline }
 ; NOPRELINK: attributes #[[ATTR4]] = { nobuiltin }
 ;.
-; PRELINK: [[META0]] = !{float 2.000000e+00}
-; PRELINK: [[META1]] = !{float 3.000000e+00}
+; PRELINK: [[META0:![0-9]+]] = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}
+; PRELINK: [[META1]] = !{float 2.000000e+00}
+; PRELINK: [[META2]] = !{float 3.000000e+00}
 ;.
-; NOPRELINK: [[META0]] = !{float 2.000000e+00}
-; NOPRELINK: [[META1]] = !{float 3.000000e+00}
+; NOPRELINK: [[META0:![0-9]+]] = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}
+; NOPRELINK: [[META1]] = !{float 2.000000e+00}
+; NOPRELINK: [[META2]] = !{float 3.000000e+00}
 ;.

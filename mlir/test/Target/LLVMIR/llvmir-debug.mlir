@@ -19,8 +19,8 @@ llvm.func @func_no_debug() {
 
 #file = #llvm.di_file<"foo.mlir" in "/test/">
 #si64 = #llvm.di_basic_type<
-  // Omit the optional sizeInBits and encoding parameters.
-  tag = DW_TAG_base_type, name = "si64"
+  // Omit the optional parameters.
+  tag = DW_TAG_base_type
 >
 #si32 = #llvm.di_basic_type<
   tag = DW_TAG_base_type, name = "si32",
@@ -152,7 +152,7 @@ llvm.func @empty_types() {
 // CHECK: ![[TOPLEVEL_NAMESPACE]] = !DINamespace(name: "toplevel", scope: null, exportSymbols: true)
 // CHECK: ![[FUNC_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[FUNC_ARGS:.*]])
 // CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[PTR_WITH_ADDR_SPACE:.*]], ![[FLAGS:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
-// CHECK: ![[ARG_TYPE]] = !DIBasicType(name: "si64")
+// CHECK: ![[ARG_TYPE]] = !DIBasicType()
 // CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, extraData: ![[BASE_TYPE]])
 // CHECK: ![[BASE_TYPE]] = !DIBasicType(name: "si32", size: 32, encoding: DW_ATE_signed)
 // CHECK: ![[NAMED_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "named", baseType: ![[BASE_TYPE:.*]])
@@ -661,15 +661,17 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 #sp = #llvm.di_subprogram<compileUnit = #cu, scope = #file, name = "test",
  file = #file, subprogramFlags = Definition>
 #var = #llvm.di_local_variable<scope = #sp, name = "string_size", type = #bt, flags = Artificial>
-#ty = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
+#sty1 = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
  stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
-#var1 = #llvm.di_local_variable<scope = #sp, name = "str", type = #ty>
+#var1 = #llvm.di_local_variable<scope = #sp, name = "str1", type = #sty1>
+#sty2 = #llvm.di_string_type<tag = DW_TAG_string_type>
+#var2 = #llvm.di_local_variable<scope = #sp, name = "str2", type = #sty2>
 
 llvm.func @string_ty(%arg0: !llvm.ptr) {
   llvm.intr.dbg.value #var1 = %arg0 : !llvm.ptr
-  llvm.intr.dbg.value #var = %arg0 : !llvm.ptr
+  llvm.intr.dbg.value #var2 = %arg0 : !llvm.ptr
   llvm.return
 } loc(#loc2)
 
@@ -678,6 +680,7 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
+// CHECK-DAG: !DIStringType()
 
 // -----
 

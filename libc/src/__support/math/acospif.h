@@ -30,18 +30,20 @@ LIBC_INLINE float acospif(float x) {
 
   auto signed_result = [is_neg](auto r) -> auto { return is_neg ? -r : r; };
 
-  if (LIBC_UNLIKELY(x_abs > 1.0)) {
+  if (LIBC_UNLIKELY(x_abs >= 1.0)) {
     if (xbits.is_nan()) {
       if (xbits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
         return FPBits::quiet_nan().get_val();
       }
       return x;
+    } else if (LIBC_UNLIKELY(x_abs == 1.0)) {
+      return is_neg ? 1.0f : 0.0f;
+    } else {
+      fputil::raise_except_if_required(FE_INVALID);
+      fputil::set_errno_if_required(EDOM);
+      return FPBits::quiet_nan().get_val();
     }
-
-    fputil::raise_except_if_required(FE_INVALID);
-    fputil::set_errno_if_required(EDOM);
-    return FPBits::quiet_nan().get_val();
   }
 
   // acospif(x) = 1/2 - asinpif(x)

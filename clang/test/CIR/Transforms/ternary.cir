@@ -9,7 +9,7 @@ module {
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     %3 = cir.const #cir.int<0> : !s32i
-    %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
+    %4 = cir.cmp gt %2, %3 : !s32i
     %5 = cir.ternary(%4, true {
       %7 = cir.const #cir.int<3> : !s32i
       cir.yield %7 : !s32i
@@ -28,7 +28,7 @@ module {
 // CHECK:   cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
 // CHECK:   %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK:   %3 = cir.const #cir.int<0> : !s32i
-// CHECK:   %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
+// CHECK:   %4 = cir.cmp gt %2, %3 : !s32i
 // CHECK:    cir.brcond %4 ^bb1, ^bb2
 // CHECK:  ^bb1:  // pred: ^bb0
 // CHECK:    %5 = cir.const #cir.int<3> : !s32i

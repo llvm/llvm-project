@@ -23,7 +23,7 @@ int Return11(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 1
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 4
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return12(int4x4 A) {
@@ -36,7 +36,7 @@ int Return12(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 2
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 8
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return13(int4x4 A) {
@@ -49,7 +49,7 @@ int Return13(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 3
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 12
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return14(int4x4 A) {
@@ -62,7 +62,7 @@ int Return14(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 4
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 1
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return21(int4x4 A) {
@@ -88,7 +88,7 @@ int Return22(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 6
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 9
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return23(int4x4 A) {
@@ -101,7 +101,7 @@ int Return23(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 7
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 13
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return24(int4x4 A) {
@@ -114,7 +114,7 @@ int Return24(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 8
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 2
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return31(int4x4 A) {
@@ -127,7 +127,7 @@ int Return31(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 9
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 6
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return32(int4x4 A) {
@@ -153,7 +153,7 @@ int Return33(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 11
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 14
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return34(int4x4 A) {
@@ -166,7 +166,7 @@ int Return34(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 12
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 3
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return41(int4x4 A) {
@@ -179,7 +179,7 @@ int Return41(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 13
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 7
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return42(int4x4 A) {
@@ -192,7 +192,7 @@ int Return42(int4x4 A) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 14
+// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> [[TMP0]], i32 11
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int Return43(int4x4 A) {

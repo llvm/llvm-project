@@ -1,7 +1,5 @@
 // RUN: %check_clang_tidy \
-// RUN: -std=c++17-or-later %s modernize-use-string-view %t -- \
-// RUN: -- -isystem %clang_tidy_headers
-
+// RUN: -std=c++17-or-later %s modernize-use-string-view %t
 #include <string>
 
 namespace std {

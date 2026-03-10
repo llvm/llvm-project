@@ -42,9 +42,9 @@ public:
   /// and merges them into a single data store.
   ///
   /// \param Summary The TU summary to link. Ownership is transferred.
-  /// \returns Error if the TU namespace has already been linked, success
-  ///          otherwise. Corrupted summary data (missing linkage information,
-  ///          duplicate entity IDs, etc.) triggers a fatal error.
+  /// \returns Error if the TU namespace has already been linked or if patching
+  ///          fails, success otherwise. Corrupted summary data (missing linkage
+  ///          information, duplicate entity IDs, etc.) triggers a fatal error.
   llvm::Error link(std::unique_ptr<TUSummaryEncoding> Summary);
 
   /// Returns the accumulated LU summary.
@@ -81,8 +81,9 @@ private:
   ///
   /// \param PatchTargets Vector of summary encodings that need patching.
   /// \param EntityResolutionTable Map from TU EntityIds to LU EntityIds.
-  void patch(const std::vector<EntitySummaryEncoding *> &PatchTargets,
-             const std::map<EntityId, EntityId> &EntityResolutionTable);
+  /// \returns Error if patching any encoding fails, success otherwise.
+  llvm::Error patch(const std::vector<EntitySummaryEncoding *> &PatchTargets,
+                    const std::map<EntityId, EntityId> &EntityResolutionTable);
 };
 
 } // namespace clang::ssaf

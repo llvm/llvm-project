@@ -460,6 +460,7 @@ static ConceptDecl *constructBufferConceptDecl(Sema &S, NamespaceDecl *NSD,
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
+  ASTContext &AST = SemaPtr->getASTContext();
   CXXRecordDecl *Decl;
   ConceptDecl *TypedBufferConcept = constructBufferConceptDecl(
       *SemaPtr, HLSLNamespace, /*isTypedBuffer*/ true);
@@ -612,8 +613,10 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupSamplerType(Decl, *SemaPtr).completeDefinition();
   });
 
+  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
-             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {

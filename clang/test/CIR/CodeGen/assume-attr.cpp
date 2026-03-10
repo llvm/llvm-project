@@ -30,7 +30,7 @@ void usage(int i, int j) {
   // CIR: %[[GET_GLOB_VAR:.*]] = cir.get_global @_ZL9globalVar
   // CIR: %[[LOAD_GLOB_VAR:.*]] = cir.load {{.*}}%[[GET_GLOB_VAR]]
   // CIR: %[[LOAD_I:.*]] = cir.load {{.*}}%[[I]]
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[LOAD_GLOB_VAR]], %[[LOAD_I]]) 
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[LOAD_GLOB_VAR]], %[[LOAD_I]] 
   // CIR: cir.assume %[[CMP]] : !cir.bool
   // LLVM: %[[LOAD_GLOB_VAR:.*]] = load i32, ptr @_ZL9globalVar
   // BOTH: %[[LOAD_I:.*]] = load i32, ptr %[[I]]
@@ -46,11 +46,11 @@ void usage(int i, int j) {
     ;
   // CIR: %[[LOAD_J:.*]] = cir.load {{.*}}%[[J]]
   // CIR: %[[LOAD_I:.*]] = cir.load {{.*}}%[[I]]
-  // CIR: %[[J_EQ_I:.*]] = cir.cmp(eq, %[[LOAD_J]], %[[LOAD_I]])
+  // CIR: %[[J_EQ_I:.*]] = cir.cmp eq %[[LOAD_J]], %[[LOAD_I]]
   // CIR: %[[TERN:.*]] = cir.ternary(%[[J_EQ_I]], true {
   // CIR-NEXT: %[[LOAD_J:.*]] = cir.load {{.*}}%[[J]]
   // CIR-NEXT: %[[LOAD_LOCAL:.*]] = cir.load {{.*}}%[[LOCAL]]
-  // CIR-NEXT: %[[J_GT_LOCAL:.*]] = cir.cmp(gt, %[[LOAD_J]], %[[LOAD_LOCAL]])
+  // CIR-NEXT: %[[J_GT_LOCAL:.*]] = cir.cmp gt %[[LOAD_J]], %[[LOAD_LOCAL]]
   // CIR-NEXT: cir.yield %[[J_GT_LOCAL]]
   // CIR-NEXT: }, false {
   // CIR-NEXT: %[[FALSE:.*]] = cir.const #false

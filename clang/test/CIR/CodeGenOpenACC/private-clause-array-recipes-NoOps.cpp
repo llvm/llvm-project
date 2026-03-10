@@ -21,7 +21,7 @@ void do_things(unsigned A, unsigned B) {
 //
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR1_LOAD]], %[[UB1_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR1_LOAD]], %[[UB1_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
@@ -59,7 +59,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[IDX_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_NoOps>>, !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp ne %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]] : !cir.ptr<!rec_NoOps>
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
@@ -82,7 +82,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.store %[[LB2_CAST]], %[[ITR2]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR2_LOAD:.*]] = cir.load %[[ITR2]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR2_LOAD]], %[[UB2_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR2_LOAD]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 //
@@ -100,7 +100,7 @@ void do_things(unsigned A, unsigned B) {
 //
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR1_LOAD]], %[[UB1_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR1_LOAD]], %[[UB1_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
@@ -149,7 +149,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[IDX_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_NoOps>>, !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp ne %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]] : !cir.ptr<!rec_NoOps>
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
@@ -172,7 +172,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.store %[[LB3_CAST]], %[[ITR3]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR3_LOAD:.*]] = cir.load %[[ITR3]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR3_LOAD]], %[[UB3_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR3_LOAD]], %[[UB3_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR3_LOAD:.*]] = cir.load %[[ITR3]] : !cir.ptr<!u64i>, !u64i
@@ -187,7 +187,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.store %[[LB2_CAST]], %[[ITR2]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR2_LOAD:.*]] = cir.load %[[ITR2]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR2_LOAD]], %[[UB2_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR2_LOAD]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR2_LOAD:.*]] = cir.load %[[ITR2]] : !cir.ptr<!u64i>, !u64i
@@ -202,7 +202,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.store %[[LB1_CAST]], %[[ITR1]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR1_LOAD]], %[[UB1_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR1_LOAD]], %[[UB1_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
@@ -256,7 +256,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.store %[[LB2_CAST]], %[[ITR2]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR2_LOAD:.*]] = cir.load %[[ITR2]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR2_LOAD]], %[[UB2_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR2_LOAD]], %[[UB2_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 //
@@ -274,7 +274,7 @@ void do_things(unsigned A, unsigned B) {
 //
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR1_LOAD]], %[[UB1_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp lt %[[ITR1_LOAD]], %[[UB1_CAST]] : !u64i
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: } body {
 // CHECK-NEXT: %[[ITR1_LOAD:.*]] = cir.load %[[ITR1]] : !cir.ptr<!u64i>, !u64i
@@ -294,7 +294,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[IDX_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_NoOps>>, !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp ne %[[IDX_LOAD]], %[[LAST_ELT]] : !cir.ptr<!rec_NoOps>
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.yield
@@ -339,7 +339,7 @@ void do_things(unsigned A, unsigned B) {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } while {
 // CHECK-NEXT: %[[IDX_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_NoOps>>, !cir.ptr<!rec_NoOps>
-// CHECK-NEXT: %[[COND:.*]] = cir.cmp(ne, %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]]) : !cir.ptr<!rec_NoOps>, !cir.bool
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp ne %[[IDX_LOAD]], %[[ONE_PAST_LAST_ELT]] : !cir.ptr<!rec_NoOps>
 // CHECK-NEXT: cir.condition(%[[COND]])
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.yield

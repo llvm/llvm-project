@@ -7370,45 +7370,21 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
   if (!EpiRedHeaderPhi) {
     match(BackedgeVal,
-          m_Select(m_VPValue(), m_VPValue(BackedgeVal), m_VPValue()));
-    EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
+          VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
+                                      VPlanPatternMatch::m_VPValue(BackedgeVal),
+                                      VPlanPatternMatch::m_VPValue()));
+    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
         vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
   }
 
-  // Look through Broadcast or ReductionStartVector to get the underlying
-  // start value.
-  auto GetStartValue = [](VPValue *V) -> Value * {
-    VPValue *Start;
-    if (match(V, m_VPInstruction<VPInstruction::ReductionStartVector>(
-                     m_VPValue(Start), m_VPValue(), m_VPValue())) ||
-        match(V, m_Broadcast(m_VPValue(Start))))
-      return Start->getUnderlyingValue();
-    return V->getUnderlyingValue();
-  };
-
   Value *MainResumeValue;
-  if (EpiRedHeaderPhi) {
-    MainResumeValue = GetStartValue(EpiRedHeaderPhi->getStartValue());
-  } else {
-    // The epilogue vector loop was dissolved (single-iteration). The
-    // reduction header phi was replaced by its start value. Look for a
-    // Broadcast or ReductionStartVector in BackedgeVal or its operands.
-    Value *FromOperand = nullptr;
-    if (auto *BackedgeR = BackedgeVal->getDefiningRecipe()) {
-      // For ordered (in-loop) reductions, BackedgeVal is a
-      // VPReductionRecipe whose chain operand is the start value.
-      if (auto *Red = dyn_cast<VPReductionRecipe>(BackedgeR)) {
-        FromOperand = GetStartValue(Red->getChainOp());
-      } else {
-        auto *It = find_if(BackedgeR->operands(), [&](VPValue *Op) {
-          return GetStartValue(Op) != Op->getUnderlyingValue();
-        });
-        if (It != BackedgeR->op_end())
-          FromOperand = GetStartValue(*It);
-      }
-    }
-    MainResumeValue = FromOperand ? FromOperand : GetStartValue(BackedgeVal);
-  }
+  if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
+    assert((VPI->getOpcode() == VPInstruction::Broadcast ||
+            VPI->getOpcode() == VPInstruction::ReductionStartVector) &&
+           "unexpected start recipe");
+    MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
+  } else
+    MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
     [[maybe_unused]] Value *StartV =
         EpiRedResult->getOperand(0)->getLiveInIRValue();
@@ -7490,16 +7466,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
   // Convert loops with variable-length stepping after regions are dissolved.
   VPlanTransforms::convertToVariableLengthStep(BestVPlan);
-  // Remove dead edges for single-iteration loops with BranchOnCond(true).
-  VPlanTransforms::removeBranchOnConst(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()));
+      CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF());
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
-  VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
@@ -9372,12 +9345,29 @@ static void fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
   // Fix induction resume values from the additional bypass block.
   IRBuilder<> BypassBuilder(BypassBlock, BypassBlock->getFirstInsertionPt());
   for (const auto &[IVPhi, II] : LVL.getInductionVars()) {
-    auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));
     Value *V = createInductionAdditionalBypassValues(
         IVPhi, II, BypassBuilder, ExpandedSCEVs, MainVectorTripCount,
         LVL.getPrimaryInduction());
     // TODO: Directly add as extra operand to the VPResumePHI recipe.
-    Inc->setIncomingValueForBlock(BypassBlock, V);
+    if (auto *Inc = dyn_cast<PHINode>(IVPhi->getIncomingValueForBlock(PH))) {
+      if (Inc->getBasicBlockIndex(BypassBlock) != -1)
+        Inc->setIncomingValueForBlock(BypassBlock, V);
+    } else {
+      // If the resume value in the scalar preheader was simplified (e.g., when
+      // narrowInterleaveGroups optimized away the resume PHIs), create a new
+      // PHI to merge the bypass value with the original value.
+      Value *OrigVal = IVPhi->getIncomingValueForBlock(PH);
+      PHINode *NewPhi =
+          PHINode::Create(IVPhi->getType(), pred_size(PH), "bc.resume.val",
+                          PH->getFirstNonPHIIt());
+      for (auto *Pred : predecessors(PH)) {
+        if (Pred == BypassBlock)
+          NewPhi->addIncoming(V, Pred);
+        else
+          NewPhi->addIncoming(OrigVal, Pred);
+      }
+      IVPhi->setIncomingValueForBlock(PH, NewPhi);
+    }
   }
 }
 

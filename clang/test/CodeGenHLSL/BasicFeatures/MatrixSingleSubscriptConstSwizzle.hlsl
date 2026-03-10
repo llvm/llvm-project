@@ -171,6 +171,20 @@ void setMatrixSwizzleFromMatrix(out int2x3 M, int2x3 N, int NIndex) {
     M[1].brg = N[NIndex];
 }
 
+
+// CHECK-LABEL: define hidden noundef nofpclass(nan inf) <2 x float> @_Z2fnu11matrix_typeILm4ELm4EfE(
+// CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
+// CHECK-NEXT:    store <16 x float> [[M]], ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[M_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> poison, <2 x i32> <i32 0, i32 4>
+// CHECK-NEXT:    ret <2 x float> [[TMP1]]
+//
+float2 fn(float4x4 M) {
+    return M[0].xy;
+}
+
 //.
 // CHECK: [[META3]] = !{}
 // CHECK: [[META4]] = !{i64 4}

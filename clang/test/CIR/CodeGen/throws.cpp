@@ -32,7 +32,7 @@ int rethrow_from_block(int a, int b) {
 // CIR:  cir.scope {
 // CIR:    %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:    %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:    %[[IS_B_ZERO:.*]] = cir.cmp(eq, %[[TMP_B]], %[[CONST_0]]) : !s32i, !cir.bool
+// CIR:    %[[IS_B_ZERO:.*]] = cir.cmp eq %[[TMP_B]], %[[CONST_0]] : !s32i
 // CIR:    cir.if %[[IS_B_ZERO]] {
 // CIR:      cir.throw
 // CIR:      cir.unreachable

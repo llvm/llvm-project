@@ -7,7 +7,7 @@
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
 // RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 1 \
-// RUN:  }}' -- -isystem %clang_tidy_headers
+// RUN:  }}'
 #include <string>
 
 class Matrix {};

@@ -91,7 +91,8 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SendFails) {
   send_message.msg_controllen = 0;
   send_message.msg_flags = 0;
 
-  ASSERT_THAT(LIBC_NAMESPACE::sendmsg(-1, &send_message, 0), Fails(EBADF));
+  ASSERT_THAT(LIBC_NAMESPACE::sendmsg(-1, &send_message, 0),
+              Fails(EBADF, static_cast<ssize_t>(-1)));
 }
 
 TEST_F(LlvmLibcSendMsgRecvMsgTest, RecvFails) {
@@ -110,5 +111,6 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, RecvFails) {
   recv_message.msg_controllen = 0;
   recv_message.msg_flags = 0;
 
-  ASSERT_THAT(LIBC_NAMESPACE::recvmsg(-1, &recv_message, 0), Fails(EBADF));
+  ASSERT_THAT(LIBC_NAMESPACE::recvmsg(-1, &recv_message, 0),
+              Fails(EBADF, static_cast<ssize_t>(-1)));
 }

@@ -28,7 +28,7 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                                     MCContext &OutContext, bool IsLocal) {
   auto GOCS = [FuncName, &OutContext, IsLocal](StringRef Suffix) {
     StringRef Prefix =
-        IsLocal ? OutContext.getAsmInfo()->getPrivateGlobalPrefix() : "";
+        IsLocal ? OutContext.getAsmInfo()->getInternalSymbolPrefix() : "";
     return OutContext.getOrCreateSymbol(Twine(Prefix) + FuncName +
                                         Twine(Suffix));
   };

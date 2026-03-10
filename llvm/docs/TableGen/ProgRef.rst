@@ -686,9 +686,14 @@ arguments.
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
    BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
-           :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
+           :| "let" [`LetMode`] `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`
+   LetMode: "append" | "prepend"
+
+Note that ``append`` and ``prepend`` are context-sensitive keywords: they are
+only recognized as modifiers immediately after ``let``. In all other positions,
+they remain valid identifiers (e.g., usable as field names).
 
 A field definition in the body specifies a field to be included in the class
 or record. If no initial value is specified, then the field's value is
@@ -699,6 +704,34 @@ The ``let`` form is used to reset a field to a new value. This can be done
 for fields defined directly in the body or fields inherited from parent
 classes.  A :token:`RangeList` can be specified to reset certain bits in a
 ``bit<n>`` field.
+
+The ``let append`` and ``let prepend`` forms concatenate a value with the
+field's current value instead of replacing it. For ``append``, the new value
+is added after the current value; for ``prepend``, it is added before. The
+supported types and concatenation operators are:
+
+* ``list<T>``: uses ``!listconcat``
+* ``string`` / ``code``: uses ``!strconcat``
+* ``dag``: uses ``!con``
+
+If the field is currently unset (``?``), ``let append`` and ``let prepend``
+simply set the value directly. This is useful for accumulating values across
+a class hierarchy:
+
+.. code-block:: text
+
+  class Base {
+    list<int> items = [2, 3];
+  }
+  class Middle : Base {
+    let append items = [4];       // items = [2, 3, 4]
+  }
+  def Concrete : Middle {
+    let prepend items = [1];      // items = [1, 2, 3, 4]
+  }
+
+A plain ``let`` (without ``append``/``prepend``) always replaces the current
+value, which can be used to opt out of accumulated values.
 
 The ``defvar`` form defines a variable whose value can be used in other
 value expressions within the body. The variable is not a field: it does not
@@ -890,7 +923,7 @@ statements within the scope of the ``let``.
    Let:  "let" `LetList` "in" "{" `Statement`* "}"
       :| "let" `LetList` "in" `Statement`
    LetList: `LetItem` ("," `LetItem`)*
-   LetItem: `TokIdentifier` ["<" `RangeList` ">"] "=" `Value`
+   LetItem: [`LetMode`] `TokIdentifier` ["<" `RangeList` ">"] "=" `Value`
 
 The ``let`` statement establishes a scope, which is a sequence of statements
 in braces or a single statement with no braces. The bindings in the
@@ -926,6 +959,16 @@ statements can be nested.
 
 Note that a top-level ``let`` will not override fields defined in the classes or records
 themselves.
+
+Top-level ``let`` also supports ``append`` and ``prepend`` modes, which
+concatenate the value with the field's current value instead of replacing it.
+See the :token:`BodyItem` production for the supported types and semantics.
+
+.. code-block:: text
+
+  let append traits = [NewTrait] in {
+    def MyRecord : Base;
+  }
 
 
 ``multiclass`` --- define multiple records

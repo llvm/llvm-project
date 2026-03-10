@@ -52,7 +52,7 @@ M68kMCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   StringRef Suffix;
 
   if (!Suffix.empty())
-    Name += DL.getPrivateGlobalPrefix();
+    Name += DL.getInternalSymbolPrefix();
 
   if (MO.isGlobal()) {
     const GlobalValue *GV = MO.getGlobal();

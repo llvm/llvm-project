@@ -631,7 +631,7 @@ func.func @mbarrier_txcount_pred() {
     %mine = arith.constant 1 : index
     // CHECK: %[[c0:.+]] = arith.constant 0 : index
     // CHECK: %[[mid:.+]] = builtin.unrealized_conversion_cast %[[c0]] : index to i64
-    // CHECK: %[[S2:.+]] = gpu.thread_id  x
+    // CHECK: %[[S2:.+]] = gpu.thread_id x
     // CHECK: %[[P:.+]] = arith.cmpi eq, %[[S2]], %[[c0]] : index
     %c0 = arith.constant 0 : index
     %tidx = gpu.thread_id x

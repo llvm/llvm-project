@@ -647,13 +647,24 @@ static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
       rewriter.splitBlock(callBlock, std::next(callOp->getIterator()));
 
   // Build the try_call to replace the original call.
+  // TODO(cir): Preserve function and argument attributes.
   rewriter.setInsertionPoint(callOp);
-  mlir::Type resType = callOp->getNumResults() > 0
-                           ? callOp->getResult(0).getType()
-                           : mlir::Type();
-  auto tryCallOp =
-      cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
-                             normalDest, unwindDest, callOp.getArgOperands());
+  cir::TryCallOp tryCallOp;
+  if (callOp.isIndirect()) {
+    mlir::Value indTarget = callOp.getIndirectCall();
+    auto ptrTy = mlir::cast<cir::PointerType>(indTarget.getType());
+    auto resTy = mlir::cast<cir::FuncType>(ptrTy.getPointee());
+    tryCallOp =
+        cir::TryCallOp::create(rewriter, loc, indTarget, resTy, normalDest,
+                               unwindDest, callOp.getArgOperands());
+  } else {
+    mlir::Type resType = callOp->getNumResults() > 0
+                             ? callOp->getResult(0).getType()
+                             : mlir::Type();
+    tryCallOp =
+        cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
+                               normalDest, unwindDest, callOp.getArgOperands());
+  }
 
   // Replace uses of the call result with the try_call result.
   if (callOp->getNumResults() > 0)

@@ -43,6 +43,7 @@ public:
       : MCSymbol(Name, IsTemporary) {}
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
+    assert(AssociatedDataArea && "ADA must be non-null");
     ADA = AssociatedDataArea;
     AssociatedDataArea->RequiresNonZeroLength = true;
   }

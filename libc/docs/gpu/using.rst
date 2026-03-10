@@ -4,10 +4,6 @@
 Using libc for GPUs
 ===================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Using the GPU C library
 =======================
 

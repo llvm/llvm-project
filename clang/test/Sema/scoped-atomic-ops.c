@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -x c -triple=amdgcn-amd-amdhsa -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=x86_64-pc-linux-gnu -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=spirv64-unknown-unknown -verify -fsyntax-only %s
+// RUN: %clang_cc1 -x c -triple=spir -verify -fsyntax-only %s
 
 int fi1a(int *i) {
   int v;
@@ -142,4 +143,8 @@ float ff3a(float *c, float *d) {
 float ff4a(_Bool *c) {
   return __scoped_atomic_exchange_n(c, 1, __ATOMIC_RELAXED,
                                     __MEMORY_SCOPE_SYSTEM);
+}
+
+void fi8a(long long *p) {
+  __scoped_atomic_store_n(p, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }

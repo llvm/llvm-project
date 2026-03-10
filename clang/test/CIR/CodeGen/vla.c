@@ -171,7 +171,7 @@ void f3(unsigned len) {
 // CIR:     %[[NEXT:.*]] = cir.unary(inc, %[[CUR_I]])
 // CIR:     cir.store{{.*}} %[[NEXT]], %[[I]]
 // CIR:     %[[LEN2:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
-// CIR:     %[[CMP:.*]] = cir.cmp(lt, %[[NEXT]], %[[LEN2]])
+// CIR:     %[[CMP:.*]] = cir.cmp lt %[[NEXT]], %[[LEN2]]
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   } do {
 // CIR:       cir.scope {

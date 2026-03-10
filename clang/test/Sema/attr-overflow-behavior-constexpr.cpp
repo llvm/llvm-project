@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -std=c++14
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -std=c++14 -fexperimental-new-constant-interpreter
 
 #define __wrap __attribute__((overflow_behavior(wrap)))
 #define __no_trap __attribute__((overflow_behavior(trap)))
@@ -35,6 +36,9 @@ void constexpr_test() {
 
   static_assert(preinc(max) == -2147483648, "preinc wrapping failed");
   static_assert(postinc(max) == -2147483648, "postinc wrapping failed");
+
+  constexpr wrap_int M = -2147483648;
+  constexpr wrap_int A = -M;
 }
 
 template <typename T>

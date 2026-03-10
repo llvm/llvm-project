@@ -16,7 +16,10 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [Pure]> {
+def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [
+    Pure,
+    AllElementTypesMatch<["leftmatrix", "rightmatrix", "result"]>
+  ]> {
   let summary = "Linear-algebraic multiply of LeftMatrix X RightMatrix.";
 
   let description = [{
@@ -63,7 +66,11 @@ def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [Pure]> {
 
 // -----
 
-def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [Pure, AllTypesMatch<["matrix", "result"]>]> {
+def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [
+    Pure,
+    AllTypesMatch<["matrix", "result"]>,
+    AllElementTypesMatch<["matrix", "scalar"]>
+  ]> {
   let summary = "Scale a floating-point matrix.";
 
   let description = [{
@@ -109,12 +116,15 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [Pure, AllTypesMat
     Extension<[]>,
     Capability<[SPIRV_C_Matrix]>
   ];
+
+  let hasVerifier = 0;
 }
 
 // -----
 
 def SPIRV_MatrixTimesVectorOp : SPIRV_Op<"MatrixTimesVector", [
     Pure,
+    AllElementTypesMatch<["matrix", "result"]>,
     AllElementTypesMatch<["vector", "result"]>
   ]> {
   let summary = "Linear-algebraic Matrix X Vector.";
@@ -157,7 +167,10 @@ def SPIRV_MatrixTimesVectorOp : SPIRV_Op<"MatrixTimesVector", [
 
 // -----
 
-def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [Pure]> {
+def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [
+    Pure,
+    AllElementTypesMatch<["matrix", "result"]>
+  ]> {
   let summary = "Transpose a matrix.";
 
   let description = [{
@@ -202,7 +215,8 @@ def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [Pure]> {
 
 def SPIRV_VectorTimesMatrixOp : SPIRV_Op<"VectorTimesMatrix", [
     Pure,
-    AllElementTypesMatch<["vector", "result"]>
+    AllElementTypesMatch<["vector", "result"]>,
+    AllElementTypesMatch<["matrix", "result"]>
   ]> {
   let summary = "Linear-algebraic Vector X Matrix.";
 

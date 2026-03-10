@@ -33,7 +33,7 @@ void for_range() {
 // CIR:      cir.for : cond {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:        %[[CMP:.*]] = cir.cmp(ne, %[[BEGIN]], %[[END]])
+// CIR:        %[[CMP:.*]] = cir.cmp ne %[[BEGIN]], %[[END]]
 // CIR:        cir.condition(%[[CMP]])
 // CIR:      } body {
 // CIR:        %[[E:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
@@ -76,7 +76,7 @@ void for_range2() {
 // CIR:      cir.for : cond {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:        %[[CMP:.*]] = cir.cmp(ne, %[[BEGIN]], %[[END]])
+// CIR:        %[[CMP:.*]] = cir.cmp ne %[[BEGIN]], %[[END]]
 // CIR:        cir.condition(%[[CMP]])
 // CIR:      } body {
 // CIR:        %[[E:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]

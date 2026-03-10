@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c99,c11,c17 -check-suffixes=,BEFORE-23 %s bugprone-signal-handler %t -- -- -isystem %clang_tidy_headers
-// RUN: %check_clang_tidy -std=c23-or-later %s bugprone-signal-handler %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c99,c11,c17 -check-suffixes=,BEFORE-23 %s bugprone-signal-handler %t
+// RUN: %check_clang_tidy -std=c23-or-later %s bugprone-signal-handler %t
 
 #include "signal.h"
 #include "stdlib.h"

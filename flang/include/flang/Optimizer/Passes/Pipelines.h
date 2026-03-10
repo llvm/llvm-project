@@ -93,7 +93,8 @@ void addTargetRewritePass(mlir::PassManager &pm);
 mlir::LLVM::DIEmissionKind
 getEmissionKind(llvm::codegenoptions::DebugInfoKind kind);
 
-void addBoxedProcedurePass(mlir::PassManager &pm);
+void addBoxedProcedurePass(mlir::PassManager &pm,
+                           bool enableSafeTrampoline = false);
 
 void addExternalNameConversionPass(mlir::PassManager &pm,
                                    bool appendUnderscore = true);

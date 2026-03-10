@@ -1698,27 +1698,6 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.MatrixTimesScalar
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::MatrixTimesScalarOp::verify() {
-  Type elementType =
-      llvm::TypeSwitch<Type, Type>(getMatrix().getType())
-          .Case<spirv::CooperativeMatrixType, spirv::MatrixType>(
-              [](auto matrixType) { return matrixType.getElementType(); })
-          .Default(nullptr);
-
-  assert(elementType && "Unhandled type");
-
-  // Check that the scalar type is the same as the matrix element type.
-  if (getScalar().getType() != elementType)
-    return emitOpError("input matrix components' type and scaling value must "
-                       "have the same type");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // spirv.Transpose
 //===----------------------------------------------------------------------===//
 
@@ -1734,11 +1713,6 @@ LogicalResult spirv::TransposeOp::verify() {
   if (inputMatrix.getNumColumns() != resultMatrix.getNumRows())
     return emitError("input matrix columns count must be equal to "
                      "output matrix rows count");
-
-  // Verify that the input and output matrices have the same component type
-  if (inputMatrix.getElementType() != resultMatrix.getElementType())
-    return emitError("input and output matrices must have the same "
-                     "component type");
 
   return success();
 }
@@ -1762,9 +1736,6 @@ LogicalResult spirv::MatrixTimesVectorOp::verify() {
            << resultType.getNumElements() << ") must match the matrix rows ("
            << matrixType.getNumRows() << ")";
 
-  if (matrixType.getElementType() != resultType.getElementType())
-    return emitOpError("matrix and result element types must match");
-
   return success();
 }
 
@@ -1784,10 +1755,6 @@ LogicalResult spirv::VectorTimesMatrixOp::verify() {
   if (resultType.getNumElements() != matrixType.getNumColumns())
     return emitOpError("number of columns in matrix must equal the number of "
                        "components in result");
-
-  if (matrixType.getElementType() != resultType.getElementType())
-    return emitOpError("matrix must be a matrix with the same component type "
-                       "as the component type in result");
 
   return success();
 }
@@ -1810,16 +1777,6 @@ LogicalResult spirv::MatrixTimesMatrixOp::verify() {
   if (rightMatrix.getNumColumns() != resultMatrix.getNumColumns())
     return emitError(
         "right and result matrices must have equal columns' count");
-
-  // right and result matrices component type must be the same
-  if (rightMatrix.getElementType() != resultMatrix.getElementType())
-    return emitError("right and result matrices' component type must"
-                     " be the same");
-
-  // left and result matrices component type must be the same
-  if (leftMatrix.getElementType() != resultMatrix.getElementType())
-    return emitError("left and result matrices' component type"
-                     " must be the same");
 
   // left and result matrices rows count must be the same
   if (leftMatrix.getNumRows() != resultMatrix.getNumRows())

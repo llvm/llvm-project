@@ -791,6 +791,9 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
             }
           });
 
+  // FIXME: Propagate errors up.
+  (void)MDC.Controller.finalizeModuleInvocation(MDC.ScanInstance, CI, MD);
+
   // Check provided input paths from the invocation for determining
   // IsInStableDirectories.
   if (MD.IsInStableDirectories)

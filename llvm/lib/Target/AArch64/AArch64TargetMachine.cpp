@@ -245,7 +245,7 @@ LLVMInitializeAArch64Target() {
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769LegacyPass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
-  initializeAArch64AdvSIMDScalarPass(PR);
+  initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
   initializeAArch64CollectLOHPass(PR);

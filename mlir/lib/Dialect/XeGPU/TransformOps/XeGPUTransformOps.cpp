@@ -122,17 +122,16 @@ static std::optional<T> findProducerOfType(Value val) {
 }
 
 /// Create a layout attribute from the given parameters.
-static xegpu::LayoutAttr
-createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
-                 ArrayRef<int32_t> sgData,
-                 std::optional<ArrayRef<int32_t>> instData) {
+static xegpu::LayoutAttr createLayoutAttr(
+    MLIRContext *ctx, ArrayRef<int32_t> sgLayout, ArrayRef<int32_t> sgData,
+    std::optional<ArrayRef<int32_t>> instData, ArrayRef<int32_t> order) {
   return xegpu::LayoutAttr::get(
       ctx, DenseI32ArrayAttr::get(ctx, sgLayout),
       DenseI32ArrayAttr::get(ctx, sgData),
       instData ? DenseI32ArrayAttr::get(ctx, instData.value()) : nullptr,
       /*lane_layout=*/nullptr,
       /*lane_data=*/nullptr,
-      /*order=*/nullptr);
+      /*order=*/order.empty() ? nullptr : DenseI32ArrayAttr::get(ctx, order));
 }
 
 /// Generate `xegpu::LayoutAttr` from op mixed layout values.
@@ -142,6 +141,7 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
                           ArrayRef<::mlir::OpFoldResult> mixedSgLayout,
                           ArrayRef<::mlir::OpFoldResult> mixedSgData,
                           ArrayRef<::mlir::OpFoldResult> mixedInstData,
+                          ArrayRef<int32_t> order,
                           xegpu::LayoutAttr &layoutAttr) {
   SmallVector<int32_t> sgLayout, sgData, instData;
   auto status =
@@ -160,7 +160,7 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
                            ? std::nullopt
                            : std::optional<ArrayRef<int32_t>>(instData);
 
-  layoutAttr = createLayoutAttr(ctx, sgLayout, sgData, maybeInstData);
+  layoutAttr = createLayoutAttr(ctx, sgLayout, sgData, maybeInstData, order);
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -215,6 +215,7 @@ void transform::SetDescLayoutOp::build(OpBuilder &builder,
                                        ArrayRef<OpFoldResult> mixedSgLayout,
                                        ArrayRef<OpFoldResult> mixedSgData,
                                        ArrayRef<OpFoldResult> mixedInstData,
+                                       ArrayRef<int32_t> order,
                                        ArrayRef<int64_t> sliceDims) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
@@ -229,6 +230,7 @@ void transform::SetDescLayoutOp::build(OpBuilder &builder,
         /*static_sg_layout=*/staticSgLayout,
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
+        /*order=*/order,
         /*slice_dims=*/sliceDims);
 }
 
@@ -244,9 +246,9 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   Operation *target = *targetOps.begin();
 
   xegpu::LayoutAttr layoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
-                                          getMixedSgLayout(), getMixedSgData(),
-                                          getMixedInstData(), layoutAttr);
+  auto status = getLayoutAttrFromOperands(
+      getContext(), state, (*this), getMixedSgLayout(), getMixedSgData(),
+      getMixedInstData(), getOrder(), layoutAttr);
   if (!status.succeeded())
     return status;
 
@@ -290,8 +292,8 @@ void transform::SetDescLayoutOp::getEffects(
 void transform::SetOpLayoutAttrOp::build(
     OpBuilder &builder, OperationState &ostate, Value target, int64_t index,
     ArrayRef<OpFoldResult> mixedSgLayout, ArrayRef<OpFoldResult> mixedSgData,
-    ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int64_t> sliceDims,
-    bool result, bool operand) {
+    ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int32_t> order,
+    ArrayRef<int64_t> sliceDims, bool result, bool operand) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -306,6 +308,7 @@ void transform::SetOpLayoutAttrOp::build(
         /*static_sg_layout=*/staticSgLayout,
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
+        /*order=*/order,
         /*slice_dims=*/sliceDims,
         /*result=*/result,
         /*operand=*/operand);
@@ -336,9 +339,9 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   }
 
   xegpu::LayoutAttr layoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
-                                          getMixedSgLayout(), getMixedSgData(),
-                                          getMixedInstData(), layoutAttr);
+  auto status = getLayoutAttrFromOperands(
+      getContext(), state, (*this), getMixedSgLayout(), getMixedSgData(),
+      getMixedInstData(), getOrder(), layoutAttr);
   if (!status.succeeded())
     return status;
 
@@ -600,10 +603,10 @@ void transform::ConvertLayoutOp::build(
     OpBuilder &builder, OperationState &ostate, Value target,
     ArrayRef<OpFoldResult> mixedInputSgLayout,
     ArrayRef<OpFoldResult> mixedInputSgData,
-    ArrayRef<OpFoldResult> mixedInputInstData,
+    ArrayRef<OpFoldResult> mixedInputInstData, ArrayRef<int32_t> inputOrder,
     ArrayRef<OpFoldResult> mixedTargetSgLayout,
     ArrayRef<OpFoldResult> mixedTargetSgData,
-    ArrayRef<OpFoldResult> mixedTargetInstData) {
+    ArrayRef<OpFoldResult> mixedTargetInstData, ArrayRef<int32_t> targetOrder) {
   SmallVector<int64_t> staticInputSgLayout, staticInputSgData,
       staticInputInstData;
   SmallVector<Value> dynamicInputSgLayout, dynamicInputSgData,
@@ -632,12 +635,14 @@ void transform::ConvertLayoutOp::build(
         /*target_sg_layout=*/dynamicTargetSgLayout,
         /*target_sg_data=*/dynamicTargetSgData,
         /*target_inst_data=*/dynamicTargetInstData,
+        /*input_order=*/inputOrder,
         /*static_input_sg_layout=*/staticInputSgLayout,
         /*static_input_sg_data=*/staticInputSgData,
         /*static_input_inst_data=*/staticInputInstData,
         /*static_target_sg_layout=*/staticTargetSgLayout,
         /*static_target_sg_data=*/staticTargetSgData,
-        /*static_target_inst_data=*/staticTargetInstData);
+        /*static_target_inst_data=*/staticTargetInstData,
+        /*target_order=*/targetOrder);
 }
 
 DiagnosedSilenceableFailure
@@ -655,14 +660,16 @@ transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
   xegpu::LayoutAttr inputLayoutAttr = nullptr;
   auto status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedInputSgLayout(),
-      getMixedInputSgData(), getMixedInputInstData(), inputLayoutAttr);
+      getMixedInputSgData(), getMixedInputInstData(), getInputOrder(),
+      inputLayoutAttr);
   if (!status.succeeded())
     return status;
 
   xegpu::LayoutAttr targetLayoutAttr = nullptr;
   status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedTargetSgLayout(),
-      getMixedTargetSgData(), getMixedTargetInstData(), targetLayoutAttr);
+      getMixedTargetSgData(), getMixedTargetInstData(), getTargetOrder(),
+      targetLayoutAttr);
   if (!status.succeeded())
     return status;
 

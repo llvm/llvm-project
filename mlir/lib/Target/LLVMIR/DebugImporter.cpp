@@ -45,7 +45,8 @@ Location DebugImporter::translateFuncLocation(llvm::Function *func) {
 //===----------------------------------------------------------------------===//
 
 DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
-  return DIBasicTypeAttr::get(context, node->getTag(), node->getName(),
+  return DIBasicTypeAttr::get(context, node->getTag(),
+                              getStringAttrOrNull(node->getRawName()),
                               node->getSizeInBits(), node->getEncoding());
 }
 

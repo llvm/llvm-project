@@ -313,6 +313,7 @@ add_gen_header(
     libc.include.llvm-libc-types.Elf32_Versym
     libc.include.llvm-libc-types.Elf32_Word
     libc.include.llvm-libc-types.Elf32_Xword
+    libc.include.llvm-libc-types.Elf32_auxv_t
     libc.include.llvm-libc-types.Elf64_Addr
     libc.include.llvm-libc-types.Elf64_Chdr
     libc.include.llvm-libc-types.Elf64_Dyn
@@ -335,6 +336,7 @@ add_gen_header(
     libc.include.llvm-libc-types.Elf64_Versym
     libc.include.llvm-libc-types.Elf64_Word
     libc.include.llvm-libc-types.Elf64_Xword
+    libc.include.llvm-libc-types.Elf64_auxv_t
   PROXY
 )
 

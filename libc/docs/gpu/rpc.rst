@@ -4,10 +4,6 @@
 Remote Procedure Calls
 ======================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Remote Procedure Call Implementation
 ====================================
 

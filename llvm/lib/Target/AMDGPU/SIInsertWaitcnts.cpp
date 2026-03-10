@@ -315,7 +315,8 @@ public:
   void print(raw_ostream &OS) const {
     ListSeparator LS(", ");
     for (WaitEventType Event : wait_events()) {
-      OS << LS << getWaitEventTypeName(Event);
+      if (contains(Event))
+        OS << LS << getWaitEventTypeName(Event);
     }
   }
   LLVM_DUMP_METHOD void dump() const;

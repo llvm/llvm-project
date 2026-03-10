@@ -29,7 +29,7 @@ auto base_to_derived(int Base2::*ptr) -> int Derived::* {
 // CIR-AFTER: cir.func {{.*}} @_Z15base_to_derivedM5Base2i
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %[[NULL_VALUE:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp(eq, %[[PTR]], %[[NULL_VALUE]])
+// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp eq %[[PTR]], %[[NULL_VALUE]]
 // CIR-AFTER:   %[[OFFSET_VALUE:.*]] = cir.const #cir.int<4> : !s64i
 // CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.add nsw %[[PTR]], %[[OFFSET_VALUE]] : !s64i
 // CIR-AFTER:   %[[SELECT:.*]] = cir.select if %[[IS_NULL]] then %[[PTR]] else %[[BINOP_KIND]]
@@ -57,7 +57,7 @@ auto derived_to_base(int Derived::*ptr) -> int Base2::* {
 // CIR-AFTER: cir.func {{.*}} @_Z15derived_to_baseM7Derivedi
 // CIR-AFTER:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s64i>, !s64i
 // CIR-AFTER:   %[[NULL_VALUE:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp(eq, %[[PTR]], %[[NULL_VALUE]])
+// CIR-AFTER:   %[[IS_NULL:.*]] = cir.cmp eq %[[PTR]], %[[NULL_VALUE]]
 // CIR-AFTER:   %[[OFFSET_VALUE:.*]] = cir.const #cir.int<4> : !s64i
 // CIR-AFTER:   %[[BINOP_KIND:.*]] = cir.sub nsw %[[PTR]], %[[OFFSET_VALUE]] : !s64i
 // CIR-AFTER:   %[[SELECT:.*]] = cir.select if %[[IS_NULL]] then %[[PTR]] else %[[BINOP_KIND]]
@@ -152,7 +152,7 @@ bool to_bool(int Foo::*x) {
 
 // CIR-AFTER: cir.func {{.*}} @_Z7to_boolM3Fooi
 // CIR-AFTER:   %[[NULL_VAL:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp(ne, %{{.*}}, %[[NULL_VAL]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp ne %{{.*}}, %[[NULL_VAL]] : !s64i
 
 // LLVM: define {{.*}} i1 @_Z7to_boolM3Fooi
 // LLVM:   %[[X:.*]] = load i64, ptr %{{.*}}

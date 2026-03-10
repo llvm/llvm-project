@@ -5,11 +5,11 @@
 func.func @subgroupId(%sz : index, %mem: memref<index, 1>) {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
              threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
-    // CHECK: %[[DIMX:.*]] = gpu.block_dim  x
-    // CHECK-NEXT: %[[DIMY:.*]] = gpu.block_dim  y
-    // CHECK-NEXT: %[[TIDX:.*]] = gpu.thread_id  x
-    // CHECK-NEXT: %[[TIDY:.*]] = gpu.thread_id  y
-    // CHECK-NEXT: %[[TIDZ:.*]] = gpu.thread_id  z
+    // CHECK: %[[DIMX:.*]] = gpu.block_dim x
+    // CHECK-NEXT: %[[DIMY:.*]] = gpu.block_dim y
+    // CHECK-NEXT: %[[TIDX:.*]] = gpu.thread_id x
+    // CHECK-NEXT: %[[TIDY:.*]] = gpu.thread_id y
+    // CHECK-NEXT: %[[TIDZ:.*]] = gpu.thread_id z
     // CHECK-NEXT: %[[T0:.*]] = arith.muli %[[DIMY]], %[[TIDZ]] : index
     // CHECK-NEXT: %[[T1:.*]] = arith.addi %[[T0]], %[[TIDY]] : index
     // CHECK-NEXT: %[[T2:.*]] = arith.muli %[[DIMX]], %[[T1]] : index

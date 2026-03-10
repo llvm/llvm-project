@@ -876,7 +876,8 @@ let Predicates = [UseIncDec, In64BitMode] in {
   def : Pat<(X86lock_sub addr:$dst, (i64 -1)), (LOCK_INC64m addr:$dst)>;
 }
 
-// Atomic bit test.
+/// LOCK-prefixed arithmetic read-modify-write instructions.
+/// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
 def X86LBTest : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>,
                                      SDTCisVT<2, i8>, SDTCisVT<3, i32>]>;
 def x86bts : SDNode<"X86ISD::LBTS", X86LBTest,

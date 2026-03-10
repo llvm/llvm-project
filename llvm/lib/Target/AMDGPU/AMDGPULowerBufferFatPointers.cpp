@@ -2467,11 +2467,14 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
 
   BufferFatPtrToStructTypeMap StructTM(DL);
   BufferFatPtrToIntTypeMap IntTM(DL);
-  for (const GlobalVariable &GV : M.globals()) {
+  for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
     if (GV.getAddressSpace() == AMDGPUAS::BUFFER_FAT_POINTER) {
       // FIXME: Use DiagnosticInfo unsupported but it requires a Function
       Ctx.emitError("global variables with a buffer fat pointer address "
                     "space (7) are not supported");
+      GV.replaceAllUsesWith(PoisonValue::get(GV.getType()));
+      GV.eraseFromParent();
+      Changed = true;
       continue;
     }
 
@@ -2481,6 +2484,9 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
       Ctx.emitError("global variables that contain buffer fat pointers "
                     "(address space 7 pointers) are unsupported. Use "
                     "buffer resource pointers (address space 8) instead");
+      GV.replaceAllUsesWith(PoisonValue::get(GV.getType()));
+      GV.eraseFromParent();
+      Changed = true;
       continue;
     }
   }

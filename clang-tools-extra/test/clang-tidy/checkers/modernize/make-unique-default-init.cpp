@@ -3,7 +3,7 @@
 // RUN:             {modernize-make-unique.IgnoreDefaultInitialization: \
 // RUN:              'false'}} \
 // RUN:             }" \
-// RUN:   -- -I %S/Inputs/smart-ptr -isystem %clang_tidy_headers
+// RUN:   -- -I %S/Inputs/smart-ptr
 
 #include "unique_ptr.h"
 #include <vector>
