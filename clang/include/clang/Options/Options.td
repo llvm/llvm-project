@@ -5688,6 +5688,8 @@ def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Fea
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
 def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
+def mrelaxed_atomics : Flag<["-"], "mrelaxed-atomics">, Group<m_wasm_Features_Group>;
+def mno_relaxed_atomics : Flag<["-"], "mno-relaxed-atomics">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
@@ -7607,6 +7609,11 @@ defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], [ClangOption], "Allocate array temporaries on the heap (default)">>;
+
+defm safe_trampoline : BoolOptionWithoutMarshalling<"f",
+  "safe-trampoline",
+  PosFlag<SetTrue, [], [FlangOption], "Use W^X compliant runtime trampoline pool for internal procedures">,
+  NegFlag<SetFalse, [], [FlangOption], "Use stack-based trampolines for internal procedures (default, may require executable stack)">>;
 
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,

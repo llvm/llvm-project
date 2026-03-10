@@ -1,8 +1,8 @@
 # RUN: split-file %s %t
-# RUN: not llc -run-pass=none -o --filetype=null %t/missing-bb-id.mir 2>&1 | FileCheck %s --check-prefix=MISSING-BB-ID
-# RUN: not llc -run-pass=none -o --filetype=null %t/missing-comma.mir 2>&1 | FileCheck %s --check-prefix=MISSING-COMMA
-# RUN: not llc -run-pass=none -o --filetype=null %t/missing-index.mir 2>&1 | FileCheck %s --check-prefix=MISSING-INDEX
-# RUN: not llc -run-pass=none -o --filetype=null %t/invalid-index.mir 2>&1 | FileCheck %s --check-prefix=INVALID-INDEX
+# RUN: not llc -run-pass=none --filetype=null %t/missing-bb-id.mir 2>&1 | FileCheck %s --check-prefix=MISSING-BB-ID
+# RUN: not llc -run-pass=none --filetype=null %t/missing-comma.mir 2>&1 | FileCheck %s --check-prefix=MISSING-COMMA
+# RUN: not llc -run-pass=none --filetype=null %t/missing-index.mir 2>&1 | FileCheck %s --check-prefix=MISSING-INDEX
+# RUN: not llc -run-pass=none --filetype=null %t/invalid-index.mir 2>&1 | FileCheck %s --check-prefix=INVALID-INDEX
 
 # MISSING-BB-ID: {{.*}}missing-bb-id.mir:3:22: expected 'bb_id'
 # MISSING-COMMA: {{.*}}missing-comma.mir:3:33: expected ','
@@ -15,7 +15,6 @@ name:            test
 prefetch-targets: [ '0, 0, 1' ]
 body:             |
   bb.0:
-    RET 0
 ...
 #--- missing-comma.mir
 ---
@@ -23,7 +22,6 @@ name:            test
 prefetch-targets: [ 'bb_id 0, 0 1' ]
 body:             |
   bb.0:
-    RET 0
 ...
 #--- missing-index.mir
 ---
@@ -31,7 +29,6 @@ name:            test
 prefetch-targets: [ 'bb_id 0, 0,' ]
 body:             |
   bb.0:
-    RET 0
 ...
 #--- invalid-index.mir
 ---
@@ -39,5 +36,4 @@ name:            test
 prefetch-targets: [ 'bb_id 0, 0, a' ]
 body:             |
   bb.0:
-    RET 0
 ...

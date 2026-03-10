@@ -304,7 +304,7 @@ attributes #2 = { nounwind }
 !0 = !{i32 8, i32 16, i32 2}
 !1 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
-; GCN: [[RNG1]] = !{i16 0, i16 1023}
-; GCN: [[RNG2]] = !{i16 1, i16 1024}
+; GCN: [[RNG1]] = !{i16 0, i16 1024}
+; GCN: [[RNG2]] = !{i16 1, i16 1025}
 ; GCN: [[RNG4]] = !{i16 0, i16 10}
 ;.
