@@ -297,6 +297,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
     libc.src.wctype.iswdigit
+    libc.src.wctype.iswlower
 
     # internal entrypoints
     libc.startup.baremetal.init
