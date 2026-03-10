@@ -223,8 +223,6 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // Read stopped_cpus bitmask and mp_maxid for CPU validation.
     lldb::addr_t stopped_cpus = FindSymbol("stopped_cpus");
     uint32_t mp_maxid = 0;
-    uint32_t long_size_bytes = GetAddressByteSize();
-    uint32_t long_bit = long_size_bytes * 8;
 
     if (stopped_cpus != LLDB_INVALID_ADDRESS) {
       // https://cgit.freebsd.org/src/tree/sys/kern/subr_smp.c
@@ -232,18 +230,21 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
           ReadSignedIntegerFromMemory(FindSymbol("mp_maxid"), 4, 0, error);
       if (error.Fail())
         stopped_cpus = LLDB_INVALID_ADDRESS;
-      else if (auto type_system_or_err =
-                   GetTarget().GetScratchTypeSystemForLanguage(
-                       eLanguageTypeC)) {
-        CompilerType long_type =
-            (*type_system_or_err)->GetBasicTypeFromAST(eBasicTypeLong);
-        if (long_type.IsValid())
-          if (auto size = long_type.GetByteSize(nullptr))
-            long_size_bytes = *size;
-        long_bit = long_size_bytes * 8;
-      } else
-        llvm::consumeError(type_system_or_err.takeError());
     }
+
+    uint32_t long_size_bytes = GetAddressByteSize();
+    uint32_t long_bit = long_size_bytes * 8;
+
+    if (auto type_system_or_err =
+            GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC)) {
+      CompilerType long_type =
+          (*type_system_or_err)->GetBasicTypeFromAST(eBasicTypeLong);
+      if (long_type.IsValid())
+        if (auto size = long_type.GetByteSize(nullptr))
+          long_size_bytes = *size;
+      long_bit = long_size_bytes * 8;
+    } else
+      llvm::consumeError(type_system_or_err.takeError());
 
     // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
