@@ -452,7 +452,16 @@ llvm::SmallString<16> Info::extractName() const {
 
 // Order is based on the Name attribute: case insensitive order
 bool Index::operator<(const Index &Other) const {
-  return Name.str().compare_insensitive(Other.Name) < 0;
+  // Start with case-insensitive (e.g., 'apple' < 'Zebra').
+  // This prevents 'Zebra' from appearing before 'apple' due to ASCII values,
+  // where uppercase letters have a lower numeric value than lowercase.
+  int Cmp = Name.compare_insensitive(Other.Name);
+  if (Cmp != 0)
+    return Cmp < 0;
+
+  // If names are identical, we fall back to standard string comparison where
+  // uppercase precedes lowercase (e.g., 'Apple' < 'apple').
+  return Name < Other.Name;
 }
 
 OwningVec<const Index *> Index::getSortedChildren() const {
