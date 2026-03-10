@@ -163,7 +163,7 @@ Expected<bool> LevelZeroPluginTy::isELFCompatible(uint32_t DeviceId,
   return isValidOneOmpImage(Image, MajorVer, MinorVer);
 }
 
-// We only need to check for formats other than ELF here
+// We only need to check for formats other than ELF here.
 Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
   switch (identify_magic(Image)) {
   case file_magic::spirv_object:
@@ -177,13 +177,21 @@ Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
       return BinariesOrErr.takeError();
 
     auto &Binaries = *BinariesOrErr;
-    for (const auto &Binary : Binaries) {
-      StringRef TripleStr = Binary->getTriple();
-      llvm::Triple T(TripleStr);
-      if (T.getArch() == getTripleArch())
-        return true;
-    }
-    return false;
+    if (Binaries.size() != 1)
+      return false;
+
+    const OffloadBinary *InnerBinary = Binaries[0].get();
+    ImageKind ImageKind = InnerBinary->getImageKind();
+    llvm::Triple Triple(InnerBinary->getTriple());
+
+    if (Triple.getArch() != getTripleArch())
+      return false;
+
+    if (ImageKind != llvm::object::IMG_SPIRV &&
+        ImageKind != llvm::object::IMG_Object)
+      return false;
+
+    return true;
   }
   default:
     // Unknown format
