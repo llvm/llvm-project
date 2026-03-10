@@ -35390,10 +35390,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         return;
 
       if (IsStrict)
-        V = DAG.getNode(X86ISD::STRICT_CVTPS2PH, dl, {MVT::v8i16, MVT::Other},
-                        {Chain, Src, Rnd});
+        V = DAG.getNode(
+            X86ISD::STRICT_CVTPS2PH, dl, {MVT::v8i16, MVT::Other},
+            {Chain, Src,
+             DAG.getTargetConstant(Rnd->getAsZExtVal(), dl, MVT::i32)});
       else
-        V = DAG.getNode(X86ISD::CVTPS2PH, dl, MVT::v8i16, Src, Rnd);
+        V = DAG.getNode(
+            X86ISD::CVTPS2PH, dl, MVT::v8i16, Src,
+            DAG.getTargetConstant(Rnd->getAsZExtVal(), dl, MVT::i32));
 
       Results.push_back(DAG.getBitcast(MVT::v8f16, V));
       if (IsStrict)
