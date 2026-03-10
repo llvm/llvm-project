@@ -3117,6 +3117,24 @@ def TestNVVMRequirestSMArchCondMultiOp :
   let assemblyFormat = "attr-dict";
 }
 
+def TestNVVMRequiresSMFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMf<[100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondMultiOp :
+    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMf<[100, 120]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchOrFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrf<[90], [100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued String Attributes
 //===----------------------------------------------------------------------===//
