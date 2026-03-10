@@ -47,7 +47,7 @@ enum Color {
 // MD-INDEX: | Red |
 // MD-INDEX: | Green |
 // MD-INDEX: | Blue |
-// MD-INDEX: **brief**For specifying RGB colors
+// MD-INDEX: **brief** For specifying RGB colors
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -91,7 +91,7 @@ enum Color {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p>For specifying RGB colors</p>
+// HTML-INDEX-NEXT:           <p> For specifying RGB colors</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-61]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -125,7 +125,7 @@ enum class Shapes {
 // MD-INDEX: | Circle |
 // MD-INDEX: | Rectangle |
 // MD-INDEX: | Triangle |
-// MD-INDEX: **brief**Shape Types
+// MD-INDEX: **brief** Shape Types
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -169,7 +169,7 @@ enum class Shapes {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p>Shape Types</p>
+// HTML-INDEX-NEXT:           <p> Shape Types</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-63]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -201,7 +201,7 @@ enum Size : uint8_t {
 // MD-INDEX: | Small |
 // MD-INDEX: | Medium |
 // MD-INDEX: | Large |
-// MD-INDEX: **brief**Specify the size
+// MD-INDEX: **brief** Specify the size
 
 // HTML-INDEX-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -247,7 +247,7 @@ enum Size : uint8_t {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p>Specify the size</p>
+// HTML-INDEX-NEXT:           <p> Specify the size</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-71]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -265,7 +265,7 @@ enum : long long {
 // MD-INDEX: | enum (unnamed) : long long |
 // MD-INDEX: --
 // MD-INDEX: | BigVal |
-// MD-INDEX: **brief**Very long number
+// MD-INDEX: **brief** Very long number
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -291,7 +291,7 @@ enum : long long {
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX-NEXT:     <div class="doc-card">
 // HTML-INDEX-NEXT:       <div class="nested-delimiter-container">
-// HTML-INDEX-NEXT:           <p>Very long number</p>
+// HTML-INDEX-NEXT:           <p> Very long number</p>
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX-NEXT:     <p>Defined at line [[@LINE-38]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -318,7 +318,7 @@ public:
 // MD-PERM: | Read |
 // MD-PERM: | Write |
 // MD-PERM: | Execute |
-// MD-PERM: **brief**File permission flags
+// MD-PERM: **brief** File permission flags
 
 // HTML-PERM-LABEL:  <section id="Enums" class="section-container">
 // HTML-PERM-NEXT:     <h2>Enumerations</h2>
@@ -364,7 +364,7 @@ public:
 // HTML-PERM-NEXT:       </table>
 // HTML-PERM-NEXT:       <div class="doc-card">
 // HTML-PERM-NEXT:         <div class="nested-delimiter-container">
-// HTML-PERM-NEXT:             <p>File permission flags</p>
+// HTML-PERM-NEXT:             <p> File permission flags</p>
 // HTML-PERM-NEXT:         </div>
 // HTML-PERM-NEXT:       </div>
 // HTML-PERM-NEXT:         <p>Defined at line [[@LINE-63]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
@@ -434,7 +434,7 @@ public:
 // HTML-ANIMAL-NEXT:         </table>
 // HTML-ANIMAL-NEXT:         <div class="doc-card">
 // HTML-ANIMAL-NEXT:             <div class="nested-delimiter-container">
-// HTML-ANIMAL-NEXT:                 <p>specify what animal the class is</p>
+// HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
 // HTML-ANIMAL-NEXT:             </div>
 // HTML-ANIMAL-NEXT:         </div>
 // HTML-ANIMAL-NEXT:         <p>Defined at line [[@LINE-56]] of file {{.*}}enum.cpp</p>
@@ -448,7 +448,7 @@ public:
 // MD-ANIMAL: | Dog |
 // MD-ANIMAL: | Cat |
 // MD-ANIMAL: | Iguana |
-// MD-ANIMAL: **brief**specify what animal the class is
+// MD-ANIMAL: **brief** specify what animal the class is
 
 // MD-MUSTACHE-ANIMAL: # class Animals
 // MD-MUSTACHE-ANIMAL: ## Enums
@@ -483,7 +483,7 @@ enum Car {
 // MD-VEHICLES: | SUV |
 // MD-VEHICLES: | Pickup |
 // MD-VEHICLES: | Hatchback |
-// MD-VEHICLES: **brief**specify type of car
+// MD-VEHICLES: **brief** specify type of car
 
 // HTML-VEHICLES-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-VEHICLES-NEXT:      <div>
@@ -536,7 +536,7 @@ enum Car {
 // HTML-VEHICLES-NEXT:      </table>
 // HTML-VEHICLES-NEXT:      <div class="doc-card">
 // HTML-VEHICLES-NEXT:        <div class="nested-delimiter-container">
-// HTML-VEHICLES-NEXT:           <p>specify type of car</p>
+// HTML-VEHICLES-NEXT:           <p> specify type of car</p>
 // HTML-VEHICLES-NEXT:        </div>
 // HTML-VEHICLES-NEXT:      </div>
 // HTML-VEHICLES-NEXT:      <p>Defined at line [[@LINE-75]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>

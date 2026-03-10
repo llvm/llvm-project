@@ -239,14 +239,14 @@ void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
 
 void ClangDocCommentVisitor::visitTextComment(const TextComment *C) {
   if (!isWhitespaceOnly(C->getText()))
-    CurrentCI.Text = C->getText().trim().str();
+    CurrentCI.Text = C->getText();
 }
 
 void ClangDocCommentVisitor::visitInlineCommandComment(
     const InlineCommandComment *C) {
   CurrentCI.Name = getCommandName(C->getCommandID());
   for (unsigned I = 0, E = C->getNumArgs(); I != E; ++I)
-    CurrentCI.Args.push_back(C->getArgText(I).trim());
+    CurrentCI.Args.push_back(C->getArgText(I));
 }
 
 void ClangDocCommentVisitor::visitHTMLStartTagComment(
@@ -270,7 +270,7 @@ void ClangDocCommentVisitor::visitBlockCommandComment(
     const BlockCommandComment *C) {
   CurrentCI.Name = getCommandName(C->getCommandID());
   for (unsigned I = 0, E = C->getNumArgs(); I < E; ++I)
-    CurrentCI.Args.push_back(C->getArgText(I).trim());
+    CurrentCI.Args.push_back(C->getArgText(I));
 }
 
 void ClangDocCommentVisitor::visitParamCommandComment(
