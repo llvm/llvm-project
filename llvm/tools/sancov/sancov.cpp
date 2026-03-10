@@ -628,7 +628,12 @@ static bool isCoveragePointSymbol(StringRef Name) {
          // Mac has '___' prefix
          Name == "___sanitizer_cov" || Name == "___sanitizer_cov_with_check" ||
          Name == "___sanitizer_cov_trace_func_enter" ||
-         Name == "___sanitizer_cov_trace_pc_guard";
+         Name == "___sanitizer_cov_trace_pc_guard" ||
+         // Large Aarch64 binaries use thunks
+         Name == "__AArch64ADRPThunk___sanitizer_cov" ||
+         Name == "__AArch64ADRPThunk___sanitizer_cov_with_check" ||
+         Name == "__AArch64ADRPThunk___sanitizer_cov_trace_func_enter" ||
+         Name == "__AArch64ADRPThunk___sanitizer_cov_trace_pc_guard";
 }
 
 // Locate __sanitizer_cov* function addresses inside the stubs table on MachO.
