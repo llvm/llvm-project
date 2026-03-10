@@ -510,8 +510,7 @@ TypeSystemClang::~TypeSystemClang() { Finalize(); }
 
 lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
                                                    lldb_private::Module *module,
-                                                   Target *target,
-                                                   const char *compiler_options) {
+                                                   Target *target) {
   if (!TypeSystemClangSupportsLanguage(language))
     return lldb::TypeSystemSP();
   ArchSpec arch;

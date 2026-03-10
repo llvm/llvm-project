@@ -675,8 +675,7 @@ public:
 
   TypeSystemSwiftTypeRefForExpressions(lldb::LanguageType language,
                                        Target &target, bool repl,
-                                       bool playground,
-                                       const char *extra_options);
+                                       bool playground);
 
   static TypeSystemSwiftTypeRefForExpressionsSP GetForTarget(Target &target);
   static TypeSystemSwiftTypeRefForExpressionsSP

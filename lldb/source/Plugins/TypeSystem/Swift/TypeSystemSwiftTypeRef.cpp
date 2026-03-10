@@ -2370,17 +2370,14 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(Module &module) {
 }
 
 TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
-    lldb::LanguageType language, Target &target, bool repl, bool playground,
-    const char *extra_options)
+    lldb::LanguageType language, Target &target, bool repl, bool playground)
     : m_target_wp(target.shared_from_this()),
       m_persistent_state_up(new SwiftPersistentExpressionState) {
   m_description = "TypeSystemSwiftTypeRefForExpressions";
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "%s::TypeSystemSwiftTypeRefForExpressions()",
             m_description.c_str());
-  // Is this a REPL or Playground?
-  assert(!repl && !playground && !extra_options && "use SetCompilerOptions()");
-  if (repl || playground || extra_options) {
+  if (repl || playground) {
     SymbolContext global_sc(target.shared_from_this(),
                             target.GetExecutableModule());
     const char *key = DeriveKeyFor(global_sc);
@@ -2389,7 +2386,7 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
          {SwiftASTContext::CreateInstance(
               global_sc,
               *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this), repl,
-              playground, extra_options),
+              playground),
           0}});
   }
 }

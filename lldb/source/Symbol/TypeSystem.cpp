@@ -41,11 +41,10 @@ TypeSystem::TypeSystem() = default;
 TypeSystem::~TypeSystem() = default;
 
 static TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
-                                         Module *module, Target *target,
-                                         const char *compiler_options) {
+                                         Module *module, Target *target) {
   for (auto create_callback : PluginManager::GetTypeSystemCreateCallbacks()) {
     if (auto type_system_sp =
-        create_callback(language, module, target, compiler_options))
+        create_callback(language, module, target))
       return type_system_sp;
   }
   return {};
@@ -53,18 +52,12 @@ static TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
 
 lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
                                               Module *module) {
-  return CreateInstanceHelper(language, module, nullptr, nullptr);
+  return CreateInstanceHelper(language, module, nullptr);
 }
 
 lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
                                               Target *target) {
-  return CreateInstanceHelper(language, nullptr, target, nullptr);
-}
-
-lldb::TypeSystemSP TypeSystem::CreateInstance(lldb::LanguageType language,
-                                              Target *target,
-                                              const char *compiler_options) {
-  return CreateInstanceHelper(language, nullptr, target, compiler_options);
+  return CreateInstanceHelper(language, nullptr, target);
 }
 
 #ifndef NDEBUG

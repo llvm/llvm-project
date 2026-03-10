@@ -33,22 +33,20 @@ TypeSystemSwift::TypeSystemSwift() : TypeSystem() {}
 /// \{
 static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
                                                    Module *module,
-                                                   Target *target,
-                                                   const char *extra_options) {
+                                                   Target *target) {
   if (language != eLanguageTypeSwift)
     return {};
 
   // This should be called with either a target or a module.
   if (module) {
     assert(!target);
-    assert(StringRef(extra_options).empty());
     return std::shared_ptr<TypeSystemSwiftTypeRef>(
         new TypeSystemSwiftTypeRef(*module));
   } else if (target) {
     assert(!module);
     return std::shared_ptr<TypeSystemSwiftTypeRefForExpressions>(
         new TypeSystemSwiftTypeRefForExpressions(language, *target, false,
-                                                 false, extra_options));
+                                                 false));
   }
   llvm_unreachable("Neither type nor module given to CreateTypeSystemInstance");
 }
