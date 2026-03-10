@@ -137,13 +137,6 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [
     operands attr-dict `:` type($matrix) `,` type($scalar)
   }];
 
-  let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[]>,
-    Capability<[SPIRV_C_Matrix]>
-  ];
-
   let hasVerifier = 0;
 }
 
