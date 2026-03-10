@@ -287,9 +287,12 @@ Changes in existing checks
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
 - Improved :doc:`performance-faster-string-find
-  <clang-tidy/checks/performance/faster-string-find>` check to
-  analyze calls to the ``starts_with``, ``ends_with``, ``contains``,
-  and ``operator+=`` string member functions.
+  <clang-tidy/checks/performance/faster-string-find>` check:
+
+  - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
+    and ``operator+=`` string member functions.
+
+  - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
