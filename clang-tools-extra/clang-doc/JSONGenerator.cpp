@@ -625,7 +625,7 @@ void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {
         break;
       }
     }
-    serializeArray(I.Members, Obj, "Members", SerializeInfoLambda);
+    serializeArray(I.Members, Obj, "Members", serializeInfoLambda());
   }
 }
 
