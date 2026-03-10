@@ -1908,10 +1908,17 @@ namespace lambda_captures {
     return lambda;
   }
 
-  auto capture_static_address() {
+  auto capture_static_address_by_value() {
       static int local = 1;
       int* p = &local;
       auto lambda = [p]() { return p; };
       return lambda;
+  }
+
+  auto capture_static_address_by_ref() {
+      static int local = 1;
+      int* p = &local;
+      auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
+      return lambda; // expected-note {{returned here}}
   }
 } // namespace lambda_captures
