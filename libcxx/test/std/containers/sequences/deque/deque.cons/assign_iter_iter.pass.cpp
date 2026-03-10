@@ -145,6 +145,7 @@ TEST_CONSTEXPR_CXX26 void test_iterators() {
 TEST_CONSTEXPR_CXX26 bool test() {
   basic_test();
   test_iterators();
+  return true;
 }
 
 int main(int, char**) {
