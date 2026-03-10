@@ -671,18 +671,6 @@ bool FullDependence::isScalar(unsigned Level, bool IsSameSD) const {
   return getDVEntry(Level, IsSameSD).Scalar;
 }
 
-// Returns true if peeling the first iteration from this regular or SameSD
-// loop level will break this dependence.
-bool FullDependence::isPeelFirst(unsigned Level, bool IsSameSD) const {
-  return getDVEntry(Level, IsSameSD).PeelFirst;
-}
-
-// Returns true if peeling the last iteration from this regular or SameSD
-// loop level will break this dependence.
-bool FullDependence::isPeelLast(unsigned Level, bool IsSameSD) const {
-  return getDVEntry(Level, IsSameSD).PeelLast;
-}
-
 // inSameSDLoops - Returns true if this level is an SameSD level, i.e.,
 // performed across two separate loop nests that have the Same iteration space
 // and Depth.
@@ -814,8 +802,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
   for (unsigned II = 1; II <= LevelNum; ++II) {
     if (!OnSameSD && inSameSDLoops(II))
       OnSameSD = true;
-    if (isPeelFirst(II, OnSameSD))
-      OS << 'p';
     const SCEV *Distance = getDistance(II, OnSameSD);
     if (Distance)
       OS << *Distance;
@@ -834,8 +820,6 @@ void Dependence::dumpImp(raw_ostream &OS, bool IsSameSD) const {
           OS << ">";
       }
     }
-    if (isPeelLast(II, OnSameSD))
-      OS << 'p';
     if (II < LevelNum)
       OS << " ";
   }
@@ -1236,6 +1220,9 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
                                    FullDependence &Result,
                                    bool UnderRuntimeAssumptions) {
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
+    return false;
+
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
     return false;
 
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
@@ -1813,10 +1800,8 @@ static bool isRemainderZero(const SCEVConstant *Dividend,
 //
 // If i is not an integer, there's no dependence.
 // If i < 0 or > UB, there's no dependence.
-// If i = 0, the direction is >= and peeling the
-// 1st iteration will break the dependence.
-// If i = UB, the direction is <= and peeling the
-// last iteration will break the dependence.
+// If i = 0, the direction is >=.
+// If i = UB, the direction is <=.
 // Otherwise, the direction is *.
 //
 // Can prove independence. Failing that, we can sometimes refine
@@ -1845,16 +1830,17 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= MaxLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (SE->isKnownPredicate(CmpInst::ICMP_EQ, SrcConst, DstConst)) {
+  if (SrcConst == DstConst && SE->isKnownNonZero(DstCoeff)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::GE;
-      Result.DV[Level].PeelFirst = true;
       ++WeakZeroSIVsuccesses;
     }
     return false; // dependences caused by first iteration
   }
+  const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
+  if (!Delta)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
   if (!ConstCoeff)
     return false;
@@ -1882,7 +1868,6 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
       // dependences caused by last iteration
       if (Level < CommonLevels) {
         Result.DV[Level].Direction &= Dependence::DVEntry::LE;
-        Result.DV[Level].PeelLast = true;
         ++WeakZeroSIVsuccesses;
       }
       return false;
@@ -1926,10 +1911,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 //
 // If i is not an integer, there's no dependence.
 // If i < 0 or > UB, there's no dependence.
-// If i = 0, the direction is <= and peeling the
-// 1st iteration will break the dependence.
-// If i = UB, the direction is >= and peeling the
-// last iteration will break the dependence.
+// If i = 0, the direction is <=.
+// If i = UB, the direction is >=.
 // Otherwise, the direction is *.
 //
 // Can prove independence. Failing that, we can sometimes refine
@@ -1957,16 +1940,17 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= SrcLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  if (SE->isKnownPredicate(CmpInst::ICMP_EQ, DstConst, SrcConst)) {
+  if (DstConst == SrcConst && SE->isKnownNonZero(SrcCoeff)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::LE;
-      Result.DV[Level].PeelFirst = true;
       ++WeakZeroSIVsuccesses;
     }
     return false; // dependences caused by first iteration
   }
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   if (!ConstCoeff)
     return false;
@@ -1994,7 +1978,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
       // dependences caused by last iteration
       if (Level < CommonLevels) {
         Result.DV[Level].Direction &= Dependence::DVEntry::GE;
-        Result.DV[Level].PeelLast = true;
         ++WeakZeroSIVsuccesses;
       }
       return false;
@@ -2025,7 +2008,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
 // where i and j are induction variable, c1 and c2 are loop invariant,
 // and a and b are constants.
 // Returns true if any possible dependence is disproved.
-// Marks the result as inconsistent.
 // Works in some cases that symbolicRDIVtest doesn't, and vice versa.
 bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                    const SCEV *SrcConst, const SCEV *DstConst,
@@ -2447,7 +2429,6 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // gcdMIVtest -
 // Tests an MIV subscript pair for dependence.
 // Returns true if any possible dependence is disproved.
-// Marks the result as inconsistent.
 // Can sometimes disprove the equal direction for 1 or more loops,
 // as discussed in Michael Wolfe's book,
 // High Performance Compilers for Parallel Computing, page 235.

@@ -984,6 +984,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Getters of the grid values.
   uint32_t getWarpSize() const { return GridValues.GV_Warp_Size; }
+
+  /// Get the number of lanes used for the RPC interface.
+  virtual uint32_t getRPCNumLanes() const { return getWarpSize(); }
   uint32_t getThreadLimit() const { return GridValues.GV_Max_WG_Size; }
   uint32_t getBlockLimit() const { return GridValues.GV_Max_Teams; }
   uint32_t getDefaultNumThreads() const {

@@ -13,6 +13,7 @@
 #include "CGBuiltin.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenFunction.h"
+#include "llvm/IR/MatrixBuilder.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -331,7 +332,7 @@ static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
 
 // Return wave active sum that corresponds to the QT scalar type
 static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
+                                               QualType QT) {
   switch (Arch) {
   case llvm::Triple::spirv:
     return Intrinsic::spv_wave_reduce_sum;
@@ -342,6 +343,23 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
   }
   default:
     llvm_unreachable("Intrinsic WaveActiveSum"
+                     " not supported by target architecture");
+  }
+}
+
+// Return wave active product that corresponds to the QT scalar type
+static Intrinsic::ID getWaveActiveProductIntrinsic(llvm::Triple::ArchType Arch,
+                                                   QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    return Intrinsic::spv_wave_product;
+  case llvm::Triple::dxil: {
+    if (QT->isUnsignedIntegerType())
+      return Intrinsic::dx_wave_uproduct;
+    return Intrinsic::dx_wave_product;
+  }
+  default:
+    llvm_unreachable("Intrinsic WaveActiveProduct"
                      " not supported by target architecture");
   }
 }
@@ -1054,6 +1072,37 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Mul = Builder.CreateNUWMul(M, A);
     return Builder.CreateNUWAdd(Mul, B);
   }
+  case Builtin::BI__builtin_hlsl_mul: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    QualType QTy0 = E->getArg(0)->getType();
+    QualType QTy1 = E->getArg(1)->getType();
+
+    bool IsVec0 = QTy0->isVectorType();
+    bool IsVec1 = QTy1->isVectorType();
+    bool IsMat0 = QTy0->isConstantMatrixType();
+    bool IsMat1 = QTy1->isConstantMatrixType();
+
+    llvm::MatrixBuilder MB(Builder);
+    if (IsVec0 && IsMat1) {
+      unsigned N = QTy0->castAs<VectorType>()->getNumElements();
+      auto *MatTy = QTy1->castAs<ConstantMatrixType>();
+      unsigned M = MatTy->getNumColumns();
+      return MB.CreateMatrixMultiply(Op0, Op1, 1, N, M, "hlsl.mul");
+    }
+    if (IsMat0 && IsVec1) {
+      auto *MatTy = QTy0->castAs<ConstantMatrixType>();
+      unsigned Rows = MatTy->getNumRows();
+      unsigned Cols = MatTy->getNumColumns();
+      return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
+    }
+    assert(IsMat0 && IsMat1);
+    auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
+    auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
+    return MB.CreateMatrixMultiply(Op0, Op1, MatTy0->getNumRows(),
+                                   MatTy0->getNumColumns(),
+                                   MatTy1->getNumColumns(), "hlsl.mul");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
@@ -1177,18 +1226,27 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         ArrayRef{OpExpr});
   }
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
-    // Due to the use of variadic arguments, explicitly retreive argument
+    // Due to the use of variadic arguments, explicitly retrieve argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID IID = getWaveActiveSumIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+        getTarget().getTriple().getArch(), E->getArg(0)->getType());
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.active.sum");
   }
+  case Builtin::BI__builtin_hlsl_wave_active_product: {
+    // Due to the use of variadic arguments, explicitly retrieve argument
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID IID = getWaveActiveProductIntrinsic(
+        getTarget().getTriple().getArch(), E->getArg(0)->getType());
+
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.wave.active.product");
+  }
   case Builtin::BI__builtin_hlsl_wave_active_max: {
-    // Due to the use of variadic arguments, explicitly retreive argument
+    // Due to the use of variadic arguments, explicitly retrieve argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     QualType QT = E->getArg(0)->getType();
     Intrinsic::ID IID;
@@ -1202,7 +1260,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                            ArrayRef{OpExpr}, "hlsl.wave.active.max");
   }
   case Builtin::BI__builtin_hlsl_wave_active_min: {
-    // Due to the use of variadic arguments, explicitly retreive argument
+    // Due to the use of variadic arguments, explicitly retrieve argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     QualType QT = E->getArg(0)->getType();
     Intrinsic::ID IID;
@@ -1243,7 +1301,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
   }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
-    // Due to the use of variadic arguments we must explicitly retreive them and
+    // Due to the use of variadic arguments we must explicitly retrieve them and
     // create our function type.
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Value *OpIndex = EmitScalarExpr(E->getArg(1));

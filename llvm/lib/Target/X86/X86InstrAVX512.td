@@ -9097,13 +9097,13 @@ multiclass avx512_ord_cmp_sae<bits<8> opc, X86VectorVTInfo _,
 
 let Defs = [EFLAGS], Predicates = [HasAVX512] in {
   defm VUCOMISSZ : avx512_ord_cmp_sae<0x2E, v4f32x_info, "vucomiss", SSEPackedSingle>,
-                                   AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
+                                   TB, EVEX_CD8<32, CD8VT1>;
   defm VUCOMISDZ : avx512_ord_cmp_sae<0x2E, v2f64x_info, "vucomisd", SSEPackedDouble>,
-                                   AVX512PDIi8Base, REX_W, EVEX_CD8<64, CD8VT1>;
+                                   TB, PD, REX_W, EVEX_CD8<64, CD8VT1>;
   defm VCOMISSZ : avx512_ord_cmp_sae<0x2F, v4f32x_info, "vcomiss", SSEPackedSingle>,
-                                   AVX512PSIi8Base, EVEX_CD8<32, CD8VT1>;
+                                   TB, EVEX_CD8<32, CD8VT1>;
   defm VCOMISDZ : avx512_ord_cmp_sae<0x2F, v2f64x_info, "vcomisd", SSEPackedDouble>,
-                                   AVX512PDIi8Base, REX_W, EVEX_CD8<64, CD8VT1>;
+                                   TB, PD, REX_W, EVEX_CD8<64, CD8VT1>;
 }
 
 let Defs = [EFLAGS], Predicates = [HasAVX512] in {
@@ -9138,10 +9138,10 @@ let Defs = [EFLAGS], Predicates = [HasAVX512] in {
 
 let Defs = [EFLAGS], Predicates = [HasFP16] in {
   defm VUCOMISHZ : avx512_ord_cmp_sae<0x2E, v8f16x_info, "vucomish",
-                                SSEPackedSingle>, AVX512PSIi8Base, T_MAP5,
+                                SSEPackedSingle>, TB, T_MAP5,
                                 EVEX_CD8<16, CD8VT1>;
   defm VCOMISHZ : avx512_ord_cmp_sae<0x2F, v8f16x_info, "vcomish",
-                                SSEPackedSingle>, AVX512PSIi8Base, T_MAP5,
+                                SSEPackedSingle>, TB, T_MAP5,
                                 EVEX_CD8<16, CD8VT1>;
   defm VUCOMISHZ : sse12_ord_cmp<0x2E, FR16X, X86any_fcmp, f16, f16mem, loadf16,
                                 "ucomish", SSEPackedSingle>, T_MAP5, EVEX,
@@ -12493,6 +12493,55 @@ let Predicates = [HasVBMI2, NoVLX] in {
   defm : vbmi2_funnel_novlx<v32i16_info, v16i16x_info, VPSHRDWZrri, X86VShrd, VPSHRDVWZr, fshr, 1>;
   defm : vbmi2_funnel_novlx<v32i16_info, v8i16x_info,  VPSHLDWZrri, X86VShld, VPSHLDVWZr, fshl, 0>;
   defm : vbmi2_funnel_novlx<v32i16_info, v8i16x_info,  VPSHRDWZrri, X86VShrd, VPSHRDVWZr, fshr, 1>;
+}
+
+// Use VPSHLD/VPSHRD to implement rotations.
+multiclass vbmi2_rotate<X86VectorVTInfo _, Instruction InstrStrRI, SDNode OpNodeRI,
+                        Instruction InstrStrRR, SDNode OpNodeRR> {
+  def : Pat<(_.VT (OpNodeRI (_.VT _.RC:$src1), (i8 timm:$src2))),
+            (InstrStrRI (_.VT _.RC:$src1), (_.VT _.RC:$src1), timm:$src2)>;
+
+  def : Pat<(_.VT (OpNodeRR (_.VT _.RC:$src1), (_.VT _.RC:$src2))),
+            (InstrStrRR (_.VT _.RC:$src1), (_.VT _.RC:$src1), (_.VT _.RC:$src2))>;
+}
+
+let Predicates = [HasVBMI2] in {
+  defm : vbmi2_rotate<v32i16_info, VPSHLDWZrri, X86vrotli, VPSHLDVWZr, rotl>;
+  defm : vbmi2_rotate<v32i16_info, VPSHRDWZrri, X86vrotri, VPSHRDVWZr, rotr>;
+}
+
+let Predicates = [HasVBMI2, HasVLX] in {
+  defm : vbmi2_rotate<v16i16x_info, VPSHLDWZ256rri, X86vrotli, VPSHLDVWZ256r, rotl>;
+  defm : vbmi2_rotate<v16i16x_info, VPSHRDWZ256rri, X86vrotri, VPSHRDVWZ256r, rotr>;
+  defm : vbmi2_rotate<v8i16x_info,  VPSHLDWZ128rri, X86vrotli, VPSHLDVWZ128r, rotl>;
+  defm : vbmi2_rotate<v8i16x_info,  VPSHRDWZ128rri, X86vrotri, VPSHRDVWZ128r, rotr>;
+}
+
+multiclass vbmi2_rotate_novlx<X86VectorVTInfo Dst, X86VectorVTInfo Src,
+                              Instruction InstrStrRI, SDNode OpNodeRI,
+                              Instruction InstrStrRR, SDNode OpNodeRR> {
+  def : Pat<(Src.VT (OpNodeRI (Src.VT Src.RC:$src1), (i8 timm:$src2))),
+          (EXTRACT_SUBREG
+              (InstrStrRI
+                (INSERT_SUBREG (Dst.VT (IMPLICIT_DEF)), Src.RC:$src1, Src.SubRegIdx),
+                (INSERT_SUBREG (Dst.VT (IMPLICIT_DEF)), Src.RC:$src1, Src.SubRegIdx),
+                timm:$src2),
+           Src.SubRegIdx)>;
+
+  def : Pat<(Src.VT (OpNodeRR (Src.VT Src.RC:$src1), (Src.VT Src.RC:$src2))),
+          (EXTRACT_SUBREG
+              (InstrStrRR
+                (INSERT_SUBREG (Dst.VT (IMPLICIT_DEF)), Src.RC:$src1, Src.SubRegIdx),
+                (INSERT_SUBREG (Dst.VT (IMPLICIT_DEF)), Src.RC:$src1, Src.SubRegIdx),
+                (INSERT_SUBREG (Dst.VT (IMPLICIT_DEF)), Src.RC:$src2, Src.SubRegIdx)),
+           Src.SubRegIdx)>;
+}
+
+let Predicates = [HasVBMI2, NoVLX] in {
+  defm : vbmi2_rotate_novlx<v32i16_info, v16i16x_info, VPSHLDWZrri, X86vrotli, VPSHLDVWZr, rotl>;
+  defm : vbmi2_rotate_novlx<v32i16_info, v16i16x_info, VPSHRDWZrri, X86vrotri, VPSHRDVWZr, rotr>;
+  defm : vbmi2_rotate_novlx<v32i16_info, v8i16x_info,  VPSHLDWZrri, X86vrotli, VPSHLDVWZr, rotl>;
+  defm : vbmi2_rotate_novlx<v32i16_info, v8i16x_info,  VPSHRDWZrri, X86vrotri, VPSHRDVWZr, rotr>;
 }
 
 //===----------------------------------------------------------------------===//
