@@ -14547,6 +14547,75 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+	// Signed
+  case X86::BI__builtin_ia32_vpdpwssd128:
+  case X86::BI__builtin_ia32_vpdpwssd256:
+  case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpwssds128:
+  case X86::BI__builtin_ia32_vpdpwssds256:
+  case X86::BI__builtin_ia32_vpdpwssds512:
+	// Get the number of elements from the 0th arg
+	// Get the bitmask over each lane
+	// Result SmallVector
+	// return the Result SmallVector
+
+	// Unsigned
+  case X86::BI__builtin_ia32_vpdpbusds128:
+  case X86::BI__builtin_ia32_vpdpbusds256:
+  case X86::BI__builtin_ia32_vpdpbusds512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512: {
+	llvm::outs() << "DEBUG: constexpr evaluator is firing properly\n";
+    
+    APValue Source, OperandA, OperandB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), OperandA) ||
+        !EvaluateAsRValue(Info, E->getArg(2), OperandB)) {
+	  llvm::outs() << "DEBUG: an operand was rejected when evaluated\n";
+	  return false;
+    }
+    
+    unsigned NumElements = Source.getVectorLength();
+
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumElements);
+
+    for (unsigned I = 0; I < NumElements; ++I) {
+	  Result.push_back(APValue(0)); 
+    }
+    
+	return Success(APValue(Result.data(), Result.size()), E);
+
+    /**
+ case clang::X86::BI__builtin_ia32_addsubps256: {
+    // Addsub: alternates between subtraction and addition
+    // Result[i] = (i % 2 == 0) ? (a[i] - b[i]) : (a[i] + b[i])
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+    unsigned NumElems = SourceLHS.getVectorLength();
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(NumElems);
+    llvm::RoundingMode RM = getActiveRoundingMode(getEvalInfo(), E);
+
+    for (unsigned I = 0; I != NumElems; ++I) {
+      APFloat LHS = SourceLHS.getVectorElt(I).getFloat();
+      APFloat RHS = SourceRHS.getVectorElt(I).getFloat();
+      if (I % 2 == 0) {
+        // Even indices: subtract
+        LHS.subtract(RHS, RM);
+      } else {
+        // Odd indices: add
+        LHS.add(RHS, RM);
+      }
+      ResultElements.push_back(APValue(LHS));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+	 */
+  }
   }
 }
 
