@@ -293,6 +293,8 @@ static uint32_t findMaskR6(Ctx &ctx, uint32_t insn) {
 }
 
 static uint32_t findMaskR8(uint32_t insn) {
+  if (isDuplex(insn))
+    return 0x03f00000;
   if ((0xff000000 & insn) == 0xde000000)
     return 0x00e020e8;
   if ((0xff000000 & insn) == 0x3c000000)

@@ -907,6 +907,17 @@ public:
   bool isSImm8Unsigned() const { return isSImm<8>() || isUImm<8>(); }
   bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
 
+  bool isSImm10PLI_H() const {
+    return isSImm<10>() || isUImmPred([](int64_t Imm) {
+             return isUInt<16>(Imm) && isInt<10>(SignExtend64<16>(Imm));
+           });
+  }
+  bool isSImm10PLI_W() const {
+    return isSImm<10>() || isUImmPred([](int64_t Imm) {
+             return isUInt<32>(Imm) && isInt<10>(SignExtend64<32>(Imm));
+           });
+  }
+
   bool isUImm20LUI() const {
     if (!isExpr())
       return false;
@@ -1577,6 +1588,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
                                       (1 << 8) - 1);
   case Match_InvalidSImm10:
+  case Match_InvalidSImm10PLI_H:
+  case Match_InvalidSImm10PLI_W:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
                                       (1 << 9) - 1);
   case Match_InvalidSImm10Unsigned:
@@ -3789,6 +3802,16 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgLegacyOp() const {
                                     llvm::SMLoc());
 }
 
+unsigned getLMULFromVectorRegister(MCRegister Reg) {
+  if (RISCVMCRegisterClasses[RISCV::VRM2RegClassID].contains(Reg))
+    return 2;
+  if (RISCVMCRegisterClasses[RISCV::VRM4RegClassID].contains(Reg))
+    return 4;
+  if (RISCVMCRegisterClasses[RISCV::VRM8RegClassID].contains(Reg))
+    return 8;
+  return 1;
+}
+
 bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
   unsigned Opcode = Inst.getOpcode();
@@ -3842,14 +3865,20 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   assert(ParsedOp->getReg() == DestReg && "Can't find parsed dest operand");
   SMLoc Loc = ParsedOp->getStartLoc();
 
+  unsigned Lmul = getLMULFromVectorRegister(DestReg);
+  const MCRegisterInfo *RI = getContext().getRegisterInfo();
+  unsigned DestEncoding = RI->getEncodingValue(DestReg);
   if (MCID.TSFlags & RISCVII::VS2Constraint) {
     int VS2Idx =
         RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs2);
     assert(VS2Idx >= 0 && "No vs2 operand?");
-    MCRegister CheckReg = Inst.getOperand(VS2Idx).getReg();
-    if (DestReg == CheckReg)
-      return Error(Loc, "the destination vector register group cannot overlap"
-                        " the source vector register group");
+    unsigned CheckEncoding =
+        RI->getEncodingValue(Inst.getOperand(VS2Idx).getReg());
+    for (unsigned i = 0; i < Lmul; i++) {
+      if ((DestEncoding + i) == CheckEncoding)
+        return Error(Loc, "the destination vector register group cannot overlap"
+                          " the source vector register group");
+    }
   }
   if (MCID.TSFlags & RISCVII::VS1Constraint) {
     int VS1Idx =
@@ -3857,10 +3886,14 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // FIXME: The vs1 constraint is used on scalar and imm instructions so we
     // need to check that the operand exists.
     if (VS1Idx >= 0) {
-      MCRegister CheckReg = Inst.getOperand(VS1Idx).getReg();
-      if (DestReg == CheckReg)
-        return Error(Loc, "the destination vector register group cannot overlap"
-                          " the source vector register group");
+      unsigned CheckEncoding =
+          RI->getEncodingValue(Inst.getOperand(VS1Idx).getReg());
+      for (unsigned i = 0; i < Lmul; i++) {
+        if ((DestEncoding + i) == CheckEncoding)
+          return Error(Loc,
+                       "the destination vector register group cannot overlap"
+                       " the source vector register group");
+      }
     }
   }
 

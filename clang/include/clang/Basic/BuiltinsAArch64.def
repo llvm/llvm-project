@@ -135,6 +135,9 @@ TARGET_BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n", "ls64")
 TARGET_BUILTIN(__builtin_arm_st64bv, "WUiv*WUiC*", "n", "ls64")
 TARGET_BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n", "ls64")
 
+// Atomic store with PCDPHINT
+TARGET_BUILTIN(__builtin_arm_atomic_store_with_stshh, "v.", "t", "")
+
 // Armv9.3-A Guarded Control Stack
 TARGET_BUILTIN(__builtin_arm_gcspopm, "WUiWUi", "n", "gcs")
 TARGET_BUILTIN(__builtin_arm_gcsss, "v*v*", "n", "gcs")

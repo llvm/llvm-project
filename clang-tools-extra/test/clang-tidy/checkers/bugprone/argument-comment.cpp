@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-argument-comment %t -- -- -I %S/Inputs/argument-comment -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s bugprone-argument-comment %t -- -- -I %S/Inputs/argument-comment
 
 // FIXME: clang-tidy should provide a -verify mode to make writing these checks
 // easier and more accurate.

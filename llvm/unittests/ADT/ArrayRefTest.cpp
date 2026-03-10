@@ -340,6 +340,12 @@ static_assert(
 static_assert(!std::is_constructible_v<ArrayRef<TestBase *>,
                                        iterator_range<TestDerived **>>,
               "cannot construct ArrayRef pointer of base type");
+static_assert(!std::is_constructible_v<MutableArrayRef<TestBase>,
+                                       iterator_range<TestDerived *>>,
+              "cannot construct MutableArrayRef base type");
+static_assert(!std::is_constructible_v<MutableArrayRef<TestBase *>,
+                                       iterator_range<TestDerived **>>,
+              "cannot construct MutableArrayRef pointer of base type");
 
 static_assert(
     !std::is_constructible_v<ArrayRef<int>, iterator_range<const int *>>,
@@ -468,6 +474,10 @@ TEST(ArrayRefTest, MutableArrayRefDeductionGuides) {
   }
 }
 
+static_assert(
+    !std::is_constructible_v<MutableArrayRef<int>, const SmallVector<int>>,
+    "cannot construct MutableArrayRef from const std::SmallVector<int>");
+
 #ifdef __cpp_lib_span
 static_assert(std::is_constructible_v<ArrayRef<int>, std::span<const int>>,
               "should be able to construct ArrayRef from const std::span");
@@ -491,6 +501,10 @@ static_assert(
     std::is_constructible_v<MutableArrayRef<int>, const std::span<int>>,
     "should be able to construct MutableArrayRef from const std::span with "
     "mutable elements");
+static_assert(
+    !std::is_constructible_v<MutableArrayRef<TestBase>, std::span<TestDerived>>,
+    "cannot construct MutableArrayRef base type from std::span with derived "
+    "elements");
 #endif
 
 } // end anonymous namespace

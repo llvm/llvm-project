@@ -17,6 +17,7 @@ add_clang_library(clangDoc STATIC
   Serialize.cpp
   YAMLGenerator.cpp
   JSONGenerator.cpp
+  MDMustacheGenerator.cpp
 
   DEPENDS
   omp_gen
@@ -39,7 +40,7 @@ clang_target_link_libraries(clangDoc
 
 target_link_libraries(clangDoc
   PRIVATE
-  clangDocSupport      
+  clangDocSupport
   )
 
 add_subdirectory(tool)
