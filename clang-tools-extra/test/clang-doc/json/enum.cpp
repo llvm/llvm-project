@@ -116,7 +116,7 @@ enum Car {
 };
 } // namespace Vehicles
 
-// JSON-VEHICLES-INDEX-NEXT:    "DocumentationFileName": "index",
+// JSON-VEHICLES-INDEX-LABEL:   "DocumentationFileName": "index",
 // JSON-VEHICLES-INDEX-NEXT:    "Enums": [
 // JSON-VEHICLES-INDEX-NEXT:      {
 // JSON-VEHICLES-INDEX-NEXT:        "Description": {
