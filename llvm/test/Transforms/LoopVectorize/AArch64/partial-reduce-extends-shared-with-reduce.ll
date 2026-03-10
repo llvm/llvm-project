@@ -8,8 +8,12 @@ target triple = "arm64-apple-macosx"
 ; `%sum1.next = add i64 %accum, 1` does not have an extended operand.
 ; The sum2 chain will be matched, but rejected as some of its inputs are used
 ; by sum1, which is not a partial reduction.
-define void @invalid_operation_as_exit_value(ptr %ptr, i64 %n) #0 {
-; CHECK-LABEL: define void @invalid_operation_as_exit_value(
+;
+; TODO: Should we allow %sum2 to lower to a partial reduction in this case?
+; This would require relaxing the "ExtendUsersValid" restriction in
+; createPartialReductions.
+define void @partial_reduce_extends_shared_with_reduction(ptr %ptr, i64 %n) #0 {
+; CHECK-LABEL: define void @partial_reduce_extends_shared_with_reduction(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
@@ -21,22 +25,22 @@ define void @invalid_operation_as_exit_value(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x i8], ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i16> [[WIDE_LOAD]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i32> [[TMP3]] to <8 x i64>
-; CHECK-NEXT:    [[TMP6]] = add <8 x i64> [[VEC_PHI]], [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add <8 x i64> [[VEC_PHI1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7]] = add <8 x i64> [[TMP11]], splat (i64 1)
+; CHECK-NEXT:    [[TMP5]] = add <8 x i64> [[VEC_PHI1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add <8 x i64> [[VEC_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7]] = add <8 x i64> [[TMP6]], splat (i64 1)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP7]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP6]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -95,51 +99,6 @@ loop:
 exit:
   call void @use(i64 %sum1.next, i64 %sum2.next)
   ret void
-}
-
-; This test case should be rejected as `%add.const = add i32 %accum, 1` (which
-; is not the exit value), does not have an extended operand.
-define i32 @invalid_operation_after_exit_value(ptr %src) #0 {
-; CHECK-LABEL: define i32 @invalid_operation_after_exit_value(
-; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add <8 x i32> [[VEC_PHI]], splat (i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i8> [[WIDE_LOAD]] to <8 x i32>
-; CHECK-NEXT:    [[TMP3]] = add <8 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP3]])
-; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[TMP5]]
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
-  %accum = phi i32 [ %add, %loop ], [ 0, %entry ]
-  %add.const = add i32 %accum, 1
-  %gep = getelementptr i8, ptr %src, i64 %iv
-  %ld = load i8, ptr %gep, align 1
-  %ext = sext i8 %ld to i32
-  %add = add i32 %add.const, %ext
-  %iv.next = add i64 %iv, 1
-  %cmp = icmp eq i64 %iv.next, 64
-  br i1 %cmp, label %exit, label %loop
-
-exit:
-  ret i32 %add
 }
 
 declare void @use(i64, i64)
