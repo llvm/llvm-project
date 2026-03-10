@@ -1186,23 +1186,21 @@ public:
     // Does the right thing provided self and Other are either both pre-gfx12
     // or both gfx12+.
     Waitcnt Wait;
-    for (InstCounterType T : inst_counter_types()) {
+    for (InstCounterType T : inst_counter_types())
       Wait.Cnt[T] = std::min(Cnt[T], Other.Cnt[T]);
-    }
     return Wait;
   }
 
   void print(raw_ostream &OS) const {
     ListSeparator LS;
-    for (InstCounterType T : inst_counter_types()) {
+    for (InstCounterType T : inst_counter_types())
       OS << LS << instCounterTypeToStr(T) << ": " << Cnt[T];
-    }
     if (LS.unused())
       OS << "none";
     OS << '\n';
   }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
 #endif
 

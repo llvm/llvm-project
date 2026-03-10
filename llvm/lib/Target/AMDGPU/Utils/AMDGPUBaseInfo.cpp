@@ -225,7 +225,7 @@ StringLiteral instCounterTypeToStr(InstCounterType T) {
   }
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Waitcnt::dump() const { dbgs() << *this << "\n"; }
 #endif
 
