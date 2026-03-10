@@ -2990,13 +2990,8 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
 
     if (User->getOpcode() == ISD::SETCC) {
       ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
-      if (CC == ISD::SETEQ || CC == ISD::SETNE) {
-        if (mayFoldIntoVector(User->getOperand(0), DAG, Subtarget,
-                              /*AssumeSingleUse=*/true) &&
-            mayFoldIntoVector(User->getOperand(1), DAG, Subtarget,
-                              /*AssumeSingleUse=*/true))
-          continue;
-      }
+      if (CC == ISD::SETEQ || CC == ISD::SETNE)
+        continue;
       return false;
     }
 
