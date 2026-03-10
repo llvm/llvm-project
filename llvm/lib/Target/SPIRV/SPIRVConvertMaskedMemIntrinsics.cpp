@@ -12,7 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -65,31 +68,42 @@ bool SPIRVConvertMaskedMemIntrinsics::runOnModule(Module &M) {
     return false;
 
   bool Changed = false;
-  SmallVector<IntrinsicInst *, 8> ToProcess;
 
-  for (Function &F : M) {
+  for (Function &F : make_early_inc_range(M)) {
     if (!F.isIntrinsic())
       continue;
     Intrinsic::ID IID = F.getIntrinsicID();
     if (IID != Intrinsic::masked_gather && IID != Intrinsic::masked_scatter)
       continue;
 
-    for (User *U : F.users()) {
+    for (User *U : make_early_inc_range(F.users())) {
       if (auto *II = dyn_cast<IntrinsicInst>(U))
-        ToProcess.push_back(II);
+        Changed |= processIntrinsic(*II);
     }
-  }
 
-  for (IntrinsicInst *II : ToProcess)
-    Changed |= processIntrinsic(*II);
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
 
   return Changed;
 }
 
 bool SPIRVConvertMaskedMemIntrinsics::processIntrinsic(IntrinsicInst &I) {
+  const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*I.getFunction());
+
   if (I.getIntrinsicID() == Intrinsic::masked_gather) {
-    IRBuilder<> B(I.getParent());
-    B.SetInsertPoint(&I);
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      I.getContext().emitError(
+          &I, "llvm.masked.gather requires SPV_INTEL_masked_gather_scatter "
+              "extension");
+      // Replace with poison to allow compilation to continue and report error.
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+      I.eraseFromParent();
+      return true;
+    }
+
+    IRBuilder<> B(&I);
 
     Value *Ptrs = I.getArgOperand(0);
     Value *Mask = I.getArgOperand(1);
@@ -110,8 +124,17 @@ bool SPIRVConvertMaskedMemIntrinsics::processIntrinsic(IntrinsicInst &I) {
   }
 
   if (I.getIntrinsicID() == Intrinsic::masked_scatter) {
-    IRBuilder<> B(I.getParent());
-    B.SetInsertPoint(&I);
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      I.getContext().emitError(
+          &I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter "
+              "extension");
+      // Erase the intrinsic to allow compilation to continue and report error.
+      I.eraseFromParent();
+      return true;
+    }
+
+    IRBuilder<> B(&I);
 
     Value *Values = I.getArgOperand(0);
     Value *Ptrs = I.getArgOperand(1);

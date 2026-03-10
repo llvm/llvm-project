@@ -1,7 +1,6 @@
-; REQUIRES: asserts
-; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown %s 2>&1 | FileCheck %s
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK: Vector of pointers requires SPV_INTEL_masked_gather_scatter
+; CHECK: error:{{.*}}Vector of pointers requires SPV_INTEL_masked_gather_scatter extension
 
 declare spir_func void @foo(<2 x i64>)
 

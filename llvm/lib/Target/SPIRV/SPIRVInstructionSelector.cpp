@@ -1733,16 +1733,17 @@ bool SPIRVInstructionSelector::selectMaskedGather(Register ResVReg,
                                                   SPIRVTypeInst ResType,
                                                   MachineInstr &I) const {
   assert(I.getNumExplicitDefs() == 1 && "Expected single def for gather");
-  // Operand indices (after explicit defs):
-  // 0: intrinsic ID
-  // 1: vector of pointers
-  // 2: alignment (i32 immediate)
-  // 3: mask (vector of i1)
-  // 4: passthru/fill value
-  Register PtrsReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
-  uint32_t Alignment = I.getOperand(I.getNumExplicitDefs() + 2).getImm();
-  Register MaskReg = I.getOperand(I.getNumExplicitDefs() + 3).getReg();
-  Register PassthruReg = I.getOperand(I.getNumExplicitDefs() + 4).getReg();
+  // Operand indices:
+  // 0: result (def)
+  // 1: intrinsic ID
+  // 2: vector of pointers
+  // 3: alignment (i32 immediate)
+  // 4: mask (vector of i1)
+  // 5: passthru/fill value
+  Register PtrsReg = I.getOperand(2).getReg();
+  uint32_t Alignment = I.getOperand(3).getImm();
+  Register MaskReg = I.getOperand(4).getReg();
+  Register PassthruReg = I.getOperand(5).getReg();
   Register AlignmentReg = buildI32Constant(Alignment, I);
 
   MachineBasicBlock &BB = *I.getParent();

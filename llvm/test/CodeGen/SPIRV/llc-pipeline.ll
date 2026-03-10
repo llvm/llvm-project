@@ -25,7 +25,8 @@
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      Expand IR instructions
 ; SPIRV-O0-NEXT:      Expand Atomic instructions
-; SPIRV-O0-NEXT:      SPIRV convert masked memory intrinsics
+; SPIRV-O0-NEXT:    SPIRV convert masked memory intrinsics
+; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-O0-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-O0-NEXT:      Remove unreachable blocks from the CFG
@@ -106,7 +107,8 @@
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Expand IR instructions
 ; SPIRV-Opt-NEXT:      Expand Atomic instructions
-; SPIRV-Opt-NEXT:      SPIRV convert masked memory intrinsics
+; SPIRV-Opt-NEXT:    SPIRV convert masked memory intrinsics
+; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; SPIRV-Opt-NEXT:      Natural Loop Information

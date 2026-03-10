@@ -320,11 +320,16 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
   assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
 
   if (EleOpc == SPIRV::OpTypePointer) {
-    assert(cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
-               .canUseExtension(
-                   SPIRV::Extension::SPV_INTEL_masked_gather_scatter) &&
-           "Vector of pointers requires SPV_INTEL_masked_gather_scatter "
-           "extension");
+    if (!cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
+             .canUseExtension(
+                 SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      const Function &F = MIRBuilder.getMF().getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F,
+          "Vector of pointers requires SPV_INTEL_masked_gather_scatter "
+          "extension",
+          DebugLoc(), DS_Error));
+    }
   } else {
     assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
             EleOpc == SPIRV::OpTypeBool) &&
