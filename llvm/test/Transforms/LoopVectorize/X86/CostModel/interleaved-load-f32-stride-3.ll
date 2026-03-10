@@ -43,7 +43,7 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX512:  LV: Found an estimated cost of 4 for VF 2 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX512:  LV: Found an estimated cost of 4 for VF 4 For instruction: %v0 = load float, ptr %in0, align 4
-; AVX512:  LV: Found an estimated cost of 6.50 (26/4) for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 6.5 for VF 8 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX512:  LV: Found an estimated cost of 12 for VF 16 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX512:  LV: Found an estimated cost of 51 for VF 32 For instruction: %v0 = load float, ptr %in0, align 4
 ; AVX512:  LV: Found an estimated cost of 210 for VF 64 For instruction: %v0 = load float, ptr %in0, align 4

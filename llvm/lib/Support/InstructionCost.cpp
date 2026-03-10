@@ -19,11 +19,20 @@ using namespace llvm;
 
 void InstructionCost::print(raw_ostream &OS) const {
   if (isValid()) {
-    if (Value % CostGranularity) {
-      double DecimalValue = static_cast<double>(Value) / CostGranularity;
-      OS << format("%.2f", DecimalValue) << " (" << Value << "/" << CostGranularity << ")";
-    } else {
-      OS << (Value / CostGranularity);
+    CostType WholeNumber = Value / CostGranularity;
+    CostType Remainder = Value % CostGranularity;
+    OS << WholeNumber;
+    assert(CostGranularity == 4 && "Hardcoded for CostGranularity=4");
+    switch (Remainder) {
+    case 1:
+      OS << ".25";
+      break;
+    case 2:
+      OS << ".5";
+      break;
+    case 3:
+      OS << ".75";
+      break;
     }
   } else {
     OS << "Invalid";

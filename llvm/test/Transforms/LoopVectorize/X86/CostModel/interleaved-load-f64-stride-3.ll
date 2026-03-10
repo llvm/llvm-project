@@ -88,7 +88,7 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 4 for VF 2 For instruction: %v0 = load double, ptr %in0, align 8
 ; AVX512:  LV: Found an estimated cost of 0 for VF 2 For instruction: %v1 = load double, ptr %in1, align 8
 ; AVX512:  LV: Found an estimated cost of 0 for VF 2 For instruction: %v2 = load double, ptr %in2, align 8
-; AVX512:  LV: Found an estimated cost of 6.50 (26/4) for VF 4 For instruction: %v0 = load double, ptr %in0, align 8
+; AVX512:  LV: Found an estimated cost of 6.5 for VF 4 For instruction: %v0 = load double, ptr %in0, align 8
 ; AVX512:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v1 = load double, ptr %in1, align 8
 ; AVX512:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v2 = load double, ptr %in2, align 8
 ; AVX512:  LV: Found an estimated cost of 12 for VF 8 For instruction: %v0 = load double, ptr %in0, align 8

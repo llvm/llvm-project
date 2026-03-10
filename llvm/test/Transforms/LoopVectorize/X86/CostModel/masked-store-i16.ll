@@ -29,7 +29,7 @@ define void @test(ptr %C) {
 ; AVX1:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX1:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX1:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i16 %valB, ptr %out, align 2
-; AVX1:  LV: Found an estimated cost of 16.50 (66/4) for VF 16 For instruction: store i16 %valB, ptr %out, align 2
+; AVX1:  LV: Found an estimated cost of 16.5 for VF 16 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX1:  LV: Found an estimated cost of 33 for VF 32 For instruction: store i16 %valB, ptr %out, align 2
 ;
 ; AVX2-LABEL: 'test'
@@ -38,7 +38,7 @@ define void @test(ptr %C) {
 ; AVX2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX2:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX2:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i16 %valB, ptr %out, align 2
-; AVX2:  LV: Found an estimated cost of 16.50 (66/4) for VF 16 For instruction: store i16 %valB, ptr %out, align 2
+; AVX2:  LV: Found an estimated cost of 16.5 for VF 16 For instruction: store i16 %valB, ptr %out, align 2
 ; AVX2:  LV: Found an estimated cost of 33 for VF 32 For instruction: store i16 %valB, ptr %out, align 2
 ;
 ; AVX512-LABEL: 'test'

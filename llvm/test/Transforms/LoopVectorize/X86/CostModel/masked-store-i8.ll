@@ -18,10 +18,10 @@ define void @test(ptr %C) {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %valB, ptr %out, align 1
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %valB, ptr %out, align 1
-; SSE2:  LV: Found an estimated cost of 2.50 (10/4) for VF 2 For instruction: store i8 %valB, ptr %out, align 1
-; SSE2:  LV: Found an estimated cost of 5.50 (22/4) for VF 4 For instruction: store i8 %valB, ptr %out, align 1
-; SSE2:  LV: Found an estimated cost of 11.50 (46/4) for VF 8 For instruction: store i8 %valB, ptr %out, align 1
-; SSE2:  LV: Found an estimated cost of 23.50 (94/4) for VF 16 For instruction: store i8 %valB, ptr %out, align 1
+; SSE2:  LV: Found an estimated cost of 2.5 for VF 2 For instruction: store i8 %valB, ptr %out, align 1
+; SSE2:  LV: Found an estimated cost of 5.5 for VF 4 For instruction: store i8 %valB, ptr %out, align 1
+; SSE2:  LV: Found an estimated cost of 11.5 for VF 8 For instruction: store i8 %valB, ptr %out, align 1
+; SSE2:  LV: Found an estimated cost of 23.5 for VF 16 For instruction: store i8 %valB, ptr %out, align 1
 ;
 ; SSE42-LABEL: 'test'
 ; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %valB, ptr %out, align 1
@@ -38,7 +38,7 @@ define void @test(ptr %C) {
 ; AVX1:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i8 %valB, ptr %out, align 1
 ; AVX1:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i8 %valB, ptr %out, align 1
 ; AVX1:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i8 %valB, ptr %out, align 1
-; AVX1:  LV: Found an estimated cost of 32.50 (130/4) for VF 32 For instruction: store i8 %valB, ptr %out, align 1
+; AVX1:  LV: Found an estimated cost of 32.5 for VF 32 For instruction: store i8 %valB, ptr %out, align 1
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %valB, ptr %out, align 1
@@ -47,7 +47,7 @@ define void @test(ptr %C) {
 ; AVX2:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i8 %valB, ptr %out, align 1
 ; AVX2:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i8 %valB, ptr %out, align 1
 ; AVX2:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i8 %valB, ptr %out, align 1
-; AVX2:  LV: Found an estimated cost of 32.50 (130/4) for VF 32 For instruction: store i8 %valB, ptr %out, align 1
+; AVX2:  LV: Found an estimated cost of 32.5 for VF 32 For instruction: store i8 %valB, ptr %out, align 1
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %valB, ptr %out, align 1

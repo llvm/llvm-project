@@ -18,8 +18,8 @@ define void @test(ptr %C) {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
-; SSE2:  LV: Found an estimated cost of 2.50 (10/4) for VF 2 For instruction: store i32 %valB, ptr %out, align 4
-; SSE2:  LV: Found an estimated cost of 5.50 (22/4) for VF 4 For instruction: store i32 %valB, ptr %out, align 4
+; SSE2:  LV: Found an estimated cost of 2.5 for VF 2 For instruction: store i32 %valB, ptr %out, align 4
+; SSE2:  LV: Found an estimated cost of 5.5 for VF 4 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE2:  LV: Found an estimated cost of 11 for VF 8 For instruction: store i32 %valB, ptr %out, align 4
 ; SSE2:  LV: Found an estimated cost of 22 for VF 16 For instruction: store i32 %valB, ptr %out, align 4
 ;

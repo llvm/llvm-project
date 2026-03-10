@@ -55,7 +55,7 @@ define void @test() {
 ; AVX512BW:  LV: Found an estimated cost of 4 for VF 2 For instruction: %v0 = load i16, ptr %in0, align 2
 ; AVX512BW:  LV: Found an estimated cost of 7 for VF 4 For instruction: %v0 = load i16, ptr %in0, align 2
 ; AVX512BW:  LV: Found an estimated cost of 7 for VF 8 For instruction: %v0 = load i16, ptr %in0, align 2
-; AVX512BW:  LV: Found an estimated cost of 9.50 (38/4) for VF 16 For instruction: %v0 = load i16, ptr %in0, align 2
+; AVX512BW:  LV: Found an estimated cost of 9.5 for VF 16 For instruction: %v0 = load i16, ptr %in0, align 2
 ; AVX512BW:  LV: Found an estimated cost of 18 for VF 32 For instruction: %v0 = load i16, ptr %in0, align 2
 ; AVX512BW:  LV: Found an estimated cost of 81 for VF 64 For instruction: %v0 = load i16, ptr %in0, align 2
 ;
