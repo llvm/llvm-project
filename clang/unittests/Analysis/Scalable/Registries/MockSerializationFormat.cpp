@@ -45,8 +45,7 @@ MockSerializationFormat::MockSerializationFormat() {
 }
 
 void MockSerializationFormat::forEachRegisteredAnalysis(
-    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> Callback)
-    const {
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> Callback) const {
   for (const auto &Entry : llvm::Registry<FormatInfo>::entries())
     Callback(Entry.getName(), Entry.getDesc());
 }
