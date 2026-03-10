@@ -143,6 +143,7 @@ TEST_F(RecordASTTest, Macros) {
 // Decl from template instantiation is filtered out from roots.
 TEST_F(RecordASTTest, ImplicitTemplates) {
   Inputs.ExtraFiles["dispatch.h"] = R"cpp(
+  #pragma once
   struct A {
     static constexpr int value = 1;
   };
