@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s bugprone-move-forwarding-reference %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++14-or-later %s bugprone-move-forwarding-reference %t -- -- -fno-delayed-template-parsing
 
 #include <utility>
 

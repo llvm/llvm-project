@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-forwarding-reference-overload %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s bugprone-forwarding-reference-overload %t
 
 #include <utility>
 

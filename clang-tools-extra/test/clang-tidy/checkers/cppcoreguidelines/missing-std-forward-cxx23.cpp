@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++23-or-later %s cppcoreguidelines-missing-std-forward %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++23-or-later %s cppcoreguidelines-missing-std-forward %t -- -- -fno-delayed-template-parsing
 
 // NOLINTBEGIN
 #include <utility>

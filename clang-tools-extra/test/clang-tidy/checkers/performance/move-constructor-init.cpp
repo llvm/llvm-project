@@ -1,13 +1,19 @@
 // RUN: %check_clang_tidy %s performance-move-constructor-init,modernize-pass-by-value %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  {modernize-pass-by-value.ValuesOnly: true}}' \
-// RUN: -- -isystem %clang_tidy_headers
+// RUN:  {modernize-pass-by-value.ValuesOnly: true}}'
 
 #include <s.h>
-#include <utility>
-using std::move;
 
 // CHECK-FIXES: #include <utility>
+
+template <class T> struct remove_reference      {typedef T type;};
+template <class T> struct remove_reference<T&>  {typedef T type;};
+template <class T> struct remove_reference<T&&> {typedef T type;};
+
+template <typename T>
+typename remove_reference<T>::type&& move(T&& arg) {
+  return static_cast<typename remove_reference<T>::type&&>(arg);
+}
 
 struct C {
   C() = default;

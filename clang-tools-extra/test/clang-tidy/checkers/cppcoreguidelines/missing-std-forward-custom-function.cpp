@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++14-or-later %s cppcoreguidelines-missing-std-forward %t -- \
-// RUN: -config="{CheckOptions: {cppcoreguidelines-missing-std-forward.ForwardFunction: custom_forward}}" -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: -config="{CheckOptions: {cppcoreguidelines-missing-std-forward.ForwardFunction: custom_forward}}" -- -fno-delayed-template-parsing
 
 // NOLINTBEGIN
 #include <utility>

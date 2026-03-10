@@ -2,13 +2,13 @@
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
-// RUN:   }}' -- -isystem %clang_tidy_headers \
+// RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
-// RUN:   }}' -- -isystem %clang_tidy_headers \
+// RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
 #include <utility>

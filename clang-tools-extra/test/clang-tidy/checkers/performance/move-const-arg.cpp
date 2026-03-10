@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-move-const-arg %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s performance-move-const-arg %t
 
 #include <utility>
 

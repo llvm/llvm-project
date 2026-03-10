@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-use-std-move %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s performance-use-std-move %t
 
 // Definitions used in the tests
 // -----------------------------

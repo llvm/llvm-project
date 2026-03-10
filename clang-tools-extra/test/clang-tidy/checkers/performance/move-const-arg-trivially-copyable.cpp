@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s performance-move-const-arg %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  {performance-move-const-arg.CheckTriviallyCopyableMove: false}}' -- -isystem %clang_tidy_headers
+// RUN:  {performance-move-const-arg.CheckTriviallyCopyableMove: false}}'
 
 #include <utility>
 
