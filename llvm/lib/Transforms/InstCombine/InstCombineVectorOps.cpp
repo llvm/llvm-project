@@ -1707,10 +1707,251 @@ static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
   return new BitCastInst(NewInsert, VTy);
 }
 
+static bool matchExtractElt(Value *V, Value *&Vec, unsigned &Idx) {
+  auto *EI = dyn_cast<ExtractElementInst>(V);
+  if (!EI)
+    return false;
+
+  auto *CI = dyn_cast<ConstantInt>(EI->getIndexOperand());
+  if (!CI)
+    return false;
+
+  Idx = CI->getZExtValue();
+  Vec = EI->getVectorOperand();
+  return true;
+}
+
+struct LaneMask {
+  enum Kind {
+    ExtractMask,
+    ICmpMask,
+    FCmpMask
+  } K;
+
+  Value *MaskVec = nullptr;
+
+  CmpInst::Predicate Pred;
+  Value *LHSVec = nullptr;
+  Value *RHSVec = nullptr;
+};
+
+static bool matchLaneMask(Value *V, unsigned Lane,
+                          LaneMask &M) {
+
+  Value *Vec;
+  unsigned Idx;
+
+  if (matchExtractElt(V, Vec, Idx) && Idx == Lane) {
+
+    if (auto *FC = dyn_cast<FCmpInst>(Vec)) {
+      if (isa<VectorType>(FC->getOperand(0)->getType())) {
+        M.K = LaneMask::FCmpMask;
+        M.Pred = FC->getPredicate();
+        M.LHSVec = FC->getOperand(0);
+        M.RHSVec = FC->getOperand(1);
+        return true;
+      }
+    }
+
+    if (auto *IC = dyn_cast<ICmpInst>(Vec)) {
+      if (isa<VectorType>(IC->getOperand(0)->getType())) {
+        M.K = LaneMask::ICmpMask;
+        M.Pred = IC->getPredicate();
+        M.LHSVec = IC->getOperand(0);
+        M.RHSVec = IC->getOperand(1);
+        return true;
+      }
+    }
+
+    auto *VT = dyn_cast<VectorType>(Vec->getType());
+    if (!VT || !VT->getElementType()->isIntegerTy(1))
+      return false;
+
+    M.K = LaneMask::ExtractMask;
+    M.MaskVec = Vec;
+    return true;
+  }
+
+  if (auto *FC = dyn_cast<FCmpInst>(V)) {
+
+    Value *LVec, *RVec;
+    unsigned LIdx, RIdx;
+
+    if (!matchExtractElt(FC->getOperand(0), LVec, LIdx) || LIdx != Lane)
+      return false;
+
+    if (!matchExtractElt(FC->getOperand(1), RVec, RIdx) || RIdx != Lane)
+      return false;
+
+    M.K = LaneMask::FCmpMask;
+    M.Pred = FC->getPredicate();
+    M.LHSVec = LVec;
+    M.RHSVec = RVec;
+    return true;
+  }
+
+  if (auto *IC = dyn_cast<ICmpInst>(V)) {
+
+    Value *LVec, *RVec;
+    unsigned LIdx, RIdx;
+
+    if (!matchExtractElt(IC->getOperand(0), LVec, LIdx) || LIdx != Lane)
+      return false;
+
+    if (!matchExtractElt(IC->getOperand(1), RVec, RIdx) || RIdx != Lane)
+      return false;
+
+    M.K = LaneMask::ICmpMask;
+    M.Pred = IC->getPredicate();
+    M.LHSVec = LVec;
+    M.RHSVec = RVec;
+    return true;
+  }
+
+  return false;
+}
+
+static bool collectBuildVector(Value *V,
+                               unsigned NumElts,
+                               SmallVectorImpl<Value *> &Lanes,
+                               Value *&Base) {
+
+  SmallBitVector Seen(NumElts);
+
+  while (auto *IE = dyn_cast<InsertElementInst>(V)) {
+
+    auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!CI)
+      return false;
+
+    unsigned Idx = CI->getZExtValue();
+
+    if (Idx >= NumElts || Seen.test(Idx))
+      return false;
+
+    Seen.set(Idx);
+
+    Lanes[Idx] = IE->getOperand(1);
+
+    V = IE->getOperand(0);
+  }
+
+  Base = V;
+
+  return Seen.all();
+}
+
+Instruction *
+InstCombinerImpl::foldBuildVectorOfScalarSelect(InsertElementInst &IE) {
+
+  auto *VecTy = dyn_cast<FixedVectorType>(IE.getType());
+  if (!VecTy)
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+
+  SmallVector<Value *, 8> Lanes(NumElts);
+
+  Value *Base;
+
+  if (!collectBuildVector(&IE, NumElts, Lanes, Base))
+    return nullptr;
+
+  if (!isa<PoisonValue>(Base) && !isa<UndefValue>(Base))
+    return nullptr;
+
+  LaneMask FirstMask;
+
+  Value *TrueVec = nullptr;
+  Value *FalseVec = nullptr;
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+
+    auto *Sel = dyn_cast<SelectInst>(Lanes[i]);
+    if (!Sel)
+      return nullptr;
+
+    LaneMask LM;
+
+    if (!matchLaneMask(Sel->getCondition(), i, LM))
+      return nullptr;
+
+    Value *TVec;
+    Value *FVec;
+
+    unsigned TIdx;
+    unsigned FIdx;
+
+    if (!matchExtractElt(Sel->getTrueValue(), TVec, TIdx) || TIdx != i)
+      return nullptr;
+
+    if (!matchExtractElt(Sel->getFalseValue(), FVec, FIdx) || FIdx != i)
+      return nullptr;
+
+    if (i == 0) {
+
+      FirstMask = LM;
+
+      TrueVec = TVec;
+      FalseVec = FVec;
+
+      continue;
+    }
+
+    if (LM.K != FirstMask.K)
+      return nullptr;
+
+    if (LM.K == LaneMask::ExtractMask) {
+      if (LM.MaskVec != FirstMask.MaskVec)
+        return nullptr;
+    } else {
+      if (LM.Pred != FirstMask.Pred ||
+          LM.LHSVec != FirstMask.LHSVec ||
+          LM.RHSVec != FirstMask.RHSVec)
+        return nullptr;
+    }
+
+    if (TVec != TrueVec || FVec != FalseVec)
+      return nullptr;
+  }
+
+  IRBuilder<> Builder(&IE);
+
+  Value *Mask;
+
+  switch (FirstMask.K) {
+
+  case LaneMask::ExtractMask:
+    Mask = FirstMask.MaskVec;
+    break;
+
+  case LaneMask::ICmpMask:
+    Mask = Builder.CreateICmp(FirstMask.Pred,
+                              FirstMask.LHSVec,
+                              FirstMask.RHSVec);
+    break;
+
+  case LaneMask::FCmpMask:
+    Mask = Builder.CreateFCmp(FirstMask.Pred,
+                              FirstMask.LHSVec,
+                              FirstMask.RHSVec);
+    break;
+  }
+
+  auto *Sel = SelectInst::Create(Mask, TrueVec, FalseVec);
+
+  Sel->takeName(&IE);
+
+  return Sel;
+}
+
 Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   Value *VecOp    = IE.getOperand(0);
   Value *ScalarOp = IE.getOperand(1);
   Value *IdxOp    = IE.getOperand(2);
+
+  if (Instruction *R = foldBuildVectorOfScalarSelect(IE))
+    return R;
 
   if (auto *V = simplifyInsertElementInst(
           VecOp, ScalarOp, IdxOp, SQ.getWithInstruction(&IE)))

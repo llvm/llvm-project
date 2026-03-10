@@ -366,6 +366,7 @@ private:
   Value *EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs, GEPNoWrapFlags NW,
                         Type *IdxTy, bool RewriteGEPs);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
+  Instruction *foldBuildVectorOfScalarSelect(InsertElementInst &IE);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
   Instruction *foldFBinOpOfIntCasts(BinaryOperator &I);
