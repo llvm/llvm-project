@@ -8,5 +8,6 @@ add_llvm_library(LLVMUBAwareInterpreter
   STATIC
   Context.cpp
   Interpreter.cpp
+  Library.cpp
   Value.cpp
   )

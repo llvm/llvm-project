@@ -131,6 +131,22 @@ public:
     return true;
   }
 
+  bool onProgramExit(ubi::ProgramExitKind Kind, uint64_t ExitCode) override {
+    switch (Kind) {
+    case ubi::ProgramExitKind::Returned:
+    case ubi::ProgramExitKind::Exit:
+      errs() << "Program exited with code " << ExitCode << '\n';
+      return true;
+    case ubi::ProgramExitKind::Abort:
+      errs() << "Program aborted.\n";
+      return true;
+    case ubi::ProgramExitKind::Terminate:
+      errs() << "Program terminated.\n";
+      return true;
+    }
+    llvm_unreachable("Unknown ProgramExitKind");
+  }
+
   void onUnrecognizedInstruction(Instruction &I) override {
     errs() << "Unrecognized instruction: " << I << '\n';
   }
@@ -239,14 +255,33 @@ int main(int argc, char **argv) {
 
   ubi::EventHandler NoopHandler;
   VerboseEventHandler VerboseHandler;
+  ubi::EventHandler &Handler =
+      Verbose ? static_cast<ubi::EventHandler &>(VerboseHandler)
+              : static_cast<ubi::EventHandler &>(NoopHandler);
   ubi::AnyValue RetVal;
-  if (!Ctx.runFunction(*EntryFn, Args, RetVal,
-                       Verbose ? VerboseHandler : NoopHandler)) {
+  std::optional<ubi::ProgramExitInfo> ProgramExit;
+  const auto ExecStatus =
+      Ctx.runFunction(*EntryFn, Args, RetVal, Handler, &ProgramExit);
+  if (ExecStatus == ubi::ExecutionStatus::Failed) {
     WithColor::error() << "Execution of function '" << EntryFunc
                        << "' failed.\n";
     return 1;
   }
 
+  if (ExecStatus == ubi::ExecutionStatus::ProgramExited) {
+    assert(ProgramExit && "Expected program exit information");
+    switch (ProgramExit->Kind) {
+    case ubi::ProgramExitKind::Exit:
+      return static_cast<int>(ProgramExit->ExitCode & 0xFF);
+    case ubi::ProgramExitKind::Abort:
+    case ubi::ProgramExitKind::Terminate:
+      return 1;
+    case ubi::ProgramExitKind::Returned:
+      llvm_unreachable("Unexpected returned kind for ProgramExited status");
+    }
+  }
+
+  uint64_t ExitCode = 0;
   // If the function returns an integer, return that as the exit code.
   if (EntryFn->getReturnType()->isIntegerTy()) {
     assert(!RetVal.isNone() && "Expected a return value from entry function");
@@ -256,8 +291,12 @@ int main(int argc, char **argv) {
       return 1;
     }
     APInt Result = RetVal.asInteger();
-    return (int)Result.extractBitsAsZExtValue(
-        std::min(Result.getBitWidth(), 8U), 0);
+    ExitCode =
+        Result.extractBitsAsZExtValue(std::min(Result.getBitWidth(), 8U), 0);
   }
-  return 0;
+
+  if (!Handler.onProgramExit(ubi::ProgramExitKind::Returned, ExitCode))
+    return 1;
+
+  return static_cast<int>(ExitCode);
 }

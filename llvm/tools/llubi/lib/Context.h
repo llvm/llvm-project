@@ -14,6 +14,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Module.h"
 #include <map>
+#include <optional>
 #include <random>
 
 namespace llvm::ubi {
@@ -45,6 +46,24 @@ enum class MemoryObjectState {
 enum class UndefValueBehavior {
   NonDeterministic, // Each use of the undef value can yield different results.
   Zero,             // All uses of the undef value yield zero.
+};
+
+enum class ProgramExitKind {
+  Returned,
+  Exit,
+  Abort,
+  Terminate,
+};
+
+enum class ExecutionStatus {
+  Completed,
+  ProgramExited,
+  Failed,
+};
+
+struct ProgramExitInfo {
+  ProgramExitKind Kind;
+  uint64_t ExitCode;
 };
 
 class MemoryObject : public RefCountedBase<MemoryObject> {
@@ -108,6 +127,9 @@ public:
     return true;
   }
   virtual bool onFunctionExit(Function &F, const AnyValue &RetVal) {
+    return true;
+  }
+  virtual bool onProgramExit(ProgramExitKind Kind, uint64_t ExitCode = 0) {
     return true;
   }
   virtual bool onPrint(StringRef Msg) {
@@ -238,10 +260,12 @@ public:
   bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.
-  /// Returns true if the function executed successfully. False indicates an
-  /// error occurred during execution.
-  bool runFunction(Function &F, ArrayRef<AnyValue> Args, AnyValue &RetVal,
-                   EventHandler &Handler);
+  /// Returns how execution ended. If it ended via a library-triggered program
+  /// termination (e.g., exit/abort/terminate), \p ExitInfo is populated.
+  ExecutionStatus runFunction(Function &F, ArrayRef<AnyValue> Args,
+                              AnyValue &RetVal, EventHandler &Handler,
+                              std::optional<ProgramExitInfo> *ExitInfo =
+                                  nullptr);
 };
 
 } // namespace llvm::ubi
