@@ -90,6 +90,7 @@ set(host_sources
   stop.cpp
   temporary-stack.cpp
   time-intrinsic.cpp
+  trampoline.cpp
   unit-map.cpp
 )
 if (TARGET llvm-libc-common-utilities)
