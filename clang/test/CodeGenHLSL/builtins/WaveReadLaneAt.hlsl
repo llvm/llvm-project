@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -fnative-half-type -triple \
+// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -fnative-half-type -fnative-int16-type -triple \
 // RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
-// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -fnative-half-type -triple \
+// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -fnative-half-type -fnative-int16-type -triple \
 // RUN:   spirv-pc-vulkan-compute %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
@@ -17,7 +17,7 @@ int test_int(int expr, uint idx) {
 }
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.i32([[TY]], i32) #[[#attr:]]
-// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.i32([[TY]], i32) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.readlane.i32([[TY]], i32) #[[#attr:]]
 
 // CHECK-LABEL: test_uint
 uint test_uint(uint expr, uint idx) {
@@ -38,7 +38,7 @@ int64_t test_int64_t(int64_t expr, uint idx) {
 }
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.i64([[TY]], i32) #[[#attr:]]
-// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.i64([[TY]], i32) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.readlane.i64([[TY]], i32) #[[#attr:]]
 
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr, uint idx) {
@@ -60,7 +60,7 @@ int16_t test_int16(int16_t expr, uint idx) {
 }
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.i16([[TY]], i32) #[[#attr:]]
-// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.i16([[TY]], i32) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.readlane.i16([[TY]], i32) #[[#attr:]]
 
 // CHECK-LABEL: test_uint16
 uint16_t test_uint16(uint16_t expr, uint idx) {
@@ -84,7 +84,7 @@ half test_half(half expr, uint idx) {
 }
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.f16([[TY]], i32) #[[#attr:]]
-// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.f16([[TY]], i32) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.readlane.f16([[TY]], i32) #[[#attr:]]
 
 // CHECK-LABEL: test_double
 double test_double(double expr, uint idx) {
@@ -96,7 +96,7 @@ double test_double(double expr, uint idx) {
 }
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.readlane.f64([[TY]], i32) #[[#attr:]]
-// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.readlane.f64([[TY]], i32) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.readlane.f64([[TY]], i32) #[[#attr:]]
 
 // CHECK-LABEL: test_floatv4
 float4 test_floatv4(float4 expr, uint idx) {
@@ -108,6 +108,6 @@ float4 test_floatv4(float4 expr, uint idx) {
 }
 
 // CHECK-DXIL: declare [[TY1]] @llvm.dx.wave.readlane.v4f32([[TY1]], i32) #[[#attr]]
-// CHECK-SPIRV: declare spir_func [[TY1]] @llvm.spv.wave.readlane.v4f32([[TY1]], i32) #[[#attr]]
+// CHECK-SPIRV: declare [[TY1]] @llvm.spv.wave.readlane.v4f32([[TY1]], i32) #[[#attr]]
 
 // CHECK: attributes #[[#attr]] = {{{.*}} convergent {{.*}}}

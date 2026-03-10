@@ -38,6 +38,7 @@ static_library("GlobalISel") {
     "LoadStoreOpt.cpp",
     "Localizer.cpp",
     "LostDebugLocObserver.cpp",
+    "MachineFloatingPointPredicateUtils.cpp",
     "MachineIRBuilder.cpp",
     "RegBankSelect.cpp",
     "Utils.cpp",

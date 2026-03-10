@@ -20,6 +20,7 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/Support/SourceMgr.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -36,12 +37,16 @@ struct VecUtilsTest : public testing::Test {
   void parseIR(const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    if (!M)
+    if (!M) {
       Err.print("VecUtilsTest", errs());
-  }
-  ScalarEvolution &getSE(llvm::Function &LLVMF) {
-    TLII = std::make_unique<TargetLibraryInfoImpl>();
+      return;
+    }
+
+    TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
     TLI = std::make_unique<TargetLibraryInfo>(*TLII);
+  }
+
+  ScalarEvolution &getSE(llvm::Function &LLVMF) {
     AC = std::make_unique<AssumptionCache>(LLVMF);
     DT = std::make_unique<DominatorTree>(LLVMF);
     LI = std::make_unique<LoopInfo>(*DT);
@@ -562,4 +567,53 @@ TEST_F(VecUtilsTest, FloorPowerOf2) {
   EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(7), 4u);
   EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(8), 8u);
   EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(9), 8u);
+}
+
+TEST_F(VecUtilsTest, MatchPackScalar) {
+  parseIR(R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+bb0:
+  %NotPack = insertelement <2 x i8> poison, i8 %v0, i64 0
+  br label %bb1
+
+bb1:
+  %Pack0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+  %Pack1 = insertelement <2 x i8> %Pack0, i8 %v1, i64 1
+
+  %NotPack0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+  %NotPack1 = insertelement <2 x i8> %NotPack0, i8 %v1, i64 0
+  %NotPack2 = insertelement <2 x i8> %NotPack1, i8 %v1, i64 1
+
+  %NotPackBB = insertelement <2 x i8> %NotPack, i8 %v1, i64 1
+
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = getBasicBlockByName(F, "bb1");
+  auto It = BB.begin();
+  auto *Pack0 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *Pack1 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *NotPack0 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *NotPack1 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *NotPack2 = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *NotPackBB = cast<sandboxir::InsertElementInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  auto *Arg0 = F.getArg(0);
+  auto *Arg1 = F.getArg(1);
+  EXPECT_FALSE(sandboxir::VecUtils::matchPack(Pack0));
+  EXPECT_FALSE(sandboxir::VecUtils::matchPack(Ret));
+  {
+    auto PackOpt = sandboxir::VecUtils::matchPack(Pack1);
+    EXPECT_TRUE(PackOpt);
+    EXPECT_THAT(PackOpt->Instrs, testing::ElementsAre(Pack1, Pack0));
+    EXPECT_THAT(PackOpt->Operands, testing::ElementsAre(Arg0, Arg1));
+  }
+  {
+    for (auto *NotPack : {NotPack0, NotPack1, NotPack2, NotPackBB})
+      EXPECT_FALSE(sandboxir::VecUtils::matchPack(NotPack));
+  }
 }

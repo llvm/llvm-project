@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/RPC/rpc_client.h"
-#include "src/__support/macros/config.h"
-#include "src/string/string_utils.h"
-
 #include "hdr/stdio_macros.h" // For stdin/out/err
 #include "hdr/types/FILE.h"
+#include "src/__support/RPC/rpc_client.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace file {
@@ -64,7 +63,6 @@ LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
   port.recv([&](rpc::Buffer *buffer, uint32_t) {
     ret = reinterpret_cast<uint64_t *>(buffer->data)[0];
   });
-  port.close();
   return ret;
 }
 
@@ -87,7 +85,6 @@ LIBC_INLINE uint64_t read_from_stream(::FILE *file, void *buf, size_t size) {
   });
   port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
   port.recv([&](rpc::Buffer *buffer, uint32_t) { ret = buffer->data[0]; });
-  port.close();
   return ret;
 }
 

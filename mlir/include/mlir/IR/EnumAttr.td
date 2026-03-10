@@ -10,6 +10,7 @@
 #define ENUMATTR_TD
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/Properties.td"
 
 //===----------------------------------------------------------------------===//
 // Enum attribute kinds
@@ -38,8 +39,11 @@ class EnumCase<string sym, int intVal, string strVal, int widthVal> {
 class IntEnumAttrCaseBase<I intType, string sym, string strVal, int intVal> :
     EnumCase<sym, intVal, strVal, intType.bitwidth>,
     SignlessIntegerAttrBase<intType, "case " # strVal> {
-  let predicate =
-    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() == " # intVal>;
+  let predicate = CPred<[{
+    ::llvm::cast<::mlir::IntegerAttr>($_self).getValue().eq(::llvm::APInt(}]
+      # intType.bitwidth # ", "
+      # intVal # 
+    "))">;
 }
 
 // Cases of integer enums with a specific type. By default, the string
@@ -274,6 +278,12 @@ class EnumAttrInfo<
   string parameterPrinter = ?;
 }
 
+// Decorates an enum attribute to have a default (unvalidated) default value
+// from a specific enum case if not present. The default value is constructed as
+// the fully-qualified enum case symbol.
+class DefaultValuedEnumAttr<EnumAttrInfo attr, EnumCase case>
+    : DefaultValuedAttr<attr, attr.cppType # "::" # case.symbol>;
+
 // An attribute holding a single integer value.
 class IntEnum<string name, string summary, list<EnumCase> cases, int width>
     : EnumInfo<name,
@@ -285,7 +295,7 @@ class IntEnum<string name, string summary, list<EnumCase> cases, int width>
 class I32Enum<string name, string summary, list<EnumCase> cases>
     : IntEnum<name, summary, cases, 32>;
 class I64Enum<string name, string summary, list<EnumCase> cases>
-    : IntEnum<name, summary, cases, 32>;
+    : IntEnum<name, summary, cases, 64>;
 
 // An enum attribute backed by IntegerAttr.
 //
@@ -310,8 +320,8 @@ class IntEnumAttr<I intType, string name, string summary,
   // symbol is not valid.
   let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
     auto loc = $_parser.getCurrentLocation();
-    ::llvm::StringRef enumKeyword;
-    if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+    std::string enumKeyword;
+    if (::mlir::failed($_parser.parseKeywordOrString(&enumKeyword)))
       return ::mlir::failure();
     auto maybeEnum = }] # cppNamespace # "::" #
                           stringToSymbolFnName # [{(enumKeyword);
@@ -432,9 +442,9 @@ class BitEnumAttr<I intType, string name, string summary,
   let parameterParser = [{[&]() -> ::mlir::FailureOr<}] # cppType # [{> {
     }] # cppType # [{ flags = {};
     auto loc = $_parser.getCurrentLocation();
-    ::llvm::StringRef enumKeyword;
+    std::string enumKeyword;
     do {
-      if (::mlir::failed($_parser.parseKeyword(&enumKeyword)))
+      if (::mlir::failed($_parser.parseKeywordOrString(&enumKeyword)))
         return ::mlir::failure();
       auto maybeEnum = }] # cppNamespace # "::" #
                             stringToSymbolFnName # [{(enumKeyword);
@@ -552,6 +562,141 @@ class EnumAttr<Dialect dialect, EnumInfo enumInfo, string name = "",
   let assemblyFormat = "$value";
 }
 
+// A property wrapping by a C++ enum. This class will automatically create bytecode
+// serialization logic for the given enum, as well as arranging for parser and
+// printer calls.
+class EnumProp<EnumInfo enumInfo> : Property<enumInfo.cppType, enumInfo.summary> {
+  EnumInfo enum = enumInfo;
+
+  let description = enum.description;
+  let predicate = !if(
+    !isa<BitEnumBase>(enum),
+    CPred<"(static_cast<" # enum.underlyingType # ">($_self) & ~" # !cast<BitEnumBase>(enum).validBits # ") == 0">,
+    Or<!foreach(case, enum.enumerants, CPred<"$_self == " # enum.cppType # "::" # case.symbol>)>);
+
+  let convertFromAttribute = [{
+    auto intAttr = ::mlir::dyn_cast_if_present<::mlir::IntegerAttr>($_attr);
+    if (!intAttr) {
+      return $_diag() << "expected IntegerAttr storage for }] #
+        enum.cppType # [{";
+    }
+    $_storage = static_cast<}] # enum.cppType # [{>(intAttr.getValue().getZExtValue());
+    return ::mlir::success();
+  }];
+
+  let convertToAttribute = [{
+    return ::mlir::IntegerAttr::get(::mlir::IntegerType::get($_ctxt, }] # enum.bitwidth
+      # [{), static_cast<}] # enum.underlyingType #[{>($_storage));
+  }];
+
+  let writeToMlirBytecode = [{
+    $_writer.writeVarInt(static_cast<uint64_t>($_storage));
+  }];
+
+  let readFromMlirBytecode = [{
+    uint64_t rawValue;
+    if (::mlir::failed($_reader.readVarInt(rawValue)))
+      return ::mlir::failure();
+    if (rawValue > std::numeric_limits<}] # enum.underlyingType # [{>::max())
+      return ::mlir::failure();
+    $_storage = static_cast<}] # enum.cppType # [{>(rawValue);
+  }];
+
+  let optionalParser = [{
+    auto value = ::mlir::FieldParser<std::optional<}] # enum.cppType # [{>>::parse($_parser);
+    if (::mlir::failed(value))
+      return ::mlir::failure();
+    if (!(value->has_value()))
+      return std::nullopt;
+    $_storage = std::move(**value);
+  }];
+}
+
+// Enum property that can have been (or, if `storeInCustomAttribute` is true, will also
+// be stored as) an attribute, in addition to being stored as an integer attribute.
+class EnumPropWithAttrForm<EnumInfo enumInfo, Attr attributeForm>
+    : EnumProp<enumInfo> {
+  Attr attrForm = attributeForm;
+  bit storeInCustomAttribute = 0;
+
+  let convertFromAttribute = [{
+    auto customAttr = ::mlir::dyn_cast_if_present<}]
+    # attrForm.storageType # [{>($_attr);
+    if (customAttr) {
+      $_storage = customAttr.getValue();
+      return ::mlir::success();
+    }
+    auto intAttr = ::mlir::dyn_cast_if_present<::mlir::IntegerAttr>($_attr);
+    if (!intAttr) {
+      return $_diag() << "expected }] # attrForm.storageType
+      # [{ or IntegerAttr storage for }] # enum.cppType # [{";
+    }
+    $_storage = static_cast<}] # enum.cppType # [{>(intAttr.getValue().getZExtValue());
+    return ::mlir::success();
+  }];
+
+  let convertToAttribute = !if(storeInCustomAttribute, [{
+    return }] # attrForm.storageType # [{::get($_ctxt, $_storage);
+  }], [{
+    return ::mlir::IntegerAttr::get(::mlir::IntegerType::get($_ctxt, }] # enumInfo.bitwidth
+      # [{), static_cast<}] # enum.underlyingType #[{>($_storage));
+  }]);
+}
+
+class _namedEnumPropFields<string cppType, string mnemonic> {
+  code parser = [{
+    if ($_parser.parseKeyword("}] # mnemonic # [{")
+        || $_parser.parseLess()) {
+      return ::mlir::failure();
+    }
+    auto parseRes = ::mlir::FieldParser<}] # cppType # [{>::parse($_parser);
+    if (::mlir::failed(parseRes) ||
+        ::mlir::failed($_parser.parseGreater())) {
+      return ::mlir::failure();
+    }
+    $_storage = *parseRes;
+  }];
+
+  code optionalParser = [{
+    if ($_parser.parseOptionalKeyword("}] # mnemonic # [{")) {
+      return std::nullopt;
+    }
+    if ($_parser.parseLess()) {
+      return ::mlir::failure();
+    }
+    auto parseRes = ::mlir::FieldParser<}] # cppType # [{>::parse($_parser);
+    if (::mlir::failed(parseRes) ||
+        ::mlir::failed($_parser.parseGreater())) {
+      return ::mlir::failure();
+    }
+    $_storage = *parseRes;
+  }];
+
+  code printer = [{
+    $_printer << "}] # mnemonic # [{<" << $_storage << ">";
+  }];
+}
+
+// An EnumProp which, when printed, is surrounded by mnemonic<>.
+// For example, if the enum can be a, b, or c, and the mnemonic is foo,
+// the format of this property will be "foo<a>", "foo<b>", or "foo<c>".
+class NamedEnumProp<EnumInfo enumInfo, string name>
+    : EnumProp<enumInfo> {
+  string mnemonic = name;
+  let parser = _namedEnumPropFields<enum.cppType, mnemonic>.parser;
+  let optionalParser = _namedEnumPropFields<enum.cppType, mnemonic>.optionalParser;
+  let printer = _namedEnumPropFields<enum.cppType, mnemonic>.printer;
+}
+
+// A `NamedEnumProp` with an attribute form as in `EnumPropWithAttrForm`.
+class NamedEnumPropWithAttrForm<EnumInfo enumInfo, string name, Attr attributeForm>
+    : EnumPropWithAttrForm<enumInfo, attributeForm> {
+  string mnemonic = name;
+  let parser = _namedEnumPropFields<enum.cppType, mnemonic>.parser;
+  let optionalParser = _namedEnumPropFields<enum.cppType, mnemonic>.optionalParser;
+  let printer = _namedEnumPropFields<enumInfo.cppType, mnemonic>.printer;
+}
+
 class _symbolToValue<EnumInfo enumInfo, string case> {
   defvar cases =
     !filter(iter, enumInfo.enumerants, !eq(iter.str, case));
@@ -604,5 +749,36 @@ class ConstantEnumCase<Attr attribute, string case>
   assert !or(!isa<EnumAttr>(attribute), !isa<EnumInfo>(attribute)),
     "attribute must be one of 'EnumAttr' or 'EnumInfo'";
 }
+
+/// Attribute constraint restricting the enum attribute to a subset of allowed
+/// cases. `enumAttr` is the `EnumAttr` attribute and `allowedCases` is a list
+/// of `EnumCase`s that are permitted.
+///
+/// Example:
+/// ```
+/// ConfinedAttr<MyEnumAttr, [EnumAttrIsOneOf<MyEnumAttr, [CaseA, CaseB]>]>
+/// ```
+class EnumAttrIsOneOf<EnumAttr enumAttr, list<EnumCase> allowedCases>
+  : AttrConstraint<
+      Or<!foreach(case, allowedCases,
+        CPred<"::llvm::cast<" # enumAttr.cppNamespace # "::"
+              # enumAttr.cppClassName # ">($_self).getValue() == "
+              # enumAttr.enum.cppType # "::" # case.symbol>)>,
+      "whose value is one of {"
+        # !interleave(!foreach(case, allowedCases, case.str), ", ") # "}">;
+
+/// Attribute constraint restricting the enum attribute to exclude a subset of
+/// cases. `enumAttr` is the `EnumAttr` attribute and `disallowedCases` is a
+/// list of `EnumCase`s that are not permitted.
+///
+/// Example:
+/// ```
+/// ConfinedAttr<MyEnumAttr, [EnumAttrIsNoneOf<MyEnumAttr, [CaseA, CaseB]>]>
+/// ```
+class EnumAttrIsNoneOf<EnumAttr enumAttr, list<EnumCase> disallowedCases>
+  : AttrConstraint<
+      Neg<EnumAttrIsOneOf<enumAttr, disallowedCases>.predicate>,
+      "whose value is none of {"
+        # !interleave(!foreach(case, disallowedCases, case.str), ", ") # "}">;
 
 #endif // ENUMATTR_TD

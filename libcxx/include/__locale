@@ -56,7 +56,8 @@ _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale&);
 
 class _LIBCPP_EXPORTED_FROM_ABI locale {
 public:
-  // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor.
+  // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor,
+  // so it is trivially relocatable.
   using __trivially_relocatable _LIBCPP_NODEBUG = locale;
 
   // types:
@@ -179,7 +180,7 @@ inline _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale& __l) {
 // template <class _CharT> class collate;
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS collate : public locale::facet {
+class collate : public locale::facet {
 public:
   typedef _CharT char_type;
   typedef basic_string<char_type> string_type;
@@ -251,7 +252,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>;
 // template <class CharT> class collate_byname;
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS collate_byname;
+class collate_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI collate_byname<char> : public collate<char> {
@@ -387,7 +388,7 @@ public:
   static const mask xdigit       = _ISXDIGIT;
   static const mask blank        = _ISBLANK;
   static const mask __regex_word = 0x8000;
-#  elif defined(_NEWLIB_VERSION)
+#  elif _LIBCPP_LIBC_NEWLIB
   // Same type as Newlib's _ctype_ array in newlib/libc/include/ctype.h.
   typedef char mask;
   // In case char is signed, static_cast is needed to avoid warning on
@@ -448,7 +449,7 @@ public:
 };
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS ctype;
+class ctype;
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
@@ -583,22 +584,10 @@ public:
 #  ifdef _CACHED_RUNES
   static const size_t table_size = _CACHED_RUNES;
 #  else
-  static const size_t table_size = 256; // FIXME: Don't hardcode this.
+  static const size_t table_size = 256;
 #  endif
   _LIBCPP_HIDE_FROM_ABI const mask* table() const _NOEXCEPT { return __tab_; }
   static const mask* classic_table() _NOEXCEPT;
-#  if defined(__GLIBC__) || defined(__EMSCRIPTEN__)
-  static const int* __classic_upper_table() _NOEXCEPT;
-  static const int* __classic_lower_table() _NOEXCEPT;
-#  endif
-#  if defined(__NetBSD__)
-  static const short* __classic_upper_table() _NOEXCEPT;
-  static const short* __classic_lower_table() _NOEXCEPT;
-#  endif
-#  if defined(__MVS__)
-  static const unsigned short* __classic_upper_table() _NOEXCEPT;
-  static const unsigned short* __classic_lower_table() _NOEXCEPT;
-#  endif
 
 protected:
   ~ctype() override;
@@ -615,7 +604,7 @@ protected:
 // template <class CharT> class ctype_byname;
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS ctype_byname;
+class ctype_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype_byname<char> : public ctype<char> {
@@ -741,7 +730,7 @@ public:
 // template <class internT, class externT, class stateT> class codecvt;
 
 template <class _InternT, class _ExternT, class _StateT>
-class _LIBCPP_TEMPLATE_VIS codecvt;
+class codecvt;
 
 // template <> class codecvt<char, char, mbstate_t>
 
@@ -1234,7 +1223,7 @@ protected:
 // template <class _InternT, class _ExternT, class _StateT> class codecvt_byname
 
 template <class _InternT, class _ExternT, class _StateT>
-class _LIBCPP_TEMPLATE_VIS codecvt_byname : public codecvt<_InternT, _ExternT, _StateT> {
+class codecvt_byname : public codecvt<_InternT, _ExternT, _StateT> {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit codecvt_byname(const char* __nm, size_t __refs = 0)
       : codecvt<_InternT, _ExternT, _StateT>(__nm, __refs) {}
@@ -1410,7 +1399,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __widen_from_utf8<32> : public codecvt<char32_t
 // template <class charT> class numpunct
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS numpunct;
+class numpunct;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI numpunct<char> : public locale::facet {
@@ -1475,7 +1464,7 @@ protected:
 // template <class charT> class numpunct_byname
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS numpunct_byname;
+class numpunct_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<char> : public numpunct<char> {
@@ -1488,9 +1477,6 @@ public:
 
 protected:
   ~numpunct_byname() override;
-
-private:
-  void __init(const char*);
 };
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -1505,9 +1491,6 @@ public:
 
 protected:
   ~numpunct_byname() override;
-
-private:
-  void __init(const char*);
 };
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 

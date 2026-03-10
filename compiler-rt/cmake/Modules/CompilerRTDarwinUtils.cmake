@@ -194,13 +194,15 @@ function(darwin_filter_host_archs input output)
     endif()
   endif()
 
+  # arm64e isn't usually supported out of the box on darwin, because of ABI.
+  list(REMOVE_ITEM tmp_var arm64e)
+
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
     list(REMOVE_ITEM tmp_var x86_64)
     list(REMOVE_ITEM tmp_var x86_64h)
   else()
     list(REMOVE_ITEM tmp_var arm64)
-    list(REMOVE_ITEM tmp_var arm64e)
     execute_process(
       COMMAND sysctl hw.cpusubtype
       OUTPUT_VARIABLE SUBTYPE)
@@ -282,6 +284,11 @@ macro(darwin_add_builtin_library name suffix)
     ${ARGN})
   set(libname "${name}.${suffix}_${LIB_ARCH}_${LIB_OS}")
   add_library(${libname} STATIC ${LIB_SOURCES})
+  
+  # Write out the sources that were used to compile the builtins so that tests can be run in
+  # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
+  file(WRITE "${COMPILER_RT_OUTPUT_LIBRARY_DIR}/${libname}.sources.txt" "${LIB_SOURCES}")
+
   if(DARWIN_${LIB_OS}_SYSROOT)
     set(sysroot_flag -isysroot ${DARWIN_${LIB_OS}_SYSROOT})
   endif()

@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
@@ -16,7 +16,7 @@ module {
     %6 = cir.unary(dec, %1) : !u32i, !u32i
     cir.return
   }
-// CHECK: cir.func @test_unary_unsigned() {
+// CHECK: cir.func{{.*}} @test_unary_unsigned() {
 // CHECK:   %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
 // CHECK:   %2 = cir.unary(plus, %1) : !u32i, !u32i
@@ -37,7 +37,7 @@ module {
     %6 = cir.unary(dec, %1) nsw : !s32i, !s32i
     cir.return
   }
-// CHECK: cir.func @test_unary_signed() {
+// CHECK: cir.func{{.*}} @test_unary_signed() {
 // CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK:   %2 = cir.unary(plus, %1) : !s32i, !s32i

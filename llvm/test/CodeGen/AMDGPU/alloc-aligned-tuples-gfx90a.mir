@@ -1,4 +1,6 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx90a -start-before=greedy,0 -stop-after=virtregrewriter,2 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN,GFX90A %s
+
+# RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx90a -passes='greedy<sgpr>,virt-reg-rewriter<no-clear-vregs>,stack-slot-coloring,si-lower-sgpr-spills,si-pre-allocate-wwm-regs,greedy<wwm>,si-lower-wwm-copies,virt-reg-rewriter<no-clear-vregs>,amdgpu-reserve-wwm-regs,greedy<vgpr>,amdgpu-nsa-reassign,virt-reg-rewriter' -o - %s | FileCheck --check-prefixes=GCN,GFX90A %s
 # Using the unaligned vector tuples are OK as long as they aren't used
 # in a real instruction.
 

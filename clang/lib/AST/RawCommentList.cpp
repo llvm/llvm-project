@@ -224,8 +224,8 @@ comments::FullComment *RawComment::parse(const ASTContext &Context,
 static bool onlyWhitespaceBetween(SourceManager &SM,
                                   SourceLocation Loc1, SourceLocation Loc2,
                                   unsigned MaxNewlinesAllowed) {
-  std::pair<FileID, unsigned> Loc1Info = SM.getDecomposedLoc(Loc1);
-  std::pair<FileID, unsigned> Loc2Info = SM.getDecomposedLoc(Loc2);
+  FileIDAndOffset Loc1Info = SM.getDecomposedLoc(Loc1);
+  FileIDAndOffset Loc2Info = SM.getDecomposedLoc(Loc2);
 
   // Question does not make sense if locations are in different files.
   if (Loc1Info.first != Loc2Info.first)
@@ -279,8 +279,7 @@ void RawCommentList::addComment(const RawComment &RC,
   if (RC.isOrdinary() && !CommentOpts.ParseAllComments)
     return;
 
-  std::pair<FileID, unsigned> Loc =
-      SourceMgr.getDecomposedLoc(RC.getBeginLoc());
+  FileIDAndOffset Loc = SourceMgr.getDecomposedLoc(RC.getBeginLoc());
 
   const FileID CommentFile = Loc.first;
   const unsigned CommentOffset = Loc.second;

@@ -185,7 +185,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }
@@ -220,7 +221,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }
@@ -254,7 +256,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }
@@ -286,7 +289,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }
@@ -326,23 +330,23 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 // CHECK-LABEL: func.func @pack_with_pad(
-func.func @pack_with_pad(%src: tensor<4225x12xf32>, %dest: tensor<265x16x16x1xf32>)
-    -> tensor<265x16x16x1xf32> {
+func.func @pack_with_pad(%src: tensor<4225x12xf32>, %dest: tensor<265x12x16x1xf32>)
+    -> tensor<265x12x16x1xf32> {
   //      CHECK: tensor.pad {{.*}} low[0, 0]
-  //      CHECK:   : tensor<4225x12xf32> to tensor<4240x16xf32>
+  //      CHECK:   : tensor<4225x12xf32> to tensor<4240x12xf32>
   //      CHECK: tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2, 3]]
-  // CHECK-SAME:   : tensor<4240x16xf32> into tensor<265x16x16x1xf32>
+  // CHECK-SAME:   : tensor<4240x12xf32> into tensor<265x16x12x1xf32>
   //      CHECK: linalg.transpose
-  // CHECK-SAME:   ins(%{{[a-zA-Z0-9]*}} : tensor<265x16x16x1xf32>)
-  // CHECK-SAME:   outs(%{{[a-zA-Z0-9]*}} : tensor<265x16x16x1xf32>)
+  // CHECK-SAME:   ins(%{{[a-zA-Z0-9]*}} : tensor<265x16x12x1xf32>)
+  // CHECK-SAME:   outs(%{{[a-zA-Z0-9]*}} : tensor<265x12x16x1xf32>)
   // CHECK-SAME:   permutation = [0, 2, 1, 3]
   %cst = arith.constant 0.000000e+00 : f32
   %0 = linalg.pack %src
     padding_value(%cst : f32)
     inner_dims_pos = [0, 1]
     inner_tiles = [16, 1] into %dest
-    : tensor<4225x12xf32> -> tensor<265x16x16x1xf32>
-  return %0 : tensor<265x16x16x1xf32>
+    : tensor<4225x12xf32> -> tensor<265x12x16x1xf32>
+  return %0 : tensor<265x12x16x1xf32>
 }
 
 module attributes {transform.with_named_sequence} {
@@ -554,7 +558,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }
@@ -594,7 +599,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }
@@ -637,7 +643,8 @@ module attributes {transform.with_named_sequence} {
           -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
       transform.yield
   }
 }
@@ -677,7 +684,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }
@@ -711,7 +719,8 @@ module attributes {transform.with_named_sequence} {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
           transform.yield
   }
 }

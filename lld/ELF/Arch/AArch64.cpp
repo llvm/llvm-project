@@ -8,10 +8,11 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
+#include "TargetImpl.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
@@ -48,6 +49,11 @@ bool elf::isAArch64BTILandingPad(Ctx &ctx, Symbol &s, int64_t a) {
   if (off >= isec->getSize())
     return true;
   const uint8_t *buf = isec->content().begin();
+  // Synthetic sections may have a size but empty data - Assume that they won't
+  // contain a landing pad
+  if (buf == nullptr && isa<SyntheticSection>(isec))
+    return false;
+
   const uint32_t instr = read32le(buf + off);
   // All BTI instructions are HINT instructions which all have same encoding
   // apart from bits [11:5]
@@ -73,6 +79,14 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override {
+    if (ctx.arg.ekind == ELF64BEKind)
+      elf::scanSection1<AArch64, ELF64BE>(*this, sec);
+    else
+      elf::scanSection1<AArch64, ELF64LE>(*this, sec);
+  }
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -81,8 +95,8 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
+  void applyBranchToBranchOpt() const override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -113,6 +127,7 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
+  iRelSymbolicRel = R_AARCH64_FUNCINIT64;
   gotRel = R_AARCH64_GLOB_DAT;
   pltRel = R_AARCH64_JUMP_SLOT;
   symbolicRel = R_AARCH64_ABS64;
@@ -130,99 +145,17 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   needsThunks = true;
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
                             const uint8_t *loc) const {
   switch (type) {
-  case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:
   case R_AARCH64_ABS64:
-  case R_AARCH64_ADD_ABS_LO12_NC:
-  case R_AARCH64_LDST128_ABS_LO12_NC:
-  case R_AARCH64_LDST16_ABS_LO12_NC:
-  case R_AARCH64_LDST32_ABS_LO12_NC:
-  case R_AARCH64_LDST64_ABS_LO12_NC:
-  case R_AARCH64_LDST8_ABS_LO12_NC:
-  case R_AARCH64_MOVW_SABS_G0:
-  case R_AARCH64_MOVW_SABS_G1:
-  case R_AARCH64_MOVW_SABS_G2:
-  case R_AARCH64_MOVW_UABS_G0:
-  case R_AARCH64_MOVW_UABS_G0_NC:
-  case R_AARCH64_MOVW_UABS_G1:
-  case R_AARCH64_MOVW_UABS_G1_NC:
-  case R_AARCH64_MOVW_UABS_G2:
-  case R_AARCH64_MOVW_UABS_G2_NC:
-  case R_AARCH64_MOVW_UABS_G3:
     return R_ABS;
-  case R_AARCH64_AUTH_ABS64:
-    return RE_AARCH64_AUTH;
-  case R_AARCH64_TLSDESC_ADR_PAGE21:
-    return RE_AARCH64_TLSDESC_PAGE;
-  case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
-    return RE_AARCH64_AUTH_TLSDESC_PAGE;
-  case R_AARCH64_TLSDESC_LD64_LO12:
-  case R_AARCH64_TLSDESC_ADD_LO12:
-    return R_TLSDESC;
-  case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
-  case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
-    return RE_AARCH64_AUTH_TLSDESC;
-  case R_AARCH64_TLSDESC_CALL:
-    return R_TLSDESC_CALL;
-  case R_AARCH64_TLSLE_ADD_TPREL_HI12:
-  case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-  case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
-  case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
-  case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
-  case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
-  case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
-  case R_AARCH64_TLSLE_MOVW_TPREL_G0:
-  case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
-  case R_AARCH64_TLSLE_MOVW_TPREL_G1:
-  case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
-  case R_AARCH64_TLSLE_MOVW_TPREL_G2:
-    return R_TPREL;
-  case R_AARCH64_CALL26:
-  case R_AARCH64_CONDBR19:
-  case R_AARCH64_JUMP26:
-  case R_AARCH64_TSTBR14:
-    return R_PLT_PC;
-  case R_AARCH64_PLT32:
-    const_cast<Symbol &>(s).thunkAccessed = true;
-    return R_PLT_PC;
-  case R_AARCH64_PREL16:
   case R_AARCH64_PREL32:
   case R_AARCH64_PREL64:
-  case R_AARCH64_ADR_PREL_LO21:
-  case R_AARCH64_LD_PREL_LO19:
-  case R_AARCH64_MOVW_PREL_G0:
-  case R_AARCH64_MOVW_PREL_G0_NC:
-  case R_AARCH64_MOVW_PREL_G1:
-  case R_AARCH64_MOVW_PREL_G1_NC:
-  case R_AARCH64_MOVW_PREL_G2:
-  case R_AARCH64_MOVW_PREL_G2_NC:
-  case R_AARCH64_MOVW_PREL_G3:
     return R_PC;
-  case R_AARCH64_ADR_PREL_PG_HI21:
-  case R_AARCH64_ADR_PREL_PG_HI21_NC:
-    return RE_AARCH64_PAGE_PC;
-  case R_AARCH64_LD64_GOT_LO12_NC:
-  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-    return R_GOT;
-  case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
-  case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
-    return RE_AARCH64_AUTH_GOT;
-  case R_AARCH64_AUTH_GOT_LD_PREL19:
-  case R_AARCH64_AUTH_GOT_ADR_PREL_LO21:
-    return RE_AARCH64_AUTH_GOT_PC;
-  case R_AARCH64_LD64_GOTPAGE_LO15:
-    return RE_AARCH64_GOT_PAGE;
-  case R_AARCH64_ADR_GOT_PAGE:
-  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    return RE_AARCH64_GOT_PAGE_PC;
-  case R_AARCH64_AUTH_ADR_GOT_PAGE:
-    return RE_AARCH64_AUTH_GOT_PAGE_PC;
-  case R_AARCH64_GOTPCREL32:
-  case R_AARCH64_GOT_LD_PREL19:
-    return R_GOT_PC;
   case R_AARCH64_NONE:
     return R_NONE;
   default:
@@ -232,21 +165,14 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
-RelExpr AArch64::adjustTlsExpr(RelType type, RelExpr expr) const {
-  if (expr == R_RELAX_TLS_GD_TO_IE) {
-    if (type == R_AARCH64_TLSDESC_ADR_PAGE21)
-      return RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC;
-    return R_RELAX_TLS_GD_TO_IE_ABS;
-  }
-  return expr;
-}
-
 bool AArch64::usesOnlyLowPageBits(RelType type) const {
   switch (type) {
   default:
     return false;
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_LD64_GOT_LO12_NC:
+  case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
+  case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_LDST32_ABS_LO12_NC:
@@ -259,8 +185,202 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
   }
 }
 
+template <class ELFT, class RelTy>
+void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_AARCH64_NONE:
+      continue;
+
+    // Absolute relocations:
+    case R_AARCH64_ABS16:
+    case R_AARCH64_ABS32:
+    case R_AARCH64_ABS64:
+    case R_AARCH64_FUNCINIT64:
+    case R_AARCH64_ADD_ABS_LO12_NC:
+    case R_AARCH64_LDST128_ABS_LO12_NC:
+    case R_AARCH64_LDST16_ABS_LO12_NC:
+    case R_AARCH64_LDST32_ABS_LO12_NC:
+    case R_AARCH64_LDST64_ABS_LO12_NC:
+    case R_AARCH64_LDST8_ABS_LO12_NC:
+    case R_AARCH64_MOVW_SABS_G0:
+    case R_AARCH64_MOVW_SABS_G1:
+    case R_AARCH64_MOVW_SABS_G2:
+    case R_AARCH64_MOVW_UABS_G0:
+    case R_AARCH64_MOVW_UABS_G0_NC:
+    case R_AARCH64_MOVW_UABS_G1:
+    case R_AARCH64_MOVW_UABS_G1_NC:
+    case R_AARCH64_MOVW_UABS_G2:
+    case R_AARCH64_MOVW_UABS_G2_NC:
+    case R_AARCH64_MOVW_UABS_G3:
+      expr = R_ABS;
+      break;
+
+    case R_AARCH64_AUTH_ABS64:
+      expr = RE_AARCH64_AUTH;
+      break;
+
+    case R_AARCH64_PATCHINST:
+      if (!isAbsolute(sym))
+        Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+                 << "R_AARCH64_PATCHINST relocation against non-absolute "
+                    "symbol "
+                 << &sym;
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_AARCH64_PREL16:
+    case R_AARCH64_PREL32:
+    case R_AARCH64_PREL64:
+    case R_AARCH64_ADR_PREL_LO21:
+    case R_AARCH64_LD_PREL_LO19:
+    case R_AARCH64_MOVW_PREL_G0:
+    case R_AARCH64_MOVW_PREL_G0_NC:
+    case R_AARCH64_MOVW_PREL_G1:
+    case R_AARCH64_MOVW_PREL_G1_NC:
+    case R_AARCH64_MOVW_PREL_G2:
+    case R_AARCH64_MOVW_PREL_G2_NC:
+    case R_AARCH64_MOVW_PREL_G3:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // Page-PC relocations:
+    case R_AARCH64_ADR_PREL_PG_HI21:
+    case R_AARCH64_ADR_PREL_PG_HI21_NC:
+      expr = RE_AARCH64_PAGE_PC;
+      break;
+
+    // PLT-generating relocations:
+    case R_AARCH64_PLT32:
+      sym.thunkAccessed = true;
+      [[fallthrough]];
+    case R_AARCH64_CALL26:
+    case R_AARCH64_CONDBR19:
+    case R_AARCH64_JUMP26:
+    case R_AARCH64_TSTBR14:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT relocations:
+    case R_AARCH64_ADR_GOT_PAGE:
+      expr = RE_AARCH64_GOT_PAGE_PC;
+      break;
+    case R_AARCH64_LD64_GOT_LO12_NC:
+      expr = R_GOT;
+      break;
+    case R_AARCH64_LD64_GOTPAGE_LO15:
+      expr = RE_AARCH64_GOT_PAGE;
+      break;
+    case R_AARCH64_GOTPCREL32:
+    case R_AARCH64_GOT_LD_PREL19:
+      expr = R_GOT_PC;
+      break;
+
+    // AUTH GOT relocations. Set NEEDS_GOT_AUTH to detect incompatibility with
+    // NEEDS_GOT_NONAUTH. rs.process does not set the flag.
+    case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
+    case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
+      sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      rs.processAux(R_GOT, type, offset, sym, addend);
+      continue;
+    case R_AARCH64_AUTH_GOT_LD_PREL19:
+    case R_AARCH64_AUTH_GOT_ADR_PREL_LO21:
+      sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      rs.processAux(R_GOT_PC, type, offset, sym, addend);
+      continue;
+    case R_AARCH64_AUTH_ADR_GOT_PAGE:
+      sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      rs.processAux(RE_AARCH64_GOT_PAGE_PC, type, offset, sym, addend);
+      continue;
+
+    // TLS LE relocations:
+    case R_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC:
+    case R_AARCH64_TLSLE_MOVW_TPREL_G0:
+    case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
+    case R_AARCH64_TLSLE_MOVW_TPREL_G1:
+    case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
+    case R_AARCH64_TLSLE_MOVW_TPREL_G2:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+
+    // TLS IE relocations:
+    case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+      rs.handleTlsIe(RE_AARCH64_GOT_PAGE_PC, type, offset, addend, sym);
+      continue;
+    case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+      rs.handleTlsIe(R_GOT, type, offset, addend, sym);
+      continue;
+
+    // TLSDESC relocations:
+    case R_AARCH64_TLSDESC_ADR_PAGE21:
+      rs.handleTlsDesc(RE_AARCH64_TLSDESC_PAGE, RE_AARCH64_GOT_PAGE_PC, type,
+                       offset, addend, sym);
+      continue;
+    case R_AARCH64_TLSDESC_LD64_LO12:
+    case R_AARCH64_TLSDESC_ADD_LO12:
+      rs.handleTlsDesc(R_TLSDESC, R_GOT, type, offset, addend, sym);
+      continue;
+    case R_AARCH64_TLSDESC_CALL:
+      sym.setFlags(NEEDS_TLSDESC_NONAUTH);
+      if (!ctx.arg.shared)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+
+    // AUTH TLSDESC relocations. Do not optimize to LE/IE because PAUTHELF64
+    // only supports the descriptor based TLS (TLSDESC).
+    // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
+    case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
+      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+      sec.addReloc({RE_AARCH64_TLSDESC_PAGE, type, offset, addend, &sym});
+      continue;
+    case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
+    case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
+      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+      sec.addReloc({R_TLSDESC, type, offset, addend, &sym});
+      continue;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+
+  if (ctx.arg.branchToBranch)
+    llvm::stable_sort(sec.relocs(),
+                      [](auto &l, auto &r) { return l.offset < r.offset; });
+}
+
 RelType AArch64::getDynRel(RelType type) const {
-  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64)
+  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64 ||
+      type == R_AARCH64_FUNCINIT64)
     return type;
   return R_AARCH64_NONE;
 }
@@ -505,41 +625,29 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
+  case R_AARCH64_PATCHINST:
+    if (!rel.sym->isUndefined()) {
+      checkUInt(ctx, loc, val, 32, rel);
+      write32le(loc, val);
+    }
+    break;
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:
     checkInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
   case R_AARCH64_ABS64:
-    // AArch64 relocations to tagged symbols have extended semantics, as
-    // described here:
-    // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative.
-    // tl;dr: encode the symbol's special addend in the place, which is an
-    // offset to the point where the logical tag is derived from. Quick hack, if
-    // the addend is within the symbol's bounds, no need to encode the tag
-    // derivation offset.
-    if (rel.sym && rel.sym->isTagged() &&
-        (rel.addend < 0 ||
-         rel.addend >= static_cast<int64_t>(rel.sym->getSize())))
-      write64(ctx, loc, -rel.addend);
-    else
-      write64(ctx, loc, val);
+    write64(ctx, loc, val);
     break;
   case R_AARCH64_PREL64:
     write64(ctx, loc, val);
     break;
   case R_AARCH64_AUTH_ABS64:
-    // If val is wider than 32 bits, the relocation must have been moved from
-    // .relr.auth.dyn to .rela.dyn, and the addend write is not needed.
-    //
-    // If val fits in 32 bits, we have two potential scenarios:
-    // * True RELR: Write the 32-bit `val`.
-    // * RELA: Even if the value now fits in 32 bits, it might have been
-    //   converted from RELR during an iteration in
-    //   finalizeAddressDependentContent(). Writing the value is harmless
-    //   because dynamic linking ignores it.
-    if (isInt<32>(val))
-      write32(ctx, loc, val);
+    // This is used for the addend of a .relr.auth.dyn entry,
+    // which is a 32-bit value; the upper 32 bits are used to
+    // encode the schema.
+    checkInt(ctx, loc, val, 32, rel);
+    write32(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
@@ -749,7 +857,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
     relocateNoSym(loc, R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC, val);
     break;
   default:
-    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
+    llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
   }
 }
 
@@ -804,8 +912,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   // to
   // NOP
   // ADR xn, sym
-  if (!ctx.arg.relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
-      addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
+  if (!ctx.arg.relax || addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
     return false;
   // Check if the relocations apply to consecutive instructions.
   if (adrpRel.offset + 4 != addRel.offset)
@@ -926,15 +1033,14 @@ static bool needsGotForMemtag(const Relocation &rel) {
   return rel.sym->isTagged() && needsGot(rel.expr);
 }
 
-void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
-  AArch64Relaxer relaxer(ctx, sec.relocs());
-  for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
-    const Relocation &rel = sec.relocs()[i];
+void AArch64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
+  const ArrayRef<Relocation> relocs = sec.relocs();
+  AArch64Relaxer relaxer(ctx, relocs);
+  for (size_t i = 0, size = relocs.size(); i != size; ++i) {
+    const Relocation &rel = relocs[i];
+    if (rel.expr == R_NONE) // See finalizeAddressDependentContent()
+      continue;
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
@@ -943,36 +1049,102 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       continue;
     }
 
-    switch (rel.expr) {
-    case RE_AARCH64_GOT_PAGE_PC:
+    switch (rel.type) {
+    case R_AARCH64_ADR_GOT_PAGE:
       if (i + 1 < size &&
-          relaxer.tryRelaxAdrpLdr(rel, sec.relocs()[i + 1], secAddr, buf)) {
+          relaxer.tryRelaxAdrpLdr(rel, relocs[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }
       break;
-    case RE_AARCH64_PAGE_PC:
+    case R_AARCH64_ADR_PREL_PG_HI21:
       if (i + 1 < size &&
-          relaxer.tryRelaxAdrpAdd(rel, sec.relocs()[i + 1], secAddr, buf)) {
+          relaxer.tryRelaxAdrpAdd(rel, relocs[i + 1], secAddr, buf)) {
         ++i;
         continue;
       }
       break;
-    case RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
-    case R_RELAX_TLS_GD_TO_IE_ABS:
-      relaxTlsGdToIe(loc, rel, val);
+
+    case R_AARCH64_TLSDESC_ADR_PAGE21:
+    case R_AARCH64_TLSDESC_LD64_LO12:
+    case R_AARCH64_TLSDESC_ADD_LO12:
+    case R_AARCH64_TLSDESC_CALL:
+      if (rel.expr == R_TPREL)
+        relaxTlsGdToLe(loc, rel, val);
+      else if (rel.expr == RE_AARCH64_GOT_PAGE_PC || rel.expr == R_GOT)
+        relaxTlsGdToIe(loc, rel, val);
+      else
+        relocate(loc, rel, val);
       continue;
-    case R_RELAX_TLS_GD_TO_LE:
-      relaxTlsGdToLe(loc, rel, val);
-      continue;
-    case R_RELAX_TLS_IE_TO_LE:
-      relaxTlsIeToLe(loc, rel, val);
+    case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+      if (rel.expr == R_TPREL)
+        relaxTlsIeToLe(loc, rel, val);
+      else
+        relocate(loc, rel, val);
       continue;
     default:
       break;
     }
+
     relocate(loc, rel, val);
   }
+}
+
+static std::optional<uint64_t> getControlTransferAddend(InputSection &is,
+                                                        Relocation &r) {
+  // Identify a control transfer relocation for the branch-to-branch
+  // optimization. A "control transfer relocation" means a B or BL
+  // target but it also includes relative vtable relocations for example.
+  //
+  // We require the relocation type to be JUMP26, CALL26 or PLT32. With a
+  // relocation type of PLT32 the value may be assumed to be used for branching
+  // directly to the symbol and the addend is only used to produce the relocated
+  // value (hence the effective addend is always 0). This is because if a PLT is
+  // needed the addend will be added to the address of the PLT, and it doesn't
+  // make sense to branch into the middle of a PLT. For example, relative vtable
+  // relocations use PLT32 and 0 or a positive value as the addend but still are
+  // used to branch to the symbol.
+  //
+  // With JUMP26 or CALL26 the only reasonable interpretation of a non-zero
+  // addend is that we are branching to symbol+addend so that becomes the
+  // effective addend.
+  if (r.type == R_AARCH64_PLT32)
+    return 0;
+  if (r.type == R_AARCH64_JUMP26 || r.type == R_AARCH64_CALL26)
+    return r.addend;
+  return std::nullopt;
+}
+
+static std::pair<Relocation *, uint64_t>
+getBranchInfoAtTarget(InputSection &is, uint64_t offset) {
+  auto *i = llvm::partition_point(
+      is.relocations, [&](Relocation &r) { return r.offset < offset; });
+  if (i != is.relocations.end() && i->offset == offset &&
+      i->type == R_AARCH64_JUMP26) {
+    return {i, i->addend};
+  }
+  return {nullptr, 0};
+}
+
+static void redirectControlTransferRelocations(Relocation &r1,
+                                               const Relocation &r2) {
+  r1.expr = r2.expr;
+  r1.sym = r2.sym;
+  // With PLT32 we must respect the original addend as that affects the value's
+  // interpretation. With the other relocation types the original addend is
+  // irrelevant because it referred to an offset within the original target
+  // section so we overwrite it.
+  if (r1.type == R_AARCH64_PLT32)
+    r1.addend += r2.addend;
+  else
+    r1.addend = r2.addend;
+}
+
+void AArch64::applyBranchToBranchOpt() const {
+  applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
+                             getBranchInfoAtTarget,
+                             redirectControlTransferRelocations);
 }
 
 // AArch64 may use security features in variant PLT sequences. These are:
@@ -1044,8 +1216,7 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // instructions.
 
   if (ctx.arg.zPacPlt) {
-    if (llvm::any_of(ctx.aarch64PauthAbiCoreInfo,
-                     [](uint8_t c) { return c != 0; }))
+    if (ctx.aarch64PauthAbiCoreInfo && ctx.aarch64PauthAbiCoreInfo->isValid())
       pacEntryKind = PEK_Auth;
     else
       pacEntryKind = PEK_AuthHint;

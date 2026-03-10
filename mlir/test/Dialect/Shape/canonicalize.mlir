@@ -86,6 +86,19 @@ func.func @broadcast() -> !shape.shape {
 
 // -----
 
+// Variadic case including extent tensors.
+// CHECK-LABEL: @broadcast_variadic
+func.func @broadcast_variadic() -> !shape.shape {
+  // CHECK: shape.const_shape [7, 2, 10] : !shape.shape
+  %0 = shape.const_shape [2, 1] : tensor<2xindex>
+  %1 = shape.const_shape [7, 2, 1] : tensor<3xindex>
+  %2 = shape.const_shape [1, 10] : tensor<2xindex>
+  %3 = shape.broadcast %0, %1, %2 : tensor<2xindex>, tensor<3xindex>, tensor<2xindex> -> !shape.shape
+  return %3 : !shape.shape
+}
+
+// -----
+
 // Rhs is a scalar.
 // CHECK-LABEL: func @f
 func.func @f(%arg0 : !shape.shape) -> !shape.shape {
@@ -254,6 +267,18 @@ func.func @no_fold(%arg0: index) -> !shape.shape {
   // CHECK-NOT: shape.const_shape
   %e0 = arith.constant 3 : index
   %ret = shape.from_extents %e0, %arg0 : index, index
+  return %ret : !shape.shape
+}
+
+// -----
+
+// GH#178820: Verify from_extents doesn't crash on poison operands.
+// CHECK-LABEL: func @from_extents_poison
+func.func @from_extents_poison() -> !shape.shape {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: shape.from_extents %[[POISON]]
+  %0 = ub.poison : index
+  %ret = shape.from_extents %0 : index
   return %ret : !shape.shape
 }
 
@@ -1600,4 +1625,32 @@ func.func @add_poison() -> !shape.size {
 func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
   %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
   return %0 : tensor<?xindex>
+}
+
+// -----
+
+// CHECK-LABEL: func @shape_of_static_with_shape_result(
+func.func @shape_of_static_with_shape_result(%arg0: tensor<3xf32>) -> !shape.shape {
+  // CHECK: %[[const:.*]] = shape.const_shape [3] : !shape.shape
+  // CHECK: return %[[const]] : !shape.shape
+  %0 = shape.shape_of %arg0 : tensor<3xf32> -> !shape.shape
+  return %0 : !shape.shape
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/179679:
+// shape.broadcast fold used to crash with an unchecked cast when one of the
+// operands was ub.poison (a non-DenseIntElementsAttr attribute). The fold
+// must bail out gracefully instead.
+
+// CHECK-LABEL: @broadcast_no_crash_on_poison
+// CHECK-NOT: shape.broadcast
+// CHECK: return
+func.func @broadcast_no_crash_on_poison() {
+  %0 = shape.const_shape [1, 2, 3] : tensor<3xindex>
+  %1 = ub.poison : tensor<3xindex>
+  %2 = shape.broadcast %0, %1 : tensor<3xindex>, tensor<3xindex> -> tensor<3xindex>
+  %3 = tensor.rank %2 : tensor<3xindex>
+  return
 }

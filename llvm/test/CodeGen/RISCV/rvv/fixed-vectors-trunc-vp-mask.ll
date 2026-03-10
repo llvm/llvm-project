@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s | FileCheck %s
 
-declare <2 x i1> @llvm.vp.trunc.v2i1.v2i16(<2 x i16>, <2 x i1>, i32)
-
 define <2 x i1> @vtrunc_v2i1_v2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i16:
 ; CHECK:       # %bb.0:
@@ -26,8 +24,6 @@ define <2 x i1> @vtrunc_v2i1_v2i16_unmasked(<2 x i16> %a, i32 zeroext %vl) {
   ret <2 x i1> %v
 }
 
-declare <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32>, <2 x i1>, i32)
-
 define <2 x i1> @vtrunc_v2i1_v2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i32:
 ; CHECK:       # %bb.0:
@@ -49,8 +45,6 @@ define <2 x i1> @vtrunc_v2i1_v2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
   %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
   ret <2 x i1> %v
 }
-
-declare <2 x i1> @llvm.vp.trunc.v2i1.v2i64(<2 x i64>, <2 x i1>, i32)
 
 define <2 x i1> @vtrunc_v2i1_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i64:

@@ -137,6 +137,8 @@ void int_to_float() {
   Agg<float> f7 = {12345678};  // OK (exactly fits in a float)
   Agg<float> f8 = {EnumVal};  // OK
   Agg<float> f9 = {123456789};  // expected-error {{ cannot be narrowed }} expected-note {{silence}}
+  Agg<float> f10 = {2147483646}; // expected-error {{constant expression evaluates to 2147483646 which cannot be narrowed to type 'float'}} expected-note {{silence}}
+  Agg<float> f11 = {2147483647}; // expected-error {{constant expression evaluates to 2147483647 which cannot be narrowed to type 'float'}} expected-note {{silence}}
 
   Agg<float> ce1 = { Convert<int>(123456789) }; // expected-error {{constant expression evaluates to 123456789 which cannot be narrowed to type 'float'}} expected-note {{silence}}
   Agg<double> ce2 = { ConvertVar<long long>() }; // expected-error {{non-constant-expression cannot be narrowed from type 'long long' to 'double'}} expected-note {{silence}}

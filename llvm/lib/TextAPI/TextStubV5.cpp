@@ -642,13 +642,13 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   auto UmbrellasOrErr = getUmbrellaSection(File, Targets);
   if (!UmbrellasOrErr)
     return UmbrellasOrErr.takeError();
-  AttrToTargets Umbrellas = *UmbrellasOrErr;
+  const AttrToTargets &Umbrellas = *UmbrellasOrErr;
 
   auto ClientsOrErr =
       getLibSection(File, TBDKey::AllowableClients, TBDKey::Clients, Targets);
   if (!ClientsOrErr)
     return ClientsOrErr.takeError();
-  AttrToTargets Clients = *ClientsOrErr;
+  const AttrToTargets &Clients = *ClientsOrErr;
 
   auto RLOrErr =
       getLibSection(File, TBDKey::ReexportLibs, TBDKey::Names, Targets);
@@ -940,6 +940,12 @@ Array serializeSymbols(InterfaceFile::const_filtered_symbol_range Symbols,
                                 SymbolFields::SymbolTypes &SymField) {
     if (SymField.empty())
       return;
+    llvm::sort(SymField.Globals);
+    llvm::sort(SymField.TLV);
+    llvm::sort(SymField.Weaks);
+    llvm::sort(SymField.ObjCClasses);
+    llvm::sort(SymField.EHTypes);
+    llvm::sort(SymField.IVars);
     Object Segment;
     insertNonEmptyValues(Segment, TBDKey::Globals, std::move(SymField.Globals));
     insertNonEmptyValues(Segment, TBDKey::ThreadLocal, std::move(SymField.TLV));

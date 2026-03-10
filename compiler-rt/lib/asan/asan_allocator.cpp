@@ -93,6 +93,11 @@ class ChunkHeader {
   atomic_uint8_t chunk_state;
   u8 alloc_type : 2;
   u8 lsan_tag : 2;
+#if SANITIZER_WINDOWS
+  // True if this was a zero-size allocation upgraded to size 1.
+  // Used to report the original size (0) to the user via HeapSize/RtlSizeHeap.
+  u8 from_zero_alloc : 1;
+#endif
 
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
@@ -424,10 +429,15 @@ struct Allocator {
     PoisonShadow(chunk, allocated_size, kAsanHeapLeftRedzoneMagic);
   }
 
-  void ReInitialize(const AllocatorOptions &options) {
+  // Apply provided AllocatorOptions to an Allocator
+  void ApplyOptions(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
     allocator.SetReleaseToOSIntervalMs(options.release_to_os_interval_ms);
     SharedInitCode(options);
+  }
+
+  void ReInitialize(const AllocatorOptions &options) {
+    ApplyOptions(options);
 
     // Poison all existing allocation's redzones.
     if (CanPoisonMemory()) {
@@ -542,6 +552,7 @@ struct Allocator {
         ComputeUserRequestedAlignmentLog(alignment);
     if (alignment < min_alignment)
       alignment = min_alignment;
+    bool upgraded_from_zero = false;
     if (size == 0) {
       // We'd be happy to avoid allocating memory for zero-size requests, but
       // some programs/tests depend on this behavior and assume that malloc
@@ -550,6 +561,7 @@ struct Allocator {
       // consecutive "new" calls must be different even if the allocated size
       // is zero.
       size = 1;
+      upgraded_from_zero = true;
     }
     CHECK(IsPowerOfTwo(alignment));
     uptr rz_log = ComputeRZLog(size);
@@ -603,6 +615,9 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
+#if SANITIZER_WINDOWS
+    m->from_zero_alloc = upgraded_from_zero;
+#endif
     CHECK(size);
     m->SetUsedSize(size);
     m->user_requested_alignment_log = user_requested_alignment_log;
@@ -631,6 +646,10 @@ struct Allocator {
           (u8 *)MemToShadow(user_beg + size_rounded_down_to_granularity);
       *shadow = fl.poison_partial ? (size & (ASAN_SHADOW_GRANULARITY - 1)) : 0;
     }
+
+    if (upgraded_from_zero)
+      PoisonShadow(user_beg, ASAN_SHADOW_GRANULARITY,
+                   kAsanHeapLeftRedzoneMagic);
 
     AsanStats &thread_stats = GetCurrentThreadStats();
     thread_stats.mallocs++;
@@ -780,13 +799,14 @@ struct Allocator {
     return new_ptr;
   }
 
-  void *Calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
+  void* Calloc(uptr nmemb, uptr size, BufferedStackTrace* stack,
+               uptr align = 8) {
     if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
       if (AllocatorMayReturnNull())
         return nullptr;
       ReportCallocOverflow(nmemb, size, stack);
     }
-    void *ptr = Allocate(nmemb * size, 8, stack, FROM_MALLOC, false);
+    void* ptr = Allocate(nmemb * size, align, stack, FROM_MALLOC, false);
     // If the memory comes from the secondary allocator no need to clear it
     // as it comes directly from mmap.
     if (ptr && allocator.FromPrimary(ptr))
@@ -850,6 +870,23 @@ struct Allocator {
     if (m->Beg() != p) return 0;
     return m->UsedSize();
   }
+
+#if SANITIZER_WINDOWS
+  // Returns true if the allocation at p was a zero-size request that was
+  // internally upgraded to size 1.
+  bool FromZeroAllocation(uptr p) {
+    return reinterpret_cast<AsanChunk*>(p - kChunkHeaderSize)->from_zero_alloc;
+  }
+
+  // Marks an existing size 1 allocation as having originally been zero-size.
+  // Used by SharedReAlloc which augments size 0 to 1 before calling
+  // asan_realloc, bypassing Allocate's own zero-size tracking.
+  void MarkAsZeroAllocation(uptr p) {
+    AsanChunk* m = reinterpret_cast<AsanChunk*>(p - kChunkHeaderSize);
+    m->from_zero_alloc = 1;
+    PoisonShadow(p, ASAN_SHADOW_GRANULARITY, kAsanHeapLeftRedzoneMagic);
+  }
+#endif
 
   uptr AllocationSizeFast(uptr p) {
     return reinterpret_cast<AsanChunk *>(p - kChunkHeaderSize)->UsedSize();
@@ -977,6 +1014,11 @@ void ReInitializeAllocator(const AllocatorOptions &options) {
   instance.ReInitialize(options);
 }
 
+// Apply provided AllocatorOptions to an Allocator
+void ApplyAllocatorOptions(const AllocatorOptions &options) {
+  instance.ApplyOptions(options);
+}
+
 void GetAllocatorOptions(AllocatorOptions *options) {
   instance.GetOptions(options);
 }
@@ -997,13 +1039,8 @@ void PrintInternalAllocatorStats() {
   instance.PrintStats();
 }
 
-void asan_free(void *ptr, BufferedStackTrace *stack, AllocType alloc_type) {
-  instance.Deallocate(ptr, 0, 0, stack, alloc_type);
-}
-
-void asan_delete(void *ptr, uptr size, uptr alignment,
-                 BufferedStackTrace *stack, AllocType alloc_type) {
-  instance.Deallocate(ptr, size, alignment, stack, alloc_type);
+void asan_free(void *ptr, BufferedStackTrace *stack) {
+  instance.Deallocate(ptr, 0, 0, stack, FROM_MALLOC);
 }
 
 void *asan_malloc(uptr size, BufferedStackTrace *stack) {
@@ -1013,6 +1050,16 @@ void *asan_malloc(uptr size, BufferedStackTrace *stack) {
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(instance.Calloc(nmemb, size, stack));
 }
+
+#if SANITIZER_AIX
+void* asan_vec_malloc(uptr size, BufferedStackTrace* stack) {
+  return SetErrnoOnNull(instance.Allocate(size, 16, stack, FROM_MALLOC, true));
+}
+
+void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack) {
+  return SetErrnoOnNull(instance.Calloc(nmemb, size, stack, 16));
+}
+#endif
 
 void *asan_reallocarray(void *p, uptr nmemb, uptr size,
                         BufferedStackTrace *stack) {
@@ -1058,8 +1105,7 @@ void *asan_pvalloc(uptr size, BufferedStackTrace *stack) {
       instance.Allocate(size, PageSize, stack, FROM_MALLOC, true));
 }
 
-void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
-                    AllocType alloc_type) {
+void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
     if (AllocatorMayReturnNull())
@@ -1067,7 +1113,7 @@ void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
     ReportInvalidAllocationAlignment(alignment, stack);
   }
   return SetErrnoOnNull(
-      instance.Allocate(size, alignment, stack, alloc_type, true));
+      instance.Allocate(size, alignment, stack, FROM_MALLOC, true));
 }
 
 void *asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack) {
@@ -1104,12 +1150,131 @@ uptr asan_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
     GET_STACK_TRACE_FATAL(pc, bp);
     ReportMallocUsableSizeNotOwned((uptr)ptr, &stack);
   }
+#if SANITIZER_WINDOWS
+  // Zero-size allocations are internally upgraded to size 1 so that
+  // malloc(0)/new(0) return unique non-NULL pointers as required by the
+  // standard. Windows heap APIs (HeapSize, RtlSizeHeap, _msize) should still
+  // report the originally requested size (0).
+  if (usable_size > 0 &&
+      instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr))) {
+    DCHECK(usable_size == 1);
+    return 0;
+  }
+#endif
   return usable_size;
 }
 
-uptr asan_mz_size(const void *ptr) {
-  return instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+namespace {
+
+void *asan_new(uptr size, BufferedStackTrace *stack, bool array) {
+  return SetErrnoOnNull(
+      instance.Allocate(size, 0, stack, array ? FROM_NEW_BR : FROM_NEW, true));
 }
+
+void *asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace *stack,
+                       bool array) {
+  if (UNLIKELY(alignment == 0 || !IsPowerOfTwo(alignment))) {
+    errno = errno_EINVAL;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAllocationAlignment(alignment, stack);
+  }
+  return SetErrnoOnNull(instance.Allocate(
+      size, alignment, stack, array ? FROM_NEW_BR : FROM_NEW, true));
+}
+
+void asan_delete(void *ptr, BufferedStackTrace *stack, bool array) {
+  instance.Deallocate(ptr, 0, 0, stack, array ? FROM_NEW_BR : FROM_NEW);
+}
+
+void asan_delete_aligned(void *ptr, uptr alignment, BufferedStackTrace *stack,
+                         bool array) {
+  instance.Deallocate(ptr, 0, alignment, stack, array ? FROM_NEW_BR : FROM_NEW);
+}
+
+void asan_delete_sized(void *ptr, uptr size, BufferedStackTrace *stack,
+                       bool array) {
+  instance.Deallocate(ptr, size, 0, stack, array ? FROM_NEW_BR : FROM_NEW);
+}
+
+void asan_delete_sized_aligned(void *ptr, uptr size, uptr alignment,
+                               BufferedStackTrace *stack, bool array) {
+  instance.Deallocate(ptr, size, alignment, stack,
+                      array ? FROM_NEW_BR : FROM_NEW);
+}
+
+}  // namespace
+
+void *asan_new(uptr size, BufferedStackTrace *stack) {
+  return asan_new(size, stack, /*array=*/false);
+}
+
+void *asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace *stack) {
+  return asan_new_aligned(size, alignment, stack, /*array=*/false);
+}
+
+void *asan_new_array(uptr size, BufferedStackTrace *stack) {
+  return asan_new(size, stack, /*array=*/true);
+}
+
+void *asan_new_array_aligned(uptr size, uptr alignment,
+                             BufferedStackTrace *stack) {
+  return asan_new_aligned(size, alignment, stack, /*array=*/true);
+}
+
+void asan_delete(void *ptr, BufferedStackTrace *stack) {
+  asan_delete(ptr, stack, /*array=*/false);
+}
+
+void asan_delete_aligned(void *ptr, uptr alignment, BufferedStackTrace *stack) {
+  asan_delete_aligned(ptr, alignment, stack, /*array=*/false);
+}
+
+void asan_delete_sized(void *ptr, uptr size, BufferedStackTrace *stack) {
+  asan_delete_sized(ptr, size, stack, /*array=*/false);
+}
+
+void asan_delete_sized_aligned(void *ptr, uptr size, uptr alignment,
+                               BufferedStackTrace *stack) {
+  asan_delete_sized_aligned(ptr, size, alignment, stack, /*array=*/false);
+}
+
+void asan_delete_array(void *ptr, BufferedStackTrace *stack) {
+  asan_delete(ptr, stack, /*array=*/true);
+}
+
+void asan_delete_array_aligned(void *ptr, uptr alignment,
+                               BufferedStackTrace *stack) {
+  asan_delete_aligned(ptr, alignment, stack, /*array=*/true);
+}
+
+void asan_delete_array_sized(void *ptr, uptr size, BufferedStackTrace *stack) {
+  asan_delete_sized(ptr, size, stack, /*array=*/true);
+}
+
+void asan_delete_array_sized_aligned(void *ptr, uptr size, uptr alignment,
+                                     BufferedStackTrace *stack) {
+  asan_delete_sized_aligned(ptr, size, alignment, stack, /*array=*/true);
+}
+
+uptr asan_mz_size(const void* ptr) {
+  uptr size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+
+#if SANITIZER_WINDOWS
+  if (size > 0 && instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr))) {
+    DCHECK(size == 1);
+    return 0;
+  }
+#endif
+
+  return size;
+}
+
+#if SANITIZER_WINDOWS
+void asan_mark_zero_allocation(void* ptr) {
+  instance.MarkAsZeroAllocation(reinterpret_cast<uptr>(ptr));
+}
+#endif
 
 void asan_mz_force_lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   instance.ForceLock();

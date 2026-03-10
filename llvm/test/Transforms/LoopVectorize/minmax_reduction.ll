@@ -401,11 +401,11 @@ for.end:
 ; Turn this into a max reduction in the presence of a no-nans-fp-math attribute.
 ; CHECK-LABEL: @max_red_float(
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @max_red_float(float %max) #0 {
+define float @max_red_float(float %max) {
 entry:
   br label %for.body
 
@@ -415,7 +415,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ogt float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %0, float %max.red.08
+  %max.red.0 = select nnan nsz i1 %cmp3, float %0, float %max.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -426,11 +426,11 @@ for.end:
 
 ; CHECK-LABEL: @max_red_float_ge(
 ; CHECK: fcmp fast oge <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @max_red_float_ge(float %max) #0 {
+define float @max_red_float_ge(float %max) {
 entry:
   br label %for.body
 
@@ -440,7 +440,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast oge float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %0, float %max.red.08
+  %max.red.0 = select nnan nsz i1 %cmp3, float %0, float %max.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -451,11 +451,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_max_red_float(
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @inverted_max_red_float(float %max) #0 {
+define float @inverted_max_red_float(float %max) {
 entry:
   br label %for.body
 
@@ -465,7 +465,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast olt float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %max.red.08, float %0
+  %max.red.0 = select nnan nsz i1 %cmp3, float %max.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -476,11 +476,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_max_red_float_le(
 ; CHECK: fcmp fast ole <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @inverted_max_red_float_le(float %max) #0 {
+define float @inverted_max_red_float_le(float %max) {
 entry:
   br label %for.body
 
@@ -490,7 +490,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ole float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %max.red.08, float %0
+  %max.red.0 = select nnan nsz i1 %cmp3, float %max.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -501,11 +501,11 @@ for.end:
 
 ; CHECK-LABEL: @unordered_max_red_float(
 ; CHECK: fcmp fast ugt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @unordered_max_red_float(float %max) #0 {
+define float @unordered_max_red_float(float %max) {
 entry:
   br label %for.body
 
@@ -515,7 +515,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ugt float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %0, float %max.red.08
+  %max.red.0 = select nnan nsz i1 %cmp3, float %0, float %max.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -526,11 +526,11 @@ for.end:
 
 ; CHECK-LABEL: @unordered_max_red_float_ge(
 ; CHECK: fcmp fast uge <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @unordered_max_red_float_ge(float %max) #0 {
+define float @unordered_max_red_float_ge(float %max) {
 entry:
   br label %for.body
 
@@ -540,7 +540,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast uge float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %0, float %max.red.08
+  %max.red.0 = select nnan nsz i1 %cmp3, float %0, float %max.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -551,11 +551,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_unordered_max_red_float(
 ; CHECK: fcmp fast ult <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @inverted_unordered_max_red_float(float %max) #0 {
+define float @inverted_unordered_max_red_float(float %max) {
 entry:
   br label %for.body
 
@@ -565,7 +565,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ult float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %max.red.08, float %0
+  %max.red.0 = select nnan nsz i1 %cmp3, float %max.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -576,11 +576,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_unordered_max_red_float_le(
 ; CHECK: fcmp fast ule <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmax.v2f32
 
-define float @inverted_unordered_max_red_float_le(float %max) #0 {
+define float @inverted_unordered_max_red_float_le(float %max) {
 entry:
   br label %for.body
 
@@ -590,7 +590,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ule float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %max.red.08, float %0
+  %max.red.0 = select nnan nsz i1 %cmp3, float %max.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -604,11 +604,11 @@ for.end:
 ; Turn this into a min reduction in the presence of a no-nans-fp-math attribute.
 ; CHECK-LABEL: @min_red_float(
 ; CHECK: fcmp fast olt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @min_red_float(float %min) #0 {
+define float @min_red_float(float %min) {
 entry:
   br label %for.body
 
@@ -618,7 +618,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast olt float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %0, float %min.red.08
+  %min.red.0 = select nnan nsz i1 %cmp3, float %0, float %min.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -629,11 +629,11 @@ for.end:
 
 ; CHECK-LABEL: @min_red_float_le(
 ; CHECK: fcmp fast ole <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @min_red_float_le(float %min) #0 {
+define float @min_red_float_le(float %min) {
 entry:
   br label %for.body
 
@@ -643,7 +643,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ole float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %0, float %min.red.08
+  %min.red.0 = select nnan nsz i1 %cmp3, float %0, float %min.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -654,11 +654,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_min_red_float(
 ; CHECK: fcmp fast ogt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @inverted_min_red_float(float %min) #0 {
+define float @inverted_min_red_float(float %min) {
 entry:
   br label %for.body
 
@@ -668,7 +668,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ogt float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %min.red.08, float %0
+  %min.red.0 = select nnan nsz i1 %cmp3, float %min.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -679,11 +679,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_min_red_float_ge(
 ; CHECK: fcmp fast oge <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @inverted_min_red_float_ge(float %min) #0 {
+define float @inverted_min_red_float_ge(float %min) {
 entry:
   br label %for.body
 
@@ -693,7 +693,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast oge float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %min.red.08, float %0
+  %min.red.0 = select nnan nsz i1 %cmp3, float %min.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -704,11 +704,11 @@ for.end:
 
 ; CHECK-LABEL: @unordered_min_red_float(
 ; CHECK: fcmp fast ult <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @unordered_min_red_float(float %min) #0 {
+define float @unordered_min_red_float(float %min) {
 entry:
   br label %for.body
 
@@ -718,7 +718,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ult float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %0, float %min.red.08
+  %min.red.0 = select nnan nsz i1 %cmp3, float %0, float %min.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -729,11 +729,11 @@ for.end:
 
 ; CHECK-LABEL: @unordered_min_red_float_le(
 ; CHECK: fcmp fast ule <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @unordered_min_red_float_le(float %min) #0 {
+define float @unordered_min_red_float_le(float %min) {
 entry:
   br label %for.body
 
@@ -743,7 +743,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ule float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %0, float %min.red.08
+  %min.red.0 = select nnan nsz i1 %cmp3, float %0, float %min.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -754,11 +754,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_unordered_min_red_float(
 ; CHECK: fcmp fast ugt <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @inverted_unordered_min_red_float(float %min) #0 {
+define float @inverted_unordered_min_red_float(float %min) {
 entry:
   br label %for.body
 
@@ -768,7 +768,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ugt float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %min.red.08, float %0
+  %min.red.0 = select nnan nsz i1 %cmp3, float %min.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -779,11 +779,11 @@ for.end:
 
 ; CHECK-LABEL: @inverted_unordered_min_red_float_ge(
 ; CHECK: fcmp fast uge <2 x float>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast float @llvm.vector.reduce.fmin.v2f32
 
-define float @inverted_unordered_min_red_float_ge(float %min) #0 {
+define float @inverted_unordered_min_red_float_ge(float %min) {
 entry:
   br label %for.body
 
@@ -793,7 +793,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast uge float %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, float %min.red.08, float %0
+  %min.red.0 = select nnan nsz i1 %cmp3, float %min.red.08, float %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -805,11 +805,11 @@ for.end:
 ; Make sure we handle doubles, too.
 ; CHECK-LABEL: @min_red_double(
 ; CHECK: fcmp fast olt <2 x double>
-; CHECK: select <2 x i1>
+; CHECK: select nnan nsz <2 x i1>
 ; CHECK: middle.block
 ; CHECK: call fast double @llvm.vector.reduce.fmin.v2f64
 
-define double @min_red_double(double %min) #0 {
+define double @min_red_double(double %min) {
 entry:
   br label %for.body
 
@@ -819,7 +819,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x double], ptr @dA, i64 0, i64 %indvars.iv
   %0 = load double, ptr %arrayidx, align 4
   %cmp3 = fcmp fast olt double %0, %min.red.08
-  %min.red.0 = select i1 %cmp3, double %0, double %min.red.08
+  %min.red.0 = select nnan nsz i1 %cmp3, double %0, double %min.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -829,7 +829,7 @@ for.end:
 }
 
 
-; Don't this into a max reduction. The no-nans-fp-math attribute is missing
+; Don't turn this into a max reduction. The nnan flag is missing on select.
 ; CHECK-LABEL: @max_red_float_nans(
 ; CHECK-NOT: <2 x float>
 
@@ -852,11 +852,11 @@ for.end:
   ret float %max.red.0
 }
 
-; As above, with the no-signed-zeros-fp-math attribute missing
+; As above, with the nsz flag missing on select.
 ; CHECK-LABEL: @max_red_float_nsz(
 ; CHECK-NOT: <2 x float>
 
-define float @max_red_float_nsz(float %max) #1 {
+define float @max_red_float_nsz(float %max) {
 entry:
   br label %for.body
 
@@ -866,7 +866,7 @@ for.body:
   %arrayidx = getelementptr inbounds [1024 x float], ptr @fA, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp3 = fcmp fast ogt float %0, %max.red.08
-  %max.red.0 = select i1 %cmp3, float %0, float %max.red.08
+  %max.red.0 = select nnan i1 %cmp3, float %0, float %max.red.08
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
@@ -1001,8 +1001,10 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+; This can be vectorized with additional runtime checks for NaNs.
 ; CHECK-LABEL: @fmin_intrinsic_nofast(
-; CHECK-NOT: <2 x float> @llvm.minnum.v2f32
+; CHECK: <2 x float> @llvm.minnum.v2f32
+; CHECK: fcmp uno <2 x float> [[OP:.+]], [[OP]]
 define float @fmin_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
@@ -1021,8 +1023,10 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+; This can be vectorized with additional runtime checks for NaNs.
 ; CHECK-LABEL: @fmax_intrinsic_nofast(
-; CHECK-NOT: <2 x float> @llvm.maxnum.v2f32
+; CHECK: <2 x float> @llvm.maxnum.v2f32
+; CHECK: fcmp uno <2 x float> [[OP:.+]], [[OP]]
 define float @fmax_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
@@ -1216,5 +1220,3 @@ declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minimum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
 
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
-attributes #1 = { "no-nans-fp-math"="true" }

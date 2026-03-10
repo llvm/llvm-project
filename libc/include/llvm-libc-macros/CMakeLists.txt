@@ -32,6 +32,12 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_macro_header(
+  annex_k_macros
+  HDR
+    annex-k-macros.h
+)
+
+add_macro_header(
   assert_macros
   HDR
     assert-macros.h
@@ -62,9 +68,24 @@ add_macro_header(
 )
 
 add_macro_header(
+  cfloat128_macros
+  HDR
+    cfloat128-macros.h
+)
+
+add_macro_header(
+  cfloat16_macros
+  HDR
+    cfloat16-macros.h
+)
+
+add_macro_header(
   complex_macros
   HDR
     complex-macros.h
+  DEPENDS
+    .cfloat128_macros
+    .cfloat16_macros
 )
 
 add_macro_header(
@@ -138,6 +159,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  netinet_in_macros
+  HDR
+    netinet-in-macros.h
+)
+
+add_macro_header(
   offsetof_macro
   HDR
     offsetof-macro.h
@@ -197,6 +224,12 @@ add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
+)
+
+add_macro_header(
+  sys_ipc_macros
+  HDR
+    sys-ipc-macros.h
 )
 
 add_macro_header(
@@ -322,6 +355,12 @@ add_macro_header(
   locale_macros
   HDR
     locale-macros.h
+)
+
+add_macro_header(
+  nl_types_macros
+  HDR
+    nl-types-macros.h
 )
 
 add_macro_header(

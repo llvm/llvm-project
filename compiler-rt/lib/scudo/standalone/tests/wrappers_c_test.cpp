@@ -175,7 +175,20 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
 
   free(P);
   verifyDeallocHookPtr(P);
-  EXPECT_DEATH(free(P), "");
+
+  // Verify a double free causes an abort.
+  // Don't simply free(P) since EXPECT_DEATH will do a number of
+  // allocations before creating a new process. There is a possibility
+  // that the previously freed P is reused, therefore, in the new
+  // process doing free(P) is not a double free.
+  EXPECT_DEATH(
+      {
+        // Note: volatile here prevents the calls from being optimized out.
+        void *volatile Ptr = malloc(Size);
+        free(Ptr);
+        free(Ptr);
+      },
+      "");
 
   P = malloc(0U);
   EXPECT_NE(P, nullptr);
@@ -382,6 +395,35 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   }
 }
 
+TEST_F(ScudoWrappersCTest, Reallocarray) {
+  // reallocarray is effectively a wrapper around realloc, so we don't have
+  // as much coverage here - simply provide a sanity check that reallocarray
+  // preserves memory contents and properly checks for overflow.
+  void *P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0x42, Size);
+
+  invalidateHookPtrs();
+  void *OldP = P;
+  P = reallocarray(P, 2U, Size);
+  EXPECT_NE(P, nullptr);
+  for (size_t I = 0; I < Size; I++)
+    EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
+  if (OldP == P) {
+    verifyDeallocHookPtr(OldP);
+    verifyAllocHookPtr(OldP);
+  } else {
+    verifyAllocHookPtr(P);
+    verifyAllocHookSize(Size * 2U);
+    verifyDeallocHookPtr(OldP);
+  }
+  verifyReallocHookPtrs(OldP, P, Size * 2U);
+
+  errno = 0;
+  EXPECT_EQ(reallocarray(P, SIZE_MAX - 1, SIZE_MAX - 1), nullptr);
+  EXPECT_EQ(errno, ENOMEM);
+}
+
 #if !SCUDO_FUCHSIA
 TEST_F(ScudoWrappersCTest, MallOpt) {
   errno = 0;
@@ -575,8 +617,13 @@ TEST_F(ScudoWrappersCTest, MallocInfo) {
   EXPECT_EQ(errno, 0);
   fclose(F);
   EXPECT_EQ(strncmp(Buffer, "<malloc version=\"scudo-", 23), 0);
-  EXPECT_NE(nullptr, strstr(Buffer, "<alloc size=\"1234\" count=\""));
-  EXPECT_NE(nullptr, strstr(Buffer, "<alloc size=\"4321\" count=\""));
+  std::string expected;
+  expected =
+      "<alloc size=\"" + std::to_string(malloc_usable_size(P1)) + "\" count=\"";
+  EXPECT_NE(nullptr, strstr(Buffer, expected.c_str()));
+  expected =
+      "<alloc size=\"" + std::to_string(malloc_usable_size(P2)) + "\" count=\"";
+  EXPECT_NE(nullptr, strstr(Buffer, expected.c_str()));
 
   free(P1);
   free(P2);

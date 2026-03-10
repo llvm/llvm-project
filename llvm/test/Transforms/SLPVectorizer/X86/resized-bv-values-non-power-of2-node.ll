@@ -32,14 +32,12 @@ define <16 x half> @test(i32 %0, float %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = sitofp <16 x i32> [[TMP28]] to <16 x float>
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> [[TMP29]], <16 x float> zeroinitializer, <16 x float> zeroinitializer)
 ; CHECK-NEXT:    [[TMP31:%.*]] = fadd <16 x float> [[TMP30]], zeroinitializer
-; CHECK-NEXT:    [[TMP32:%.*]] = call <12 x i1> @llvm.vector.insert.v12i1.v2i1(<12 x i1> poison, <2 x i1> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <12 x i1> [[TMP32]], <12 x i1> <i1 poison, i1 false, i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <12 x i32> <i32 0, i32 13, i32 14, i32 1, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <12 x i1> [[TMP33]], <12 x i1> poison, <16 x i32> <i32 0, i32 1, i32 0, i32 0, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 0, i32 10, i32 11, i32 0>
-; CHECK-NEXT:    [[TMP35:%.*]] = select <16 x i1> [[TMP34]], <16 x float> zeroinitializer, <16 x float> [[TMP31]]
+; CHECK-NEXT:    [[TMP35:%.*]] = select <16 x i1> zeroinitializer, <16 x float> zeroinitializer, <16 x float> [[TMP31]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = bitcast <16 x float> [[TMP35]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP37:%.*]] = and <16 x i32> [[TMP36]], zeroinitializer
 ; CHECK-NEXT:    [[TMP38:%.*]] = bitcast <16 x i32> [[TMP37]] to <16 x float>
-; CHECK-NEXT:    [[TMP39:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v2f32(<16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float poison>, <2 x float> [[TMP6]], i64 14)
+; CHECK-NEXT:    [[TMP53:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float poison>, <16 x float> [[TMP53]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 16, i32 17>
 ; CHECK-NEXT:    [[TMP40:%.*]] = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> zeroinitializer, <16 x float> [[TMP38]], <16 x float> [[TMP39]])
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <16 x float> [[TMP29]], i32 0
 ; CHECK-NEXT:    [[TMP42:%.*]] = fcmp olt float [[TMP41]], 0.000000e+00

@@ -73,7 +73,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
 
   int wordsize = 8;
   ProcessSP process_sp(thread.GetProcess());
-  if (process_sp.get() == nullptr)
+  if (!process_sp || !first_row || !last_row)
     return false;
 
   wordsize = process_sp->GetTarget().GetArchitecture().GetAddressByteSize();

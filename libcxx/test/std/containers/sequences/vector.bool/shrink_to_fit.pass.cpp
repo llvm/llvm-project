@@ -11,8 +11,6 @@
 
 // void shrink_to_fit();
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cassert>
 #include <climits>
 #include <vector>
@@ -80,7 +78,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 }
 
 #if TEST_STD_VER >= 23
-// https://github.com/llvm/llvm-project/issues/95161
+// https://llvm.org/PR95161
 constexpr bool test_increasing_allocator() {
   std::vector<bool, increasing_allocator<bool>> v;
   v.push_back(1);

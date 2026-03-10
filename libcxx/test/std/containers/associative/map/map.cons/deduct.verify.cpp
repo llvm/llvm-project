@@ -26,9 +26,11 @@
 // map(initializer_list<Key>, Allocator)
 //   -> map<Key, less<Key>, Allocator>;
 
+#include <array>
 #include <climits> // INT_MAX
 #include <functional>
 #include <map>
+#include <tuple>
 #include <type_traits>
 
 struct NotAnAllocator {
@@ -101,6 +103,17 @@ int main(int, char**) {
     std::map m(PC{1, 1L});
     // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
   }
-
+  {
+    // cannot deduce from tuple-like objects without proper iterator
+    std::tuple<int, double> t{1, 2.0};
+    std::map m(t);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
+  }
+  {
+    // cannot deduce from array-like objects without proper iterator
+    std::array<int, 2> arr{1, 2};
+    std::map m(arr);
+    // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
+  }
   return 0;
 }

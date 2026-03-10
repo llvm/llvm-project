@@ -14,7 +14,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
   ; CHECK-NEXT:   [[FMOVD0_:%[0-9]+]]:fpr64 = FMOVD0
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64sp = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64sp = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.7(0x40000000)
@@ -80,7 +80,7 @@ body:             |
     %0:gpr64common = COPY $x0
     %1:fpr64 = FMOVD0
     %2:gpr32 = MOVi32imm 1
-    %3:gpr64all = SUBREG_TO_REG 0, killed %2, %subreg.sub_32
+    %3:gpr64all = SUBREG_TO_REG killed %2, %subreg.sub_32
 
   bb.1:
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)

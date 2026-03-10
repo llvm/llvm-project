@@ -159,7 +159,7 @@ void CommandObjectMultiword::Execute(const char *args_string,
 
   auto sub_command = args[0].ref();
   if (sub_command.empty()) {
-    result.AppendError("Need to specify a non-empty subcommand.");
+    result.AppendError("need to specify a non-empty subcommand");
     return;
   }
 
@@ -204,8 +204,7 @@ void CommandObjectMultiword::Execute(const char *args_string,
                     " Use \"help " + GetCommandName() + "\" to find out more.")
             .str());
   }
-  error_msg.append("\n");
-  result.AppendRawError(error_msg.c_str());
+  result.AppendError(error_msg);
 }
 
 std::string CommandObjectMultiword::GetSubcommandsHintText() {

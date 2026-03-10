@@ -180,7 +180,7 @@ bb4:
   LoopInfo LI(DT);
 
   DataLayout DL("e-i64:64-f80:128-n8:16:32:64-S128");
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   AAResults AA(TLI);
@@ -255,7 +255,7 @@ declare void @sink_alt() cold
 
   LoopInfo LI(DT);
 
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
 
   AAResults AA(TLI);
@@ -285,22 +285,8 @@ declare void @sink_alt() cold
   EXPECT_TRUE(Ehpad);
 
   BasicBlock *NewBB = SplitEdge(SrcBlock, DestBlock, &DT, &LI, &MSSAU, "");
-
-  MSSA.verifyMemorySSA();
-  EXPECT_TRUE(DT.verify());
-  EXPECT_NE(NewBB, nullptr);
-  EXPECT_EQ(NewBB->getSinglePredecessor(), SrcBlock);
-  EXPECT_EQ(NewBB, SrcBlock->getTerminator()->getSuccessor(SuccNum));
-  EXPECT_EQ(NewBB->getParent(), F);
-
-  bool BBFlag = false;
-  for (BasicBlock &BB : *F) {
-    if (BB.getName() == NewBB->getName()) {
-      BBFlag = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(BBFlag);
+  // SplitEdge cannot split an eh pad edge.
+  EXPECT_EQ(NewBB, nullptr);
 }
 
 TEST(BasicBlockUtils, splitBasicBlockBefore_ex1) {
@@ -368,6 +354,37 @@ bb3:
 }
 #endif
 
+TEST(BasicBlockUtils, splitBlockBefore2) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @split-block-before-test(i1 %flag) {
+entry:
+  br label %loop
+
+loop:
+  br i1 %flag, label %loop, label %exit
+
+exit:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("split-block-before-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  auto *LoopBB = getBasicBlockByName(*F, "loop");
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  auto *New = splitBlockBefore(LoopBB, LoopBB->getFirstInsertionPt(), &DTU, &LI,
+                               /* MemorySSAUpdater */ nullptr,
+                               LoopBB->getName() + ".split");
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(New)->getHeader(), New);
+}
+
 TEST(BasicBlockUtils, NoUnreachableBlocksToEliminate) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
@@ -390,6 +407,31 @@ bb1:
   EXPECT_FALSE(Result);
   EXPECT_EQ(F->size(), (size_t)3);
   EXPECT_TRUE(DT.verify());
+}
+
+TEST(BasicBlockUtils, splitBlockBefore) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define i32 @basic_func(i1 %cond) {
+entry:
+  br i1 %cond, label %bb0, label %bb1
+bb0:
+  br label %bb1
+bb1:
+  %phi = phi i32 [ 0, %entry ], [ 1, %bb0 ]
+  ret i32 %phi
+}
+)IR");
+  Function *F = M->getFunction("basic_func");
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  BasicBlock *EntryBB = &F->getEntryBlock();
+  Instruction *TI = EntryBB->getTerminator();
+
+  // Make sure the dominator tree is properly updated if calling this on the
+  // entry block.
+  splitBlockBefore(EntryBB, TI, &DTU, nullptr, nullptr);
+  EXPECT_TRUE(DTU.getDomTree().verify());
 }
 
 TEST(BasicBlockUtils, SplitBlockPredecessors) {
@@ -498,9 +540,9 @@ exit:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdgesIgnorePHIs) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -540,9 +582,9 @@ bb4:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdges) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -686,7 +728,7 @@ resume:
 destroy:
   ret void
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -703,13 +745,13 @@ resume:
 destroy:
   ret void
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 attributes #0 = { presplitcoroutine }
 )IR");
@@ -729,4 +771,33 @@ attributes #0 = { presplitcoroutine }
   const auto &ExitN = *FindExit(*N);
   EXPECT_FALSE(llvm::isPresplitCoroSuspendExitEdge(
       *ExitN.getSinglePredecessor(), ExitN));
+}
+
+TEST(BasicBlockUtils, BasicBlockPrintable) {
+  std::string S;
+  std::string SCheck;
+  llvm::raw_string_ostream OS{S};
+  llvm::raw_string_ostream OSCheck{SCheck};
+
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @foo() {
+  br label %bb0
+bb0:
+  br label %.exit
+.exit:
+  ret void
+}
+)IR");
+
+  Function *F = M->getFunction("foo");
+  for (const BasicBlock &BB : *F) {
+    OS << printBasicBlock(&BB);
+    BB.printAsOperand(OSCheck);
+    EXPECT_EQ(OS.str(), OSCheck.str());
+    S.clear();
+    SCheck.clear();
+  }
+  OS << printBasicBlock(nullptr);
+  EXPECT_EQ(OS.str(), "<nullptr>");
 }

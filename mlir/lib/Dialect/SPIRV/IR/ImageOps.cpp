@@ -89,8 +89,8 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
                                   "floating-point type scalar");
 
       auto samplingOp = cast<spirv::SamplingOpInterface>(imageOp);
-      auto sampledImageType = llvm::cast<spirv::SampledImageType>(
-          samplingOp.getSampledImage().getType());
+      auto sampledImageType =
+          cast<spirv::SampledImageType>(samplingOp.getSampledImage().getType());
       imageType = cast<spirv::ImageType>(sampledImageType.getImageType());
     } else {
       if (!isa<mlir::IntegerType>(operands[index].getType()))
@@ -205,6 +205,23 @@ LogicalResult spirv::ImageDrefGatherOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ImageReadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ImageReadOp::verify() {
+  // TODO: Do we need check for: "If the Arrayed operand is 1, then additional
+  // capabilities may be required; e.g., ImageCubeArray, or ImageMSArray."?
+
+  // TODO: Ideally it should be somewhere verified that "If the Image Dim
+  // operand is not SubpassData, the Image Format must not be Unknown, unless
+  // the StorageImageReadWithoutFormat Capability was declared." This function
+  // however may not be the suitable place for such verification.
+
+  return verifyImageOperands(getOperation(), getImageOperandsAttr(),
+                             getOperandArguments());
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.ImageWriteOp
 //===----------------------------------------------------------------------===//
 
@@ -226,8 +243,7 @@ LogicalResult spirv::ImageWriteOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::ImageQuerySizeOp::verify() {
-  spirv::ImageType imageType =
-      llvm::cast<spirv::ImageType>(getImage().getType());
+  spirv::ImageType imageType = cast<spirv::ImageType>(getImage().getType());
   Type resultType = getResult().getType();
 
   spirv::Dim dim = imageType.getDim();
@@ -275,7 +291,7 @@ LogicalResult spirv::ImageQuerySizeOp::verify() {
     componentNumber += 1;
 
   unsigned resultComponentNumber = 1;
-  if (auto resultVectorType = llvm::dyn_cast<VectorType>(resultType))
+  if (auto resultVectorType = dyn_cast<VectorType>(resultType))
     resultComponentNumber = resultVectorType.getNumElements();
 
   if (componentNumber != resultComponentNumber)
@@ -312,6 +328,15 @@ LogicalResult spirv::ImageSampleExplicitLodOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::ImageSampleProjDrefImplicitLodOp::verify() {
+  return verifyImageOperands(getOperation(), getImageOperandsAttr(),
+                             getOperandArguments());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ImageFetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ImageFetchOp::verify() {
   return verifyImageOperands(getOperation(), getImageOperandsAttr(),
                              getOperandArguments());
 }

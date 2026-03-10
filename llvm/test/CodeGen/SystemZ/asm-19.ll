@@ -3,6 +3,15 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -no-integrated-as | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 -no-integrated-as | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z14
 
+define half @f0() {
+; CHECK-LABEL: f0:
+; CHECK: lzer %f1
+; CHECK: blah %f0 %f1
+; CHECK: br %r14
+  %val = call half asm "blah $0 $1", "=&v,v" (half 0.0)
+  ret half %val
+}
+
 define float @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: lzer %f1
@@ -84,6 +93,16 @@ define <4 x float> @f9() {
 ; CHECK: br %r14
   %val = call <4 x float> asm "blah $0 $1", "=&v,v" (<4 x float> <float 0.0, float 0.0, float 0.0, float 0.0>)
   ret <4 x float> %val
+}
+
+define half @f10_half() {
+; CHECK-LABEL: f10_half:
+; CHECK: lzer %f4
+; CHECK: blah %f4
+; CHECK: ldr %f0, %f4
+; CHECK: br %r14
+  %ret = call half asm "blah $0", "={v4},0" (half 0.0)
+  ret half %ret
 }
 
 define float @f10() {

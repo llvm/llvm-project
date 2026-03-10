@@ -12,7 +12,7 @@
 ; altered. If they are, it means that the discriminators pass added a
 ; new lexical scope.
 
-define i32 @foo(i64 %i) #0 !dbg !4 {
+define i32 @foo(i64 %i) !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %i.addr = alloca i64, align 8
@@ -39,10 +39,7 @@ return:                                           ; preds = %if.else, %if.then
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; We should be able to add discriminators even in the absence of llvm.dbg.cu.
 ; When using sample profiles, the front end will generate line tables but it

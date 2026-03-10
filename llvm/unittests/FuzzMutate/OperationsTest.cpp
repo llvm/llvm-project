@@ -380,9 +380,8 @@ TEST(OperationsTest, GEPPointerOperand) {
   // Check that we only pick sized pointers for the GEP instructions
 
   LLVMContext Ctx;
-  const char *SourceCode = "%opaque = type opaque\n"
-                           "declare void @f()\n"
-                           "define void @test(%opaque %o) {\n"
+  const char *SourceCode = "declare void @f()\n"
+                           "define void @test(target(\"foo\") %o) {\n"
                            "  %a = alloca i64, i32 10\n"
                            "  ret void\n"
                            "}";

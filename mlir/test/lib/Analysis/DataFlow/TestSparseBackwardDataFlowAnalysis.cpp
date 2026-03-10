@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -82,6 +81,10 @@ public:
   void visitBranchOperand(OpOperand &operand) override;
 
   void visitCallOperand(OpOperand &operand) override;
+
+  void
+  visitNonControlFlowArguments(RegionSuccessor &successor,
+                               ArrayRef<BlockArgument> arguments) override {}
 
   void visitExternalCall(CallOpInterface call, ArrayRef<WrittenTo *> operands,
                          ArrayRef<const WrittenTo *> results) override;
@@ -182,8 +185,7 @@ struct TestWrittenToPass
     SymbolTableCollection symbolTable;
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<WrittenToAnalysis>(symbolTable, assumeFuncWrites);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();

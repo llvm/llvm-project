@@ -2,16 +2,12 @@
 
 void foo() {
   int Var;
-  // TODO OpenACC: These are only legal if they have one of a list of clauses on
-  // them, so the 'check' lines should start to include those once we implement
-  // them.  For now, they don't emit those because they are 'not implemented'.
-
 // CHECK: #pragma acc data default(none)
 #pragma acc data default(none)
   ;
 
-// CHECK: #pragma acc data default(none) device_type(int)
-#pragma acc data default(none) device_type(int)
+// CHECK: #pragma acc data default(none) device_type(radeon)
+#pragma acc data default(none) device_type(radeon)
   ;
 
 // CHECK: #pragma acc enter data copyin(Var)

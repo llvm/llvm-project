@@ -107,6 +107,8 @@ public:
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
                               const FunctionDecl *Delete,
                               Expr *ThisArg) override;
+  void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobDelete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;
@@ -118,6 +120,7 @@ public:
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
   void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
+  void DeclarationMarkedOpenMPIndirectCall(const Decl *D) override;
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
@@ -184,6 +187,11 @@ void MultiplexASTMutationListener::ResolvedOperatorDelete(
   for (auto *L : Listeners)
     L->ResolvedOperatorDelete(DD, Delete, ThisArg);
 }
+void MultiplexASTMutationListener::ResolvedOperatorGlobDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobDelete) {
+  for (auto *L : Listeners)
+    L->ResolvedOperatorGlobDelete(DD, GlobDelete);
+}
 void MultiplexASTMutationListener::CompletedImplicitDefinition(
                                                         const FunctionDecl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
@@ -232,6 +240,11 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPAllocate(
     const Decl *D, const Attr *A) {
   for (ASTMutationListener *L : Listeners)
     L->DeclarationMarkedOpenMPAllocate(D, A);
+}
+void MultiplexASTMutationListener::DeclarationMarkedOpenMPIndirectCall(
+    const Decl *D) {
+  for (ASTMutationListener *L : Listeners)
+    L->DeclarationMarkedOpenMPIndirectCall(D);
 }
 void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
     const Decl *D, const Attr *Attr) {

@@ -2,8 +2,8 @@
 
 # We want to keep the symbol "multiplyByThree" in the .dynamic section and not
 # have it put the default .symtab section.
-# RUN: echo "{multiplyByThree;};" > %T/dynmic-symbols.txt
-# RUN: %clang_host -Wl,--dynamic-list=%T/dynmic-symbols.txt -g -o %t.binary %p/Inputs/minidebuginfo-main.c
+# RUN: echo "{multiplyByThree;};" > %t.dynmic-symbols.txt
+# RUN: %clang_host -Wl,--dynamic-list=%t.dynmic-symbols.txt -g -o %t.binary %p/Inputs/minidebuginfo-main.c
 
 # The following section is adapted from GDB's official documentation:
 # http://sourceware.org/gdb/current/onlinedocs/gdb/MiniDebugInfo.html#MiniDebugInfo

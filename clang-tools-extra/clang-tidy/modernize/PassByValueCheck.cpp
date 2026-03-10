@@ -1,4 +1,4 @@
-//===--- PassByValueCheck.cpp - clang-tidy---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,8 +20,22 @@ using namespace llvm;
 
 namespace clang::tidy::modernize {
 
+static bool isFirstFriendOfSecond(const CXXRecordDecl *Friend,
+                                  const CXXRecordDecl *Class) {
+  return llvm::any_of(
+      Class->friends(), [Friend](FriendDecl *FriendDecl) -> bool {
+        if (const TypeSourceInfo *FriendTypeSource =
+                FriendDecl->getFriendType()) {
+          const QualType FriendType = FriendTypeSource->getType();
+          return FriendType->getAsCXXRecordDecl() == Friend;
+        }
+        return false;
+      });
+}
+
 namespace {
-/// Matches move-constructible classes.
+/// Matches move-constructible classes whose constructor can be called inside
+/// a CXXRecordDecl with a bound ID.
 ///
 /// Given
 /// \code
@@ -32,22 +46,38 @@ namespace {
 ///     Bar(Bar &&) = deleted;
 ///     int a;
 ///   };
+///
+///   class Buz {
+///     Buz(Buz &&);
+///     int a;
+///     friend class Outer;
+///   };
+///
+///   class Outer {
+///   };
 /// \endcode
-/// recordDecl(isMoveConstructible())
-///   matches "Foo".
-AST_MATCHER(CXXRecordDecl, isMoveConstructible) {
-  for (const CXXConstructorDecl *Ctor : Node.ctors()) {
-    if (Ctor->isMoveConstructor() && !Ctor->isDeleted())
-      return true;
-  }
-  return false;
+/// recordDecl(isMoveConstructibleInBoundCXXRecordDecl("Outer"))
+///   matches "Foo", "Buz".
+AST_MATCHER_P(CXXRecordDecl, isMoveConstructibleInBoundCXXRecordDecl, StringRef,
+              RecordDeclID) {
+  return Builder->removeBindings(
+      [this,
+       &Node](const ast_matchers::internal::BoundNodesMap &Nodes) -> bool {
+        const auto *BoundClass =
+            Nodes.getNode(this->RecordDeclID).get<CXXRecordDecl>();
+        for (const CXXConstructorDecl *Ctor : Node.ctors())
+          if (Ctor->isMoveConstructor() && !Ctor->isDeleted() &&
+              (Ctor->getAccess() == AS_public ||
+               (BoundClass && isFirstFriendOfSecond(BoundClass, &Node))))
+            return false;
+        return true;
+      });
 }
 } // namespace
 
 static TypeMatcher notTemplateSpecConstRefType() {
   return lValueReferenceType(
-      pointee(unless(elaboratedType(namesType(templateSpecializationType()))),
-              isConstQualified()));
+      pointee(unless(templateSpecializationType()), isConstQualified()));
 }
 
 static TypeMatcher nonConstValueType() {
@@ -165,12 +195,7 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
     return true;
   };
 
-  for (const auto *Candidate : Record->ctors()) {
-    if (IsRValueOverload(Candidate)) {
-      return true;
-    }
-  }
-  return false;
+  return llvm::any_of(Record->ctors(), IsRValueOverload);
 }
 
 /// Find all references to \p ParamDecl across all of the
@@ -179,7 +204,7 @@ static SmallVector<const ParmVarDecl *, 2>
 collectParamDecls(const CXXConstructorDecl *Ctor,
                   const ParmVarDecl *ParamDecl) {
   SmallVector<const ParmVarDecl *, 2> Results;
-  unsigned ParamIdx = ParamDecl->getFunctionScopeIndex();
+  const unsigned ParamIdx = ParamDecl->getFunctionScopeIndex();
 
   for (const FunctionDecl *Redecl : Ctor->redecls())
     Results.push_back(Redecl->getParamDecl(ParamIdx));
@@ -191,11 +216,13 @@ PassByValueCheck::PassByValueCheck(StringRef Name, ClangTidyContext *Context)
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()),
-      ValuesOnly(Options.get("ValuesOnly", false)) {}
+      ValuesOnly(Options.get("ValuesOnly", false)),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
 
 void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "ValuesOnly", ValuesOnly);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
@@ -203,6 +230,7 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
       traverse(
           TK_AsIs,
           cxxConstructorDecl(
+              ofClass(cxxRecordDecl().bind("outer")),
               forEachConstructorInitializer(
                   cxxCtorInitializer(
                       unless(isBaseInitializer()),
@@ -226,8 +254,9 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
                                   .bind("Param"))))),
                           hasDeclaration(cxxConstructorDecl(
                               isCopyConstructor(), unless(isDeleted()),
-                              hasDeclContext(
-                                  cxxRecordDecl(isMoveConstructible())))))))
+                              hasDeclContext(cxxRecordDecl(
+                                  isMoveConstructibleInBoundCXXRecordDecl(
+                                      "outer"))))))))
                       .bind("Initializer")))
               .bind("Ctor")),
       this);
@@ -244,7 +273,10 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ParamDecl = Result.Nodes.getNodeAs<ParmVarDecl>("Param");
   const auto *Initializer =
       Result.Nodes.getNodeAs<CXXCtorInitializer>("Initializer");
-  SourceManager &SM = *Result.SourceManager;
+  const SourceManager &SM = *Result.SourceManager;
+
+  if (IgnoreMacros && ParamDecl->getBeginLoc().isMacroID())
+    return;
 
   // If the parameter is used or anything other than the copy, do not apply
   // the changes.
@@ -268,7 +300,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (ParamDecl->getType()->isLValueReferenceType()) {
     // Check if we can succesfully rewrite all declarations of the constructor.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
-      TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
+      const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
       auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
       if (RefTL.isNull()) {
         // We cannot rewrite this instance. The type is probably hidden behind
@@ -278,11 +310,11 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     }
     // Rewrite all declarations.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
-      TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
+      const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
       auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
 
-      TypeLoc ValueTL = RefTL.getPointeeLoc();
-      CharSourceRange TypeRange = CharSourceRange::getTokenRange(
+      const TypeLoc ValueTL = RefTL.getPointeeLoc();
+      const CharSourceRange TypeRange = CharSourceRange::getTokenRange(
           ParmDecl->getBeginLoc(), ParamTL.getEndLoc());
       std::string ValueStr =
           Lexer::getSourceText(

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-parse-tree -x cuda %s 2>&1 | FileCheck %s
 include "cuf-sanity-common"
 !CHECK: Program -> ProgramUnit -> SubroutineSubprogram
 !CHECK: | SubroutineStmt
@@ -178,7 +178,7 @@ include "cuf-sanity-common"
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !CHECK: | | | | | | Scalar -> Expr = '2_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
-!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | Scalar -> Expr = '3_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
 !CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4,3_4,4_4>>>()'
 !CHECK: | | | | | Call
@@ -188,8 +188,25 @@ include "cuf-sanity-common"
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !CHECK: | | | | | | Scalar -> Expr = '2_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
-!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | Scalar -> Expr = '3_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '4_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '4'
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4,9._4,4_4>>>()'
+!CHECK: | | | | | Call
+!CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
+!CHECK: | | | | | Chevrons
+!CHECK: | | | | | | StarOrExpr -> Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | | | Scalar -> Expr = '9._4'
+!CHECK: | | | | | | | Multiply
+!CHECK: | | | | | | | | Expr = '8.9999997615814208984375e-1_4'
+!CHECK: | | | | | | | | | LiteralConstant -> RealLiteralConstant
+!CHECK: | | | | | | | | | | Real = '0.9'
+!CHECK: | | | | | | | | Expr = '10_4'
+!CHECK: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '10'
 !CHECK: | | | | | | Scalar -> Integer -> Expr = '4_4'
 !CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '4'
 !CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt

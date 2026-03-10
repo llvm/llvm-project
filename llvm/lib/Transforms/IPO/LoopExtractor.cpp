@@ -39,9 +39,7 @@ struct LoopExtractorLegacyPass : public ModulePass {
   unsigned NumLoops;
 
   explicit LoopExtractorLegacyPass(unsigned NumLoops = ~0)
-      : ModulePass(ID), NumLoops(NumLoops) {
-    initializeLoopExtractorLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : ModulePass(ID), NumLoops(NumLoops) {}
 
   bool runOnModule(Module &M) override;
 

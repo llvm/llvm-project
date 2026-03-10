@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_FILESPECLIST_H
-#define LLDB_CORE_FILESPECLIST_H
+#ifndef LLDB_UTILITY_FILESPECLIST_H
+#define LLDB_UTILITY_FILESPECLIST_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/SupportFile.h"
@@ -41,7 +41,7 @@ public:
   bool AppendIfUnique(const FileSpec &file);
   size_t GetSize() const { return m_files.size(); }
   const FileSpec &GetFileSpecAtIndex(size_t idx) const;
-  lldb::SupportFileSP GetSupportFileAtIndex(size_t idx) const;
+  SupportFileNSP GetSupportFileAtIndex(size_t idx) const;
   size_t FindFileIndex(size_t idx, const FileSpec &file, bool full) const;
   /// Find a compatible file index.
   ///
@@ -254,4 +254,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_FILESPECLIST_H
+#endif // LLDB_UTILITY_FILESPECLIST_H

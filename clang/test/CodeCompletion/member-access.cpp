@@ -431,7 +431,9 @@ using Alias = S<T>;
 template <typename T>
 void f(Alias<T> s) {
   s.a.b;
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:433:7 %s -o - | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS %s
-  // CHECK-TEMPLATE-ALIAS: [#int#]b
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:433:5 %s -o - | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS %s
+  // CHECK-TEMPLATE-ALIAS: [#A#]a
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:433:7 %s -o - | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS-NESTED %s
+  // CHECK-TEMPLATE-ALIAS-NESTED: [#int#]b
 }
 }

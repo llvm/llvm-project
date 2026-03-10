@@ -192,7 +192,7 @@ namespace std {
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/format>
+#  include <__cxx03/__config>
 #else
 #  include <__config>
 
@@ -213,7 +213,7 @@ namespace std {
 #    include <__format/format_string.h>
 #    include <__format/format_to_n_result.h>
 #    include <__format/formatter.h>
-#    include <__format/formatter_bool.h>
+#    include <__format/formatter_bool_impl.h>
 #    include <__format/formatter_char.h>
 #    include <__format/formatter_floating_point.h>
 #    include <__format/formatter_integer.h>

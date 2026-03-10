@@ -6,7 +6,7 @@
 // integer. It is converted to an integer on call and converted back after the
 // function.
 
-// CHECK: define void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void trunc_Param(inout int X) {}
 
 // ALL-LABEL: define noundef nofpclass(nan inf) float {{.*}}case1
@@ -32,7 +32,7 @@ export float case1(float F) {
 // uninitialized in the function. If they are not initialized before the
 // function returns the value is undefined.
 
-// CHECK: define void {{.*}}undef{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}undef{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void undef(out int Z) { }
 
 // ALL-LABEL: define noundef i32 {{.*}}case2
@@ -54,7 +54,7 @@ export int case2() {
 // This test should verify that an out parameter value is written to as
 // expected.
 
-// CHECK: define void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}zero{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void zero(out int Z) { Z = 0; }
 
 // ALL-LABEL: define noundef i32 {{.*}}case3
@@ -76,7 +76,7 @@ export int case3() {
 // Vector swizzles in HLSL produce lvalues, so they can be used as arguments to
 // inout parameters and the swizzle is reversed on writeback.
 
-// CHECK: define void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void funky(inout int3 X) {
   X.x += 1;
   X.y += 2;
@@ -101,10 +101,16 @@ void funky(inout int3 X) {
 // Call the function with the temporary.
 // CHECK: call void {{.*}}funky{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) [[ArgTmp]])
 
-// Shuffle it back.
+// Write it back.
 // CHECK:  [[RetVal:%.*]] = load <3 x i32>, ptr [[ArgTmp]]
-// CHECK:  [[Vxyz:%.*]] = shufflevector <3 x i32> [[RetVal]], <3 x i32> poison, <3 x i32> <i32 2, i32 0, i32 1>
-// CHECK:  store <3 x i32> [[Vxyz]], ptr [[V]]
+// CHECK:  [[Src0:%.*]] = extractelement <3 x i32> [[RetVal]], i32 0
+// CHECK:  [[PtrY:%.*]] = getelementptr <3 x i32>, ptr %V, i32 0, i32 1
+// CHECK:  store i32 [[Src0]], ptr [[PtrY]], align 4
+// CHECK:  [[Src1:%.*]] = extractelement <3 x i32> [[RetVal]], i32 1
+// CHECK:  [[PtrZ:%.*]] = getelementptr <3 x i32>, ptr %V, i32 0, i32 2
+// CHECK:  store i32 [[Src1]], ptr [[PtrZ]], align 4
+// CHECK:  [[Src2:%.*]] = extractelement <3 x i32> [[RetVal]], i32 2
+// CHECK:  store i32 [[Src2]], ptr %V, align 4
 
 // OPT: ret <3 x i32> <i32 3, i32 1, i32 2>
 export int3 case4() {
@@ -116,7 +122,7 @@ export int3 case4() {
 
 // Case 5: Straightforward inout of a scalar value.
 
-// CHECK: define void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
+// CHECK: define hidden void {{.*}}increment{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void increment(inout int I) {
   I += 1;
 }
@@ -144,7 +150,7 @@ struct S {
   float Y;
 };
 
-// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) {{%.*}})
+// CHECK: define hidden void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
 void init(out S s) {
   s.X = 3;
   s.Y = 4;
@@ -154,8 +160,8 @@ void init(out S s) {
 
 // CHECK: [[S:%.*]] = alloca %struct.S
 // CHECK: [[Tmp:%.*]] = alloca %struct.S
-// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[S]], ptr align 4 [[Tmp]], i32 8, i1 false)
+// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) [[Tmp]])
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 [[Tmp]], i32 8, i1 false)
 
 // OPT: ret i32 7
 export int case6() {
@@ -170,7 +176,7 @@ struct R {
   float Y;
 };
 
-// CHECK: define void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) {{%.*}})
+// CHECK: define hidden void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) {{%.*}})
 void init(inout R s) {
   s.X = 3;
   s.Y = 4;
@@ -180,9 +186,9 @@ void init(inout R s) {
 
 // CHECK: [[S:%.*]] = alloca %struct.R
 // CHECK: [[Tmp:%.*]] = alloca %struct.R
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[S]], i32 8, i1 false)
-// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(8) [[Tmp]])
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[S]], ptr align 4 [[Tmp]], i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[S]], i32 8, i1 false)
+// CHECK: call void {{.*}}init{{.*}}(ptr noalias noundef nonnull align 1 dereferenceable(8) [[Tmp]])
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 [[Tmp]], i32 8, i1 false)
 
 // OPT: ret i32 7
 export int case7() {
@@ -194,7 +200,7 @@ export int case7() {
 
 // Case 8: Non-scalars with a cast expression.
 
-// CHECK: define void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
+// CHECK: define hidden void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
 // ALL-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}case8
@@ -289,19 +295,13 @@ void setFour(inout int I) {
 // CHECK: [[B:%.*]] = alloca %struct.B
 // CHECK: [[Tmp:%.*]] = alloca i32
 
-// CHECK: [[BFLoad:%.*]] = load i16, ptr [[B]]
-// CHECK: [[BFshl:%.*]] = shl i16 [[BFLoad]], 8
-// CHECK: [[BFashr:%.*]] = ashr i16 [[BFshl]], 8
-// CHECK: [[BFcast:%.*]] = sext i16 [[BFashr]] to i32
+// CHECK: [[BFLoad:%.*]] = load i8, ptr [[B]]
+// CHECK: [[BFcast:%.*]] = sext i8 [[BFLoad]] to i32
 // CHECK: store i32 [[BFcast]], ptr [[Tmp]]
 // CHECK: call void {{.*}}setFour{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp]])
 // CHECK: [[RetVal:%.*]] = load i32, ptr [[Tmp]]
-// CHECK: [[TruncVal:%.*]] = trunc i32 [[RetVal]] to i16
-// CHECK: [[BFLoad:%.*]] = load i16, ptr [[B]]
-// CHECK: [[BFValue:%.*]] = and i16 [[TruncVal]], 255
-// CHECK: [[ZerodField:%.*]] = and i16 [[BFLoad]], -256
-// CHECK: [[BFSet:%.*]] = or i16 [[ZerodField]], [[BFValue]]
-// CHECK: store i16 [[BFSet]], ptr [[B]]
+// CHECK: [[TruncVal:%.*]] = trunc i32 [[RetVal]] to i8
+// CHECK: store i8 [[TruncVal]], ptr [[B]]
 
 // OPT: ret i32 8
 export int case11() {

@@ -27,7 +27,7 @@ subroutine omp_target_data
       a = arrayB
    !$omp end target data
 
-   !WARNING: Use of non-C_PTR type 'a' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead
+   !WARNING: Use of non-C_PTR type 'a' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead [-Wopen-mp-usage]
    !$omp target data map(tofrom: a) use_device_ptr(a)
       a = 2
    !$omp end target data

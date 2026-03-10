@@ -8,8 +8,8 @@
 
 #include "ProjectModules.h"
 #include "support/Logger.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/Tooling/DependencyScanningTool.h"
 
 namespace clang::clangd {
 namespace {
@@ -35,9 +35,13 @@ public:
   ModuleDependencyScanner(
       std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
       const ThreadsafeFS &TFS)
-      : CDB(CDB), TFS(TFS),
-        Service(tooling::dependencies::ScanningMode::CanonicalPreprocessing,
-                tooling::dependencies::ScanningOutputFormat::P1689) {}
+      : CDB(CDB), Service([&TFS] {
+          dependencies::DependencyScanningServiceOptions Opts;
+          Opts.MakeVFS = [&] { return TFS.view(std::nullopt); };
+          Opts.Mode = dependencies::ScanningMode::CanonicalPreprocessing;
+          Opts.Format = dependencies::ScanningOutputFormat::P1689;
+          return Opts;
+        }()) {}
 
   /// The scanned modules dependency information for a specific source file.
   struct ModuleDependencyInfo {
@@ -76,12 +80,11 @@ public:
 
 private:
   std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
-  const ThreadsafeFS &TFS;
 
   // Whether the scanner has scanned the project globally.
   bool GlobalScanned = false;
 
-  clang::tooling::dependencies::DependencyScanningService Service;
+  clang::dependencies::DependencyScanningService Service;
 
   // TODO: Add a scanning cache.
 
@@ -104,26 +107,39 @@ ModuleDependencyScanner::scan(PathRef FilePath,
   if (Mangler)
     Mangler(Cmd, FilePath);
 
-  using namespace clang::tooling::dependencies;
+  using namespace clang::tooling;
 
-  llvm::SmallString<128> FilePathDir(FilePath);
-  llvm::sys::path::remove_filename(FilePathDir);
-  DependencyScanningTool ScanningTool(Service, TFS.view(FilePathDir));
+  DependencyScanningTool ScanningTool(Service);
 
-  llvm::Expected<P1689Rule> ScanningResult =
-      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory);
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  DiagnosticOptions DiagOpts;
+  DiagOpts.ShowCarets = false;
+  TextDiagnosticPrinter DiagConsumer(OS, DiagOpts);
 
-  if (auto E = ScanningResult.takeError()) {
-    elog("Scanning modules dependencies for {0} failed: {1}", FilePath,
-         llvm::toString(std::move(E)));
+  std::optional<P1689Rule> ScanningResult =
+      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory,
+                                                DiagConsumer);
+
+  if (!ScanningResult) {
+    elog("Scanning modules dependencies for {0} failed: {1}", FilePath, S);
     return std::nullopt;
   }
 
   ModuleDependencyInfo Result;
 
   if (ScanningResult->Provides) {
-    ModuleNameToSource[ScanningResult->Provides->ModuleName] = FilePath;
     Result.ModuleName = ScanningResult->Provides->ModuleName;
+
+    auto [Iter, Inserted] = ModuleNameToSource.try_emplace(
+        ScanningResult->Provides->ModuleName, FilePath);
+
+    if (!Inserted && Iter->second != FilePath) {
+      elog("Detected multiple source files ({0}, {1}) declaring the same "
+           "module: '{2}'. "
+           "Now clangd may find the wrong source in such case.",
+           Iter->second, FilePath, ScanningResult->Provides->ModuleName);
+    }
   }
 
   for (auto &Required : ScanningResult->Requires)

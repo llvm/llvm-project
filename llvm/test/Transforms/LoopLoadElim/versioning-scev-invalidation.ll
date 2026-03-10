@@ -65,8 +65,7 @@ define void @g(ptr %dst.1, ptr %start, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_1]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[TMP5]], align 8
+; CHECK-NEXT:    store <4 x double> zeroinitializer, ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -84,7 +83,7 @@ define void @g(ptr %dst.1, ptr %start, i64 %N) {
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr inbounds double, ptr [[PTR_IV_2]], i64 1
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add nuw nsw i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[EXITCOND_1_NOT:%.*]] = icmp eq i64 [[IV_2_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_1_NOT]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_2]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_1_NOT]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_2]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

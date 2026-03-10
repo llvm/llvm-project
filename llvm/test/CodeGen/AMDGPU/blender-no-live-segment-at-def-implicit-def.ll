@@ -115,7 +115,7 @@ if.end273.i.i:                                    ; preds = %if.then263.i.i, %if
 
 if.end294.i.i:                                    ; preds = %if.end273.i.i, %if.then263.i.i, %if.end13.i.i
   %ls111.sroa.0.2.i = phi <4 x float> [ zeroinitializer, %if.end13.i.i ], [ zeroinitializer, %if.end273.i.i ], [ <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %if.then263.i.i ]
-  store <4 x float> zeroinitializer, ptr addrspace(5) null, align 4
+  store <4 x float> zeroinitializer, ptr addrspace(5) zeroinitializer, align 4
   br label %kernel_direct_lighting.exit
 
 kernel_direct_lighting.exit:                      ; preds = %if.end294.i.i, %entry
@@ -126,5 +126,3 @@ kernel_direct_lighting.exit:                      ; preds = %if.end294.i.i, %ent
 
 declare float @_Z3dotDv3_fS_(<3 x float>)
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

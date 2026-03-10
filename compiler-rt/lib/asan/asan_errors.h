@@ -362,7 +362,7 @@ struct ErrorBadParamsToCopyContiguousContainerAnnotations : ErrorBase {
       u32 tid, BufferedStackTrace *stack_, uptr old_storage_beg_,
       uptr old_storage_end_, uptr new_storage_beg_, uptr new_storage_end_)
       : ErrorBase(tid, 10,
-                  "bad-__sanitizer_annotate_double_ended_contiguous_container"),
+                  "bad-__sanitizer_copy_contiguous_container_annotations"),
         stack(stack_),
         old_storage_beg(old_storage_beg_),
         old_storage_end(old_storage_end_),

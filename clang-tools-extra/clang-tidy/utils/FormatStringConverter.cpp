@@ -1,4 +1,4 @@
-//===--- FormatStringConverter.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,6 +14,7 @@
 
 #include "FormatStringConverter.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
@@ -207,13 +208,9 @@ FormatStringConverter::FormatStringConverter(
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
   FormatExpr = llvm::dyn_cast<StringLiteral>(
-      Args[FormatArgOffset]->IgnoreImplicitAsWritten());
+      Args[FormatArgOffset]->IgnoreUnlessSpelledInSource());
 
-  if (!FormatExpr || !FormatExpr->isOrdinary()) {
-    // Function must have a narrow string literal as its first argument.
-    conversionNotPossible("first argument is not a narrow string literal");
-    return;
-  }
+  assert(FormatExpr && FormatExpr->isOrdinary());
 
   if (const std::optional<StringRef> MaybeMacroName =
           formatStringContainsUnreplaceableMacro(Call, FormatExpr, SM, PP);
@@ -249,7 +246,7 @@ FormatStringConverter::formatStringContainsUnreplaceableMacro(
   // inhibit conversion. The whole format string will appear to come from that
   // macro, as will the function call.
   std::optional<StringRef> MaybeSurroundingMacroName;
-  if (SourceLocation BeginCallLoc = Call->getBeginLoc();
+  if (const SourceLocation BeginCallLoc = Call->getBeginLoc();
       BeginCallLoc.isMacroID())
     MaybeSurroundingMacroName =
         Lexer::getImmediateMacroName(BeginCallLoc, SM, PP.getLangOpts());
@@ -287,7 +284,8 @@ FormatStringConverter::formatStringContainsUnreplaceableMacro(
 
 void FormatStringConverter::emitAlignment(const PrintfSpecifier &FS,
                                           std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
 
   // We only care about alignment if a field width is specified
   if (FS.getFieldWidth().getHowSpecified() != OptionalAmount::NotSpecified) {
@@ -438,9 +436,9 @@ void FormatStringConverter::emitStringArgument(unsigned ArgIndex,
   }
 
   auto CStrMatches = match(*StringCStrCallExprMatcher, *Arg, *Context);
-  if (CStrMatches.size() == 1)
+  if (CStrMatches.size() == 1) {
     ArgCStrRemovals.push_back(CStrMatches.front());
-  else if (Arg->getType()->isPointerType()) {
+  } else if (Arg->getType()->isPointerType()) {
     const QualType Pointee = Arg->getType()->getPointeeType();
     // printf is happy to print signed char and unsigned char strings, but
     // std::format only likes char strings.
@@ -464,9 +462,9 @@ bool FormatStringConverter::emitIntegerArgument(
     // be passed as its underlying type. However, printf will have forced
     // the signedness based on the format string, so we need to do the
     // same.
-    if (const auto *ET = ArgType->getAs<EnumType>()) {
+    if (const auto *ED = ArgType->getAsEnumDecl()) {
       if (const std::optional<std::string> MaybeCastType =
-              castTypeForArgument(ArgKind, ET->getDecl()->getIntegerType()))
+              castTypeForArgument(ArgKind, ED->getIntegerType()))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else
@@ -503,7 +501,8 @@ bool FormatStringConverter::emitIntegerArgument(
 /// @returns true on success, false on failure
 bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
                                      std::string &FormatSpec) {
-  ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
+  const ConversionSpecifier::Kind ArgKind =
+      FS.getConversionSpecifier().getKind();
   switch (ArgKind) {
   case ConversionSpecifier::Kind::sArg:
     emitStringArgument(FS.getArgIndex() + ArgsOffset, Arg);
@@ -626,7 +625,6 @@ bool FormatStringConverter::HandlePrintfSpecifier(const PrintfSpecifier &FS,
                                                   const char *StartSpecifier,
                                                   unsigned SpecifierLen,
                                                   const TargetInfo &Target) {
-
   const size_t StartSpecifierPos = StartSpecifier - PrintfFormatString.data();
   assert(StartSpecifierPos + SpecifierLen <= PrintfFormatString.size());
 
@@ -703,36 +701,38 @@ void FormatStringConverter::finalizeFormatText() {
 /// Append literal parts of the format text, reinstating escapes as required.
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
-    if (Ch == '\a')
+    const auto UCh = static_cast<unsigned char>(Ch);
+    if (Ch == '\a') {
       StandardFormatString += "\\a";
-    else if (Ch == '\b')
+    } else if (Ch == '\b') {
       StandardFormatString += "\\b";
-    else if (Ch == '\f')
+    } else if (Ch == '\f') {
       StandardFormatString += "\\f";
-    else if (Ch == '\n')
+    } else if (Ch == '\n') {
       StandardFormatString += "\\n";
-    else if (Ch == '\r')
+    } else if (Ch == '\r') {
       StandardFormatString += "\\r";
-    else if (Ch == '\t')
+    } else if (Ch == '\t') {
       StandardFormatString += "\\t";
-    else if (Ch == '\v')
+    } else if (Ch == '\v') {
       StandardFormatString += "\\v";
-    else if (Ch == '\"')
+    } else if (Ch == '\"') {
       StandardFormatString += "\\\"";
-    else if (Ch == '\\')
+    } else if (Ch == '\\') {
       StandardFormatString += "\\\\";
-    else if (Ch == '{') {
+    } else if (Ch == '{') {
       StandardFormatString += "{{";
       FormatStringNeededRewriting = true;
     } else if (Ch == '}') {
       StandardFormatString += "}}";
       FormatStringNeededRewriting = true;
-    } else if (Ch < 32) {
+    } else if (UCh < 32) {
       StandardFormatString += "\\x";
-      StandardFormatString += llvm::hexdigit(Ch >> 4, true);
-      StandardFormatString += llvm::hexdigit(Ch & 0xf, true);
-    } else
+      StandardFormatString += llvm::hexdigit(UCh >> 4, true);
+      StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
+    } else {
       StandardFormatString += Ch;
+    }
   }
 }
 
@@ -763,14 +763,14 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // First move the value argument to the right place. But if there's a
     // pending c_str() removal then we must do that at the same time.
     if (const auto CStrRemovalMatch =
-            std::find_if(ArgCStrRemovals.cbegin(), ArgCStrRemovals.cend(),
-                         [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
-                             const BoundNodes &Match) {
-                           // This c_str() removal corresponds to the argument
-                           // being moved if they start at the same location.
-                           const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
-                           return ArgStartPos == CStrArg->getBeginLoc();
-                         });
+            llvm::find_if(ArgCStrRemovals,
+                          [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
+                              const BoundNodes &Match) {
+                            // This c_str() removal corresponds to the argument
+                            // being moved if they start at the same location.
+                            const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
+                            return ArgStartPos == CStrArg->getBeginLoc();
+                          });
         CStrRemovalMatch != ArgCStrRemovals.end()) {
       const std::string ArgText =
           withoutCStrReplacement(*CStrRemovalMatch, *Context);
@@ -781,9 +781,10 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
 
       // That c_str() removal is now dealt with, so we don't need to do it again
       ArgCStrRemovals.erase(CStrRemovalMatch);
-    } else
+    } else {
       Diag << tooling::fixit::createReplacement(*Args[ValueArgIndex - ArgCount],
                                                 *Args[ValueArgIndex], *Context);
+    }
 
     // Now shift down the field width and precision (if either are present) to
     // accommodate it.
@@ -795,16 +796,18 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // Now we need to modify the ArgFix index too so that we fix the right
     // argument. We don't need to care about the width and precision indices
     // since they never need fixing.
-    for (auto &ArgFix : ArgFixes) {
+    for (auto &ArgFix : ArgFixes)
       if (ArgFix.ArgIndex == ValueArgIndex)
         ArgFix.ArgIndex = ValueArgIndex - ArgCount;
-    }
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    SourceLocation AfterOtherSide =
-        Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
-            ->getLocation();
+    const std::optional<Token> NextToken =
+        utils::lexer::findNextTokenSkippingComments(Args[ArgIndex]->getEndLoc(),
+                                                    SM, LangOpts);
+    if (!NextToken)
+      continue;
+    const SourceLocation AfterOtherSide = NextToken->getLocation();
 
     Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),
                                        Replacement, true)

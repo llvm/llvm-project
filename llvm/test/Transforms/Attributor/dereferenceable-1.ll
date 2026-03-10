@@ -207,7 +207,6 @@ define void @f7_1(ptr %ptr, i1 %cnd) {
 ; CHECK-LABEL: define {{[^@]+}}@f7_1
 ; CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
-; CHECK-NEXT:    [[PTR_0:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(ptr noundef nonnull align 4 dereferenceable(4) [[PTR]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[CND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:

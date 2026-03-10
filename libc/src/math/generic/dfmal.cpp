@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/dfmal.h"
-#include "src/__support/FPUtil/FMA.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/dfmal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, dfmal,
                    (long double x, long double y, long double z)) {
-  return fputil::fma<double>(x, y, z);
+  return math::dfmal(x, y, z);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

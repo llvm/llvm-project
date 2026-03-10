@@ -46,8 +46,8 @@ extern S2 *q2;
 
 // FIXME: This is well-formed, because [basic.def.odr]/15 is satisfied.
 struct S3 {};
-// since-cxx20-error@-1 {{redefinition of 'S3'}}
-//   since-cxx20-note@cwg279_A.cppm:23 {{previous definition is here}}
+// since-cxx20-error@-1 {{declaration of 'S3' in the global module follows declaration in module cwg279_A}}
+//   since-cxx20-note@cwg279_A.cppm:23 {{previous declaration is here}}
 extern S3 *q3;
 // since-cxx20-error@-1 {{declaration of 'q3' in the global module follows declaration in module cwg279_A}}
 //   since-cxx20-note@cwg279_A.cppm:24 {{previous declaration is here}}

@@ -174,8 +174,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: default,
       callee-saved-register: '$esi' }
@@ -232,8 +232,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '' }

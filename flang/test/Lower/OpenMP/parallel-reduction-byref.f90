@@ -18,7 +18,7 @@
 !CHECK:    fir.store %[[CR]] to %[[C0]] : !fir.ref<i32>
 !CHECK:    omp.yield(%[[C0]] : !fir.ref<i32>)
 !CHECK:  }
-!CHECK:  func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
+!CHECK:  func.func @_QQmain() attributes {fir.bindc_name = "MN"} {
 !CHECK:    %[[RED_ACCUM_REF:[_a-z0-9]+]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
 !CHECK:    %[[RED_ACCUM_DECL:[_a-z0-9]+]]:2 = hlfir.declare %[[RED_ACCUM_REF]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[C0:[_a-z0-9]+]] = arith.constant 0 : i32

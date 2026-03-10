@@ -999,21 +999,21 @@ int TestOperatorConfusion(int X, int Y, long Z)
 
   int K = !(1 | 2 | 4);
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: ineffective logical negation operator used; did you mean '~'?
-  // CHECK-FIXES: {{^}}  int K = ~(1 | 2 | 4);{{$}}
+  // CHECK-FIXES: int K = ~(1 | 2 | 4);
   K = !(FLAG1 & FLAG2 & FLAG3);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  K = ~(FLAG1 & FLAG2 & FLAG3);{{$}}
+  // CHECK-FIXES: K = ~(FLAG1 & FLAG2 & FLAG3);
   K = !(3 | 4);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  K = ~(3 | 4);{{$}}
+  // CHECK-FIXES: K = ~(3 | 4);
   int NotFlags = !FLAGS;
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  int NotFlags = ~FLAGS;{{$}}
+  // CHECK-FIXES: int NotFlags = ~FLAGS;
   NotFlags = NOTFLAGS;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: ineffective logical negation operator
   return !(1 | 2 | 4);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: ineffective logical negation operator
-  // CHECK-FIXES: {{^}}  return ~(1 | 2 | 4);{{$}}
+  // CHECK-FIXES: return ~(1 | 2 | 4);
 }
 
 template <int Shift, int Mask>

@@ -21,26 +21,8 @@ class RegisterCommandsTestCase(TestBase):
         self.dbg.GetSelectedTarget().GetProcess().Destroy()
         TestBase.tearDown(self)
 
-    # on macOS, detect if the current machine is arm64 and supports SME
-    def get_sme_available(self):
-        if self.getArchitecture() != "arm64":
-            return None
-        try:
-            sysctl_output = subprocess.check_output(
-                ["sysctl", "hw.optional.arm.FEAT_SME"]
-            ).decode("utf-8")
-        except subprocess.CalledProcessError:
-            return None
-        m = re.match(r"hw\.optional\.arm\.FEAT_SME: (\w+)", sysctl_output)
-        if m:
-            if int(m.group(1)) == 1:
-                return True
-            else:
-                return False
-        return None
-
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48371")
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
@@ -51,7 +33,7 @@ class RegisterCommandsTestCase(TestBase):
         self.log_enable("registers")
 
         error_str_matched = False
-        if self.get_sme_available() and self.platformIsDarwin():
+        if self.isAArch64SME() and self.platformIsDarwin():
             # On Darwin AArch64 SME machines, we will have unavailable
             # registers when not in Streaming SVE Mode/SME, so
             # `register read -a` will report that some registers
@@ -100,7 +82,7 @@ class RegisterCommandsTestCase(TestBase):
     # Writing of mxcsr register fails, presumably due to a kernel/hardware
     # problem
     @skipIfTargetAndroid(archs=["i386"])
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
@@ -118,7 +100,7 @@ class RegisterCommandsTestCase(TestBase):
         self.fp_special_purpose_register_read()
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
@@ -556,7 +538,7 @@ class RegisterCommandsTestCase(TestBase):
             self.expect("expr -- $ax == (($ah << 8) | $al)", substrs=["true"])
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     def test_invalid_invocation(self):
         self.build()
         self.common_setup()
@@ -589,7 +571,7 @@ class RegisterCommandsTestCase(TestBase):
         )
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     def test_write_unknown_register(self):
         self.build()
         self.common_setup()

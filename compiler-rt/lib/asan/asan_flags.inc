@@ -116,6 +116,9 @@ ASAN_FLAG(bool, poison_partial, true,
           "stack buffers.")
 ASAN_FLAG(bool, poison_array_cookie, true,
           "Poison (or not) the array cookie after operator new[].")
+ASAN_FLAG(int, poison_history_size, 0,
+          "[EXPERIMENTAL] Number of most recent memory poisoning calls for "
+          "which the stack traces will be recorded.")
 
 // Turn off alloc/dealloc mismatch checker on Mac and Windows for now.
 // https://github.com/google/sanitizers/issues/131

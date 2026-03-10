@@ -10,3 +10,16 @@ body:             |
     ; GCN: S_CMP_LT_I32 65, 1, implicit-def $scc
     S_CMP_GT_I32 1, 65, implicit-def $scc
 ...
+
+---
+name:             shrink_icmp
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: shrink_icmp
+    ; GCN: %op0:sgpr_32 = COPY $sgpr0
+    ; GCN-NEXT: %cond:sreg_64 = V_CMPX_GE_U32_e64 5, %op0, implicit-def $exec, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    %op0:sgpr_32 = COPY $sgpr0
+    %cond:sreg_64 = V_CMPX_LE_U32_e64 %op0, 5, implicit-def $exec, implicit $exec
+    S_NOP 0
+...

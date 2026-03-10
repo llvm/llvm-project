@@ -9,10 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_CORE_STRUCTS_H
 #define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_CORE_STRUCTS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/string_view.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {

@@ -1,7 +1,7 @@
 // RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacos-version-min=10.6 -fblocks -x objective-c %s
 // RUN: c-index-test -test-load-tu %t.ast all > %t 2>&1 && FileCheck --input-file=%t %s
 // REQUIRES: x86-registered-target
-@interface Foo 
+@interface Foo
 {
   __attribute__((iboutlet)) id myoutlet;
 }
@@ -11,7 +11,7 @@
 
 @end
 
-@interface Bar : Foo 
+@interface Bar : Foo
 {
 }
 
@@ -164,7 +164,7 @@ struct X0  {};
 // CHECK: c-index-api-loadTU-test.m:66:28: TypeRef=id:0:0 Extent=[66:28 - 66:30]
 // CHECK: c-index-api-loadTU-test.m:69:16: StructDecl=X0:69:16 Extent=[69:9 - 69:18]
 // CHECK: c-index-api-loadTU-test.m:69:19: TypedefDecl=X1:69:19 (Definition) Extent=[69:1 - 69:21]
-// CHECK: c-index-api-loadTU-test.m:69:16: TypeRef=struct X0:71:8 Extent=[69:16 - 69:18]
+// CHECK: c-index-api-loadTU-test.m:69:16: TypeRef=struct X0:69:16 Extent=[69:16 - 69:18]
 // CHECK: c-index-api-loadTU-test.m:70:8: StructDecl=X0:70:8 Extent=[70:1 - 70:10]
 // CHECK: c-index-api-loadTU-test.m:71:8: StructDecl=X0:71:8 (Definition) Extent=[71:1 - 71:14]
 // CHECK: c-index-api-loadTU-test.m:73:12: ObjCCategoryDecl=:73:12 Extent=[73:1 - 76:5]

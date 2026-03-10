@@ -1,4 +1,4 @@
-//===---------- Matchers.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,22 +18,22 @@ bool NotIdenticalStatementsPredicate::operator()(
 }
 
 MatchesAnyListedTypeNameMatcher::MatchesAnyListedTypeNameMatcher(
-    llvm::ArrayRef<StringRef> NameList)
-    : NameMatchers(NameList.begin(), NameList.end()) {}
+    llvm::ArrayRef<StringRef> NameList, bool CanonicalTypes)
+    : NameMatchers(NameList.begin(), NameList.end()),
+      CanonicalTypes(CanonicalTypes) {}
 
 MatchesAnyListedTypeNameMatcher::~MatchesAnyListedTypeNameMatcher() = default;
 
 bool MatchesAnyListedTypeNameMatcher::matches(
     const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
     ast_matchers::internal::BoundNodesTreeBuilder *Builder) const {
-
   if (NameMatchers.empty())
     return false;
 
   PrintingPolicy PrintingPolicyWithSuppressedTag(
       Finder->getASTContext().getLangOpts());
-  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes = true;
-  PrintingPolicyWithSuppressedTag.SuppressElaboration = true;
+  PrintingPolicyWithSuppressedTag.PrintAsCanonical = CanonicalTypes;
+  PrintingPolicyWithSuppressedTag.FullyQualifiedName = true;
   PrintingPolicyWithSuppressedTag.SuppressScope = false;
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;

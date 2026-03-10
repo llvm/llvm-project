@@ -792,11 +792,11 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT: bb.56.bb57:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[C56]](s64), %bb.1, [[C57]](s64), %bb.2, [[C58]](s64), %bb.3, [[C59]](s64), %bb.4, [[C60]](s64), %bb.5, [[C61]](s64), %bb.6, [[C62]](s64), %bb.7, [[C63]](s64), %bb.8, [[C64]](s64), %bb.9, [[C65]](s64), %bb.10, [[C66]](s64), %bb.11, [[C67]](s64), %bb.12, [[C68]](s64), %bb.13, [[C69]](s64), %bb.14, [[C70]](s64), %bb.15, [[C71]](s64), %bb.16, [[C72]](s64), %bb.17, [[C73]](s64), %bb.18, [[C74]](s64), %bb.19, [[C75]](s64), %bb.20, [[C76]](s64), %bb.21, [[C77]](s64), %bb.22, [[C78]](s64), %bb.23, [[C79]](s64), %bb.24, [[C80]](s64), %bb.25, [[C81]](s64), %bb.26, [[C82]](s64), %bb.27, [[C83]](s64), %bb.28, [[C84]](s64), %bb.29, [[C85]](s64), %bb.30, [[C86]](s64), %bb.31, [[C87]](s64), %bb.32, [[C88]](s64), %bb.33, [[C89]](s64), %bb.34, [[C90]](s64), %bb.35, [[C91]](s64), %bb.36, [[C92]](s64), %bb.37, [[C93]](s64), %bb.38, [[C94]](s64), %bb.39, [[C95]](s64), %bb.40, [[C96]](s64), %bb.41, [[C97]](s64), %bb.42, [[C98]](s64), %bb.43, [[C99]](s64), %bb.44, [[C100]](s64), %bb.45, [[C101]](s64), %bb.46, [[C102]](s64), %bb.47, [[C103]](s64), %bb.48, [[C104]](s64), %bb.49, [[C105]](s64), %bb.50, [[C106]](s64), %bb.51, [[C107]](s64), %bb.52, [[C108]](s64), %bb.53, [[C109]](s64), %bb.54, [[C110]](s64), %bb.55
   ; CHECK-NEXT:   [[C111:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[PHI]], [[C111]]
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[MUL]](s64)
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = nsw G_MUL [[PHI]], [[C111]]
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[GV]], [[MUL]](s64)
   ; CHECK-NEXT:   [[C112:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   %120:_(p0) = nuw nusw G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD %120(p0) :: (load (p0) from %ir.tmp59)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load (p0) from %ir.tmp59)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[LOAD]](p0)

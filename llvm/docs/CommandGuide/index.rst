@@ -17,6 +17,7 @@ Basic Commands
    dsymutil
    llc
    lli
+   llubi
    llvm-as
    llvm-cgdata
    llvm-config
@@ -27,6 +28,7 @@ Basic Commands
    llvm-dis
    llvm-dwarfdump
    llvm-dwarfutil
+   llvm-ir2vec
    llvm-lib
    llvm-libtool-darwin
    llvm-link
@@ -67,9 +69,9 @@ Debugging Tools
 .. toctree::
    :maxdepth: 1
 
-   bugpoint
    llvm-extract
    llvm-bcanalyzer
+   llvm-reduce
 
 Developer Tools
 ~~~~~~~~~~~~~~~
@@ -87,9 +89,11 @@ Developer Tools
    llvm-exegesis
    llvm-ifs
    llvm-locstats
+   llvm-test-mustache-spec
    llvm-pdbutil
    llvm-profgen
    llvm-tli-checker
+   llvm-offload-binary
 
 Remarks Tools
 ~~~~~~~~~~~~~~

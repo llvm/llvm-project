@@ -30,9 +30,30 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func private @orig()
+func.func private @updated()
 
 // CHECK-LABEL: func @test2
 func.func @test2() {
+  // CHECK: call @updated
+  call @orig() : () -> ()
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    %call = transform.structured.match ops{["func.call"]} in %arg0 : (!transform.any_op) -> !transform.my.call_op_interface
+    // CHECK: transform.my.change_call_target %{{.*}}, "updated" : !transform.my.call_op_interface
+    transform.my.change_call_target %call, "updated" : !transform.my.call_op_interface
+    transform.yield
+  }
+}
+
+// -----
+
+func.func private @orig()
+
+// CHECK-LABEL: func @test3
+func.func @test3() {
   // CHECK: "my.mm4"
   call @orig() : () -> ()
   return

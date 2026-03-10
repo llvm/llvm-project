@@ -7,15 +7,15 @@
 ! CHECK-LABEL: subroutine mixed_form1()
 ! CHECK-E:{{^}}      i = 1 &
 ! CHECK-E:{{^}}!$    +100&
-! CHECK-E:{{^}}!$    &+ 1000&
-! CHECK-E:{{^}}      &+ 10 + 1&
-! CHECK-E:{{^}}!$    & +100000&
-! CHECK-E:{{^}}      &0000 + 1000000
+! CHECK-E:{{^}}!$   &+ 1000&
+! CHECK-E:{{^}}     &+ 10 + 1&
+! CHECK-E:{{^}}!$   & +100000&
+! CHECK-E:{{^}}     &0000 + 1000000
 ! CHECK-OMP: i=1001001112_4
 ! CHECK-NO-OMP: i=1010011_4
 subroutine mixed_form1()
    i = 1 &
-  !$+100&
+  !$ +100&
   !$&+ 1000&
    &+ 10 + 1&
   !$& +100000&
@@ -39,8 +39,8 @@ end subroutine
 ! CHECK-LABEL: subroutine mixed_form3()
 ! CHECK-E:{{^}}!$    i=0
 ! CHECK-E:{{^}}!$    i = 1 &
-! CHECK-E:{{^}}!$    & +10 &
-! CHECK-E:{{^}}!$    &+100&
+! CHECK-E:{{^}}!$   & +10 &
+! CHECK-E:{{^}}!$   &+100&
 ! CHECK-E:{{^}}!$    +1000
 ! CHECK-OMP: i=0_4
 ! CHECK-OMP: i=1111_4
@@ -53,3 +53,12 @@ subroutine mixed_form3()
    !$ +1000
 end subroutine
 
+! CHECK-LABEL: subroutine regression
+! CHECK-E:{{^}}!$    real x, &
+! CHECK-E:{{^}}      stop
+! CHECK-OMP: REAL x, stop
+! CHECK-NO-OMP-NOT: REAL x,
+subroutine regression
+!$ real x, &
+ stop
+end

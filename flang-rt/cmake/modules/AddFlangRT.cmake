@@ -122,12 +122,18 @@ function (add_flangrt_library name)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
+  # Include the RPC utilities from the `libc` project.
+  if (TARGET llvm-libc-common-utilities)
+    set(extra_deps llvm-libc-common-utilities)
+  endif()
+
   # Also add header files to IDEs to list as part of the library.
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
   # Create selected library types.
   if (build_object)
     add_library("${name_object}" OBJECT ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    target_link_libraries(${name_object} PRIVATE ${extra_deps})
     set_target_properties(${name_object} PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         FOLDER "Flang-RT/Object Libraries"
@@ -139,11 +145,11 @@ function (add_flangrt_library name)
   endif ()
   if (build_static)
     add_library("${name_static}" STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static)
+    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static ${extra_deps})
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared)
+    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared  ${extra_deps})
     if (Threads_FOUND) 
       target_link_libraries(${name_shared} PUBLIC Threads::Threads)
     endif ()
@@ -204,6 +210,14 @@ function (add_flangrt_library name)
     endif ()
   endforeach ()
 
+ set(TARGET_FLAGS)
+  if(APPLE)
+    set(DARWIN_EMBEDDED_PLATFORMS)
+    set(DARWIN_osx_BUILTIN_MIN_VER 10.7)
+    set(DARWIN_osx_BUILTIN_MIN_VER_FLAG
+        -mmacosx-version-min=${DARWIN_osx_BUILTIN_MIN_VER})
+  endif()
+
   # Define how to compile and link the library.
   # Some conceptionally only apply to ${srctargets} or ${libtargets}, but we
   # apply them to ${alltargets}. In worst case, they are ignored by CMake.
@@ -223,6 +237,27 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
+
+      # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
+      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
+      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
+      # silence a warning.
+      #
+      # This is a problem for us because some compilers, specifically
+      # clang, do not always optimize away that (void)_EXC even though
+      # it is unreachable since it occurs after a call to
+      # _builtin_abort().  Because _EXC is typically an object derived
+      # from std::exception, (void)_EXC, when not optimized away,
+      # calls std::exception methods defined in the libstdc++ shared
+      # library.  We shouldn't link against that library since our
+      # build version may conflict with the version used by a hybrid
+      # Fortran/C++ application.
+      #
+      # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
+      # supported by the maintainers of libstdc++, so future changes
+      # to libstdc++ may require future changes to this build script
+      # and/or future changes to the Fortran runtime source code.
+      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
@@ -241,6 +276,17 @@ function (add_flangrt_library name)
     elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
+        )
+    elseif (APPLE)
+      # Clang on Darwin enables non-POSIX extensions by default.
+      # This causes some macros to leak, such as HUGE from <math.h>, which
+      # causes some conflicts with Flang symbols (but not with Flang-RT, for
+      # now).
+      # It also causes some Flang-RT extensions to be disabled, such as fdate,
+      # that checks for _POSIX_C_SOURCE.
+      # Setting _POSIX_C_SOURCE avoids these issues.
+      target_compile_options(${tgtname} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG} -D_POSIX_C_SOURCE=200809>
         )
     endif ()
 
@@ -269,30 +315,12 @@ function (add_flangrt_library name)
 
     # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
+    target_compile_definitions(${tgtname} PUBLIC _GLIBCXX_NO_ASSERTIONS)
     if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
-      target_compile_options(${tgtname} PUBLIC -U_GLIBCXX_ASSERTIONS)
-      target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
-    endif ()
-
-    # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
-    # should only depend on msvcrt/ucrt. LLVM still emits libgcc/compiler-rt
-    # functions in some cases like 128-bit integer math (__udivti3, __modti3,
-    # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
-    # dependency to Compiler-RT's builtin library where these are implemented.
-    if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      endif ()
-    endif ()
-    if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      else ()
-        message(WARNING "Did not find libclang_rt.builtins.lib.
-          LLVM may emit builtins that are not implemented in msvcrt/ucrt and
-          instead falls back to builtins from Compiler-RT. Linking with ${tgtname}
-          may result in a linker error.")
-      endif ()
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_GLIBCXX_ASSERTIONS>")
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_LIBCPP_ENABLE_ASSERTIONS>")
     endif ()
 
     # Non-GTest unittests depend on LLVMSupport

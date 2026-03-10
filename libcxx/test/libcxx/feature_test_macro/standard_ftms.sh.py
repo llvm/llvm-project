@@ -21,7 +21,7 @@ from generate_feature_test_macro_components import FeatureTestMacros
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.ftm = FeatureTestMacros(TEST_DATA)
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
         self.maxDiff = None  # This causes the diff to be printed when the test fails
 
     def test_implementation(self):
@@ -37,6 +37,12 @@ class Test(unittest.TestCase):
                 "c++23": "201907L",
                 "c++26": "299900L",
             },
+            "__cpp_lib_clamp": {
+                "c++17": "201603L",
+                "c++20": "201603L",
+                "c++23": "201603L",
+                "c++26": "201603L",
+            },
             "__cpp_lib_format": {
                 "c++20": "202110L",
                 "c++23": "202207L",
@@ -48,13 +54,19 @@ class Test(unittest.TestCase):
                 "c++23": "201603L",
                 "c++26": "201603L",
             },
+            "__cpp_lib_to_chars": {
+                "c++17": "201611L",
+                "c++20": "201611L",
+                "c++23": "201611L",
+                "c++26": "201611L",
+            },
             "__cpp_lib_variant": {
                 "c++17": "202102L",
                 "c++20": "202106L",
                 "c++23": "202106L",
                 "c++26": "202306L",
             },
-            "__cpp_lib_missing_FTM_in_older_standard": {
+            "__cpp_lib_zz_missing_FTM_in_older_standard": {
                 "c++17": "2017L",
                 "c++20": "2020L",
                 "c++23": "2020L",

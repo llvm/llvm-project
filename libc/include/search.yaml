@@ -1,6 +1,6 @@
 header: search.h
-header_template: search.h.def
-macros: []
+standards:
+  - posix
 types:
   - type_name: ACTION
   - type_name: ENTRY
@@ -12,35 +12,35 @@ objects: []
 functions:
   - name: hcreate
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: size_t
   - name: hcreate_r
-    standards: GNUExtensions
+    standards: gnu
     return_type: int
     arguments:
       - type: size_t
       - type: struct hsearch_data *
   - name: hdestroy
-    standards: GNUExtensions
+    standards: gnu
     return_type: void
     arguments: []
   - name: hdestroy_r
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: struct hsearch_data *
   - name: hsearch
     standards:
-      - POSIX
+      - posix
     return_type: ENTRY *
     arguments:
       - type: ENTRY
       - type: ACTION
   - name: hsearch_r
-    standards: GNUExtensions
+    standards: gnu
     return_type: int
     arguments:
       - type: ENTRY
@@ -49,20 +49,20 @@ functions:
       - type: struct hsearch_data *
   - name: insque
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: void *
       - type: void *
   - name: remque
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: void *
   - name: lfind
     standards:
-      - POSIX
+      - posix
     return_type: void *
     arguments:
       - type: const void *
@@ -72,7 +72,7 @@ functions:
       - type: __search_compare_t
   - name: lsearch
     standards:
-      - POSIX
+      - posix
     return_type: void *
     arguments:
       - type: const void *

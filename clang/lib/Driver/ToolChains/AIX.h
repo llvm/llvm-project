@@ -77,6 +77,9 @@ public:
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
 
+  void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs) const override;
+
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
@@ -86,9 +89,6 @@ public:
 
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
-
-  void addFortranRuntimeLibs(const llvm::opt::ArgList &Args,
-                             llvm::opt::ArgStringList &CmdArgs) const override;
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
 
@@ -100,6 +100,8 @@ public:
   llvm::DebuggerKind getDefaultDebuggerTuning() const override {
     return llvm::DebuggerKind::DBX;
   }
+
+  path_list getArchSpecificLibPaths() const override { return path_list(); };
 
 protected:
   Tool *buildAssembler() const override;

@@ -37,7 +37,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 
 using namespace clang;
 using namespace ento;
@@ -288,7 +287,7 @@ bool IvarInvalidationCheckerImpl::trackIvar(const ObjCIvarDecl *Iv,
   containsInvalidationMethod(IvInterf, Info, /*LookForPartial*/ false);
   if (Info.needsInvalidation()) {
     const ObjCIvarDecl *I = cast<ObjCIvarDecl>(Iv->getCanonicalDecl());
-    TrackedIvars[I] = Info;
+    TrackedIvars[I] = std::move(Info);
     if (!*FirstIvarDecl)
       *FirstIvarDecl = I;
     return true;

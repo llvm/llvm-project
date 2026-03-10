@@ -18,9 +18,10 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ;
 ; SSE41-LABEL: zext_i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; SSE41-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    pinsrb $1, %edx, %xmm0
+; SSE41-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -30,9 +31,10 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ;
 ; AVX-32-LABEL: zext_i8:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; AVX-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vpinsrb $1, %edx, %xmm0, %xmm0
+; AVX-32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; AVX-32-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX-32-NEXT:    vmovd %xmm0, %eax
 ; AVX-32-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -42,9 +44,10 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ;
 ; AVX-64-LABEL: zext_i8:
 ; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmovd %edi, %xmm0
+; AVX-64-NEXT:    vpinsrb $1, %esi, %xmm0, %xmm0
 ; AVX-64-NEXT:    movzbl %dl, %ecx
 ; AVX-64-NEXT:    movzbl %sil, %edx
-; AVX-64-NEXT:    vmovd %edi, %xmm0
 ; AVX-64-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX-64-NEXT:    vmovd %xmm0, %eax
 ; AVX-64-NEXT:    # kill: def $ax killed $ax killed $eax

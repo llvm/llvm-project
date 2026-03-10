@@ -50,6 +50,14 @@ __global__ __device__ void z11();  // expected-error {{attributes are not compat
 __global__ __host__ void z12();  // expected-error {{attributes are not compatible}}
 // expected-note@-1 {{conflicting attribute is here}}
 
+// Make sure GPU-side variables do not allow __attribute((address_space(N)))
+// expected-error@+1 {{__constant__, __device__, and __shared__ variables must use default address space}}
+__shared__ __attribute__((address_space(999))) int as_s;
+// expected-error@+1 {{__constant__, __device__, and __shared__ variables must use default address space}}
+__device__ __attribute__((address_space(999))) int as_d;
+// expected-error@+1 {{__constant__, __device__, and __shared__ variables must use default address space}}
+__constant__ __attribute__((address_space(999))) int as_c;
+
 struct S {
   __global__ void foo() {};  // expected-error {{must be a free function or static member function}}
   __global__ static void bar(); // expected-warning {{kernel function 'bar' is a member function}}

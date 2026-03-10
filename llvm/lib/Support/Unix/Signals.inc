@@ -78,10 +78,16 @@
 #include <__le_cwi.h>
 #endif
 
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
+
 using namespace llvm;
 
-static void SignalHandler(int Sig, siginfo_t *Info, void *);
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context);
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context);
 static void InfoSignalHandler(int Sig); // defined below.
+static void InfoSignalHandlerTerminate(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
@@ -288,7 +294,8 @@ static void CreateSigAltStack() {
 static void CreateSigAltStack() {}
 #endif
 
-static void RegisterHandlers() { // Not signal-safe.
+static void RegisterHandlers(
+    bool NeedsPOSIXUtilitySignalHandling = false) { // Not signal-safe.
   // The mutex prevents other threads from registering handlers while we're
   // doing it. We also have to protect the handlers and their count because
   // a signal handler could fire while we're registering handlers.
@@ -313,18 +320,34 @@ static void RegisterHandlers() { // Not signal-safe.
 
     switch (Kind) {
     case SignalKind::IsKill:
-      NewHandler.sa_sigaction = SignalHandler;
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
+        NewHandler.sa_sigaction = SignalHandlerTerminate;
+      else
+        NewHandler.sa_sigaction = SignalHandler;
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
-      NewHandler.sa_handler = InfoSignalHandler;
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
+        NewHandler.sa_handler = InfoSignalHandlerTerminate;
+      else
+        NewHandler.sa_handler = InfoSignalHandler;
       NewHandler.sa_flags = SA_ONSTACK;
       break;
     }
     sigemptyset(&NewHandler.sa_mask);
 
-    // Install the new handler, save the old one in RegisteredSignalInfo.
-    sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    if (NeedsPOSIXUtilitySignalHandling) {
+      // Don't install the new handler if the signal disposition is SIG_IGN.
+      struct sigaction act;
+      if (sigaction(Signal, NULL, &act) == 0 && act.sa_handler != SIG_IGN)
+        sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    } else {
+      sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    }
     RegisteredSignalInfo[Index].SigNo = Signal;
     ++NumRegisteredSignals;
   };
@@ -354,6 +377,9 @@ static void RemoveFilesToRemove() {
 }
 
 void sys::CleanupOnSignal(uintptr_t Context) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   int Sig = (int)Context;
 
   if (llvm::is_contained(InfoSigs, Sig)) {
@@ -370,7 +396,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 // The signal handler that runs.
-static void SignalHandler(int Sig, siginfo_t *Info, void *) {
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
@@ -413,10 +439,30 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
     raise(Sig);
 #endif
 
-  // Signal sent from another process, do not assume that continuing the
-  // execution would re-raise it.
-  if (Info->si_pid != getpid())
+#if defined(__linux__)
+  // Re-raising a signal via `raise` loses the original siginfo. Recent
+  // versions of linux (>= 3.9) support processes sending a signal to itself
+  // with arbitrary signal information using a syscall. If this syscall is
+  // unsupported, errno will be set to EPERM and `raise` will be used instead.
+  int retval =
+      syscall(SYS_rt_tgsigqueueinfo, getpid(), syscall(SYS_gettid), Sig, Info);
+  if (retval != 0 && errno == EPERM)
     raise(Sig);
+#else
+  // Signal sent from another userspace process, do not assume that continuing
+  // the execution would re-raise it.
+  if (Info->si_pid != getpid() && Info->si_pid != 0)
+    raise(Sig);
+#endif
+}
+
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context) {
+  SignalHandler(Sig, Info, Context);
+
+  // Resignal if it is a kill signal so that the exit code contains the
+  // terminating signal number.
+  if (llvm::is_contained(KillSigs, Sig))
+    raise(Sig); // Execute the default handler.
 }
 
 static void InfoSignalHandler(int Sig) {
@@ -425,7 +471,21 @@ static void InfoSignalHandler(int Sig) {
     CurrentInfoFunction();
 }
 
-void llvm::sys::RunInterruptHandlers() { RemoveFilesToRemove(); }
+static void InfoSignalHandlerTerminate(int Sig) {
+  InfoSignalHandler(Sig);
+
+  if (Sig == SIGUSR1) {
+    sys::unregisterHandlers();
+    raise(Sig);
+  }
+}
+
+void sys::RunInterruptHandlers() {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
+  RemoveFilesToRemove();
+}
 
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);
@@ -465,10 +525,11 @@ void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
-void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
-                                 void *Cookie) { // Signal-safe.
+void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr, void *Cookie,
+                                 bool NeedsPOSIXUtilitySignalHandling) {
+  // Signal-safe.
   insertSignalHandler(FnPtr, Cookie);
-  RegisterHandlers();
+  RegisterHandlers(NeedsPOSIXUtilitySignalHandling);
 }
 
 #if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) &&                            \
@@ -506,6 +567,21 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   }
   return 0;
 }
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#if !defined(HAVE_BACKTRACE)
+#error DebugLoc origin-tracking currently requires `backtrace()`.
+#endif
+namespace llvm {
+namespace sys {
+template <unsigned long MaxDepth>
+int getStackTrace(std::array<void *, MaxDepth> &StackTrace) {
+  return backtrace(StackTrace.data(), MaxDepth);
+}
+template int getStackTrace<16ul>(std::array<void *, 16ul> &);
+} // namespace sys
+} // namespace llvm
+#endif
 
 /// If this is an ELF platform, we can find all loaded modules and their virtual
 /// addresses with dl_iterate_phdr.
@@ -826,30 +902,36 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   int width = 0;
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-
     int nwidth;
-    if (!name)
-      nwidth = strlen(dlinfo.dli_fname);
-    else
-      nwidth = strlen(name) - 1;
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      nwidth = 7; // "(error)"
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
 
-    if (nwidth > width)
-      width = nwidth;
+      if (!name)
+        nwidth = strlen(dlinfo.dli_fname);
+      else
+        nwidth = strlen(name) - 1;
+    }
+
+    width = std::max(nwidth, width);
   }
 
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
 
     OS << format("%-2d", i);
 
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-    if (!name)
-      OS << format(" %-*s", width, dlinfo.dli_fname);
-    else
-      OS << format(" %-*s", width, name + 1);
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      OS << format(" %-*s", width, static_cast<const char *>("(error)"));
+      dlinfo.dli_sname = nullptr;
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
+      if (!name)
+        OS << format(" %-*s", width, dlinfo.dli_fname);
+      else
+        OS << format(" %-*s", width, name + 1);
+    }
 
     OS << format(" %#0*lx", (int)(sizeof(void *) * 2) + 2,
                  (unsigned long)StackTrace[i]);

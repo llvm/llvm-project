@@ -238,9 +238,12 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   bool StartsWithDigit = std::isdigit(AddrSpec.front());
 
   // GNU addr2line assumes the address is hexadecimal and allows a redundant
-  // "0x" or "0X" prefix; do the same for compatibility.
-  if (IsAddr2Line)
-    AddrSpec.consume_front("0x") || AddrSpec.consume_front("0X");
+  // "0x", "0X" prefix or an optional `+` sign; do the same for
+  // compatibility.
+  if (IsAddr2Line) {
+    AddrSpec.consume_front_insensitive("0x") ||
+        AddrSpec.consume_front_insensitive("+0x");
+  }
 
   // If address specification is a number, treat it as a module offset.
   if (!AddrSpec.getAsInteger(IsAddr2Line ? 16 : 0, Offset)) {
@@ -499,6 +502,8 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.DWPName = Args.getLastArgValue(OPT_dwp_EQ).str();
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
+  Opts.GsymFileDirectory = Args.getAllArgValues(OPT_gsym_file_directory_EQ);
+  Opts.DisableGsym = Args.hasArg(OPT_disable_gsym);
   Opts.PrintFunctions = decideHowToPrintFunctions(Args, IsAddr2Line);
   parseIntArg(Args, OPT_print_source_context_lines_EQ,
               Config.SourceContextLines);

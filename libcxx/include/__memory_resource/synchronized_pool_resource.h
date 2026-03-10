@@ -56,9 +56,11 @@ public:
     __unsync_.release();
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __unsync_.upstream_resource(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const {
+    return __unsync_.upstream_resource();
+  }
 
-  _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
 
 protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t __align) override {

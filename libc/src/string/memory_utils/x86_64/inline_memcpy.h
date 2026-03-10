@@ -8,6 +8,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H
 
+#include "hdr/stdint_proxy.h"                  // SIZE_MAX
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE_VAR
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/op_builtin.h"
@@ -15,7 +16,6 @@
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
-#include <stdint.h> // SIZE_MAX
 
 #ifdef LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB
 #error LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.

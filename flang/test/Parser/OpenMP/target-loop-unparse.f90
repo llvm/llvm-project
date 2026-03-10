@@ -9,7 +9,7 @@
 subroutine test_loop
   integer :: i, j = 1
   !PARSE-TREE: OmpBeginLoopDirective
-  !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = loop
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = loop
   !CHECK: !$omp loop
   !$omp loop
   do i=1,10
@@ -18,7 +18,7 @@ subroutine test_loop
   !$omp end loop
 
   !PARSE-TREE: OmpBeginLoopDirective
-  !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = loop
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = loop
   !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Bind -> OmpBindClause -> Binding = Thread
   !CHECK: !$omp loop
   !$omp loop bind(thread)
@@ -31,7 +31,7 @@ end subroutine
 subroutine test_target_loop
   integer :: i, j = 1
   !PARSE-TREE: OmpBeginLoopDirective
-  !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = target loop
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target loop
   !CHECK: !$omp target loop
   !$omp target loop
   do i=1,10
@@ -43,7 +43,7 @@ end subroutine
 subroutine test_target_teams_loop
   integer :: i, j = 1
   !PARSE-TREE: OmpBeginLoopDirective
-  !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = target teams loop
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target teams loop
   !CHECK: !$omp target teams loop
   !$omp target teams loop
   do i=1,10
@@ -55,7 +55,7 @@ end subroutine
 subroutine test_target_parallel_loop
   integer :: i, j = 1
   !PARSE-TREE: OmpBeginLoopDirective
-  !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = target parallel loop
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target parallel loop
   !CHECK: !$omp target parallel loop
   !$omp target parallel loop
   do i=1,10

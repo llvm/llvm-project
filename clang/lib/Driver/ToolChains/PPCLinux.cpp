@@ -8,11 +8,9 @@
 
 #include "PPCLinux.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -60,7 +58,7 @@ PPCLinuxToolChain::PPCLinuxToolChain(const Driver &D,
 
 void PPCLinuxToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                   ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(clang::driver::options::OPT_nostdinc) &&
+  if (!DriverArgs.hasArg(options::OPT_nostdinc) &&
       !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     const Driver &D = getDriver();
     SmallString<128> P(D.ResourceDir);
@@ -101,19 +99,4 @@ bool PPCLinuxToolChain::SupportIEEEFloat128(
   std::string Linker = Linux::getDynamicLinker(Args);
   return GlibcSupportsFloat128((Twine(D.DyldPrefix) + Linker).str()) &&
          !(D.CCCIsCXX() && HasUnsupportedCXXLib);
-}
-
-void PPCLinuxToolChain::addFortranRuntimeLibs(
-    const ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const {
-  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so
-  const char *Path;
-  if (getVFS().exists(Twine(Path = getCompilerRTArgString(
-                                Args, "runtime", ToolChain::FT_Static, true))))
-    CmdArgs.push_back(Path);
-  else if (getVFS().exists(
-               Twine(Path = getCompilerRTArgString(
-                         Args, "runtime", ToolChain::FT_Shared, true))))
-    CmdArgs.push_back(Path);
-  else
-    CmdArgs.push_back("-lflang_rt.runtime");
 }

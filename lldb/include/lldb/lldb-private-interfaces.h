@@ -15,6 +15,7 @@
 #include "lldb/lldb-types.h"
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace llvm {
 namespace json {
@@ -25,6 +26,8 @@ class Value;
 
 namespace lldb_private {
 class ScriptedInterfaceUsages;
+struct ScriptedFrameProviderDescriptor;
+class Highlighter;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
@@ -44,15 +47,13 @@ typedef ObjectContainer *(*ObjectContainerCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
 typedef size_t (*ObjectFileGetModuleSpecifications)(
-    const FileSpec &file, lldb::DataBufferSP &data_sp,
+    const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, ModuleSpecList &module_specs);
-typedef ObjectFile *(*ObjectFileCreateInstance)(const lldb::ModuleSP &module_sp,
-                                                lldb::DataBufferSP data_sp,
-                                                lldb::offset_t data_offset,
-                                                const FileSpec *file,
-                                                lldb::offset_t file_offset,
-                                                lldb::offset_t length);
+typedef ObjectFile *(*ObjectFileCreateInstance)(
+    const lldb::ModuleSP &module_sp, lldb::DataExtractorSP extractor_sp,
+    lldb::offset_t data_offset, const FileSpec *file,
+    lldb::offset_t file_offset, lldb::offset_t length);
 typedef ObjectFile *(*ObjectFileCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
@@ -81,10 +82,20 @@ typedef lldb::PlatformSP (*PlatformCreateInstance)(bool force,
 typedef lldb::ProcessSP (*ProcessCreateInstance)(
     lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect);
+typedef lldb::ProtocolServerUP (*ProtocolServerCreateInstance)();
 typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
+typedef FileSpec (*ScriptInterpreterGetPath)();
+typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
+    *ScriptedFrameProviderCreateInstance)(
+    lldb::StackFrameListSP input_frames,
+    const lldb_private::ScriptedFrameProviderDescriptor &descriptor);
+typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
+    *SyntheticFrameProviderCreateInstance)(
+    lldb::StackFrameListSP input_frames,
+    const std::vector<lldb_private::ThreadSpec> &thread_specs);
 typedef SymbolFile *(*SymbolFileCreateInstance)(lldb::ObjectFileSP objfile_sp);
 typedef SymbolVendor *(*SymbolVendorCreateInstance)(
     const lldb::ModuleSP &module_sp,
@@ -127,6 +138,8 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            const char *repl_options);
 typedef bool (*ScriptedInterfaceCreateInstance)(lldb::ScriptLanguage language,
                                                 ScriptedInterfaceUsages usages);
+
+typedef Highlighter *(*HighlighterCreateInstance)(lldb::LanguageType language);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 /// Trace

@@ -13,7 +13,6 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBModuleSpec.h"
-#include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBUnixSignals.h"
@@ -330,6 +329,11 @@ SBPlatform::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp.get() != nullptr;
+}
+
+bool SBPlatform::IsHost() const {
+  LLDB_INSTRUMENT_VA(this);
+  return m_opaque_sp.get() != nullptr && m_opaque_sp->IsHost();
 }
 
 void SBPlatform::Clear() {

@@ -35,8 +35,7 @@ using CreateCmpXchgInstFun = function_ref<void(
 /// instructions directly into a platform specific intrinsics (because, say,
 /// those intrinsics don't exist). If such a pass is able to expand cmpxchg
 /// instructions directly however, then, with this function, it could avoid two
-/// extra module passes (avoiding passes by `-atomic-expand` and itself). A
-/// specific example would be PNaCl's `RewriteAtomics` pass.
+/// extra module passes (avoiding passes by `-atomic-expand` and itself).
 ///
 /// Given: atomicrmw some_op iN* %addr, iN %incr ordering
 ///

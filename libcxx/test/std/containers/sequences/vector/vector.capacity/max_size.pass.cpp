@@ -66,7 +66,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 
 #if TEST_STD_VER >= 11
 
-  // Test with various allocators and diffrent size_type
+  // Test with various allocators and different size_type
   {
     test(std::vector<int>());
     test(std::vector<short, std::allocator<short> >());

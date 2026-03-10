@@ -468,7 +468,7 @@ define i64 @subi_i64(i64 %a) {
 ; RV64IM-LABEL: subi_i64:
 ; RV64IM:       # %bb.0: # %entry
 ; RV64IM-NEXT:    lui a1, 1048275
-; RV64IM-NEXT:    addiw a1, a1, -1548
+; RV64IM-NEXT:    addi a1, a1, -1548
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:

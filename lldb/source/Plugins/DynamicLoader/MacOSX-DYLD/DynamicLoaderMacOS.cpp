@@ -530,7 +530,7 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
           m_process->GetTarget()
               .CreateBreakpoint(&dyld_filelist, source_files,
                                 "lldb_image_notifier", eFunctionNameTypeFull,
-                                eLanguageTypeUnknown, 0, skip_prologue,
+                                eLanguageTypeUnknown, 0, false, skip_prologue,
                                 internal, hardware)
               .get();
       breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
@@ -546,8 +546,9 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
             m_process->GetTarget()
                 .CreateBreakpoint(&dyld_filelist, source_files,
                                   "gdb_image_notifier", eFunctionNameTypeFull,
-                                  eLanguageTypeUnknown, 0, skip_prologue,
-                                  internal, hardware)
+                                  eLanguageTypeUnknown, 0,
+                                  /*offset_is_insn_count = */ false,
+                                  skip_prologue, internal, hardware)
                 .get();
         breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
                                 true);
@@ -615,7 +616,7 @@ DynamicLoaderMacOS::GetDyldLockVariableAddressFromModule(Module *module) {
     num_matches =
         symtab->AppendSymbolIndexesWithName(g_symbol_name, match_indexes);
     if (num_matches == 1) {
-      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
+      const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
       if (symbol &&
           (symbol->ValueIsAddress() || symbol->GetAddressRef().IsValid())) {
         return symbol->GetAddressRef().GetOpcodeLoadAddress(&target);
@@ -690,7 +691,7 @@ Status DynamicLoaderMacOS::CanLoadImage() {
 
 bool DynamicLoaderMacOS::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_path) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;
@@ -709,6 +710,7 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
 
     if (info_dict && info_dict->HasKey("shared_cache_uuid") &&
         info_dict->HasKey("no_shared_cache") &&
+        info_dict->HasKey("shared_cache_private_cache") &&
         info_dict->HasKey("shared_cache_base_address")) {
       base_address = info_dict->GetValueForKey("shared_cache_base_address")
                          ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
@@ -725,7 +727,11 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
         private_shared_cache = eLazyBoolYes;
       else
         private_shared_cache = eLazyBoolNo;
-
+      if (info_dict->HasKey("shared_cache_path")) {
+        llvm::StringRef filepath =
+            info_dict->GetValueForKey("shared_cache_path")->GetStringValue();
+        shared_cache_path.SetPath(filepath);
+      }
       return true;
     }
   }

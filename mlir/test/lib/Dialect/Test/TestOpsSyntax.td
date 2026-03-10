@@ -69,6 +69,12 @@ def TestAttrWithLoc : TEST_Op<"attr_with_loc"> {
   let assemblyFormat = "`(` $value `` custom<OptionalLoc>($loc) `)` attr-dict";
 }
 
+def ParseCustomOperationNameAPI : TEST_Op<"parse_custom_operation_name_api"> {
+  let summary = "noop that exercises the parseCustomOperationName API";
+  let arguments = (ins StrAttr:$name);
+  let assemblyFormat = "`(` custom<CustomOperationNameEntry>($name) `)` attr-dict";
+}
+
 // -----
 
 // This is used to test that the fallback for a custom op's parser and printer
@@ -426,6 +432,11 @@ def FormatOptionalDefaultAttrs : TEST_Op<"format_optional_default_attrs"> {
   let assemblyFormat = "($str^)? ($sym^)? ($e^)? attr-dict";
 }
 
+def FormatOptionalDefaultEnumAttrs : TEST_Op<"format_optional_default_enum_attr"> {
+  let arguments = (ins DefaultValuedEnumAttr<SomeI64Enum, I64Case5>:$e);
+  let assemblyFormat = "($e^)? attr-dict";
+}
+
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
@@ -654,6 +665,17 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
   let arguments = (ins AnyType:$value);
   let results = (outs AnyType:$result);
   let assemblyFormat = "attr-dict $value `:` type($value)";
+}
+
+def FormatTypesMatchOptionalOp : TEST_Op<"format_types_match_optional", [
+    OptionalTypesMatchWith<"optional type matches result", 
+                           "result", "optional", "$_self">
+  ]> {
+  let arguments = (ins Optional<AnyType>:$optional);
+  let results = (outs Optional<AnyType>:$result);
+  let assemblyFormat = [{
+    (`(` $optional^ `:` type($result) `)`)? attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//

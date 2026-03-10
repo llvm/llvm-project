@@ -304,10 +304,9 @@ llvm.func @g()
 // CHECK-NOT: = llvm.alloca
 llvm.func amdgpu_kernelcc @addrspace_discard() {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.mlir.constant(2 : i64) : i64
-  %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
-  %3 = llvm.addrspacecast %2 : !llvm.ptr<5> to !llvm.ptr
-  llvm.intr.lifetime.start 2, %3 : !llvm.ptr
+  %1 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
+  %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+  llvm.intr.lifetime.start %2 : !llvm.ptr
   llvm.return
 }
 
@@ -406,9 +405,9 @@ llvm.func @unreachable_jumps_to_merge_point(%arg0: i1) -> i32 {
 llvm.func @ignore_lifetime() {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
-  llvm.intr.lifetime.start 2, %1 : !llvm.ptr
+  llvm.intr.lifetime.start %1 : !llvm.ptr
   llvm.store %0, %1 {alignment = 4 : i64} : i32, !llvm.ptr
-  llvm.intr.lifetime.end 2, %1 : !llvm.ptr
+  llvm.intr.lifetime.end %1 : !llvm.ptr
   llvm.return
 }
 
@@ -437,9 +436,9 @@ llvm.func @ignore_discardable_tree() {
   %5 = llvm.insertvalue %1, %4[1] : !llvm.struct<(i8, i16)>
   %6 = llvm.alloca %0 x !llvm.struct<(i8, i16)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %7 = llvm.getelementptr %6[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i8, i16)>
-  llvm.intr.lifetime.start 2, %7 : !llvm.ptr
+  llvm.intr.lifetime.start %7 : !llvm.ptr
   llvm.store %5, %6 {alignment = 2 : i64} : !llvm.struct<(i8, i16)>, !llvm.ptr
-  llvm.intr.lifetime.end 2, %7 : !llvm.ptr
+  llvm.intr.lifetime.end %7 : !llvm.ptr
   llvm.return
 }
 
@@ -517,8 +516,8 @@ llvm.func @discardable_use_tree() {
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
   %4 = llvm.bitcast %3 : !llvm.ptr to !llvm.ptr
-  llvm.intr.lifetime.start 2, %3 : !llvm.ptr
-  llvm.intr.lifetime.start 2, %4 : !llvm.ptr
+  llvm.intr.lifetime.start %3 : !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
   %5 = llvm.intr.invariant.start 2, %3 : !llvm.ptr
   llvm.intr.invariant.end %5, 2, %3 : !llvm.ptr
   llvm.return
@@ -534,8 +533,8 @@ llvm.func @non_discardable_use_tree() {
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
   %4 = llvm.bitcast %3 : !llvm.ptr to !llvm.ptr
-  llvm.intr.lifetime.start 2, %3 : !llvm.ptr
-  llvm.intr.lifetime.start 2, %4 : !llvm.ptr
+  llvm.intr.lifetime.start %3 : !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
   llvm.call @use(%4) : (!llvm.ptr) -> i1
   llvm.return
 }
@@ -551,8 +550,8 @@ llvm.func @trivial_get_element_ptr() {
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
   %4 = llvm.getelementptr %3[0] : (!llvm.ptr) -> !llvm.ptr, i8
-  llvm.intr.lifetime.start 2, %3 : !llvm.ptr
-  llvm.intr.lifetime.start 2, %4 : !llvm.ptr
+  llvm.intr.lifetime.start %3 : !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
   llvm.return
 }
 
@@ -565,8 +564,8 @@ llvm.func @nontrivial_get_element_ptr() {
   // CHECK: = llvm.alloca
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %4 = llvm.getelementptr %2[1] : (!llvm.ptr) -> !llvm.ptr, i8
-  llvm.intr.lifetime.start 2, %2 : !llvm.ptr
-  llvm.intr.lifetime.start 2, %4 : !llvm.ptr
+  llvm.intr.lifetime.start %2 : !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
   llvm.return
 }
 
@@ -580,8 +579,8 @@ llvm.func @dynamic_get_element_ptr() {
   %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %3 = llvm.bitcast %2 : !llvm.ptr to !llvm.ptr
   %4 = llvm.getelementptr %3[%0] : (!llvm.ptr, i32) -> !llvm.ptr, i8
-  llvm.intr.lifetime.start 2, %3 : !llvm.ptr
-  llvm.intr.lifetime.start 2, %4 : !llvm.ptr
+  llvm.intr.lifetime.start %3 : !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
   llvm.return
 }
 

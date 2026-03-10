@@ -153,11 +153,11 @@ target.markOpRecursivelyLegal<MyOp>([](MyOp op) { ... });
 
 After the conversion target has been defined, a set of legalization patterns
 must be provided to transform illegal operations into legal ones. The patterns
-supplied here have the same structure and restrictions as those described in the
-main [Pattern](PatternRewriter.md) documentation. The patterns provided do not
-need to generate operations that are directly legal on the target. The framework
-will automatically build a graph of conversions to convert non-legal operations
-into a set of legal ones.
+supplied here have the same structure and similar restrictions as those
+described in the main [Pattern](PatternRewriter.md) documentation. The patterns
+provided do not need to generate operations that are directly legal on the
+target. The framework will automatically build a graph of conversions to convert
+non-legal operations into a set of legal ones.
 
 As an example, say you define a target that supports one operation: `foo.add`.
 When providing the following patterns: [`bar.add` -> `baz.add`, `baz.add` ->
@@ -171,23 +171,12 @@ means that you don’t have to define a direct legalization pattern for `bar.add
 Along with the general `RewritePattern` classes, the conversion framework
 provides a special type of rewrite pattern that can be used when a pattern
 relies on interacting with constructs specific to the conversion process, the
-`ConversionPattern`. For example, the conversion process does not necessarily
-update operations in-place and instead creates a mapping of events such as
-replacements and erasures, and only applies them when the entire conversion
-process is successful. Certain classes of patterns rely on using the
-updated/remapped operands of an operation, such as when the types of results
-defined by an operation have changed. The general Rewrite Patterns can no longer
-be used in these situations, as the types of the operands of the operation being
-matched will not correspond with those expected by the user. This pattern
-provides, as an additional argument to the `matchAndRewrite` method, the list
-of operands that the operation should use after conversion. If an operand was
-the result of a non-converted operation, for example if it was already legal,
-the original operand is used. This means that the operands provided always have
-a 1-1 non-null correspondence with the operands on the operation. The original
-operands of the operation are still intact and may be inspected as normal.
-These patterns also utilize a special `PatternRewriter`,
-`ConversionPatternRewriter`, that provides special hooks for use with the
-conversion infrastructure.
+`ConversionPattern`.
+
+#### Remapped Operands / Adaptor
+Conversion patterns have an additional `operands` / `adaptor` argument for the
+`matchAndRewrite` method. These operands correspond to the most recent
+replacement values of the respective operands of the matched operation.
 
 ```c++
 struct MyConversionPattern : public ConversionPattern {
@@ -200,19 +189,186 @@ struct MyConversionPattern : public ConversionPattern {
 };
 ```
 
+Example:
+
+```mlir
+%0 = "test.foo"() : () -> i1  // matched by pattern A
+"test.bar"(%0) : (i1) -> ()   // matched by pattern B
+```
+
+Let's assume that the two patterns are applied back-to-back: first, pattern A
+replaces `"test.foo"` with `"test.qux"`, an op that has a different result
+type. The dialect conversion infrastructure has special support for such
+type-changing IR modifications.
+
+```mlir
+%0 = "test.qux"() : () -> i2
+%r = builtin.unrealized_conversion_cast %0 : i2 to i1
+"test.bar"(%r) : (i1) -> ()
+```
+
+Simply swapping out the operand of `"test.bar"` during the `replaceOp` call
+would be unsafe, because that would change the type of operand and, therefore,
+potentially the semantics of the operation. Instead, the dialect conversion
+driver (conceptually) inserts a `builtin.unrealized_conversion_cast` op that
+connects the newly created `"test.qux"` op with the `"test.bar"` op, without
+changing the types of the latter one.
+
+Now, the second pattern B is applied. The `operands` argument contains an SSA
+value with the most recent replacement type (`%0` with type `i2`), whereas
+querying the operand from the matched op still returns an SSA value with the
+original operand type `i1`.
+
+Note: If the conversion pattern is instantiated with a type converter, the
+`operands` argument contains SSA values whose types match the legalized operand
+types as per the type converter. See [Type Safety](#type-safety) for more
+details.
+
+Note: The dialect conversion framework does not guarantee the presence of any
+particular value in the `operands` argument. The only thing that's guaranteed
+is the type of the `operands` SSA values. E.g., instead of the actual
+replacement values supplied to a `replaceOp` API call, `operands` may contain
+results of transitory `builtin.unrealized_conversion_cast` ops that were
+inserted by the conversion driver but typically fold away again throughout the
+conversion process.
+
+#### Immediate vs. Delayed IR Modification
+
+The dialect conversion driver can operate in two modes: (a) rollback mode
+(default) and (b) no-rollback mode. This can be controlled by
+`ConversionConfig::allowPatternRollback`. When running in rollback mode, the
+driver is able backtrack and roll back already applied patterns when the
+current legalization path (sequence of pattern applications) gets stuck with
+unlegalizable operations.
+
+When running in no-rollback mode, all IR modifications such as op replacement,
+op erasure, op insertion or in-place op modification are applied immediately.
+
+When running in rollback mode, certain IR modifications are delayed to the end
+of the conversion process. For example, a `ConversionPatternRewriter::eraseOp`
+API call does not immediately erase the op, but just marks it for erasure. The
+op will stay visible to patterns and IR traversals throughout the conversion
+process. As another example, `replaceOp` and `replaceAllUsesWith` does not
+immediately update users of the original SSA values. This step is also delayed
+to the end of the conversion process.
+
+Delaying certain IR modifications has two benefits: (1) pattern rollback is
+simpler because fewer IR modifications must be rolled back, (2) pointers of
+erased operations / blocks are preserved upon rollback, and (3) patterns can
+still access/traverse the original IR to some degree. However, additional
+bookkeeping in the form of complex internal C++ data structures is required to
+support pattern rollback. Running in rollback mode has a significant toll on
+compilation time, is error-prone and makes debugging conversion passes more
+complicated. Therefore, programmers are encouraged to run in no-rollback mode
+when possible.
+
+The following table gives an overview of which IR changes are applied in a
+delayed fasion in rollback mode.
+
+| Type                                                    | Rollback Mode     | No-rollback Mode |
+| ------------------------------------------------------- | ----------------- | ---------------- |
+| Op Insertion / Movement (`create`/`insert`)             | Immediate         | Immediate        |
+| Op Replacement (`replaceOp`)                            | Delayed           | Immediate        |
+| Op Erasure (`eraseOp`)                                  | Delayed           | Immediate        |
+| Op Modification (`modifyOpInPlace`)                     | Immediate         | Immediate        |
+| Value Replacement (`replaceAllUsesWith`)                | Delayed           | Immediate        |
+| Block Insertion (`createBlock`)                         | Immediate         | Immediate        |
+| Block Replacement                                       | Not supported     | Not supported    |
+| Block Erasure                                           | Partly delayed    | Immediate        |
+| Block Signature Conversion (`applySignatureConversion`) | Partially delayed | Immediate        |
+| Region / Block Inlining  (`inlineBlockBefore`, etc.)    | Partially delayed | Immediate        |
+
+Value replacement is delayed and has different semantics in rollback mode:
+Since the actual replacement is delayed to the end of the conversion process,
+additional uses of the replaced value can be created after the
+`replaceAllUsesWith` call. Those uses will also be replaced at the end of the
+conversion process.
+
+Block replacement is not supported in either mode, because the rewriter
+infrastructure currently has no API for replacing blocks: there is no overload
+of `replaceAllUsesWith` that accepts `Block *`.
+
+Block erasure is partly delayed in rollback mode: the block is detached from
+the IR graph, but not memory for the block is not released until the end of the
+conversion process. This mechanism ensures that block pointers do not change
+when a block erasure is rolled back.
+
+Block signature conversion is a combination of block insertion, op insertion,
+value replacement and block erasure. In rollback mode, the first two steps are
+immediate, but the last two steps are delayed.
+
+Region / block inlining is a combination of block / op insertion and
+(optionally) value replacement. In rollback mode, the insertion steps are
+immediate, but the replacement step is delayed.
+
+Note: When running in rollback mode, the conversion driver inserts fewer
+transitory `builtin.unrealized_conversion_cast` ops. Such ops are needed less
+frequently because certain IR modifications are delayed, making it unnecessary
+to connect old (not yet rewritten) and new (already rewritten) IR in a
+type-safe way. This has a negative effect on the debugging experience: when
+dumping IR throughout the conversion process, users see a mixture of old and
+new IR, but the way they are connected is not always visibile in the IR. Some
+of that information is stored in internal C++ data structures that is not
+visibile during an IR dump.
+
 #### Type Safety
 
-The types of the remapped operands provided to a conversion pattern must be of a
-type expected by the pattern. The expected types of a pattern are determined by
-a provided [TypeConverter](#type-converter). If no type converter is provided,
-the types of the remapped operands are expected to match the types of the
-original operands. If a type converter is provided, the types of the remapped
-operands are expected to be legal as determined by the converter. If the
-remapped operand types are not of an expected type, and a materialization to the
-expected type could not be performed, the pattern fails application before the
-`matchAndRewrite` hook is invoked. This ensures that patterns do not have to
-explicitly ensure type safety, or sanitize the types of the incoming remapped
-operands. More information on type conversion is detailed in the
+The types of the remapped operands provided to a conversion pattern (through
+the adaptor or `ArrayRef` of operands) depend on type conversion rules.
+
+If the pattern was initialized with a [type converter](#type-converter), the
+conversion driver passes values whose types match the legalized types of the
+operands of the matched operation as per the type converter. To that end, the
+conversion driver may insert target materializations to convert the most
+recently mapped values to the expected legalized types. The driver tries to
+reuse existing materializations on a best-effort basis, but this is not
+guaranteed by the infrastructure. If the operand types of the matched op could
+not be legalized, the pattern fails to apply before the `matchAndRewrite` hook
+is invoked.
+
+Example:
+```c++
+// Type converter that converts all FloatTypes to IntegerTypes.
+TypeConverter converter;
+converter.addConversion([](FloatType t) {
+    return IntegerType::get(t.getContext(), t.getWidth());
+});
+
+// Assuming that `MyConversionPattern` was initialized with `converter`.
+struct MyConversionPattern : public ConversionPattern {
+  virtual LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, /* ... */) const {
+//                                               ^^^^^^^^
+//      If `op` has a FloatType operand, the respective value in `operands`
+//      is guaranteed to have the legalized IntegerType. If another pattern
+//      previously replaced the operand SSA value with an SSA value of the
+//      legalized type (via "replaceOp" or "applySignatureConversion"), you
+//      will get that SSA value directly (unless the replacement value was
+//      also replaced). Otherwise, you will get a materialization to the
+//      legalized type.
+```
+
+If the pattern was initialized without a type converter, the conversion driver
+passes the most recently mapped values to the pattern, excluding any
+materializations. If a value with the same type as the original operand is
+desired, users can directly take the respective operand from the matched
+operation.
+
+Example: When initializing the pattern from the above example without a type
+converter, `operands` contains the most recent replacement values, regardless
+of their types.
+
+Note: When running without a type converter, materializations are intentionally
+excluded from the lookup process because their presence may depend on other
+patterns. Passing materializations would make the conversion infrastructure
+fragile and unpredictable. Moreover, there could be multiple materializations
+to different types. (This can be the case when multiple patterns are running
+with different type converters.) In such a case, it would be unclear which
+materialization to pass.
+
+The above rules ensure that patterns do not have to explicitly ensure type
+safety, or sanitize the types of the incoming remapped operands. More
+information on type conversion is detailed in the
 [dedicated section](#type-conversion) below.
 
 ## Type Conversion
@@ -234,6 +390,19 @@ A `conversion` describes how a given source `Type` should be converted to N
 target types. If the source type is converted to itself, we say it is a "legal"
 type. Type conversions are specified via the `addConversion` method described
 below.
+
+There are two kind of conversion functions: context-aware and context-unaware
+conversions. A context-unaware conversion function converts a `Type` into a
+`Type`. A context-aware conversion function converts a `Value` into a type. The
+latter allows users to customize type conversion rules based on the IR.
+
+Note: context-aware type conversion functions impact the ability of the
+framework to cache the conversion result. In the absence of a context-aware
+conversion, all context-free type conversions can be cached. Otherwise only the
+context-free conversions added after a context-aware type conversion can be
+cached (conversions are applied in reverse order). 
+As such it is advised to add context-aware conversions as early as possible in
+the sequence of `addConversion` calls (so that they apply last).
 
 A `materialization` describes how a list of values should be converted to a
 list of values with specific types. An important distinction from a
@@ -287,29 +456,31 @@ Several of the available hooks are detailed below:
 ```c++
 class TypeConverter {
  public:
-  /// Register a conversion function. A conversion function defines how a given
-  /// source type should be converted. A conversion function must be convertible
-  /// to any of the following forms(where `T` is a class derived from `Type`:
-  ///   * Optional<Type>(T)
+  /// Register a conversion function. A conversion function must be convertible
+  /// to any of the following forms (where `T` is `Value` or a class derived
+  /// from `Type`, including `Type` itself):
+  ///
+  ///   * std::optional<Type>(T)
   ///     - This form represents a 1-1 type conversion. It should return nullptr
-  ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned, the
-  ///       converter is allowed to try another conversion function to perform
-  ///       the conversion.
-  ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &)
+  ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned,
+  ///       the converter is allowed to try another conversion function to
+  ///       perform the conversion.
+  ///   * std::optional<LogicalResult>(T, SmallVectorImpl<Type> &)
   ///     - This form represents a 1-N type conversion. It should return
-  ///       `failure` or `std::nullopt` to signify a failed conversion. If the new
-  ///       set of types is empty, the type is removed and any usages of the
+  ///       `failure` or `std::nullopt` to signify a failed conversion. If the
+  ///       new set of types is empty, the type is removed and any usages of the
   ///       existing value are expected to be removed during conversion. If
   ///       `std::nullopt` is returned, the converter is allowed to try another
   ///       conversion function to perform the conversion.
-  ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &, ArrayRef<Type>)
-  ///     - This form represents a 1-N type conversion supporting recursive
-  ///       types. The first two arguments and the return value are the same as
-  ///       for the regular 1-N form. The third argument is contains is the
-  ///       "call stack" of the recursive conversion: it contains the list of
-  ///       types currently being converted, with the current type being the
-  ///       last one. If it is present more than once in the list, the
-  ///       conversion concerns a recursive type.
+  ///
+  /// Conversion functions that accept `Value` as the first argument are
+  /// context-aware. I.e., they can take into account IR when converting the
+  /// type of the given value. Context-unaware conversion functions accept
+  /// `Type` or a derived class as the first argument.
+  ///
+  /// Note: Context-unaware conversions are cached, but context-aware
+  /// conversions are not.
+  ///
   /// Note: When attempting to convert a type, e.g. via 'convertType', the
   ///       mostly recently added conversions will be invoked first.
   template <typename FnT,
@@ -338,7 +509,7 @@ class TypeConverter {
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapSourceMaterialization<T>(std::forward<FnT>(callback)));
   }
 
   /// This method registers a materialization that will be called when
@@ -362,7 +533,7 @@ class TypeConverter {
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
     targetMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapTargetMaterialization<T>(std::forward<FnT>(callback)));
   }
 };
 ```

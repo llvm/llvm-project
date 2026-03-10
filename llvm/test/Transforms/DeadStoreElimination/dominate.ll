@@ -8,12 +8,12 @@ bb1:
   br label %bb3
 
 bb2:
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %memtmp3.i)
+  call void @llvm.lifetime.end.p0(ptr %memtmp3.i)
   br label %bb3
 
 bb3:
   call void @bar()
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %memtmp3.i)
+  call void @llvm.lifetime.end.p0(ptr %memtmp3.i)
   br label %bb4
 
 bb4:
@@ -21,4 +21,4 @@ bb4:
 
 }
 
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind

@@ -16,6 +16,19 @@
 #include "../../GenerateInput.h"
 #include "benchmark/benchmark.h"
 
+static void BM_map_find_string_literal(benchmark::State& state) {
+  std::map<std::string, int> map;
+  map.emplace("Something very very long to show a long string situation", 1);
+  map.emplace("Something Else", 2);
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    benchmark::DoNotOptimize(map.find("Something very very long to show a long string situation"));
+  }
+}
+
+BENCHMARK(BM_map_find_string_literal);
+
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
   using ValueType = typename std::map<K, V>::value_type;
@@ -25,10 +38,14 @@ struct support::adapt_operations<std::map<K, V>> {
 
   using InsertionResult = std::pair<typename std::map<K, V>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }
+
+  template <class Allocator>
+  using rebind_alloc = std::map<K, V, std::less<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::map<int, int>>("std::map<int, int>");
+  support::associative_container_benchmarks<std::map<std::string, int>>("std::map<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

@@ -1,6 +1,6 @@
 #include "UdtRecordCompleter.h"
 
-#include "PdbAstBuilder.h"
+#include "PdbAstBuilderClang.h"
 #include "PdbIndex.h"
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
@@ -36,35 +36,27 @@ using Error = llvm::Error;
 
 UdtRecordCompleter::UdtRecordCompleter(
     PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
-    PdbAstBuilder &ast_builder, PdbIndex &index,
+    PdbAstBuilderClang &ast_builder, PdbIndex &index,
     llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status,
     llvm::DenseMap<lldb::opaque_compiler_type_t,
                    llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
         &cxx_record_map)
-    : m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
+    : m_cv_tag_record(CVTagRecord::create(index.tpi().getType(id.index))),
+      m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
       m_ast_builder(ast_builder), m_index(index),
       m_decl_to_status(decl_to_status), m_cxx_record_map(cxx_record_map) {
-  CVType cvt = m_index.tpi().getType(m_id.index);
-  switch (cvt.kind()) {
-  case LF_ENUM:
-    m_cvr.er.Options = ClassOptions::None;
-    llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, m_cvr.er));
+  switch (m_cv_tag_record.kind()) {
+  case CVTagRecord::Enum:
     break;
-  case LF_UNION:
-    m_cvr.ur.Options = ClassOptions::None;
-    llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, m_cvr.ur));
-    m_layout.bit_size = m_cvr.ur.getSize() * 8;
+  case CVTagRecord::Union:
+    m_layout.bit_size = m_cv_tag_record.asUnion().getSize() * 8;
     m_record.record.kind = Member::Union;
     break;
-  case LF_CLASS:
-  case LF_STRUCTURE:
-    m_cvr.cr.Options = ClassOptions::None;
-    llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, m_cvr.cr));
-    m_layout.bit_size = m_cvr.cr.getSize() * 8;
+  case CVTagRecord::Class:
+  case CVTagRecord::Struct:
+    m_layout.bit_size = m_cv_tag_record.asClass().getSize() * 8;
     m_record.record.kind = Member::Struct;
     break;
-  default:
-    llvm_unreachable("unreachable!");
   }
 }
 
@@ -72,7 +64,7 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
     llvm::codeview::TypeIndex ti, llvm::codeview::MemberAccess access,
     std::optional<uint64_t> vtable_idx) {
   PdbTypeSymId type_id(ti);
-  clang::QualType qt = m_ast_builder.GetOrCreateType(type_id);
+  clang::QualType qt = m_ast_builder.GetOrCreateClangType(type_id);
 
   CVType udt_cvt = m_index.tpi().getType(ti);
 
@@ -90,10 +82,10 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
 }
 
 void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
-                                   MemberAccess access, MethodOptions options,
+                                   MethodOptions options,
                                    MemberAttributes attrs) {
   clang::QualType method_qt =
-      m_ast_builder.GetOrCreateType(PdbTypeSymId(type_idx));
+      m_ast_builder.GetOrCreateClangType(PdbTypeSymId(type_idx));
   if (method_qt.isNull())
     return;
   CompilerType method_ct = m_ast_builder.ToCompilerType(method_qt);
@@ -107,13 +99,11 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
     }
   }
 
-  lldb::AccessType access_type = TranslateMemberAccess(access);
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
   m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), nullptr, method_ct,
-      access_type, attrs.isVirtual(), attrs.isStatic(), false, false, false,
-      is_artificial);
+      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct,
+      attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
 
   m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
 }
@@ -155,21 +145,23 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 Error UdtRecordCompleter::visitKnownMember(
     CVMemberRecord &cvr, StaticDataMemberRecord &static_data_member) {
   clang::QualType member_type =
-      m_ast_builder.GetOrCreateType(PdbTypeSymId(static_data_member.Type));
+      m_ast_builder.GetOrCreateClangType(PdbTypeSymId(static_data_member.Type));
   if (member_type.isNull())
     return llvm::Error::success();
 
   CompilerType member_ct = m_ast_builder.ToCompilerType(member_type);
 
-  lldb::AccessType access =
-      TranslateMemberAccess(static_data_member.getAccess());
   auto decl = TypeSystemClang::AddVariableToRecordType(
-      m_derived_ct, static_data_member.Name, member_ct, access);
+      m_derived_ct, static_data_member.Name, member_ct);
 
   // Static constant members may be a const[expr] declaration.
   // Query the symbol's value as the variable initializer if valid.
   if (member_ct.IsConst() && member_ct.IsCompleteType()) {
-    std::string qual_name = decl->getQualifiedNameAsString();
+    // Reconstruct the full name for the static member. Use the names as given
+    // in the PDB. This ensures we match the compiler's style of names (e.g.
+    // "A<B<int> >::Foo" vs "A<B<int>>::Foo").
+    std::string qual_name =
+        (m_cv_tag_record.name() + "::" + static_data_member.Name).str();
 
     auto results =
         m_index.globals().findRecordsByName(qual_name, m_index.symrecords());
@@ -234,6 +226,32 @@ Error UdtRecordCompleter::visitKnownMember(
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            NestedTypeRecord &nested) {
+  // Typedefs can only be added on structs.
+  if (m_record.record.kind != Member::Struct)
+    return Error::success();
+
+  clang::QualType qt =
+      m_ast_builder.GetOrCreateClangType(PdbTypeSymId(nested.Type, false));
+  if (qt.isNull())
+    return Error::success();
+  CompilerType ct = m_ast_builder.ToCompilerType(qt);
+
+  // There's no distinction between nested types and typedefs, so check if we
+  // encountered a nested type.
+  auto *pdb = static_cast<SymbolFileNativePDB *>(
+      m_ast_builder.clang().GetSymbolFile()->GetBackingSymbolFile());
+  std::optional<TypeIndex> parent = pdb->GetParentType(nested.Type);
+  if (parent && *parent == m_id.index && ct.GetTypeName(true) == nested.Name)
+    return Error::success();
+
+  clang::DeclContext *decl_ctx =
+      m_ast_builder.GetOrCreateClangDeclContextForUid(m_id);
+  if (!decl_ctx)
+    return Error::success();
+
+  std::string name = nested.Name.str();
+  ct.CreateTypedef(name.c_str(), m_ast_builder.ToCompilerDeclContext(decl_ctx),
+                   0);
   return Error::success();
 }
 
@@ -255,7 +273,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
     }
   }
 
-  clang::QualType member_qt = m_ast_builder.GetOrCreateType(PdbTypeSymId(ti));
+  clang::QualType member_qt =
+      m_ast_builder.GetOrCreateClangType(PdbTypeSymId(ti));
   if (member_qt.isNull())
     return Error::success();
   TypeSystemClang::RequireCompleteType(m_ast_builder.ToCompilerType(member_qt));
@@ -271,8 +290,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            OneMethodRecord &one_method) {
-  AddMethod(one_method.Name, one_method.Type, one_method.getAccess(),
-            one_method.getOptions(), one_method.Attrs);
+  AddMethod(one_method.Name, one_method.Type, one_method.getOptions(),
+            one_method.Attrs);
 
   return Error::success();
 }
@@ -289,8 +308,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
       method_list_type, method_list));
 
   for (const OneMethodRecord &method : method_list.Methods)
-    AddMethod(overloaded.Name, method.Type, method.getAccess(),
-              method.getOptions(), method.Attrs);
+    AddMethod(overloaded.Name, method.Type, method.getOptions(), method.Attrs);
 
   return Error::success();
 }
@@ -352,7 +370,7 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
   case Member::Field: {
     field_decl = TypeSystemClang::AddFieldToRecordType(
         parent_ct, field->name, m_ast_builder.ToCompilerType(field->qt),
-        field->access, field->bitfield_width);
+        field->bitfield_width);
     bit_size = field->bit_size;
     break;
   };
@@ -365,8 +383,8 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     metadata.SetUserID(pdb->anonymous_id);
     metadata.SetIsDynamicCXXType(false);
     CompilerType record_ct = clang.CreateRecordType(
-        parent_decl_ctx, OptionalClangModuleID(), lldb::eAccessPublic, "",
-        llvm::to_underlying(kind), lldb::eLanguageTypeC_plus_plus, metadata);
+        parent_decl_ctx, OptionalClangModuleID(), "", llvm::to_underlying(kind),
+        lldb::eLanguageTypeC_plus_plus, metadata);
     TypeSystemClang::StartTagDeclarationDefinition(record_ct);
     ClangASTImporter::LayoutInfo layout;
     clang::DeclContext *decl_ctx = clang.GetDeclContextForType(record_ct);
@@ -385,8 +403,8 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
     TypeSystemClang::CompleteTagDeclarationDefinition(record_ct);
     clang::RecordDecl *record_decl = clang.GetAsRecordDecl(record_ct);
     m_ast_builder.GetClangASTImporter().SetRecordLayout(record_decl, layout);
-    field_decl = TypeSystemClang::AddFieldToRecordType(
-        parent_ct, "", record_ct, lldb::eAccessPublic, 0);
+    field_decl =
+        TypeSystemClang::AddFieldToRecordType(parent_ct, "", record_ct, 0);
     // Mark this record decl as completed.
     DeclStatus status;
     status.resolved = true;
@@ -404,7 +422,7 @@ UdtRecordCompleter::AddMember(TypeSystemClang &clang, Member *field,
 void UdtRecordCompleter::FinishRecord() {
   TypeSystemClang &clang = m_ast_builder.clang();
   clang::DeclContext *decl_ctx =
-      m_ast_builder.GetOrCreateDeclContextForUid(m_id);
+      m_ast_builder.GetOrCreateClangDeclContextForUid(m_id);
   m_record.ConstructRecord();
   // Maybe we should check the construsted record size with the size in pdb. If
   // they mismatch, it might be pdb has fields info missing.
@@ -443,6 +461,10 @@ void UdtRecordCompleter::Record::ConstructRecord() {
 
   // The end offset to a vector of field/struct that ends at the offset.
   std::map<uint64_t, std::vector<Member *>> end_offset_map;
+  auto is_last_end_offset = [&](auto it) {
+    return it != end_offset_map.end() && ++it == end_offset_map.end();
+  };
+
   for (auto &pair : fields_map) {
     uint64_t offset = pair.first;
     auto &fields = pair.second;
@@ -463,8 +485,23 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       }
       if (iter->second.empty())
         continue;
-      parent = iter->second.back();
-      iter->second.pop_back();
+
+      // If the new fields come after the already added ones
+      // without overlap, go back to the root.
+      if (iter->first <= offset && is_last_end_offset(iter)) {
+        if (record.kind == Member::Struct) {
+          parent = &record;
+        } else {
+          assert(record.kind == Member::Union &&
+                 "Current record must be a union");
+          assert(!record.fields.empty());
+          // For unions, append the field to the last struct
+          parent = record.fields.back().get();
+        }
+      } else {
+        parent = iter->second.back();
+        iter->second.pop_back();
+      }
     }
     // If it's a field, then the field is inside a union, so we can safely
     // increase its size by converting it to a struct to hold multiple fields.

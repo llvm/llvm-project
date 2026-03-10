@@ -32,7 +32,7 @@
 ; CHECK-10: function(loop-unroll<O2>,loop-unroll<partial;peeling;runtime;upperbound;profile-peeling;full-unroll-max=5;O1>,loop-unroll<no-partial;no-peeling;no-runtime;no-upperbound;no-profile-peeling;full-unroll-max=7;O1>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;no-memdep;no-memoryssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-11
-; CHECK-11: function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;no-memdep;no-memoryssa>)
+; CHECK-11: function(gvn<>,gvn<pre;load-pre;split-backedge-load-pre;no-memdep;memoryssa>,gvn<no-pre;no-load-pre;no-split-backedge-load-pre;memdep;no-memoryssa>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(early-cse<>,early-cse<memssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-12
 ; CHECK-12: function(early-cse<>,early-cse<memssa>)
@@ -50,7 +50,7 @@
 ; CHECK-17: function(print<stack-lifetime><may>,print<stack-lifetime><must>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;switch-to-lookup;keep-loops;hoist-common-insts;hoist-loads-stores-with-cond-faulting;sink-common-insts;speculate-blocks;simplify-cond-branch;speculate-unpredictables>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-hoist-loads-stores-with-cond-faulting;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch;no-speculate-unpredictables>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-18
-; CHECK-18: function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;no-switch-range-to-icmp;switch-to-lookup;keep-loops;hoist-common-insts;hoist-loads-stores-with-cond-faulting;sink-common-insts;speculate-blocks;simplify-cond-branch;speculate-unpredictables>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-range-to-icmp;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-hoist-loads-stores-with-cond-faulting;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch;no-speculate-unpredictables>)
+; CHECK-18: function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;no-switch-range-to-icmp;no-switch-to-arithmetic;switch-to-lookup;keep-loops;hoist-common-insts;hoist-loads-stores-with-cond-faulting;sink-common-insts;speculate-blocks;simplify-cond-branch;speculate-unpredictables>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-range-to-icmp;no-switch-to-arithmetic;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-hoist-loads-stores-with-cond-faulting;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch;no-speculate-unpredictables>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only>,loop-vectorize<interleave-forced-only;vectorize-forced-only>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-19
 ; CHECK-19: function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only;>,loop-vectorize<interleave-forced-only;vectorize-forced-only;>)

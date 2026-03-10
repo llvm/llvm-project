@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCRegisterInfo;
@@ -48,7 +49,7 @@ enum OperandConstraint {
 /// private, all access should go through the MCOperandInfo accessors.
 /// See the accessors for a description of what these are.
 enum OperandFlags {
-  LookupPtrRegClass = 0,
+  LookupRegClassByHwMode = 0,
   Predicate,
   OptionalDef,
   BranchTarget
@@ -84,10 +85,10 @@ enum OperandType {
 /// indicating the register class for register operands, etc.
 class MCOperandInfo {
 public:
-  /// This specifies the register class enumeration of the operand
-  /// if the operand is a register.  If isLookupPtrRegClass is set, then this is
-  /// an index that is passed to TargetRegisterInfo::getPointerRegClass(x) to
-  /// get a dynamic register class.
+  /// This specifies the register class enumeration of the operand if the
+  /// operand is a register. If LookupRegClassByHwMode is set, then this is an
+  /// index into a table in TargetInstrInfo or MCInstrInfo which contains the
+  /// real register class ID.
   int16_t RegClass;
 
   /// These are flags from the MCOI::OperandFlags enum.
@@ -99,10 +100,10 @@ public:
   /// Operand constraints (see OperandConstraint enum).
   uint16_t Constraints;
 
-  /// Set if this operand is a pointer value and it requires a callback
-  /// to look up its register class.
-  bool isLookupPtrRegClass() const {
-    return Flags & (1 << MCOI::LookupPtrRegClass);
+  /// Set if this operand is a value that requires the current hwmode to look up
+  /// its register class.
+  bool isLookupRegClassByHwMode() const {
+    return Flags & (1 << MCOI::LookupRegClassByHwMode);
   }
 
   /// Set if this is one of the operands that made up of the predicate
@@ -202,17 +203,17 @@ public:
   // the <Target>Insts table because they rely on knowing their own address to
   // find other information elsewhere in the same table.
 
-  unsigned short Opcode;         // The opcode number
-  unsigned short NumOperands;    // Num of args (may be more if variable_ops)
-  unsigned char NumDefs;         // Num of args that are definitions
-  unsigned char Size;            // Number of bytes in encoding.
-  unsigned short SchedClass;     // enum identifying instr sched class
-  unsigned char NumImplicitUses; // Num of regs implicitly used
-  unsigned char NumImplicitDefs; // Num of regs implicitly defined
-  unsigned short ImplicitOffset; // Offset to start of implicit op list
-  unsigned short OpInfoOffset;   // Offset to info about operands
-  uint64_t Flags;                // Flags identifying machine instr class
-  uint64_t TSFlags;              // Target Specific Flag values
+  uint32_t Opcode;         // The opcode number.
+  uint16_t NumOperands;    // Num of args (may be more if variable_ops)
+  uint8_t NumDefs;         // Num of args that are definitions
+  uint8_t Size;            // Number of bytes in encoding.
+  uint16_t SchedClass;     // enum identifying instr sched class
+  uint8_t NumImplicitUses; // Num of regs implicitly used
+  uint8_t NumImplicitDefs; // Num of regs implicitly defined
+  uint16_t OpInfoOffset;   // Offset to info about operands
+  uint16_t ImplicitOffset; // Offset to start of implicit op list
+  uint64_t Flags;          // Flags identifying machine instr class
+  uint64_t TSFlags;        // Target Specific Flag values
 
   /// Returns the value of the specified operand constraint if
   /// it is present. Returns -1 if it is not present.
@@ -329,7 +330,8 @@ public:
   /// Return true if this is a branch or an instruction which directly
   /// writes to the program counter. Considered 'may' affect rather than
   /// 'does' affect as things like predication are not taken into account.
-  bool mayAffectControlFlow(const MCInst &MI, const MCRegisterInfo &RI) const;
+  LLVM_ABI bool mayAffectControlFlow(const MCInst &MI,
+                                     const MCRegisterInfo &RI) const;
 
   /// Return true if this instruction has a predicate operand
   /// that controls execution. It may be set to 'always', or may be set to other
@@ -519,7 +521,7 @@ public:
   /// Returns true if this instruction is a candidate for remat. This
   /// flag is only used in TargetInstrInfo method isTriviallyRematerializable.
   ///
-  /// If this flag is set, the isReallyTriviallyReMaterializable() method is
+  /// If this flag is set, the isReMaterializableImpl() method is
   /// called to verify the instruction is really rematerializable.
   bool isRematerializable() const {
     return Flags & (1ULL << MCID::Rematerializable);
@@ -590,8 +592,9 @@ public:
 
   /// Return true if this instruction implicitly
   /// defines the specified physical register.
-  bool hasImplicitDefOfPhysReg(MCRegister Reg,
-                               const MCRegisterInfo *MRI = nullptr) const;
+  LLVM_ABI bool
+  hasImplicitDefOfPhysReg(MCRegister Reg,
+                          const MCRegisterInfo *MRI = nullptr) const;
 
   /// Return the scheduling class for this instruction.  The
   /// scheduling class is an index into the InstrItineraryData table.  This
@@ -617,8 +620,8 @@ public:
 
   /// Return true if this instruction defines the specified physical
   /// register, either explicitly or implicitly.
-  bool hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
-                       const MCRegisterInfo &RI) const;
+  LLVM_ABI bool hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
+                                const MCRegisterInfo &RI) const;
 };
 
 } // end namespace llvm

@@ -15,7 +15,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -128,7 +127,7 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
         unsigned ImpDef = IsGeneric ? TargetOpcode::G_IMPLICIT_DEF
                                     : TargetOpcode::IMPLICIT_DEF;
 
-        unsigned State = getRegState(MO);
+        RegState State = getRegState(MO);
         if (MO.getSubReg())
           State |= RegState::Undef;
 

@@ -20,10 +20,57 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
 
+using PoisonRecordRingBuffer = RingBuffer<PoisonRecord>;
+
 static atomic_uint8_t can_poison_memory;
+
+static Mutex poison_records_mutex;
+static PoisonRecordRingBuffer *poison_records
+    SANITIZER_GUARDED_BY(poison_records_mutex) = nullptr;
+
+void AddPoisonRecord(const PoisonRecord &new_record) {
+  if (flags()->poison_history_size <= 0)
+    return;
+
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
+
+  if (poison_records == nullptr)
+    poison_records = PoisonRecordRingBuffer::New(flags()->poison_history_size);
+
+  poison_records->push(new_record);
+}
+
+bool FindPoisonRecord(uptr addr, PoisonRecord &match) {
+  if (flags()->poison_history_size <= 0)
+    return false;
+
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
+
+  if (poison_records) {
+    for (unsigned int i = 0; i < poison_records->size(); i++) {
+      PoisonRecord record = (*poison_records)[i];
+      if (record.begin <= addr && addr < record.end) {
+        internal_memcpy(&match, &record, sizeof(record));
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+void SANITIZER_ACQUIRE(poison_records_mutex) AcquirePoisonRecords() {
+  poison_records_mutex.Lock();
+}
+
+void SANITIZER_RELEASE(poison_records_mutex) ReleasePoisonRecords() {
+  poison_records_mutex.Unlock();
+}
 
 void SetCanPoisonMemory(bool value) {
   atomic_store(&can_poison_memory, value, memory_order_release);
@@ -107,6 +154,21 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  if (flags()->poison_history_size > 0) {
+    GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
+    u32 current_tid = GetCurrentTidOrInvalid();
+
+    u32 stack_id = StackDepotPut(stack);
+
+    PoisonRecord record;
+    record.stack_id = stack_id;
+    record.thread_id = current_tid;
+    record.begin = beg_addr;
+    record.end = end_addr;
+    AddPoisonRecord(record);
+  }
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -147,6 +209,11 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to unpoison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  // Note: we don't need to update the poison tracking here. Since the shadow
+  // memory will be unpoisoned, the poison tracking ring buffer entries will be
+  // ignored.
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -180,18 +247,21 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   if (!AddrIsInMem(end))
     return end;
   CHECK_LT(beg, end);
-  uptr aligned_b = RoundUpTo(beg, ASAN_SHADOW_GRANULARITY);
-  uptr aligned_e = RoundDownTo(end, ASAN_SHADOW_GRANULARITY);
-  uptr shadow_beg = MemToShadow(aligned_b);
-  uptr shadow_end = MemToShadow(aligned_e);
   // First check the first and the last application bytes,
   // then check the ASAN_SHADOW_GRANULARITY-aligned region by calling
   // mem_is_zero on the corresponding shadow.
-  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(end - 1) &&
-      (shadow_end <= shadow_beg ||
-       __sanitizer::mem_is_zero((const char *)shadow_beg,
-                                shadow_end - shadow_beg)))
-    return 0;
+  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(end - 1)) {
+    uptr aligned_b = RoundUpTo(beg, ASAN_SHADOW_GRANULARITY);
+    uptr aligned_e = RoundDownTo(end, ASAN_SHADOW_GRANULARITY);
+    if (aligned_e <= aligned_b)
+      return 0;
+    uptr shadow_beg = MemToShadow(aligned_b);
+    uptr shadow_end = MemToShadow(aligned_e);
+    CHECK_LE(shadow_beg, shadow_end);
+    if (__sanitizer::mem_is_zero((const char*)shadow_beg,
+                                 shadow_end - shadow_beg))
+      return 0;
+  }
   // The fast check failed, so we have a poisoned byte somewhere.
   // Find it slowly.
   for (; beg < end; beg++)

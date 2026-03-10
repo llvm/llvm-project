@@ -17,6 +17,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -29,16 +30,17 @@ class Module;
 /// \param DetailedHash Whether or not to encode additional information in the
 /// hash. The additional information added into the hash when this flag is set
 /// to true includes instruction and operand type information.
-stable_hash StructuralHash(const Function &F, bool DetailedHash = false);
+LLVM_ABI stable_hash StructuralHash(const Function &F,
+                                    bool DetailedHash = false);
 
 /// Returns a hash of the global variable \p G.
-stable_hash StructuralHash(const GlobalVariable &G);
+LLVM_ABI stable_hash StructuralHash(const GlobalVariable &G);
 
 /// Returns a hash of the module \p M by hashing all functions and global
 /// variables contained within. \param M The module to hash. \param DetailedHash
 /// Whether or not to encode additional information in the function hashes that
 /// composed the module hash.
-stable_hash StructuralHash(const Module &M, bool DetailedHash = false);
+LLVM_ABI stable_hash StructuralHash(const Module &M, bool DetailedHash = false);
 
 /// The pair of an instruction index and a operand index.
 using IndexPair = std::pair<unsigned, unsigned>;
@@ -80,8 +82,8 @@ struct FunctionHashInfo {
 /// \param IgnoreOp A callable that takes an instruction and an operand index,
 /// and returns true if the operand should be ignored in the hash computation.
 /// \return A FunctionHashInfo structure
-FunctionHashInfo StructuralHashWithDifferences(const Function &F,
-                                               IgnoreOperandFunc IgnoreOp);
+LLVM_ABI FunctionHashInfo
+StructuralHashWithDifferences(const Function &F, IgnoreOperandFunc IgnoreOp);
 
 } // end namespace llvm
 

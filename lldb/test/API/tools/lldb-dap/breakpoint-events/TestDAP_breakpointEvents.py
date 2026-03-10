@@ -2,7 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
-import dap_server
+from dap_server import Source
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -11,36 +11,29 @@ import os
 
 
 class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
-    @skipUnlessDarwin
+    @skipIfWindows
     def test_breakpoint_events(self):
         """
-        This test sets a breakpoint in a shared library and runs and stops
-        at the entry point of a program. When we stop at the entry point,
-        the shared library won't be loaded yet. At this point the
-        breakpoint should set itself, but not be verified because no
-        locations are resolved. We will then continue and expect to get a
-        breakpoint event that informs us that the breakpoint in the shared
-        library is "changed" and the correct line number should be
-        supplied. We also set a breakpoint using a LLDB command using the
-        "preRunCommands" when launching our program. Any breakpoints set via
-        the command interpreter should not be have breakpoint events sent
-        back to VS Code as the UI isn't able to add new breakpoints to
-        their UI. Code has been added that tags breakpoints set from VS Code
+        This test follows the following steps.
+        - Sets a breakpoint in a shared library from the preCommands.
+        - Runs and stops at the entry point of a program.
+        - Sets two new breakpoints, one in the main executable and one in the shared library
+        - Both breakpoint is set but only the the shared library breakpoint is not verified yet.
+        - We will then continue and expect to get a breakpoint event that
+            informs us the breakpoint in the shared library has "changed"
+            and the correct line number should be supplied.
+        - We also verify the breakpoint set via the command interpreter should not
+            be have breakpoint events sent back to VS Code as the UI isn't able to
+            add new breakpoints to their UI.
+
+        Code has been added that tags breakpoints set from VS Code
         DAP packets so we know the IDE knows about them. If VS Code is ever
         able to register breakpoints that aren't initially set in the GUI,
         then we will need to revise this.
         """
-        main_source_basename = "main.cpp"
-        main_source_path = os.path.join(os.getcwd(), main_source_basename)
-        foo_source_basename = "foo.cpp"
-        foo_source_path = os.path.join(os.getcwd(), foo_source_basename)
-        main_bp_line = line_number("main.cpp", "main breakpoint 1")
-        foo_bp1_line = line_number("foo.cpp", "foo breakpoint 1")
-        foo_bp2_line = line_number("foo.cpp", "foo breakpoint 2")
-
-        # Visual Studio Code Debug Adapters have no way to specify the file
-        # without launching or attaching to a process, so we must start a
-        # process in order to be able to set breakpoints.
+        main_source_path = self.getSourcePath("main.cpp")
+        main_bp_line = line_number(main_source_path, "main breakpoint 1")
+        main_source = Source.build(path=main_source_path)
         program = self.getBuildArtifact("a.out")
 
         # Set a breakpoint after creating the target by running a command line
@@ -51,82 +44,91 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # registered and marked with a special keyword to ensure we deliver
         # breakpoint events for these breakpoints but not for ones that are not
         # set via the command interpreter.
-        bp_command = "breakpoint set --file foo.cpp --line %u" % (foo_bp2_line)
-        self.build_and_launch(program, stopOnEntry=True, preRunCommands=[bp_command])
-        main_bp_id = 0
-        foo_bp_id = 0
-        # Set breakpoints and verify that they got set correctly
+
+        shlib_env_key = self.platformContext.shlib_environment_var
+        path_separator = self.platformContext.shlib_path_separator
+        shlib_env_value = os.getenv(shlib_env_key)
+        shlib_env_new_value = (
+            self.getBuildDir()
+            if shlib_env_value is None
+            else (shlib_env_value + path_separator + self.getBuildDir())
+        )
+
+        # Set preCommand breakpoint
+        func_unique_function_name = "unique_function_name"
+        bp_command = f"breakpoint set --name {func_unique_function_name}"
+        launch_seq = self.build_and_launch(
+            program,
+            preRunCommands=[bp_command],
+            env={shlib_env_key: shlib_env_new_value},
+        )
+        self.dap_server.wait_for_event(["initialized"])
         dap_breakpoint_ids = []
-        response = self.dap_server.request_setBreakpoints(
-            main_source_path, [main_bp_line]
-        )
-        self.assertTrue(response)
+
+        # We set the breakpoints after initialized event.
+        # Set and verify new line breakpoint.
+        response = self.dap_server.request_setBreakpoints(main_source, [main_bp_line])
+        self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
-        for breakpoint in breakpoints:
-            main_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (main_bp_id))
-            self.assertTrue(
-                breakpoint["verified"], "expect main breakpoint to be verified"
-            )
-
-        response = self.dap_server.request_setBreakpoints(
-            foo_source_path, [foo_bp1_line]
+        self.assertEqual(len(breakpoints), 1, "expects only one line breakpoint")
+        main_breakpoint = breakpoints[0]
+        main_bp_id = main_breakpoint["id"]
+        dap_breakpoint_ids.append(main_bp_id)
+        self.assertTrue(
+            main_breakpoint["verified"], "expects main breakpoint to be verified"
         )
-        self.assertTrue(response)
+
+        # Set and verify new function breakpoint.
+        func_foo = "foo"
+        response = self.dap_server.request_setFunctionBreakpoints([func_foo])
+        self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
-        for breakpoint in breakpoints:
-            foo_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (foo_bp_id))
-            self.assertFalse(
-                breakpoint["verified"], "expect foo breakpoint to not be verified"
-            )
-
-        # Get the stop at the entry point
-        self.continue_to_next_stop()
-
-        # We are now stopped at the entry point to the program. Shared
-        # libraries are not loaded yet (at least on macOS they aren't) and only
-        # the breakpoint in the main executable should be resolved.
-        self.assertEqual(len(self.dap_server.breakpoint_events), 1)
-        event = self.dap_server.breakpoint_events[0]
-        body = event["body"]
-        self.assertEqual(
-            body["reason"], "changed", "breakpoint event should say changed"
+        self.assertEqual(len(breakpoints), 1, "expects only one function breakpoint")
+        func_foo_breakpoint = breakpoints[0]
+        foo_bp_id = func_foo_breakpoint["id"]
+        dap_breakpoint_ids.append(foo_bp_id)
+        self.assertFalse(
+            func_foo_breakpoint["verified"],
+            "expects unique function breakpoint to not be verified",
         )
-        breakpoint = body["breakpoint"]
-        self.assertEqual(breakpoint["id"], main_bp_id)
-        self.assertTrue(breakpoint["verified"], "main breakpoint should be resolved")
 
-        # Clear the list of breakpoint events so we don't see this one again.
-        self.dap_server.breakpoint_events.clear()
+        self.dap_server.request_configurationDone()
+        launch_response = self.dap_server.receive_response(launch_seq)
+        self.assertIsNotNone(launch_response)
+        self.assertTrue(launch_response["success"])
 
-        # Continue to the breakpoint
-        self.continue_to_breakpoints(dap_breakpoint_ids)
+        # Wait for the next stop (breakpoint foo).
+        self.verify_breakpoint_hit([foo_bp_id])
+        unique_bp_id = 1
 
-        # When the process launches, we first expect to see both the main and
-        # foo breakpoint as unresolved.
-        for event in self.dap_server.breakpoint_events[:2]:
-            body = event["body"]
-            self.assertEqual(
-                body["reason"], "changed", "breakpoint event should say changed"
-            )
-            breakpoint = body["breakpoint"]
-            self.assertIn(str(breakpoint["id"]), dap_breakpoint_ids)
-            self.assertFalse(breakpoint["verified"], "breakpoint should be unresolved")
+        # Check the breakpoints set in dap is verified.
+        verified_breakpoint_ids = []
+        events = self.dap_server.wait_for_breakpoint_events()
+        for breakpoint_event in events:
+            breakpoint_event_body = breakpoint_event["body"]
+            if breakpoint_event_body["reason"] != "changed":
+                continue
+            breakpoint = breakpoint_event_body["breakpoint"]
 
-        # Then, once the dynamic loader has given us a load address, they
-        # should show up as resolved again.
-        for event in self.dap_server.breakpoint_events[3:]:
-            body = event["body"]
-            self.assertEqual(
-                body["reason"], "changed", "breakpoint event should say changed"
-            )
-            breakpoint = body["breakpoint"]
-            self.assertIn(str(breakpoint["id"]), dap_breakpoint_ids)
-            self.assertTrue(breakpoint["verified"], "breakpoint should be resolved")
-            self.assertNotIn(
-                "source",
-                breakpoint,
-                "breakpoint event should not return a source object",
-            )
-            self.assertIn("line", breakpoint, "breakpoint event should have line")
+            if "verified" in breakpoint_event_body:
+                self.assertFalse(
+                    breakpoint_event_body["verified"],
+                    f"expects changed breakpoint to be verified. event: {breakpoint_event}",
+                )
+            id = breakpoint["id"]
+            verified_breakpoint_ids.append(id)
+
+        self.assertIn(main_bp_id, verified_breakpoint_ids)
+        self.assertIn(foo_bp_id, verified_breakpoint_ids)
+        self.assertNotIn(unique_bp_id, verified_breakpoint_ids)
+
+        # Continue to the unique function breakpoint set from preRunCommands.
+        unique_function_stop_event = self.continue_to_next_stop()[0]
+        unique_body = unique_function_stop_event["body"]
+        self.assertEqual(unique_body["reason"], "breakpoint")
+        self.assertIn(unique_bp_id, unique_body["hitBreakpointIds"])
+
+        # Clear line and function breakpoints and exit.
+        self.dap_server.request_setFunctionBreakpoints([])
+        self.dap_server.request_setBreakpoints(main_source, [])
+        self.continue_to_exit()

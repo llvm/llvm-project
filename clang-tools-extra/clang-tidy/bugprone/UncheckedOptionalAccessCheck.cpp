@@ -1,4 +1,4 @@
-//===--- UncheckedOptionalAccessCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessDiagnostic;
 using dataflow::UncheckedOptionalAccessModel;
 
-static constexpr llvm::StringLiteral FuncID("fun");
+static constexpr StringRef FuncID = "fun";
 
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
@@ -30,11 +30,11 @@ void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   auto HasOptionalCallDescendant = hasDescendant(callExpr(callee(cxxMethodDecl(
       ofClass(UncheckedOptionalAccessModel::optionalClassDecl())))));
   Finder->addMatcher(
-      decl(anyOf(functionDecl(unless(isExpansionInSystemHeader()),
-                              // FIXME: Remove the filter below when lambdas are
-                              // well supported by the check.
-                              unless(hasDeclContext(cxxRecordDecl(isLambda()))),
-                              hasBody(HasOptionalCallDescendant)),
+      decl(anyOf(functionDecl(
+                     // FIXME: Remove the filter below when lambdas are
+                     // well supported by the check.
+                     unless(hasDeclContext(cxxRecordDecl(isLambda()))),
+                     hasBody(HasOptionalCallDescendant)),
                  cxxConstructorDecl(hasAnyConstructorInitializer(
                      withInitializer(HasOptionalCallDescendant)))))
           .bind(FuncID),

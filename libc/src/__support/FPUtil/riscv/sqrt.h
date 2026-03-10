@@ -18,6 +18,8 @@
 #error "Invalid include"
 #endif
 
+#include "src/__support/FPUtil/generic/sqrt.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 

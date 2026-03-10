@@ -38,7 +38,7 @@ define i16 @test1(float %f) nounwind {
 ; X86_AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86_AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86_AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86_AVX1-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X86_AVX1-NEXT:    vcvttss2si %xmm0, %eax
@@ -50,7 +50,7 @@ define i16 @test1(float %f) nounwind {
 ; X64_AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64_AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64_AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64_AVX1-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vcvttss2si %xmm0, %eax
@@ -63,7 +63,7 @@ define i16 @test1(float %f) nounwind {
 ; X86_AVX512-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X86_AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X86_AVX512-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
@@ -76,7 +76,7 @@ define i16 @test1(float %f) nounwind {
 ; X64_AVX512-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; X64_AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64_AVX512-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0

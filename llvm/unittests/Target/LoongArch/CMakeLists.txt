@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
   LoongArchCodeGen
   LoongArchDesc
   LoongArchInfo
+  Instrumentation
   MC
   MIRParser
   SelectionDAG

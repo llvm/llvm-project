@@ -185,7 +185,7 @@ Status writeSocketIdToPipe(const char *const named_pipe_path,
                            llvm::StringRef socket_id) {
   Pipe port_name_pipe;
   // Wait for 10 seconds for pipe to be opened.
-  if (llvm::Error err = port_name_pipe.OpenAsWriter(named_pipe_path, false,
+  if (llvm::Error err = port_name_pipe.OpenAsWriter(named_pipe_path,
                                                     std::chrono::seconds{10}))
     return Status::FromError(std::move(err));
 
@@ -218,8 +218,8 @@ void ConnectToRemote(MainLoop &mainloop,
                                     error.AsCString());
       exit(-1);
     }
-    connection_up = std::unique_ptr<Connection>(new ConnectionFileDescriptor(
-        new TCPSocket(sockfd, /*should_close=*/true)));
+    connection_up = std::make_unique<ConnectionFileDescriptor>(
+        std::make_unique<TCPSocket>(sockfd, /*should_close=*/true));
 #else
     url = llvm::formatv("fd://{0}", connection_fd).str();
 

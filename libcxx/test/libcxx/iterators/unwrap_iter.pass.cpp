@@ -12,6 +12,7 @@
 #include <cassert>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include "test_iterators.h"
 #include "test_macros.h"

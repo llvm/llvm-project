@@ -10,23 +10,10 @@
 define i32 @_Z9load_le32Ph(ptr nocapture readonly %data) {
 ; CHECK-LABEL: @_Z9load_le32Ph(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 8
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL3]], [[CONV]]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
-; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
-; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 16
-; CHECK-NEXT:    [[OR7:%.*]] = or i32 [[OR]], [[SHL6]]
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
-; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
-; CHECK-NEXT:    [[SHL10:%.*]] = shl nuw i32 [[CONV9]], 24
-; CHECK-NEXT:    [[OR11:%.*]] = or i32 [[OR7]], [[SHL10]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
+; CHECK-NEXT:    [[OR11:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[OR11]]
 ;
 entry:
@@ -101,10 +88,8 @@ define <4 x float> @PR16739_byref_alt(ptr nocapture readonly dereferenceable(16)
 define <4 x float> @PR16739_byval(ptr nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byval(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[T1:%.*]] = load i64, ptr [[X]], align 16
-; CHECK-NEXT:    [[T8:%.*]] = lshr i64 [[T1]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[T8]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i64> [[TMP2]], <i64 0, i64 32, i64 0, i64 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[TMP5]]
