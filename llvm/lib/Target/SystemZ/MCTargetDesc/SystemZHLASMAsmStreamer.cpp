@@ -367,8 +367,13 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     if (Symbol.isTemporary() || !Symbol.isRegistered() || Symbol.isDefined())
       continue;
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-    OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
-    EmitEOL();
+    if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
+      OS << "C_WSA64 CATTR PART(" << Sym.getName() << ")";
+      EmitEOL();
+    } else {
+      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      EmitEOL();
+    }
     emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
               Sym.getLinkage(), Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();

@@ -83,6 +83,9 @@ class GOFFObjectWriter : public MCObjectWriter {
   // The RootSD section.
   MCSectionGOFF *RootSD = nullptr;
 
+  // The ED section for external data references.
+  MCSectionGOFF *ExternalED = nullptr;
+
   // Saved relocation data.
   std::vector<GOFFRelocationEntry> Relocations;
 
@@ -92,6 +95,9 @@ public:
   ~GOFFObjectWriter() override;
 
   void setRootSD(MCSectionGOFF *RootSD) { this->RootSD = RootSD; }
+  void setExternalED(MCSectionGOFF *ExternalED) {
+    this->ExternalED = ExternalED;
+  }
 
   // Implementation of the MCObjectWriter interface.
   void recordRelocation(const MCFragment &F, const MCFixup &Fixup,

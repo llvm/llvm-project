@@ -840,8 +840,11 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 
-  if (!GV->hasInitializer())   // External globals require no extra code.
+  if (!GV->hasInitializer()) { // External globals require no extra code.
+    if (TM.getTargetTriple().isOSzOS())
+      OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_ELF_TypeObject);
     return;
+  }
 
   GVSym->redefineIfPossible();
   if (GVSym->isDefined() || GVSym->isVariable())

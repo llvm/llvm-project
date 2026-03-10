@@ -34,9 +34,22 @@ MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
 MCGOFFStreamer::~MCGOFFStreamer() = default;
 
 void MCGOFFStreamer::finishImpl() {
-  getWriter().setRootSD(static_cast<MCSectionGOFF *>(
+  // The root SD symbol.
+  MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(
                             getContext().getObjectFileInfo()->getTextSection())
-                            ->getParent());
+                            ->getParent();
+  // Special ED symbol required for external data references.
+  MCSectionGOFF *ExternalED = getContext().getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
+                   GOFF::ESD_ALIGN_Quadword, 0},
+      RootSD);
+  // Change to this section to register and initialize it.
+  MCObjectStreamer::changeSection(ExternalED, 0);
+  getWriter().setRootSD(RootSD);
+  getWriter().setExternalED(ExternalED);
   MCObjectStreamer::finishImpl();
 }
 
