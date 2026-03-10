@@ -2810,6 +2810,40 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
 __attribute__((convergent)) uint64_t4 WaveActiveBitOr(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// WaveActiveBitXor builtins
+//===----------------------------------------------------------------------===//
+
+// \brief Returns the bitwise XOR of all the values of <expr> across all active
+// non-helper lanes in the current wave, and replicates it back to
+// all active non-helper lanes.
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint WaveActiveBitXor(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint2 WaveActiveBitXor(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint3 WaveActiveBitXor(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint4 WaveActiveBitXor(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t WaveActiveBitXor(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t2 WaveActiveBitXor(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t3 WaveActiveBitXor(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_xor)
+__attribute__((convergent)) uint64_t4 WaveActiveBitXor(uint64_t4);
+
+//===----------------------------------------------------------------------===//
 // WaveActiveMax builtins
 //===----------------------------------------------------------------------===//
 

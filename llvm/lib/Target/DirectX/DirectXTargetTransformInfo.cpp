@@ -63,6 +63,7 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_reduce_or:
+  case Intrinsic::dx_wave_reduce_xor:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_min:
   case Intrinsic::dx_wave_reduce_sum:
