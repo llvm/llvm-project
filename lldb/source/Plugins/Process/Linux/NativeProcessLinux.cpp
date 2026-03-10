@@ -287,8 +287,7 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::make_error<StringError>("Could not sync with inferior process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
@@ -505,8 +504,7 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
 
   size_t tid_count = tids_to_attach.size();
   if (tid_count == 0)
-    return llvm::make_error<StringError>("No such process",
-                                         llvm::inconvertibleErrorCode());
+    return llvm::createStringError("No such process");
 
   std::vector<::pid_t> tids;
   tids.reserve(tid_count);

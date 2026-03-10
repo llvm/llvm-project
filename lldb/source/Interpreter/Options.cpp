@@ -981,7 +981,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     // See if the option takes an argument, and see if one was supplied.
     if (long_options_index == -1) {
       return llvm::createStringError(
-          llvm::formatv("Invalid option with value '{0}'.", char(val)).str());
+          llvm::formatv("Invalid option with value '{0}'.", char(val)));
     }
 
     StreamString option_str;

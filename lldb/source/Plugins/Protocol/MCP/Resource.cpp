@@ -58,7 +58,7 @@ static constexpr llvm::StringLiteral kMimeTypeJSON = "application/json";
 template <typename... Args>
 static llvm::Error createStringError(const char *format, Args &&...args) {
   return llvm::createStringError(
-      llvm::formatv(format, std::forward<Args>(args)...).str());
+      llvm::formatv(format, std::forward<Args>(args)...));
 }
 
 static llvm::Error createUnsupportedURIError(llvm::StringRef uri) {
