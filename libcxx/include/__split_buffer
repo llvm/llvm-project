@@ -25,6 +25,7 @@
 #include <__memory/compressed_pair.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
+#include <__memory/uninitialized_algorithms.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
@@ -800,7 +801,17 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
       difference_type __d = __back_spare();
       __d                 = (__d + 1) / 2;
       auto __new_end      = __end + __d;
-      __set_valid_range(std::move_backward(begin(), __end, __new_end), __new_end);
+      if (__d >= __end_ - __begin_) {
+        auto __new_begin = __begin() + __d;
+        std::__uninitialized_allocator_relocate(__get_allocator(), begin(), __end, __new_begin);
+        __set_valid_range(__new_begin, __new_end);
+      } else {
+        auto __mid = __end - __d;
+        std::__uninitialized_allocator_relocate(__get_allocator(), __mid, __end, __new_end);
+        auto __new_begin = std::move_backward(begin(), __mid, __end);
+        __destruct_at_begin(__new_begin);
+        __set_valid_range(__new_begin, __new_end);
+      }
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
       __split_buffer<value_type, allocator_type, _Layout> __t(__c, (__c + 3) / 4, __get_allocator());
@@ -821,8 +832,17 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
     if (__front_spare() > 0) {
       difference_type __d = __front_spare();
       __d                 = (__d + 1) / 2;
-      __end               = std::move(begin(), __end, begin() - __d);
-      __set_valid_range(begin() - __d, __end);
+      auto __new_begin    = __begin() - __d;
+      if (__d >= __end_ - __begin_) {
+        std::__uninitialized_allocator_relocate(__get_allocator(), begin(), __end, __new_begin);
+        __set_valid_range(__new_begin, __end - __d);
+      } else {
+        auto __mid = begin() + __d;
+        std::__uninitialized_allocator_relocate(__get_allocator(), begin(), __mid, __new_begin);
+        auto __new_end = std::move(__mid, __end, begin());
+        __destruct_at_end(__new_end);
+        __set_valid_range(__new_begin, __new_end);
+      }
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
       __split_buffer<value_type, allocator_type, _Layout> __t(__c, __c / 4, __get_allocator());
