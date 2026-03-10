@@ -487,6 +487,8 @@ public:
       return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
     }
 
+    const clang::Decl *getDecl() const { return calleeDecl; }
+
     unsigned getNumParams() const {
       if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
         return fd->getNumParams();
@@ -969,6 +971,16 @@ public:
   void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
+
+  /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
+  /// it if it's the top of the stack.
+  ///
+  /// \param DominatingIP - An instruction which is known to
+  ///   dominate the current IP (if set) and which lies along
+  ///   all paths of execution between the current IP and the
+  ///   the point at which the cleanup comes into scope.
+  void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
+                              mlir::Operation *dominatingIP);
 
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
@@ -1567,6 +1579,11 @@ public:
                                mlir::Type elementTy, Address beginPtr,
                                mlir::Value numElements,
                                mlir::Value allocSizeWithoutCookie);
+
+  /// Create a check for a function parameter that may potentially be
+  /// declared as non-null.
+  void emitNonNullArgCheck(RValue rv, QualType argType, SourceLocation argLoc,
+                           AbstractCallee ac, unsigned paramNum);
 
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,

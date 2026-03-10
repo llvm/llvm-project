@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s performance-faster-string-find %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s performance-faster-string-find %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-faster-string-find %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {performance-faster-string-find.StringLikeClasses: \
-// RUN:                '::llvm::StringRef;'}}" -- -isystem %clang_tidy_headers
+// RUN:                '::llvm::StringRef;'}}" -- -fno-delayed-template-parsing
 #include <string>
 
 namespace llvm {
@@ -13,6 +13,10 @@ struct StringRef {
 
 struct NotStringRef {
   int find(const char *);
+};
+
+template <typename T> struct Wrapper {
+  T value;
 };
 
 void StringFind() {
@@ -114,18 +118,23 @@ void StringFind() {
 
 
 template <typename T>
-int FindTemplateDependant(T value) {
+int FindTemplateDependent(T value) {
   return value.find("A");
 }
 template <typename T>
-int FindTemplateNotDependant(T pos) {
+int FindTemplateDependent1(T pos) {
+  // Ignored since the type of `pos` is dependent, the call cannot be completely resolved without instantiating the template.
   return std::string().find("A", pos);
+}
+template <typename T>
+int FindTemplateNonDependent() {
+  return std::string().find("A");
   // CHECK-MESSAGES: [[@LINE-1]]:29: warning: 'find' called with a string literal
-  // CHECK-FIXES: return std::string().find('A', pos);
+  // CHECK-FIXES: return std::string().find('A');
 }
 
 int FindStr() {
-  return FindTemplateDependant(std::string()) + FindTemplateNotDependant(1);
+  return FindTemplateDependent(std::string()) + FindTemplateDependent1(1);
 }
 
 #define STR_MACRO(str) str.find("A")
@@ -135,4 +144,10 @@ int Macros() {
   return STR_MACRO(std::string()) + POS_MACRO(1);
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: 'find' called with a string literal
   // CHECK-MESSAGES: [[@LINE-2]]:37: warning: 'find' called with a string literal
+}
+
+void SubstitutedTemplateType() {
+  Wrapper<std::string>().value.find("a");
+  // CHECK-MESSAGES: [[@LINE-1]]:37: warning: 'find' called with a string literal
+  // CHECK-FIXES: Wrapper<std::string>().value.find('a');
 }

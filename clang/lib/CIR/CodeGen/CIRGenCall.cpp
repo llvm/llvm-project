@@ -1021,6 +1021,25 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   return arrangeFreeFunctionType(funcTy.castAs<FunctionProtoType>());
 }
 
+RValue CallArg::getRValue(CIRGenFunction &cgf, mlir::Location loc) const {
+  if (!hasLV)
+    return rv;
+  LValue copy = cgf.makeAddrLValue(cgf.createMemTemp(ty, loc), ty);
+  cgf.emitAggregateCopy(copy, lv, ty, AggValueSlot::DoesNotOverlap,
+                        lv.isVolatile());
+  isUsed = true;
+  return RValue::getAggregate(copy.getAddress());
+}
+
+void CIRGenFunction::emitNonNullArgCheck(RValue rv, QualType argType,
+                                         SourceLocation argLoc,
+                                         AbstractCallee ac, unsigned paramNum) {
+  if (!ac.getDecl() || !(sanOpts.has(SanitizerKind::NonnullAttribute) ||
+                         sanOpts.has(SanitizerKind::NullabilityArg)))
+    return;
+  cgm.errorNYI("non-null arg check is NYI");
+}
+
 static cir::CIRCallOpInterface
 emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
                cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
