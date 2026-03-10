@@ -1269,14 +1269,9 @@ public:
   }
 
   void getDefaultLiveOut(BitVector &Regs) const override {
-    Regs |= getAliases(AArch64::X0);
-    Regs |= getAliases(AArch64::X1);
-    Regs |= getAliases(AArch64::X2);
-    Regs |= getAliases(AArch64::X3);
-    Regs |= getAliases(AArch64::X4);
-    Regs |= getAliases(AArch64::X5);
-    Regs |= getAliases(AArch64::X6);
-    Regs |= getAliases(AArch64::X7);
+    // According to the AArch64 ABI the return registers are X0 to X7,
+    // which happen to be the same as the parameter registers.
+    Regs |= getRegsUsedAsParams();
   }
 
   void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
@@ -1350,6 +1345,7 @@ public:
   void removeNonScavengeableRegs(BitVector &Regs) const override {
     BitVector ExclusionMask = getAliases(AArch64::LR);
     ExclusionMask |= getAliases(AArch64::FP);
+    ExclusionMask |= getAliases(AArch64::X18); // platform register
     ExclusionMask.flip();
     Regs &= ExclusionMask;
   }
