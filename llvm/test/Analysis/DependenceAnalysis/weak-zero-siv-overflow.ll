@@ -92,7 +92,7 @@ entry:
 
 loop.header:
   %i = phi i64 [ 0, %entry ], [ %i.inc, %loop.latch ]
-  %offset = phi i64 [ -2, %entry ], [ %offset.next, %loop.latch ]
+  %offset = phi i64 [ -1, %entry ], [ %offset.next, %loop.latch ]
   %ec = icmp eq i64 %i, %n
   br i1 %ec, label %exit, label %loop.body
 
