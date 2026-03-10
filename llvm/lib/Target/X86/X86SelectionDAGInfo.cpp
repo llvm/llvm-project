@@ -72,11 +72,8 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   case X86ISD::VP2INTERSECT:
     // invalid number of results; expected 1, got 2
-  case X86ISD::VTRUNCSTOREUS:
-  case X86ISD::VTRUNCSTORES:
   case X86ISD::FSETCCM_SAE:
     // invalid number of operands; expected 3, got 4
-  case X86ISD::CVTPH2PS:
   case X86ISD::CVTTP2SI_SAE:
   case X86ISD::CVTTP2UI_SAE:
   case X86ISD::CVTTP2IBS_SAE:
@@ -91,6 +88,8 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     // result #0 must have type v2i64, but has type v16i8/v8i16
   case X86ISD::CMPCCXADD:
     // operand #4 must have type i8, but has type i32
+  case X86ISD::CVTPS2PH:
+    // invalid node: operand #1 must have type i32, but has type i64
     return;
   }
 

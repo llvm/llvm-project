@@ -25,6 +25,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -583,6 +584,11 @@ struct XeGPUPeepHoleOptimizerPass final
       DBGS() << "Optimize block loads pass failed.\n";
       return signalPassFailure();
     }
+
+    // Apply folding for cleaning up IR.
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet emptyPatterns(ctx);
+    (void)applyPatternsGreedily(getOperation(), std::move(emptyPatterns));
   }
 };
 

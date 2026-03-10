@@ -2,6 +2,10 @@
 #define _UTILITY_
 
 namespace std {
+
+typedef __SIZE_TYPE__ size_t;
+typedef decltype(nullptr) nullptr_t;
+
 template <typename T>
 struct remove_reference { typedef T type; };
 template <typename T>
@@ -9,10 +13,54 @@ struct remove_reference<T &> { typedef T type; };
 template <typename T>
 struct remove_reference<T &&> { typedef T type; };
 
+template <typename T>
+using remove_reference_t = typename remove_reference<T>::type;
+
 template <typename _Tp>
 constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
   return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
 }
+
+template <typename T>
+constexpr T &&forward(remove_reference_t<T> &t) noexcept {
+  return static_cast<T &&>(t);
+}
+
+template <typename T>
+constexpr T &&forward(remove_reference_t<T> &&t) noexcept {
+  return static_cast<T &&>(t);
+}
+
+template <typename T>
+void swap(T &a, T &b) {
+  T tmp = move(a);
+  a = move(b);
+  b = move(tmp);
+}
+
+template <class T, class U>
+struct is_same { static constexpr bool value = false; };
+template <class T>
+struct is_same<T, T> { static constexpr bool value = true; };
+template <class T, class U>
+constexpr bool is_same_v = is_same<T, U>::value;
+
+template <bool B, class T = void>
+struct enable_if {};
+template <class T>
+struct enable_if<true, T> { typedef T type; };
+template <bool B, class T = void>
+using enable_if_t = typename enable_if<B, T>::type;
+
+template <class T> struct remove_cv { using type = T; };
+template <class T> struct remove_cv<const T> { using type = T; };
+template <class T> struct remove_cv<volatile T> { using type = T; };
+template <class T> struct remove_cv<const volatile T> { using type = T; };
+template <class T> using remove_cv_t = typename remove_cv<T>::type;
+
+template <class T> struct remove_cvref { using type = remove_cv_t<remove_reference_t<T>>; };
+template <class T> using remove_cvref_t = typename remove_cvref<T>::type;
+
 } // namespace std
 
 #endif // _UTILITY_
