@@ -62,6 +62,7 @@ GNU binutils replacements
    llvm-size
    llvm-strings
    llvm-strip
+   llvm-extract-bundle-entry
 
 Debugging Tools
 ~~~~~~~~~~~~~~~

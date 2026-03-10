@@ -1,5 +1,5 @@
-llvm-extract-bundle-entry - object stripping tool
-=================================================
+llvm-extract-bundle-entry - extract an offload bundle entry
+===========================================================
 
 .. program:: llvm-extract-bundle-entry
 
@@ -11,8 +11,9 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program: The `llvm-extract-offload-entry` command takes a URI argument, and generates a code 
-object file based on the details of the URI given.
+:program:`llvm-extract-offload-entry` is a tool thet takes a URI argument, and 
+generates a code object file by extracting an offload bundle entry specified
+by the URI given.
 
 The URI syntax is defined as:
  
@@ -24,9 +25,6 @@ extract_file    ::== URI_ENCODED_OS_FILE_PATH
 process_id      ::== DECIMAL_NUMBER
 number          ::== HEX_NUMBER | DECIMAL_NUMBER | OCTAL_NUMBER
  
-The `llvm-extract-offload-entry` command reads its input from standard input if the URI is omitted 
-or if the URI argument is -.  
-
 The output is always written to a file, whose name is generated from the URI input given.
 
 
