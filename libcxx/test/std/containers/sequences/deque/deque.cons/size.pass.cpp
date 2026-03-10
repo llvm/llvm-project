@@ -25,17 +25,20 @@ TEST_CONSTEXPR_CXX26 void test2(unsigned n) {
 #if TEST_STD_VER > 11
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(DefaultOnly::count == 0);
   {
     C d(n, Allocator());
-    assert(static_cast<unsigned>(DefaultOnly::count) == n);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert(static_cast<unsigned>(DefaultOnly::count) == n);
     assert(d.size() == n);
     assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
       assert(*i == T());
   }
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(DefaultOnly::count == 0);
 #else
   ((void)n);
 #endif
@@ -45,10 +48,12 @@ template <class T, class Allocator>
 TEST_CONSTEXPR_CXX26 void test1(unsigned n) {
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(DefaultOnly::count == 0);
   {
     C d(n);
-    assert(static_cast<unsigned>(DefaultOnly::count) == n);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert(static_cast<unsigned>(DefaultOnly::count) == n);
     assert(d.size() == n);
     assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
@@ -57,7 +62,8 @@ TEST_CONSTEXPR_CXX26 void test1(unsigned n) {
       assert(*i == T());
 #endif
   }
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(DefaultOnly::count == 0);
 }
 
 template <class T, class Allocator>

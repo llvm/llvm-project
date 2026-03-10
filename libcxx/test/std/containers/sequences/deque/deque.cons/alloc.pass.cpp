@@ -38,7 +38,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   test_util<int>(explicit_allocator<int>());
   test_util<NotConstructible>(explicit_allocator<NotConstructible>{});
 #endif
-  return false;
+  return true;
 }
 
 int main(int, char**) {

@@ -97,12 +97,16 @@ TEST_CONSTEXPR_CXX26 void test_emplacable_concept() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   basic_test();
   test_emplacable_concept();
+  return true;
+}
+
+int main(int, char**) {
+  test();
 #if TEST_STD_VER >= 26
-  static_assert(basic_test());
-  static_assert(test_emplacable_concept());
+  static_assert(test());
 #endif
 
   return 0;

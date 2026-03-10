@@ -44,7 +44,7 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 int main(int, char**) {
   tests();
 #if TEST_STD_VER >= 26
-  static_assert(test());
+  static_assert(tests());
 #endif
 
   return 0;

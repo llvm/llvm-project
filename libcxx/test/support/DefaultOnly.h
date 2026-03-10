@@ -11,6 +11,8 @@
 
 #include <cassert>
 
+#include "test_macros.h"
+
 class DefaultOnly
 {
     int data_;
@@ -20,13 +22,20 @@ class DefaultOnly
 public:
     static int count;
 
-    DefaultOnly() : data_(-1) {++count;}
-    ~DefaultOnly() {data_ = 0; --count;}
+    TEST_CONSTEXPR_CXX20 DefaultOnly() : data_(-1) {
+      if (!TEST_IS_CONSTANT_EVALUATED)
+        ++count;
+    }
+    TEST_CONSTEXPR_CXX20 ~DefaultOnly() {
+      data_ = 0;
+      if (!TEST_IS_CONSTANT_EVALUATED)
+        --count;
+    }
 
-    friend bool operator==(const DefaultOnly& x, const DefaultOnly& y)
-        {return x.data_ == y.data_;}
-    friend bool operator< (const DefaultOnly& x, const DefaultOnly& y)
-        {return x.data_ < y.data_;}
+    friend TEST_CONSTEXPR_CXX20 bool operator==(const DefaultOnly& x, const DefaultOnly& y) {
+      return x.data_ == y.data_;
+    }
+    friend TEST_CONSTEXPR_CXX20 bool operator<(const DefaultOnly& x, const DefaultOnly& y) { return x.data_ < y.data_; }
 };
 
 int DefaultOnly::count = 0;

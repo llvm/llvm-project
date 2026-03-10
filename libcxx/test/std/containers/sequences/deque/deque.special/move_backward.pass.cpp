@@ -42,7 +42,7 @@ TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
 }
 
 template <class C>
-void testN(int start, int N) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   typedef typename C::iterator I;
   typedef typename C::const_iterator CI;
   typedef random_access_iterator<I> RAI;
