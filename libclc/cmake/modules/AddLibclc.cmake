@@ -1,8 +1,23 @@
 # Converts a list of relative source paths to absolute paths and exports
-# it to the parent scope.
+# it to the parent scope. Also adds each source file's parent directory
+# as an include path to support .inc files in the same directory.
 macro(libclc_configure_source_list variable path)
   set(${variable} ${ARGN})
   list(TRANSFORM ${variable} PREPEND "${path}/")
+
+  # Add each source file's parent directory as an include path
+  foreach(_src ${${variable}})
+    cmake_path(GET _src PARENT_PATH _parent_dir)
+    get_property(_existing SOURCE ${_src}
+      DIRECTORY ${LIBCLC_SOURCE_DIR}
+      PROPERTY COMPILE_OPTIONS)
+    if(NOT "-I${_parent_dir}" IN_LIST _existing)
+      set_property(SOURCE ${_src}
+        DIRECTORY ${LIBCLC_SOURCE_DIR}
+        APPEND PROPERTY COMPILE_OPTIONS "-I${_parent_dir}")
+    endif()
+  endforeach()
+
   set(${variable} ${${variable}} PARENT_SCOPE)
 endmacro()
 
@@ -49,16 +64,6 @@ function(add_libclc_builtin_library target_name)
     "SOURCES;COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS"
     ${ARGN}
   )
-
-  # Append each source's parent directory as an include path to COMPILE_OPTIONS.
-  foreach(f ${ARG_SOURCES})
-    cmake_path(GET f PARENT_PATH parent_dir)
-    get_property(_existing SOURCE "${f}" DIRECTORY ${LIBCLC_SOURCE_DIR} PROPERTY COMPILE_OPTIONS)
-    if(NOT "-I${parent_dir}" IN_LIST _existing)
-      set_property(SOURCE "${f}" DIRECTORY ${LIBCLC_SOURCE_DIR}
-        APPEND PROPERTY COMPILE_OPTIONS "-I${parent_dir}")
-    endif()
-  endforeach()
 
   add_library(${target_name} STATIC ${ARG_SOURCES})
   target_compile_options(${target_name} PRIVATE ${ARG_COMPILE_OPTIONS})
