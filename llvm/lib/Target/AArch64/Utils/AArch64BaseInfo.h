@@ -467,14 +467,7 @@ struct TLBIPSysAlias : SysAliasOptionalReg {
   bool allowTLBID() const { return d128orTLBID; }
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
-    if (ActiveFeatures[llvm::AArch64::FeatureAll])
-      return true;
-
-    FeatureBitset Required = FeaturesRequired;
-    if (d128orTLBID)
-      Required &= ~D128OrTLBIDMask;
-
-    return (Required & ActiveFeatures) == Required &&
+    return SysAliasOptionalReg::haveFeatures(ActiveFeatures) &&
            (!d128orTLBID || ActiveFeatures[llvm::AArch64::FeatureD128] ||
             ActiveFeatures[llvm::AArch64::FeatureTLBID]);
   }
