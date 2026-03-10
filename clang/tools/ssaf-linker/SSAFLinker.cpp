@@ -14,7 +14,7 @@
 #include "clang/Analysis/Scalable/EntityLinker/EntityLinker.h"
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
-#include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
+#include "clang/Analysis/Scalable/SSAFForceLinker.h" // IWYU pragma: keep
 #include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
 #include "llvm/ADT/STLExtras.h"
@@ -303,8 +303,6 @@ int main(int argc, const char **argv) {
   cl::SetVersionPrinter(printVersion);
   // Parse command-line arguments and exit with an error if they are invalid.
   cl::ParseCommandLineOptions(argc, argv, "SSAF Linker\n");
-
-  initializeJSONFormat();
 
   llvm::TimerGroup LinkerTimers("ssaf-linker", "SSAF Linker");
   LinkerInput LI;
