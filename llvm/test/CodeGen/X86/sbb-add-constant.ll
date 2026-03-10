@@ -4,8 +4,6 @@
 ; Verify that ADD(SBB(Y,0,flags),C) folds to SBB(Y,-C,flags).
 ; SBB(Y,0) = Y - CF; adding C gives Y - CF + C = Y - (-C) - CF = SBB(Y,-C).
 ;
-declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64)
-declare { i8, i64 } @llvm.x86.subborrow.64(i8, i64, i64)
 
 ; Fold should fire because all conditions are met
 define i64 @g_i64(i64 %a, i64 %b) {
@@ -24,13 +22,31 @@ define i64 @g_i64(i64 %a, i64 %b) {
   ret i64 %r2
 }
 
-; Non-constant addend, fold should not fire
+; Fold should fire because all conditions are met
+define i32 @g_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: g_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    sbbl $-10, %eax
+; CHECK-NEXT:    retq
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = add i32 %r, 10
+  ret i32 %r2
+}
+
+; Non-constant addend, fold should still fire.
 define i64 @g_nonconstant(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: g_nonconstant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq %rsi, %rdi
-; CHECK-NEXT:    sbbq $0, %rdi
-; CHECK-NEXT:    leaq (%rdi,%rdx), %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    sbbq %rdx, %rax
 ; CHECK-NEXT:    retq
   %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue { i64, i1 } %ov, 0
@@ -39,6 +55,77 @@ define i64 @g_nonconstant(i64 %a, i64 %b, i64 %c) {
   %r   = add i64 %val, %ext
   %r2  = add i64 %r, %c
   ret i64 %r2
+}
+
+; Non-constant addend, fold should still fire.
+define i32 @g_nonconstant_i32(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: g_nonconstant_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %edx
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    sbbl %edx, %eax
+; CHECK-NEXT:    retq
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = add i32 %r, %c
+  ret i32 %r2
+}
+
+; Non-constant addend in commuted form, fold should still fire.
+define i64 @g_nonconstant_commuted(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: g_nonconstant_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    sbbq %rdx, %rax
+; CHECK-NEXT:    retq
+  %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
+  %val = extractvalue { i64, i1 } %ov, 0
+  %bit = extractvalue { i64, i1 } %ov, 1
+  %ext = sext i1 %bit to i64
+  %r   = add i64 %val, %ext
+  %r2  = add i64 %c, %r
+  ret i64 %r2
+}
+
+; Non-constant addend in commuted form, fold should still fire.
+define i32 @g_nonconstant_commuted_i32(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: g_nonconstant_commuted_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %edx
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    sbbl %edx, %eax
+; CHECK-NEXT:    retq
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = add i32 %c, %r
+  ret i32 %r2
+}
+
+; INT_MIN should fold correctly too.
+define i32 @g_i32_int_min(i32 %a, i32 %b) {
+; CHECK-LABEL: g_i32_int_min:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    sbbl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    retq
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = add i32 %r, -2147483648
+  ret i32 %r2
 }
 
 ; Multiple uses of SBB result, fold should not fire
@@ -58,6 +145,26 @@ define i64 @g_multi_use(i64 %a, i64 %b, ptr %out) {
   store i64 %sbb, ptr %out
   %r   = add i64 %sbb, 10
   ret i64 %r
+}
+
+; Multiple uses of SBB result, fold should not fire
+define i32 @g_multi_use_i32(i32 %a, i32 %b, ptr %out) {
+; CHECK-LABEL: g_multi_use_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    sbbl $0, %edi
+; CHECK-NEXT:    movl %edi, (%rdx)
+; CHECK-NEXT:    leal 10(%rdi), %eax
+; CHECK-NEXT:    retq
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %sbb = add i32 %val, %ext
+  store i32 %sbb, ptr %out
+  %r   = add i32 %sbb, 10
+  ret i32 %r
 }
 
 ; Flags live across the low-limb constant add into the next SBB in the chain.
