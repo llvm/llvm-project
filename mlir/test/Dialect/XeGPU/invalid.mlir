@@ -602,6 +602,14 @@ func.func @dpas_5(%a : vector<8x16xf16>, %b: vector<8x8x2xf16>) {
 }
 
 // -----
+func.func @dpas_6() {
+  %0 = arith.constant dense<0> : vector<4xi32>
+  // expected-error@+1 {{'xegpu.dpas' op Expecting lhs and rhs element types to be at most 32 bits.}}
+  %1 = xegpu.dpas %0, %0 : vector<4xi32>, vector<4xi32> -> vector<4xi32>
+  return
+}
+
+// -----
 func.func @dpas_simt_1(%a : vector<8xf16>, %b: vector<15xf16>) {
   // expected-error@+1 {{Expecting B operand to be a multiple of 32 bits}}
   %1 = xegpu.dpas %a, %b : vector<8xf16>, vector<15xf16> -> vector<8xf32>
