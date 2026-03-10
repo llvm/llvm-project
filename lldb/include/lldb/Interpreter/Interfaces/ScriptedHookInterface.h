@@ -26,7 +26,7 @@ public:
   /// Called when modules are unloaded from the target. Optional.
   virtual void HandleModuleUnloaded(lldb::StreamSP &output_sp) {}
 
-  /// Called when the process stops. Returns "should_stop" -- if false, the
+  /// Called when the process stops. Returns "should_stop" if false, the
   /// process will continue. Defaults to true (stop on unimplemented).
   virtual llvm::Expected<bool> HandleStop(ExecutionContext &exe_ctx,
                                           lldb::StreamSP &output_sp) {
