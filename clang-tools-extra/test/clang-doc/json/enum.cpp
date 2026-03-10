@@ -34,7 +34,7 @@ enum Size : uint8_t {
 // JSON-INDEX-NEXT:          "BriefComments": [
 // JSON-INDEX-NEXT:            [
 // JSON-INDEX-NEXT:              {
-// JSON-INDEX-NEXT:                "TextComment": " Specify the size"
+// JSON-INDEX-NEXT:                "TextComment": "Specify the size"
 // JSON-INDEX-NEXT:              }
 // JSON-INDEX-NEXT:            ]
 // JSON-INDEX-NEXT:          ],
@@ -53,12 +53,15 @@ enum Size : uint8_t {
 // JSON-INDEX-NEXT:              "ParagraphComments": [
 // JSON-INDEX-NEXT:                [
 // JSON-INDEX-NEXT:                  {
-// JSON-INDEX-NEXT:                    "TextComment": " Pearls are quite small."
+// JSON-INDEX-NEXT:                    "TextComment": "A pearl."
+// JSON-INDEX-NEXT:                  },
+// JSON-INDEX-NEXT:                  {
+// JSON-INDEX-NEXT:                    "TextComment": "Pearls are quite small."
 // JSON-INDEX-NEXT:                  }
 // JSON-INDEX-NEXT:                ],
 // JSON-INDEX-NEXT:                [
 // JSON-INDEX-NEXT:                  {
-// JSON-INDEX-NEXT:                    "TextComment": " Pearls are used in jewelry."
+// JSON-INDEX-NEXT:                    "TextComment": "Pearls are used in jewelry."
 // JSON-INDEX-NEXT:                  }
 // JSON-INDEX-NEXT:                ]
 // JSON-INDEX-NEXT:              ]
@@ -72,7 +75,7 @@ enum Size : uint8_t {
 // JSON-INDEX-NEXT:              "BriefComments": [
 // JSON-INDEX-NEXT:                [
 // JSON-INDEX-NEXT:                  {
-// JSON-INDEX-NEXT:                    "TextComment": " A tennis ball."
+// JSON-INDEX-NEXT:                    "TextComment": "A tennis ball."
 // JSON-INDEX-NEXT:                  }
 // JSON-INDEX-NEXT:                ]
 // JSON-INDEX-NEXT:              ],
@@ -88,7 +91,7 @@ enum Size : uint8_t {
 // JSON-INDEX-NEXT:              "ParagraphComments": [
 // JSON-INDEX-NEXT:                [
 // JSON-INDEX-NEXT:                  {
-// JSON-INDEX-NEXT:                    "TextComment": " A football."
+// JSON-INDEX-NEXT:                    "TextComment": "A football."
 // JSON-INDEX-NEXT:                  }
 // JSON-INDEX-NEXT:                ]
 // JSON-INDEX-NEXT:              ]
@@ -124,7 +127,7 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:          "BriefComments": [
 // JSON-VEHICLES-INDEX-NEXT:            [
 // JSON-VEHICLES-INDEX-NEXT:              {
-// JSON-VEHICLES-INDEX-NEXT:                "TextComment": " specify type of car"
+// JSON-VEHICLES-INDEX-NEXT:                "TextComment": "specify type of car"
 // JSON-VEHICLES-INDEX-NEXT:              }
 // JSON-VEHICLES-INDEX-NEXT:            ]
 // JSON-VEHICLES-INDEX-NEXT:          ],
@@ -135,7 +138,7 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:        "InfoType": "enum",
 // JSON-VEHICLES-INDEX-NEXT:        "Location": {
 // JSON-VEHICLES-INDEX-NEXT:          "Filename": "{{.*}}enum.cpp",
-// JSON-VEHICLES-INDEX-NEXT:          "LineNumber": 111
+// JSON-VEHICLES-INDEX-NEXT:          "LineNumber": 114
 // JSON-VEHICLES-INDEX-NEXT:        },
 // JSON-VEHICLES-INDEX-NEXT:        "Members": [
 // JSON-VEHICLES-INDEX-NEXT:          {
@@ -144,7 +147,7 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:              "ParagraphComments": [
 // JSON-VEHICLES-INDEX-NEXT:                [
 // JSON-VEHICLES-INDEX-NEXT:                  {
-// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": " Comment 1"
+// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": "Comment 1"
 // JSON-VEHICLES-INDEX-NEXT:                  }
 // JSON-VEHICLES-INDEX-NEXT:                ]
 // JSON-VEHICLES-INDEX-NEXT:              ]
@@ -159,7 +162,7 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:              "ParagraphComments": [
 // JSON-VEHICLES-INDEX-NEXT:                [
 // JSON-VEHICLES-INDEX-NEXT:                  {
-// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": " Comment 2"
+// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": "Comment 2"
 // JSON-VEHICLES-INDEX-NEXT:                  }
 // JSON-VEHICLES-INDEX-NEXT:                ]
 // JSON-VEHICLES-INDEX-NEXT:              ]
@@ -178,7 +181,7 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:              "ParagraphComments": [
 // JSON-VEHICLES-INDEX-NEXT:                [
 // JSON-VEHICLES-INDEX-NEXT:                  {
-// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": " Comment 4"
+// JSON-VEHICLES-INDEX-NEXT:                    "TextComment": "Comment 4"
 // JSON-VEHICLES-INDEX-NEXT:                  }
 // JSON-VEHICLES-INDEX-NEXT:                ]
 // JSON-VEHICLES-INDEX-NEXT:              ]
