@@ -138,12 +138,11 @@ class LLDBTest(TestFormat):
                 (unexpected_successes, lit.Test.XPASS),
             ]
         else:
-            # Mark this test as PASS if at least one test passed.
-            if passes > 0:
-                return lit.Test.PASS, output
+            # Only mark the test as unsupported if they are all unsupported.
+            if passes == 0 and expected_failures == 0:
+                return lit.Test.UNSUPPORTED
             lit_results = [
                 (passes, lit.Test.PASS),
-                (skipped, lit.Test.UNSUPPORTED),
                 (expected_failures, lit.Test.XFAIL),
             ]
 
