@@ -16,6 +16,7 @@
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
+#include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
@@ -257,6 +258,28 @@ TEST(IndexTest, IndexExplicitTemplateInstantiation) {
                                    DeclAt(Position(5, 12)))),
                     Contains(AllOf(QName("Foo"), WrittenAt(Position(7, 7)),
                                    DeclAt(Position(3, 12))))));
+}
+
+TEST(IndexTest, IndexImplicitTemplateInstantiation) {
+  std::string Code = R"cpp(
+    struct Seagulls {};
+    struct Cry {};
+
+    template <typename... T>
+    struct The : T... {};
+
+    struct When : The<Seagulls,Cry> {};
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  Opts.IndexImplicitInstantiation = true;
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(
+      Index->Symbols,
+      AllOf(Contains(AllOf(QName("Seagulls"), WrittenAt(Position(6, 18)),
+                           DeclAt(Position(2, 12)))),
+            Contains(AllOf(QName("Cry"), WrittenAt(Position(6, 18)),
+                           DeclAt(Position(3, 12))))));
 }
 
 TEST(IndexTest, IndexTemplateInstantiationPartial) {
