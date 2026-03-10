@@ -75,7 +75,7 @@ class DependencyActionController {
 public:
   virtual ~DependencyActionController();
 
-  /// Creates a thread-safe copy of the controller.
+  /// Creates a copy of the controller. The result must be both thread-safe.
   virtual std::unique_ptr<DependencyActionController> clone() const = 0;
 
   /// Provides output path for a given module dependency. Must be thread-safe.
