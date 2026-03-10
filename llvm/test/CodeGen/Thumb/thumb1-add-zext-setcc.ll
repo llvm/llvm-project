@@ -6,9 +6,9 @@
 define i32 @add_zext_setne_zero(i32 %x, i32 %z) {
 ; CHECK-LABEL: add_zext_setne_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    subs r1, r1, #1
-; CHECK-NEXT:    adcs r0, r2
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    sbcs r1, r1
+; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %cmp = icmp ne i32 %z, 0
   %ext = zext i1 %cmp to i32
@@ -19,9 +19,9 @@ define i32 @add_zext_setne_zero(i32 %x, i32 %z) {
 define i32 @add_zext_seteq_zero(i32 %x, i32 %z) {
 ; CHECK-LABEL: add_zext_seteq_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    rsbs r1, r1, #0
-; CHECK-NEXT:    adcs r0, r2
+; CHECK-NEXT:    subs r1, r1, #1
+; CHECK-NEXT:    sbcs r1, r1
+; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %cmp = icmp eq i32 %z, 0
   %ext = zext i1 %cmp to i32
@@ -63,9 +63,9 @@ define i32 @add_zext_seteq_const(i32 %x, i32 %z) {
 define i32 @add_zext_setne_zero_commuted(i32 %x, i32 %z) {
 ; CHECK-LABEL: add_zext_setne_zero_commuted:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    subs r1, r1, #1
-; CHECK-NEXT:    adcs r0, r2
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    sbcs r1, r1
+; CHECK-NEXT:    subs r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %cmp = icmp ne i32 %z, 0
   %ext = zext i1 %cmp to i32
@@ -133,5 +133,44 @@ define i32 @add_zext_seteq_large_const(i32 %x, i32 %z) {
   %cmp = icmp eq i32 %z, 1024
   %ext = zext i1 %cmp to i32
   %result = add i32 %x, %ext
+  ret i32 %result
+}
+
+define i32 @add_sext_setne_zero(i32 %x, i32 %z) {
+; CHECK-LABEL: add_sext_setne_zero:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    sbcs r1, r1
+; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    bx lr
+  %cmp = icmp ne i32 %z, 0
+  %ext = sext i1 %cmp to i32
+  %result = add i32 %x, %ext
+  ret i32 %result
+}
+
+define i32 @sub_zext_setne_zero(i32 %x, i32 %z) {
+; CHECK-LABEL: sub_zext_setne_zero:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    sbcs r1, r1
+; CHECK-NEXT:    adds r0, r0, r1
+; CHECK-NEXT:    bx lr
+  %cmp = icmp ne i32 %z, 0
+  %ext = zext i1 %cmp to i32
+  %result = sub i32 %x, %ext
+  ret i32 %result
+}
+
+define i32 @sub_sext_setne_zero(i32 %x, i32 %z) {
+; CHECK-LABEL: sub_sext_setne_zero:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    sbcs r1, r1
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    bx lr
+  %cmp = icmp ne i32 %z, 0
+  %ext = sext i1 %cmp to i32
+  %result = sub i32 %x, %ext
   ret i32 %result
 }
