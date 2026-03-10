@@ -282,9 +282,6 @@ Improvements to Clang's diagnostics
 - Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
-- ``-Wunsafe-buffer-usage`` now warns about unsafe two-parameter constructors of
-  ``std::string_view`` (pointer and size), consistent with the existing warning for ``std::span``.
-
 - Added ``-Wmodule-map-path-outside-directory`` (off by default) to warn on
   header and umbrella directory paths that use ``..`` to refer outside the module
   directory in module maps found via implicit search
