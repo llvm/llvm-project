@@ -103,7 +103,7 @@ private:
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
   /// A queue of (optional) vtables to consider emitting.
-  std::vector<const CXXRecordDecl*> deferredVTables;
+  std::vector<const CXXRecordDecl *> deferredVTables;
 
   /// A queue of (optional) vtables that may be emitted opportunistically.
   std::vector<const CXXRecordDecl *> opportunisticVTables;
@@ -498,7 +498,6 @@ public:
   void addDeferredVTable(const CXXRecordDecl *rd) {
     deferredVTables.push_back(rd);
   }
-
 
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.

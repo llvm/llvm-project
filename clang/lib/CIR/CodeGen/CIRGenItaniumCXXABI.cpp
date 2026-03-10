@@ -227,7 +227,7 @@ public:
   classifyRTTIUniqueness(QualType canTy, cir::GlobalLinkageKind linkage) const;
 
 private:
- bool hasAnyUnusedVirtualInlineFunction(const CXXRecordDecl *rd) const;
+  bool hasAnyUnusedVirtualInlineFunction(const CXXRecordDecl *rd) const;
   bool isVTableHidden(const CXXRecordDecl *rd) const;
 };
 
