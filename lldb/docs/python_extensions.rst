@@ -45,10 +45,3 @@ Scripted Thread Plan Plugins
     :no-heading:
     :no-inheritance-diagram:
 
-Scripted Symbol Locator Plugins
--------------------------------
-
-.. automodapi:: lldb.plugins.scripted_symbol_locator
-    :no-heading:
-    :skip: ABCMeta, LocalCacheSymbolLocator
-    :no-inheritance-diagram:

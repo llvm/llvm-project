@@ -444,8 +444,12 @@ Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
   auto &SymEntry = getSymbolTableEntry(Section);
   MCSymbol *Sym = SymEntry.second.Symbol;
   if (Sym && Sym->isDefined() &&
-      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
+      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym)) {
     reportError(SMLoc(), "invalid symbol redefinition");
+    // Don't reuse the conflicting symbol (e.g. an equated symbol from `x=0`)
+    // as a section symbol, which would cause a crash in changeSection.
+    Sym = nullptr;
+  }
   // Use the symbol's index to track if it has been used as a section symbol.
   // Set to -1 to catch potential bugs if misused as a symbol index.
   if (Sym && Sym->getIndex() != -1u) {

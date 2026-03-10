@@ -446,6 +446,16 @@ public:
   static void bindDerived(ClassTy &c);
 };
 
+class MLIR_PYTHON_API_EXPORTED PyDynamicType
+    : public PyConcreteType<PyDynamicType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsADynamicType;
+  static constexpr const char *pyClassName = "DynamicType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c);
+};
+
 MLIR_PYTHON_API_EXPORTED void populateIRTypes(nanobind::module_ &m);
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

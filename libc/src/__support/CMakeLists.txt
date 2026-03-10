@@ -442,3 +442,6 @@ if(NOT (LIBC_TARGET_OS_IS_DARWIN))
 endif()
 
 add_subdirectory(math)
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_subdirectory(mathvec)
+endif()

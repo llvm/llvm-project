@@ -21,6 +21,7 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
@@ -211,17 +212,20 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
-  mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+  mlir::StringRef getName() const final { return "AccRuntimeCounters"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
-  mlir::StringRef getName() final { return "AccConstructResource"; }
+  mlir::StringRef getName() const final { return "AccConstructResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
-  mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
+  mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 } // namespace acc

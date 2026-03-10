@@ -113,6 +113,11 @@ struct BFloat16 {
   LIBC_INLINE BFloat16 operator/(BFloat16 other) const {
     return fputil::generic::div<bfloat16>(*this, other);
   }
+
+  LIBC_INLINE BFloat16 &operator*=(const BFloat16 &other) {
+    *this = *this * other;
+    return *this;
+  }
 }; // struct BFloat16
 
 } // namespace fputil

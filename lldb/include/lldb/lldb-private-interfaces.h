@@ -87,6 +87,7 @@ typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
+typedef FileSpec (*ScriptInterpreterGetPath)();
 typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
     *ScriptedFrameProviderCreateInstance)(
     lldb::StackFrameListSP input_frames,
@@ -110,8 +111,6 @@ typedef std::optional<FileSpec> (*SymbolLocatorLocateExecutableSymbolFile)(
 typedef bool (*SymbolLocatorDownloadObjectAndSymbolFile)(
     ModuleSpec &module_spec, Status &error, bool force_lookup,
     bool copy_executable);
-typedef std::optional<FileSpec> (*SymbolLocatorLocateSourceFile)(
-    const lldb::ModuleSP &module_sp, const FileSpec &original_source_file);
 using BreakpointHitCallback =
     std::function<bool(void *baton, StoppointCallbackContext *context,
                        lldb::user_id_t break_id, lldb::user_id_t break_loc_id)>;

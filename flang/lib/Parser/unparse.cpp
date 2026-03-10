@@ -1514,9 +1514,7 @@ public:
       Walk(x.count);
       break;
     case format::ControlEditDesc::Kind::X:
-      if (x.count != 1) {
-        Walk(x.count);
-      }
+      Walk(x.count);
       Word("X");
       break;
     case format::ControlEditDesc::Kind::Slash:

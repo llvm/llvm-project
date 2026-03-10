@@ -9,23 +9,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-let Namespace = "PPC" in {
-def sub_lt : SubRegIndex<1>;
-def sub_gt : SubRegIndex<1, 1>;
-def sub_eq : SubRegIndex<1, 2>;
-def sub_un : SubRegIndex<1, 3>;
-def sub_32 : SubRegIndex<32>;
-def sub_32_hi_phony : SubRegIndex<32,32>;
-def sub_64 : SubRegIndex<64>;
-def sub_64_hi_phony : SubRegIndex<64,64>;
-def sub_vsx0 : SubRegIndex<128>;
-def sub_vsx1 : SubRegIndex<128, 128>;
-def sub_gp8_x0 : SubRegIndex<64>;
-def sub_gp8_x1 : SubRegIndex<64, 64>;
-def sub_fp0 : SubRegIndex<64>;
-def sub_fp1 : SubRegIndex<64, 64>;
-}
+include "PPCOperands.td"
 
+let Namespace = "PPC" in {
+  def sub_lt : SubRegIndex<1>;
+  def sub_gt : SubRegIndex<1, 1>;
+  def sub_eq : SubRegIndex<1, 2>;
+  def sub_un : SubRegIndex<1, 3>;
+  def sub_32 : SubRegIndex<32>;
+  def sub_32_hi_phony : SubRegIndex<32,32>;
+  def sub_64 : SubRegIndex<64>;
+  def sub_64_hi_phony : SubRegIndex<64,64>;
+  def sub_vsx0 : SubRegIndex<128>;
+  def sub_vsx1 : SubRegIndex<128, 128>;
+  def sub_gp8_x0 : SubRegIndex<64>;
+  def sub_gp8_x1 : SubRegIndex<64, 64>;
+  def sub_fp0 : SubRegIndex<64>;
+  def sub_fp1 : SubRegIndex<64, 64>;
+}
 
 class PPCReg<string n> : Register<n> {
   let Namespace = "PPC";
@@ -149,7 +150,6 @@ foreach Index = 0-31 in {
 
 }
 
-
 // Floating-point registers
 foreach Index = 0-31 in {
   def F#Index : FPR<Index, "f"#Index>,
@@ -186,17 +186,16 @@ foreach Index = 0-31 in {
 }
 
 let CoveredBySubRegs = 1 in {
-// Vector registers
-foreach Index = 0-31 in {
-  def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
-                DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
-}
-
-// VSX registers
-foreach Index = 0-31 in {
-  def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
-                  DwarfRegAlias<!cast<FPR>("F"#Index)>;
-}
+  // Vector registers
+  foreach Index = 0-31 in {
+    def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
+                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
+  }
+  // VSX registers
+  foreach Index = 0-31 in {
+    def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
+                    DwarfRegAlias<!cast<FPR>("F"#Index)>;
+  }
 }
 
 // Dummy VSX registers, this defines string: "vs32"-"vs63", and is only used for
@@ -229,8 +228,8 @@ foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in
 
 // The representation of r0 when treated as the constant 0.
 let isConstant = true in {
-def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
-def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
+  def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
+  def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
 } // isConstant = true
 
 // Representations of the frame pointer used by ISD::FRAMEADDR.
@@ -277,14 +276,14 @@ def CR7UN : CRBIT<31, "31">;
 
 // Condition registers
 let SubRegIndices = [sub_lt, sub_gt, sub_eq, sub_un] in {
-def CR0 : CR<0, "cr0", [CR0LT, CR0GT, CR0EQ, CR0UN]>, DwarfRegNum<[68, 68]>;
-def CR1 : CR<1, "cr1", [CR1LT, CR1GT, CR1EQ, CR1UN]>, DwarfRegNum<[69, 69]>;
-def CR2 : CR<2, "cr2", [CR2LT, CR2GT, CR2EQ, CR2UN]>, DwarfRegNum<[70, 70]>;
-def CR3 : CR<3, "cr3", [CR3LT, CR3GT, CR3EQ, CR3UN]>, DwarfRegNum<[71, 71]>;
-def CR4 : CR<4, "cr4", [CR4LT, CR4GT, CR4EQ, CR4UN]>, DwarfRegNum<[72, 72]>;
-def CR5 : CR<5, "cr5", [CR5LT, CR5GT, CR5EQ, CR5UN]>, DwarfRegNum<[73, 73]>;
-def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
-def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
+  def CR0 : CR<0, "cr0", [CR0LT, CR0GT, CR0EQ, CR0UN]>, DwarfRegNum<[68, 68]>;
+  def CR1 : CR<1, "cr1", [CR1LT, CR1GT, CR1EQ, CR1UN]>, DwarfRegNum<[69, 69]>;
+  def CR2 : CR<2, "cr2", [CR2LT, CR2GT, CR2EQ, CR2UN]>, DwarfRegNum<[70, 70]>;
+  def CR3 : CR<3, "cr3", [CR3LT, CR3GT, CR3EQ, CR3UN]>, DwarfRegNum<[71, 71]>;
+  def CR4 : CR<4, "cr4", [CR4LT, CR4GT, CR4EQ, CR4UN]>, DwarfRegNum<[72, 72]>;
+  def CR5 : CR<5, "cr5", [CR5LT, CR5GT, CR5EQ, CR5UN]>, DwarfRegNum<[73, 73]>;
+  def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
+  def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 }
 
 // Link register
@@ -612,250 +611,6 @@ def PPCRegSPE4RCAsmOperand : AsmOperandClass {
 }
 def spe4rc : RegisterOperand<GPRC> {
   let ParserMatchClass = PPCRegSPE4RCAsmOperand;
-}
-
-def PPCU1ImmAsmOperand : AsmOperandClass {
-  let Name = "U1Imm";
-  let PredicateMethod = "isUImm<1>";
-  let RenderMethod = "addImmOperands";
-}
-def u1imm   : Operand<i32> {
-  let PrintMethod = "printU1ImmOperand";
-  let ParserMatchClass = PPCU1ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<1>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCU2ImmAsmOperand : AsmOperandClass {
-  let Name = "U2Imm";
-  let PredicateMethod = "isUImm<2>";
-  let RenderMethod = "addImmOperands";
-}
-def u2imm   : Operand<i32> {
-  let PrintMethod = "printU2ImmOperand";
-  let ParserMatchClass = PPCU2ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCATBitsAsHintAsmOperand : AsmOperandClass {
-  let Name = "ATBitsAsHint"; let PredicateMethod = "isATBitsAsHint";
-  let RenderMethod = "addImmOperands"; // Irrelevant, predicate always fails.
-}
-def atimm   : Operand<i32> {
-  let PrintMethod = "printATBitsAsHint";
-  let ParserMatchClass = PPCATBitsAsHintAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCU3ImmAsmOperand : AsmOperandClass {
-  let Name = "U3Imm";
-  let PredicateMethod = "isUImm<3>";
-  let RenderMethod = "addImmOperands";
-}
-def u3imm   : Operand<i32> {
-  let PrintMethod = "printU3ImmOperand";
-  let ParserMatchClass = PPCU3ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<3>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCU4ImmAsmOperand : AsmOperandClass {
-  let Name = "U4Imm";
-  let PredicateMethod = "isUImm<4>";
-  let RenderMethod = "addImmOperands";
-}
-def u4imm   : Operand<i32> {
-  let PrintMethod = "printU4ImmOperand";
-  let ParserMatchClass = PPCU4ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS5ImmAsmOperand : AsmOperandClass {
-  let Name = "S5Imm";
-  let PredicateMethod = "isSImm<5>";
-  let RenderMethod = "addImmOperands";
-}
-def s5imm   : Operand<i32> {
-  let PrintMethod = "printS5ImmOperand";
-  let ParserMatchClass = PPCS5ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<5>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU5ImmAsmOperand : AsmOperandClass {
-  let Name = "U5Imm";
-  let PredicateMethod = "isUImm<5>";
-  let RenderMethod = "addImmOperands";
-}
-def u5imm   : Operand<i32> {
-  let PrintMethod = "printU5ImmOperand";
-  let ParserMatchClass = PPCU5ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU6ImmAsmOperand : AsmOperandClass {
-  let Name = "U6Imm";
-  let PredicateMethod = "isUImm<6>";
-  let RenderMethod = "addImmOperands";
-}
-def u6imm   : Operand<i32> {
-  let PrintMethod = "printU6ImmOperand";
-  let ParserMatchClass = PPCU6ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<6>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU7ImmAsmOperand : AsmOperandClass {
-  let Name = "U7Imm";
-  let PredicateMethod = "isUImm<7>";
-  let RenderMethod = "addImmOperands";
-}
-def u7imm   : Operand<i32> {
-  let PrintMethod = "printU7ImmOperand";
-  let ParserMatchClass = PPCU7ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<7>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU8ImmAsmOperand : AsmOperandClass {
-  let Name = "U8Imm";
-  let PredicateMethod = "isUImm<8>";
-  let RenderMethod = "addImmOperands";
-}
-def u8imm   : Operand<i32> {
-  let PrintMethod = "printU8ImmOperand";
-  let ParserMatchClass = PPCU8ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU10ImmAsmOperand : AsmOperandClass {
-  let Name = "U10Imm";
-  let PredicateMethod = "isUImm<10>";
-  let RenderMethod = "addImmOperands";
-}
-def u10imm  : Operand<i32> {
-  let PrintMethod = "printU10ImmOperand";
-  let ParserMatchClass = PPCU10ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<10>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU12ImmAsmOperand : AsmOperandClass {
-  let Name = "U12Imm";
-  let PredicateMethod = "isUImm<12>";
-  let RenderMethod = "addImmOperands";
-}
-def u12imm  : Operand<i32> {
-  let PrintMethod = "printU12ImmOperand";
-  let ParserMatchClass = PPCU12ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<12>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS16ImmAsmOperand : AsmOperandClass {
-  let Name = "S16Imm"; let PredicateMethod = "isS16Imm";
-  let RenderMethod = "addS16ImmOperands";
-}
-def s16imm  : Operand<i32> {
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
-  let ParserMatchClass = PPCS16ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def s16imm64 : Operand<i64> {
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
-  let ParserMatchClass = PPCS16ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU16ImmAsmOperand : AsmOperandClass {
-  let Name = "U16Imm"; let PredicateMethod = "isU16Imm";
-  let RenderMethod = "addU16ImmOperands";
-}
-def u16imm  : Operand<i32> {
-  let PrintMethod = "printU16ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
-  let ParserMatchClass = PPCU16ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def u16imm64 : Operand<i64> {
-  let PrintMethod = "printU16ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
-  let ParserMatchClass = PPCU16ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS17ImmAsmOperand : AsmOperandClass {
-  let Name = "S17Imm"; let PredicateMethod = "isS17Imm";
-  let RenderMethod = "addS16ImmOperands";
-}
-def s17imm  : Operand<i32> {
-  // This operand type is used for addis/lis to allow the assembler parser
-  // to accept immediates in the range -65536..65535 for compatibility with
-  // the GNU assembler.  The operand is treated as 16-bit otherwise.
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
-  let ParserMatchClass = PPCS17ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def s17imm64 : Operand<i64> {
-  // This operand type is used for addis/lis to allow the assembler parser
-  // to accept immediates in the range -65536..65535 for compatibility with
-  // the GNU assembler.  The operand is treated as 16-bit otherwise.
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_half16>";
-  let ParserMatchClass = PPCS17ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS32ImmAsmOperand : AsmOperandClass {
-  let Name = "S32Imm";
-  let PredicateMethod = "isS32Imm";
-  let RenderMethod = "addImmOperands";
-}
-def s32imm : Operand<i64> {
-  let PrintMethod = "printS32ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm32>";
-  let ParserMatchClass = PPCS32ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<32>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def s32imm_pcrel : Operand<i64> {
-  let PrintMethod = "printS32ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel32>";
-  let ParserMatchClass = PPCS32ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<32>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS34ImmAsmOperand : AsmOperandClass {
-  let Name = "S34Imm";
-  let PredicateMethod = "isS34Imm";
-  let RenderMethod = "addImmOperands";
-}
-def s34imm : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm34>";
-  let ParserMatchClass = PPCS34ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<34>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def s34imm_pcrel : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
-  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel34>";
-  let ParserMatchClass = PPCS34ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<34>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCImmZeroAsmOperand : AsmOperandClass {
-  let Name = "ImmZero";
-  let PredicateMethod = "isImmZero";
-  let RenderMethod = "addImmOperands";
-}
-def immZero : Operand<i32> {
-  let PrintMethod = "printImmZeroOperand";
-  let ParserMatchClass = PPCImmZeroAsmOperand;
-  let DecoderMethod = "decodeImmZeroOperand";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;

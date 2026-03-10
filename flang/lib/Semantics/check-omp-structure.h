@@ -281,7 +281,7 @@ private:
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
-  void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
+  void CheckIterationVariableType(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
@@ -329,10 +329,7 @@ private:
   void CheckLooprangeBounds(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
-  void CheckNestedBlock(
-      const parser::OpenMPLoopConstruct &x, const parser::Block &body);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
-  void CheckFullUnroll(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
   void CheckTaskgraph(const parser::OmpBlockConstruct &x);
@@ -362,6 +359,8 @@ private:
       const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
       const parser::Name &name, const llvm::omp::Clause clause);
+  void CheckLastPartRefForArraySection(
+      const parser::Designator &designator, llvm::omp::Clause clauseId);
   void CheckSharedBindingInOuterContext(
       const parser::OmpObjectList &ompObjectList);
   void CheckIfContiguous(const parser::OmpObject &object);
