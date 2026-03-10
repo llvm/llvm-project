@@ -46,6 +46,7 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
@@ -96,6 +97,21 @@ class AMDGPULowerVGPREncoding {
       for (const auto &[I, Op] : enumerate(Ops))
         V |= Op.MSBits.value_or(0) << (I * 2);
       return V;
+    }
+
+    void print(raw_ostream &OS) const {
+      static const char *FieldNames[] = {"src0", "src1", "src2", "dst"};
+      OS << '{';
+      for (const auto &[I, Op] : enumerate(Ops)) {
+        if (I)
+          OS << ", ";
+        OS << FieldNames[I] << '=';
+        if (Op.MSBits)
+          OS << *Op.MSBits;
+        else
+          OS << '?';
+      }
+      OS << '}';
     }
 
     // Check if this mode is compatible with required \p NewMode without
@@ -189,12 +205,28 @@ private:
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                                       MachineBasicBlock::instr_iterator I) {
+  LLVM_DEBUG({
+    dbgs() << "  setMode: NewMode=";
+    NewMode.print(dbgs());
+    dbgs() << " CurrentMode=";
+    CurrentMode.print(dbgs());
+    dbgs() << " MostRecentModeSet=" << (MostRecentModeSet ? "yes" : "null");
+    if (I != MBB->instr_end())
+      dbgs() << " before: " << *I;
+    else
+      dbgs() << " at end\n";
+  });
+
   // Record previous mode into high 8 bits of the immediate.
   int64_t OldModeBits = CurrentMode.encode() << ModeWidth;
 
   bool Rewritten = false;
-  if (!CurrentMode.update(NewMode, Rewritten))
+  if (!CurrentMode.update(NewMode, Rewritten)) {
+    LLVM_DEBUG(dbgs() << "    -> no change needed\n");
     return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "    Rewritten=" << Rewritten << " after update\n");
 
   if (MostRecentModeSet && !Rewritten) {
     // Update MostRecentModeSet with the new mode. It can be either
@@ -204,10 +236,14 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
       // Carry old mode bits from the existing instruction.
       int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
       Op.setImm(CurrentMode.encode() | OldModeBits);
+      LLVM_DEBUG(dbgs() << "    -> piggybacked onto S_SET_VGPR_MSB: "
+                        << *MostRecentModeSet);
     } else {
       assert(MostRecentModeSet->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
              "unexpected MostRecentModeSet opcode");
       updateSetregModeImm(*MostRecentModeSet, CurrentMode.encode());
+      LLVM_DEBUG(dbgs() << "    -> piggybacked onto S_SETREG_IMM32_B32: "
+                        << *MostRecentModeSet);
     }
 
     return true;
@@ -217,6 +253,8 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   I = handleCoissue(I);
   MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(NewMode.encode() | OldModeBits);
+  LLVM_DEBUG(dbgs() << "    -> inserted new S_SET_VGPR_MSB: "
+                    << *MostRecentModeSet);
 
   CurrentMode = NewMode;
   return true;
@@ -288,10 +326,23 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   if (Ops.first) {
     ModeTy NewMode;
     computeMode(NewMode, MI, Ops.first, Ops.second);
+    LLVM_DEBUG({
+      dbgs() << "  runOnMachineInstr: ";
+      MI.print(dbgs());
+      dbgs() << "    computed NewMode=";
+      NewMode.print(dbgs());
+      dbgs() << " compatible=" << CurrentMode.isCompatible(NewMode) << '\n';
+    });
     if (!CurrentMode.isCompatible(NewMode) && MI.isCommutable() &&
         TII->commuteInstruction(MI)) {
       ModeTy NewModeCommuted;
       computeMode(NewModeCommuted, MI, Ops.first, Ops.second);
+      LLVM_DEBUG({
+        dbgs() << "    commuted NewMode=";
+        NewModeCommuted.print(dbgs());
+        dbgs() << " compatible=" << CurrentMode.isCompatible(NewModeCommuted)
+               << '\n';
+      });
       if (CurrentMode.isCompatible(NewModeCommuted)) {
         // Update CurrentMode with mode bits the commuted instruction relies on.
         // This prevents later instructions from piggybacking and corrupting
@@ -399,26 +450,44 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
          "only S_SETREG_IMM32_B32 needs to be handled");
 
+  LLVM_DEBUG(dbgs() << "  handleSetregMode: " << MI);
+
   MachineOperand *SIMM16Op = TII->getNamedOperand(MI, AMDGPU::OpName::simm16);
   assert(SIMM16Op && "SIMM16Op must be present");
 
   auto [HwRegId, Offset, Size] = HwregEncoding::decode(SIMM16Op->getImm());
   (void)Offset;
-  if (HwRegId != ID_MODE)
+  LLVM_DEBUG(dbgs() << "    HwRegId=" << HwRegId << " Offset=" << Offset
+                    << " Size=" << Size << '\n');
+  if (HwRegId != ID_MODE) {
+    LLVM_DEBUG(dbgs() << "    -> not ID_MODE, skipping\n");
     return false;
+  }
 
   int64_t ModeValue = CurrentMode.encode();
+  LLVM_DEBUG({
+    dbgs() << "    CurrentMode=";
+    CurrentMode.print(dbgs());
+    dbgs() << " encoded=0x" << Twine::utohexstr(ModeValue)
+           << " VGPRMSBShift=" << VGPRMSBShift << '\n';
+  });
 
   // Case 1: Size <= 12 - the original instruction uses imm32[0:Size-1], so
   // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR
   // MSBs.
   if (Size <= VGPRMSBShift) {
+    LLVM_DEBUG(dbgs() << "    Case 1: Size(" << Size << ") <= VGPRMSBShift("
+                      << VGPRMSBShift
+                      << "), treating as mode scope boundary\n");
     // This instruction is at the boundary of the old mode's control range.
     // Reset CurrentMode so that the next setMode call can freely piggyback
     // the required mode into bits[12:19] without triggering Rewritten.
     MostRecentModeSet = &MI;
     CurrentMode = {};
-    return updateSetregModeImm(MI, 0);
+    bool Changed = updateSetregModeImm(MI, 0);
+    LLVM_DEBUG(dbgs() << "    -> reset CurrentMode, cleared bits[12:19]: "
+                      << MI);
+    return Changed;
   }
 
   // Case 2: Size > 12 - the original instruction uses bits beyond 11, so we
@@ -429,12 +498,18 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   assert(ImmOp && "ImmOp must be present");
   int64_t ImmBits12To19 = (ImmOp->getImm() & VGPR_MSB_MASK) >> VGPRMSBShift;
   int64_t SetregModeValue = convertModeToSetregFormat(ModeValue);
+  LLVM_DEBUG(dbgs() << "    Case 2: Size(" << Size << ") > VGPRMSBShift, "
+                    << "ImmBits12To19=0x" << Twine::utohexstr(ImmBits12To19)
+                    << " SetregModeValue=0x"
+                    << Twine::utohexstr(SetregModeValue) << '\n');
   if (ImmBits12To19 == SetregModeValue) {
     // Already correct, but we must invalidate MostRecentModeSet because this
     // instruction will overwrite mode[12:19]. We can't update this instruction
     // via piggybacking (bits[12:19] are meaningful), so if CurrentMode changes,
     // a new s_set_vgpr_msb will be inserted after this instruction.
     MostRecentModeSet = nullptr;
+    LLVM_DEBUG(dbgs() << "    -> bits[12:19] already correct, "
+                         "invalidated MostRecentModeSet\n");
     return false;
   }
 
@@ -444,6 +519,8 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
                               TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(ModeValue);
+  LLVM_DEBUG(dbgs() << "    -> inserted S_SET_VGPR_MSB after setreg: "
+                    << *MostRecentModeSet);
   return true;
 }
 
@@ -455,6 +532,9 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
 
+  LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()
+                    << " ***\n");
+
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
   CurrentMode = {};
@@ -462,11 +542,15 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     MostRecentModeSet = nullptr;
     this->MBB = &MBB;
 
+    LLVM_DEBUG(dbgs() << "BB#" << MBB.getNumber() << ' ' << MBB.getName()
+                      << ":\n");
+
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
       if (MI.isMetaInstruction())
         continue;
 
       if (MI.isTerminator() || MI.isCall()) {
+        LLVM_DEBUG(dbgs() << "  terminator/call: " << MI);
         if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
             MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED)
           CurrentMode = {};
@@ -476,6 +560,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
       }
 
       if (MI.isInlineAsm()) {
+        LLVM_DEBUG(dbgs() << "  inline asm: " << MI);
         if (TII->hasVGPRUses(MI))
           resetMode(MI.getIterator());
         continue;
@@ -487,6 +572,8 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         ClauseBreaks = (ClauseLen >> 8) & 15;
         ClauseLen = ClauseRemaining = (ClauseLen & 63) + 1;
         Clause = &MI;
+        LLVM_DEBUG(dbgs() << "  clause: len=" << ClauseLen
+                          << " breaks=" << ClauseBreaks << '\n');
         continue;
       }
 
@@ -503,6 +590,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     }
 
     // Reset the mode if we are falling through.
+    LLVM_DEBUG(dbgs() << "  end of BB, resetting mode\n");
     resetMode(MBB.instr_end());
   }
 

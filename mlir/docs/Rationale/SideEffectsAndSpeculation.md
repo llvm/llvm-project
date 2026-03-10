@@ -75,6 +75,22 @@ memory effects they have and whether they are speculatable.
 We don't have proper modeling yet to fully capture non-local control flow
 semantics.
 
+### Resource hierarchy and scope
+
+Each effect is applied to a `Resource`. Resources form a hierarchy: each
+resource may have a parent (`getParent()`), and the API provides
+`isSubresourceOf()` and `isDisjointFrom()` so that passes can determine whether
+two effects may conflict (e.g. CSE and alias analysis use disjointness to allow
+more optimizations). A resource may be *addressable* (`isAddressable()`), meaning
+effects on it can alias pointer-based memory; non-addressable resources (e.g.
+runtime state) do not alias with any value-based memory location. The
+canonical definition and API live in `mlir/Interfaces/SideEffectInterfaces.h`.
+
+**Scope and limitations.** This mechanism is deliberately *not* intended for
+fine-grained regions with specific addresses or sizes, or for alias classes /
+offset-based disambiguation. Those concerns are out of scope for the resource
+hierarchy and should be handled by alias analysis or other mechanisms.
+
 When adding a new op, ask:
 
 1. Does it read from or write to the heap or stack? It should probably implement

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-return-braced-init-list %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++11-or-later %s modernize-return-braced-init-list %t
 #include <vector>
 
 class Bar {};
