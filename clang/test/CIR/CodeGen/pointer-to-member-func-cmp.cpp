@@ -19,7 +19,7 @@ bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-BEFORE: cir.func {{.*}} @_Z6cmp_eqM3FooFviES1_
 // CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp(eq, %[[LHS]], %[[RHS]]) : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.bool
+// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp eq %[[LHS]], %[[RHS]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[CMP]], %{{.*}} : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR-AFTER: @_Z6cmp_eqM3FooFviES1_
@@ -28,13 +28,13 @@ bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-AFTER:   %[[NULL:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER:   %[[LHS_PTR:.*]] = cir.extract_member %[[LHS]][0] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[RHS_PTR:.*]] = cir.extract_member %[[RHS]][0] : !rec_anon_struct -> !s64i
-// CIR-AFTER:   %[[PTR_CMP:.*]] = cir.cmp(eq, %[[LHS_PTR]], %[[RHS_PTR]]) : !s64i, !cir.bool
-// CIR-AFTER:   %[[PTR_NULL:.*]] = cir.cmp(eq, %[[LHS_PTR]], %[[NULL]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[PTR_CMP:.*]] = cir.cmp eq %[[LHS_PTR]], %[[RHS_PTR]] : !s64i
+// CIR-AFTER:   %[[PTR_NULL:.*]] = cir.cmp eq %[[LHS_PTR]], %[[NULL]] : !s64i
 // CIR-AFTER:   %[[LHS_ADJ:.*]] = cir.extract_member %[[LHS]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[RHS_ADJ:.*]] = cir.extract_member %[[RHS]][1] : !rec_anon_struct -> !s64i
-// CIR-AFTER:   %[[ADJ_CMP:.*]] = cir.cmp(eq, %[[LHS_ADJ]], %[[RHS_ADJ]]) : !s64i, !cir.bool
-// CIR-AFTER:   %[[TMP:.*]] = cir.binop(or, %[[PTR_NULL]], %[[ADJ_CMP]]) : !cir.bool
-// CIR-AFTER:   %[[RESULT:.*]] = cir.binop(and, %[[PTR_CMP]], %[[TMP]]) : !cir.bool
+// CIR-AFTER:   %[[ADJ_CMP:.*]] = cir.cmp eq %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
+// CIR-AFTER:   %[[TMP:.*]] = cir.or %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
+// CIR-AFTER:   %[[RESULT:.*]] = cir.and %[[PTR_CMP]], %[[TMP]] : !cir.bool
 
 // LLVM: define {{.*}} i1 @_Z6cmp_eqM3FooFviES1_
 // LLVM:   %[[LHS:.*]] = load { i64, i64 }, ptr %{{.+}}
@@ -73,7 +73,7 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-BEFORE: cir.func {{.*}} @_Z6cmp_neM3FooFviES1_
 // CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp(ne, %[[LHS]], %[[RHS]]) : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.bool
+// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp ne %[[LHS]], %[[RHS]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[CMP]], %{{.*}} : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR-AFTER: cir.func {{.*}} @_Z6cmp_neM3FooFviES1_
@@ -82,13 +82,13 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 // CIR-AFTER:   %[[NULL:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER:   %[[LHS_PTR:.*]] = cir.extract_member %[[LHS]][0] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[RHS_PTR:.*]] = cir.extract_member %[[RHS]][0] : !rec_anon_struct -> !s64i
-// CIR-AFTER:   %[[PTR_CMP:.*]] = cir.cmp(ne, %[[LHS_PTR]], %[[RHS_PTR]]) : !s64i, !cir.bool
-// CIR-AFTER:   %[[PTR_NULL:.*]] = cir.cmp(ne, %[[LHS_PTR]], %[[NULL]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[PTR_CMP:.*]] = cir.cmp ne %[[LHS_PTR]], %[[RHS_PTR]] : !s64i
+// CIR-AFTER:   %[[PTR_NULL:.*]] = cir.cmp ne %[[LHS_PTR]], %[[NULL]] : !s64i
 // CIR-AFTER:   %[[LHS_ADJ:.*]] = cir.extract_member %[[LHS]][1] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[RHS_ADJ:.*]] = cir.extract_member %[[RHS]][1] : !rec_anon_struct -> !s64i
-// CIR-AFTER:   %[[ADJ_CMP:.*]] = cir.cmp(ne, %[[LHS_ADJ]], %[[RHS_ADJ]]) : !s64i, !cir.bool
-// CIR-AFTER:   %[[TMP:.*]] = cir.binop(and, %[[PTR_NULL]], %[[ADJ_CMP]]) : !cir.bool
-// CIR-AFTER:   %[[RESULT:.*]] = cir.binop(or, %[[PTR_CMP]], %[[TMP]]) : !cir.bool
+// CIR-AFTER:   %[[ADJ_CMP:.*]] = cir.cmp ne %[[LHS_ADJ]], %[[RHS_ADJ]] : !s64i
+// CIR-AFTER:   %[[TMP:.*]] = cir.and %[[PTR_NULL]], %[[ADJ_CMP]] : !cir.bool
+// CIR-AFTER:   %[[RESULT:.*]] = cir.or %[[PTR_CMP]], %[[TMP]] : !cir.bool
 
 // LLVM: define {{.*}} i1 @_Z6cmp_neM3FooFviES1_
 // LLVM:   %[[LHS:.*]] = load { i64, i64 }, ptr %{{.*}}

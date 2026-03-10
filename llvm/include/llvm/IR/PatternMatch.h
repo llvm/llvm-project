@@ -148,6 +148,11 @@ inline class_match<BinaryOperator> m_BinOp() {
 /// Matches any compare instruction and ignore it.
 inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
 
+/// Matches any intrinsic call and ignore it.
+inline class_match<IntrinsicInst> m_AnyIntrinsic() {
+  return class_match<IntrinsicInst>();
+}
+
 struct undef_match {
   static bool check(const Value *V) {
     if (isa<UndefValue>(V))
@@ -936,6 +941,11 @@ inline bind_ty<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
 /// Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 inline bind_ty<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
+  return I;
+}
+/// Match any intrinsic call, capturing it if we match.
+inline bind_ty<IntrinsicInst> m_AnyIntrinsic(IntrinsicInst *&I) { return I; }
+inline bind_ty<const IntrinsicInst> m_AnyIntrinsic(const IntrinsicInst *&I) {
   return I;
 }
 /// Match a with overflow intrinsic, capturing it if we match.
@@ -2368,6 +2378,54 @@ inline match_combine_or<match_combine_or<CastInst_match<OpTy, ZExtInst>,
                         OpTy>
 m_ZExtOrTruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
+}
+
+template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
+  CondTy Cond;
+  LTy TrueC;
+  RTy FalseC;
+
+  SelectLike_match(const CondTy &C, const LTy &TC, const RTy &FC)
+      : Cond(C), TrueC(TC), FalseC(FC) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    // select(Cond, TrueC, FalseC) — captures both constants directly
+    if (PatternMatch::match(V, m_Select(Cond, TrueC, FalseC)))
+      return true;
+
+    Type *Ty = V->getType();
+    Value *CondV = nullptr;
+
+    // zext(i1 Cond) is equivalent to select(Cond, 1, 0)
+    if (PatternMatch::match(V, m_ZExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(ConstantInt::get(Ty, 1)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
+      return true;
+
+    // sext(i1 Cond) is equivalent to select(Cond, -1, 0)
+    if (PatternMatch::match(V, m_SExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(Constant::getAllOnesValue(Ty)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
+      return true;
+
+    return false;
+  }
+};
+
+/// Matches a value that behaves like a boolean-controlled select, i.e. one of:
+///   select i1 Cond, TrueC, FalseC
+///   zext i1 Cond             (equivalent to select i1 Cond, 1, 0)
+///   sext i1 Cond             (equivalent to select i1 Cond, -1, 0)
+///
+/// The condition is matched against \p Cond, and the true/false constants
+/// against \p TrueC and \p FalseC respectively. For zext/sext, the synthetic
+/// constants are bound to \p TrueC and \p FalseC via their matchers.
+template <typename CondTy, typename LTy, typename RTy>
+inline SelectLike_match<CondTy, LTy, RTy>
+m_SelectLike(const CondTy &C, const LTy &TrueC, const RTy &FalseC) {
+  return SelectLike_match<CondTy, LTy, RTy>(C, TrueC, FalseC);
 }
 
 template <typename OpTy>

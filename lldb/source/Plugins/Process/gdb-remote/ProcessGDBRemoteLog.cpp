@@ -40,8 +40,7 @@ template <> Log::Channel &lldb_private::LogChannelFor<GDBRLog>() {
 }
 
 void ProcessGDBRemoteLog::Initialize() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    Log::Register("gdb-remote", g_channel);
-  });
+  Log::Register("gdb-remote", g_channel);
 }
+
+void ProcessGDBRemoteLog::Terminate() { Log::Unregister("gdb-remote"); }

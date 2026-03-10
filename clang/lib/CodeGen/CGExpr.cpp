@@ -5415,17 +5415,22 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     return LValue::MakeExtVectorElt(Base.getAddress(), CV, type,
                                     Base.getBaseInfo(), TBAAAccessInfo());
   }
+
   if (Base.isMatrixRow()) {
     if (auto *RowIdx =
             llvm::dyn_cast<llvm::ConstantInt>(Base.getMatrixRowIdx())) {
       llvm::SmallVector<llvm::Constant *> MatIndices;
       QualType MatTy = Base.getType();
       const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
-      unsigned NumCols = MT->getNumColumns();
+      unsigned NumCols = Indices.size();
       unsigned NumRows = MT->getNumRows();
-      MatIndices.reserve(NumCols);
-
       unsigned Row = RowIdx->getZExtValue();
+      QualType VecQT = E->getBase()->getType();
+      if (NumCols != MT->getNumColumns()) {
+        const auto *EVT = VecQT->getAs<ExtVectorType>();
+        QualType ElemQT = EVT->getElementType();
+        VecQT = getContext().getExtVectorType(ElemQT, NumCols);
+      }
       for (unsigned C = 0; C < NumCols; ++C) {
         unsigned Col = Indices[C];
         unsigned Linear = Col * NumRows + Row;
@@ -5433,8 +5438,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
       }
 
       llvm::Constant *ConstIdxs = llvm::ConstantVector::get(MatIndices);
-      return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs,
-                                      E->getBase()->getType(),
+      return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs, VecQT,
                                       Base.getBaseInfo(), TBAAAccessInfo());
     }
     llvm::Constant *Cols =
@@ -6884,13 +6888,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       // might be passed function pointers of both types.
       llvm::Value *AlignedCalleePtr;
       if (CGM.getTriple().isARM() || CGM.getTriple().isThumb()) {
-        llvm::Value *CalleeAddress =
-            Builder.CreatePtrToInt(CalleePtr, IntPtrTy);
-        llvm::Value *Mask = llvm::ConstantInt::getSigned(IntPtrTy, ~1);
-        llvm::Value *AlignedCalleeAddress =
-            Builder.CreateAnd(CalleeAddress, Mask);
-        AlignedCalleePtr =
-            Builder.CreateIntToPtr(AlignedCalleeAddress, CalleePtr->getType());
+        AlignedCalleePtr = Builder.CreateIntrinsic(
+            CalleePtr->getType(), llvm::Intrinsic::ptrmask,
+            {CalleePtr, llvm::ConstantInt::getSigned(IntPtrTy, ~1)});
       } else {
         AlignedCalleePtr = CalleePtr;
       }
@@ -7025,6 +7025,42 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
         Address(Handle, Handle->getType(), CGM.getPointerAlign()));
     Callee.setFunctionPointer(Stub);
   }
+
+  // Insert function pointer lookup if this is a target call
+  //
+  // This is used for the indirect function case, virtual function case is
+  // handled in ItaniumCXXABI.cpp
+  if (getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU() &&
+      (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
+    const Expr *CalleeExpr = E->getCallee()->IgnoreParenImpCasts();
+    const DeclRefExpr *DRE = nullptr;
+    while (CalleeExpr) {
+      if ((DRE = dyn_cast<DeclRefExpr>(CalleeExpr)))
+        break;
+      if (const auto *ME = dyn_cast<MemberExpr>(CalleeExpr))
+        CalleeExpr = ME->getBase()->IgnoreParenImpCasts();
+      else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(CalleeExpr))
+        CalleeExpr = ASE->getBase()->IgnoreParenImpCasts();
+      else
+        break;
+    }
+
+    const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
+    if (VD && VD->hasAttr<OMPTargetIndirectCallAttr>()) {
+      auto *PtrTy = CGM.VoidPtrTy;
+      llvm::Type *RtlFnArgs[] = {PtrTy};
+      llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
+          llvm::FunctionType::get(PtrTy, RtlFnArgs, false),
+          "__llvm_omp_indirect_call_lookup");
+      llvm::Value *Func = Callee.getFunctionPointer();
+      llvm::Type *BackupTy = Func->getType();
+      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, PtrTy);
+      Func = EmitRuntimeCall(DeviceRtlFn, {Func});
+      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, BackupTy);
+      Callee.setFunctionPointer(Func);
+    }
+  }
+
   llvm::CallBase *LocalCallOrInvoke = nullptr;
   RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &LocalCallOrInvoke,
                          E == MustTailCall, E->getExprLoc());
