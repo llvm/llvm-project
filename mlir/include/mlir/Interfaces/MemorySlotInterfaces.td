@@ -313,7 +313,8 @@ def PromotableRegionOpInterface
       )
     >,
     InterfaceMethod<[{
-        Called after promotion has been completed in all the relevant regions.
+        Called once the reaching definitions have been computed for all the
+        regions, but before the actual removal of the blocking uses.
 
         Returns the new reaching definition at the exit of the operation. For
         this purpose, it is allowed to mutate the operation using the provided
@@ -323,7 +324,8 @@ def PromotableRegionOpInterface
         if its region content is moved from the original operation and not
         copied. Operations with an effect on the value of the slot must not
         change said effect (for example, new control flow that could change
-        reaching definitions for a block is not allowed).
+        reaching definitions for a block is not allowed), and must remain
+        unmodified.
 
         The `entryReachingDef` is the reaching definition at the entry of the
         region operation.

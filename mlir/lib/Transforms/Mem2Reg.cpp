@@ -105,7 +105,18 @@ using namespace mlir;
 /// operation, to obtain the reaching definition at its end and carry on with
 /// the value forwarding.
 /// - The second step of the per-region process uses the reaching definition to
-/// remove blocking uses in topological order.
+/// remove blocking uses in topological order. Some reaching definitions may
+/// be values that will be removed or modified during the blocking use removal
+/// step (typically, in the case of a store that stores the result of a load).
+/// To properly handle such values, this step traverses the operations to modify
+/// in reverse topological order. This way, if a value that will disappear is
+/// used in place of reaching definition, the logic to make it disappear will be
+/// executed after the value has been used to replace an operation. For regions
+/// within a PromotableRegionOpInterface, in order to correctly handle cases
+/// where the finalization logic would use a reaching definition that will be
+/// replaced, the finalization logic must be called before the blocking use
+/// removal step, so that any use of a value that will be removed gets properly
+/// replaced.
 ///
 /// For further reading, chapter three of SSA-based Compiler Design [1]
 /// showcases SSA construction for control-flow graphs, where mem2reg is an
@@ -220,12 +231,15 @@ private:
   /// Computes the reaching definition for all the operations that require
   /// promotion, including within nested regions needing promotion.
   /// `reachingDef` is the value the slot contains at the beginning of the
-  /// block. This method returns the reached definition at the end of the block.
+  /// block. This member function returns the reached definition at the end of
+  /// the block. If the block contains a region that needs promotion, the
+  /// blocking uses of that region will have been removed. This member function
+  /// will not remove the blocking uses contained directly in the block.
   ///
   /// The `reachingDef` may be a null value. In that case, a lazily-created
   /// default value will be used.
   ///
-  /// This method must only be called at most once per block.
+  /// This member function must only be called at most once per block.
   Value promoteInBlock(Block *block, Value reachingDef);
 
   /// Computes the reaching definition for all the operations that require
@@ -237,7 +251,7 @@ private:
   /// The `reachingDef` may be a null value. In that case, a lazily-created
   /// default value will be used.
   ///
-  /// This method must only be called at most once per region.
+  /// This member function must only be called at most once per region.
   void promoteInRegion(Region *region, Value reachingDef);
 
   /// Removes the blocking uses of the slot within the given region, in
@@ -587,6 +601,13 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
         builder.setInsertionPointAfter(op);
         reachingDef = promotableRegionOp.finalizePromotion(
             slot, reachingDef, hasValueStores, reachingAtBlockEnd, builder);
+
+        // Blocking uses can then be removed for the regions that were promoted.
+        // Even though `finalizePromotion` may have moved regions to a new operation,
+        // `removeBlockingUses` handles this case and will redirect processing to
+        // the correct region.
+        for (auto &[region, reachingDef] : regionsToProcess)
+          removeBlockingUses(region);
       }
     }
   }
@@ -598,7 +619,6 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
 void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
   if (region->hasOneBlock()) {
     promoteInBlock(&region->front(), reachingDef);
-    removeBlockingUses(region);
     return;
   }
 
@@ -629,8 +649,6 @@ void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
     for (auto *child : job.block->children())
       dfsStack.emplace_back<DfsJob>({child, job.reachingDef});
   }
-
-  removeBlockingUses(region);
 }
 
 /// Gets or creates a block index mapping for `region`.
@@ -674,6 +692,18 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
   if (blockingUsesMapIt == info.userToBlockingUses.end())
     return;
   BlockingUsesMap &blockingUsesMap = blockingUsesMapIt->second;
+  if (blockingUsesMap.empty())
+    return;
+
+  // Operations may have been moved to a different region at this point.
+  // To cover this, we process the current region of an operation to remove
+  // instead of the provided region.
+  region = blockingUsesMap.front().first->getParentRegion();
+#ifndef NDEBUG
+  for (auto &[op, blockingUses] : blockingUsesMap)
+    assert(op->getParentRegion() == region &&
+           "all operations must still be in the same region");
+#endif // NDEBUG
 
   llvm::SmallVector<Operation *> usersToRemoveUses(
       llvm::make_first_range(blockingUsesMap));
@@ -681,6 +711,7 @@ void MemorySlotPromoter::removeBlockingUses(Region *region) {
   // Sort according to dominance.
   dominanceSort(usersToRemoveUses, *region, blockIndexCache);
 
+  // Iterate over the operations to rewrite in reverse dominance order.
   for (Operation *toPromote : llvm::reverse(usersToRemoveUses)) {
     if (auto toPromoteMemOp = dyn_cast<PromotableMemOpInterface>(toPromote)) {
       Value reachingDef = reachingDefs.lookup(toPromoteMemOp);
@@ -767,7 +798,14 @@ MemorySlotPromoter::promoteSlot() {
   // definition starts with a null value that will be replaced by a
   // lazily-created default value if the value must be passed to a promotion
   // interface while no store has been encountered yet.
+  // Innermost regions will see their blocking uses be removed, but not the
+  // outermost region which we have to remove manually afterwards. This is
+  // because PromotableRegionOpInterface::finalizePromotion must be called
+  // before removeBlockingUses.
   promoteInRegion(slot.ptr.getParentRegion(), nullptr);
+
+  // Blocking uses can then be removed for the outermost region.
+  removeBlockingUses(slot.ptr.getParentRegion());
 
   // Notify operations that requested it of the reaching definitions set by
   // storing memory operations.

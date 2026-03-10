@@ -124,6 +124,32 @@ func.func @if_nested_store(%cond0: i1, %cond1: i1) {
 
 // -----
 
+// Check that a store coming from a load of the same slot is correctly promoted.
+
+// CHECK-LABEL: func.func @if_load_into_store
+// CHECK-SAME: (%[[COND:.*]]: i1)
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.if %[[COND]] -> (i32) {
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: } else {
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @if_load_into_store(%arg1 : i1) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.if %arg1 {
+    %loaded = memref.load %alloca[] : memref<i32>
+    memref.store %loaded, %alloca[] : memref<i32>
+    scf.yield
+  }
+  %loaded2 = memref.load %alloca[] : memref<i32>
+  return %loaded2 : i32
+}
+
+// -----
+
 // Check load promotion through execute_region.
 
 func.func private @use(i32)
@@ -365,6 +391,61 @@ func.func @execute_region_same_reaching_def(%cond: i1) -> i32 {
 
 // -----
 
+// Check that a load-then-store of the same slot in the same block is promoted.
+
+// CHECK-LABEL: func.func @execute_region_load_into_store_same_block
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.execute_region -> i32 {
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @execute_region_load_into_store_same_block() -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.execute_region {
+    %loaded = memref.load %alloca[] : memref<i32>
+    memref.store %loaded, %alloca[] : memref<i32>
+    scf.yield
+  }
+  %load = memref.load %alloca[] : memref<i32>
+  return %load : i32
+}
+
+// -----
+
+// Check that a load-then-store of the same slot across blocks is promoted.
+
+// CHECK-LABEL: func.func @execute_region_load_into_store_diff_block
+// CHECK-SAME: (%[[COND:.*]]: i1)
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.execute_region -> i32 {
+// CHECK:   cf.cond_br %[[COND]], ^[[BB1:.*]], ^[[BB2:.*]]
+// CHECK: ^[[BB1]]:
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: ^[[BB2]]:
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @execute_region_load_into_store_diff_block(%cond: i1) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.execute_region {
+    %loaded = memref.load %alloca[] : memref<i32>
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    memref.store %loaded, %alloca[] : memref<i32>
+    scf.yield
+  ^bb2:
+    scf.yield
+  }
+  %load = memref.load %alloca[] : memref<i32>
+  return %load : i32
+}
+
+// -----
+
 // Check promotion through a for loop with a load and store in the body.
 
 // CHECK-LABEL: func.func @for_load_and_store
@@ -474,6 +555,30 @@ func.func @for_if_store(%lb: index, %ub: index, %step: index, %cond: i1) -> i32 
       memref.store %c7, %alloca[] : memref<i32>
       scf.yield
     }
+    scf.yield
+  }
+  %load = memref.load %alloca[] : memref<i32>
+  return %load : i32
+}
+
+// -----
+
+// Check that a load-then-store of the same slot in a for loop is promoted.
+
+// CHECK-LABEL: func.func @for_load_into_store
+// CHECK-SAME: (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index)
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.for %{{.*}} = %[[LB]] to %[[UB]] step %[[STEP]] iter_args(%[[ARG:.*]] = %[[C5]]) -> (i32) {
+// CHECK:   scf.yield %[[ARG]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @for_load_into_store(%lb: index, %ub: index, %step: index) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.for %i = %lb to %ub step %step {
+    %loaded = memref.load %alloca[] : memref<i32>
+    memref.store %loaded, %alloca[] : memref<i32>
     scf.yield
   }
   %load = memref.load %alloca[] : memref<i32>
@@ -798,6 +903,64 @@ func.func @while_store() -> i32 {
 
 // -----
 
+// Check that a load-then-store in the before region of a while is promoted.
+
+// CHECK-LABEL: func.func @while_load_into_store_before
+// CHECK-SAME: (%[[COND:.*]]: i1)
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.while (%[[BEFORE:.*]] = %[[C5]]) : (i32) -> i32 {
+// CHECK:   scf.condition(%[[COND]]) %[[BEFORE]] : i32
+// CHECK: } do {
+// CHECK: ^{{.*}}(%[[AFTER:.*]]: i32):
+// CHECK:   scf.yield %[[AFTER]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @while_load_into_store_before(%cond: i1) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.while : () -> () {
+    %loaded = memref.load %alloca[] : memref<i32>
+    memref.store %loaded, %alloca[] : memref<i32>
+    scf.condition(%cond)
+  } do {
+    scf.yield
+  }
+  %res = memref.load %alloca[] : memref<i32>
+  return %res : i32
+}
+
+// -----
+
+// Check that a load-then-store in the after region of a while is promoted.
+
+// CHECK-LABEL: func.func @while_load_into_store
+// CHECK-SAME: (%[[COND:.*]]: i1)
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.while (%[[BEFORE:.*]] = %[[C5]]) : (i32) -> i32 {
+// CHECK:   scf.condition(%[[COND]]) %[[BEFORE]] : i32
+// CHECK: } do {
+// CHECK: ^{{.*}}(%[[AFTER:.*]]: i32):
+// CHECK:   scf.yield %[[AFTER]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @while_load_into_store(%cond: i1) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.while : () -> () {
+    scf.condition(%cond)
+  } do {
+    %loaded = memref.load %alloca[] : memref<i32>
+    memref.store %loaded, %alloca[] : memref<i32>
+    scf.yield
+  }
+  %res = memref.load %alloca[] : memref<i32>
+  return %res : i32
+}
+
+// -----
+
 // Check load promotion through an index_switch default branch.
 
 func.func private @use(i32)
@@ -885,4 +1048,38 @@ func.func @index_switch_store_case_load_default(%idx: index) -> i32 {
   }
   %load2 = memref.load %alloca[] : memref<i32>
   return %load2 : i32
+}
+
+// -----
+
+// Check that load-then-store of the same slot in an index_switch is promoted.
+
+// CHECK-LABEL: func.func @index_switch_load_into_store
+// CHECK-SAME: (%[[IDX:.*]]: index)
+// CHECK: %[[C5:.*]] = arith.constant 5 : i32
+// CHECK: %[[RES:.*]] = scf.index_switch %[[IDX]] -> i32
+// CHECK: case 0 {
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: }
+// CHECK: default {
+// CHECK:   scf.yield %[[C5]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @index_switch_load_into_store(%idx: index) -> i32 {
+  %c5 = arith.constant 5 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c5, %alloca[] : memref<i32>
+  scf.index_switch %idx
+  case 0 {
+    %loaded = memref.load %alloca[] : memref<i32>
+    memref.store %loaded, %alloca[] : memref<i32>
+    scf.yield
+  }
+  default {
+    %loaded = memref.load %alloca[] : memref<i32>
+    memref.store %loaded, %alloca[] : memref<i32>
+    scf.yield
+  }
+  %load = memref.load %alloca[] : memref<i32>
+  return %load : i32
 }
