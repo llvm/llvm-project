@@ -424,42 +424,42 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) no
 ; CHECK-BE-LABEL: if_then_else64:
 ; CHECK-BE:       // %bb.0: // %start
 ; CHECK-BE-NEXT:    stp d11, d10, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-BE-NEXT:    fmov d4, x1
+; CHECK-BE-NEXT:    fmov d5, x1
 ; CHECK-BE-NEXT:    add x9, x2, #224
 ; CHECK-BE-NEXT:    add x8, x2, #240
 ; CHECK-BE-NEXT:    ld1 { v1.4s }, [x9]
-; CHECK-BE-NEXT:    add x9, x2, #128
-; CHECK-BE-NEXT:    ld1 { v2.4s }, [x8]
-; CHECK-BE-NEXT:    ld1 { v18.4s }, [x9]
-; CHECK-BE-NEXT:    add x9, x2, #80
-; CHECK-BE-NEXT:    add x8, x2, #208
-; CHECK-BE-NEXT:    rev64 v17.4s, v4.4s
+; CHECK-BE-NEXT:    add x9, x2, #192
 ; CHECK-BE-NEXT:    adrp x10, .LCPI3_3
 ; CHECK-BE-NEXT:    add x10, x10, :lo12:.LCPI3_3
+; CHECK-BE-NEXT:    ld1 { v3.4s }, [x9]
+; CHECK-BE-NEXT:    add x9, x2, #128
+; CHECK-BE-NEXT:    rev64 v17.4s, v5.4s
+; CHECK-BE-NEXT:    ld1 { v18.4s }, [x9]
+; CHECK-BE-NEXT:    add x9, x2, #80
 ; CHECK-BE-NEXT:    ld1 { v19.4s }, [x9]
 ; CHECK-BE-NEXT:    adrp x9, .LCPI3_4
 ; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI3_4
-; CHECK-BE-NEXT:    ld1 { v0.4s }, [x8]
-; CHECK-BE-NEXT:    add x8, x2, #192
+; CHECK-BE-NEXT:    ld1 { v2.4s }, [x8]
+; CHECK-BE-NEXT:    add x8, x2, #208
 ; CHECK-BE-NEXT:    ld1 { v24.4s }, [x10]
 ; CHECK-BE-NEXT:    ld1 { v28.4s }, [x9]
 ; CHECK-BE-NEXT:    add x9, x3, #96
-; CHECK-BE-NEXT:    ld1 { v3.4s }, [x8]
-; CHECK-BE-NEXT:    dup v6.4s, v17.s[0]
+; CHECK-BE-NEXT:    ld1 { v0.4s }, [x8]
+; CHECK-BE-NEXT:    dup v7.4s, v17.s[0]
 ; CHECK-BE-NEXT:    add x8, x2, #176
 ; CHECK-BE-NEXT:    ld1 { v23.4s }, [x9]
 ; CHECK-BE-NEXT:    add x9, x3, #48
-; CHECK-BE-NEXT:    ld1 { v7.4s }, [x8]
+; CHECK-BE-NEXT:    ld1 { v4.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x2, #160
 ; CHECK-BE-NEXT:    ld1 { v29.4s }, [x9]
 ; CHECK-BE-NEXT:    adrp x9, .LCPI3_5
 ; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI3_5
-; CHECK-BE-NEXT:    ld1 { v4.4s }, [x8]
-; CHECK-BE-NEXT:    add x8, x2, #144
-; CHECK-BE-NEXT:    and v16.16b, v6.16b, v24.16b
-; CHECK-BE-NEXT:    and v30.16b, v6.16b, v28.16b
-; CHECK-BE-NEXT:    ld1 { v25.4s }, [x9]
 ; CHECK-BE-NEXT:    ld1 { v5.4s }, [x8]
+; CHECK-BE-NEXT:    add x8, x2, #144
+; CHECK-BE-NEXT:    and v16.16b, v7.16b, v24.16b
+; CHECK-BE-NEXT:    and v30.16b, v7.16b, v28.16b
+; CHECK-BE-NEXT:    ld1 { v25.4s }, [x9]
+; CHECK-BE-NEXT:    ld1 { v6.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x2, #96
 ; CHECK-BE-NEXT:    adrp x9, .LCPI3_6
 ; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI3_6
@@ -469,7 +469,7 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) no
 ; CHECK-BE-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
 ; CHECK-BE-NEXT:    ld1 { v20.4s }, [x8]
 ; CHECK-BE-NEXT:    cmeq v16.4s, v16.4s, #0
-; CHECK-BE-NEXT:    and v8.16b, v6.16b, v25.16b
+; CHECK-BE-NEXT:    and v8.16b, v7.16b, v25.16b
 ; CHECK-BE-NEXT:    cmeq v30.4s, v30.4s, #0
 ; CHECK-BE-NEXT:    add x8, x3, #80
 ; CHECK-BE-NEXT:    adrp x9, .LCPI3_7
@@ -480,7 +480,7 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) no
 ; CHECK-BE-NEXT:    ld1 { v31.4s }, [x9]
 ; CHECK-BE-NEXT:    adrp x9, .LCPI3_0
 ; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI3_0
-; CHECK-BE-NEXT:    and v10.16b, v6.16b, v27.16b
+; CHECK-BE-NEXT:    and v10.16b, v7.16b, v27.16b
 ; CHECK-BE-NEXT:    ld1 { v21.4s }, [x10]
 ; CHECK-BE-NEXT:    ld1 { v9.4s }, [x8]
 ; CHECK-BE-NEXT:    bsl v16.16b, v29.16b, v20.16b
@@ -489,7 +489,7 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) no
 ; CHECK-BE-NEXT:    dup v29.4s, v17.s[1]
 ; CHECK-BE-NEXT:    mov v17.16b, v30.16b
 ; CHECK-BE-NEXT:    add x8, x2, #112
-; CHECK-BE-NEXT:    and v11.16b, v6.16b, v31.16b
+; CHECK-BE-NEXT:    and v11.16b, v7.16b, v31.16b
 ; CHECK-BE-NEXT:    cmeq v30.4s, v10.4s, #0
 ; CHECK-BE-NEXT:    add x9, x3, #112
 ; CHECK-BE-NEXT:    bit v19.16b, v26.16b, v8.16b
@@ -522,7 +522,7 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) no
 ; CHECK-BE-NEXT:    ld1 { v10.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x3, #192
 ; CHECK-BE-NEXT:    cmeq v28.4s, v28.4s, #0
-; CHECK-BE-NEXT:    bit v7.16b, v9.16b, v30.16b
+; CHECK-BE-NEXT:    bit v4.16b, v9.16b, v30.16b
 ; CHECK-BE-NEXT:    ld1 { v30.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x3, #208
 ; CHECK-BE-NEXT:    ld1 { v9.4s }, [x8]
@@ -562,33 +562,33 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) no
 ; CHECK-BE-NEXT:    add x8, x0, #208
 ; CHECK-BE-NEXT:    st1 { v0.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #192
-; CHECK-BE-NEXT:    and v0.16b, v6.16b, v28.16b
-; CHECK-BE-NEXT:    bsl v2.16b, v31.16b, v4.16b
-; CHECK-BE-NEXT:    bsl v1.16b, v27.16b, v5.16b
+; CHECK-BE-NEXT:    and v0.16b, v7.16b, v28.16b
+; CHECK-BE-NEXT:    bsl v2.16b, v31.16b, v5.16b
+; CHECK-BE-NEXT:    bsl v1.16b, v27.16b, v6.16b
 ; CHECK-BE-NEXT:    st1 { v3.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #176
-; CHECK-BE-NEXT:    and v3.16b, v6.16b, v30.16b
-; CHECK-BE-NEXT:    and v4.16b, v6.16b, v20.16b
-; CHECK-BE-NEXT:    st1 { v7.4s }, [x8]
+; CHECK-BE-NEXT:    and v3.16b, v7.16b, v30.16b
+; CHECK-BE-NEXT:    st1 { v4.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #160
+; CHECK-BE-NEXT:    and v4.16b, v7.16b, v20.16b
 ; CHECK-BE-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-BE-NEXT:    st1 { v2.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #144
-; CHECK-BE-NEXT:    cmeq v2.4s, v4.4s, #0
 ; CHECK-BE-NEXT:    st1 { v1.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #128
 ; CHECK-BE-NEXT:    cmeq v1.4s, v3.4s, #0
 ; CHECK-BE-NEXT:    st1 { v18.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #112
-; CHECK-BE-NEXT:    bsl v0.16b, v10.16b, v21.16b
+; CHECK-BE-NEXT:    cmeq v2.4s, v4.4s, #0
 ; CHECK-BE-NEXT:    st1 { v26.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #96
-; CHECK-BE-NEXT:    bsl v2.16b, v9.16b, v24.16b
+; CHECK-BE-NEXT:    bsl v0.16b, v10.16b, v21.16b
 ; CHECK-BE-NEXT:    st1 { v23.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #80
 ; CHECK-BE-NEXT:    bsl v1.16b, v25.16b, v22.16b
 ; CHECK-BE-NEXT:    st1 { v19.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #64
+; CHECK-BE-NEXT:    bsl v2.16b, v9.16b, v24.16b
 ; CHECK-BE-NEXT:    st1 { v17.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #48
 ; CHECK-BE-NEXT:    st1 { v16.4s }, [x8]

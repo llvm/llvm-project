@@ -176,13 +176,33 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
 
     assert(!cir::MissingFeatures::cudaSupport());
 
+    auto getSpecialVirtFn = [&](StringRef name) -> cir::FuncOp {
+      assert(!cir::MissingFeatures::vtableRelativeLayout());
+
+      if (cgm.getLangOpts().OpenMP && cgm.getLangOpts().OpenMPIsTargetDevice &&
+          cgm.getTriple().isNVPTX())
+        cgm.errorNYI(gd.getDecl()->getSourceRange(),
+                     "getVTableComponent for OMP Device NVPTX");
+
+      cir::FuncType fnTy =
+          cgm.getBuilder().getFuncType({}, cgm.getBuilder().getVoidTy());
+      cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
+
+      assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+      return fnPtr;
+    };
+
     cir::FuncOp fnPtr;
     if (cast<CXXMethodDecl>(gd.getDecl())->isPureVirtual()) {
-      cgm.errorNYI("getVTableComponent: CK_FunctionPointer: pure virtual");
-      return mlir::Attribute();
+      if (!pureVirtualFn)
+        pureVirtualFn =
+            getSpecialVirtFn(cgm.getCXXABI().getPureVirtualCallName());
+      fnPtr = pureVirtualFn;
     } else if (cast<CXXMethodDecl>(gd.getDecl())->isDeleted()) {
-      cgm.errorNYI("getVTableComponent: CK_FunctionPointer: deleted virtual");
-      return mlir::Attribute();
+      if (!deletedVirtualFn)
+        deletedVirtualFn =
+            getSpecialVirtFn(cgm.getCXXABI().getDeletedVirtualCallName());
+      fnPtr = deletedVirtualFn;
     } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
                layout.vtable_thunks()[nextVTableThunkIndex].first ==
                    componentIndex) {
@@ -746,8 +766,8 @@ void CIRGenFunction::generateThunk(cir::FuncOp fn,
 
   // Create lexical scope - must stay alive for entire thunk generation.
   // startFunction() requires currLexScope to be set.
-  mlir::Location unknownLoc = builder.getUnknownLoc();
-  LexicalScope lexScope{*this, unknownLoc, entryBb};
+  SourceLocRAIIObject locRAII(*this, fn.getLoc());
+  LexicalScope lexScope{*this, fn.getLoc(), entryBb};
 
   startThunk(fn, gd, fnInfo, isUnprototyped);
   assert(!cir::MissingFeatures::generateDebugInfo());

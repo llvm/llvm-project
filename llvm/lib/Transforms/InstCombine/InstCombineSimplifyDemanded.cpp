@@ -3413,6 +3413,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Known.knownNot(~DemandedMask);
     break;
   }
+  case Instruction::InsertValue: {
+    KnownFPClass KnownAgg, KnownElt;
+    if (SimplifyDemandedFPClass(I, 0, DemandedMask, KnownAgg, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 1, DemandedMask, KnownElt, Depth + 1))
+      return I;
+
+    Known = KnownAgg | KnownElt;
+    break;
+  }
   case Instruction::ExtractValue: {
     Value *ExtractSrc;
     if (match(I, m_ExtractValue<0>(m_OneUse(m_Value(ExtractSrc))))) {
@@ -3458,7 +3467,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         }
       }
     }
-    [[fallthrough]];
+
+    KnownFPClass KnownSrc;
+    if (SimplifyDemandedFPClass(I, 0, DemandedMask, KnownSrc, Depth + 1))
+      return I;
+    Known = KnownSrc;
+    break;
   }
   default:
     Known = computeKnownFPClass(I, DemandedMask, SQ, Depth + 1);

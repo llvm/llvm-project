@@ -122,7 +122,7 @@ And the hard way:
 .. code-block:: llvm
 
     %0 = add i32 %X, %X           ; yields i32:%0
-    %1 = add i32 %0, %0           /* yields i32:%1 */
+    %1 = add i32 %0, %0           ; yields i32:%1
     %result = add i32 %1, %1
 
 This last way of multiplying ``%X`` by 8 illustrates several important
@@ -2397,7 +2397,7 @@ For example:
     occurs inside a cycle in the dynamic call graph.
     For example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     fn -> other_fn -> fn       ; fn is not norecurse
     other_fn -> fn -> other_fn ; fn is not norecurse

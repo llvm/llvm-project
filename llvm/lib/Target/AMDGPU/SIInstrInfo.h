@@ -827,8 +827,8 @@ public:
     unsigned Opc = MI.getOpcode();
     // Exclude instructions that read FROM LDS (not write to it)
     return isLDSDMA(MI) && Opc != AMDGPU::BUFFER_STORE_LDS_DWORD &&
-           Opc != AMDGPU::TENSOR_STORE_FROM_LDS &&
-           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_D2;
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d2 &&
+           Opc != AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   }
 
   static bool isSBarrierSCCWrite(unsigned Opcode) {

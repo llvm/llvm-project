@@ -1413,6 +1413,31 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
+ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {
+  if (cStdlibType)
+    return *cStdlibType;
+
+  const Arg *A = Args.getLastArg(options::OPT_cstdlib_EQ);
+  StringRef LibName = A ? A->getValue() : "system";
+
+  if (LibName == "newlib")
+    cStdlibType = ToolChain::CST_Newlib;
+  else if (LibName == "picolibc")
+    cStdlibType = ToolChain::CST_Picolibc;
+  else if (LibName == "llvm-libc")
+    cStdlibType = ToolChain::CST_LLVMLibC;
+  else if (LibName == "system")
+    cStdlibType = ToolChain::CST_System;
+  else {
+    if (A)
+      getDriver().Diag(diag::err_drv_invalid_cstdlib_name)
+          << A->getAsString(Args);
+    cStdlibType = ToolChain::CST_System;
+  }
+
+  return *cStdlibType;
+}
+
 /// Utility function to add a system framework directory to CC1 arguments.
 void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
                                           llvm::opt::ArgStringList &CC1Args,

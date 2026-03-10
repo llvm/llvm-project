@@ -773,8 +773,8 @@ bool isAsyncStore(unsigned Opc) {
 }
 
 bool isTensorStore(unsigned Opc) {
-  return Opc == TENSOR_STORE_FROM_LDS_gfx1250 ||
-         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1250;
+  return Opc == TENSOR_STORE_FROM_LDS_d2_gfx1250 ||
+         Opc == TENSOR_STORE_FROM_LDS_d4_gfx1250;
 }
 
 unsigned getTemporalHintType(const MCInstrDesc TID) {
@@ -1131,11 +1131,8 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   }
 }
 
-std::string AMDGPUTargetID::toString() const {
-  std::string StringRep;
-  raw_string_ostream StreamRep(StringRep);
-
-  auto TargetTriple = STI.getTargetTriple();
+void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
+  const Triple &TargetTriple = STI.getTargetTriple();
   auto Version = getIsaVersion(STI.getCPU());
 
   StreamRep << TargetTriple.getArchName() << '-' << TargetTriple.getVendorName()
@@ -1154,7 +1151,7 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features;
-  if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TargetTriple.getOS() == Triple::AMDHSA) {
     // sramecc.
     if (getSramEccSetting() == TargetIDSetting::Off)
       Features += ":sramecc-";
@@ -1168,8 +1165,13 @@ std::string AMDGPUTargetID::toString() const {
   }
 
   StreamRep << Processor << Features;
+}
 
-  return StringRep;
+std::string AMDGPUTargetID::toString() const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << *this;
+  return Str;
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
@@ -1262,11 +1264,6 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
 }
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI) { return 1; }
-
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI) {
-  // Some subtargets allow encoding 2048, but this isn't tested or supported.
-  return 1024;
-}
 
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
                               unsigned FlatWorkGroupSize) {
@@ -3465,10 +3462,9 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 }
 
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
-  if (AMDGPU::isGFX10(ST))
+  if (ST.getFeatureBits().test(FeatureFlatOffsetBits12))
     return 12;
-
-  if (AMDGPU::isGFX12(ST))
+  if (ST.getFeatureBits().test(FeatureFlatOffsetBits24))
     return 24;
   return 13;
 }
