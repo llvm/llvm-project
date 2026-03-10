@@ -105,6 +105,14 @@ public:
           if (Func->hasWeakLinkage() || Func->hasExternalWeakLinkage())
             GUIDIsWeakSymbol.insert(GUID);
       }
+      for (const auto &Func : M) {
+        if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
+          auto GUID = Function::getGUIDAssumingExternalLinkage(
+                FunctionSamples::getCanonicalFnName(Func));
+          if (GUIDToProbeDescMap.contains(GUID))
+            GUIDIsWeakSymbol.insert(GUID);
+        }
+      }
     }
   }
 
