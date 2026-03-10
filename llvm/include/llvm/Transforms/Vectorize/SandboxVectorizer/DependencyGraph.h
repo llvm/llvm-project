@@ -289,7 +289,7 @@ public:
     PredN->MemSuccs.insert(this);
     if (!Scheduled) {
       if (!PredN->Scheduled)
-        ++*PredN->UnscheduledSuccs;
+        PredN->incrUnscheduledSuccs();
     }
   }
   /// Removes the memory dependency PredN->this. This also updates the
