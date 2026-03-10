@@ -79,6 +79,10 @@ function(link_libclc_builtin_library target_name)
     ${ARGN}
   )
 
+  if(NOT ARG_OUTPUT_FILENAME)
+    message(FATAL_ERROR "OUTPUT_FILENAME is required for link_libclc_builtin_library")
+  endif()
+
   set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE})
   file(MAKE_DIRECTORY ${library_dir})
 
@@ -149,6 +153,13 @@ function(add_libclc_library target_name)
     "SOURCES;COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
+
+  if(NOT ARG_OUTPUT_FILENAME)
+    message(FATAL_ERROR "OUTPUT_FILENAME is required for add_libclc_library")
+  endif()
+  if(NOT ARG_PARENT_TARGET)
+    message(FATAL_ERROR "PARENT_TARGET is required for add_libclc_library")
+  endif()
 
   set(opencl_lib ${target_name}_opencl_builtins)
   add_libclc_builtin_library(${opencl_lib}
