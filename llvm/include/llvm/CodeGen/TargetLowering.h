@@ -1509,12 +1509,48 @@ public:
     return isOperationExpand(Op, VT) || getOperationAction(Op, VT) == LibCall;
   }
 
+  /// Returns an alternative action to use when the coarser lookups (configured
+  /// through `setLoadExtAction` and `setAtomicLoadExtAction`) yield
+  /// `LegalizeAction::Custom`. Allows targets to use builtin behaviors (e.g.
+  /// Legal, Promote) specialized by Alignment and AddrSpace, rather than just
+  /// types.
+  virtual LegalizeAction
+  getCustomLoadAction(EVT ValVT, EVT MemVT, Align Alignment, unsigned AddrSpace,
+                      unsigned ExtType, bool Atomic) const {
+    return LegalizeAction::Custom;
+  }
+
   /// Return how this load with extension should be treated: either it is legal,
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
-  virtual LegalizeAction getLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
-                                       unsigned AddrSpace, unsigned ExtType,
-                                       bool Atomic) const;
+  LegalizeAction getLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
+                               unsigned AddrSpace, unsigned ExtType,
+                               bool Atomic) const {
+    if (ValVT.isExtended() || MemVT.isExtended())
+      return Expand;
+    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
+    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
+           MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
+    unsigned Shift = 4 * ExtType;
+
+    LegalizeAction Action;
+    if (Atomic) {
+      Action =
+          (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
+      assert((Action == Legal || Action == Expand) &&
+             "Unsupported atomic load extension action.");
+    } else {
+      Action = (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
+    }
+
+    if (Action == LegalizeAction::Custom) {
+      return getCustomLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType,
+                               Atomic);
+    }
+
+    return Action;
+  }
 
   /// Return true if the specified load with extension is legal on this target.
   bool isLoadLegal(EVT ValVT, EVT MemVT, Align Alignment, unsigned AddrSpace,
