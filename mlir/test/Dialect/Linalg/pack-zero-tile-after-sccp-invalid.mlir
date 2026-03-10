@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s --inline --sccp --canonicalize -split-input-file -verify-diagnostics
 
 func.func @get_tile_size() -> index {
   %c0 = arith.constant 0 : index
