@@ -5558,3 +5558,10 @@ def OverflowBehavior : TypeAttr {
                              "variables, typedefs, and data members">;
   let Documentation = [Undocumented];
 }
+
+def Personality : InheritableAttr {
+  let Spellings = [Clang<"personality">];
+  let Args = [DeclArgument<Function, "Routine">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [PersonalityDocs];
+}
