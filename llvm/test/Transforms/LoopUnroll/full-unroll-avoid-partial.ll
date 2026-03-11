@@ -18,7 +18,6 @@
 
 ; LOOP-UNROLL-FULL-LABEL: Loop Unroll: F[pragma_unroll] Loop %for.body
 ; LOOP-UNROLL-FULL-NEXT: Loop Size = 9
-; LOOP-UNROLL-FULL-NEXT:  Runtime unrolling with count: 8
 ; LOOP-UNROLL-FULL-NEXT: Not attempting partial/runtime unroll in FullLoopUnroll
 define void @pragma_unroll(ptr %queue, i32 %num_elements) {
 entry:
