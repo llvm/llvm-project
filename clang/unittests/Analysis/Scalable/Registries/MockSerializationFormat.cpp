@@ -44,6 +44,12 @@ MockSerializationFormat::MockSerializationFormat() {
   }
 }
 
+void MockSerializationFormat::forEachRegisteredAnalysis(
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> Callback) const {
+  for (const auto &Entry : llvm::Registry<FormatInfo>::entries())
+    Callback(Entry.getName(), Entry.getDesc());
+}
+
 llvm::Expected<TUSummary>
 MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
   BuildNamespace NS(BuildNamespaceKind::CompilationUnit, "Mock.cpp");

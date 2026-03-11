@@ -151,16 +151,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   const llvm::Triple::ArchType ArchType = Triple.getArch();
-  bool HasEGPR = false;
-
-  // -ffixed-r16 through -ffixed-r31 are only valid when the selected x86_64
-  // CPU enables APX EGPR by default; later -target-feature arguments still get
-  // their own validation when translated to backend features.
-  if (ArchType == llvm::Triple::x86_64) {
-    SmallVector<StringRef, 16> CPUFeatures;
-    llvm::X86::getFeaturesForCPU(getX86TargetCPU(D, Args, Triple), CPUFeatures);
-    HasEGPR = llvm::is_contained(CPUFeatures, "+egpr");
-  }
 
   // Add features to be compatible with gcc for Android.
   if (Triple.isAndroid()) {
@@ -241,6 +231,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         << D.getOpts().getOptionName(LVIOpt);
   }
 
+  enum class EGPRFeature { Unknown, Disabled, Enabled };
+  EGPRFeature EGPROpt = EGPRFeature::Unknown;
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   for (const Arg *A : Args.filtered(options::OPT_m_x86_Features_Group,
@@ -271,13 +263,13 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (A->getOption().matches(options::OPT_mapxf) ||
         A->getOption().matches(options::OPT_mno_apxf)) {
       if (IsNegative) {
-        HasEGPR = false;
+        EGPROpt = EGPRFeature::Disabled;
         Features.insert(Features.end(),
                         {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
         if (!Triple.isOSWindows())
           Features.insert(Features.end(), {"-push2pop2", "-ppx"});
       } else {
-        HasEGPR = true;
+        EGPROpt = EGPRFeature::Enabled;
         Features.insert(Features.end(),
                         {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
         if (!Triple.isOSWindows())
@@ -303,8 +295,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
           D.Diag(clang::diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Value;
 
-        if (Value == "egpr")
-          HasEGPR = !IsNegative;
+        if (Value == "egpr") {
+          EGPROpt = IsNegative ? EGPRFeature::Disabled : EGPRFeature::Enabled;
+        }
 
         Features.push_back(
             Args.MakeArgString((IsNegative ? "-" : "+") + Value));
@@ -312,8 +305,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       continue;
     }
 
-    if (Name == "egpr")
-      HasEGPR = !IsNegative;
+    if (Name == "egpr") {
+      EGPROpt = IsNegative ? EGPRFeature::Disabled : EGPRFeature::Enabled;
+    }
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 
@@ -366,9 +360,25 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   RESERVE_REG(r13)
   RESERVE_REG(r14)
   RESERVE_REG(r15)
+#undef RESERVE_REG
+
+  bool NeedDetectEGPR = Args.hasArg(
+      options::OPT_ffixed_r16, options::OPT_ffixed_r17, options::OPT_ffixed_r18,
+      options::OPT_ffixed_r19, options::OPT_ffixed_r20, options::OPT_ffixed_r21,
+      options::OPT_ffixed_r22, options::OPT_ffixed_r23, options::OPT_ffixed_r24,
+      options::OPT_ffixed_r25, options::OPT_ffixed_r26, options::OPT_ffixed_r27,
+      options::OPT_ffixed_r28, options::OPT_ffixed_r29, options::OPT_ffixed_r30,
+      options::OPT_ffixed_r31);
+  if (NeedDetectEGPR && EGPROpt == EGPRFeature::Unknown &&
+      ArchType == llvm::Triple::x86_64) {
+    SmallVector<StringRef, 16> CPUFeatures;
+    llvm::X86::getFeaturesForCPU(getX86TargetCPU(D, Args, Triple), CPUFeatures);
+    EGPROpt = llvm::is_contained(CPUFeatures, "+egpr") ? EGPRFeature::Enabled
+                                                       : EGPRFeature::Disabled;
+  }
 #define RESERVE_EGPR(REG)                                                      \
   if (Args.hasArg(options::OPT_ffixed_##REG)) {                                \
-    if (!HasEGPR)                                                              \
+    if (EGPROpt != EGPRFeature::Enabled)                                       \
       D.Diag(diag::err_drv_unsupported_opt_for_target)                         \
           << "-ffixed-" #REG << Triple.getTriple();                            \
     else                                                                       \
@@ -391,5 +401,4 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   RESERVE_EGPR(r30)
   RESERVE_EGPR(r31)
 #undef RESERVE_EGPR
-#undef RESERVE_REG
 }

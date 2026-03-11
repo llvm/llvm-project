@@ -4435,7 +4435,7 @@ public:
   /// row-major order flattened index. Otherwise, returns the column-major order
   /// flattened index.
   unsigned getFlattenedIndex(unsigned Row, unsigned Column,
-                             bool IsRowMajor = false) {
+                             bool IsRowMajor = false) const {
     return IsRowMajor ? getRowMajorFlattenedIndex(Row, Column)
                       : getColumnMajorFlattenedIndex(Row, Column);
   }

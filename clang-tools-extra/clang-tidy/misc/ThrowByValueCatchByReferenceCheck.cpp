@@ -31,8 +31,8 @@ void ThrowByValueCatchByReferenceCheck::registerMatchers(MatchFinder *Finder) {
 
 void ThrowByValueCatchByReferenceCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "CheckThrowTemporaries", true);
-  Options.store(Opts, "WarnOnLargeObjects", WarnOnLargeObject);
+  Options.store(Opts, "CheckThrowTemporaries", CheckAnonymousTemporaries);
+  Options.store(Opts, "WarnOnLargeObject", WarnOnLargeObject);
   Options.store(Opts, "MaxSize", MaxSizeOptions);
 }
 
