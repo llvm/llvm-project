@@ -200,7 +200,7 @@ B *c() {
 // LLVM:   br label %[[EH_SCOPE:.*]]
 // LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
-// LLVM:   invoke void @_ZN1BC1Ei(ptr %[[PTR]], i32 5)
+// LLVM:   invoke void @_ZN1BC1Ei(ptr {{.*}} %[[PTR]], i32 5)
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[EH_SCOPE_END:.*]]
