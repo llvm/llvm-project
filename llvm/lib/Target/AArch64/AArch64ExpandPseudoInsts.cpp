@@ -1867,7 +1867,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      const MachineOperand *Op2 = &MI.getOperand(2);
      const Register DOPReg = Op0.getReg();
      const RegState DOPRegState =
-        getRenamableRegState(Op0.isRenamable()) | RegState::Kill;
+         getRenamableRegState(Op0.isRenamable()) | RegState::Kill;
 
      if (DOPReg == Op2->getReg()) {
        // Commute the operands to allow destroying the second source.
