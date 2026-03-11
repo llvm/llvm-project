@@ -8231,7 +8231,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                               DAG.getConstant(0, dl, HiLoVT));
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
     }
-
   } else {
     // If we cannot split in two halves. Let's look for a smaller chunk
     // width where (1 << ChunkWidth) mod Divisor == 1.
