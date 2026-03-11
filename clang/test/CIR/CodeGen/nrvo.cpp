@@ -11,8 +11,6 @@
 // lowering isn't of interest for this test. We just need to see that the
 // copy constructor is elided without -fno-elide-constructors but not with it.
 
-// XFAIL: *
-
 struct S {
   S();
   int a;
@@ -71,16 +69,24 @@ NonTrivial test_nrvo() {
 // CIR:   %[[NRVO_FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["nrvo"]
 // CIR:   %[[FALSE:.*]] = cir.const #false
 // CIR:   cir.store{{.*}} %[[FALSE]], %[[NRVO_FLAG]]
-// CIR:   cir.call @_Z10maybeThrowv() : () -> ()
-// CIR:   %[[TRUE:.*]] = cir.const #true
-// CIR:   cir.store{{.*}} %[[TRUE]], %[[NRVO_FLAG]]
-// CIR:   %[[NRVO_FLAG_VAL:.*]] = cir.load{{.*}} %[[NRVO_FLAG]]
-// CIR:   %[[NOT_NRVO_VAL:.*]] = cir.unary(not, %[[NRVO_FLAG_VAL]])
-// CIR:   cir.if %[[NOT_NRVO_VAL]] {
-// CIR:     cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.call @_Z10maybeThrowv() : () -> ()
+// CIR:     %[[TRUE:.*]] = cir.const #true
+// CIR:     cir.store{{.*}} %[[TRUE]], %[[NRVO_FLAG]]
+// CIR:     %[[RET:.*]] = cir.load %[[RESULT]]
+// CIR:     cir.return %[[RET]]
+// CIR:   } cleanup  normal {
+// CIR:     %[[NRVO_FLAG_VAL:.*]] = cir.load{{.*}} %[[NRVO_FLAG]]
+// CIR:     %[[NOT_NRVO_VAL:.*]] = cir.unary(not, %[[NRVO_FLAG_VAL]])
+// CIR:     cir.if %[[NOT_NRVO_VAL]] {
+// CIR:       cir.call @_ZN10NonTrivialD1Ev(%[[RESULT]])
+// CIR:     }
+// CIR:     cir.yield
 // CIR:   }
-// CIR:   %[[RET:.*]] = cir.load %[[RESULT]]
-// CIR:   cir.return %[[RET]]
+//
+// TODO(cir): This is unreachable, but it really shouldn't be here. This is an
+//            artifact of us falling through to emitImplicitReturn().
+// CIR:   cir.trap
 
 // LLVM: define {{.*}} %struct.NonTrivial @_Z9test_nrvov()
 // LLVM:   %[[RESULT:.*]] = alloca %struct.NonTrivial

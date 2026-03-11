@@ -929,94 +929,32 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
     report_fatal_error(
         "Scalable vector support not yet implemented in ExecutionEngine");
   case Type::FixedVectorTyID: {
-    unsigned elemNum;
-    Type* ElemTy;
-    const ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C);
-    const ConstantVector *CV = dyn_cast<ConstantVector>(C);
-    const ConstantAggregateZero *CAZ = dyn_cast<ConstantAggregateZero>(C);
+    Type *ElemTy = cast<FixedVectorType>(C->getType())->getElementType();
+    if (!ElemTy->isIntegerTy() && !ElemTy->isFloatTy() && !ElemTy->isDoubleTy())
+      llvm_unreachable("Unknown constant pointer type!");
 
-    if (CDV) {
-        elemNum = CDV->getNumElements();
-        ElemTy = CDV->getElementType();
-    } else if (CV || CAZ) {
-      auto *VTy = cast<FixedVectorType>(C->getType());
-      elemNum = VTy->getNumElements();
-      ElemTy = VTy->getElementType();
-    } else {
-        llvm_unreachable("Unknown constant vector type!");
+    unsigned ElemNum = cast<FixedVectorType>(C->getType())->getNumElements();
+    Result.AggregateVal.resize(ElemNum);
+    for (unsigned I = 0; I < ElemNum; ++I) {
+      Constant *Elt = C->getAggregateElement(I);
+      if (!Elt)
+        llvm_unreachable("Failed to extract element from constant vector!");
+
+      if (auto *CI = dyn_cast<ConstantInt>(Elt))
+        Result.AggregateVal[I].IntVal = CI->getValue();
+      else if (auto *CFP = dyn_cast<ConstantFP>(Elt)) {
+        APFloat Val = CFP->getValueAPF();
+        if (ElemTy->isFloatTy())
+          Result.AggregateVal[I].FloatVal = Val.convertToFloat();
+        else
+          Result.AggregateVal[I].DoubleVal = Val.convertToDouble();
+      } else if (isa<UndefValue>(Elt)) {
+        if (ElemTy->isIntegerTy())
+          Result.AggregateVal[I].IntVal =
+              APInt(ElemTy->getScalarSizeInBits(), 0ull);
+      } else
+        llvm_unreachable("Unknown constant pointer type!");
     }
-
-    Result.AggregateVal.resize(elemNum);
-    // Check if vector holds floats.
-    if(ElemTy->isFloatTy()) {
-      if (CAZ) {
-        GenericValue floatZero;
-        floatZero.FloatVal = 0.f;
-        llvm::fill(Result.AggregateVal, floatZero);
-        break;
-      }
-      if(CV) {
-        for (unsigned i = 0; i < elemNum; ++i)
-          if (!isa<UndefValue>(CV->getOperand(i)))
-            Result.AggregateVal[i].FloatVal = cast<ConstantFP>(
-              CV->getOperand(i))->getValueAPF().convertToFloat();
-        break;
-      }
-      if(CDV)
-        for (unsigned i = 0; i < elemNum; ++i)
-          Result.AggregateVal[i].FloatVal = CDV->getElementAsFloat(i);
-
-      break;
-    }
-    // Check if vector holds doubles.
-    if (ElemTy->isDoubleTy()) {
-      if (CAZ) {
-        GenericValue doubleZero;
-        doubleZero.DoubleVal = 0.0;
-        llvm::fill(Result.AggregateVal, doubleZero);
-        break;
-      }
-      if(CV) {
-        for (unsigned i = 0; i < elemNum; ++i)
-          if (!isa<UndefValue>(CV->getOperand(i)))
-            Result.AggregateVal[i].DoubleVal = cast<ConstantFP>(
-              CV->getOperand(i))->getValueAPF().convertToDouble();
-        break;
-      }
-      if(CDV)
-        for (unsigned i = 0; i < elemNum; ++i)
-          Result.AggregateVal[i].DoubleVal = CDV->getElementAsDouble(i);
-
-      break;
-    }
-    // Check if vector holds integers.
-    if (ElemTy->isIntegerTy()) {
-      if (CAZ) {
-        GenericValue intZero;
-        intZero.IntVal = APInt(ElemTy->getScalarSizeInBits(), 0ull);
-        llvm::fill(Result.AggregateVal, intZero);
-        break;
-      }
-      if(CV) {
-        for (unsigned i = 0; i < elemNum; ++i)
-          if (!isa<UndefValue>(CV->getOperand(i)))
-            Result.AggregateVal[i].IntVal = cast<ConstantInt>(
-                                            CV->getOperand(i))->getValue();
-          else {
-            Result.AggregateVal[i].IntVal =
-              APInt(CV->getOperand(i)->getType()->getPrimitiveSizeInBits(), 0);
-          }
-        break;
-      }
-      if(CDV)
-        for (unsigned i = 0; i < elemNum; ++i)
-          Result.AggregateVal[i].IntVal = APInt(
-            CDV->getElementType()->getPrimitiveSizeInBits(),
-            CDV->getElementAsInteger(i));
-
-      break;
-    }
-    llvm_unreachable("Unknown constant pointer type!");
   } break;
 
   default:

@@ -6947,7 +6947,7 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
 // tablegen, so fix it up here.
 //
 // We have to be careful to not emit an invalid Rt2 here, because the rest of
-// the assembly parser could then generate confusing diagnostics refering to
+// the assembly parser could then generate confusing diagnostics referring to
 // it. If we do find anything that prevents us from doing the transformation we
 // bail out, and let the assembly parser report an error on the instruction as
 // it is written.
@@ -7259,8 +7259,8 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // This marks the end of the LHS Mnemonic operators.
-  // This is used for indexing into the non-menmonic operators as some of the
-  // mnemonic operators are optional and therfore indexes can differ.
+  // This is used for indexing into the non-mnemonic operators as some of the
+  // mnemonic operators are optional and therefore indexes can differ.
   unsigned MnemonicOpsEndInd = Operands.size();
 
   // Read the remaining operands.
@@ -9008,7 +9008,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     Inst = TmpInst;
     return true;
   }
-  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for ommitted immediate.
+  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for omitted immediate.
   case ARM::LDRSBTii:
   case ARM::LDRHTii:
   case ARM::LDRSHTii: {
@@ -11366,7 +11366,7 @@ unsigned ARMAsmParser::MatchInstruction(OperandVector &Operands, MCInst &Inst,
     extendImplicitITBlock(ITState.Cond);
     if (MatchInstructionImpl(Operands, Inst, nullptr, MatchingInlineAsm) ==
             Match_Success) {
-      // The match succeded, but we still have to check that the instruction is
+      // The match succeeded, but we still have to check that the instruction is
       // valid in this implicit IT block.
       const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
       if (MCID.isPredicable()) {
@@ -11830,7 +11830,7 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
         getTargetStreamer().emitCode16();
       else
         getTargetStreamer().emitCode32();
-      // Warn about the implcit mode switch. GAS does not switch modes here,
+      // Warn about the implicit mode switch. GAS does not switch modes here,
       // but instead stays in the old mode, reporting an error on any following
       // instructions as the mode does not exist on the target.
       Warning(Loc, Twine("new target does not support ") +

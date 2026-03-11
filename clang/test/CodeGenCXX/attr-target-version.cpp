@@ -232,7 +232,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_Z3fooi.resolver(
-// CHECK-SAME: ) #[[ATTR_RESOLVER:[0-9]+]] comdat {
+// CHECK-SAME: ) #[[ATTR12:[0-9]+]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -247,7 +247,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_Z3foov.resolver(
-// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
+// CHECK-SAME: ) #[[ATTR12]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -262,7 +262,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_ZN7MyClass3gooEi.resolver(
-// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
+// CHECK-SAME: ) #[[ATTR12]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -285,7 +285,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_ZN7MyClass23unused_with_default_defEv.resolver(
-// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
+// CHECK-SAME: ) #[[ATTR12]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -299,8 +299,8 @@ int bar() {
 // CHECK-NEXT:    ret ptr @_ZN7MyClass23unused_with_default_defEv.default
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN7MyClass32unused_with_imp
-// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
+// CHECK-LABEL: define weak_odr ptr @_ZN7MyClass32unused_with_implicit_default_defEv.resolver(
+// CHECK-SAME: ) #[[ATTR12]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -315,7 +315,7 @@ int bar() {
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv.resolver(
-// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
+// CHECK-SAME: ) #[[ATTR12]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -328,8 +328,6 @@ int bar() {
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    ret ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv.default
 //
-// CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

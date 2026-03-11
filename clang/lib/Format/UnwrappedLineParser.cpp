@@ -762,12 +762,13 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
   const bool MacroBlock = FormatTok->is(TT_MacroBlockBegin);
   FormatTok->setBlockKind(BK_Block);
 
+  const bool IsWhitesmiths =
+      Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths;
+
   // For Whitesmiths mode, jump to the next level prior to skipping over the
   // braces.
-  if (!VerilogHierarchy && AddLevels > 0 &&
-      Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
+  if (!VerilogHierarchy && AddLevels > 0 && IsWhitesmiths)
     ++Line->Level;
-  }
 
   size_t PPStartHash = computePPHash();
 
@@ -802,8 +803,11 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
 
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
-  if (AddLevels > 0u && Style.BreakBeforeBraces != FormatStyle::BS_Whitesmiths)
-    Line->Level += AddLevels;
+
+  // Whitesmiths logic has already added a level by this point, so avoid
+  // adding it twice.
+  if (AddLevels > 0u)
+    Line->Level += AddLevels - (IsWhitesmiths ? 1 : 0);
 
   FormatToken *IfLBrace = nullptr;
   const bool SimpleBlock = parseLevel(Tok, IfKind, &IfLBrace);
@@ -1710,7 +1714,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (!Line->InMacroBody || CurrentLines->size() > 1)
         Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(!Style.IndentGotoLabels);
+      parseLabel(Style.IndentGotoLabels);
       if (HasLabel)
         *HasLabel = true;
       return;
@@ -3354,14 +3358,23 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
+void UnwrappedLineParser::parseLabel(
+    FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
   nextToken();
   unsigned OldLineLevel = Line->Level;
 
-  if (LeftAlignLabel)
+  switch (IndentGotoLabels) {
+  case FormatStyle::IGLS_NoIndent:
     Line->Level = 0;
-  else if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-    --Line->Level;
+    break;
+  case FormatStyle::IGLS_OuterIndent:
+    if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
+      --Line->Level;
+    break;
+  case FormatStyle::IGLS_HalfIndent:
+  case FormatStyle::IGLS_InnerIndent:
+    break;
+  }
 
   if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
       FormatTok->is(tok::l_brace)) {

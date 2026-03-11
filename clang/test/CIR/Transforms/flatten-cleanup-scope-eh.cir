@@ -372,6 +372,318 @@ cir.func @test_eh_cleanup_in_try() {
 // CHECK: ^[[CONTINUE]]:
 // CHECK:   cir.return
 
+// Test nested EH cleanup flattening. After both cleanup scopes are flattened,
+// the inner EH cleanup block branches to the outer EH cleanup block before
+// unwinding to the caller.
+//
+// C++ equivalent:
+//   void test() {
+//     SomeClass c;
+//     SomeClass c2;
+//     doSomething(&c);
+//   }
+cir.func @test_nested_eh_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%1) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_nested_eh_cleanup()
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
+// CHECK:         %[[C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[C]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+//
+// Outer body: ctor for c2 may throw. Since c2 is not yet constructed,
+// the unwind skips the inner cleanup and goes to the outer unwind.
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.try_call @ctor(%[[C2]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[OUTER_UNWIND:bb[0-9]+]]
+//
+// After c2 construction, branch to inner body.
+// CHECK:       ^[[AFTER_CTOR]]:
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+//
+// Inner body: doSomething may throw, unwinding to the inner unwind block.
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[INNER_NORMAL:bb[0-9]+]], ^[[INNER_UNWIND:bb[0-9]+]]
+//
+// Inner normal continuation: branch to inner normal cleanup.
+// CHECK:       ^[[INNER_NORMAL]]:
+// CHECK:         cir.br ^[[INNER_NORMAL_CLEANUP:bb[0-9]+]]
+//
+// Inner normal cleanup: destroy c2.
+// CHECK:       ^[[INNER_NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C2]]) nothrow
+// CHECK:         cir.br ^[[INNER_EXIT:bb[0-9]+]]
+//
+// Inner exit: branch toward outer normal cleanup.
+// CHECK:       ^[[INNER_EXIT]]:
+// CHECK:         cir.br ^[[YIELD_BLOCK:bb[0-9]+]]
+//
+// Inner unwind block: initiate EH and branch to inner EH cleanup.
+// CHECK:       ^[[INNER_UNWIND]]:
+// CHECK:         %[[INNER_ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[INNER_EH_CLEANUP:bb[0-9]+]](%[[INNER_ET]] : !cir.eh_token)
+//
+// Inner EH cleanup: destroy c2, then chain to OUTER EH cleanup (not resume).
+// CHECK:       ^[[INNER_EH_CLEANUP]](%[[INNER_EH:.*]]: !cir.eh_token):
+// CHECK:         %[[INNER_CT:.*]] = cir.begin_cleanup %[[INNER_EH]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[C2]]) nothrow
+// CHECK:         cir.end_cleanup %[[INNER_CT]] : !cir.cleanup_token
+// CHECK:         cir.br ^[[OUTER_EH_CLEANUP:bb[0-9]+]](%[[INNER_EH]] : !cir.eh_token)
+//
+// Outer body yield branches to normal cleanup.
+// CHECK:       ^[[YIELD_BLOCK]]:
+// CHECK:         cir.br ^[[OUTER_NORMAL_CLEANUP:bb[0-9]+]]
+//
+// Outer normal cleanup: destroy c.
+// CHECK:       ^[[OUTER_NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.br ^[[OUTER_EXIT:bb[0-9]+]]
+//
+// Outer exit: branch to continue.
+// CHECK:       ^[[OUTER_EXIT]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Outer unwind block: initiate EH and branch to outer EH cleanup.
+// CHECK:       ^[[OUTER_UNWIND]]:
+// CHECK:         %[[OUTER_ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[OUTER_EH_CLEANUP]](%[[OUTER_ET]] : !cir.eh_token)
+//
+// Outer EH cleanup: destroy c, then resume unwinding to caller.
+// Both inner EH cleanup and outer unwind branch here.
+// CHECK:       ^[[OUTER_EH_CLEANUP]](%[[OUTER_EH:.*]]: !cir.eh_token):
+// CHECK:         %[[OUTER_CT:.*]] = cir.begin_cleanup %[[OUTER_EH]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.end_cleanup %[[OUTER_CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test nested EH cleanup where the outer cleanup is EH-only and has no
+// direct throwing calls -- only resume ops from the inner cleanup need
+// chaining.
+//
+// C++ equivalent (simplified):
+//   struct Derived : Base {
+//     Derived() : Base() {
+//       SomeClass c;
+//       doSomething(&c);
+//     }
+//   };
+cir.func @test_nested_eh_only_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["base", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      cir.call @doSomething(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%1) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_nested_eh_only_cleanup()
+// CHECK:         %[[BASE:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["base", init]
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
+// CHECK:         cir.call @ctor(%[[BASE]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+//
+// Outer body: ctor for c may throw. The outer flattening rewrites it to
+// try_call with the outer unwind as destination (the inner cleanup should
+// not run if c was never constructed).
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.try_call @ctor(%[[C]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[OUTER_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[AFTER_CTOR]]:
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+//
+// Inner body: doSomething is a try_call unwinding to the inner unwind.
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[INNER_NORMAL:bb[0-9]+]], ^[[INNER_UNWIND:bb[0-9]+]]
+//
+// Inner normal cleanup.
+// CHECK:       ^[[INNER_NORMAL]]:
+// CHECK:         cir.br ^[[INNER_NORMAL_CLEANUP:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.br ^[[INNER_EXIT:bb[0-9]+]]
+//
+// Inner exit: branch toward continue (outer is EH-only, no normal cleanup).
+// CHECK:       ^[[INNER_EXIT]]:
+// CHECK:         cir.br ^[[OUTER_EXIT:bb[0-9]+]]
+//
+// Inner unwind block.
+// CHECK:       ^[[INNER_UNWIND]]:
+// CHECK:         %[[INNER_ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[INNER_EH_CLEANUP:bb[0-9]+]](%[[INNER_ET]] : !cir.eh_token)
+//
+// Inner EH cleanup: destroy c, then chain to outer EH cleanup.
+// CHECK:       ^[[INNER_EH_CLEANUP]](%[[INNER_EH:.*]]: !cir.eh_token):
+// CHECK:         %[[INNER_CT:.*]] = cir.begin_cleanup %[[INNER_EH]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.end_cleanup %[[INNER_CT]] : !cir.cleanup_token
+// CHECK:         cir.br ^[[OUTER_EH_CLEANUP:bb[0-9]+]](%[[INNER_EH]] : !cir.eh_token)
+//
+// Outer body exit: branch to continue (outer is EH-only, no normal cleanup).
+// CHECK:       ^[[OUTER_EXIT]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Outer unwind block: initiate EH and branch to outer EH cleanup.
+// CHECK:       ^[[OUTER_UNWIND]]:
+// CHECK:         %[[OUTER_ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[OUTER_EH_CLEANUP]](%[[OUTER_ET]] : !cir.eh_token)
+//
+// Outer EH cleanup: destroy base, then resume to caller.
+// Both inner EH cleanup and outer unwind branch here.
+// CHECK:       ^[[OUTER_EH_CLEANUP]](%[[OUTER_EH:.*]]: !cir.eh_token):
+// CHECK:         %[[OUTER_CT:.*]] = cir.begin_cleanup %[[OUTER_EH]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[BASE]]) nothrow
+// CHECK:         cir.end_cleanup %[[OUTER_CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
+// Test nested cleanup where both the inner and outer cleanup scopes have
+// throwing calls. The outer body contains a throwing call (doSomethingElse)
+// AFTER the inner cleanup scope, so both scopes independently contribute
+// try_call operations.
+//
+// C++ equivalent:
+//   void test() {
+//     SomeClass c;
+//     {
+//       SomeClass c2;
+//       doSomething(&c);
+//     }
+//     doSomethingElse(&c);
+//   }
+cir.func @test_nested_eh_both_throwing() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.cleanup.scope {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%1) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    }
+    cir.call @doSomethingElse(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_nested_eh_both_throwing()
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
+// CHECK:         %[[C2:.*]] = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
+// CHECK:         cir.call @ctor(%[[C]])
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+//
+// Outer body: ctor for c2 may throw, unwinding to the outer unwind block
+// (shared with doSomethingElse below).
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.try_call @ctor(%[[C2]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[OUTER_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[AFTER_CTOR]]:
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+//
+// Inner body: doSomething may throw, unwinding to the inner unwind block.
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[INNER_NORMAL:bb[0-9]+]], ^[[INNER_UNWIND:bb[0-9]+]]
+//
+// Inner normal continuation: branch to inner normal cleanup.
+// CHECK:       ^[[INNER_NORMAL]]:
+// CHECK:         cir.br ^[[INNER_NORMAL_CLEANUP:bb[0-9]+]]
+//
+// Inner normal cleanup: destroy c2.
+// CHECK:       ^[[INNER_NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C2]]) nothrow
+// CHECK:         cir.br ^[[INNER_EXIT:bb[0-9]+]]
+//
+// Inner exit: branch to the rest of the outer body.
+// CHECK:       ^[[INNER_EXIT]]:
+// CHECK:         cir.br ^[[OUTER_BODY_CONT:bb[0-9]+]]
+//
+// Inner unwind block: initiate EH and branch to inner EH cleanup.
+// CHECK:       ^[[INNER_UNWIND]]:
+// CHECK:         %[[INNER_ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[INNER_EH_CLEANUP:bb[0-9]+]](%[[INNER_ET]] : !cir.eh_token)
+//
+// Inner EH cleanup: destroy c2, then chain to OUTER EH cleanup.
+// CHECK:       ^[[INNER_EH_CLEANUP]](%[[INNER_EH:.*]]: !cir.eh_token):
+// CHECK:         %[[INNER_CT:.*]] = cir.begin_cleanup %[[INNER_EH]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[C2]]) nothrow
+// CHECK:         cir.end_cleanup %[[INNER_CT]] : !cir.cleanup_token
+// CHECK:         cir.br ^[[OUTER_EH_CLEANUP:bb[0-9]+]](%[[INNER_EH]] : !cir.eh_token)
+//
+// Outer body continues after inner cleanup: doSomethingElse may throw,
+// unwinding to the SAME outer unwind block as ctor.
+// CHECK:       ^[[OUTER_BODY_CONT]]:
+// CHECK:         cir.try_call @doSomethingElse(%[[C]]) ^[[AFTER_ELSE:bb[0-9]+]], ^[[OUTER_UNWIND]]
+//
+// After doSomethingElse: branch to outer normal cleanup.
+// CHECK:       ^[[AFTER_ELSE]]:
+// CHECK:         cir.br ^[[OUTER_NORMAL_CLEANUP:bb[0-9]+]]
+//
+// Outer normal cleanup: destroy c.
+// CHECK:       ^[[OUTER_NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.br ^[[OUTER_EXIT:bb[0-9]+]]
+//
+// Outer exit: branch to continue.
+// CHECK:       ^[[OUTER_EXIT]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Outer unwind block: shared by ctor and doSomethingElse try_calls.
+// CHECK:       ^[[OUTER_UNWIND]]:
+// CHECK:         %[[OUTER_ET:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[OUTER_EH_CLEANUP]](%[[OUTER_ET]] : !cir.eh_token)
+//
+// Outer EH cleanup: destroy c, then resume. Reached from both the inner
+// EH cleanup chain and the outer unwind block.
+// CHECK:       ^[[OUTER_EH_CLEANUP]](%[[OUTER_EH:.*]]: !cir.eh_token):
+// CHECK:         %[[OUTER_CT:.*]] = cir.begin_cleanup %[[OUTER_EH]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.end_cleanup %[[OUTER_CT]] : !cir.cleanup_token
+// CHECK:         cir.resume
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.return
+
 cir.func private @get() -> !s32i
 cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
 cir.func private @dtor(!cir.ptr<!rec_SomeClass>) attributes {nothrow}

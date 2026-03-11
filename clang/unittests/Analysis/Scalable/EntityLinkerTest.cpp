@@ -36,9 +36,10 @@ public:
 
   size_t getId() const { return Id; }
 
-  void
+  llvm::Error
   patch(const std::map<EntityId, EntityId> &EntityResolutionTable) override {
     PatchedIds = EntityResolutionTable;
+    return llvm::Error::success();
   }
 
   const std::map<EntityId, EntityId> &getPatchedIds() const {
@@ -57,11 +58,11 @@ size_t MockEntitySummaryEncoding::Index = 0;
 class EntityLinkerTest : public TestFixture {
 protected:
   static constexpr EntityLinkage NoneLinkage =
-      EntityLinkage(EntityLinkage::LinkageType::None);
+      EntityLinkage(EntityLinkageType::None);
   static constexpr EntityLinkage InternalLinkage =
-      EntityLinkage(EntityLinkage::LinkageType::Internal);
+      EntityLinkage(EntityLinkageType::Internal);
   static constexpr EntityLinkage ExternalLinkage =
-      EntityLinkage(EntityLinkage::LinkageType::External);
+      EntityLinkage(EntityLinkageType::External);
 
   void SetUp() override {
     // This ensures that the MockEntitySummary id assignment does not
@@ -628,7 +629,7 @@ TEST_F(EntityLinkerTest, RejectsDuplicateTUSummary) {
   ASSERT_THAT_ERROR(Linker.link(std::move(TU2)),
                     llvm::FailedWithMessage(
                         HasSubstr("failed to link TU summary: duplicate "
-                                  "BuildNamespace(compilation_unit, TU)")));
+                                  "BuildNamespace(CompilationUnit, TU)")));
 }
 
 } // namespace

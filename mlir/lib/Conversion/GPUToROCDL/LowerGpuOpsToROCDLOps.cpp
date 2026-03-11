@@ -271,8 +271,11 @@ struct GPUSubgroupBroadcastOpToROCDL
 
     Type i32 = rewriter.getI32Type();
     Location loc = op.getLoc();
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed,
+                                    /*permitVariablySizedScalars=*/true)))
+      return rewriter.notifyMatchFailure(op,
+                                         "Unexpected decomposition failure");
 
     SmallVector<Value> results;
     results.reserve(decomposed.size());
@@ -359,8 +362,11 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value dwordAlignedDstLane =
         LLVM::ShlOp::create(rewriter, loc, int32Type, selectDstLane, two);
 
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, initShflValue, int32Type,
+                                    decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
     SmallVector<Value> swizzled;
     for (Value v : decomposed) {
       Value res = ROCDL::DsBpermuteOp::create(rewriter, loc, int32Type,

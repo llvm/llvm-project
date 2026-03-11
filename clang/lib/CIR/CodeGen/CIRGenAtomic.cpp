@@ -895,8 +895,6 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
       e->getScopeModel() && e->getScope()->EvaluateAsInt(eval, getContext()))
     scopeConst.emplace(std::move(eval));
 
-  bool shouldCastToIntPtrTy = true;
-
   switch (e->getOp()) {
   default:
     cgm.errorNYI(e->getSourceRange(), "atomic op NYI");
@@ -974,7 +972,6 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__scoped_atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    shouldCastToIntPtrTy = !memTy->isFloatingType();
     [[fallthrough]];
 
   case AtomicExpr::AO__atomic_fetch_and:
@@ -1008,6 +1005,9 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   }
 
   QualType resultTy = e->getType().getUnqualifiedType();
+
+  bool shouldCastToIntPtrTy =
+      shouldCastToInt(convertTypeForMem(memTy), e->isCmpXChg());
 
   // The inlined atomics only function on iN types, where N is a power of 2. We
   // need to make sure (via temporaries if necessary) that all incoming values

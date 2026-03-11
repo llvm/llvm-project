@@ -785,8 +785,13 @@ bool IODEF(SetAsynchronous)(
     } else {
       handler.SignalError(IostatBadAsynchronous);
     }
-  } else if (!io.get_if<NoopStatementState>() &&
-      !io.get_if<ErroneousIoStatementState>()) {
+  } else if (io.get_if<NoopStatementState>() ||
+      io.get_if<ErroneousIoStatementState>()) {
+    // no error
+  } else if (io.get_if<ChildIoStatementState<Direction::Output>>() ||
+      io.get_if<ChildIoStatementState<Direction::Input>>()) {
+    io.GetIoErrorHandler().SignalError(IostatChildAsynchronous);
+  } else {
     handler.Crash("SetAsynchronous('YES') called when not in an OPEN or "
                   "external I/O statement");
   }

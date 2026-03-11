@@ -84,6 +84,11 @@ public:
                                    const Expr *MovedExpr,
                                    SourceLocation ExpiryLoc) {}
 
+  virtual void reportDanglingGlobal(const Expr *IssueExpr,
+                                    const VarDecl *DanglingGlobal,
+                                    const Expr *MovedExpr,
+                                    SourceLocation ExpiryLoc) {}
+
   // Reports when a reference/iterator is used after the container operation
   // that invalidated it.
   virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
@@ -104,6 +109,10 @@ public:
   // Reports misuse of [[clang::noescape]] when parameter escapes through field
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const FieldDecl *EscapeField) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes through
+  // assignment to a global variable
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const VarDecl *EscapeGlobal) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

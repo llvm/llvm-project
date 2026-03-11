@@ -4704,6 +4704,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.asinpif
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinpif16_test
   NEED_MPFR
   SUITE
@@ -4805,6 +4817,18 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.acosf16
+)
+
+add_fp_unittest(
+  acospif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.acospif
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -5992,6 +6016,17 @@ add_fp_unittest(
     cbrt_test.cpp
   DEPENDS
     libc.src.math.cbrt
+)
+
+add_fp_unittest(
+  cbrtbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cbrtbf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
