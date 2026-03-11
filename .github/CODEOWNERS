@@ -189,3 +189,10 @@
 
 # libclang/Python bindings
 /clang/bindings/python @DeinAlptraum
+
+# Clang Driver
+/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
+/clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
+
+# GlobalIsel
+/llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95
