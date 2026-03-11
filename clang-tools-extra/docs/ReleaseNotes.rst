@@ -49,6 +49,8 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- TODO: removed `IncludeStyle` option.
+
 Improvements to clangd
 ----------------------
 
