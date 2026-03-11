@@ -912,7 +912,7 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
   ExpectedCFix.Message = "variable 'C' is not initialized";
   ExpectedCFix.Edits.push_back(TextEdit{Main.range("CFix"), " = NAN"});
   ExpectedCFix.Edits.push_back(
-      TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+      TextEdit{Main.range("MathHeader"), "#include <math.h>\n"});
 
   // Again in clang-tidy only the include directive would be emitted for the
   // first warning. However we need the include attaching for both warnings.
@@ -920,7 +920,7 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiags) {
   ExpectedDFix.Message = "variable 'D' is not initialized";
   ExpectedDFix.Edits.push_back(TextEdit{Main.range("DFix"), " = NAN"});
   ExpectedDFix.Edits.push_back(
-      TextEdit{Main.range("MathHeader"), "#include <math.h>\n\n"});
+      TextEdit{Main.range("MathHeader"), "#include <math.h>\n"});
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       ifTidyChecks(UnorderedElementsAre(
