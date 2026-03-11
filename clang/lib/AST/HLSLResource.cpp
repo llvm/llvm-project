@@ -1,5 +1,4 @@
-//===--- HLSLResource.cpp - Routines for HLSL resources and bindings
-//-------------===//
+//===--- HLSLResource.cpp - Helper routines for HLSL resources -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file provides shared routines to help analyze HLSL resources and
-// theirs bindings during Sema and CodeGen.
+// their bindings during Sema and CodeGen.
 //
 //===----------------------------------------------------------------------===//
 
