@@ -713,17 +713,6 @@ static bool boundsAreAllConstants(mlir::ValueRange bounds) {
   return true;
 }
 
-/// Get the address value used for a null check. Language-agnostic: works for
-/// optional (null when absent) and implicitly firstprivate cases.
-static mlir::Value getAddrForNullCheck(fir::FirOpBuilder &builder,
-                                       mlir::Location loc, mlir::Type type,
-                                       mlir::Value var) {
-  if (mlir::isa<fir::BaseBoxType>(type))
-    return fir::BoxAddrOp::create(builder, loc, var);
-  // For ref, ptr, heap the value itself represents the address
-  return var;
-}
-
 template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
@@ -736,12 +725,12 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   assert(mod && "failed to retrieve ModuleOp");
   fir::FirOpBuilder builder(mlirBuilder, mod);
 
-  // When variable is optional: null check (e.g. non-present optional). When
-  // non-optional, skip the conditional to avoid unnecessary branches.
+  // When variable is optional: use fir.is_present to check. When non-optional,
+  // skip the conditional to avoid unnecessary branches.
   std::optional<fir::IfOp> optIfOp;
   if (isOptional) {
-    mlir::Value addr = getAddrForNullCheck(builder, loc, type, var);
-    mlir::Value cond = builder.genIsNotNullAddr(loc, addr);
+    mlir::Value cond =
+        fir::IsPresentOp::create(builder, loc, builder.getI1Type(), var);
     optIfOp = fir::IfOp::create(builder, loc, mlir::TypeRange{type}, cond,
                                 /*withElseRegion=*/true);
     builder.setInsertionPointToStart(&optIfOp->getThenRegion().front());
@@ -967,13 +956,13 @@ bool OpenACCMappableModel<Ty>::generateCopy(
   assert(mod && "failed to retrieve parent module");
   fir::FirOpBuilder builder(mlirBuilder, mod);
 
-  // When optional: only copy when source is non-null (e.g. present). When
-  // null, destination is already null from init. When non-optional, copy
+  // When optional: only copy when source is present (fir.is_present). When
+  // absent, destination is already null from init. When non-optional, copy
   // directly without the conditional.
   std::optional<fir::IfOp> optIfOp;
   if (isOptional) {
-    mlir::Value addr = getAddrForNullCheck(builder, loc, type, src);
-    mlir::Value cond = builder.genIsNotNullAddr(loc, addr);
+    mlir::Value cond =
+        fir::IsPresentOp::create(builder, loc, builder.getI1Type(), src);
     optIfOp = fir::IfOp::create(builder, loc, mlir::TypeRange{}, cond,
                                 /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&optIfOp->getThenRegion().front());
