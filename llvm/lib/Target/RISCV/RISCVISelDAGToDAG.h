@@ -87,8 +87,7 @@ public:
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, Subtarget->getXLen(), ShAmt);
   }
-  template <unsigned Size>
-  bool selectShiftMask(SDValue N, SDValue &ShAmt) {
+  template <unsigned Size> bool selectShiftMask(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, Size, ShAmt);
   }
 
