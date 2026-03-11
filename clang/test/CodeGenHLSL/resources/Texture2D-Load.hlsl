@@ -61,17 +61,13 @@ float4 test_load_offset(int2 loc : LOC) : SV_Target {
 Texture2D<float> t_float;
 
 // CHECK: define hidden {{.*}} float @test_load_float(int vector[2])
-// CHECK: %[[CALL:.*]] = call {{.*}} float @hlsl::Texture2D<float>::Load(int vector[3])(ptr {{.*}} @t_float, <3 x i32> noundef %{{.*}})
-// CHECK: ret float %[[CALL]]
-float test_load_float(int2 loc : LOC) {
-  return t_float.Load(int3(loc, 0));
-}
-
-// CHECK: define hidden {{.*}} float @test_load_float(int vector[2])
 // CHECK: define linkonce_odr hidden {{.*}} float @hlsl::Texture2D<float>::Load(int vector[3])(ptr {{.*}} %[[THIS:.*]], <3 x i32> {{.*}} %[[LOCATION:.*]])
 // DXIL: %[[RES:.*]] = call {{.*}} float @llvm.dx.resource.load.level.f32.tdx.Texture_f32_0_0_0_2t.v2i32.i32.v2i32(target("dx.Texture", float, 0, 0, 0, 2) %{{.*}}, <2 x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
 // SPIRV: %[[RES:.*]] = call {{.*}} float @llvm.spv.resource.load.level.f32.tspirv.Image_f32_1_2_0_0_1_0t.v2i32.i32.v2i32(target("spirv.Image", float, 1, 2, 0, 0, 1, 0) %{{.*}}, <2 x i32> %{{.*}}, i32 %{{.*}}, <2 x i32> zeroinitializer)
 // CHECK: ret float %[[RES]]
+float test_load_float(int2 loc : LOC) {
+  return t_float.Load(int3(loc, 0));
+}
 
 // CHECK: define hidden {{.*}} float @test_load_offset_float(int vector[2])
 // CHECK: %[[CALL:.*]] = call {{.*}} float @hlsl::Texture2D<float>::Load(int vector[3], int vector[2])(ptr {{.*}} @t_float, <3 x i32> noundef %{{.*}}, <2 x i32> noundef splat (i32 1))
