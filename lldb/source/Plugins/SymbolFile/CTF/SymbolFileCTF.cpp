@@ -584,8 +584,8 @@ llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
   case CTFType::Kind::eFloat:
   case CTFType::Kind::eSlice:
     return llvm::createStringErrorV(
-        "unsupported type (uid = {0}, name = {1}, kind = {2})",
-        ctf_type->uid, ctf_type->name, ctf_type->kind);
+        "unsupported type (uid = {0}, name = {1}, kind = {2})", ctf_type->uid,
+        ctf_type->name, ctf_type->kind);
   }
   llvm_unreachable("Unexpected CTF type kind");
 }
@@ -686,8 +686,8 @@ SymbolFileCTF::ParseType(lldb::offset_t &offset, lldb::user_id_t uid) {
   }
 
   return llvm::createStringErrorV(
-      "unsupported type (name = {0}, kind = {1}, vlength = {2})",
-      name, kind, variable_length);
+      "unsupported type (name = {0}, kind = {1}, vlength = {2})", name, kind,
+      variable_length);
 }
 
 size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
