@@ -270,7 +270,7 @@ define <3 x i1> @test_v3_sge(<3 x i32> %a, <3 x i32> %b) {
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
 
-define spir_func <16 x i1> @test_v16_ne() addrspace(4) {
+define spir_func <16 x i1> @test_v16_ne() {
   %A = icmp ne <16 x i1> zeroinitializer, zeroinitializer
   ret <16 x i1> %A
 }
