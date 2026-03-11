@@ -110,7 +110,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswalpha
     libc.src.wctype.iswgraph
     libc.src.wctype.iswcntrl
-    libc.src.wctype.iswdigit
     libc.src.wctype.iswlower
 )
 
