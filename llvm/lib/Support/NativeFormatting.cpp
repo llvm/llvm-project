@@ -127,8 +127,8 @@ void llvm::write_integer(raw_ostream &S, long N, size_t MinDigits,
 }
 
 void llvm::write_integer(raw_ostream &S, unsigned long long N, size_t MinDigits,
-                         IntegerStyle Style, bool NoneNegativePlus) {
-  write_unsigned(S, N, MinDigits, Style, false, NoneNegativePlus);
+                         IntegerStyle Style, bool NonNegativePlus) {
+  write_unsigned(S, N, MinDigits, Style, false, NonNegativePlus);
 }
 
 void llvm::write_integer(raw_ostream &S, long long N, size_t MinDigits,
