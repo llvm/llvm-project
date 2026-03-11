@@ -50,12 +50,12 @@ TEST_F(SummaryViewBuilderRegistryTest, InstantiatingBuilder1) {
 
     ASSERT_TRUE(B1);
     EXPECT_EQ(B1->summaryName(), SummaryName("Mock1"));
-    EXPECT_TRUE(MockBuilderLog.find(
-                    "MockSummaryViewBuilder1 constructor was invoked") !=
-                std::string::npos);
+    EXPECT_NE(
+        MockBuilderLog.find("MockSummaryViewBuilder1 constructor was invoked"),
+        std::string::npos);
   }
-  EXPECT_TRUE(
-      MockBuilderLog.find("MockSummaryViewBuilder1 destructor was invoked") !=
+  EXPECT_NE(
+      MockBuilderLog.find("MockSummaryViewBuilder1 destructor was invoked"),
       std::string::npos);
 }
 
@@ -70,12 +70,12 @@ TEST_F(SummaryViewBuilderRegistryTest, InstantiatingBuilder2) {
 
     ASSERT_TRUE(B2);
     EXPECT_EQ(B2->summaryName(), SummaryName("Mock2"));
-    EXPECT_TRUE(MockBuilderLog.find(
-                    "MockSummaryViewBuilder2 constructor was invoked") !=
-                std::string::npos);
+    EXPECT_NE(
+        MockBuilderLog.find("MockSummaryViewBuilder2 constructor was invoked"),
+        std::string::npos);
   }
-  EXPECT_TRUE(
-      MockBuilderLog.find("MockSummaryViewBuilder2 destructor was invoked") !=
+  EXPECT_NE(
+      MockBuilderLog.find("MockSummaryViewBuilder2 destructor was invoked"),
       std::string::npos);
 }
 
