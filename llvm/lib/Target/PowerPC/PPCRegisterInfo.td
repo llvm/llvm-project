@@ -168,13 +168,9 @@ let isArtificial = 1 in {
   }
 }
 
-def VFHRC : PPCNonAllocatableRegisterClass<[f64], 64,
-              (sequence "VFH%u", 0, 31)> {
-  let CopyCost = -1;
-}
-def FHRC : PPCNonAllocatableRegisterClass<[f64], 64,
-             (sequence "FH%u", 0, 31)> {
-  let CopyCost = -1;
+let CopyCost = -1 in {
+  def VFHRC : PPCNonAllocatableRegisterClass<[f64], 64, (sequence "VFH%u", 0, 31)>;
+  def FHRC : PPCNonAllocatableRegisterClass<[f64], 64, (sequence "FH%u", 0, 31)>;
 }
 
 // Floating-point pair registers
@@ -363,10 +359,8 @@ def SPERC : PPCRegisterClass<[f64], 64,
 // previous stack frame. By allocating non-volatiles in reverse order we make
 // sure that the Floating-point register save area is always as small as
 // possible because there aren't any unused spill slots.
-def F8RC : PPCRegisterClass<[f64], 64,
-             (add (sequence "F%u", 0, 13),
-                  (sequence "F%u", 31, 14))>;
-
+def F8RC : PPCRegisterClass<[f64], 64, (add (sequence "F%u", 0, 13),
+                                            (sequence "F%u", 31, 14))>;
 def F4RC : PPCRegisterClass<[f32], 32, (add F8RC)>;
 
 // Floating point pair registers.
@@ -408,9 +402,8 @@ def VSFRC : PPCRegisterClass<[f64], 64, (add F8RC, VFRC)>;
 
 // Allow spilling GPR's into caller-saved VSR's.
 def SPILLTOVSRRC : PPCRegisterClass<[i64, f64], 64,
-                     (add G8RC, (sub VSFRC,
-                          (sequence "VF%u", 31, 20),
-                          (sequence "F%u", 31, 14)))>;
+                     (add G8RC, (sub VSFRC, (sequence "VF%u", 31, 20),
+                                            (sequence "F%u", 31, 14)))>;
 
 // Register class for single precision scalars in VSX registers
 def VSSRC : PPCRegisterClass<[f32], 32, (add VSFRC)>;
