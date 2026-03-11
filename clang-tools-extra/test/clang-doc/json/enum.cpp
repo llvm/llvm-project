@@ -2,6 +2,7 @@
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json --check-prefix=JSON-INDEX-LINE
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json --check-prefix=JSON-INDEX
+// RUN: FileCheck %s < %t/json/Vehicles/index.json --check-prefix=JSON-VEHICLES-INDEX-LINE
 // RUN: FileCheck %s < %t/json/Vehicles/index.json --check-prefix=JSON-VEHICLES-INDEX
 
 typedef unsigned char uint8_t;
