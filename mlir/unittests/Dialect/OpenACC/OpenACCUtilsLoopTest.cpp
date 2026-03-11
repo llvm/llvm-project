@@ -839,7 +839,7 @@ TEST_F(OpenACCUtilsLoopTest,
   IRMapping mapping;
   scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
       region, mapping, loc, b, /*convertFuncReturn=*/true);
-  
+
   ASSERT_TRUE(exeRegionOp);
 
   // execute_region should have one result (same as func.return operands)
