@@ -159,6 +159,7 @@ public:
   virtual std::optional<swift::remote::RemoteExistential>
   ReadMetadataAndValueOpaqueExistential(lldb::addr_t existential_address) = 0;
   struct AsyncTaskInfo {
+    lldb::addr_t taskAddr = 0;
     bool isChildTask = false;
     bool isFuture = false;
     bool isGroupChildTask = false;
@@ -177,7 +178,10 @@ public:
     uint32_t enqueuePriority = 0;
     lldb::addr_t resumeAsyncContext = LLDB_INVALID_ADDRESS;
     lldb::addr_t runJob = LLDB_INVALID_ADDRESS;
+    lldb::addr_t parentTask = 0; // Use the same default as RemoteInspection.
     std::vector<lldb::addr_t> childTasks;
+    std::vector<lldb::addr_t> waitingTasks;
+    std::vector<lldb::addr_t> asyncBacktracePcs;
   };
   // The default limits are copied from swift-inspect.
   virtual llvm::Expected<AsyncTaskInfo>
