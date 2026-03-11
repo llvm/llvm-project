@@ -633,7 +633,7 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
 /// memory and the function is marked as NoSync. The latter ensures the current
 /// function cannot arrange for another thread to free on its behalf.
 LLVM_ABI bool willNotFreeOrSyncBetween(const Instruction *Assume,
-                                 const Instruction *CtxI);
+                                       const Instruction *CtxI);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.

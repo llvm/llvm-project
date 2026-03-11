@@ -703,7 +703,7 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 }
 
 bool llvm::willNotFreeOrSyncBetween(const Instruction *Assume,
-                              const Instruction *CtxI) {
+                                    const Instruction *CtxI) {
   // Helper to make sure the current function cannot arrange for
   // another thread to free on its behalf and to check if there
   // are any calls in the range that may free memory.
@@ -728,7 +728,8 @@ bool llvm::willNotFreeOrSyncBetween(const Instruction *Assume,
 
       // Non volatile memset/memcpy/memmoves are nosync
       if (auto *MI = dyn_cast<MemIntrinsic>(&I))
-        return false;
+        if (MI->isVolatile())
+          return false;
     }
     return true;
   };
