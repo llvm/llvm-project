@@ -56,12 +56,6 @@ llvm::json::Value toJSON(const TargetResource &TR) {
 
 static constexpr llvm::StringLiteral kMimeTypeJSON = "application/json";
 
-template <typename... Args>
-static llvm::Error createStringError(const char *format, Args &&...args) {
-  return llvm::createStringError(
-      llvm::formatv(format, std::forward<Args>(args)...));
-}
-
 static llvm::Error createUnsupportedURIError(llvm::StringRef uri) {
   return llvm::make_error<UnsupportedURI>(uri.str());
 }
@@ -143,8 +137,8 @@ DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
 
   size_t debugger_idx;
   if (components[1].getAsInteger(0, debugger_idx))
-    return createStringError("invalid debugger id '{0}': {1}", components[1],
-                             path);
+    return llvm::createStringErrorV("invalid debugger id '{0}': {1}",
+                                    components[1], path);
 
   if (components.size() > 3) {
     if (components[2] != "target")
@@ -152,8 +146,8 @@ DebuggerResourceProvider::ReadResource(llvm::StringRef uri) const {
 
     size_t target_idx;
     if (components[3].getAsInteger(0, target_idx))
-      return createStringError("invalid target id '{0}': {1}", components[3],
-                               path);
+      return llvm::createStringErrorV("invalid target id '{0}': {1}",
+                                      components[3], path);
 
     return ReadTargetResource(uri, debugger_idx, target_idx);
   }
@@ -166,7 +160,7 @@ DebuggerResourceProvider::ReadDebuggerResource(llvm::StringRef uri,
                                                lldb::user_id_t debugger_id) {
   lldb::DebuggerSP debugger_sp = Debugger::FindDebuggerWithID(debugger_id);
   if (!debugger_sp)
-    return createStringError("invalid debugger id: {0}", debugger_id);
+    return llvm::createStringErrorV("invalid debugger id: {0}", debugger_id);
 
   DebuggerResource debugger_resource;
   debugger_resource.debugger_id = debugger_id;
@@ -190,12 +184,12 @@ DebuggerResourceProvider::ReadTargetResource(llvm::StringRef uri,
 
   lldb::DebuggerSP debugger_sp = Debugger::FindDebuggerWithID(debugger_id);
   if (!debugger_sp)
-    return createStringError("invalid debugger id: {0}", debugger_id);
+    return llvm::createStringErrorV("invalid debugger id: {0}", debugger_id);
 
   TargetList &target_list = debugger_sp->GetTargetList();
   lldb::TargetSP target_sp = target_list.GetTargetAtIndex(target_idx);
   if (!target_sp)
-    return createStringError("invalid target idx: {0}", target_idx);
+    return llvm::createStringErrorV("invalid target idx: {0}", target_idx);
 
   TargetResource target_resource;
   target_resource.debugger_id = debugger_id;
