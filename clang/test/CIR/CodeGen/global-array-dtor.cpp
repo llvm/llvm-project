@@ -21,7 +21,7 @@ ArrayDtor arrDtor[16];
 // CIR-BEFORE-LPP:          %[[THIS:.*]] = cir.get_global @arrDtor : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR-BEFORE-LPP:          cir.array.dtor %[[THIS]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> {
 // CIR-BEFORE-LPP:          ^bb0(%[[ELEM:.*]]: !cir.ptr<!rec_ArrayDtor>):
-// CIR-BEFORE-LPP:            cir.call @_ZN9ArrayDtorD1Ev(%[[ELEM]]) nothrow : (!cir.ptr<!rec_ArrayDtor>) -> ()
+// CIR-BEFORE-LPP:            cir.call @_ZN9ArrayDtorD1Ev(%[[ELEM]]) nothrow : (!cir.ptr<!rec_ArrayDtor> {{.*}}) -> ()
 // CIR-BEFORE-LPP:            cir.yield
 // CIR-BEFORE-LPP:          }
 // CIR-BEFORE-LPP:        }
@@ -35,14 +35,14 @@ ArrayDtor arrDtor[16];
 // CIR:   cir.store %[[END]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
 // CIR:   cir.do {
 // CIR:     %[[CUR:.*]] = cir.load %[[CUR_ADDR]] : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, !cir.ptr<!rec_ArrayDtor>
-// CIR:     cir.call @_ZN9ArrayDtorD1Ev(%[[CUR]]) nothrow : (!cir.ptr<!rec_ArrayDtor>) -> ()
+// CIR:     cir.call @_ZN9ArrayDtorD1Ev(%[[CUR]]) nothrow : (!cir.ptr<!rec_ArrayDtor> {{.*}}) -> ()
 // CIR:     %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
 // CIR:     %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %[[NEG_ONE]] : (!cir.ptr<!rec_ArrayDtor>, !s64i) -> !cir.ptr<!rec_ArrayDtor>
 // CIR:     cir.store %[[NEXT]], %[[CUR_ADDR]] : !cir.ptr<!rec_ArrayDtor>, !cir.ptr<!cir.ptr<!rec_ArrayDtor>>
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CUR:.*]] = cir.load %[[CUR_ADDR]] : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, !cir.ptr<!rec_ArrayDtor>
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[BEGIN]]) : !cir.ptr<!rec_ArrayDtor>, !cir.bool
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[BEGIN]] : !cir.ptr<!rec_ArrayDtor>
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   cir.return
@@ -68,7 +68,7 @@ ArrayDtor arrDtor[16];
 // LLVM:   br i1 %[[CMP]], label %[[LOOP_BODY]], label %[[LOOP_END:.*]]
 // LLVM: [[LOOP_BODY]]:
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[CUR_ADDR]]
-// LLVM:   call void @_ZN9ArrayDtorD1Ev(ptr %[[CUR]]) #0
+// LLVM:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
 // LLVM:   %[[PREV:.*]] = getelementptr %struct.ArrayDtor, ptr %[[CUR]], i64 -1
 // LLVM:   store ptr %[[PREV]], ptr %[[CUR_ADDR]]
 // LLVM:   br label %[[LOOP_COND]]
@@ -92,7 +92,7 @@ ArrayDtor arrDtor[16];
 // OGCG:   store ptr %[[ARG]], ptr %[[UNUSED_ADDR]]
 // OGCG:   br label %[[LOOP_BODY:.*]]
 // OGCG: [[LOOP_BODY]]:
-// OGCG:   %[[PREV:.*]] = phi ptr [ getelementptr inbounds (%struct.ArrayDtor, ptr @arrDtor, i64 16), %entry ], [ %[[CUR:.*]], %[[LOOP_BODY]] ]
+// OGCG:   %[[PREV:.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @arrDtor, i64 16), %entry ], [ %[[CUR:.*]], %[[LOOP_BODY]] ]
 // OGCG:   %[[CUR]] = getelementptr inbounds %struct.ArrayDtor, ptr %[[PREV]], i64 -1
 // OGCG:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CUR]])
 // OGCG:   %[[DONE:.*]] = icmp eq ptr %[[CUR]], @arrDtor

@@ -440,6 +440,9 @@ Register ARMFastISel::ARMMoveToIntReg(MVT VT, Register SrcReg) {
 // (the high and the low) into integer registers then use a move to get
 // the combined constant into an FP reg.
 Register ARMFastISel::ARMMaterializeFP(const ConstantFP *CFP, MVT VT) {
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return Register();
+
   const APFloat Val = CFP->getValueAPF();
   bool is64bit = VT == MVT::f64;
 

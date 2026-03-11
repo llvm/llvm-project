@@ -737,7 +737,7 @@ CodeGenFunction::getFuncletEHDispatchBlock(EHScopeStack::stable_iterator SI) {
     DispatchBlock = getTerminateFunclet();
   else
     DispatchBlock = createBasicBlock();
-  CGBuilderTy Builder(*this, DispatchBlock);
+  CGBuilderTy Builder(CGM, DispatchBlock);
 
   switch (EHS.getKind()) {
   case EHScope::Catch:
@@ -1835,7 +1835,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
                                                    Address ParentVar,
                                                    llvm::Value *ParentFP) {
   llvm::CallInst *RecoverCall = nullptr;
-  CGBuilderTy Builder(*this, AllocaInsertPt);
+  CGBuilderTy Builder(CGM, AllocaInsertPt);
   if (auto *ParentAlloca =
           dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer())) {
     // Mark the variable escaped if nobody else referenced it and compute the

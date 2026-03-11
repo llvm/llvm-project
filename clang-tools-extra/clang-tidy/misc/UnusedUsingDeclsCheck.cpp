@@ -99,6 +99,12 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     if (isa<FunctionDecl>(Using->getDeclContext()))
       return;
 
+    // Ignore exported using-decls.
+    if (Using->hasOwningModule() &&
+        Using->getModuleOwnershipKind() <=
+            Decl::ModuleOwnershipKind::VisibleWhenImported)
+      return;
+
     UsingDeclContext Context(Using);
     Context.UsingDeclRange = CharSourceRange::getCharRange(
         Using->getBeginLoc(),

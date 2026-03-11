@@ -4736,6 +4736,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
   }];
 }
 
+def OMPTargetIndirectCall : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  // The attribute is added to the VarDecl of the function pointer used in
+  // an indirect call in a OMP target region.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def OMPAllocateDecl : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
@@ -5392,4 +5401,11 @@ def OverflowBehavior : TypeAttr {
   let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
                              "variables, typedefs, and data members">;
   let Documentation = [Undocumented];
+}
+
+def Personality : InheritableAttr {
+  let Spellings = [Clang<"personality">];
+  let Args = [DeclArgument<Function, "Routine">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [PersonalityDocs];
 }

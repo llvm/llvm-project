@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -459,6 +459,12 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
   if (Attribute sumAttr = constFoldBinaryOp<IntegerAttr>(
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
+    // If any operand is poison, propagate poison to both results.
+    if (matchPattern(sumAttr, ub::m_Poison())) {
+      results.push_back(sumAttr);
+      results.push_back(sumAttr);
+      return success();
+    }
     Attribute overflowAttr = constFoldBinaryOp<IntegerAttr>(
         ArrayRef({sumAttr, adaptor.getLhs()}),
         getI1SameShape(llvm::cast<TypedAttr>(sumAttr).getType()),
@@ -1913,7 +1919,7 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
     return {};
 
   /// Bitcast poison.
-  if (llvm::isa<ub::PoisonAttr>(operand))
+  if (matchPattern(operand, ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   /// Bitcast integer or float to integer or float.
@@ -2497,10 +2503,10 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
     return falseVal;
 
   // If either operand is fully poisoned, return the other.
-  if (isa_and_nonnull<ub::PoisonAttr>(adaptor.getTrueValue()))
+  if (matchPattern(adaptor.getTrueValue(), ub::m_Poison()))
     return falseVal;
 
-  if (isa_and_nonnull<ub::PoisonAttr>(adaptor.getFalseValue()))
+  if (matchPattern(adaptor.getFalseValue(), ub::m_Poison()))
     return trueVal;
 
   // select %x, true, false => %x

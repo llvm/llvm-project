@@ -27,6 +27,14 @@
 #include <type_traits>
 #include <utility>
 
+namespace Fortran::parser::omp {
+struct ExecutionPartIterator;
+struct LoopNestIterator;
+template <typename T> struct ExecutionPartRange;
+using BlockRange = ExecutionPartRange<ExecutionPartIterator>;
+using LoopRange = ExecutionPartRange<LoopNestIterator>;
+} // namespace Fortran::parser::omp
+
 namespace Fortran::semantics {
 class Scope;
 class SemanticsContext;
@@ -34,6 +42,11 @@ class Symbol;
 
 // Add this namespace to avoid potential conflicts
 namespace omp {
+using Fortran::parser::omp::BlockRange;
+using Fortran::parser::omp::ExecutionPartIterator;
+using Fortran::parser::omp::LoopNestIterator;
+using Fortran::parser::omp::LoopRange;
+
 template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
   return U(t);
 }
@@ -101,6 +114,13 @@ bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
+
+std::optional<int64_t> GetNumGeneratedNestsFrom(
+    const parser::ExecutionPartConstruct &epc,
+    std::optional<int64_t> nestedCount);
 } // namespace omp
 } // namespace Fortran::semantics
 

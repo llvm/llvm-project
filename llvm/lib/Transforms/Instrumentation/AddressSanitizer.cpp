@@ -549,9 +549,10 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   } else {  // LongSize == 64
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    if (IsFuchsia)
-      Mapping.Offset = 0;
-    else if (IsPPC64)
+    if (IsFuchsia) {
+      // kDynamicShadowSentinel tells instrumentation to use the dynamic shadow.
+      Mapping.Offset = kDynamicShadowSentinel;
+    } else if (IsPPC64)
       Mapping.Offset = kPPC64_ShadowOffset64;
     else if (IsSystemZ)
       Mapping.Offset = kSystemZ_ShadowOffset64;
@@ -575,7 +576,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       else
         Mapping.Offset = (kSmallX86_64ShadowOffsetBase &
                           (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
-    } else if (IsWindows && IsX86_64) {
+    } else if (IsWindows && (IsX86_64 || IsAArch64)) {
       Mapping.Offset = kWindowsShadowOffset64;
     } else if (IsMIPS64)
       Mapping.Offset = kMIPS64_ShadowOffset64;

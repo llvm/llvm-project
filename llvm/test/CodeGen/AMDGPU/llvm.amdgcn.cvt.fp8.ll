@@ -511,7 +511,7 @@ define i32 @test_cvt_pk_bf8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1170-TRUE16-LABEL: test_cvt_pk_bf8_f32_word1:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v2.h, v0, v1 op_sel:[0,0,1]
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v2.h, v0, v1
 ; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -531,7 +531,7 @@ define i32 @test_cvt_pk_bf8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v2.h, v0, v1 op_sel:[0,0,1]
+; GFX12-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v2.h, v0, v1
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -552,7 +552,7 @@ define i32 @test_cvt_pk_bf8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v2.h, v0, v1 op_sel:[0,0,1]
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf8_f32 v2.h, v0, v1
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
@@ -650,7 +650,7 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1170-TRUE16-LABEL: test_cvt_pk_fp8_f32_word1:
 ; GFX1170-TRUE16:       ; %bb.0:
 ; GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 op_sel:[0,0,1]
+; GFX1170-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
 ; GFX1170-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -670,7 +670,7 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 op_sel:[0,0,1]
+; GFX12-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -691,7 +691,7 @@ define i32 @test_cvt_pk_fp8_f32_word1(float %x, float %y, i32 %old) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1 op_sel:[0,0,1]
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_fp8_f32 v2.h, v0, v1
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]

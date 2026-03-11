@@ -1523,7 +1523,7 @@ Error OffloadBundler::BundleFiles() {
     CompressedBuffer.assign(CompressedMemBuffer->getBufferStart(),
                             CompressedMemBuffer->getBufferEnd());
   } else
-    CompressedBuffer = Buffer;
+    CompressedBuffer = std::move(Buffer);
 
   OutputFile.write(CompressedBuffer.data(), CompressedBuffer.size());
 

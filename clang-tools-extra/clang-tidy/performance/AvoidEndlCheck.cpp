@@ -22,7 +22,6 @@ namespace clang::tidy::performance {
 void AvoidEndlCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          unless(isExpansionInSystemHeader()),
           anyOf(cxxOperatorCallExpr(
                     hasOverloadedOperatorName("<<"),
                     hasRHS(declRefExpr(to(namedDecl(hasName("::std::endl"))))

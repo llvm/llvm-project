@@ -104,7 +104,7 @@ def OneUse : OneUsePred;
 //
 // `IsCommutable` means whether we should handle commutable operands.
 class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
-  : SubtargetFeature<name, fieldName, "true", desc> {
+  : SubtargetFeature<"fusion-" # name, fieldName, "true", desc> {
   list<FusionPredicate> Predicates = predicates;
   bit IsCommutable = 0;
 }

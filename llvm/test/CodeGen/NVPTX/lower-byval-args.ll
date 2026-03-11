@@ -936,7 +936,7 @@ define void @device_func(ptr byval(i32) align 4 %input) {
   ret void
 }
 
-attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "no-trapping-math"="true" "target-cpu"="sm_60" "target-features"="+ptx78,+sm_60" "uniform-work-group-size"="true" }
+attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "no-trapping-math"="true" "target-cpu"="sm_60" "target-features"="+ptx78,+sm_60" "uniform-work-group-size" }
 attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
 

@@ -939,7 +939,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
-                    Capability::DerivativeControl, Capability::MinLod});
+                    Capability::DerivativeControl, Capability::MinLod,
+                    Capability::ImageGatherExtended});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -2162,6 +2163,11 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 5);
     break;
+  case SPIRV::OpImageDrefGather:
+  case SPIRV::OpImageGather:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 5);
+    break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
@@ -2662,6 +2668,10 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
     MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
+    if (MF->getFunction()
+            .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+            .isValid())
+      continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
     for (auto &MBB : *MF) {
       if (!MBB.hasName() || MBB.empty())
@@ -2801,8 +2811,6 @@ static void collectFPFastMathDefaults(const Module &M,
     }
   }
 }
-
-struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();

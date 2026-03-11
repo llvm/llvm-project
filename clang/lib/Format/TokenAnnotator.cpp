@@ -4913,6 +4913,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return true;
   // Space before parentheses common for all languages
   if (Right.is(tok::l_paren)) {
+    // Function declaration or definition
+    if (Line.MightBeFunctionDecl && Right.is(TT_FunctionDeclarationLParen)) {
+      if (spaceRequiredBeforeParens(Right))
+        return true;
+      const auto &Options = Style.SpaceBeforeParensOptions;
+      return Line.mightBeFunctionDefinition()
+                 ? Options.AfterFunctionDefinitionName
+                 : Options.AfterFunctionDeclarationName;
+    }
     if (Left.is(TT_TemplateCloser) && Right.isNot(TT_FunctionTypeLParen))
       return spaceRequiredBeforeParens(Right);
     if (Left.isOneOf(TT_RequiresClause,
@@ -4958,15 +4967,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // SpaceBeforeParensOptions
     if (Right.is(TT_OverloadedOperatorLParen))
       return spaceRequiredBeforeParens(Right);
-    // Function declaration or definition
-    if (Line.MightBeFunctionDecl && Right.is(TT_FunctionDeclarationLParen)) {
-      if (spaceRequiredBeforeParens(Right))
-        return true;
-      const auto &Options = Style.SpaceBeforeParensOptions;
-      return Line.mightBeFunctionDefinition()
-                 ? Options.AfterFunctionDefinitionName
-                 : Options.AfterFunctionDeclarationName;
-    }
+
     // Lambda
     if (Line.Type != LT_PreprocessorDirective && Left.is(tok::r_square) &&
         Left.MatchingParen && Left.MatchingParen->is(TT_LambdaLSquare)) {

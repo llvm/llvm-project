@@ -563,10 +563,15 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
         int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
-            return ArrayConstantBoundChanger{
-                std::move(*AsConstantExtents(
-                    context, GetRawLowerBounds(context, NamedEntity{symbol})))}
-                .ChangeLbounds(std::move(folded));
+            if (auto lbounds{AsConstantExtents(context,
+                    GetRawLowerBounds(context, NamedEntity{symbol}))}) {
+              return ArrayConstantBoundChanger{std::move(*lbounds)}
+                  .ChangeLbounds(std::move(folded));
+            } else {
+              context.messages().Say(symbol.name(),
+                  "The lower bounds of the parameter '%s' are not constant"_err_en_US,
+                  symbol.name());
+            }
           } else {
             context.messages().Say(
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,

@@ -34,6 +34,7 @@ define <2 x i32> @stest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    vmov.32 d8[1], r1
 ; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    adr r4, .LCPI0_1
 ; CHECK-NEXT:    movwlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    vdup.32 d19, r5
@@ -42,7 +43,6 @@ define <2 x i32> @stest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    vdup.32 d18, r0
 ; CHECK-NEXT:    vbit q8, q4, q9
-; CHECK-NEXT:    adr r4, .LCPI0_1
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r4:128]
 ; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r3, r5, d16
@@ -261,11 +261,11 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mvnne r0, #0
 ; CHECK-NEXT:    vmov.32 d12[1], r1
+; CHECK-NEXT:    adr r1, .LCPI3_1
 ; CHECK-NEXT:    rsbs r3, r11, #-2147483648
 ; CHECK-NEXT:    vdup.32 d16, r0
 ; CHECK-NEXT:    mvn r0, #0
 ; CHECK-NEXT:    vbsl q8, q6, q5
-; CHECK-NEXT:    adr r1, .LCPI3_1
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r1:128]
 ; CHECK-NEXT:    sbcs r3, r0, r10
 ; CHECK-NEXT:    mov r3, #0
@@ -582,11 +582,11 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    cmp r0, #0
 ; CHECK-NEON-NEXT:    mvnne r0, #0
 ; CHECK-NEON-NEXT:    vmov.32 d12[1], r1
+; CHECK-NEON-NEXT:    adr r1, .LCPI6_1
 ; CHECK-NEON-NEXT:    rsbs r3, r11, #-2147483648
 ; CHECK-NEON-NEXT:    vdup.32 d16, r0
 ; CHECK-NEON-NEXT:    mvn r0, #0
 ; CHECK-NEON-NEXT:    vbsl q8, q6, q4
-; CHECK-NEON-NEXT:    adr r1, .LCPI6_1
 ; CHECK-NEON-NEXT:    vld1.64 {d18, d19}, [r1:128]
 ; CHECK-NEON-NEXT:    sbcs r3, r0, r10
 ; CHECK-NEON-NEXT:    mov r3, #0
@@ -699,11 +699,11 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    cmp r0, #0
 ; CHECK-FP16-NEXT:    mvnne r0, #0
 ; CHECK-FP16-NEXT:    vmov.32 d12[1], r1
+; CHECK-FP16-NEXT:    adr r1, .LCPI6_1
 ; CHECK-FP16-NEXT:    rsbs r3, r9, #-2147483648
 ; CHECK-FP16-NEXT:    vdup.32 d16, r0
 ; CHECK-FP16-NEXT:    mvn r0, #0
 ; CHECK-FP16-NEXT:    vbsl q8, q6, q5
-; CHECK-FP16-NEXT:    adr r1, .LCPI6_1
 ; CHECK-FP16-NEXT:    vld1.64 {d18, d19}, [r1:128]
 ; CHECK-FP16-NEXT:    sbcs r3, r0, r8
 ; CHECK-FP16-NEXT:    mov r3, #0

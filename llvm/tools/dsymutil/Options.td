@@ -229,6 +229,24 @@ def build_variant_suffix: Separate<["--", "-"], "build-variant-suffix">,
   Group<grp_general>;
 def: Joined<["--", "-"], "build-variant-suffix=">, Alias<build_variant_suffix>;
 
+def allow: Separate<["--", "-"], "allow">,
+  MetaVarName<"<path>">,
+  HelpText<"Only process debug map objects listed in the YAML file at <path>. "
+  "Only filters N_OSO entries. If `--oso-prepend-path` is specified, the path "
+  "prefix applies, i.e. paths in the file should exact match that of N_OSO "
+  "entries.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "allow=">, Alias<allow>;
+
+def disallow: Separate<["--", "-"], "disallow">,
+  MetaVarName<"<path>">,
+  HelpText<"Exclude debug map objects listed in the YAML file at <path>. "
+  "Only filters N_OSO entries. If `--oso-prepend-path` is specified, the path "
+  "prefix applies, i.e. paths in the file should exact match that of N_OSO "
+  "entries.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "disallow=">, Alias<disallow>;
+
 def dsym_search_path: Separate<["-", "--"], "D">,
   MetaVarName<"<path>">,
   HelpText<"Specify a directory that contain dSYM files to search for.">,

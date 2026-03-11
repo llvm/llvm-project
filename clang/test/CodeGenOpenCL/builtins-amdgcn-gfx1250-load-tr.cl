@@ -6,7 +6,7 @@ typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v3i   __attribute__((ext_vector_type(3)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 typedef short  v8s   __attribute__((ext_vector_type(8)));
-typedef half   v8h   __attribute__((ext_vector_type(8)));
+typedef _Float16 v8h __attribute__((ext_vector_type(8)));
 typedef __bf16 v8y  __attribute__((ext_vector_type(8)));
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_global_load_tr4_b64_v2i32(
