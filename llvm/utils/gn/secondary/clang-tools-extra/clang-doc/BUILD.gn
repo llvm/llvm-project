@@ -24,6 +24,7 @@ static_library("clang-doc") {
     "HTMLGenerator.cpp",
     "JSONGenerator.cpp",
     "MDGenerator.cpp",
+    "MDMustacheGenerator.cpp",
     "Mapper.cpp",
     "Representation.cpp",
     "Serialize.cpp",
