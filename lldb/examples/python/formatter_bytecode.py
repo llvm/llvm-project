@@ -338,14 +338,13 @@ class BytecodeSection:
 
         print(
             textwrap.dedent(
-                """
-                @used
+                """\
                 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
-                @section("__TEXT,__lldbsummaries")
+                @section("__DATA_CONST,__lldbformatters")
                 #else
-                @section(".lldbsummaries")
+                @section(".lldbformatters")
                 #endif
-                """
+                @used"""
             ),
             file=output,
         )
