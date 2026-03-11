@@ -112,7 +112,8 @@ protected:
 ///   | X+ / X  | Hex + prefix, upper  |   42   |   0x2A  | Minimum # digits   |
 ///   | N / n   | Digit grouped number | 123456 | 123,456 | Ignored            |
 ///   | D / d   | Integer              | 100000 | 100000  | Ignored            |
-///   |+D /+d   | Integer w/ + for >=0 | 100000 | +100000 | Ignored            |
+///   |+D / +d  | Integer with + prefix| 100000 | +100000 | Ignored            |
+///   |         | for numbers => 0     |        |         |                    |
 ///   |   +     | Same as +D / +d      |        |         |                    |
 ///   | (empty) | Same as D / d        |        |         |                    |
 ///   ==========================================================================
