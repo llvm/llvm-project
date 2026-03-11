@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/workitem/clc_get_group_id.h"
+#include <clc/workitem/clc_get_group_id.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_group_id(uint dim) {
   return __clc_get_group_id(dim);
