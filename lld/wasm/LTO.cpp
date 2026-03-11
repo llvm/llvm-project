@@ -197,6 +197,10 @@ static void thinLTOCreateEmptyIndexFiles() {
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
+}
+
 SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
