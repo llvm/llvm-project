@@ -11722,17 +11722,12 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
 
     // fold fshl(SRL(x, c), SHL(x, BW-c), c) -> x
     // fold fshr(SRL(x, BW-c), SHL(x, c), c) -> x
-    if (N0.getOpcode() == ISD::SRL && N1.getOpcode() == ISD::SHL &&
-        N0.getOperand(0) == N1.getOperand(0)) {
-      if (auto *C0 = isConstOrConstSplat(N0.getOperand(1)))
-        if (auto *C1 = isConstOrConstSplat(N1.getOperand(1))) {
-          unsigned C0Expected = IsFSHL ? ShAmt : BitWidth - ShAmt;
-          unsigned C1Expected = IsFSHL ? BitWidth - ShAmt : ShAmt;
-          if (C0->getZExtValue() == C0Expected &&
-              C1->getZExtValue() == C1Expected)
-            return N0.getOperand(0);
-        }
-    }
+    SDValue Val;
+    unsigned C0Expected = IsFSHL ? ShAmt : BitWidth - ShAmt;
+    unsigned C1Expected = IsFSHL ? BitWidth - ShAmt : ShAmt;
+    if (sd_match(N0, m_Srl(m_Value(Val), m_SpecificInt(C0Expected))) &&
+        sd_match(N1, m_Shl(m_Specific(Val), m_SpecificInt(C1Expected))))
+      return N0.getOperand(0);
 
     // fold (fshl ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
     // fold (fshr ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
