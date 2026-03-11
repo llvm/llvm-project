@@ -1118,7 +1118,10 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;
 
-  if (isImplicitTemplateInstantiation(&ND)) {
+  // Computing doc comments is expensive, so if we can skip it we should do so.
+  if (isImplicitTemplateInstantiation(&ND) ||
+      (!(S.Flags & Symbol::IndexedForCodeCompletion) &&
+       !Opts.StoreAllDocumentation)) {
     Symbols.insert(S);
     return Symbols.find(S.ID);
   }
@@ -1139,21 +1142,16 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
     DocComment = getDocComment(Ctx, SymbolCompletion,
                                /*CommentsFromHeaders=*/true);
     Documentation = formatDocumentation(*CCS, DocComment);
+    if (!DocComment.empty())
+      S.Flags |= Symbol::HasDocComment;
+    S.Documentation = Documentation;
   }
-  const auto UpdateDoc = [&] {
-    if (!AlreadyHasDoc) {
-      if (!DocComment.empty())
-        S.Flags |= Symbol::HasDocComment;
-      S.Documentation = Documentation;
-    }
-  };
+
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
-    if (Opts.StoreAllDocumentation)
-      UpdateDoc();
     Symbols.insert(S);
     return Symbols.find(S.ID);
   }
-  UpdateDoc();
+
   std::string Signature;
   std::string SnippetSuffix;
   getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,

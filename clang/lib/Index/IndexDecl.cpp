@@ -734,8 +734,8 @@ public:
       indexTemplateParameters(Params, Parent);
     }
 
-    bool shouldContinue = Visit(Parent);
-    if (!shouldContinue)
+    bool ShouldContinue = Visit(Parent);
+    if (!ShouldContinue)
       return false;
 
     if (!IndexCtx.shouldIndexImplicitInstantiation())
