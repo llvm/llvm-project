@@ -231,7 +231,7 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int* __codepage) {
       __codepage, MB_ERR_INVALID_CHARS, __name.data(), __name.size(), __locale_wbuffer, LOCALE_MAX_NAME_LENGTH);
 
   if (__ret <= 0)
-    return te_impl();
+    return __te_impl();
 
   // The below function fills the string with the number in text.
   int __result = ::GetLocaleInfoEx(__locale_wbuffer, __lctype, __number_buffer, 10);
