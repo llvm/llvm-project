@@ -56,6 +56,11 @@ struct VirtualDerived : virtual ForwardDeclared {
   ~VirtualDerived() override;
 };
 
+struct DeclaredCtorDefinedDtor {
+  DeclaredCtorDefinedDtor();
+  virtual ~DeclaredCtorDefinedDtor() {}
+};
+
 struct TemplateNotAllocated {
   TemplateNotAllocated();
   virtual ~TemplateNotAllocated();
@@ -88,6 +93,7 @@ void cases() {
   ImplicitVDtorDerived *arr7 = new ImplicitVDtorDerived[5];
   DllImported *arr8 = new DllImported[5];
   VirtualDerived *arr9 = new VirtualDerived[3];
+  DeclaredCtorDefinedDtor *arr10 = new DeclaredCtorDefinedDtor[5];
   actuallyAllocate<TemplateAllocated>();
 }
 
@@ -106,6 +112,7 @@ void cases() {
 // CHECK-DAG: declare dllimport void @"??1DllImported@@UEAA@XZ"(
 // CHECK-DAG: define weak dso_local noundef ptr @"??_EDllImported@@UEAAPEAXI@Z"(
 // CHECK-DAG: define weak dso_local noundef ptr @"??_EVirtualDerived@@UEAAPEAXI@Z"(
+// CHECK-DAG: define weak dso_local noundef ptr @"??_EDeclaredCtorDefinedDtor@@UEAAPEAXI@Z"(
 // CHECK-DAG: declare dso_local void @"??1TemplateAllocated@@UEAA@XZ"(
 // CHECK-DAG: define weak dso_local noundef ptr @"??_ETemplateAllocated@@UEAAPEAXI@Z"(
 // CHECK-NOT: @"??_ETemplateNotAllocated@@

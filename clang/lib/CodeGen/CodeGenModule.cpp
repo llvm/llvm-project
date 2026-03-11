@@ -4372,12 +4372,15 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
         DeferredAnnotations[MangledName] = FD;
     }
 
+    // Emit vector deleting dtors if required even if the destructor itself is
+    // not defined.
+    if (auto *Dtor = dyn_cast<CXXDestructorDecl>(FD))
+      if (GD.getDtorType() == Dtor_VectorDeleting &&
+          Context.classNeedsVectorDeletingDestructor(Dtor->getParent()))
+        addDeferredDeclToEmit(GD);
+
     // Forward declarations are emitted lazily on first use.
     if (!FD->doesThisDeclarationHaveABody()) {
-      if (auto *Dtor = dyn_cast<CXXDestructorDecl>(FD))
-        if (GD.getDtorType() == Dtor_VectorDeleting &&
-            Context.classNeedsVectorDeletingDestructor(Dtor->getParent()))
-          addDeferredDeclToEmit(GD);
 
       if (!FD->doesDeclarationForceExternallyVisibleDefinition() &&
           (!FD->isMultiVersion() || !getTarget().getTriple().isAArch64()))
