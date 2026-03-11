@@ -8363,7 +8363,7 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 //    fptrunc(x) <= C      -->  x <= ext(C)
 //    fptrunc(x) >  C      -->  x >  ext(C)
 //    fptrunc(x) >= C      -->  x >= ext(C)
-//    fptrunc(x) ord/uno C --> x ord/uno C
+//    fptrunc(x) ord/uno C -->  x ord/uno C
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
