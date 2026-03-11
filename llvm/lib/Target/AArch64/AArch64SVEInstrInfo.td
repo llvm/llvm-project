@@ -984,6 +984,9 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(nxv2i64 (splat_vector (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
             (DUP_ZI_D $a, $b)>;
 
+  def : Pat<(v2i64 (AArch64dup (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
+            (EXTRACT_SUBREG (DUP_ZI_D $a, $b), zsub)>;
+
   // Duplicate immediate FP into all vector elements.
   def : Pat<(nxv2f16 (splat_vector (f16 fpimm:$val))),
             (DUP_ZR_H (MOVi32imm (bitcast_fpimm_to_i32 f16:$val)))>;
