@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isinf.h>
-#include <clc/relational/clc_isnan.h>
+#ifndef CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
+#define CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H
+
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isnan.h"
 
 /*
    Algorithm:
@@ -322,3 +325,5 @@ __clc_log(half x) {
 #endif
 
 #endif // cl_khr_fp16
+
+#endif // CLC_LIB_GENERIC_MATH_CLC_LOG_BASE_H

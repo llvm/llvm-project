@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/integer/clc_add_sat.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_subnormal_config.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isinf.h>
-#include <clc/relational/clc_isnan.h>
-#include <clc/shared/clc_clamp.h>
+#include "clc/integer/clc_add_sat.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_subnormal_config.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isnan.h"
+#include "clc/shared/clc_clamp.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
 
@@ -130,5 +130,5 @@ _CLC_OVERLOAD _CLC_DEF half __clc_ldexp(half x, int n) {
 
 #define __CLC_FUNCTION __clc_ldexp
 #define __CLC_ARG2_TYPE int
-#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/binary_def_scalarize.inc"
+#include "clc/math/gentype.inc"
