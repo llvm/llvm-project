@@ -1375,7 +1375,7 @@ class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
 class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
 
-class PatGprImm<SDPatternOperator OpNode, RVInst Inst, ImmLeaf ImmType,
+class PatGprImm<SDPatternOperator OpNode, RVInst Inst, SDPatternOperator ImmType,
                 ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1), ImmType:$imm)),
           (Inst GPR:$rs1, ImmType:$imm)>;
