@@ -2658,6 +2658,22 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
       return CGF.performAddrSpaceCast(Src, DstTy);
 
+    // FIXME: Similarly to the sret case above, we need to handle BitCasts that
+    // involve implicit address space conversions. This arises when the source
+    // language lacks explicit address spaces, but the target's data layout
+    // assigns different address spaces (e.g., program address space for
+    // function pointers). Since Sema operates on Clang types (which don't carry
+    // this information) and selects CK_BitCast, we must detect the address
+    // space mismatch here in CodeGen when lowering to LLVM types. The most
+    // common case is casting function pointers (which get the program AS from
+    // the data layout) to/from object pointers (which use the default AS).
+    // Ideally, this would be resolved at a higher level, but that would require
+    // exposing data layout details to Sema.
+    if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+        SrcTy->getPointerAddressSpace() != DstTy->getPointerAddressSpace()) {
+      return CGF.performAddrSpaceCast(Src, DstTy);
+    }
+
     assert(
         (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
          SrcTy->getPointerAddressSpace() == DstTy->getPointerAddressSpace()) &&
