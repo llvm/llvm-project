@@ -217,9 +217,18 @@ public:
   void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
 
+  /// Write string representation to \p OS
+  void print(raw_ostream &OS) const;
+
   /// \returns String representation of an object.
   std::string toString() const;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const AMDGPUTargetID &TargetID) {
+  TargetID.print(OS);
+  return OS;
+}
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
@@ -256,8 +265,11 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
 /// \returns Minimum flat work group size for given subtarget \p STI.
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
 
-/// \returns Maximum flat work group size for given subtarget \p STI.
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI);
+/// \returns Maximum flat work group size
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
 
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.

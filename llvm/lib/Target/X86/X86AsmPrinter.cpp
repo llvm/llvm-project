@@ -867,6 +867,13 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
     switch (ExtraCode[0]) {
     default: return true;  // Unknown modifier.
+    case 'a': {
+      // Print as address — only valid with 'p' constraint.
+      const InlineAsm::Flag Flags(MI->getOperand(OpNo - 1).getImm());
+      if (Flags.getMemoryConstraintID() != InlineAsm::ConstraintCode::p)
+        return true;
+      break;
+    }
     case 'b': // Print QImode register
     case 'h': // Print QImode high register
     case 'w': // Print HImode register
@@ -1115,7 +1122,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       Align Alignment(1);
       MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(
           getDataLayout(), SectionKind::getReadOnly(),
-          /*C=*/nullptr, Alignment);
+          /*C=*/nullptr, Alignment, /*F=*/nullptr);
       OutStreamer->switchSection(ReadOnlySection);
       OutStreamer->emitLabel(AddrSymbol);
 

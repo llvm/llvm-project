@@ -5882,6 +5882,24 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         std::swap(N0, N1);
     }
 
+    // For MULX, the implicit source must be in RDX (LoReg). If N1 is
+    // already a CopyFromReg of LoReg and N0 is not, flip so that N0
+    // (which feeds the CopyToReg below) is the operand already in LoReg,
+    // avoiding an unnecessary register-to-register copy before the multiply.
+    if (UseMULX && !foldedLoad) {
+      MachineRegisterInfo &MRI = CurDAG->getMachineFunction().getRegInfo();
+      auto GetPhysReg = [&](SDValue V) -> Register {
+        if (V.getOpcode() != ISD::CopyFromReg)
+          return Register();
+        Register Reg = cast<RegisterSDNode>(V.getOperand(1))->getReg();
+        if (Reg.isVirtual())
+          return MRI.getLiveInPhysReg(Reg);
+        return Reg;
+      };
+      if (GetPhysReg(N1) == LoReg && GetPhysReg(N0) != LoReg)
+        std::swap(N0, N1);
+    }
+
     SDValue InGlue = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);
     SDValue ResHi, ResLo;

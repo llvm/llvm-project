@@ -189,11 +189,17 @@ else()
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
 if(LIBOMP_USE_HWLOC)
+  # Since we are using an OBJECT library, the PRIVATE and INTERFACE options are split
+  # (instead of using PUBLIC): obj.omp for compiling itself, omp for propagating
+  # the options to other libraries that depend on it, e.g. libompd.
+  target_include_directories(obj.omp
+    PRIVATE
+    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+    "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
   target_include_directories(omp
-                             PUBLIC
-			     "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
-			     "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
-  )
+    INTERFACE
+    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+    "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
 endif()
 
 if(OPENMP_MSVC_NAME_SCHEME)

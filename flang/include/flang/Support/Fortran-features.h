@@ -82,7 +82,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
     RealConstantWidening, VolatileOrAsynchronousTemporary, UnusedVariable,
     UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy,
-    MisplacedIgnoreTKR)
+    MisplacedIgnoreTKR, NamelistParameter)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

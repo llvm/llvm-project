@@ -147,7 +147,7 @@ void X86MCAsmInfoMicrosoft::anchor() { }
 
 X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   if (Triple.isX86_64()) {
-    PrivateGlobalPrefix = ".L";
+    InternalSymbolPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
@@ -186,7 +186,7 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   assert((Triple.isOSWindows() || Triple.isUEFI()) &&
          "Windows and UEFI are the only supported COFF targets");
   if (Triple.isX86_64()) {
-    PrivateGlobalPrefix = ".L";
+    InternalSymbolPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;

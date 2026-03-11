@@ -18,7 +18,6 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"

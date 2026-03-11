@@ -779,7 +779,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
         APInt OldOffset = Offset;
         Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
         if (Overflow) {
-          Offset = OldOffset;
+          Offset = std::move(OldOffset);
           return V;
         }
       }

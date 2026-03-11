@@ -114,12 +114,6 @@ static cl::opt<bool> UseApproxLog2F32(
     cl::desc("NVPTX Specific: whether to use lg2.approx for log2"),
     cl::init(false));
 
-static cl::opt<bool> ForceMinByValParamAlign(
-    "nvptx-force-min-byval-param-align", cl::Hidden,
-    cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
-             " params of device functions."),
-    cl::init(false));
-
 NVPTX::DivPrecisionLevel
 NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
                                     const SDNode &N) const {
@@ -1191,6 +1185,9 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
   }
 }
 
+static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                                  const DataLayout &DL);
+
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *RetTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -1295,14 +1292,8 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
-Align NVPTXTargetLowering::getFunctionArgumentAlignment(
-    const Function *F, Type *Ty, unsigned Idx, const DataLayout &DL) const {
-  return getAlign(*F, Idx).value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
-}
-
-Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
-                                                unsigned Idx,
-                                                const DataLayout &DL) const {
+static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                                  const DataLayout &DL) {
   if (!CB) {
     // CallSite is zero, fallback to ABI type alignment
     return DL.getABITypeAlign(Ty);
@@ -5568,57 +5559,6 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
   }
-}
-
-/// getFunctionParamOptimizedAlign - since function arguments are passed via
-/// .param space, we may want to increase their alignment in a way that
-/// ensures that we can effectively vectorize their loads & stores. We can
-/// increase alignment only if the function has internal or has private
-/// linkage as for other linkage types callers may already rely on default
-/// alignment. To allow using 128-bit vectorized loads/stores, this function
-/// ensures that alignment is 16 or greater.
-Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
-    const Function *F, Type *ArgTy, const DataLayout &DL) const {
-  // Capping the alignment to 128 bytes as that is the maximum alignment
-  // supported by PTX.
-  const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
-
-  // If a function has linkage different from internal or private, we
-  // must use default ABI alignment as external users rely on it. Same
-  // for a function that may be called from a function pointer.
-  if (!F || !F->hasLocalLinkage() ||
-      F->hasAddressTaken(/*Users=*/nullptr,
-                         /*IgnoreCallbackUses=*/false,
-                         /*IgnoreAssumeLikeCalls=*/true,
-                         /*IgnoreLLVMUsed=*/true))
-    return ABITypeAlign;
-
-  assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
-  return std::max(Align(16), ABITypeAlign);
-}
-
-/// Helper for computing alignment of a device function byval parameter.
-Align NVPTXTargetLowering::getFunctionByValParamAlign(
-    const Function *F, Type *ArgTy, Align InitialAlign,
-    const DataLayout &DL) const {
-  Align ArgAlign = InitialAlign;
-  // Try to increase alignment to enhance vectorization options.
-  if (F)
-    ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
-
-  // Old ptx versions have a bug. When PTX code takes address of
-  // byval parameter with alignment < 4, ptxas generates code to
-  // spill argument into memory. Alas on sm_50+ ptxas generates
-  // SASS code that fails with misaligned access. To work around
-  // the problem, make sure that we align byval parameters by at
-  // least 4. This bug seems to be fixed at least starting from
-  // ptxas > 9.0.
-  // TODO: remove this after verifying the bug is not reproduced
-  // on non-deprecated ptxas versions.
-  if (ForceMinByValParamAlign)
-    ArgAlign = std::max(ArgAlign, Align(4));
-
-  return ArgAlign;
 }
 
 // Helper for getting a function parameter name. Name is composed from
