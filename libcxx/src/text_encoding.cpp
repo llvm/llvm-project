@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_WIN32API)
-_LIBCPP_HIDDEN __te_impl::__id __te_impl::__get_win32_acp() {
+_LIBCPP_HIDDEN __te_impl __get_win32_acp() {
   switch (GetACP()) {
   case 037:
     return __te_impl::__id::IBM037;
@@ -208,10 +208,14 @@ _LIBCPP_HIDDEN __te_impl::__id __te_impl::__get_win32_acp() {
     return __te_impl::__id::other;
   }
 }
-#endif // _LIBCPP_WIN32API
 
-#if !defined(__ANDROID__) && !defined(_LIBCPP_WIN32API)
-_LIBCPP_HIDDEN __te_impl __te_impl::__get_locale_encoding(const char* __name) {
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name [[maybe_unused]]) { return __te_impl(); }
+_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_win32_acp(); }
+
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FREEBSD__) || defined(__NETBSD__) ||                       \
+    _LIBCPP_LIBC_NEWLIB || defined(_AIX) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
+// POSIX
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name) {
   __te_impl __e;
 
   __locale::__locale_t __l = __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name, static_cast<__locale::__locale_t>(0));
@@ -237,20 +241,14 @@ _LIBCPP_HIDDEN __te_impl __te_impl::__get_locale_encoding(const char* __name) {
   return __e;
 }
 
+_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_locale_encoding(""); }
 #else
-_LIBCPP_HIDDEN __te_impl __te_impl::__get_locale_encoding(const char* __name [[maybe_unused]]) { return __te_impl(); }
-#endif
-
-_LIBCPP_HIDDEN __te_impl __te_impl::__get_env_encoding() {
-#if defined(_LIBCPP_WIN32API)
-  return __te_impl(__get_win32_acp());
-#else
-  return __get_locale_encoding("");
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name [[maybe_unused]]) { return __te_impl(); }
+_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_locale_encoding(""); }
 #endif // _LIBCPP_WIN32API
-}
 
 _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI __te_impl __te_impl::__environment() {
-  return __te_impl::__get_env_encoding();
+  return __get_env_encoding();
 }
 
 _LIBCPP_END_NAMESPACE_STD
