@@ -170,7 +170,8 @@ LLVM_ABI Error getAMDGPUMetaDataFromImage(
 /// \param MetaData The key-value map of metadata to be associated with the
 /// image.
 LLVM_ABI Error containerizeImage(std::unique_ptr<MemoryBuffer> &Binary,
-                                 llvm::Triple Triple, object::ImageKind ImageKind,
+                                 llvm::Triple Triple,
+                                 object::ImageKind ImageKind,
                                  object::OffloadKind OffloadKind,
                                  int32_t ImageFlags,
                                  MapVector<StringRef, StringRef> &MetaData);
