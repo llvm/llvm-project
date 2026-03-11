@@ -1469,17 +1469,20 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       Phis.push_back(PhiR);
   }
 
+  if (Phis.empty())
+    return true;
+
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
-  for (VPReductionPHIRecipe *Phi : Phis) {
+  for (VPReductionPHIRecipe *PhiR : Phis) {
     // Find the condition for the select/blend.
-    VPValue *BackedgeSelect = Phi->getBackedgeValue();
+    VPValue *BackedgeSelect = PhiR->getBackedgeValue();
     VPValue *CondSelect = BackedgeSelect;
 
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     if (HeaderMask && !match(BackedgeSelect,
                              m_Select(m_Specific(HeaderMask),
-                                      m_VPValue(CondSelect), m_Specific(Phi))))
+                                      m_VPValue(CondSelect), m_Specific(PhiR))))
       llvm_unreachable("expected header mask select");
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
@@ -1495,11 +1498,11 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       unsigned NumIncomingDataValues = 0;
       for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
         VPValue *Incoming = Blend->getIncomingValue(I);
-        if (Incoming != Phi) {
+        if (Incoming != PhiR) {
           ++NumIncomingDataValues;
           Cond = Blend->getMask(I);
           Op1 = Incoming;
-          Op2 = Phi;
+          Op2 = PhiR;
         }
       }
       return NumIncomingDataValues == 1;
@@ -1522,20 +1525,20 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
-    VPBuilder Builder = VPBuilder::getToInsertAfter(Phi);
+    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
     auto *MaskPHI = new VPWidenPHIRecipe(nullptr, /*Start=*/Plan.getFalse());
     Builder.insert(MaskPHI);
 
     // Add select for mask.
     Builder.setInsertPoint(SelectR);
 
-    if (Op1 == Phi) {
+    if (Op1 == PhiR) {
       // Normalize to selecting the data operand when the condition is true by
       // swapping operands and negating the condition.
       std::swap(Op1, Op2);
       Cond = Builder.createNot(Cond);
     }
-    assert(Op2 == Phi && "data value must be selected if Cond is true");
+    assert(Op2 == PhiR && "data value must be selected if Cond is true");
 
     if (HeaderMask)
       Cond = Builder.createLogicalAnd(HeaderMask, Cond);
@@ -1548,13 +1551,13 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     VPValue *DataSelect =
         Builder.createSelect(AnyOf, Op1, Op2, SelectR->getDebugLoc());
     SelectR->replaceAllUsesWith(DataSelect);
-    Phi->setBackedgeValue(DataSelect);
+    PhiR->setBackedgeValue(DataSelect);
     SelectR->eraseFromParent();
 
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
-                             {Phi->getStartValue(), DataSelect, MaskSelect},
+                             {PhiR->getStartValue(), DataSelect, MaskSelect},
                              RdxResult->getDebugLoc());
     RdxResult->replaceAllUsesWith(ExtractLastActive);
     RdxResult->eraseFromParent();
