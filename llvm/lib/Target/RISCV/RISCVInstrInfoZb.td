@@ -375,12 +375,12 @@ def CLMULR : ALU_rr<0b0000101, 0b010, "clmulr", Commutable=1>,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 } // Predicates = [HasStdExtZbc]
 
-let Predicates = [HasStdExtZbcOrZbkc] in {
+let Predicates = [HasStdExtZbkc] in {
 def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul", Commutable=1>,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh", Commutable=1>,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
-} // Predicates = [HasStdExtZbcOrZbkc]
+} // Predicates = [HasStdExtZbkc]
 
 let Predicates = [HasStdExtZbb] in {
 def MIN  : ALU_rr<0b0000101, 0b100, "min", Commutable=1>,
@@ -843,19 +843,19 @@ def : Sh2AddPat<SH2ADD>;
 def : Sh3AddPat<SH3ADD>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
-let Predicates = [HasStdExtZbcOrZbkc] in {
+let Predicates = [HasStdExtZbkc] in {
 def : PatGprGpr<clmul, CLMUL>;
 def : PatGprGpr<clmulh, CLMULH>;
-} // Predicates = [HasStdExtZbcOrZbkc]
+} // Predicates = [HasStdExtZbkc]
 
-let Predicates = [HasStdExtZbcOrZbkc, IsRV64, NoStdExtZba] in {
+let Predicates = [HasStdExtZbkc, IsRV64, NoStdExtZba] in {
 // Special case for calculating the full 64-bit product of a 32x32 unsigned
 // multiply where the inputs aren't known to be zero extended. We can shift the
 // inputs left by 32 and use a CLMULH. This saves two SRLIs needed to finish
 // zeroing the upper 32 bits.
 def : Pat<(i64 (clmul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
           (CLMULH (i64 (SLLI GPR:$rs1, 32)), (i64 (SLLI GPR:$rs2, 32)))>;
-} // Predicates = [HasStdExtZbcOrZbkc, IsRV64, NoStdExtZba]
+} // Predicates = [HasStdExtZbkc, IsRV64, NoStdExtZba]
 
 let Predicates = [HasStdExtZbc] in
 def : PatGprGpr<clmulr, CLMULR>;
