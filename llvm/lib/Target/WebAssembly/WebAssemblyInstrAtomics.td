@@ -394,10 +394,12 @@ defm ATOMIC_RMW32_U_XCHG_I64 :
   WebAssemblyBinRMW<I64, "i64.atomic.rmw32.xchg_u", 0x47>;
 
 multiclass BinRMWPat<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(ty (kind (AtomicAddrOps32 offset32_op:$offset, I32:$addr, i32imm:$order), ty:$val)),
+  def : Pat<(ty (kind (AtomicAddrOps32 offset32_op:$offset, I32:$addr,
+                       i32imm:$order), ty:$val)),
             (!cast<NI>(inst#_A32) $order, 0, $offset, $addr, $val)>,
         Requires<[HasAddr32, HasAtomics]>;
-  def : Pat<(ty (kind (AtomicAddrOps64 offset64_op:$offset, I64:$addr, i32imm:$order), ty:$val)),
+  def : Pat<(ty (kind (AtomicAddrOps64 offset64_op:$offset, I64:$addr,
+                       i32imm:$order), ty:$val)),
             (!cast<NI>(inst#_A64) $order, 0, $offset, $addr, $val)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
