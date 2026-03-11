@@ -241,6 +241,9 @@ private:
                         MachineInstr &I, bool IsUnsigned,
                         PickOpcodeFn &&PickOpcode) const;
 
+  bool selectWaveReduceOp(Register ResVReg, SPIRVTypeInst ResType,
+                          MachineInstr &I, unsigned Opcode) const;
+
   bool selectWaveReduceMax(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
@@ -331,6 +334,9 @@ private:
                      ArrayRef<Register> SrcRegs = {}) const;
 
   bool selectLog10(Register ResVReg, SPIRVTypeInst ResType,
+                   MachineInstr &I) const;
+
+  bool selectFpowi(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
   bool selectSaturate(Register ResVReg, SPIRVTypeInst ResType,
@@ -1033,7 +1039,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FPOW:
     return selectExtInst(ResVReg, ResType, I, CL::pow, GL::Pow);
   case TargetOpcode::G_FPOWI:
-    return selectExtInst(ResVReg, ResType, I, CL::pown);
+    return selectFpowi(ResVReg, ResType, I);
 
   case TargetOpcode::G_FEXP:
     return selectExtInst(ResVReg, ResType, I, CL::exp, GL::Exp);
@@ -2412,8 +2418,7 @@ bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
   Register InputRegister = I.getOperand(2).getReg();
   SPIRVTypeInst InputType = GR.getSPIRVTypeForVReg(InputRegister);
 
-  if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
+  assert(InputType && "VReg has no type assigned");
 
   bool IsBoolTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool);
   bool IsVectorTy = InputType->getOpcode() == SPIRV::OpTypeVector;
@@ -3043,6 +3048,15 @@ bool SPIRVInstructionSelector::selectWaveReduce(
       .addUse(I.getOperand(2).getReg())
       .constrainAllUses(TII, TRI, RBI);
   return true;
+}
+
+bool SPIRVInstructionSelector::selectWaveReduceOp(Register ResVReg,
+                                                  SPIRVTypeInst ResType,
+                                                  MachineInstr &I,
+                                                  unsigned Opcode) const {
+  return selectWaveReduce(
+      ResVReg, ResType, I, false,
+      [&](Register InputRegister, bool IsUnsigned) { return Opcode; });
 }
 
 bool SPIRVInstructionSelector::selectWaveExclusiveScanSum(
@@ -4241,6 +4255,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                             SPIRV::OpGroupNonUniformBallot);
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
+  case Intrinsic::spv_wave_reduce_or:
+    return selectWaveReduceOp(ResVReg, ResType, I,
+                              SPIRV::OpGroupNonUniformBitwiseOr);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:
@@ -5555,6 +5572,29 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
       .addUse(ScaleReg)
       .constrainAllUses(TII, TRI, RBI);
   return true;
+}
+
+bool SPIRVInstructionSelector::selectFpowi(Register ResVReg,
+                                           SPIRVTypeInst ResType,
+                                           MachineInstr &I) const {
+  // On OpenCL targets, pown(gentype x, intn n) maps directly.
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std))
+    return selectExtInst(ResVReg, ResType, I, CL::pown);
+
+  // On GLSL (Vulkan) targets, there is no integer-exponent power instruction.
+  // Lower as: Pow(base, OpConvertSToF(exp)).
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+    Register BaseReg = I.getOperand(1).getReg();
+    Register ExpReg = I.getOperand(2).getReg();
+    Register FloatExpReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    if (!selectOpWithSrcs(FloatExpReg, ResType, I, {ExpReg},
+                          SPIRV::OpConvertSToF))
+      return false;
+    return selectExtInst(ResVReg, ResType, I, GL::Pow,
+                         /*setMIFlags=*/true, /*useMISrc=*/false,
+                         {BaseReg, FloatExpReg});
+  }
+  return false;
 }
 
 bool SPIRVInstructionSelector::selectModf(Register ResVReg,

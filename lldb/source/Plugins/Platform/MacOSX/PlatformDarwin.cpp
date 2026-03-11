@@ -683,7 +683,7 @@ static FileSpec GetXcodeSelectPath() {
       Status status =
           Host::RunShellCommand("/usr/bin/xcode-select --print-path",
                                 FileSpec(), // current working directory
-                                &exit_status, &signo, &command_output,
+                                &exit_status, &signo, &command_output, nullptr,
                                 std::chrono::seconds(2), // short timeout
                                 false);                  // don't run in a shell
       if (status.Success() && exit_status == 0 && !command_output.empty()) {
