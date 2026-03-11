@@ -3084,6 +3084,10 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   if (BaseTy->isScalarType() || BaseTy->isVectorType() ||
       BaseTy->isAnyComplexType())
     return true;
+  // Matrices with constant numbers of rows and columns are also literal types
+  // in HLSL.
+  if (Ctx.getLangOpts().HLSL && BaseTy->isConstantMatrixType())
+    return true;
   //    -- a reference type; or
   if (BaseTy->isReferenceType())
     return true;

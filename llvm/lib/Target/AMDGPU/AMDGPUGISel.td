@@ -441,8 +441,8 @@ def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm32">,
 def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm64">,
   GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
 
-def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
-  GISDNodeXFormEquiv<IMMPopCount>;
+def gi_IMMCountTrailingOnes : GICustomOperandRenderer<"renderCountTrailingOnesImm">,
+  GISDNodeXFormEquiv<IMMCountTrailingOnes>;
 
 def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
   GISDNodeXFormEquiv<extract_cpol>;

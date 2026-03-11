@@ -524,6 +524,7 @@ if(build_runtimes)
                 llvm-symbolizer
                 llvm-xray
                 llvm-offload-binary
+                llvm-gpu-loader
                 not
                 obj2yaml
                 opt

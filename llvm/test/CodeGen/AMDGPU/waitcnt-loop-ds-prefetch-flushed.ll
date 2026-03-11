@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -o - %s | FileCheck %s
 ; Test for DS prefetch with flush points: preheader has single ds_load_b64 (2xf32).
 ; Loop has DS loads where some are used in same iteration, others are prefetches.
-; Expected: s_wait_dscnt at loop entry, not in preheader
+; Expected: s_wait_dscnt 0 in preheader (preheader flush optimization)
 
 define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrspace(1) %out, i32 %n) {
 ; CHECK-LABEL: ds_prefetch_flushed:
@@ -25,17 +25,19 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ds_load_b64 v[0:1], v11 offset:4
 ; CHECK-NEXT:    ds_load_b64 v[2:3], v12
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_barrier_signal -1
-; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[2:3]
 ; CHECK-NEXT:    s_add_co_i32 s1, s1, 1
 ; CHECK-NEXT:    s_cmp_lt_i32 s1, s0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[0:1]
+; CHECK-NEXT:    s_wait_dscnt 0x1
 ; CHECK-NEXT:    v_pk_add_f32 v[6:7], v[8:9], v[6:7]
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[6:7], v[4:5]
 ; CHECK-NEXT:    s_barrier_wait -1

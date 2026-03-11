@@ -13,7 +13,7 @@ include "llvm/TableGen/SearchableTable.td"
 // CHECK: }
 
 // CHECK-LABEL: GET_CEnum_DECL
-// CHECK: enum CEnum {
+// CHECK: enum CEnum : uint64_t {
 // CHECK:   CBar
 // CHECK:   CBaz
 // CHECK:   CFoo
@@ -130,6 +130,7 @@ def CBaz : CEnum;
 
 def CEnum : GenericEnum {
   let FilterClass = "CEnum";
+  let UnderlyingType = "uint64_t";
 }
 
 class CEntry<string name, CEnum kind, int enc> {
