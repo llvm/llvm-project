@@ -5,6 +5,16 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+void f(char* fmt, ...);
+void g() {
+  f("test\0");
+}
+
+// CIR: cir.global {{.*}} @".str" = #cir.const_array<"test" : !cir.array<!s8i x 4>, trailing_zeros> : !cir.array<!s8i x 6>
+
+// LLVM: @.str = {{.*}} [6 x i8] c"test\00\00"
+
+// OGCG: @.str = {{.*}} [6 x i8] c"test\00\00"
 
 char const *array[] {
     "my", "hands", "are", "typing", "words"
