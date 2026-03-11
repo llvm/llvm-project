@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=200000000
+
 // <deque>
 
 // template <class... Args> reference emplace_back(Args&&... args);

@@ -14,6 +14,8 @@
 // ADDITIONAL_COMPILE_FLAGS(msan): -O1
 // ADDITIONAL_COMPILE_FLAGS(tsan): -O1
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=33554432
+
 // <deque>
 
 // template <class InputIterator>

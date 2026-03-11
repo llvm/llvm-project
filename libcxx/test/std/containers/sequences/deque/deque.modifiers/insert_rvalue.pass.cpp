@@ -12,6 +12,9 @@
 
 // UNSUPPORTED: c++03
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=200000000
+
 #include "asan_testing.h"
 #include <deque>
 #include <cassert>

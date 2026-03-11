@@ -8,6 +8,9 @@
 //
 // REQUIRES: long_tests
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=200000000
+
 // <deque>
 
 // iterator insert (const_iterator p, size_type n, const value_type& v);
