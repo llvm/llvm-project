@@ -10,6 +10,8 @@
 #include <__text_encoding/te_impl.h>
 
 #if defined(_LIBCPP_WIN32API)
+#  include <__algorithm/max.h>
+#  include <cwchar>
 #  include <windows.h>
 #else
 #  include <__locale_dir/locale_base_api.h>
@@ -18,8 +20,17 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_WIN32API)
-_LIBCPP_HIDDEN __te_impl __get_win32_acp() {
-  switch (GetACP()) {
+_LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int* __codepage) {
+  unsigned int __acp = __codepage == nullptr ? GetACP() : *__codepage;
+
+  switch (__acp) {
+  case 0:
+    // If no ANSI code page is available, only Unicode can be used for the locale.
+    // In this case, the value is CP_ACP (0).
+    // Such a locale cannot be set as the system locale.
+    // Applications that do not support Unicode do not work correctly with locales
+    // marked as "Unicode only".
+    return __te_impl::id::unkown;
   case 037:
     return __te_impl::__id::IBM037;
   case 437:
@@ -209,16 +220,38 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp() {
   }
 }
 
-_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name [[maybe_unused]]) { return __te_impl(); }
-_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_win32_acp(); }
+[[maybe_unused]] _LIBCPP_HIDDEN __te_impl __get_locale_encoding(string_view __name) {
+  wchar_t __locale_wbuffer[LOCALE_NAME_MAX_LENGTH + 1]{};
+  wchar_t __number_buffer[11]{};
+
+  auto __codepage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
+  auto __lctype = ::AreFileApisANSI() ? LOCALE_IDEFAULTANSICODEPAGE : LOCALE_IDEFAULTCODEPAGE;
+
+  int __ret = ::MultiByteToWideChar(
+      __codepage, MB_ERR_INVALID_CHARS, __name.data(), __name.size(), __locale_wbuffer, LOCALE_MAX_NAME_LENGTH);
+
+  if (__ret <= 0)
+    return te_impl();
+
+  // The below function fills the string with the number in text.
+  int __result = ::GetLocaleInfoEx(__locale_wbuffer, __lctype, __number_buffer, 10);
+
+  unsigned int __acp = std::wcstoul(__number_buffer, nullptr, 10);
+
+  return __get_win32_acp(&__acp);
+}
+
+_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_win32_acp(nullptr); }
 
 #elif defined(__linux__) || defined(__APPLE__) || defined(__FREEBSD__) || defined(__NETBSD__) ||                       \
     _LIBCPP_LIBC_NEWLIB || defined(_AIX) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
 // POSIX
-_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name) {
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding(string_view __name) {
+  // TODO: An assert that checks if the string is null-terminated may be prudent.
   __te_impl __e;
 
-  __locale::__locale_t __l = __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name, static_cast<__locale::__locale_t>(0));
+  __locale::__locale_t __l =
+      __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name.data(), static_cast<__locale::__locale_t>(0));
 
   if (!__l) {
     return __e;
@@ -243,7 +276,7 @@ _LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name) {
 
 _LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_locale_encoding(""); }
 #else
-_LIBCPP_HIDDEN __te_impl __get_locale_encoding(const char* __name [[maybe_unused]]) { return __te_impl(); }
+_LIBCPP_HIDDEN __te_impl __get_locale_encoding(string_view __name [[maybe_unused]]) { return __te_impl(); }
 _LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_locale_encoding(""); }
 #endif // _LIBCPP_WIN32API
 

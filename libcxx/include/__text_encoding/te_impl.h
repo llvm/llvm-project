@@ -533,12 +533,12 @@ private:
 
 #  if _LIBCPP_HAS_LOCALIZATION
 
-  _LIBCPP_HIDDEN friend __te_impl __get_locale_encoding(const char* __name);
+  _LIBCPP_HIDDEN friend __te_impl __get_locale_encoding(string_view __name);
   _LIBCPP_HIDDEN friend __te_impl __get_env_encoding();
 #    if defined(_LIBCPP_WIN32)
-  _LIBCPP_HIDDEN friend __te_impl __get_win32_acp();
+  _LIBCPP_HIDDEN friend __te_impl __get_win32_acp(unsigned int*);
 #    else
-  _LIBCPP_HIDDEN friend __te_impl __get_win32_acp() = delete;
+  _LIBCPP_HIDDEN friend __te_impl __get_win32_acp(unsigned int*) = delete;
 #    endif
 
   [[__nodiscard__]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI static __te_impl __environment();
