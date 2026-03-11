@@ -123,8 +123,6 @@ bool AlwaysInlineImpl(
     for (BasicBlock &BB : *F) {
       for (Instruction &I : BB) {
         if (auto *CB = dyn_cast<CallBase>(&I)) {
-          if (CB->getAttributes().hasFnAttr(Attribute::NoInline))
-            continue;
           Function *Callee = CB->getCalledFunction();
           if (!Callee || Callee->isDeclaration())
             continue;
@@ -174,8 +172,7 @@ bool AlwaysInlineImpl(
         InlineHistory.push_back({Callee, InlineHistoryID});
         for (CallBase *NewCB : NewCallSites) {
           Function *NewCallee = NewCB->getCalledFunction();
-          if (NewCallee && !NewCallee->isDeclaration() &&
-              !NewCB->getAttributes().hasFnAttr(Attribute::NoInline))
+          if (NewCallee && !NewCallee->isDeclaration())
             Worklist.push_back({NewCB, NewHistoryID});
         }
       }
