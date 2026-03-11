@@ -32,3 +32,9 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswblank
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t

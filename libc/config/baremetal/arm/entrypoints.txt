@@ -304,6 +304,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswdigit
     libc.src.wctype.iswlower
     libc.src.wctype.iswspace
+    libc.src.wctype.iswblank
 
     # internal entrypoints
     libc.startup.baremetal.init
