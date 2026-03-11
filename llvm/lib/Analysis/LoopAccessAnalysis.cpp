@@ -251,7 +251,6 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
                        });
   if (DerefRK) {
     const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
-    // Ensure both operands have the same type
     Type *CommonTy =
         SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
     DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);

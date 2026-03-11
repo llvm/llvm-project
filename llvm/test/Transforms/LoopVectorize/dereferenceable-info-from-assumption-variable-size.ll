@@ -761,6 +761,7 @@ exit:
 }
 
 ; Test to check type mismatch while calling getUMaxExpr()
+; Function Attrs: mustprogress norecurse nosync nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
 define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly %pred, i32 %n) nosync nofree {
 ; CHECK-LABEL: define void @test_assumed_bounds_type_mismatch(
 ; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i32 [[N:%.*]]) #[[ATTR1]] {
@@ -774,6 +775,7 @@ define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly 
 ; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds i16, ptr [[ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load i16, ptr [[ST_ADDR]], align 2
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 [[DATA]], 1
+; CHECK-NEXT:    store i16 [[INC]], ptr [[ST_ADDR]], align 2
 ; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds i16, ptr [[PRED]], i64 [[IV]]
 ; CHECK-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
 ; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
@@ -795,6 +797,8 @@ for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
   %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv
   %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
   %ee.addr = getelementptr inbounds i16, ptr %pred, i64 %iv
   %ee.val = load i16, ptr %ee.addr, align 2
   %ee.cond = icmp sgt i16 %ee.val, 500
