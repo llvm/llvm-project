@@ -14,6 +14,12 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswgraph
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
   - name: iswlower
     standards:
       - stdc
