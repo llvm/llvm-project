@@ -163,7 +163,7 @@ PROJECT_CHECK_TARGETS = {
     "libc": "check-libc",
     "libclc": "check-libclc",
     "mlir": "check-mlir",
-    "openmp": "check-openmp",
+    "openmp": "openmp",
     "polly": "check-polly",
     "lit": "check-lit",
     "offload": "offload",
