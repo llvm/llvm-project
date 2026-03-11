@@ -511,7 +511,7 @@ static void handleNormalInst(const MachineInstr &MI, LOHInfo *LOHInfos) {
 
 namespace {
 
-static void runAArch64CollectLOH(MachineFunction &MF) {
+void runAArch64CollectLOH(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Collect LOH **********\n"
                     << "Looking in function " << MF.getName() << '\n');
 
