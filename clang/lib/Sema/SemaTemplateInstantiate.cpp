@@ -4502,7 +4502,7 @@ ExprResult Sema::SubstConceptTemplateArguments(
         if (ResolvedConcept == nullptr)
           return E;
       } else
-        ResolvedConcept = dyn_cast<ConceptDecl>(D);
+        ResolvedConcept = cast<ConceptDecl>(D);
 
       TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
       if (TransformTemplateArguments(E->getTemplateArgs(),
