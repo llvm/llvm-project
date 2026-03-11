@@ -151,6 +151,10 @@ public:
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
+  CASOptions getCASOpts() const;
+  std::shared_ptr<cas::ObjectStore> getCAS() const;
+  std::shared_ptr<cas::ActionCache> getActionCache() const;
+
 private:
   /// The options customizing dependency scanning behavior.
   DependencyScanningServiceOptions Opts;

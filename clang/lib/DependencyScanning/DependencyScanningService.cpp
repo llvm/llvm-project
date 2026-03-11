@@ -57,3 +57,25 @@ DependencyScanningService::DependencyScanningService(
   if (std::holds_alternative<IncludeTreeCompilation>(Opts.Compilation))
     Opts.OptimizeArgs &= ~ScanningOptimizations::FullIncludeTreeIrrelevant;
 }
+
+CASOptions DependencyScanningService::getCASOpts() const {
+  if (auto *IncludeTree =
+          std::get_if<IncludeTreeCompilation>(&Opts.Compilation))
+    return IncludeTree->CASOpts;
+  return {};
+}
+
+std::shared_ptr<cas::ObjectStore> DependencyScanningService::getCAS() const {
+  if (auto *IncludeTree =
+          std::get_if<IncludeTreeCompilation>(&Opts.Compilation))
+    return IncludeTree->CAS;
+  return nullptr;
+}
+
+std::shared_ptr<cas::ActionCache>
+DependencyScanningService::getActionCache() const {
+  if (auto *IncludeTree =
+          std::get_if<IncludeTreeCompilation>(&Opts.Compilation))
+    return IncludeTree->Cache;
+  return nullptr;
+}
