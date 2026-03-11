@@ -260,7 +260,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpN = getNode(OpI);
       if (OpN == nullptr)
         continue;
-      ++OpN->UnscheduledSuccs;
+      OpN->incrUnscheduledSuccs();
     }
   }
 
@@ -292,7 +292,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
         continue;
       if (!TopInterval.contains(OpI))
         continue;
-      ++OpN->UnscheduledSuccs;
+      OpN->incrUnscheduledSuccs();
     }
   }
 }
@@ -546,7 +546,7 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
       if (!NewSrcN->scheduled())
-        ++NewSrcN->UnscheduledSuccs;
+        NewSrcN->incrUnscheduledSuccs();
     }
   }
 }
