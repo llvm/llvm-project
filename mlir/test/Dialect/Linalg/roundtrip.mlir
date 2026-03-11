@@ -829,3 +829,16 @@ func.func @test_unpack_tensor(%arg0: tensor<16x8x8x32xf32>, %arg1: tensor<128x25
   // CHECK: return %[[RESULT]] : tensor<128x256xf32>
   return %0 : tensor<128x256xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @test_pack_unpack_tensor_with_extra_tiles
+func.func @test_pack_unpack_tensor_with_extra_tiles(%arg0: tensor<127x255xf32>, %arg1: tensor<17x10x8x32xf32>) -> tensor<127x255xf32> {
+  %pad = arith.constant 0.0 : f32
+  // CHECK: %[[PACK:.*]] = linalg.pack %{{.*}} padding_value(%{{.*}} : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : tensor<127x255xf32> -> tensor<17x10x8x32xf32>
+  %0 = linalg.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : tensor<127x255xf32> -> tensor<17x10x8x32xf32>
+  // CHECK: %[[UNPACK:.*]] = linalg.unpack %[[PACK]] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %{{.*}} : tensor<17x10x8x32xf32> -> tensor<127x255xf32>
+  %1 = linalg.unpack %0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg0 : tensor<17x10x8x32xf32> -> tensor<127x255xf32>
+  // CHECK: return %[[UNPACK]] : tensor<127x255xf32>
+  return %1 : tensor<127x255xf32>
+}

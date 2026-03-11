@@ -588,7 +588,8 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     // Build the symmetrical UnPackOp to the existing PackOp.
     unPackOps.push_back(linalg::UnPackOp::create(
         rewriter, packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
-        maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
+        maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles(),
+        maybePackedInit.getOuterDimsPerm()));
     results.push_back(unPackOps.back().getResult());
   }
 

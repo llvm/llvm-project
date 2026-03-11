@@ -229,6 +229,55 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func.func @pack_with_larger_result_shape(
+func.func @pack_with_larger_result_shape(%arg0: tensor<127x255xf32>, %arg1: tensor<17x10x8x32xf32>) -> tensor<17x10x8x32xf32> {
+  %cst_0 = arith.constant 0.0 : f32
+  // CHECK: tensor.pad {{.*}} low[0, 0] high[9, 65]
+  // CHECK:   : tensor<127x255xf32> to tensor<136x320xf32>
+  %pack = linalg.pack %arg0 padding_value(%cst_0 : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1
+    : tensor<127x255xf32> -> tensor<17x10x8x32xf32>
+  return %pack : tensor<17x10x8x32xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["linalg.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"linalg.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @unpack_with_larger_packed_shape(
+func.func @unpack_with_larger_packed_shape(%arg0: tensor<17x10x8x32xf32>, %arg1: tensor<127x255xf32>) -> tensor<127x255xf32> {
+  // CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<17x8x10x32xf32>
+  // CHECK: %[[TRAN:.*]] = linalg.transpose
+  // CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{.*}} : tensor<17x8x10x32xf32> into tensor<136x320xf32>
+  // CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0] [127, 255] [1, 1]
+  %unpack = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1
+    : tensor<17x10x8x32xf32> -> tensor<127x255xf32>
+  return %unpack : tensor<127x255xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["linalg.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"linalg.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
+          transform.yield
+  }
+}
+
+// -----
+
 // When an unpack is a plain 'unpad', lower it to a simple extract_slice.
 // CHECK-LABEL: func.func @unpack_as_pad(
 func.func @unpack_as_pad(%arg0: tensor<1x1x1x1x136x64x16x16xf32>, %arg1: tensor<129x47x16x16xf32>) -> tensor<129x47x16x16xf32> {
@@ -625,8 +674,8 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:   permutation = [0, 2, 1, 3]
 //      CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0, 1], [2, 3]]
 // CHECK-SAME:   : tensor<?x?x?x?xf32> into tensor<?x?xf32>
-//      CHECK: %[[DIM10:.*]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<?x?xf32>
-//      CHECK: %[[DIM11:.*]] = tensor.dim %[[ARG1]], %[[C1]] : tensor<?x?xf32>
+//  CHECK-DAG: %[[DIM10:.*]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<?x?xf32>
+//  CHECK-DAG: %[[DIM11:.*]] = tensor.dim %[[ARG1]], %[[C1]] : tensor<?x?xf32>
 //      CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0] [%[[DIM10]], %[[DIM11]]] [1, 1]
 // CHECK-SAME:   : tensor<?x?xf32> to tensor<?x?xf32>
 //      CHECK: linalg.copy ins(%[[SLICE]] : tensor<?x?xf32>)

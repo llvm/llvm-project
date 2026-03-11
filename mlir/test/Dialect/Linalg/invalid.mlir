@@ -1811,22 +1811,6 @@ func.func @pack_invalid_no_padding_no_full_tiles(%input: tensor<256x128xf32>, %o
 
 // -----
 
-func.func @pack_invalid_no_padding_no_full_tiles_dyn_tiles(%input: tensor<256x128xf32>, %output: tensor<10x8x?x?xf32>, %tile_size_0: index, %tile_size_1: index) -> tensor<10x8x?x?xf32> {
-  // expected-error@+1 {{invalid tile factor or output size provided. Only full tiles are supported when padding_value is not set}}
-  %0 = linalg.pack %input inner_dims_pos = [1, 0] inner_tiles = [%tile_size_0, %tile_size_1] into %output : tensor<256x128xf32>  -> tensor<10x8x?x?xf32>
-  return %0 : tensor<10x8x?x?xf32>
-}
-
-// -----
-
-func.func @pack_invalid_no_padding_no_full_tiles_dyn_tiles_outperm(%input: tensor<256x128xf32>, %output: tensor<8x10x?x?xf32>, %tile_size_0: index, %tile_size_1: index) -> tensor<8x10x?x?xf32> {
-  // expected-error@+1 {{invalid tile factor or output size provided. Only full tiles are supported when padding_value is not set}}
-  %0 = linalg.pack %input outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [%tile_size_0, %tile_size_1] into %output : tensor<256x128xf32>  -> tensor<8x10x?x?xf32>
-  return %0 : tensor<8x10x?x?xf32>
-}
-
-// -----
-
 func.func @pad_and_pack_invalid_type(%input: tensor<13x15xf32>, %output: tensor<2x8x8x2xf32>, %pad: i32) -> tensor<2x8x8x2xf32> {
   // expected-error@+1 {{expected padding_value has 'f32' but got: 'i32'}}
   %0 = linalg.pack %input padding_value(%pad: i32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %output : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
@@ -1911,6 +1895,14 @@ func.func @pack_invalid_outer_dims_perm(%source: tensor<128x256xf32>, %dest: ten
 
 // -----
 
+func.func @pack_invalid_larger_result_without_padding(%source: tensor<128x256xf32>, %dest: tensor<17x8x8x32xf32>) -> tensor<17x8x8x32xf32> {
+  // expected-error@+1 {{invalid tile factor or output size provided. Only full tiles are supported when padding_value is not set}}
+  %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<17x8x8x32xf32>
+  return %0 : tensor<17x8x8x32xf32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // linalg.unpack
 //===----------------------------------------------------------------------===//
@@ -1939,13 +1931,13 @@ func.func @unpack_invalid_outer_dims_perm(%source: tensor<128x256xf32>, %dest: t
 
 // -----
 
-func.func @pack_with_artificial_padding(%input: tensor<9xf32>, %output: tensor<3x8xf32>) -> tensor<3x8xf32> {
+func.func @pack_invalid_small_result_shape_1d(%input: tensor<9xf32>, %output: tensor<1x8xf32>) -> tensor<1x8xf32> {
   %cst = arith.constant 0.0 : f32
-  // expected-error@+1 {{expected 'tensor<2x8xf32>' for the packed domain value, got 'tensor<3x8xf32>'}}
+  // expected-error@+1 {{expected packed outer dimension 0 to be at least 2, got 1}}
   %0 = linalg.pack %input padding_value(%cst : f32) inner_dims_pos = [0]
       inner_tiles = [8] into %output
-      : tensor<9xf32> -> tensor<3x8xf32>
-  return %0 : tensor<3x8xf32>
+      : tensor<9xf32> -> tensor<1x8xf32>
+  return %0 : tensor<1x8xf32>
 }
 
 // -----
@@ -1953,7 +1945,7 @@ func.func @pack_with_artificial_padding(%input: tensor<9xf32>, %output: tensor<3
 // The outer dims in the output tensor are incorrectly/unexpectedly transposed.
 // This could be fixed by adding `outer_dims_perm = [1, 0]` (the default value assumes no transpose).
 func.func @pack_invalid_result_shape(%input: tensor<256x128xf32>, %output: tensor<4x16x32x16xf32>) -> tensor<4x16x32x16xf32> {
-  // expected-error@+1 {{expected 'tensor<16x4x32x16xf32>' for the packed domain value, got 'tensor<4x16x32x16xf32>'}}
+  // expected-error@+1 {{expected packed outer dimension 0 to be at least 16, got 4}}
   %0 = linalg.pack %input inner_dims_pos = [1, 0] inner_tiles = [32, 16] into %output : tensor<256x128xf32> -> tensor<4x16x32x16xf32>
   return %0 : tensor<4x16x32x16xf32>
 }
@@ -1961,24 +1953,24 @@ func.func @pack_invalid_result_shape(%input: tensor<256x128xf32>, %output: tenso
 // -----
 
 func.func @pack_invalid_result_shape(%input: tensor<256x128xf32>, %output: tensor<8x7x16x32xf32>) -> tensor<8x7x16x32xf32> {
-  // expected-error@+1 {{expected 'tensor<8x8x16x32xf32>' for the packed domain value, got 'tensor<8x7x16x32xf32>'}}
+  // expected-error@+1 {{expected packed outer dimension 1 to be at least 8, got 7}}
   %0 = linalg.pack %input inner_dims_pos = [1, 0] inner_tiles = [16, 32] into %output : tensor<256x128xf32> -> tensor<8x7x16x32xf32>
   return %0 : tensor<8x7x16x32xf32>
 }
 
 // -----
 
-func.func @unpack_with_artifical_tiles_that_are_dropped(%input: tensor<3x8xf32>, %output: tensor<9xf32>) -> tensor<9xf32> {
-  // expected-error@+1 {{expected 'tensor<2x8xf32>' for the packed domain value, got 'tensor<3x8xf32>'}}
+func.func @unpack_invalid_small_source_shape_1d(%input: tensor<1x8xf32>, %output: tensor<9xf32>) -> tensor<9xf32> {
+  // expected-error@+1 {{expected packed outer dimension 0 to be at least 2, got 1}}
   %0 = linalg.unpack %input inner_dims_pos = [0] inner_tiles = [8] into %output
-      : tensor<3x8xf32> -> tensor<9xf32>
+      : tensor<1x8xf32> -> tensor<9xf32>
   return %0 : tensor<9xf32>
 }
 
 // -----
 
 func.func @unpack_invalid_source_shape(%output: tensor<256x128xf32>, %input: tensor<8x8x4x32xf32>) -> tensor<256x128xf32> {
-  // expected-error@+1 {{expected 'tensor<8x32x4x32xf32>' for the packed domain value, got 'tensor<8x8x4x32xf32>'}}
+  // expected-error@+1 {{expected packed outer dimension 1 to be at least 32, got 8}}
   %0 = linalg.unpack %input inner_dims_pos = [1, 0] inner_tiles = [4, 32] into %output : tensor<8x8x4x32xf32> -> tensor<256x128xf32>
   return %0 : tensor<256x128xf32>
 }

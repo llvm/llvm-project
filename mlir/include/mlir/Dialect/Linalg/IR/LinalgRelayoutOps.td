@@ -164,10 +164,7 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
       tiles divide perfectly the corresponding outer dimension in the result
       tensor. It is UB if the tile does not perfectly divide the dimension.
     - If present, it will pad along high dimensions (high-padding) to make the
-      tile complete. Note that it is not allowed to have artificial padding that
-      is not strictly required by linalg.pack (i.e., padding past what is needed
-      to complete the last tile along each packed dimension). It is UB if extra
-      padding is requested.
+      tile complete.
     It is not possible to verify the requirements statically with dynamic
     shapes, so they are treated as UB.
 
@@ -185,7 +182,11 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     // Note: Only tiled dimensions can be padded.
     ```
 
-    Invalid example that has artificial padding:
+    The packed outer dimensions may be larger than the minimum shape implied by
+    `shape(source)` and `inner_tiles`, if `padding_value` is specified. 
+    Any additional outer extent is treated as extra full-tile high-padding.
+
+    Invalid example that has artificial padding without a `padding_value`:
     ```mlir
     %0 = linalg.pack %src padding_value(%cst : f32) inner_dims_pos = [0]
         inner_tiles = [8] into %dest
@@ -328,6 +329,11 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
     Note, the unpack operation may drop any padding introduced by the pack
     operation and hence the following holds
     `NumElementsOf(source) >= NumElementsOf(result)`.
+
+    The packed source outer dimensions may be larger than the minimum shape
+    implied by `shape(result)` and `inner_tiles`. Any additional outer extent
+    is treated as extra full-tile high-padding and is discarded from the high
+    end when reconstructing the result tensor.
 
     Examples:
 

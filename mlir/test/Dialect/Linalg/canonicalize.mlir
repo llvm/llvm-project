@@ -2158,6 +2158,32 @@ func.func @fold_pack_unpack_tensor(%x: tensor<2x3xf32>) -> tensor<2x3xf32> {
 
 // -----
 
+// CHECK-LABEL: func.func @keep_unpack_pack_tensor_with_larger_packed_shape
+// CHECK: linalg.unpack
+// CHECK: linalg.pack
+func.func @keep_unpack_pack_tensor_with_larger_packed_shape(%x: tensor<17x10x8x32xf32>, %dest: tensor<127x255xf32>) -> tensor<17x10x8x32xf32> {
+  %unpacked = linalg.unpack %x inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+             into %dest : tensor<17x10x8x32xf32> -> tensor<127x255xf32>
+  %cst = arith.constant 0.0 : f32
+  %packed = linalg.pack %unpacked padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+             into %x : tensor<127x255xf32> -> tensor<17x10x8x32xf32>
+  return %packed : tensor<17x10x8x32xf32>
+}
+
+// CHECK-LABEL: func.func @do_not_fold_unpack_pack_tensor_with_mismatched_packed_shape
+// CHECK: linalg.unpack
+// CHECK: linalg.pack
+func.func @do_not_fold_unpack_pack_tensor_with_mismatched_packed_shape(%x: tensor<17x10x8x32xf32>, %dest: tensor<127x255xf32>, %packed_dest: tensor<17x9x8x32xf32>) -> tensor<17x9x8x32xf32> {
+  %unpacked = linalg.unpack %x inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+             into %dest : tensor<17x10x8x32xf32> -> tensor<127x255xf32>
+  %cst = arith.constant 0.0 : f32
+  %packed = linalg.pack %unpacked padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32]
+             into %packed_dest : tensor<127x255xf32> -> tensor<17x9x8x32xf32>
+  return %packed : tensor<17x9x8x32xf32>
+}
+
+// -----
+
 // Test that pack/unpack canonicalization is disabled for memref versions.
 // CHECK-LABEL: func.func @negative_pack_unpack_memref_no_canonicalization
 // CHECK: linalg.pack

@@ -5104,6 +5104,16 @@ static SmallVector<int64_t> getStaticTilesImpl(OpTy op) {
   return staticTiles;
 }
 
+static SmallVector<int64_t>
+getPackedOuterShapeInUnpackedOrder(ArrayRef<int64_t> packedShape,
+                                   size_t unpackedRank,
+                                   ArrayRef<int64_t> outerDimsPerm) {
+  SmallVector<int64_t> result(packedShape.take_front(unpackedRank));
+  if (!outerDimsPerm.empty())
+    applyPermutationToVector(result, invertPermutationVector(outerDimsPerm));
+  return result;
+}
+
 /// Returns true if `dimsPos` is invalid. It is invalid when:
 /// a) It contains duplicate.
 /// b) At least one dimension is out of bound (`dimPos` is >= 0 and < rank).
@@ -5215,20 +5225,30 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
              << " but dynamic tile size";
     }
   }
-  if (failed(
-          verifyCompatibleShape(expectedPackedShape, packedType.getShape()))) {
-    auto elementType = unpackedType.getElementType();
-    Type expectedType, actualType;
-    if (packOrUnPack.hasPureTensorSemantics()) {
-      expectedType = RankedTensorType::get(expectedPackedShape, elementType);
-      actualType = RankedTensorType::get(packedType.getShape(), elementType);
-    } else {
-      expectedType = MemRefType::get(expectedPackedShape, elementType);
-      actualType = MemRefType::get(packedType.getShape(), elementType);
+  SmallVector<int64_t> expectedOuterShape = getPackedOuterShapeInUnpackedOrder(
+      expectedPackedShape, unpackedRank, outerDimPerm);
+  SmallVector<int64_t> actualOuterShape =
+      getPackedOuterShapeWithoutTransposition(packOrUnPack);
+  llvm::SmallBitVector areOuterDimsTiled(unpackedRank);
+  for (int64_t pos : innerDimsPos)
+    areOuterDimsTiled.set(pos);
+  for (auto [index, actualOuter] : llvm::enumerate(actualOuterShape)) {
+    int64_t expectedOuter = expectedOuterShape[index];
+    if (ShapedType::isDynamic(actualOuter) ||
+        ShapedType::isDynamic(expectedOuter))
+      continue;
+    if (areOuterDimsTiled[index]) {
+      if (actualOuter < expectedOuter) {
+        return op->emitError("expected packed outer dimension ")
+               << index << " to be at least " << expectedOuter << ", got "
+               << actualOuter;
+      }
+      continue;
     }
-    return op->emitError("expected ")
-           << expectedType << " for the packed domain value, got "
-           << actualType;
+    if (actualOuter != expectedOuter) {
+      return op->emitError("expected packed outer dimension ")
+             << index << " to be " << expectedOuter << ", got " << actualOuter;
+    }
   }
   return success();
 }
@@ -5505,28 +5525,22 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
                                  ArrayRef<int64_t> outputShape,
                                  ArrayRef<int64_t> outerDimsPerm,
                                  ArrayRef<OpFoldResult> innerTiles) {
-  SmallVector<int64_t> outputTileSizes(
-      outputShape.take_front(inputShape.size()));
+  SmallVector<int64_t> outputTileSizes = getPackedOuterShapeInUnpackedOrder(
+      outputShape, inputShape.size(), outerDimsPerm);
   if (!outerDimsPerm.empty()) {
     assert(outerDimsPerm.size() == outputTileSizes.size() &&
            "expected output and outer_dims_perm to have same size");
-    applyPermutationToVector(outputTileSizes,
-                             invertPermutationVector(outerDimsPerm));
   }
   for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
-    if (ShapedType::isDynamic(inputShape[pos]))
+    if (ShapedType::isDynamic(inputShape[pos]) ||
+        ShapedType::isDynamic(outputTileSizes[pos]))
       continue;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
-    if (!constantTile) {
-      if (ShapedType::isStatic(outputTileSizes[pos]) &&
-          (inputShape[pos] % outputTileSizes[pos] != 0))
-        return true;
-    } else {
-      assert(*constantTile != 0 && "static tile size can't be zero");
-      if (inputShape[pos] % (*constantTile) != 0) {
-        return true;
-      }
-    }
+    if (!constantTile)
+      continue;
+    assert(*constantTile != 0 && "static tile size can't be zero");
+    if (outputTileSizes[pos] * (*constantTile) != inputShape[pos])
+      return true;
   }
   return false;
 }
@@ -5536,13 +5550,11 @@ bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
                                        ArrayRef<int64_t> outputShape,
                                        ArrayRef<int64_t> outerDimsPerm,
                                        ArrayRef<OpFoldResult> innerTiles) {
-  SmallVector<int64_t> outputTileSizes(
-      outputShape.take_front(inputShape.size()));
+  SmallVector<int64_t> outputTileSizes = getPackedOuterShapeInUnpackedOrder(
+      outputShape, inputShape.size(), outerDimsPerm);
   if (!outerDimsPerm.empty()) {
     assert(outerDimsPerm.size() == outputTileSizes.size() &&
            "expected output and outer_dims_perm to have same size");
-    applyPermutationToVector(outputTileSizes,
-                             invertPermutationVector(outerDimsPerm));
   }
   for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
     if (ShapedType::isDynamic(inputShape[pos]) ||
@@ -5614,7 +5626,6 @@ SmallVector<int64_t> PackOp::inferPackedShape(ArrayRef<int64_t> inputShape,
     resultShape[tiledDim.value()] = llvm::divideCeilSigned(
         resultShape[tiledDim.value()], innerTileSizes[tiledDim.index()]);
   }
-
   // Swap tile loops if outer_dims_perm is available.
   if (!outerDimsPerm.empty())
     applyPermutationToVector(resultShape, outerDimsPerm);
@@ -6422,8 +6433,9 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
   SmallVector<int64_t> outerShapeWithoutTranspose =
       getPackedOuterShapeWithoutTransposition(*this);
   SmallVector<bool> areOuterDimsTiled(outerShapeWithoutTranspose.size(), false);
-  for (auto [pos, tileSize] :
-       llvm::zip_equal(this->getInnerDimsPos(), this->getStaticInnerTiles())) {
+  for (auto [index, values] : llvm::enumerate(llvm::zip_equal(
+           this->getInnerDimsPos(), this->getStaticInnerTiles()))) {
+    auto [pos, tileSize] = values;
     areOuterDimsTiled[pos] = true;
     if (unpackedTypeAfterFold.isDynamicDim(pos))
       return false;

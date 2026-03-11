@@ -1252,6 +1252,31 @@ func.func @test_vectorize_unpack_no_vector_sizes(%source: tensor<8x8x32x16xf32>,
 
 // -----
 
+// CHECK-LABEL: test_vectorize_unpack_larger_packed_shape_no_vector_sizes
+// CHECK-SAME:      %[[SRC:.*]]: tensor<17x10x8x32xf32>
+// CHECK-SAME:      %[[DEST:.*]]: tensor<127x255xf32>
+func.func @test_vectorize_unpack_larger_packed_shape_no_vector_sizes(%source: tensor<17x10x8x32xf32>, %dest: tensor<127x255xf32>) -> tensor<127x255xf32> {
+  // CHECK-DAG: %[[PAD:.*]] = ub.poison : f32
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[READ:.*]] = vector.transfer_read %[[SRC]]{{.*}} %[[PAD]] {{.*}} : tensor<17x10x8x32xf32>, vector<17x10x8x32xf32>
+  // CHECK: %[[TRANSP:.*]] = vector.transpose %[[READ]], [0, 2, 1, 3] : vector<17x10x8x32xf32> to vector<17x8x10x32xf32>
+  // CHECK: %[[SHAPC:.*]] = vector.shape_cast %[[TRANSP]] : vector<17x8x10x32xf32> to vector<136x320xf32>
+  // CHECK: %[[WRIT:.*]] = vector.transfer_write %[[SHAPC]], %[[DEST]]{{.*}} : vector<136x320xf32>, tensor<127x255xf32>
+  // CHECK: return %[[WRIT]] : tensor<127x255xf32>
+  %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %dest
+    : tensor<17x10x8x32xf32> -> tensor<127x255xf32>
+  return %0 : tensor<127x255xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: test_vectorize_unpack_no_vector_sizes_slice_output
 // CHECK-SAME:      %[[SRC:.*]]: tensor<8x4x16x16xf32>
 // CHECK-SAME:      %[[DEST:.*]]: tensor<64x127xf32>
@@ -1411,6 +1436,34 @@ func.func @pack_with_padding_no_vector_sizes(%src: tensor<32x7x15xf32>, %dest: t
 // CHECK-SAME:   {in_bounds = [true, true, true, true, true]} : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
 //      CHECK: return %[[WRITE]] : tensor<32x4x1x16x2xf32>
 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func @pack_with_larger_result_shape_no_vector_sizes
+// CHECK-SAME:      %[[SRC:.*]]: tensor<127x255xf32>,
+// CHECK-SAME:      %[[DEST:.*]]: tensor<17x10x8x32xf32>
+func.func @pack_with_larger_result_shape_no_vector_sizes(%src: tensor<127x255xf32>, %dest: tensor<17x10x8x32xf32>) -> tensor<17x10x8x32xf32> {
+  %pad = arith.constant 0.000000e+00 : f32
+  %pack = linalg.pack %src padding_value(%pad : f32)
+    inner_dims_pos = [0, 1]
+    inner_tiles = [8, 32]
+    into %dest : tensor<127x255xf32> -> tensor<17x10x8x32xf32>
+  return %pack : tensor<17x10x8x32xf32>
+}
+//  CHECK-DAG: %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//      CHECK: %[[READ:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]]], %[[PAD]] : tensor<127x255xf32>, vector<136x320xf32>
+//      CHECK: %[[SC:.*]] = vector.shape_cast %[[READ]] : vector<136x320xf32> to vector<17x8x10x32xf32>
+//      CHECK: %[[TR:.*]] = vector.transpose %[[SC]], [0, 2, 1, 3] : vector<17x8x10x32xf32> to vector<17x10x8x32xf32>
+//      CHECK: %[[WRITE:.*]] = vector.transfer_write %[[TR]], %[[DEST]][%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] {in_bounds = [true, true, true, true]} : vector<17x10x8x32xf32>, tensor<17x10x8x32xf32>
+//      CHECK: return %[[WRITE]] : tensor<17x10x8x32xf32>
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op

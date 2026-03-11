@@ -1101,13 +1101,16 @@ struct PackOpTiling
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
-    SmallVector<int64_t> outerShapeWithoutTranspose(
-        packOp.getDestType().getShape().take_front(packOp.getSourceRank()));
+    SmallVector<OpFoldResult> outerShapeWithoutTranspose =
+        tensor::getMixedSizes(b, loc, packOp.getDest());
+    outerShapeWithoutTranspose.resize(packOp.getSourceRank());
     if (!packOp.getOuterDimsPerm().empty()) {
       applyPermutationToVector(
           outerShapeWithoutTranspose,
           invertPermutationVector(packOp.getOuterDimsPerm()));
     }
+    SmallVector<OpFoldResult> srcDimValues =
+        tensor::getMixedSizes(b, loc, packOp.getSource());
     for (auto dim : llvm::seq<int64_t>(packOp.getSourceRank())) {
       if (dimAndTileMapping.count(dim)) {
         FailureOr<int64_t> cstTileSize =
@@ -1125,18 +1128,12 @@ struct PackOpTiling
         // TODO: It could be untiled if the `srcDimSize` is dynamic. It is a
         // hard check to determine if a dimension is tiled or not.
         int64_t srcDimSize = packOp.getSourceType().getDimSize(dim);
-        int64_t destDimSize = outerShapeWithoutTranspose[dim];
         bool isTiled = failed(cstTileSize) ||
                        ShapedType::isDynamic(srcDimSize) ||
                        cstTileSize.value() < srcDimSize;
         if (!isTiled) {
           outerDimOffsets.push_back(offsets[dim]);
-          if (ShapedType::isStatic(destDimSize)) {
-            outerDimSizes.push_back(b.getIndexAttr(destDimSize));
-          } else {
-            outerDimSizes.push_back(
-                b.createOrFold<tensor::DimOp>(loc, packOp.getDest(), dim));
-          }
+          outerDimSizes.push_back(outerShapeWithoutTranspose[dim]);
           continue;
         }
 
@@ -1165,9 +1162,37 @@ struct PackOpTiling
         bindSymbols(b.getContext(), sym);
         auto avOffset = AV(dim0).bind(offsets[dim]);
         auto avSize = AV(dim0).bind(sizes[dim]);
+        auto avSrcDim = AV(dim0).bind(srcDimValues[dim]);
         auto avTileSize = AV(sym).bind(dimAndTileMapping[dim]);
-        outerDimOffsets.push_back(ab.floor(avOffset, avTileSize));
-        outerDimSizes.push_back(ab.ceil(avSize, avTileSize));
+        OpFoldResult outerDimOffset = ab.floor(avOffset, avTileSize);
+        // Minimum packed outer-dimension size needed for the current tiled
+        // source slice.
+        OpFoldResult minOuterDimSize = ab.ceil(avSize, avTileSize);
+        outerDimOffsets.push_back(outerDimOffset);
+        // Minimum packed outer-dimension size needed to represent the entire
+        // source dimension, ignoring any intentional extra pad tiles.
+        OpFoldResult minGlobalOuterDimSize = ab.ceil(avSrcDim, avTileSize);
+        std::optional<int64_t> actualOuterCst =
+            getConstantIntValue(outerShapeWithoutTranspose[dim]);
+        std::optional<int64_t> minGlobalOuterCst =
+            getConstantIntValue(minGlobalOuterDimSize);
+        bool hasStaticExtraFullTiles = actualOuterCst && minGlobalOuterCst &&
+                                       *actualOuterCst > *minGlobalOuterCst;
+
+        // Dynamic packed outer dims are interpreted as the minimum packed
+        // shape.
+        if (!hasStaticExtraFullTiles) {
+          outerDimSizes.push_back(minOuterDimSize);
+          continue;
+        }
+
+        // Extra full tiles are only fusible when the tiled pack covers the
+        // whole affected source dimension in a single slice.
+        if (!isZeroInteger(offsets[dim]) ||
+            !isEqualConstantIntOrValue(sizes[dim], srcDimValues[dim]))
+          return failure();
+
+        outerDimSizes.push_back(outerShapeWithoutTranspose[dim]);
       } else {
         outerDimOffsets.push_back(offsets[dim]);
         outerDimSizes.push_back(sizes[dim]);

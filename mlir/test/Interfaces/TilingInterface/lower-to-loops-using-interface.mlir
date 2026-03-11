@@ -488,6 +488,52 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @NC_to_NCnc_extra(%arg0: memref<128x128xf32>, %arg1: memref<18x17x8x8xf32>, %arg2: f32) {
+  linalg.pack %arg0 padding_value(%arg2 : f32) inner_dims_pos = [1, 0] inner_tiles = [8, 8]
+      into %arg1
+    : memref<128x128xf32> -> memref<18x17x8x8xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["linalg.pack"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %pack
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+// CHECK:       #[[$MAP_EXTRA:.*]] = affine_map<(d0, d1) -> (d0 * 8 + d1)>
+// CHECK-LABEL: func @NC_to_NCnc_extra(
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]: memref<128x128xf32>
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]: memref<18x17x8x8xf32>
+// CHECK-SAME:    %[[PAD:[a-zA-Z0-9]+]]: f32
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK-DAG:     %[[C17:.*]] = arith.constant 17 : index
+// CHECK-DAG:     %[[C18:.*]] = arith.constant 18 : index
+// CHECK-DAG:     %[[C128:.*]] = arith.constant 128 : index
+// CHECK:         scf.for %[[I:.*]] = %[[C0]] to %[[C18]] step %[[C1]] {
+// CHECK:           scf.for %[[J:.*]] = %[[C0]] to %[[C17]] step %[[C1]] {
+// CHECK:             scf.for %[[K:.*]] = %[[C0]] to %[[C8]] step %[[C1]] {
+// CHECK:               scf.for %[[L:.*]] = %[[C0]] to %[[C8]] step %[[C1]] {
+// CHECK-DAG:             %[[SRC_I:.*]] = affine.apply #[[$MAP_EXTRA]](%[[I]], %[[L]])
+// CHECK-DAG:             %[[SRC_J:.*]] = affine.apply #[[$MAP_EXTRA]](%[[J]], %[[K]])
+// CHECK:                 %[[BOUND_I:.*]] = arith.cmpi slt, %[[SRC_I]], %[[C128]] : index
+// CHECK:                 %[[BOUND_J:.*]] = arith.cmpi slt, %[[SRC_J]], %[[C128]] : index
+// CHECK:                 %[[IN_BOUNDS:.*]] = arith.andi %[[BOUND_I]], %[[BOUND_J]] : i1
+// CHECK:                 %[[VAL:.*]] = scf.if %[[IN_BOUNDS]] -> (f32) {
+// CHECK:                   %[[LOAD:.*]] = memref.load %[[SRC]][%[[SRC_I]], %[[SRC_J]]] : memref<128x128xf32>
+// CHECK:                   scf.yield %[[LOAD]]
+// CHECK:                 } else {
+// CHECK:                   scf.yield %[[PAD]]
+// CHECK:                 }
+// CHECK:                 memref.store %[[VAL]], %[[DEST]][%[[I]], %[[J]], %[[K]], %[[L]]] : memref<18x17x8x8xf32>
+
+// -----
+
 func.func @KC_to_KCck(%arg0: memref<128x256xf32>, %arg1: memref<4x8x32x32xf32>) {
   linalg.pack %arg0 inner_dims_pos = [1, 0] inner_tiles = [32, 32] into %arg1
     : memref<128x256xf32> -> memref<4x8x32x32xf32>
@@ -559,6 +605,42 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG:         %[[MOD_J:.*]] = affine.apply #[[$MAP_MOD]](%[[J]])
 // CHECK:             %[[VAL:.*]] = memref.load %[[SRC]][%[[FLOOR_I]], %[[FLOOR_J]], %[[MOD_I]], %[[MOD_J]]] : memref<4x8x32x32xf32>
 // CHECK:             memref.store %[[VAL]], %[[DEST]][%[[I]], %[[J]]] : memref<128x256xf32>
+// CHECK:           }
+// CHECK:         }
+
+// -----
+
+func.func @NCnc_to_NC_drop(%arg0: memref<128x128xf32>, %arg1: memref<18x17x8x8xf32>) {
+  linalg.unpack %arg1 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %arg0
+    : memref<18x17x8x8xf32> -> memref<128x128xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["linalg.unpack"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %unpack
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-DAG:   #[[$MAP_DROP_FLOOR:.*]] = affine_map<(d0) -> (d0 floordiv 8)>
+// CHECK-DAG:   #[[$MAP_DROP_MOD:.*]] = affine_map<(d0) -> (d0 mod 8)>
+// CHECK-LABEL: func @NCnc_to_NC_drop(
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]: memref<128x128xf32>
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]: memref<18x17x8x8xf32>
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C128:.*]] = arith.constant 128 : index
+// CHECK:         scf.for %[[I:.*]] = %[[C0]] to %[[C128]] step %[[C1]] {
+// CHECK:           scf.for %[[J:.*]] = %[[C0]] to %[[C128]] step %[[C1]] {
+// CHECK-DAG:         %[[FLOOR_I:.*]] = affine.apply #[[$MAP_DROP_FLOOR]](%[[I]])
+// CHECK-DAG:         %[[MOD_I:.*]] = affine.apply #[[$MAP_DROP_MOD]](%[[I]])
+// CHECK-DAG:         %[[FLOOR_J:.*]] = affine.apply #[[$MAP_DROP_FLOOR]](%[[J]])
+// CHECK-DAG:         %[[MOD_J:.*]] = affine.apply #[[$MAP_DROP_MOD]](%[[J]])
+// CHECK:             %[[VAL:.*]] = memref.load %[[SRC]][%[[FLOOR_I]], %[[FLOOR_J]], %[[MOD_I]], %[[MOD_J]]] : memref<18x17x8x8xf32>
+// CHECK:             memref.store %[[VAL]], %[[DEST]][%[[I]], %[[J]]] : memref<128x128xf32>
 // CHECK:           }
 // CHECK:         }
 

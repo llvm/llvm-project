@@ -236,9 +236,10 @@ public:
     ShapedType unpackedType = packOp.getSourceType();
     SmallVector<int64_t> outerShapeWithoutTranspose =
         getPackedOuterShapeWithoutTransposition(packOp);
-    for (auto [pos, tileSize, high] :
-         llvm::zip_equal(packOp.getInnerDimsPos(), packOp.getStaticInnerTiles(),
-                         padOp.getMixedHighPad())) {
+    for (auto [index, tuple] : llvm::enumerate(llvm::zip_equal(
+             packOp.getInnerDimsPos(), packOp.getStaticInnerTiles(),
+             padOp.getMixedHighPad()))) {
+      auto [pos, tileSize, high] = tuple;
       if (unpackedType.isDynamicDim(pos))
         return failure();
       if (ShapedType::isDynamic(outerShapeWithoutTranspose[pos]))
@@ -248,10 +249,9 @@ public:
       std::optional<int64_t> cstHigh = getConstantIntValue(high);
       if (!cstHigh)
         return failure();
-      int64_t paddingSize = outerShapeWithoutTranspose[pos] * tileSize -
-                            unpackedType.getDimSize(pos);
-      // Do not fold the op if it requires artificial padding.
-      if (paddingSize + cstHigh.value() >= tileSize)
+      int64_t originalDim = unpackedType.getDimSize(pos) - cstHigh.value();
+      int64_t baseOuter = llvm::divideCeilSigned(originalDim, tileSize);
+      if (baseOuter != outerShapeWithoutTranspose[pos])
         return failure();
     }
 
@@ -440,7 +440,7 @@ public:
 
     // Can't use applyPermutationToVector for newInnerDimsPosVec since input and
     // permutation rank won't necessarily be equal in all cases.
-    for (auto dim : innerDimsPos)
+    for (int64_t dim : innerDimsPos)
       newInnerDimsPosVec.push_back(transposePermutation[dim]);
 
     Value output = packOp.createDestinationTensor(
@@ -497,7 +497,7 @@ public:
 
     // Can't use applyPermutationToVector for newInnerDimsPosVec since input and
     // permutation rank won't necessarily be equal in all cases.
-    for (auto dim : innerDimsPos)
+    for (int64_t dim : innerDimsPos)
       newInnerDimsPosVec.push_back(newOuterDimsPermVec[dim]);
 
     if (!outerDimsPerm.empty())
