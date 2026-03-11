@@ -20,3 +20,9 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswspace
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t

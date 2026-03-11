@@ -110,6 +110,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswalpha
     libc.src.wctype.iswcntrl
     libc.src.wctype.iswlower
+    libc.src.wctype.iswspace
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
