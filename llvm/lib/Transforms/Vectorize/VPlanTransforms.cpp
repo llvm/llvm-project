@@ -6839,6 +6839,10 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                  m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step))))
         continue;
 
+      // TODO: Support the base pointer that requires SCEV expander.
+      if (!isa<SCEVUnknown, SCEVConstant>(Start))
+        continue;
+
       // Add VF of i32 version for EVL.
       if (!I32VF) {
         VPBuilder Builder(Plan.getVectorPreheader());
