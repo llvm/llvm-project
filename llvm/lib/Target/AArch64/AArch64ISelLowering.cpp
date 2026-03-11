@@ -10494,7 +10494,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (OpFlags & AArch64II::MO_GOT) {
       Callee = DAG.getTargetGlobalAddress(CalledGlobal, DL, PtrVT, 0, OpFlags);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
-    } else {
+    } else if (!CLI.PAI || !IsTailCall) {
       const GlobalValue *GV = G->getGlobal();
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
     }
@@ -16044,10 +16044,9 @@ static SDValue trySVESplat64(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(Op);
-  SDValue SplatVal = DAG.getSplatVector(MVT::nxv2i64, DL,
-                                        DAG.getConstant(Val64, DL, MVT::i64));
-  SDValue Res = convertFromScalableVector(DAG, MVT::v2i64, SplatVal);
-  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Res);
+  SDValue SplatVal = DAG.getNode(AArch64ISD::DUP, DL, MVT::v2i64,
+                                 DAG.getConstant(Val64, DL, MVT::i64));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, SplatVal);
 }
 
 static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,

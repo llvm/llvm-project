@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -14,14 +15,6 @@ struct is_integral;
 template <>
 struct is_integral<size_t> {
   static const bool value = true;
-};
-
-template <bool, typename T = void>
-struct enable_if { };
-
-template <typename T>
-struct enable_if<true, T> {
-  typedef T type;
 };
 
 template <typename T>

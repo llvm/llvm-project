@@ -1109,7 +1109,7 @@ __gpu_kernel void foo() {
 // NVPTX-NEXT:    br i1 [[TOBOOL]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
 // NVPTX:       [[COND_TRUE]]:
 // NVPTX-NEXT:    [[TMP3:%.*]] = load i64, ptr [[__BELOW]], align 8
-// NVPTX-NEXT:    [[TMP4:%.*]] = call i64 @llvm.ctlz.i64(i64 [[TMP3]], i1 true)
+// NVPTX-NEXT:    [[TMP4:%.*]] = call i64 @llvm.ctlz.i64(i64 [[TMP3]], i1 false)
 // NVPTX-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP4]] to i32
 // NVPTX-NEXT:    [[SUB2:%.*]] = sub nsw i32 63, [[CAST]]
 // NVPTX-NEXT:    br label %[[COND_END:.*]]

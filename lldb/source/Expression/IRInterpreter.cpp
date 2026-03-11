@@ -549,7 +549,8 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       case Instruction::Add:
       case Instruction::Alloca:
       case Instruction::BitCast:
-      case Instruction::Br:
+      case Instruction::UncondBr:
+      case Instruction::CondBr:
       case Instruction::PHI:
         break;
       case Instruction::Call: {
@@ -989,36 +990,33 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       frame.AssignValue(inst, S_signextend, module);
     } break;
-    case Instruction::Br: {
-      const BranchInst *br_inst = cast<BranchInst>(inst);
+    case Instruction::UncondBr:
+      frame.Jump(cast<UncondBrInst>(inst)->getSuccessor());
+      if (log) {
+        LLDB_LOGF(log, "Interpreted an UncondBrInst");
+      }
+      continue;
+    case Instruction::CondBr: {
+      const CondBrInst *br_inst = cast<CondBrInst>(inst);
 
-      if (br_inst->isConditional()) {
-        Value *condition = br_inst->getCondition();
+      Value *condition = br_inst->getCondition();
 
-        lldb_private::Scalar C;
+      lldb_private::Scalar C;
 
-        if (!frame.EvaluateValue(C, condition, module)) {
-          LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(condition).c_str());
-          error = lldb_private::Status::FromErrorString(bad_value_error);
-          return false;
-        }
+      if (!frame.EvaluateValue(C, condition, module)) {
+        LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(condition).c_str());
+        error = lldb_private::Status::FromErrorString(bad_value_error);
+        return false;
+      }
 
-        if (!C.IsZero())
-          frame.Jump(br_inst->getSuccessor(0));
-        else
-          frame.Jump(br_inst->getSuccessor(1));
-
-        if (log) {
-          LLDB_LOGF(log, "Interpreted a BrInst with a condition");
-          LLDB_LOGF(log, "  cond : %s",
-                    frame.SummarizeValue(condition).c_str());
-        }
-      } else {
+      if (!C.IsZero())
         frame.Jump(br_inst->getSuccessor(0));
+      else
+        frame.Jump(br_inst->getSuccessor(1));
 
-        if (log) {
-          LLDB_LOGF(log, "Interpreted a BrInst with no condition");
-        }
+      if (log) {
+        LLDB_LOGF(log, "Interpreted a CondBrInst");
+        LLDB_LOGF(log, "  cond : %s", frame.SummarizeValue(condition).c_str());
       }
     }
       continue;
