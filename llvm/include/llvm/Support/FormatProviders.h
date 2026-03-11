@@ -258,7 +258,7 @@ struct format_provider<
 ///   ==================================
 ///   |    Y    |       YES / NO       |
 ///   |    y    |       yes / no       |
-///   |  D /  d |    Integer 0 or 1    |
+///   |  D / d  |    Integer 0 or 1    |
 ///   |    T    |     TRUE / FALSE     |
 ///   |    t    |     true / false     |
 ///   | (empty) |   Equivalent to 't'  |
