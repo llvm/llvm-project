@@ -13240,6 +13240,10 @@ def err_builtin_is_within_lifetime_invalid_arg : Error<
   "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "
   "is not allowed">;
 
+def err_builtin_start_lifetime_invalid_arg : Error<
+  "'__builtin_start_lifetime' argument must be a pointer to a complete "
+  "implicit-lifetime aggregate type, but got %0">;
+
 // A multi-component builtin type diagnostic. The first component broadly
 // selects a scalar or container type (scalar, vector or matrix). The second
 // component selects integer types and the third component selects

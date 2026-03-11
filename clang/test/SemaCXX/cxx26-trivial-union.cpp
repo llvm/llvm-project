@@ -78,7 +78,7 @@ void test_u5_destroy(U5 *p) { p->~U5(); } // cxx26-error {{deleted}}
 
 // ===== Test 6: Feature test macro =====
 #if __cplusplus > 202302L
-static_assert(__cpp_trivial_union >= 202502L);
+static_assert(__cpp_trivial_union >= 202507L);
 #else
 #ifdef __cpp_trivial_union
 #error "should not have __cpp_trivial_union in C++23"

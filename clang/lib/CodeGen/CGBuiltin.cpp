@@ -5642,6 +5642,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getCallee()->getType()->castAs<FunctionProtoType>(), E, true);
     return RValue::get(nullptr);
 
+  case Builtin::BI__builtin_start_lifetime:
+    // P3726R1: No-op at runtime. Lifetime of implicit-lifetime aggregates
+    // begins automatically with storage acquisition.
+    return RValue::get(nullptr);
+
   case Builtin::BI__builtin_is_aligned:
     return EmitBuiltinIsAligned(E);
   case Builtin::BI__builtin_align_up:

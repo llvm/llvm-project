@@ -437,6 +437,11 @@ def err_invalid_is_within_lifetime : Note<
   "a pointer to an object whose lifetime has not yet begun}1"
 >;
 
+def err_invalid_start_lifetime : Note<
+  "'%0' cannot be called with "
+  "%select{a null pointer|a one-past-the-end pointer}1"
+>;
+
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {
   def err_asm_invalid_escape : Error<

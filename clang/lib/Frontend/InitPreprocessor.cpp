@@ -748,7 +748,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 
   // C++26 features.
   if (LangOpts.CPlusPlus26)
-    Builder.defineMacro("__cpp_trivial_union", "202502L");
+    Builder.defineMacro("__cpp_trivial_union", "202507L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
