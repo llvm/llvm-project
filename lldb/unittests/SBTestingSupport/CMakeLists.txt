@@ -6,7 +6,6 @@ add_lldb_library(lldbSBUtilityHelpers
     Support
   LINK_LIBS
     liblldb
-    lldbUtility
     lldbUtilityHelpers
     llvm_gtest
   )
