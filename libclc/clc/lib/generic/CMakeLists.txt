@@ -149,6 +149,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_sinh.cl
   math/clc_sinpi.cl
   math/clc_sqrt.cl
+  math/clc_sqrt_cr.cl
   math/clc_tables.cl
   math/clc_tan.cl
   math/clc_tanh.cl
@@ -209,4 +210,5 @@ libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
 )
 
 libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -cl-fp32-correctly-rounded-divide-sqrt
-  math/clc_div_cr.cl)
+  math/clc_div_cr.cl
+  math/clc_sqrt_cr.cl)
