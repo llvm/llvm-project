@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcfunc.h>
-#include <clc/utils.h>
+#include "clc/clcfunc.h"
+#include "clc/utils.h"
 
 // Define some useful macros for type conversions.
 #define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)
@@ -74,6 +74,7 @@
 #define __CLC_FPSIZE 32
 #define __CLC_FP_LIT(x) (__CLC_GENTYPE) x##F
 #define __CLC_GENTYPE_NAN (__CLC_GENTYPE) FLT_NAN
+#define __CLC_GENTYPE_INF (__CLC_GENTYPE) INFINITY
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(int, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)

@@ -7936,4 +7936,53 @@ TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {
   EXPECT_FALSE(Terminator->getDbgRecordRange().empty());
 }
 
+// Test that NON_CONTIG entries with count expressions store dimension count
+TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.setIsGPU(true);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+
+  Value *BasePtr = ConstantPointerNull::get(Builder.getPtrTy());
+  Value *CountExpr =
+      Builder.CreateUDiv(Builder.getInt64(16), Builder.getInt64(2));
+  Value *ByteSize =
+      Builder.CreateMul(CountExpr, Builder.getInt64(4)); // Non-constant
+
+  // Set up NON_CONTIG entry with count expression
+  OpenMPIRBuilder::MapInfosTy CombinedInfo;
+  CombinedInfo.BasePointers.push_back(BasePtr);
+  CombinedInfo.Pointers.push_back(BasePtr);
+  CombinedInfo.DevicePointers.push_back(OpenMPIRBuilder::DeviceInfoTy::Pointer);
+  CombinedInfo.Sizes.push_back(ByteSize);
+  CombinedInfo.Types.push_back(static_cast<omp::OpenMPOffloadMappingFlags>(
+      omp::OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG |
+      omp::OpenMPOffloadMappingFlags::OMP_MAP_TO));
+  CombinedInfo.Names.push_back(
+      Builder.CreateGlobalString("data", "data_name", 0, M.get()));
+
+  CombinedInfo.NonContigInfo.IsNonContiguous = true;
+  CombinedInfo.NonContigInfo.Dims.push_back(1);
+  CombinedInfo.NonContigInfo.Offsets.push_back({Builder.getInt64(0)});
+  CombinedInfo.NonContigInfo.Counts.push_back({CountExpr});
+  CombinedInfo.NonContigInfo.Strides.push_back({Builder.getInt64(2)});
+
+  OpenMPIRBuilder::TargetDataInfo Info(true, false);
+  Info.NumberOfPtrs = 1;
+  OpenMPIRBuilder::TargetDataRTArgs RTArgs;
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+
+  EXPECT_FALSE(OMPBuilder.emitOffloadingArraysAndArgs(
+      InsertPointTy(Builder.saveIP()), InsertPointTy(Builder.saveIP()), Info,
+      RTArgs, CombinedInfo,
+      [](unsigned) -> Expected<Function *> {
+        return static_cast<Function *>(nullptr);
+      },
+      /*IsNonContiguous=*/true));
+
+  // Verify SizesArray is constant, not runtime
+  EXPECT_NE(dyn_cast<GlobalVariable>(RTArgs.SizesArray), nullptr);
+  EXPECT_EQ(dyn_cast<AllocaInst>(RTArgs.SizesArray), nullptr);
+}
+
 } // namespace

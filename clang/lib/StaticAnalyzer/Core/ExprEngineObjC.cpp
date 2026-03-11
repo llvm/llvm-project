@@ -48,7 +48,7 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
                                           const ObjCForCollectionStmt *S,
                                           ConstCFGElementRef elem,
                                           SVal elementV, SymbolManager &SymMgr,
-                                          const NodeBuilderContext *currBldrCtx,
+                                          unsigned NumVisitedCurrent,
                                           NodeBuilder &Bldr, bool hasElements) {
 
   for (ExplodedNode *Pred : dstLocation) {
@@ -69,7 +69,7 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
         SVal V;
         if (hasElements) {
           SymbolRef Sym =
-              SymMgr.conjureSymbol(elem, LCtx, T, currBldrCtx->blockCount());
+              SymMgr.conjureSymbol(elem, LCtx, T, NumVisitedCurrent);
           V = svalBuilder.makeLoc(Sym);
         } else {
           V = svalBuilder.makeIntVal(0, T);
@@ -136,12 +136,13 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
     if (!isContainerNull)
       populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S,
-                                    elemRef, elementV, SymMgr, currBldrCtx,
-                                    Bldr,
+                                    elemRef, elementV, SymMgr,
+                                    getNumVisitedCurrent(), Bldr,
                                     /*hasElements=*/true);
 
     populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elemRef,
-                                  elementV, SymMgr, currBldrCtx, Bldr,
+                                  elementV, SymMgr, getNumVisitedCurrent(),
+                                  Bldr,
                                   /*hasElements=*/false);
 
     // Finally, run any custom checkers.

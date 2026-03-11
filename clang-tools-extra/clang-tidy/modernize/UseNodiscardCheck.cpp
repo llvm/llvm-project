@@ -17,7 +17,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 static bool doesNoDiscardMacroExist(ASTContext &Context,
-                                    const llvm::StringRef &MacroId) {
+                                    const StringRef &MacroId) {
   // Don't check for the Macro existence if we are using an attribute
   // either a C++17 standard attribute or pre C++17 syntax
   if (MacroId.starts_with("[[") || MacroId.starts_with("__attribute__"))
@@ -92,11 +92,10 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
           isConst(), isDefinitionOrInline(),
           unless(anyOf(
               returns(voidType()),
-              returns(
-                  hasDeclaration(decl(hasAttr(clang::attr::WarnUnusedResult)))),
+              returns(hasDeclaration(decl(hasAttr(attr::WarnUnusedResult)))),
               isNoReturn(), isOverloadedOperator(), isVariadic(),
               hasTemplateReturnType(), hasClassMutableFields(),
-              isConversionOperator(), hasAttr(clang::attr::WarnUnusedResult),
+              isConversionOperator(), hasAttr(attr::WarnUnusedResult),
               hasType(isInstantiationDependentType()),
               hasAnyParameter(
                   anyOf(parmVarDecl(anyOf(hasType(FunctionObj),

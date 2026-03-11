@@ -82,9 +82,8 @@ class MatchesAnyListedRegexNameMatcher
 public:
   explicit MatchesAnyListedRegexNameMatcher(
       llvm::ArrayRef<StringRef> NameList) {
-    llvm::transform(
-        NameList, std::back_inserter(NameMatchers),
-        [](const llvm::StringRef Name) { return NameMatcher(Name); });
+    llvm::transform(NameList, std::back_inserter(NameMatchers),
+                    [](const StringRef Name) { return NameMatcher(Name); });
   }
 
   class NameMatcher {
@@ -103,7 +102,7 @@ public:
     MatchMode Mode;
 
   public:
-    NameMatcher(const llvm::StringRef Regex)
+    NameMatcher(const StringRef Regex)
         : Regex(Regex), Mode(determineMatchMode(Regex)) {}
 
     bool match(const NamedDecl &ND) const {
@@ -120,7 +119,7 @@ public:
     }
 
   private:
-    MatchMode determineMatchMode(llvm::StringRef Regex) {
+    MatchMode determineMatchMode(StringRef Regex) {
       if (Regex.starts_with(":") || Regex.starts_with("^:"))
         return MatchMode::MatchFullyQualified;
       return Regex.contains(":") ? MatchMode::MatchQualified

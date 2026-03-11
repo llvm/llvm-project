@@ -1719,8 +1719,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__simple_phi_inf_or_unknown(i1 %co
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 0x7FF0000000000000, [[ENTRY:%.*]] ], [ [[X]], [[BB0]] ]
-; CHECK-NEXT:    ret float [[PHI]]
+; CHECK-NEXT:    ret float [[X]]
 ;
 entry:
   br i1 %cond, label %bb0, label %ret
@@ -1745,7 +1744,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__phi_0(i1 %cond0, float %unknown)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND0]], label [[LOOP:%.*]], label [[RET:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI_LOOP:%.*]] = phi float [ 0x7FF0000000000000, [[ENTRY:%.*]] ], [ [[LOOP_FUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI_LOOP:%.*]] = phi float [ poison, [[ENTRY:%.*]] ], [ [[LOOP_FUNC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LOOP_FUNC]] = call nofpclass(nan) float @loop.func()
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @loop.cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[RET]], label [[LOOP]]
@@ -1827,11 +1826,10 @@ define nofpclass(inf) float @ret_nofpclass_inf__phi_switch_repeated_predecessor(
 ; CHECK-NEXT:      i32 1, label [[LOOP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI_LOOP:%.*]] = phi float [ 0x7FF0000000000000, [[ENTRY:%.*]] ], [ 0x7FF0000000000000, [[ENTRY]] ], [ [[UNKNOWN]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @loop.cond()
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[RET]], label [[LOOP]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[PHI_RET:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[PHI_LOOP]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI_RET:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[UNKNOWN]], [[LOOP]] ]
 ; CHECK-NEXT:    ret float [[PHI_RET]]
 ;
 entry:

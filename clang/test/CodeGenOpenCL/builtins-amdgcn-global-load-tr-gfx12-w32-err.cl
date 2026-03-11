@@ -4,7 +4,7 @@
 // REQUIRES: amdgpu-registered-target
 
 typedef short  v4s   __attribute__((ext_vector_type(4)));
-typedef _Float16 v4h __attribute__((ext_vector_type(4)));
+typedef  half  v4h   __attribute__((ext_vector_type(4)));
 typedef __bf16 v4y   __attribute__((ext_vector_type(4)));
 
 void amdgcn_global_load_tr(global int* int_inptr, global v4s* v4s_inptr, global v4h* v4h_inptr, global v4y* v4y_inptr)

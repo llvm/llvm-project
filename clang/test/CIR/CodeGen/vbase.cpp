@@ -51,9 +51,8 @@ void ppp() { B b; }
 // Note: OGCG speculatively emits the VTT and VTables. This is not yet implemented in CIR.
 
 // Vtable definition for B
-// CIR:  cir.global "private" external @_ZTV1B
-
-// LLVM: @_ZTV1B = external global { [3 x ptr] }
+// CIR: cir.global "private" {{.*}}@_ZTV1B = #cir.vtable<{#cir.const_array<[#cir.ptr<12 : i64> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1B> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct3 {alignment = 8 : i64}
+// LLVM: @_ZTV1B = linkonce_odr global { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 
 // OGCG: @_ZTV1B = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 

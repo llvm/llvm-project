@@ -86,6 +86,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_INTEL_memory_access_aliasing},
     {"SPV_INTEL_joint_matrix",
      SPIRV::Extension::Extension::SPV_INTEL_joint_matrix},
+    {"SPV_INTEL_masked_gather_scatter",
+     SPIRV::Extension::Extension::SPV_INTEL_masked_gather_scatter},
     {"SPV_KHR_16bit_storage",
      SPIRV::Extension::Extension::SPV_KHR_16bit_storage},
     {"SPV_KHR_device_group", SPIRV::Extension::Extension::SPV_KHR_device_group},

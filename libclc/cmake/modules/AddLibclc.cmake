@@ -74,10 +74,14 @@ endfunction()
 function(link_libclc_builtin_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "ARCH;TRIPLE;FOLDER"
+    "ARCH;TRIPLE;FOLDER;OUTPUT_FILENAME"
     "LIBRARIES;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
+
+  if(NOT ARG_OUTPUT_FILENAME)
+    message(FATAL_ERROR "OUTPUT_FILENAME is required for link_libclc_builtin_library")
+  endif()
 
   set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE})
   file(MAKE_DIRECTORY ${library_dir})
@@ -106,7 +110,7 @@ function(link_libclc_builtin_library target_name)
 
   if(ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64)
     # SPIR-V targets produce a .spv file from the linked bitcode.
-    set(builtins_lib ${library_dir}/libclc.spv)
+    set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.spv)
     if(LIBCLC_USE_SPIRV_BACKEND)
       add_custom_command(OUTPUT ${builtins_lib}
         COMMAND ${CMAKE_CLC_COMPILER} -c --target=${ARG_TRIPLE}
@@ -125,7 +129,7 @@ function(link_libclc_builtin_library target_name)
     endif()
   else()
     # All other targets produce an optimized .bc file.
-    set(builtins_lib ${library_dir}/libclc.bc)
+    set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.bc)
     add_custom_command(OUTPUT ${builtins_lib}
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_lib} ${linked_bc}
       DEPENDS ${opt_target} ${linked_bc}
@@ -145,10 +149,17 @@ endfunction()
 function(add_libclc_library target_name)
   cmake_parse_arguments(ARG
     ""
-    "ARCH;TRIPLE;TARGET_TRIPLE"
+    "ARCH;TRIPLE;TARGET_TRIPLE;OUTPUT_FILENAME;PARENT_TARGET"
     "SOURCES;COMPILE_OPTIONS;INCLUDE_DIRS;COMPILE_DEFINITIONS;INTERNALIZE_LIBRARIES;OPT_FLAGS"
     ${ARGN}
   )
+
+  if(NOT ARG_OUTPUT_FILENAME)
+    message(FATAL_ERROR "OUTPUT_FILENAME is required for add_libclc_library")
+  endif()
+  if(NOT ARG_PARENT_TARGET)
+    message(FATAL_ERROR "PARENT_TARGET is required for add_libclc_library")
+  endif()
 
   set(opencl_lib ${target_name}_opencl_builtins)
   add_libclc_builtin_library(${opencl_lib}
@@ -165,15 +176,16 @@ function(add_libclc_library target_name)
     LIBRARIES ${opencl_lib}
     INTERNALIZE_LIBRARIES ${ARG_INTERNALIZE_LIBRARIES}
     OPT_FLAGS ${ARG_OPT_FLAGS}
+    OUTPUT_FILENAME "${ARG_OUTPUT_FILENAME}"
     FOLDER "libclc/Device IR/Library"
   )
 
-  add_dependencies(libclc-opencl-builtins ${target_name})
+  add_dependencies(${ARG_PARENT_TARGET} ${target_name})
   set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
 
   install(FILES ${builtins_file}
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
-    COMPONENT libclc-opencl-builtins
+    COMPONENT ${ARG_PARENT_TARGET}
   )
 
   # Verify there are no unresolved external functions in the library.

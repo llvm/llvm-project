@@ -85,8 +85,7 @@ llvm::Error DAPSessionManager::WaitForAllSessionsToDisconnect() {
 
   // Check if any disconnection failed and return appropriate error.
   if (m_client_failed)
-    return llvm::make_error<llvm::StringError>(
-        "disconnecting all clients failed", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("disconnecting all clients failed");
 
   return llvm::Error::success();
 }

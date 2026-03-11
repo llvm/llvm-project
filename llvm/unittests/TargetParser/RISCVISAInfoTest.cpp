@@ -1383,6 +1383,7 @@ Experimental extensions
     zvfbfa               0.1
     zvfofp8min           0.2
     zvkgs                0.7
+    zvzip                0.1
     smpmpmt              0.6
     svukte               0.3
     xrivosvisni          0.1

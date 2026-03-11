@@ -58,7 +58,7 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
   return T1.getUnqualifiedType() == T2.getUnqualifiedType();
 }
 
-static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
+static CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
   if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr))
     return CharSourceRange::getCharRange(
         CastExpr->getLParenLoc(),
@@ -254,7 +254,7 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     [[fallthrough]];
-  case clang::CK_IntegralCast:
+  case CK_IntegralCast:
     // Convert integral and no-op casts between builtin types and enums to
     // static_cast. A cast from enum to integer may be unnecessary, but it's
     // still retained.

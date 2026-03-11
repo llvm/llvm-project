@@ -357,7 +357,7 @@ static bool canThrow(const FunctionDecl *Func) {
 ExceptionAnalyzer::ExceptionInfo::Throwables
 ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
                                                 const ASTContext &Context) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *ExceptionTy = ThrownException.getFirst();
     const CanQualType ExceptionCanTy =
@@ -427,7 +427,7 @@ ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
 ExceptionAnalyzer::ExceptionInfo &
 ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
     const llvm::StringSet<> &IgnoredTypes, bool IgnoreBadAlloc) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   // Note: Using a 'SmallSet' with 'llvm::remove_if()' is not possible.
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {

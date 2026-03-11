@@ -3596,21 +3596,28 @@ bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
   MachineInstr *UnmergeMI = nullptr;
 
   // Check all source TRUNCs come from the same UNMERGE instruction
+  // and that the element order matches (BUILD_VECTOR position I
+  // corresponds to UNMERGE result I)
   for (I = 0; I < NumOperands; ++I) {
     auto SrcMI = MRI.getVRegDef(BuildMI->getSourceReg(I));
     auto SrcMIOpc = SrcMI->getOpcode();
 
     // Check if the G_TRUNC instructions all come from the same MI
     if (SrcMIOpc == TargetOpcode::G_TRUNC) {
+      Register TruncSrcReg = SrcMI->getOperand(1).getReg();
       if (!UnmergeMI) {
-        UnmergeMI = MRI.getVRegDef(SrcMI->getOperand(1).getReg());
+        UnmergeMI = MRI.getVRegDef(TruncSrcReg);
         if (UnmergeMI->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
           return false;
       } else {
-        auto UnmergeSrcMI = MRI.getVRegDef(SrcMI->getOperand(1).getReg());
+        auto UnmergeSrcMI = MRI.getVRegDef(TruncSrcReg);
         if (UnmergeMI != UnmergeSrcMI)
           return false;
       }
+      // Verify element ordering: BUILD_VECTOR position I must use
+      // UNMERGE result I, otherwise the fold would lose element reordering
+      if (UnmergeMI->getOperand(I).getReg() != TruncSrcReg)
+        return false;
     } else {
       break;
     }

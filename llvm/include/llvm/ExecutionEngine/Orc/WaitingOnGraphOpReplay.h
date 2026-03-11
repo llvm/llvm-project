@@ -189,21 +189,17 @@ public:
                          return ExternalState::None;
                        });
       for (auto &SN : ER.Ready)
-        for (auto &[Container, Elems] : SN->defs())
-          Ready[Container].insert(Elems.begin(), Elems.end());
+        Ready.merge(SN->defs());
       for (auto &SN : ER.Failed)
-        for (auto &[Container, Elems] : SN->defs())
-          Failed[Container].insert(Elems.begin(), Elems.end());
+        Failed.merge(SN->defs());
     }
 
     void replayFail(ContainerElementsMap NewlyFailed) {
-      for (auto &[Container, Elems] : NewlyFailed)
-        Failed[Container].insert(Elems.begin(), Elems.end());
+      Failed.merge(NewlyFailed);
 
       auto FailedSNs = G.fail(NewlyFailed);
       for (auto &SN : FailedSNs)
-        for (auto &[Container, Elems] : SN->defs())
-          Failed[Container].insert(Elems.begin(), Elems.end());
+        Failed.merge(SN->defs());
     }
 
     Graph &G;

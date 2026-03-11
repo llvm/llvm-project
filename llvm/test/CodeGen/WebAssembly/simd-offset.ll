@@ -3644,3 +3644,19 @@ define void @store_v2f64_to_global_address(<2 x double> %v) {
   store <2 x double> %v , ptr @gv_v2f64
   ret void
 }
+
+; Test that load extends can fold through freeze nodes
+define <4 x i16> @test_freeze_zext(ptr %in) {
+; CHECK-LABEL: test_freeze_zext:
+; CHECK:         .functype test_freeze_zext (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %t = load <4 x i8>, ptr %in, align 1
+  %t.fr = freeze <4 x i8> %t
+  %w = zext <4 x i8> %t.fr to <4 x i16>
+  ret <4 x i16> %w
+}

@@ -242,8 +242,7 @@ IdentifierNamingCheck::NamingStyle::NamingStyle(
     : Case(Case), Prefix(Prefix), Suffix(Suffix),
       IgnoredRegexpStr(IgnoredRegexpStr), HPType(HPType) {
   if (!IgnoredRegexpStr.empty()) {
-    IgnoredRegexp =
-        llvm::Regex(llvm::SmallString<128>({"^", IgnoredRegexpStr, "$"}));
+    IgnoredRegexp = llvm::Regex(SmallString<128>({"^", IgnoredRegexpStr, "$"}));
     if (!IgnoredRegexp.isValid())
       llvm::errs() << "Invalid IgnoredRegexp regular expression: "
                    << IgnoredRegexpStr;
@@ -634,7 +633,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
   return PrefixStr;
 }
 
-llvm::StringRef IdentifierNamingCheck::HungarianNotation::getClassPrefix(
+StringRef IdentifierNamingCheck::HungarianNotation::getClassPrefix(
     const CXXRecordDecl *CRD,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
   if (CRD->isUnion())
@@ -1440,7 +1439,7 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
-  const llvm::StringRef CheckName = getID();
+  const StringRef CheckName = getID();
   ClangTidyOptions Options = Context->getOptionsForFile(RealFileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
     auto It = NamingStylesCache.try_emplace(

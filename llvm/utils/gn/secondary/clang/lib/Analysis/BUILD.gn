@@ -7,7 +7,9 @@ static_library("Analysis") {
     "//clang/lib/ASTMatchers",
     "//clang/lib/Analysis/LifetimeSafety",
     "//clang/lib/Basic",
+    "//clang/lib/Format",
     "//clang/lib/Lex",
+    "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
   ]
   sources = [

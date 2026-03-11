@@ -113,7 +113,8 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
           std::unique_ptr<InsertValueInst>(new InsertValueInst(LLVMIns, *this));
       return It->second.get();
     }
-    case llvm::Instruction::Br: {
+    case llvm::Instruction::UncondBr:
+    case llvm::Instruction::CondBr: {
       auto *LLVMBr = cast<llvm::BranchInst>(LLVMV);
       It->second = std::unique_ptr<BranchInst>(new BranchInst(LLVMBr, *this));
       return It->second.get();

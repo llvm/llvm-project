@@ -123,7 +123,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   const FileEntry *MainFile = SM->getFileEntryForID(SM->getMainFileID());
   llvm::DenseSet<const include_cleaner::Include *> Used;
   std::vector<MissingIncludeInfo> Missing;
-  llvm::SmallVector<Decl *> MainFileDecls;
+  SmallVector<Decl *> MainFileDecls;
   for (Decl *D : Result.Nodes.getNodeAs<TranslationUnitDecl>("top")->decls()) {
     if (!SM->isWrittenInMainFile(SM->getExpansionLoc(D->getLocation())))
       continue;
@@ -200,7 +200,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     Unused.push_back(&I);
   }
 
-  const llvm::StringRef Code = SM->getBufferData(SM->getMainFileID());
+  const StringRef Code = SM->getBufferData(SM->getMainFileID());
   auto FileStyle =
       format::getStyle(format::DefaultFormatStyle, getCurrentMainFile(),
                        format::DefaultFallbackStyle, Code,
@@ -227,14 +227,14 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     for (const auto &Inc : Missing) {
       const std::string Spelling = include_cleaner::spellHeader(
           {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
-      const bool Angled = llvm::StringRef{Spelling}.starts_with("<");
+      const bool Angled = StringRef{Spelling}.starts_with("<");
       // We might suggest insertion of an existing include in edge cases, e.g.,
       // include is present in a PP-disabled region, or spelling of the header
       // turns out to be the same as one of the unresolved includes in the
       // main file.
-      if (auto Replacement = HeaderIncludes.insert(
-              llvm::StringRef{Spelling}.trim("\"<>"), Angled,
-              tooling::IncludeDirective::Include)) {
+      if (auto Replacement =
+              HeaderIncludes.insert(StringRef{Spelling}.trim("\"<>"), Angled,
+                                    tooling::IncludeDirective::Include)) {
         const DiagnosticBuilder DB =
             diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
                  "no header providing \"%0\" is directly included")

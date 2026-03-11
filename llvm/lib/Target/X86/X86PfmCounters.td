@@ -235,6 +235,7 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
   let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
+def : PfmCountersBinding<"emeraldrapids", SapphireRapidsPfmCounters>;
 
 def LunarLakePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;

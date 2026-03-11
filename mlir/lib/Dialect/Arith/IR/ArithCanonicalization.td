@@ -422,6 +422,29 @@ def TruncFUIToFPToUIToFP :
         [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
 
 //===----------------------------------------------------------------------===//
+// SIToFPOp
+//===----------------------------------------------------------------------===//
+
+// sitofp(extsi(x)) -> sitofp(x)
+def SIToFPOfExtSI :
+    Pat<(Arith_SIToFPOp (Arith_ExtSIOp $x)),
+        (Arith_SIToFPOp $x)>;
+
+// sitofp(extui(x)) -> uitofp(x)
+def SIToFPOfExtUI :
+    Pat<(Arith_SIToFPOp (Arith_ExtUIOp $x, $nneg)),
+        (Arith_UIToFPOp $x, $nneg)>;
+
+//===----------------------------------------------------------------------===//
+// UIToFPOp
+//===----------------------------------------------------------------------===//
+
+// uitofp(extui(x)) -> uitofp(x)
+def UIToFPOfExtUI :
+    Pat<(Arith_UIToFPOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
+        (Arith_UIToFPOp $x, $nneg1)>;
+
+//===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
 

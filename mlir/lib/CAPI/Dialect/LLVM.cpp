@@ -250,17 +250,17 @@ MlirStringRef mlirLLVMDICompositeTypeAttrGetName(void) {
   return wrap(DICompositeTypeAttr::name);
 }
 
-MlirAttribute
-mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
-                             MlirAttribute name, MlirAttribute baseType,
-                             uint64_t sizeInBits, uint32_t alignInBits,
-                             uint64_t offsetInBits, int64_t dwarfAddressSpace,
-                             int64_t flags, MlirAttribute extraData) {
+MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute name, MlirAttribute file,
+    uint32_t line, MlirAttribute scope, MlirAttribute baseType,
+    uint64_t sizeInBits, uint32_t alignInBits, uint64_t offsetInBits,
+    int64_t dwarfAddressSpace, int64_t flags, MlirAttribute extraData) {
   std::optional<unsigned> addressSpace = std::nullopt;
   if (dwarfAddressSpace >= 0)
     addressSpace = (unsigned)dwarfAddressSpace;
   return wrap(DIDerivedTypeAttr::get(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
+      cast<DIFileAttr>(unwrap(file)), line, cast<DIScopeAttr>(unwrap(scope)),
       cast<DITypeAttr>(unwrap(baseType)), sizeInBits, alignInBits, offsetInBits,
       addressSpace, DIFlags(flags), cast<DINodeAttr>(unwrap(extraData))));
 }

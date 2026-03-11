@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 
 namespace mlir {
 namespace acc {
@@ -49,6 +52,56 @@ std::optional<DataLayout> getDataLayout(Operation *op, bool allowDefault) {
   }
 
   return std::nullopt;
+}
+
+ComputeRegionOp
+buildComputeRegion(Location loc, ValueRange launchArgs, ValueRange inputArgs,
+                   llvm::StringRef origin, Region &regionToClone,
+                   RewriterBase &rewriter, IRMapping &mapping,
+                   ValueRange output, FlatSymbolRefAttr kernelFuncName,
+                   FlatSymbolRefAttr kernelModuleName, Value stream) {
+  SmallVector<Type> resultTypes;
+  for (auto val : output)
+    resultTypes.push_back(val.getType());
+  auto computeRegion =
+      ComputeRegionOp::create(rewriter, loc, resultTypes, launchArgs, inputArgs,
+                              stream, origin, kernelFuncName, kernelModuleName);
+
+  assert(!regionToClone.getBlocks().empty() &&
+         "empty region for acc.compute_region");
+  OpBuilder::InsertionGuard guard(rewriter);
+
+  auto parWidthType = ParWidthType::get(rewriter.getContext());
+  Block *entryBlock = rewriter.createBlock(&computeRegion.getRegion());
+  for (size_t i = 0; i < launchArgs.size(); ++i)
+    entryBlock->addArgument(parWidthType, loc);
+  for (Value input : inputArgs)
+    entryBlock->addArgument(input.getType(), loc);
+  for (size_t i = 0; i < inputArgs.size(); ++i)
+    mapping.map(inputArgs[i], entryBlock->getArgument(launchArgs.size() + i));
+  rewriter.setInsertionPointToStart(entryBlock);
+  if (regionToClone.getBlocks().size() == 1) {
+    for (auto &op : regionToClone.front().getOperations()) {
+      if (op.hasTrait<OpTrait::IsTerminator>())
+        break;
+      rewriter.clone(op, mapping);
+    }
+  } else {
+    auto exeRegion = mlir::acc::wrapMultiBlockRegionWithSCFExecuteRegion(
+        regionToClone, mapping, loc, rewriter);
+    if (!exeRegion) {
+      rewriter.eraseOp(computeRegion);
+      return nullptr;
+    }
+  }
+
+  SmallVector<Value> yieldOperands;
+  for (auto val : output)
+    yieldOperands.push_back(mapping.lookup(val));
+  rewriter.setInsertionPointToEnd(entryBlock);
+  YieldOp::create(rewriter, loc, yieldOperands);
+
+  return computeRegion;
 }
 
 } // namespace acc

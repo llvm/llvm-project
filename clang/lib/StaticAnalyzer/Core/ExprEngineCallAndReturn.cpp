@@ -39,8 +39,7 @@ STAT_COUNTER(NumInlinedCalls, "The # of times we inlined a call");
 STAT_COUNTER(NumReachedInlineCountMax,
              "The # of times we reached inline count maximum");
 
-void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
-                                  ExplodedNode *Pred) {
+void ExprEngine::processCallEnter(CallEnter CE, ExplodedNode *Pred) {
   // Get the entry block in the CFG of the callee.
   const CFGBlock *Entry = CE.getEntry();
 
@@ -62,8 +61,13 @@ void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
   ExplodedNode *Node = G.getNode(Loc, state, false, &isNew);
   Node->addPredecessor(Pred, G);
   if (isNew) {
+    // FIXME: In the `processBeginOfFunction` callback
+    // `ExprEngine::getCurrLocationContext()` can be different from the
+    // `LocationContext` queried from e.g. the `ExplodedNode`s. I'm not
+    // touching this now because this commit is NFC; but in the future it would
+    // be nice to avoid this inconsistency.
     ExplodedNodeSet DstBegin;
-    processBeginOfFunction(BC, Node, DstBegin, Loc);
+    processBeginOfFunction(Node, DstBegin, Loc);
     Engine.enqueue(DstBegin);
   }
 }
@@ -158,8 +162,7 @@ static SVal adjustReturnValue(SVal V, QualType ExpectedTy, QualType ActualTy,
   return UnknownVal();
 }
 
-void ExprEngine::removeDeadOnEndOfFunction(NodeBuilderContext& BC,
-                                           ExplodedNode *Pred,
+void ExprEngine::removeDeadOnEndOfFunction(ExplodedNode *Pred,
                                            ExplodedNodeSet &Dst) {
   // Find the last statement in the function and the corresponding basic block.
   const Stmt *LastSt = nullptr;
@@ -175,7 +178,6 @@ void ExprEngine::removeDeadOnEndOfFunction(NodeBuilderContext& BC,
   // point will be associated. However, we only want to use LastStmt as a
   // reference for what to clean up if it's a ReturnStmt; otherwise, everything
   // is dead.
-  SaveAndRestore<const NodeBuilderContext *> NodeContextRAII(currBldrCtx, &BC);
   const LocationContext *LCtx = Pred->getLocationContext();
   removeDead(Pred, Dst, dyn_cast<ReturnStmt>(LastSt), LCtx,
              LCtx->getAnalysisDeclContext()->getBody(),
@@ -551,8 +553,8 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   // Construct a new stack frame for the callee.
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
   const StackFrameContext *CalleeSFC =
-      CalleeADC->getStackFrame(ParentOfCallee, CallE, currBldrCtx->getBlock(),
-                               currBldrCtx->blockCount(), currStmtIdx);
+      CalleeADC->getStackFrame(ParentOfCallee, CallE, getCurrBlock(),
+                               getNumVisitedCurrent(), currStmtIdx);
 
   CallEnter Loc(CallE, CalleeSFC, CurLC);
 
@@ -768,7 +770,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
   SVal R;
   QualType ResultTy = Call.getResultType();
-  unsigned Count = currBldrCtx->blockCount();
+  unsigned Count = getNumVisitedCurrent();
   if (auto RTC = getCurrentCFGElement().getAs<CFGCXXRecordTypedCall>()) {
     // Conjure a temporary if the function returns an object by value.
     SVal Target;
@@ -833,7 +835,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 // a conjured return value.
 void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
                                       ExplodedNode *Pred, ProgramStateRef State) {
-  State = Call.invalidateRegions(currBldrCtx->blockCount(), State);
+  State = Call.invalidateRegions(getNumVisitedCurrent(), State);
   State = bindReturnValue(Call, Pred->getLocationContext(), State);
 
   // And make the result node.

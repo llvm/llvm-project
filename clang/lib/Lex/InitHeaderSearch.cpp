@@ -249,6 +249,10 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   if (triple.isOSDarwin())
     return false;
 
+  // On hexagon, include paths are managed by the driver.
+  if (triple.getArch() == llvm::Triple::hexagon)
+    return false;
+
   return true; // Everything else uses AddDefaultIncludePaths().
 }
 

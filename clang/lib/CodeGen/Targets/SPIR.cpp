@@ -146,31 +146,30 @@ void CommonSPIRABIInfo::setCCs() {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().isTargetDevice()) {
-    // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for target devices as default address space kernel arguments
-    // are not allowed. We use the opencl_global language address space which
-    // always maps to CrossWorkGroup.
-    llvm::Type *LTy = CGT.ConvertType(Ty);
-    auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
-    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
-    auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
-    if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
-      LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
-      return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
-    }
+  // Coerce pointer arguments with default address space to CrossWorkGroup
+  // pointers as default address space kernel
+  // arguments are not allowed. We use the opencl_global language address
+  // space which always maps to CrossWorkGroup.
+  llvm::Type *LTy = CGT.ConvertType(Ty);
+  auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
+  auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
+  auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
+  if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
+    LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
+    return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
+  }
 
-    if (isAggregateTypeForABI(Ty)) {
-      // Force copying aggregate type in kernel arguments by value when
-      // compiling CUDA targeting SPIR-V. This is required for the object
-      // copied to be valid on the device.
-      // This behavior follows the CUDA spec
-      // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-      // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
-      // revisited if HIPSPV / byval starts making use of the AS of an indirect
-      // arg.
-      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
-    }
+  if (getContext().getLangOpts().isTargetDevice() &&
+      isAggregateTypeForABI(Ty)) {
+    // Force copying aggregate type in kernel arguments by value when
+    // compiling CUDA targeting SPIR-V. This is required for the object
+    // copied to be valid on the device.
+    // This behavior follows the CUDA spec
+    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
+    // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
+    // revisited if HIPSPV / byval starts making use of the AS of an indirect
+    // arg.
+    return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
   }
   return classifyArgumentType(Ty);
 }

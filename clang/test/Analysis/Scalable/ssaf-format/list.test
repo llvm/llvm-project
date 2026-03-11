@@ -1,0 +1,9 @@
+// Test ssaf-format --list output without any loaded plugins.
+
+// RUN: ssaf-format --list \
+// RUN:   | FileCheck %s
+
+// CHECK: Registered serialization formats:
+// CHECK-EMPTY:
+// CHECK-NEXT:   1. JSON  JSON serialization format
+// CHECK-NEXT:      Analyses: (none)

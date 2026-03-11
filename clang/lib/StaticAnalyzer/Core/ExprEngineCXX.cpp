@@ -254,7 +254,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
         QualType ReturnTy = RetE->getType();
         QualType RegionTy = ACtx.getPointerType(ReturnTy);
         return SVB.conjureSymbolVal(&TopLevelSymRegionTag, getCFGElementRef(),
-                                    SFC, RegionTy, currBldrCtx->blockCount());
+                                    SFC, RegionTy, getNumVisitedCurrent());
       }
       llvm_unreachable("Unhandled return value construction context!");
     }
@@ -975,7 +975,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // really part of the CXXNewExpr because they happen BEFORE the
   // CXXConstructExpr subexpression. See PR12014 for some discussion.
 
-  unsigned blockCount = currBldrCtx->blockCount();
+  unsigned blockCount = getNumVisitedCurrent();
   const LocationContext *LCtx = Pred->getLocationContext();
   SVal symVal = UnknownVal();
   FunctionDecl *FD = CNE->getOperatorNew();
@@ -1138,7 +1138,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
 
   const LocationContext *LCtx = Pred->getLocationContext();
   SVal V = svalBuilder.conjureSymbolVal(getCFGElementRef(), LCtx, VD->getType(),
-                                        currBldrCtx->blockCount());
+                                        getNumVisitedCurrent());
   ProgramStateRef state = Pred->getState();
   state = state->bindLoc(state->getLValue(VD, LCtx), V, LCtx);
 

@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/integer/clc_clz.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_floor.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_ldexp.h>
-#include <clc/math/clc_trunc.h>
-#include <clc/math/math.h>
-#include <clc/shared/clc_max.h>
+#include "clc/clc_convert.h"
+#include "clc/integer/clc_clz.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_floor.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_ldexp.h"
+#include "clc/math/clc_trunc.h"
+#include "clc/math/math.h"
+#include "clc/shared/clc_max.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
   int ux = __clc_as_int(x);
@@ -65,8 +65,8 @@ _CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_fmod
-#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/binary_def_scalarize.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_FUNCTION
 
 #ifdef cl_khr_fp64
@@ -173,8 +173,8 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
 
 #define __CLC_DOUBLE_ONLY
 #define __CLC_FUNCTION __clc_fmod
-#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/binary_def_scalarize.inc"
+#include "clc/math/gentype.inc"
 #undef __CLC_FUNCTION
 
 #endif
@@ -186,7 +186,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
 // Forward the half version of this builtin onto the float one
 #define __CLC_HALF_ONLY
 #define __CLC_FUNCTION __clc_fmod
-#define __CLC_BODY <clc/math/binary_def_via_fp32.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/math/binary_def_via_fp32.inc"
+#include "clc/math/gentype.inc"
 
 #endif

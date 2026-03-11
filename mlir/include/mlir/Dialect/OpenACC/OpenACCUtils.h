@@ -10,10 +10,13 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILS_H_
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Remarks.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include <functional>
+#include "llvm/ADT/Twine.h"
+#include <optional>
+#include <string>
 
 namespace mlir {
 class DominanceInfo;

@@ -129,24 +129,18 @@ class LLDBTest(TestFormat):
         passes = num_ran - non_pass
 
         if exitCode:
-            # Mark this test as FAIL if at least one test failed.
+            # Aggregate the tests results with the following precedence:
+            # UNRESOLVED > FAIL > XPASS
+            if errors > 0:
+                return lit.Test.UNRESOLVED, output
             if failures > 0:
                 return lit.Test.FAIL, output
-            lit_results = [
-                (failures, lit.Test.FAIL),
-                (errors, lit.Test.UNRESOLVED),
-                (unexpected_successes, lit.Test.XPASS),
-            ]
+            return lit.Test.XPASS, output
         else:
-            # Mark this test as PASS if at least one test passed.
+            # Aggregate the tests results with the following precedence:
+            # PASS > XFAIL > UNSUPPORTED
             if passes > 0:
                 return lit.Test.PASS, output
-            lit_results = [
-                (passes, lit.Test.PASS),
-                (skipped, lit.Test.UNSUPPORTED),
-                (expected_failures, lit.Test.XFAIL),
-            ]
-
-        # Return the lit result code with the maximum occurrence. Only look at
-        # the first element and rely on the original order to break ties.
-        return max(lit_results, key=operator.itemgetter(0))[1], output
+            if expected_failures > 0:
+                return lit.Test.XFAIL, output
+            return lit.Test.UNSUPPORTED, output

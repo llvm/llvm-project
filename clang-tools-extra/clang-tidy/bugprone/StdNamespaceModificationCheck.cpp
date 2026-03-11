@@ -19,9 +19,9 @@ AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgumentIncludingPack,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     TemplateSpecializationType, FunctionDecl),
-    clang::ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
+    ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
   const ArrayRef<TemplateArgument> Args =
-      clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
+      ast_matchers::internal::getTemplateSpecializationArgs(Node);
   for (const auto &Arg : Args) {
     if (Arg.getKind() != TemplateArgument::Pack)
       continue;

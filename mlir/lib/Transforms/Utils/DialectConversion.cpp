@@ -3843,19 +3843,39 @@ static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
   if (!type)
     return failure();
 
-  // Convert the original function types.
-  TypeConverter::SignatureConversion result(type.getNumInputs());
+  // Convert the function signature (inputs and results).
+  TypeConverter::SignatureConversion funcConversion(type.getNumInputs());
   SmallVector<Type, 1> newResults;
-  if (failed(typeConverter.convertSignatureArgs(type.getInputs(), result)) ||
+  if (failed(typeConverter.convertSignatureArgs(type.getInputs(),
+                                                funcConversion)) ||
       failed(typeConverter.convertTypes(type.getResults(), newResults)))
     return failure();
-  if (!funcOp.getFunctionBody().empty())
-    rewriter.applySignatureConversion(&funcOp.getFunctionBody().front(), result,
-                                      &typeConverter);
 
-  // Update the function signature in-place.
-  auto newType = FunctionType::get(rewriter.getContext(),
-                                   result.getConvertedTypes(), newResults);
+  // If the function has a body, apply a separate signature conversion to the
+  // entry block. Some function ops (e.g., gpu.func) have extra block arguments
+  // beyond the function type inputs (e.g., workgroup memory arguments that are
+  // not part of the public signature). Use a distinct conversion sized for all
+  // entry block arguments so that applySignatureConversion does not access
+  // out-of-bounds mappings.
+  if (!funcOp.getFunctionBody().empty()) {
+    Block *entryBlock = &funcOp.getFunctionBody().front();
+    unsigned numEntryBlockArgs = entryBlock->getNumArguments();
+    unsigned numFuncTypeInputs = type.getNumInputs();
+    TypeConverter::SignatureConversion blockConversion(numEntryBlockArgs);
+    // Convert the function-type inputs the same way as for the function type.
+    if (failed(typeConverter.convertSignatureArgs(type.getInputs(),
+                                                  blockConversion)))
+      return failure();
+    // Add identity mappings for extra block args beyond the function type
+    // inputs. These arguments are preserved as-is.
+    for (unsigned i = numFuncTypeInputs; i < numEntryBlockArgs; ++i)
+      blockConversion.addInputs(i, entryBlock->getArgument(i).getType());
+    rewriter.applySignatureConversion(entryBlock, blockConversion,
+                                      &typeConverter);
+  }
+
+  auto newType = FunctionType::get(
+      rewriter.getContext(), funcConversion.getConvertedTypes(), newResults);
 
   rewriter.modifyOpInPlace(funcOp, [&] { funcOp.setType(newType); });
 

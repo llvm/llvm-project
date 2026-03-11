@@ -7256,6 +7256,29 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
+PersonalityAttr *Sema::mergePersonalityAttr(Decl *D, FunctionDecl *Routine,
+                                            const AttributeCommonInfo &CI) {
+  if (PersonalityAttr *PA = D->getAttr<PersonalityAttr>()) {
+    const FunctionDecl *Personality = PA->getRoutine();
+    if (Context.isSameEntity(Personality, Routine))
+      return nullptr;
+    Diag(PA->getLocation(), diag::err_mismatched_personality);
+    Diag(CI.getLoc(), diag::note_previous_attribute);
+    D->dropAttr<PersonalityAttr>();
+  }
+  return ::new (Context) PersonalityAttr(Context, CI, Routine);
+}
+
+static void handlePersonalityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  Expr *E = AL.getArgAsExpr(0);
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
+    if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl()))
+      if (Attr *A = S.mergePersonalityAttr(D, FD, AL))
+        return D->addAttr(A);
+  S.Diag(E->getExprLoc(), diag::err_attribute_personality_arg_not_function)
+      << AL.getAttrName();
+}
+
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
@@ -7909,6 +7932,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_NoFieldProtection:
     handleNoPFPAttrField(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_Personality:
+    handlePersonalityAttr(S, D, AL);
     break;
 
   // Microsoft attributes:

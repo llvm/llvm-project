@@ -11,6 +11,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb_private;
@@ -51,9 +52,8 @@ llvm::Error LuaState::Run(llvm::StringRef buffer) {
   if (error == LUA_OK)
     return llvm::Error::success();
 
-  llvm::Error e = llvm::make_error<llvm::StringError>(
-      llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
-      llvm::inconvertibleErrorCode());
+  llvm::Error e =
+      llvm::createStringErrorV("{0}\n", lua_tostring(m_lua_state, -1));
   // Pop error message from the stack.
   lua_pop(m_lua_state, 1);
   return e;
@@ -65,9 +65,8 @@ llvm::Error LuaState::RegisterBreakpointCallback(void *baton,
   const char *fmt_str = "return function(frame, bp_loc, ...) {0} end";
   std::string func_str = llvm::formatv(fmt_str, body).str();
   if (luaL_dostring(m_lua_state, func_str.c_str()) != LUA_OK) {
-    llvm::Error e = llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0}", lua_tostring(m_lua_state, -1)),
-        llvm::inconvertibleErrorCode());
+    llvm::Error e =
+        llvm::createStringErrorV("{0}", lua_tostring(m_lua_state, -1));
     // Pop error message from the stack.
     lua_pop(m_lua_state, 2);
     return e;
@@ -94,9 +93,8 @@ llvm::Error LuaState::RegisterWatchpointCallback(void *baton,
   const char *fmt_str = "return function(frame, wp, ...) {0} end";
   std::string func_str = llvm::formatv(fmt_str, body).str();
   if (luaL_dostring(m_lua_state, func_str.c_str()) != LUA_OK) {
-    llvm::Error e = llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0}", lua_tostring(m_lua_state, -1)),
-        llvm::inconvertibleErrorCode());
+    llvm::Error e =
+        llvm::createStringErrorV("{0}", lua_tostring(m_lua_state, -1));
     // Pop error message from the stack.
     lua_pop(m_lua_state, 2);
     return e;
@@ -124,9 +122,8 @@ llvm::Error LuaState::CheckSyntax(llvm::StringRef buffer) {
     return llvm::Error::success();
   }
 
-  llvm::Error e = llvm::make_error<llvm::StringError>(
-      llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
-      llvm::inconvertibleErrorCode());
+  llvm::Error e =
+      llvm::createStringErrorV("{0}\n", lua_tostring(m_lua_state, -1));
   // Pop error message from the stack.
   lua_pop(m_lua_state, 1);
   return e;
@@ -135,21 +132,18 @@ llvm::Error LuaState::CheckSyntax(llvm::StringRef buffer) {
 llvm::Error LuaState::LoadModule(llvm::StringRef filename) {
   const FileSpec file(filename);
   if (!FileSystem::Instance().Exists(file)) {
-    return llvm::make_error<llvm::StringError>("invalid path",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("invalid path");
   }
 
   if (file.GetFileNameExtension() != ".lua") {
-    return llvm::make_error<llvm::StringError>("invalid extension",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("invalid extension");
   }
 
   int error = luaL_loadfile(m_lua_state, filename.data()) ||
               lua_pcall(m_lua_state, 0, 1, 0);
   if (error != LUA_OK) {
-    llvm::Error e = llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
-        llvm::inconvertibleErrorCode());
+    llvm::Error e =
+        llvm::createStringErrorV("{0}\n", lua_tostring(m_lua_state, -1));
     // Pop error message from the stack.
     lua_pop(m_lua_state, 1);
     return e;
@@ -173,8 +167,7 @@ llvm::Error LuaState::ChangeIO(FILE *out, FILE *err) {
     lua_pop(m_lua_state, 1);
   } else {
     lua_pop(m_lua_state, 2);
-    return llvm::make_error<llvm::StringError>("could not get stdout",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("could not get stdout");
   }
 
   lua_getfield(m_lua_state, -1, "stderr");
@@ -184,8 +177,7 @@ llvm::Error LuaState::ChangeIO(FILE *out, FILE *err) {
     lua_pop(m_lua_state, 1);
   } else {
     lua_pop(m_lua_state, 2);
-    return llvm::make_error<llvm::StringError>("could not get stderr",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("could not get stderr");
   }
 
   lua_pop(m_lua_state, 1);

@@ -1756,6 +1756,11 @@ OpFoldResult arith::UIToFPOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+void arith::UIToFPOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<UIToFPOfExtUI>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // SIToFPOp
 //===----------------------------------------------------------------------===//
@@ -1776,6 +1781,11 @@ OpFoldResult arith::SIToFPOp::fold(FoldAdaptor adaptor) {
                              APFloat::rmNearestTiesToEven);
         return apf;
       });
+}
+
+void arith::SIToFPOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                  MLIRContext *context) {
+  patterns.add<SIToFPOfExtSI, SIToFPOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//

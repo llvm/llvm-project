@@ -2555,46 +2555,16 @@ public:
     SourceRange Range;
     unsigned MsgParam = 0;
 
+    // This function only handles SpanTwoParamConstructorGadget so far, which
+    // always gives a CXXConstructExpr.
     const auto *CtorExpr = cast<CXXConstructExpr>(Operation);
     Loc = CtorExpr->getLocation();
-    Range = CtorExpr->getSourceRange();
 
-    std::string ContainerName = "std::span";
-    if (auto *TD = CtorExpr->getConstructor()->getParent()) {
-      // This will provide "std::span" if it's in the std namespace
-      ContainerName = TD->getQualifiedNameAsString();
-    }
-
-    // FIX: Pass the container name to fill the %0 parameter
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container) << ContainerName;
-
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
     if (IsRelatedToDecl) {
       assert(!SuggestSuggestions &&
              "Variables blamed for unsafe buffer usage without suggestions!");
       S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
-    }
-  }
-
-  void handleUnsafeOperationInStringView(const Stmt *Operation,
-                                         bool IsRelatedToDecl,
-                                         ASTContext &Ctx) override {
-    // Extracting location: prioritize the specific location of the constructor
-    SourceLocation Loc = Operation->getBeginLoc();
-    SourceRange Range = Operation->getSourceRange();
-
-    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
-      Loc = CtorExpr->getLocation();
-    }
-
-    // 1. Emit the primary warning for string_view
-    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container)
-        << "std::string_view";
-
-    // 2. If a specific variable is 'blamed', emit the note
-    if (IsRelatedToDecl) {
-      // MsgParam 0 is "unsafe operation"
-      // Range helps the IDE underline the whole expression
-      S.Diag(Loc, diag::note_unsafe_buffer_operation) << 0 << Range;
     }
   }
 

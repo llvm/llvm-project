@@ -1236,7 +1236,7 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
   auto IsLegal = [](const Instruction &I) -> bool {
     switch (I.getOpcode()) {
     case Instruction::Invoke:
-    case Instruction::Br:
+    case Instruction::CondBr:
     case Instruction::Switch:
     case Instruction::Call:
     case Instruction::IndirectBr:
@@ -1889,12 +1889,13 @@ void Instruction::getAllMetadataImpl(
 }
 
 bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
-  assert(
-      (getOpcode() == Instruction::Br || getOpcode() == Instruction::Select ||
-       getOpcode() == Instruction::Call || getOpcode() == Instruction::Invoke ||
-       getOpcode() == Instruction::IndirectBr ||
-       getOpcode() == Instruction::Switch) &&
-      "Looking for branch weights on something besides branch");
+  assert((getOpcode() == Instruction::CondBr ||
+          getOpcode() == Instruction::Select ||
+          getOpcode() == Instruction::Call ||
+          getOpcode() == Instruction::Invoke ||
+          getOpcode() == Instruction::IndirectBr ||
+          getOpcode() == Instruction::Switch) &&
+         "Looking for branch weights on something besides branch");
 
   return ::extractProfTotalWeight(*this, TotalVal);
 }

@@ -9,10 +9,10 @@
 #ifndef __CLC_ASYNC_CLC_PREFETCH_H__
 #define __CLC_ASYNC_CLC_PREFETCH_H__
 
-#define __CLC_BODY <clc/async/clc_prefetch.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc/async/clc_prefetch.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc/async/clc_prefetch.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/async/clc_prefetch.inc"
+#include "clc/math/gentype.inc"
 
 #endif // __CLC_ASYNC_CLC_PREFETCH_H__

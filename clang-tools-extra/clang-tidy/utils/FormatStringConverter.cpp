@@ -32,10 +32,10 @@ using clang::analyze_format_string::ConversionSpecifier;
 
 /// Is the passed type the actual "char" type, whether that be signed or
 /// unsigned, rather than explicit signed char or unsigned char types.
-static bool isRealCharType(const clang::QualType &Ty) {
+static bool isRealCharType(const QualType &Ty) {
   using namespace clang;
   const Type *DesugaredType = Ty->getUnqualifiedDesugaredType();
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(DesugaredType))
+  if (const auto *BT = dyn_cast<BuiltinType>(DesugaredType))
     return (BT->getKind() == BuiltinType::Char_U ||
             BT->getKind() == BuiltinType::Char_S);
   return false;
@@ -45,10 +45,10 @@ static bool isRealCharType(const clang::QualType &Ty) {
 /// passed integer type. If the passed type is already signed then its name is
 /// just returned. Only supports BuiltinTypes.
 static std::optional<std::string>
-getCorrespondingSignedTypeName(const clang::QualType &QT) {
+getCorrespondingSignedTypeName(const QualType &QT) {
   using namespace clang;
   const auto UQT = QT.getUnqualifiedType();
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(UQT)) {
+  if (const auto *BT = dyn_cast<BuiltinType>(UQT)) {
     switch (BT->getKind()) {
     case BuiltinType::UChar:
     case BuiltinType::Char_U:
@@ -97,10 +97,10 @@ getCorrespondingSignedTypeName(const clang::QualType &QT) {
 /// the passed integer type. If the passed type is already unsigned then its
 /// name is just returned. Only supports BuiltinTypes.
 static std::optional<std::string>
-getCorrespondingUnsignedTypeName(const clang::QualType &QT) {
+getCorrespondingUnsignedTypeName(const QualType &QT) {
   using namespace clang;
   const auto UQT = QT.getUnqualifiedType();
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(UQT)) {
+  if (const auto *BT = dyn_cast<BuiltinType>(UQT)) {
     switch (BT->getKind()) {
     case BuiltinType::SChar:
     case BuiltinType::Char_S:
@@ -148,16 +148,15 @@ getCorrespondingUnsignedTypeName(const clang::QualType &QT) {
 }
 
 static std::optional<std::string>
-castTypeForArgument(ConversionSpecifier::Kind ArgKind,
-                    const clang::QualType &QT) {
+castTypeForArgument(ConversionSpecifier::Kind ArgKind, const QualType &QT) {
   if (ArgKind == ConversionSpecifier::Kind::uArg)
     return getCorrespondingUnsignedTypeName(QT);
   return getCorrespondingSignedTypeName(QT);
 }
 
 static bool isMatchingSignedness(ConversionSpecifier::Kind ArgKind,
-                                 const clang::QualType &ArgType) {
-  if (const auto *BT = llvm::dyn_cast<BuiltinType>(ArgType)) {
+                                 const QualType &ArgType) {
+  if (const auto *BT = dyn_cast<BuiltinType>(ArgType)) {
     // Unadorned char never matches any expected signedness since it
     // could be signed or unsigned.
     const auto ArgTypeKind = BT->getKind();
@@ -172,9 +171,7 @@ static bool isMatchingSignedness(ConversionSpecifier::Kind ArgKind,
 }
 
 namespace {
-AST_MATCHER(clang::QualType, isRealChar) {
-  return clang::tidy::utils::isRealCharType(Node);
-}
+AST_MATCHER(QualType, isRealChar) { return utils::isRealCharType(Node); }
 } // namespace
 
 static bool castMismatchedIntegerTypes(const CallExpr *Call, bool StrictMode) {
@@ -207,7 +204,7 @@ FormatStringConverter::FormatStringConverter(
       Args(Call->getArgs()), NumArgs(Call->getNumArgs()),
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
-  FormatExpr = llvm::dyn_cast<StringLiteral>(
+  FormatExpr = dyn_cast<StringLiteral>(
       Args[FormatArgOffset]->IgnoreUnlessSpelledInSource());
 
   assert(FormatExpr && FormatExpr->isOrdinary());
@@ -450,7 +447,7 @@ void FormatStringConverter::emitStringArgument(unsigned ArgIndex,
 bool FormatStringConverter::emitIntegerArgument(
     ConversionSpecifier::Kind ArgKind, const Expr *Arg, unsigned ArgIndex,
     std::string &FormatSpec) {
-  const clang::QualType &ArgType = Arg->getType();
+  const QualType &ArgType = Arg->getType();
   if (ArgType->isBooleanType()) {
     // std::format will print bool as either "true" or "false" by default,
     // but printf prints them as "0" or "1". Be compatible with printf by
@@ -521,7 +518,7 @@ bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
       return false;
     break;
   case ConversionSpecifier::Kind::pArg: {
-    const clang::QualType &ArgType = Arg->getType();
+    const QualType &ArgType = Arg->getType();
     // std::format knows how to format void pointers and nullptrs
     if (!ArgType->isNullPtrType() && !ArgType->isVoidPointerType())
       ArgFixes.emplace_back(FS.getArgIndex() + ArgsOffset,

@@ -100,7 +100,8 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
 
   // XXX - For some reason this isn't called for switch.
   switch (Opcode) {
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::Ret:
     return 10;
   default:

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/relational/clc_isgreaterequal.h>
+#include "clc/relational/clc_isgreaterequal.h"
 
 #define __CLC_FUNCTION isgreaterequal
 #define __CLC_BODY "binary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

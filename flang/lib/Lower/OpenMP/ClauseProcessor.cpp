@@ -1586,8 +1586,11 @@ void ClauseProcessor::processMapObjects(
     if (!recordType)
       return mlir::FlatSymbolRefAttr();
 
-    return getOrGenImplicitDefaultDeclareMapper(converter, clauseLocation,
-                                                recordType, mapperIdName);
+    return utils::openmp::getOrGenImplicitDefaultDeclareMapper(
+        converter.getFirOpBuilder(), clauseLocation, recordType, mapperIdName,
+        [&](std::string &mapperIdName, llvm::StringRef memberName) {
+          defaultMangler(converter, mapperIdName, memberName);
+        });
   };
 
   auto getDefaultMapperID =

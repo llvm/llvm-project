@@ -34,10 +34,10 @@ static void BM_Basic(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK(BM_Basic<uint32_t>);
-BENCHMARK(BM_Basic<int32_t>);
-BENCHMARK(BM_Basic<uint64_t>);
-BENCHMARK(BM_Basic<int64_t>);
+BENCHMARK(BM_Basic<uint32_t>)->Name("std::format(uint32_t)");
+BENCHMARK(BM_Basic<int32_t>)->Name("std::format(int32_t)");
+BENCHMARK(BM_Basic<uint64_t>)->Name("std::format(uint64_t)");
+BENCHMARK(BM_Basic<int64_t>)->Name("std::format(int64_t)");
 
 // Ideally the low values of a 128-bit value are all dispatched to a 64-bit routine.
 #ifndef TEST_HAS_NO_INT128
@@ -52,11 +52,11 @@ static void BM_BasicLow(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK(BM_BasicLow<__uint128_t>);
-BENCHMARK(BM_BasicLow<__int128_t>);
+BENCHMARK(BM_BasicLow<__uint128_t>)->Name("std::format(__uint128_t) (lower 64 bits only)");
+BENCHMARK(BM_BasicLow<__int128_t>)->Name("std::format(__int128_t) (lower 64 bits only)");
 
-BENCHMARK(BM_Basic<__uint128_t>);
-BENCHMARK(BM_Basic<__int128_t>);
+BENCHMARK(BM_Basic<__uint128_t>)->Name("std::format(__uint128_t)");
+BENCHMARK(BM_Basic<__int128_t>)->Name("std::format(__int128_t)");
 #endif
 
 template <class>

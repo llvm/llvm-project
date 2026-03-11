@@ -1119,6 +1119,12 @@ public:
     setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
   }
 
+  void visitFreezeInst(FreezeInst &FI) {
+    AnyValue Val = getValue(FI.getOperand(0));
+    Ctx.freeze(Val, FI.getType());
+    setResult(FI, std::move(Val));
+  }
+
   /// This function implements the main interpreter loop.
   /// It handles function calls in a non-recursive manner to avoid stack
   /// overflows.

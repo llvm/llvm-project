@@ -157,11 +157,34 @@ LLVM_ABI Error getAMDGPUMetaDataFromImage(
     uint16_t &ELFABIVersion);
 } // namespace amdgpu
 
+/// Containerizes an image within an OffloadBinary image.
+/// Creates a nested OffloadBinary structure where the inner binary contains
+/// the raw image and associated metadata (version, format, triple, etc.).
+/// \param Binary The image to containerize.
+/// \param Triple The target triple to be associated with the image.
+/// \param ImageKind The format of the image, e.g. SPIR-V or CUBIN.
+/// \param OffloadKind The expected consuming runtime of the image, e.g. CUDA or
+/// OpenMP.
+/// \param ImageFlags Flags associated with the image, e.g. for AMDGPU the
+/// features.
+/// \param MetaData The key-value map of metadata to be associated with the
+/// image.
+LLVM_ABI Error containerizeImage(std::unique_ptr<MemoryBuffer> &Binary,
+                                 llvm::Triple Triple,
+                                 object::ImageKind ImageKind,
+                                 object::OffloadKind OffloadKind,
+                                 int32_t ImageFlags,
+                                 MapVector<StringRef, StringRef> &MetaData);
+
 namespace intel {
-/// Containerizes an offloading binary into the ELF binary format expected by
-/// the Intel runtime offload plugin.
-LLVM_ABI Error
-containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
+/// Containerizes an OpenMP SPIR-V image into an OffloadBinary image.
+/// \param Binary The SPIR-V binary to containerize.
+/// \param Triple The target triple to be associated with the image.
+/// \param CompileOpts Optional compilation options.
+/// \param LinkOpts Optional linking options.
+LLVM_ABI Error containerizeOpenMPSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Binary, llvm::Triple Triple,
+    StringRef CompileOpts = "", StringRef LinkOpts = "");
 } // namespace intel
 } // namespace offloading
 } // namespace llvm

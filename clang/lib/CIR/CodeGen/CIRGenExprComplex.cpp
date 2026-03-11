@@ -467,13 +467,12 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 
   case CK_NoOp:
   case CK_LValueToRValue:
+  case CK_UserDefinedConversion:
     return Visit(op);
 
   case CK_AtomicToNonAtomic:
-  case CK_NonAtomicToAtomic:
-  case CK_UserDefinedConversion: {
-    cgf.cgm.errorNYI(
-        "ComplexExprEmitter::emitCast Atmoic & UserDefinedConversion");
+  case CK_NonAtomicToAtomic: {
+    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast Atmoic");
     return {};
   }
 

@@ -16,10 +16,9 @@
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
 
-namespace clang::tidy::performance {
+using namespace clang::ast_matchers;
 
-using namespace ::clang::ast_matchers;
-using llvm::StringRef;
+namespace clang::tidy::performance {
 using utils::decl_ref_expr::allDeclRefExprs;
 using utils::decl_ref_expr::isOnlyUsedAsConst;
 

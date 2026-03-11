@@ -7,7 +7,7 @@
 
 #define __device__ __attribute__((device))
 
-typedef __attribute__((__vector_size__(8 * sizeof(_Float16)))) _Float16 fp16x8_t;
+typedef __attribute__((__vector_size__(8 * sizeof(__fp16)))) __fp16 fp16x8_t;
 
 // CHECK: ImplicitCastExpr {{.*}} <AddressSpaceConversion>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <LValueToRValue>

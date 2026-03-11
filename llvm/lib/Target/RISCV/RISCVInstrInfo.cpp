@@ -1304,8 +1304,12 @@ unsigned RISCVCC::getInverseBranchOpcode(unsigned BCC) {
     llvm_unreachable("Unexpected branch opcode!");
   case RISCV::BEQ:
     return RISCV::BNE;
+  case RISCV::BEQI:
+    return RISCV::BNEI;
   case RISCV::BNE:
     return RISCV::BEQ;
+  case RISCV::BNEI:
+    return RISCV::BEQI;
   case RISCV::BLT:
     return RISCV::BGE;
   case RISCV::BGE:
@@ -1314,6 +1318,10 @@ unsigned RISCVCC::getInverseBranchOpcode(unsigned BCC) {
     return RISCV::BGEU;
   case RISCV::BGEU:
     return RISCV::BLTU;
+  case RISCV::CV_BEQIMM:
+    return RISCV::CV_BNEIMM;
+  case RISCV::CV_BNEIMM:
+    return RISCV::CV_BEQIMM;
   case RISCV::QC_BEQI:
     return RISCV::QC_BNEI;
   case RISCV::QC_BNEI:
@@ -1338,6 +1346,14 @@ unsigned RISCVCC::getInverseBranchOpcode(unsigned BCC) {
     return RISCV::QC_E_BGEUI;
   case RISCV::QC_E_BGEUI:
     return RISCV::QC_E_BLTUI;
+  case RISCV::NDS_BBC:
+    return RISCV::NDS_BBS;
+  case RISCV::NDS_BBS:
+    return RISCV::NDS_BBC;
+  case RISCV::NDS_BEQC:
+    return RISCV::NDS_BNEC;
+  case RISCV::NDS_BNEC:
+    return RISCV::NDS_BEQC;
   }
 }
 
@@ -1559,88 +1575,8 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 bool RISCVInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert((Cond.size() == 3) && "Invalid branch condition!");
-  switch (Cond[0].getImm()) {
-  default:
-    llvm_unreachable("Unknown conditional branch!");
-  case RISCV::BEQ:
-    Cond[0].setImm(RISCV::BNE);
-    break;
-  case RISCV::BEQI:
-    Cond[0].setImm(RISCV::BNEI);
-    break;
-  case RISCV::BNE:
-    Cond[0].setImm(RISCV::BEQ);
-    break;
-  case RISCV::BNEI:
-    Cond[0].setImm(RISCV::BEQI);
-    break;
-  case RISCV::BLT:
-    Cond[0].setImm(RISCV::BGE);
-    break;
-  case RISCV::BGE:
-    Cond[0].setImm(RISCV::BLT);
-    break;
-  case RISCV::BLTU:
-    Cond[0].setImm(RISCV::BGEU);
-    break;
-  case RISCV::BGEU:
-    Cond[0].setImm(RISCV::BLTU);
-    break;
-  case RISCV::CV_BEQIMM:
-    Cond[0].setImm(RISCV::CV_BNEIMM);
-    break;
-  case RISCV::CV_BNEIMM:
-    Cond[0].setImm(RISCV::CV_BEQIMM);
-    break;
-  case RISCV::QC_BEQI:
-    Cond[0].setImm(RISCV::QC_BNEI);
-    break;
-  case RISCV::QC_BNEI:
-    Cond[0].setImm(RISCV::QC_BEQI);
-    break;
-  case RISCV::QC_BGEI:
-    Cond[0].setImm(RISCV::QC_BLTI);
-    break;
-  case RISCV::QC_BLTI:
-    Cond[0].setImm(RISCV::QC_BGEI);
-    break;
-  case RISCV::QC_BGEUI:
-    Cond[0].setImm(RISCV::QC_BLTUI);
-    break;
-  case RISCV::QC_BLTUI:
-    Cond[0].setImm(RISCV::QC_BGEUI);
-    break;
-  case RISCV::QC_E_BEQI:
-    Cond[0].setImm(RISCV::QC_E_BNEI);
-    break;
-  case RISCV::QC_E_BNEI:
-    Cond[0].setImm(RISCV::QC_E_BEQI);
-    break;
-  case RISCV::QC_E_BGEI:
-    Cond[0].setImm(RISCV::QC_E_BLTI);
-    break;
-  case RISCV::QC_E_BLTI:
-    Cond[0].setImm(RISCV::QC_E_BGEI);
-    break;
-  case RISCV::QC_E_BGEUI:
-    Cond[0].setImm(RISCV::QC_E_BLTUI);
-    break;
-  case RISCV::QC_E_BLTUI:
-    Cond[0].setImm(RISCV::QC_E_BGEUI);
-    break;
-  case RISCV::NDS_BBC:
-    Cond[0].setImm(RISCV::NDS_BBS);
-    break;
-  case RISCV::NDS_BBS:
-    Cond[0].setImm(RISCV::NDS_BBC);
-    break;
-  case RISCV::NDS_BEQC:
-    Cond[0].setImm(RISCV::NDS_BNEC);
-    break;
-  case RISCV::NDS_BNEC:
-    Cond[0].setImm(RISCV::NDS_BEQC);
-    break;
-  }
+
+  Cond[0].setImm(RISCVCC::getInverseBranchOpcode(Cond[0].getImm()));
 
   return false;
 }

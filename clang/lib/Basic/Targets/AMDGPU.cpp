@@ -289,6 +289,21 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__R600__");
 
+  // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
+  // removed in the near future.
+  if (hasFMAF())
+    Builder.defineMacro("__HAS_FMAF__");
+  if (hasFastFMAF())
+    Builder.defineMacro("FP_FAST_FMAF");
+  if (hasLDEXPF())
+    Builder.defineMacro("__HAS_LDEXPF__");
+  if (hasFP64())
+    Builder.defineMacro("__HAS_FP64__");
+  if (hasFastFMA())
+    Builder.defineMacro("FP_FAST_FMA");
+
+  Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
+
   // Legacy HIP host code relies on these default attributes to be defined.
   bool IsHIPHost = Opts.HIP && !Opts.CUDAIsDevice;
   if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
@@ -331,21 +346,6 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (Opts.AtomicIgnoreDenormalMode)
     Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
-
-  // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
-  // removed in the near future.
-  if (hasFMAF())
-    Builder.defineMacro("__HAS_FMAF__");
-  if (hasFastFMAF())
-    Builder.defineMacro("FP_FAST_FMAF");
-  if (hasLDEXPF())
-    Builder.defineMacro("__HAS_LDEXPF__");
-  if (hasFP64())
-    Builder.defineMacro("__HAS_FP64__");
-  if (hasFastFMA())
-    Builder.defineMacro("FP_FAST_FMA");
-
-  Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 
 void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {

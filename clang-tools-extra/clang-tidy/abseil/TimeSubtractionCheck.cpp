@@ -20,9 +20,9 @@ namespace clang::tidy::abseil {
 // Returns `true` if `Range` is inside a macro definition.
 static bool insideMacroDefinition(const MatchFinder::MatchResult &Result,
                                   SourceRange Range) {
-  return !clang::Lexer::makeFileCharRange(
-              clang::CharSourceRange::getCharRange(Range),
-              *Result.SourceManager, Result.Context->getLangOpts())
+  return !Lexer::makeFileCharRange(CharSourceRange::getCharRange(Range),
+                                   *Result.SourceManager,
+                                   Result.Context->getLangOpts())
               .isValid();
 }
 
@@ -85,7 +85,7 @@ static bool parensRequired(const MatchFinder::MatchResult &Result,
 }
 
 void TimeSubtractionCheck::emitDiagnostic(const Expr *Node,
-                                          llvm::StringRef Replacement) {
+                                          StringRef Replacement) {
   diag(Node->getBeginLoc(), "perform subtraction in the time domain")
       << FixItHint::CreateReplacement(Node->getSourceRange(), Replacement);
 }

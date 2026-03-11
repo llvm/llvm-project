@@ -1345,6 +1345,13 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   endif()
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "OS390")
+    # There are occasional issues with PCH on z/OS, therefore disable PCH by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on z/OS. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Pre-compiled headers with GCC (tested versions 14+15) provide very little
     # compile-time improvements, but substantially increase the build dir size.

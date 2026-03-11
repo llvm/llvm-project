@@ -4607,19 +4607,19 @@
 
 // Begin amdgcn tests ----------------
 
-// RUN: %clang -mcpu=gfx803 -E -dM %s -o - 2>&1 \
+// RUN: %clang -mcpu=gfx900 -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_803
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_900
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_NONE
+// CHECK_AMDGCN: #define FP_FAST_FMA 1
+// CHECK_AMDGCN_900: #define FP_FAST_FMAF 1
+// CHECK_AMDGCN_NONE-NOT: FP_FAST_FMAF
 // CHECK_AMDGCN: #define __AMDGCN__ 1
-// CHECK_AMDGCN_803: #define __HAS_FMAF__ 1
-// CHECK_AMDGCN_803: #define __HAS_FP64__ 1
-// CHECK_AMDGCN_803: #define __HAS_LDEXPF__ 1
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_FMAF__
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_FP64__
-// CHECK_AMDGCN_NONE-NOT: #define __HAS_LDEXPF__
+// CHECK_AMDGCN: #define __HAS_FMAF__ 1
+// CHECK_AMDGCN: #define __HAS_FP64__ 1
+// CHECK_AMDGCN: #define __HAS_LDEXPF__ 1
 
 // Begin r600 tests ----------------
 

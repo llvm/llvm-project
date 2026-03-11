@@ -1,8 +1,12 @@
 ; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -persist-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --func-profile-similarity-threshold=70 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-count-for-cg-matching=10 --min-func-count-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile --salvage-unused-profile-max-functions=1 -S --debug-only=sample-profile-matcher 2>&1 | FileCheck %s --check-prefix=SKIP-SALVAGE
 
 ; Verify find new IR functions.
+; SKIP-SALVAGE: define dso_local i32 @main()
+; SKIP-SALVAGE-NOT: Function new_block_only is not in profile or profile symbol list.
+; SKIP-SALVAGE-NOT: Function new_foo is not in profile or profile symbol list.
 ; CHECK: Function new_block_only is not in profile or profile symbol list.
 ; CHECK: Function new_foo is not in profile or profile symbol list.
 

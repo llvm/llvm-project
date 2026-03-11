@@ -7,13 +7,11 @@ define void @_start() nounwind {
 ; FAST-SHLD:       # %bb.0: # %Entry
 ; FAST-SHLD-NEXT:    movq -40(%rsp), %rax
 ; FAST-SHLD-NEXT:    movq -32(%rsp), %rcx
-; FAST-SHLD-NEXT:    movq %rcx, %rdx
-; FAST-SHLD-NEXT:    shlq $62, %rdx
+; FAST-SHLD-NEXT:    shrdq $2, %rcx, %rax
 ; FAST-SHLD-NEXT:    shrq $2, %rcx
-; FAST-SHLD-NEXT:    shldq $2, %rdx, %rcx
-; FAST-SHLD-NEXT:    andq $-4, %rax
-; FAST-SHLD-NEXT:    incq %rax
-; FAST-SHLD-NEXT:    movq %rax, -40(%rsp)
+; FAST-SHLD-NEXT:    leaq 1(,%rax,4), %rdx
+; FAST-SHLD-NEXT:    movq %rdx, -40(%rsp)
+; FAST-SHLD-NEXT:    shldq $2, %rax, %rcx
 ; FAST-SHLD-NEXT:    movq %rcx, -32(%rsp)
 ; FAST-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; FAST-SHLD-NEXT:    movq $-1, -48(%rsp)

@@ -194,6 +194,9 @@ def DICompositeTypeAttr : DialectAttribute<(attr
 def DIDerivedTypeAttr : DialectAttribute<(attr
   VarInt:$tag,
   OptionalAttribute<"StringAttr">:$name,
+  OptionalAttribute<"DIFileAttr">:$file,
+  VarInt:$line,
+  OptionalAttribute<"DIScopeAttr">:$scope,
   OptionalAttribute<"DITypeAttr">:$baseType,
   VarInt:$sizeInBits,
   VarInt:$alignInBits,

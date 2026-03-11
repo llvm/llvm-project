@@ -1070,6 +1070,8 @@ def AMDGPU_WMMAOp :
     The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
     in case of overflow.
 
+    The `wave64`attribute indicates whether an op is designed for 64 threads wavefont.
+
     Example:
     ```mlir
       %0 = amdgpu.wmma 16x16x16 %matA * %matB + %matC : vector<8xf16>, vector<8xf16>, vector<8xf16>
@@ -1137,6 +1139,102 @@ def AMDGPU_SparseMFMAOp :
 
       %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
         { cbsz = 0 : i32, abid = 1 : i32 }
+        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+    ```
+  }];
+  let assemblyFormat = [{
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
+    attr-dict
+    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+// sparse_wmma (swmmac)
+def SWMMACSparseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F16]>,
+    VectorOfLengthAndType<[4, 8, 16], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 32], [I8]>,
+    VectorOfLengthAndType<[8, 16], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACDenseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[8, 16, 32], [F16]>,
+    VectorOfLengthAndType<[8, 16, 32], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [I8]>,
+    VectorOfLengthAndType<[8, 16, 32], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACOutTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F32]>,
+    VectorOfLengthAndType<[4, 8], [F16]>,
+    VectorOfLengthAndType<[4, 8], [BF16]>,
+    VectorOfLengthAndType<[4, 8], [I32]>
+]>;
+
+def SWMMACIdxTypes : AnyTypeOf<[
+    FixedVectorOfLengthAndType<[4], [I8]>,
+]>;
+
+
+def AMDGPU_SparseWMMAOp :
+    AMDGPU_Op<"sparse_wmma", [AllTypesMatch<["destC", "destD"]>,
+                              Pure]>,
+    Arguments<(ins
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[32, 64, 128]>]>:$k,
+                   SWMMACSparseInTypes:$sourceA,
+                   SWMMACDenseInTypes:$sourceB,
+                   SWMMACOutTypes:$destC,
+                   SWMMACIdxTypes:$sparseIdx,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$reuseA,
+                   UnitAttr:$reuseB,
+                   UnitAttr:$clamp,
+                   UnitAttr:$wave64)>,
+    Results<(outs SWMMACOutTypes: $destD)> {
+  let summary = "MLIR wrapper for CDNA sparse mfma (smfmac) instructions";
+  let description = [{
+    The `amdgpu.sparse_wmma` op is an MLIR wrapper around intrinsics for various
+    `swmmac` instructions in the AMDGPU architecture, which perform matrix
+    multiply-accumulate operations using 2:4 structured sparsity on matrix A
+    with dense matrices B, C, and D.
+
+    On gfx12, swmmac intrinsics support:
+      - M=N=16, K=32 and M=N=32, K=16 for f16, bf16, i8 and i4 sources
+      - M=N=16, K=64 for i4 sources
+
+    On gfx1250, swmmac intrinsics additionally support:
+      - M=N=16, K=64 for f16 and bf16 sources
+      - M=N=16, K=128 for f16, bf16 and i8 sources
+
+    The `sparseIdx` parameter contains packed indices identifying the positions
+    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
+    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
+    `vector<2xi16>` (two 16-bit indices).
+
+    `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
+
+    The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
+    in case of overflow.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.sparse_wmma 16x16x32 %matA * %matB + %matC sparse(%idx : vector<4xi8>)
+        : vector<4xf16>, vector<8xf16>, vector<4xf32>
+
+      %1 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        : vector<8xi8>, vector<16xi8>, vector<4xi32>
+
+      %2 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        { unsignedA = 0 : i1, unsignedB = 1 : i1, clamp = 0 : i1 }
         : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
     ```
   }];

@@ -1044,7 +1044,13 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT ExtT = ExtVal.getValueType();
-  EVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getValueType(0);
+  SDValue N0 = ExtVal->getOperand(0);
+  if (N0.getOpcode() == ISD::FREEZE)
+    N0 = N0.getOperand(0);
+  auto *Load = dyn_cast<LoadSDNode>(N0);
+  if (!Load)
+    return false;
+  EVT MemT = Load->getValueType(0);
   return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
          (ExtT == MVT::v4i32 && MemT == MVT::v4i16) ||
          (ExtT == MVT::v2i64 && MemT == MVT::v2i32);

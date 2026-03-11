@@ -83,6 +83,9 @@ Changes to LLVM infrastructure
 * Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
   `llvm/utils/reduce_pipeline.py`.
 
+* The ``Br`` opcode was split into two opcodes separating unconditional
+  (``UncondBr``) and conditional (``CondBr``) branches.
+
 Changes to building LLVM
 ------------------------
 
@@ -153,9 +156,12 @@ Changes to the RISC-V Backend
   extensions.
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
+* Adds CodeGen support for the 'Zvabd` extension.
 * `-mcpu=spacemit-a100` was added.
 * The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
+* Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
+  Reordering Structured Data) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -181,6 +187,8 @@ Changes to the Python bindings
 
 Changes to the C API
 --------------------
+
+* Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

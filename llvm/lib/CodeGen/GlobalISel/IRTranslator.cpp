@@ -603,22 +603,27 @@ bool IRTranslator::shouldEmitAsBranches(
   return true;
 }
 
-bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
-  const BranchInst &BrInst = cast<BranchInst>(U);
+bool IRTranslator::translateUncondBr(const User &U,
+                                     MachineIRBuilder &MIRBuilder) {
+  const UncondBrInst &BrInst = cast<UncondBrInst>(U);
   auto &CurMBB = MIRBuilder.getMBB();
   auto *Succ0MBB = &getMBB(*BrInst.getSuccessor(0));
 
-  if (BrInst.isUnconditional()) {
-    // If the unconditional target is the layout successor, fallthrough.
-    if (OptLevel == CodeGenOptLevel::None ||
-        !CurMBB.isLayoutSuccessor(Succ0MBB))
-      MIRBuilder.buildBr(*Succ0MBB);
+  // If the unconditional target is the layout successor, fallthrough.
+  if (OptLevel == CodeGenOptLevel::None || !CurMBB.isLayoutSuccessor(Succ0MBB))
+    MIRBuilder.buildBr(*Succ0MBB);
 
-    // Link successors.
-    for (const BasicBlock *Succ : successors(&BrInst))
-      CurMBB.addSuccessor(&getMBB(*Succ));
-    return true;
-  }
+  // Link successors.
+  for (const BasicBlock *Succ : successors(&BrInst))
+    CurMBB.addSuccessor(&getMBB(*Succ));
+  return true;
+}
+
+bool IRTranslator::translateCondBr(const User &U,
+                                   MachineIRBuilder &MIRBuilder) {
+  const CondBrInst &BrInst = cast<CondBrInst>(U);
+  auto &CurMBB = MIRBuilder.getMBB();
+  auto *Succ0MBB = &getMBB(*BrInst.getSuccessor(0));
 
   // If this condition is one of the special cases we handle, do special stuff
   // now.

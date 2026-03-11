@@ -27,6 +27,9 @@ SPIRVMCAsmInfo::SPIRVMCAsmInfo(const Triple &TT,
   CodePointerSize = 4;
   CommentString = ";";
   HasFunctionAlignment = false;
+
+  HiddenDeclarationVisibilityAttr = HiddenVisibilityAttr = MCSA_Invalid;
+  ProtectedVisibilityAttr = MCSA_Invalid;
 }
 
 bool SPIRVMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
