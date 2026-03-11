@@ -84,8 +84,7 @@
 // This LOH aims at getting rid of redundant ADRP instructions.
 //
 // The overall design for emitting the LOHs is:
-// 1. AArch64CollectLOH (this pass) records the LOHs in the
-// AArch64FunctionInfo.
+// 1. AArch64CollectLOH (this pass) records the LOHs in the AArch64FunctionInfo.
 // 2. AArch64AsmPrinter reads the LOHs from AArch64FunctionInfo and it:
 //     1. Associates them a label.
 //     2. Emits them in a MCStreamer (EmitLOHDirective).
@@ -126,9 +125,7 @@ STATISTIC(NumADRSimpleCandidate, "Number of simplifiable ADRP + ADD");
 
 namespace {
 
-struct AArch64CollectLOHImpl {
-  void run(MachineFunction &MF);
-};
+void runAArch64CollectLOH(MachineFunction &MF);
 
 struct AArch64CollectLOHLegacy : public MachineFunctionPass {
   static char ID;
@@ -137,7 +134,7 @@ struct AArch64CollectLOHLegacy : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
-    AArch64CollectLOHImpl().run(MF);
+    runAArch64CollectLOH(MF);
 
     // Return "no change": The pass only collects information.
     return false;
@@ -548,7 +545,9 @@ static void handleNormalInst(const MachineInstr &MI, LOHInfo *LOHInfos) {
   }
 }
 
-void AArch64CollectLOHImpl::run(MachineFunction &MF) {
+namespace {
+
+void runAArch64CollectLOH(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Collect LOH **********\n"
                     << "Looking in function " << MF.getName() << '\n');
 
@@ -601,10 +600,12 @@ void AArch64CollectLOHImpl::run(MachineFunction &MF) {
   }
 }
 
+} // end anonymous namespace.
+
 PreservedAnalyses
 AArch64CollectLOHPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  AArch64CollectLOHImpl().run(MF);
+  runAArch64CollectLOH(MF);
 
   // This pass only collects information.
   return PreservedAnalyses::all();
