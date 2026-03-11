@@ -8134,9 +8134,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
 
   VPlanTransforms::simplifyRecipes(*VPlan0);
   VPlanTransforms::handleEarlyExits(*VPlan0, Legal->hasUncountableEarlyExit());
-  VPlanTransforms::addMiddleCheck(*VPlan0,
-                                  /*RequiresScalarEpilogueCheck=*/true,
-                                  CM.foldTailByMasking());
+  VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
   RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *VPlan0);
@@ -8436,8 +8434,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       /*AllowReordering=*/false);
   VPlanTransforms::handleEarlyExits(*Plan,
                                     /*HasUncountableExit*/ false);
-  VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
-                                  /*TailFolded*/ false);
+  VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
 
   VPlanTransforms::createLoopRegions(*Plan);
 
