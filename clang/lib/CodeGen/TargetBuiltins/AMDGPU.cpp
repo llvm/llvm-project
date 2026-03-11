@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -472,7 +473,10 @@ static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   // SPIRVPrepareGlobals.
   LLVMContext &Ctx = CGF.getLLVMContext();
   MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
-  Call->setMetadata("llvm.amdgcn.feature.predicate", Predicate);
+
+  std::vector<Value *> Args = {Call, MetadataAsValue::get(Ctx, Predicate)};
+  CGF.Builder.CreateIntrinsic(Intrinsic::spv_assign_name, {Call->getType()},
+                              Args);
 
   return Call;
 }

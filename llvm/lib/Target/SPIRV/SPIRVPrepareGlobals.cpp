@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
@@ -81,31 +82,64 @@ bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
   return true;
 }
 
-bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
-  StringMap<unsigned> IDs;
+template<unsigned N>
+inline void removeNameHelpers(const SmallPtrSet<CallInst *, N>& ToRemove,
+                              Function *PredicateName) {
+  for (auto &&CI : ToRemove) {
+    CI->dropDroppableUses();
 
-  // Replace placeholder Specialisation Constant IDs with unique IDs associated
-  // with the predicate being evaluated, which is encoded in the call name.
-  for (auto &&U : F->users()) {
+    assert(CI->hasNUndroppableUses(0) &&
+           "spv_assign_name should not have direct uses!");
+
+    CI->eraseFromParent();
+  }
+  PredicateName->dropDroppableUses();
+  PredicateName->removeDeadConstantUsers();
+
+  assert(PredicateName->hasZeroLiveUses() &&
+         "Feature predicate metadata encoding should not have direct uses!");
+
+  PredicateName->eraseFromParent();
+}
+
+bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
+  // We used the spv_assign_name intrinsic encode predicate identity, and
+  // nothing else could have inserted the intrinsic at this point.
+  Function *PredicateName = M.getFunction("spirv.llvm_spv_assign_name_i1");
+
+  assert(PredicateName && "Feature predicates must be encoded into metadata!");
+
+  StringMap<unsigned> IDs;
+  SmallPtrSet<CallInst *, 16> ToRemove;
+  for (auto &&U : PredicateName->users()) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
-    auto *Arg0 = dyn_cast<ConstantInt>(CI->getArgOperand(0));
+
+    auto *SpecID = dyn_cast<CallInst>(CI->getArgOperand(0));
+    if (!SpecID)
+      continue;
+
+    auto *Arg0 = dyn_cast<ConstantInt>(SpecID->getArgOperand(0));
     if (!Arg0)
       continue;
 
     unsigned ID = Arg0->getZExtValue();
-
     if (ID != UINT32_MAX)
       continue;
 
-    assert(CI->getMetadata("llvm.amdgcn.feature.predicate") &&
-           "Feature predicates must be encoded into metadata!");
-    auto *P = cast<MDString>(
-        CI->getMetadata("llvm.amdgcn.feature.predicate")->getOperand(0));
-    ID = IDs.try_emplace(P->getString(), IDs.size()).first->second;
+    // Replace placeholder Specialisation Constant IDs with unique IDs
+    // associated with the predicate being evaluated, which is encoded via
+    // spv_assign_name.
+    auto *MD =
+        cast<MDNode>(cast<MetadataAsValue>(CI->getOperand(1))->getMetadata());
+    auto *P = cast<MDString>(MD->getOperand(0));
 
-    CI->setArgOperand(0, ConstantInt::get(CI->getArgOperand(0)->getType(), ID));
+    ID = IDs.try_emplace(P->getString(), IDs.size()).first->second;
+    SpecID->setArgOperand(
+        0, ConstantInt::get(SpecID->getArgOperand(0)->getType(), ID));
+
+    ToRemove.insert(CI);
   }
 
   if (IDs.empty())
@@ -123,6 +157,8 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
   new GlobalVariable(M, PredSpecIDStr->getType(), true,
                      GlobalVariable::LinkageTypes::ExternalLinkage,
                      PredSpecIDStr, "llvm.amdgcn.feature.predicate.ids");
+
+  removeNameHelpers(ToRemove, PredicateName);
 
   return true;
 }
