@@ -44,6 +44,12 @@ MockSerializationFormat::MockSerializationFormat() {
   }
 }
 
+void MockSerializationFormat::forEachRegisteredAnalysis(
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> Callback) const {
+  for (const auto &Entry : llvm::Registry<FormatInfo>::entries())
+    Callback(Entry.getName(), Entry.getDesc());
+}
+
 llvm::Expected<TUSummary>
 MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
   BuildNamespace NS(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
@@ -154,8 +160,6 @@ llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
   return llvm::Error::success();
 }
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFMockSerializationFormatAnchorSource = 0;
 static SerializationFormatRegistry::Add<MockSerializationFormat>
     RegisterFormat("MockSerializationFormat",
                    "A serialization format for testing");

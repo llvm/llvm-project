@@ -41,7 +41,6 @@ TEST(SummaryExtractorRegistryTest, EnumeratingRegistryEntries) {
   EXPECT_EQ(ActualNames, (std::set<llvm::StringRef>{
                              "MockSummaryExtractor1",
                              "MockSummaryExtractor2",
-                             "NoOpExtractor",
                          }));
 }
 
