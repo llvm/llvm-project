@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_local_id.h>
-#include <clc/workitem/clc_get_local_size.h>
-#include <clc/workitem/clc_get_max_sub_group_size.h>
-#include <clc/workitem/clc_get_sub_group_id.h>
+#include "clc/workitem/clc_get_local_id.h"
+#include "clc/workitem/clc_get_local_size.h"
+#include "clc/workitem/clc_get_max_sub_group_size.h"
+#include "clc/workitem/clc_get_sub_group_id.h"
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_id() {
   // sreg.warpid is volatile and doesn't represent virtual warp index
