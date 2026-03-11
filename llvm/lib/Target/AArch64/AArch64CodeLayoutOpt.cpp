@@ -153,6 +153,11 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableCodeAlignment)
     return false;
 
+  const Function &F = MF.getFunction();
+  // hasOptSize() returns true for both -Os and -Oz.
+  if (F.hasOptSize())
+    return false;
+
   const auto *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
 
