@@ -408,8 +408,13 @@ Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
 Error offloading::intel::containerizeOpenMPSPIRVImage(
     std::unique_ptr<MemoryBuffer> &Binary, llvm::Triple Triple,
     StringRef CompileOpts, StringRef LinkOpts) {
+  constexpr char INTEL_ONEOMP_OFFLOAD_VERSION[] = "1.0";
+
+  assert(Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::Intel &&
+         "Expected SPIR-V triple with Intel vendor");
+
   MapVector<StringRef, StringRef> MetaData;
-  MetaData["version"] = "1.0";
+  MetaData["version"] = INTEL_ONEOMP_OFFLOAD_VERSION;
   if (!CompileOpts.empty())
     MetaData["compile-opts"] = CompileOpts;
   if (!LinkOpts.empty())

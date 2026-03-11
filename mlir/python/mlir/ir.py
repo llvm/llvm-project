@@ -46,7 +46,7 @@ def get_parent_of_type(op: OpView | Operation, op_class: type[OpView]) -> OpView
 
 
 @contextmanager
-def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None]:
+def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None, None, None]:
     """Enables automatic traceback-based locations for MLIR operations.
 
     Operations created within this context will have their location

@@ -1644,7 +1644,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                 ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
             Targets.insert(Target);
         }
-        MIA->updateState(Inst, Index);
+        MIA->updateState(Inst, STI, Index);
       } else
         MIA->resetState();
     }
@@ -2615,7 +2615,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 *TargetOS << "\n";
             }
 
-            DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
+            DT->InstrAnalysis->updateState(Inst, DT->SubtargetInfo.get(),
+                                           SectionAddr + Index);
           } else if (!Disassembled && DT->InstrAnalysis) {
             DT->InstrAnalysis->resetState();
           }
