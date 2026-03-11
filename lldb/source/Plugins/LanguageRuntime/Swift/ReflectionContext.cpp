@@ -426,6 +426,7 @@ public:
       return llvm::createStringError(*error);
 
     AsyncTaskInfo result;
+    result.taskAddr = AsyncTaskPtr;
     result.isChildTask = task_info.IsChildTask;
     result.isFuture = task_info.IsFuture;
     result.isGroupChildTask = task_info.IsGroupChildTask;
@@ -443,8 +444,13 @@ public:
     result.enqueuePriority = task_info.EnqueuePriority;
     result.resumeAsyncContext = task_info.ResumeAsyncContext;
     result.runJob = task_info.RunJob;
+    result.parentTask = task_info.ParentTask;
     for (auto child : task_info.ChildTasks)
       result.childTasks.push_back(child);
+    for (auto waiting : task_info.WaitingTasks)
+      result.waitingTasks.push_back(waiting);
+    for (auto pc : task_info.AsyncBacktraceFrames)
+      result.asyncBacktracePcs.push_back(pc);
     return result;
   }
 
