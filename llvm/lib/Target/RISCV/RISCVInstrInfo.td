@@ -1503,7 +1503,7 @@ def : Pat<(XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)),
 // zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
 // ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
 def shiftMaskXLen : ComplexPattern<XLenVT, 1, "selectShiftMaskXLen", [], [], 0>;
-def shiftMask32   : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
+def shiftMask32   : ComplexPattern<i64, 1, "selectShiftMask<32>", [], [], 0>;
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we

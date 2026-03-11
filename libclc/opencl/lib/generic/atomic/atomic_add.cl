@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/atomic/clc_atomic_fetch_add.h"
+#include <clc/atomic/clc_atomic_fetch_add.h>
 
 #define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_add(volatile AS TYPE *p, TYPE val) {      \
