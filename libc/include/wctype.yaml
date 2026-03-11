@@ -8,9 +8,6 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
-<<<<<<< HEAD
-  - name: iswxdigit
-=======
   - name: iswcntrl
     standards:
       - stdc
@@ -36,7 +33,12 @@ functions:
     arguments:
       - type: wint_t
   - name: iswblank
->>>>>>> main
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswxdigit
     standards:
       - stdc
     return_type: int
