@@ -17,8 +17,7 @@ namespace clang::tidy::llvm_check {
 
 UseVectorUtilsCheck::UseVectorUtilsCheck(StringRef Name,
                                          ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(utils::IncludeSorter::IS_LLVM, areDiagsSelfContained()) {}
+    : ClangTidyCheck(Name, Context), Inserter(areDiagsSelfContained()) {}
 
 void UseVectorUtilsCheck::registerPPCallbacks(const SourceManager &SM,
                                               Preprocessor *PP,

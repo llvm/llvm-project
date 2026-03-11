@@ -20,14 +20,11 @@ namespace clang::tidy::cppcoreguidelines {
 ProBoundsConstantArrayIndexCheck::ProBoundsConstantArrayIndexCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), GslHeader(Options.get("GslHeader", "")),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()) {}
+      Inserter(areDiagsSelfContained()) {}
 
 void ProBoundsConstantArrayIndexCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "GslHeader", GslHeader);
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
 }
 
 void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(

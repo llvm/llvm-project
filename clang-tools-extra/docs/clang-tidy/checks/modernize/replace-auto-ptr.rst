@@ -71,11 +71,3 @@ Limitations
      }
 
      // only 'f<int>()' (or similar) will trigger the replacement.
-
-Options
--------
-
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.

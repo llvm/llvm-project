@@ -171,11 +171,6 @@ Options
    system include.
    Default value is an empty string.
 
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
-
 
 Limitations
 -----------

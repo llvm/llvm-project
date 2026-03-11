@@ -11,7 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 #include "IncludeInserter.h"
-#include "IncludeSorter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Transformer/Transformer.h"
 #include <optional>
@@ -66,7 +65,7 @@ public:
 
   /// Derived classes that override this function should call this method from
   /// the overridden method.
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {}
 
   /// Set the rule that this check implements.  All cases in the rule must have
   /// a non-null \c Explanation, even though \c Explanation is optional for

@@ -15,7 +15,7 @@ namespace custom {
 // will changed dynamically when switching to different source file.
 static void registerCustomChecks(const ClangTidyOptions &Options,
                                  ClangTidyCheckFactories &Factories) {
-  static llvm::SmallSet<llvm::SmallString<32>, 8> CustomCheckNames{};
+  static llvm::SmallSet<SmallString<32>, 8> CustomCheckNames{};
   if (!Options.CustomChecks.has_value() || Options.CustomChecks->empty())
     return;
   for (const llvm::SmallString<32> &Name : CustomCheckNames)

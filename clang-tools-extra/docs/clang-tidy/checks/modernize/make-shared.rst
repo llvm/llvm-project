@@ -39,11 +39,6 @@ Options
    A string specifying the corresponding header of make-shared-ptr function.
    Default is `<memory>`.
 
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
-
 .. option:: IgnoreMacros
 
    If set to `true`, the check will not give warnings inside macros. Default

@@ -32,9 +32,7 @@ UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
           Options.get("ReplacementPrintFunction", "std::print")),
       ReplacementPrintlnFunction(
           Options.get("ReplacementPrintlnFunction", "std::println")),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()),
+      IncludeInserter(areDiagsSelfContained()),
       MaybeHeaderToInclude(Options.get("PrintHeader")) {
   if (PrintfLikeFunctions.empty() && FprintfLikeFunctions.empty()) {
     PrintfLikeFunctions.emplace_back("::printf");
@@ -57,7 +55,6 @@ void UseStdPrintCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 serializeStringList(FprintfLikeFunctions));
   Options.store(Opts, "ReplacementPrintFunction", ReplacementPrintFunction);
   Options.store(Opts, "ReplacementPrintlnFunction", ReplacementPrintlnFunction);
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   if (MaybeHeaderToInclude)
     Options.store(Opts, "PrintHeader", *MaybeHeaderToInclude);
 }

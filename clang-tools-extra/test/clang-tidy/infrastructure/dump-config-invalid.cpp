@@ -1,6 +1,6 @@
-// RUN: clang-tidy --checks="-*,modernize-make-shared" \
+// RUN: clang-tidy --checks="-*,modernize-loop-convert" \
 // RUN:   --config="CheckOptions: { \
-// RUN:      modernize-make-shared.IncludeStyle: '0' }" \
+// RUN:      modernize-loop-convert.NamingStyle: '0' }" \
 // RUN:   --dump-config -- | FileCheck %s
 
-// CHECK: modernize-make-shared.IncludeStyle: llvm
+// CHECK: modernize-loop-convert.NamingStyle: CamelCase

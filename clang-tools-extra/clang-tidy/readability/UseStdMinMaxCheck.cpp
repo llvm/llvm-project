@@ -120,14 +120,7 @@ createReplacement(const Expr *CondLhs, const Expr *CondRhs,
 }
 
 UseStdMinMaxCheck::UseStdMinMaxCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
-                                               utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
-
-void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-}
+    : ClangTidyCheck(Name, Context), IncludeInserter(areDiagsSelfContained()) {}
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperator =

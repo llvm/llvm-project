@@ -37,11 +37,6 @@ Options
    ``std::basic_string`` and ``std::basic_string_view`` are considered. The list
    of methods to be considered is fixed.
 
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
-
 .. option:: AbseilStringsMatchHeader
 
    The location of Abseil's ``strings/match.h``. Defaults to

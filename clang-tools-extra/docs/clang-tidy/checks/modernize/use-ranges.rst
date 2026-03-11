@@ -128,11 +128,6 @@ Transforms to:
 Options
 -------
 
-.. option:: IncludeStyle
-
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
-
 .. option:: UseReversePipe
 
   When `true` (default `false`), fixes which involve reverse ranges will use the

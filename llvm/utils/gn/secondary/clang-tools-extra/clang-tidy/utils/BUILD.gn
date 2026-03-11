@@ -24,7 +24,6 @@ static_library("utils") {
     "FormatStringConverter.cpp",
     "HeaderGuard.cpp",
     "IncludeInserter.cpp",
-    "IncludeSorter.cpp",
     "LexerUtils.cpp",
     "Matchers.cpp",
     "NamespaceAliaser.cpp",
