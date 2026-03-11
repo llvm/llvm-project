@@ -2757,7 +2757,8 @@ void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
     R->addVisitor<MallocBugVisitor>(Sym);
 
     if (AF.Kind == AF_InnerBuffer)
-      R->addVisitor(allocation_state::getInnerPointerBRVisitor(Sym));
+      R->addVisitor(
+          allocation_state::getInnerPointerBRVisitor(Sym, C.getState()));
 
     C.emitReport(std::move(R));
   }

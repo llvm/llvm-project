@@ -59,9 +59,11 @@ class InnerPointerChecker
 public:
   class InnerPointerBRVisitor : public BugReporterVisitor {
     SymbolRef PtrToBuf;
+    const MemRegion *const ContainerRegion;
 
   public:
-    InnerPointerBRVisitor(SymbolRef Sym) : PtrToBuf(Sym) {}
+    InnerPointerBRVisitor(SymbolRef Sym, ProgramStateRef State)
+        : PtrToBuf(Sym), ContainerRegion(getContainerRegion(Sym, State)) {}
 
     static void *getTag() {
       static int Tag = 0;
@@ -76,15 +78,18 @@ public:
                                      BugReporterContext &BRC,
                                      PathSensitiveBugReport &BR) override;
 
-    // FIXME: Scan the map once in the visitor's constructor and do a direct
-    // lookup by region.
-    bool isSymbolTracked(ProgramStateRef State, SymbolRef Sym) {
-      RawPtrMapTy Map = State->get<RawPtrMap>();
-      for (const auto &Entry : Map) {
-        if (Entry.second.contains(Sym))
-          return true;
+    static const MemRegion *getContainerRegion(SymbolRef Sym,
+                                               ProgramStateRef State) {
+      for (auto [R, Ptrs] : State->get<RawPtrMap>()) {
+        if (Ptrs.contains(Sym))
+          return R;
       }
-      return false;
+      return nullptr;
+    }
+
+    bool isSymbolTracked(ProgramStateRef State, SymbolRef Sym) {
+      const PtrSet *PS = State->get<RawPtrMap>(ContainerRegion);
+      return PS && PS->contains(Sym);
     }
   };
 
@@ -275,8 +280,10 @@ namespace clang {
 namespace ento {
 namespace allocation_state {
 
-std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym) {
-  return std::make_unique<InnerPointerChecker::InnerPointerBRVisitor>(Sym);
+std::unique_ptr<BugReporterVisitor>
+getInnerPointerBRVisitor(SymbolRef Sym, ProgramStateRef State) {
+  return std::make_unique<InnerPointerChecker::InnerPointerBRVisitor>(Sym,
+                                                                      State);
 }
 
 const MemRegion *getContainerObjRegion(ProgramStateRef State, SymbolRef Sym) {

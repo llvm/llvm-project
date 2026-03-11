@@ -23,7 +23,8 @@ ProgramStateRef markReleased(ProgramStateRef State, SymbolRef Sym,
 /// This function provides an additional visitor that augments the bug report
 /// with information relevant to memory errors caused by the misuse of
 /// AF_InnerBuffer symbols.
-std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym);
+std::unique_ptr<BugReporterVisitor>
+getInnerPointerBRVisitor(SymbolRef Sym, ProgramStateRef State);
 
 /// 'Sym' represents a pointer to the inner buffer of a container object.
 /// This function looks up the memory region of that object in
