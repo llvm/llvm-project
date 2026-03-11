@@ -128,7 +128,7 @@ cl::opt<std::string>
                    cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
 
 cl::opt<bool> GeneratePerfTextProfile(
-    "generate-perf-text-data",
+    "generate-perf-script",
     cl::desc("Dump perf-script jobs' output into a file"), cl::Hidden,
     cl::cat(AggregatorCategory));
 
@@ -176,13 +176,11 @@ void deleteTempFile(const std::string &FileName) {
 }
 }
 
-uint64_t DataAggregator::getFileSize(const StringRef File) {
+ErrorOr<uint64_t> DataAggregator::getFileSize(StringRef File) {
   uint64_t Size;
-  std::error_code EC = sys::fs::file_size(File, Size);
-  if (EC) {
+  if (std::error_code EC = sys::fs::file_size(File, Size)) {
     errs() << "unable to obtain file size: " << EC.message() << "\n";
-    deleteTempFiles();
-    exit(1);
+    return EC;
   }
   return Size;
 }
@@ -400,13 +398,12 @@ void DataAggregator::parsePreAggregated() {
   }
 }
 
-void DataAggregator::generatePerfTextData() {
+Error DataAggregator::generatePerfTextData() {
   std::error_code EC;
   raw_fd_ostream OutFile(opts::OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
     errs() << "error opening output file: " << EC.message() << "\n";
-    deleteTempFiles();
-    exit(1);
+    return errorCodeToError(EC);
   }
 
   SmallVector<PerfProcessInfo *, 5> ProcessInfos = {
@@ -433,19 +430,20 @@ void DataAggregator::generatePerfTextData() {
     sys::Wait(PPI->PI, std::nullopt, &Error);
     if (!Error.empty()) {
       errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
-      deleteTempFiles();
-      exit(1);
+      return errorCodeToError(make_error_code(llvm::errc::no_child_process));
     }
 
-    SS << PPI->Type << formatv("={0:x-16};", getFileSize(PathData));
+    ErrorOr<uint64_t> FsRes = getFileSize(PathData);
+    if (std::error_code EC = FsRes.getError())
+      return errorCodeToError(EC);
+    SS << PPI->Type << formatv("={0:x-16};", *FsRes);
 
     // Merge all perf-scripts jobs' output into the single OutputFile
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileOrSTDIN(PathData);
     if (std::error_code EC = MB.getError()) {
       errs() << "Cannot open " << PathData << ": " << EC.message() << "\n";
-      deleteTempFiles();
-      exit(1);
+      return errorCodeToError(EC);
     }
     OutFile << (*MB)->getBuffer();
   }
@@ -456,7 +454,7 @@ void DataAggregator::generatePerfTextData() {
   outs() << "PERF2BOLT: Profile is saved to file " << opts::OutputFilename
          << "\n";
   deleteTempFiles();
-  exit(0);
+  return Error::success();
 }
 
 void DataAggregator::filterBinaryMMapInfo() {
@@ -672,7 +670,11 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
   if (opts::GeneratePerfTextProfile) {
-    generatePerfTextData();
+    if (Error E = generatePerfTextData()) {
+      deleteTempFiles();
+      exit(1);
+    }
+    exit(0);
   } else if (opts::ReadPreAggregated) {
     parsePreAggregated();
   } else {
