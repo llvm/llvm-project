@@ -8,6 +8,15 @@
 //
 // Registry for SummaryViewBuilders.
 //
+// To register a builder, add a static Add<BuilderT> in the builder's
+// translation unit:
+//
+//   static SummaryViewBuilderRegistry::Add<MyViewBuilder>
+//       Registered("View builder for MyAnalysis");
+//
+// The registry entry name is derived automatically from
+// MyViewBuilder::summaryName(), which returns MyView::summaryName().
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWBUILDERREGISTRY_H
@@ -16,6 +25,7 @@
 #include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilder.h"
 #include "llvm/Support/Registry.h"
 #include <memory>
+#include <string>
 
 namespace clang::ssaf {
 

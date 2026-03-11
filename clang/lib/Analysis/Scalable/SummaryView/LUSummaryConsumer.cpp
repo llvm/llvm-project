@@ -9,7 +9,6 @@
 #include "clang/Analysis/Scalable/SummaryView/LUSummaryConsumer.h"
 #include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilderRegistry.h"
 #include <cassert>
-#include <memory>
 
 using namespace clang;
 using namespace ssaf;

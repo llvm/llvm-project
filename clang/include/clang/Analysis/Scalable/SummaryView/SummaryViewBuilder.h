@@ -16,6 +16,7 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWBUILDER_H
 
 #include "clang/Analysis/Scalable/Model/EntityId.h"
+#include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/SummaryView/SummaryView.h"
 #include "clang/Analysis/Scalable/SummaryView/SummaryViewTraits.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
@@ -52,8 +53,9 @@ private:
 };
 
 /// Typed intermediate template that concrete builders inherit from.
-/// Concrete builders only need to implement the typed
-/// \c addSummary(EntityId, unique_ptr<SummaryT>) overload.
+/// Concrete builders must implement the typed
+/// \c addSummary(EntityId, unique_ptr<SummaryT>) overload, and may override
+/// \c finalize() for any post-processing needed after all entities are added.
 template <typename ViewT, typename SummaryT>
 class SummaryViewBuilder : public SummaryViewBuilderBase {
   static_assert(std::is_base_of_v<SummaryView, ViewT>,
