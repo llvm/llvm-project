@@ -2016,14 +2016,8 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   // If this is an instruction which fast-isel has deferred, select it now.
   if (const Instruction *Inst = dyn_cast<Instruction>(V)) {
     Register InReg = FuncInfo.InitializeRegForValue(Inst);
-
-    std::optional<CallingConv::ID> CallConv;
-    auto *CB = dyn_cast<CallBase>(Inst);
-    if (CB && !CB->isInlineAsm())
-      CallConv = CB->getCallingConv();
-
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
-                     Inst->getType(), CallConv);
+                     Inst->getType(), std::nullopt);
     SDValue Chain = DAG.getEntryNode();
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
@@ -3875,6 +3869,9 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     case SPF_SMAX:    Opc = ISD::SMAX; break;
     case SPF_SMIN:    Opc = ISD::SMIN; break;
     case SPF_FMINNUM:
+      if (!TLI.isProfitableToCombineMinNumMaxNum(VT))
+        break;
+
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
       case SPNB_RETURNS_NAN: break;
@@ -3891,6 +3888,9 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       }
       break;
     case SPF_FMAXNUM:
+      if (!TLI.isProfitableToCombineMinNumMaxNum(VT))
+        break;
+
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
       case SPNB_RETURNS_NAN: break;
@@ -4785,6 +4785,18 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     if (MemVTs[i] != ValueVTs[i])
       L = DAG.getPtrExtOrTrunc(L, dl, ValueVTs[i]);
 
+    if (MDNode *NoFPClassMD = I.getMetadata(LLVMContext::MD_nofpclass)) {
+      uint64_t FPTestInt =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(NoFPClassMD->getOperand(0))->getValue())
+              ->getZExtValue();
+      if (FPTestInt != fcNone) {
+        SDValue FPTestConst =
+            DAG.getTargetConstant(FPTestInt, SDLoc(), MVT::i32);
+        L = DAG.getNode(ISD::AssertNoFPClass, dl, L.getValueType(), L,
+                        FPTestConst);
+      }
+    }
     Values[i] = L;
   }
 

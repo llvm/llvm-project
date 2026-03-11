@@ -1167,8 +1167,8 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
       // (the nonzero data and the zeroinitializer).
       SmallVector<mlir::Attribute> eles;
       eles.reserve(nonzeroLength);
-      for (const auto &element : elements)
-        eles.push_back(element);
+      for (unsigned i = 0; i < nonzeroLength; ++i)
+        eles.push_back(elements[i]);
       auto initial = cir::ConstArrayAttr::get(
           cir::ArrayType::get(commonElementType, nonzeroLength),
           mlir::ArrayAttr::get(builder.getContext(), eles));
@@ -1897,6 +1897,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     assert(!cir::MissingFeatures::cxxABI());
 
     const ValueDecl *memberDecl = value.getMemberPointerDecl();
+    if (!memberDecl)
+      return builder.getZeroInitAttr(cgm.convertType(destType));
+
     if (value.isMemberPointerToDerivedMember()) {
       cgm.errorNYI(
           "ConstExprEmitter::tryEmitPrivate member pointer to derived member");

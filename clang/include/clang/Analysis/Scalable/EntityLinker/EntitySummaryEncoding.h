@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_ENTITYLINKER_ENTITYSUMMARYENCODING_H
 
 #include "clang/Analysis/Scalable/Model/EntityId.h"
+#include "llvm/Support/Error.h"
 #include <map>
 
 namespace clang::ssaf {
@@ -32,7 +33,7 @@ public:
   /// Updates EntityId references in the encoded data.
   ///
   /// \param EntityResolutionTable Mapping from old EntityIds to new EntityIds.
-  virtual void
+  virtual llvm::Error
   patch(const std::map<EntityId, EntityId> &EntityResolutionTable) = 0;
 };
 

@@ -30,6 +30,7 @@ add_header_library(
     auxv.h
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_auxv_macros
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
