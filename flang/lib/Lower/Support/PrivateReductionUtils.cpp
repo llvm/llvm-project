@@ -14,6 +14,7 @@
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -21,12 +22,14 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 
@@ -529,6 +532,60 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   auto temp = [&]() {
     if (shouldAllocateTempOnStack())
       return createStackTempFromMold(loc, builder, source);
+
+    // For CUDA device arrays that require special allocation (device,
+    // managed, unified, etc.), use cuf.alloc instead of fir.allocmem so
+    // that the private copy lives in device memory.
+    if (sym && Fortran::semantics::NeedCUDAAlloc(sym->GetUltimate())) {
+      cuf::DataAttributeAttr dataAttr =
+          Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
+                                                          sym->GetUltimate());
+      mlir::Type sequenceType =
+          hlfir::getFortranElementOrSequenceType(source.getType());
+      mlir::Value shape = hlfir::genShape(loc, builder, source);
+      auto extents = hlfir::getIndexExtents(loc, builder, shape);
+      llvm::SmallVector<mlir::Value> elidedExtents =
+          fir::factory::elideExtentsAlreadyInType(sequenceType, extents);
+      llvm::SmallVector<mlir::Value> elidedLenParams =
+          fir::factory::elideLengthsAlreadyInType(sequenceType, lenParams);
+      auto idxTy = builder.getIndexType();
+      for (mlir::Value &ext : elidedExtents)
+        ext = builder.createConvert(loc, idxTy, ext);
+      auto allocOp = cuf::AllocOp::create(builder, loc, sequenceType,
+                                          /*uniqName=*/"",
+                                          /*bindcName=*/".tmp", dataAttr,
+                                          elidedLenParams, elidedExtents);
+      auto declareOp = hlfir::DeclareOp::create(
+          builder, loc, allocOp.getResult(), ".tmp", shape, lenParams,
+          /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+          /*storage_offset=*/0, fir::FortranVariableFlagsAttr{}, dataAttr);
+
+      // Create cleanup region using cuf.free for device deallocation.
+      {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        assert(cleanupRegion.empty());
+        mlir::Block *block = builder.createBlock(
+            &cleanupRegion, cleanupRegion.end(), {argType}, {loc});
+        builder.setInsertionPointToEnd(block);
+
+        mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
+        assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
+        mlir::Value addr =
+            hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
+        mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
+        fir::IfOp ifOp = fir::IfOp::create(builder, loc, isAllocated,
+                                           /*withElseRegion=*/false);
+        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+        cuf::FreeOp::create(builder, loc, addr, dataAttr);
+        builder.setInsertionPointAfter(ifOp);
+        if (isDoConcurrent)
+          fir::YieldOp::create(builder, loc);
+        else
+          mlir::omp::YieldOp::create(builder, loc);
+      }
+
+      return hlfir::Entity{declareOp.getBase()};
+    }
 
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
     // if needsDealloc, add cleanup region. Always
