@@ -336,13 +336,11 @@ class BytecodeSection:
             builder.add_uleb(len(bc), "program size")
             builder.add_bytes(bc, "program")
 
-        darwin = ("macOS", "iOS", "watchOS", "tvOS", "visionOS")
-        darwin_list = " || ".join(f"os({_os})" for _os in darwin)
         print(
             textwrap.dedent(
-                f"""
+                """
                 @used
-                #if {darwin_list}
+                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
                 @section("__TEXT,__lldbsummaries")
                 #else
                 @section(".lldbsummaries")
@@ -353,7 +351,7 @@ class BytecodeSection:
         )
         var_name = re.sub(r"\W", "_", self.type_name)
         print(
-            f"static let _{var_name}_formatter: {builder.type_decl} = (",
+            f"let _{var_name}_formatter: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "
