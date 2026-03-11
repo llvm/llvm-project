@@ -1,6 +1,6 @@
 libclc_configure_source_list(CLC_AMDGPU_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}
-  address_space/qualifier.cl
+  address_space/clc_qualifier.cl
   math/clc_exp.cl
   math/clc_exp2.cl
   math/clc_exp10.cl
@@ -18,9 +18,9 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   math/clc_native_exp2.cl
   math/clc_native_log10.cl
   mem_fence/clc_mem_fence.cl
-  subgroup/subgroup.cl
-  subgroup/sub_group_broadcast.cl
-  subgroup/sub_group_reduce.cl
+  subgroup/clc_subgroup.cl
+  subgroup/clc_sub_group_broadcast.cl
+  subgroup/clc_sub_group_reduce.cl
   synchronization/clc_sub_group_barrier.cl
   synchronization/clc_work_group_barrier.cl
   workitem/clc_get_enqueued_local_size.cl

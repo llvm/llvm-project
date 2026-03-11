@@ -25,6 +25,10 @@
 # CHECK-NEXT:          R_X86_64_PC32   foo-0x4
 # CHECK-NEXT: 62 f5 7d 08 6a 05 00 00 00 00 vcvttps2iubs    (%rip), %xmm0
 # CHECK-NEXT:          R_X86_64_PC32   foo-0x4
+# CHECK-NEXT: 62 f5 7f 08 1e 05 00 00 00 00 vcvthf82ph      (%rip), %xmm0
+# CHECK-NEXT:          R_X86_64_PC32   foo-0x4
+# CHECK-NEXT: 62 f1 7c 08 2e 05 00 00 00 00 vucomiss        (%rip), %xmm0
+# CHECK-NEXT:          R_X86_64_PC32   foo-0x4
 
 vcvtbf162ibs foo(%rip), %xmm0
 vcvtbf162iubs foo(%rip), %xmm0
@@ -38,3 +42,6 @@ vcvttph2ibs foo(%rip), %xmm0
 vcvttph2iubs foo(%rip), %xmm0
 vcvttps2ibs foo(%rip), %xmm0
 vcvttps2iubs foo(%rip), %xmm0
+
+vcvthf82ph foo(%rip), %xmm0
+{evex} vucomiss foo(%rip), %xmm0
