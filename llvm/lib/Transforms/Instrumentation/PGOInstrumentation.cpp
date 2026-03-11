@@ -335,6 +335,11 @@ static cl::opt<bool> PGOTreatUnknownAsCold(
     cl::desc("For cold function instrumentation, treat count unknown(e.g. "
              "unprofiled) functions as cold."));
 
+static cl::opt<bool> PGOUseEdgeCountInference(
+    "pgo-use-edge-count-inference", cl::init(false), cl::Hidden,
+    cl::desc("Use profile inference to infer block and edge counts from the "
+             "block counts."));
+
 cl::opt<bool> PGOInstrumentColdFunctionOnly(
     "pgo-instrument-cold-function-only", cl::init(false), cl::Hidden,
     cl::desc("Enable cold function only instrumentation."));
@@ -360,6 +365,41 @@ extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<bool> EnableVTableProfileUse;
 LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
     ProfileCorrelate;
+} // namespace llvm
+
+#include "llvm/Transforms/Utils/SampleProfileInference.h"
+
+namespace llvm {
+template <>
+inline bool SampleProfileInference<Function>::isExit(const BasicBlock *BB) {
+  return succ_empty(BB);
+}
+
+template <>
+inline void SampleProfileInference<Function>::findUnlikelyJumps(
+    const std::vector<const BasicBlock *> &BasicBlocks,
+    BlockEdgeMap &Successors, FlowFunction &Func) {
+  for (auto &Jump : Func.Jumps) {
+    const auto *BB = BasicBlocks[Jump.Source];
+    const auto *Succ = BasicBlocks[Jump.Target];
+    const Instruction *TI = BB->getTerminator();
+    // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
+    // In that case block Succ should be a landing pad
+    const auto &Succs = Successors[BB];
+    if (Succs.size() == 2 && Succs.back() == Succ) {
+      if (isa<InvokeInst>(TI)) {
+        Jump.IsUnlikely = true;
+      }
+    }
+    const Instruction *SuccTI = Succ->getTerminator();
+    // Check if the target block contains UnreachableInst and mark it unlikely
+    if (SuccTI->getNumSuccessors() == 0) {
+      if (isa<UnreachableInst>(SuccTI)) {
+        Jump.IsUnlikely = true;
+      }
+    }
+  }
+}
 } // namespace llvm
 
 namespace {
@@ -611,6 +651,9 @@ public:
 
   // The Minimum Spanning Tree of function CFG.
   CFGMST<Edge, BBInfo> MST;
+
+  // Collect the BasicBlocks resulting from critical edge splitting.
+  DenseSet<BasicBlock *> SplitBBs;
 
   const std::optional<BlockCoverageInference> BCI;
 
@@ -881,6 +924,8 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   // For a critical edge, we have to split. Instrument the newly
   // created BB.
   IsCS ? NumOfCSPGOSplit++ : NumOfPGOSplit++;
+  if (InstrBB)
+    SplitBBs.insert(InstrBB);
   LLVM_DEBUG(dbgs() << "Split critical edge: " << getBBInfo(SrcBB).Index
                     << " --> " << getBBInfo(DestBB).Index << "\n");
   // Need to add two new edges. First one: Add new edge of SrcBB->InstrBB.
@@ -1652,6 +1697,62 @@ void PGOUseFunc::populateCounters() {
 
   LLVM_DEBUG(dbgs() << "Populate counts in " << NumPasses << " passes.\n");
   (void)NumPasses;
+
+  if (PGOUseEdgeCountInference) {
+    SampleProfileInference<Function>::BlockWeightMap SampleBlockWeights;
+    SampleProfileInference<Function>::EdgeWeightMap EdgeWeights;
+    SampleProfileInference<Function>::BlockEdgeMap Successors;
+
+    for (auto &BB : F) {
+      SmallVector<const BasicBlock *, 8> Succs;
+      for (auto *Succ : successors(&BB)) {
+        Succs.push_back(Succ);
+      }
+      Successors[&BB] = Succs;
+
+      bool IsSplit = FuncInfo.SplitBBs.count(&BB);
+
+      if (!IsSplit) {
+        if (auto *BBInfo = findBBInfo(&BB)) {
+          if (BBInfo->Count) {
+            SampleBlockWeights[&BB] = *BBInfo->Count;
+          }
+        }
+      }
+    }
+
+    SampleProfileInference<Function> SPI(F, Successors, SampleBlockWeights);
+    SampleProfileInference<Function>::BlockWeightMap BlockWeights;
+    SPI.apply(BlockWeights, EdgeWeights);
+
+    for (auto &BB : F) {
+      if (auto *BBInfo = findBBInfo(&BB)) {
+        if (BlockWeights.count(&BB)) {
+          BBInfo->Count = BlockWeights[&BB];
+        }
+      }
+    }
+
+    for (const auto &E : FuncInfo.MST.allEdges()) {
+      if (E->Removed)
+        continue;
+      auto *SrcBB = E->SrcBB;
+      auto *DestBB = E->DestBB;
+      auto Edge = std::make_pair(SrcBB, DestBB);
+      auto *UseEdge = dyn_cast<PGOUseEdge>(E.get());
+      if (!UseEdge)
+        continue;
+      if (auto It = EdgeWeights.find(Edge); It != EdgeWeights.end()) {
+        LLVM_DEBUG(dbgs() << "Edge: " << E->infoString() << " setting to " << It->second
+               << "\n");
+        UseEdge->setEdgeCount(It->second);
+      } else {
+        LLVM_DEBUG(dbgs() << "Edge: " << E->infoString() << " setting to 0\n");
+        UseEdge->setEdgeCount(0);
+      }
+    }
+  }
+
 #ifndef NDEBUG
   // Assert every BB has a valid counter.
   for (auto &BB : F) {
