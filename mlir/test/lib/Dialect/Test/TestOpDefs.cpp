@@ -452,7 +452,7 @@ namespace {
 struct TestResource : public SideEffects::Resource::Base<TestResource> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestResource)
 
-  StringRef getName() final { return "<Test>"; }
+  StringRef getName() const final { return "<Test>"; }
 };
 } // namespace
 
@@ -479,6 +479,12 @@ void SideEffectOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -518,6 +524,12 @@ void SideEffectWithRegionOp::getEffects(
     SideEffects::Resource *resource = SideEffects::DefaultResource::get();
     if (effectElement.get("test_resource"))
       resource = TestResource::get();
+    else if (effectElement.get("test_nonaddressable_resource"))
+      resource = TestNonAddressableResource::get();
+    else if (effectElement.get("test_nonaddressable_resource_a"))
+      resource = TestNonAddressableResourceA::get();
+    else if (effectElement.get("test_nonaddressable_resource_b"))
+      resource = TestNonAddressableResourceB::get();
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
@@ -875,6 +887,20 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 //===----------------------------------------------------------------------===//
 // TestWithBoundsOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult TestWithBoundsOp::verify() {
+  Type type = getElementTypeOrSelf(getResult().getType());
+  unsigned expectedWidth = 0;
+  if (type.isIndex())
+    expectedWidth = IndexType::kInternalStorageBitWidth;
+  else if (auto intTy = llvm::dyn_cast<IntegerType>(type))
+    expectedWidth = intTy.getWidth();
+  if (expectedWidth != 0 && getUmin().getBitWidth() != expectedWidth)
+    return emitOpError("bound attribute width (")
+           << getUmin().getBitWidth() << ") does not match result type width ("
+           << expectedWidth << ")";
+  return success();
+}
 
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
@@ -1417,6 +1443,82 @@ ValueRange
 TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isParent() ? ValueRange(getOperation()->getResults())
                               : ValueRange(getBody().front().getArguments());
+}
+
+//===----------------------------------------------------------------------===//
+// TestRegionTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestRegionTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
+}
+
+//===----------------------------------------------------------------------===//
+// TestLoopTypesCompatOp
+//===----------------------------------------------------------------------===//
+
+void TestLoopTypesCompatOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getInitArgs();
+}
+
+ValueRange
+TestLoopTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+MutableArrayRef<OpOperand> TestLoopTypesCompatOp::getInitsMutable() {
+  return getInitArgsMutable();
+}
+
+Block::BlockArgListType TestLoopTypesCompatOp::getRegionIterArgs() {
+  return getBody().getArguments();
+}
+
+std::optional<MutableArrayRef<OpOperand>>
+TestLoopTypesCompatOp::getYieldedValuesMutable() {
+  return cast<TestTypesCompatYieldOp>(getBody().front().getTerminator())
+      .getArgsMutable();
+}
+
+std::optional<ResultRange> TestLoopTypesCompatOp::getLoopResults() {
+  return getResults();
+}
+
+SmallVector<Region *> TestLoopTypesCompatOp::getLoopRegions() {
+  return {&getBody()};
+}
+
+bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
+  return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
 }
 
 //===----------------------------------------------------------------------===//

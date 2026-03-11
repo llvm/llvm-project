@@ -3929,7 +3929,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                        m_Value(), m_ConstantInt(ALMUpperBound)))) {
       const auto &Attrs = II->getFunction()->getAttributes().getFnAttrs();
       unsigned VScaleMin = Attrs.getVScaleRangeMin();
-      if (ExtractIdx * VScaleMin >= ALMUpperBound->getZExtValue())
+      unsigned ScaleFactor =
+          cast<VectorType>(ReturnType)->isScalableTy() ? VScaleMin : 1;
+      if (ExtractIdx * ScaleFactor >= ALMUpperBound->getZExtValue())
         return replaceInstUsesWith(CI,
                                    ConstantVector::getNullValue(ReturnType));
     }
