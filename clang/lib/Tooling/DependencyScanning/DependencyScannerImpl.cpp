@@ -624,9 +624,7 @@ bool initializeScanCompilerInstance(
   // Pre-set the shared CAS databases on the scan instance so that code which
   // calls getOrCreateObjectStore()/getOrCreateActionCache() before
   // createVirtualFileSystem() gets the correct shared instance.
-  if (auto *IT =
-          std::get_if<IncludeTreeCompilation>(&Service.getOpts().Compilation))
-    ScanInstance.setCASDatabases(IT->CAS, IT->Cache);
+  ScanInstance.setCASDatabases(Service.getCAS(), Service.getActionCache());
 
   ScanInstance.setBuildingModule(false);
 

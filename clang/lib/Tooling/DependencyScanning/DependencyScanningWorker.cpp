@@ -110,7 +110,7 @@ bool DependencyScanningWorker::scanDependencies(
   DependencyScanningAction Action(
       Service, WorkingDirectory, Consumer, Controller, DepFS,
       /*EmitDependencyFile=*/false,
-      /*DiagGenerationAsCompilation=*/false, getCASOpts());
+      /*DiagGenerationAsCompilation=*/false, Service.getCASOpts());
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
     Success = createAndRunToolInvocation(
@@ -205,7 +205,7 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   DependencyScanningAction Action(Service, WorkingDirectory, DepsConsumer,
                                   Controller, DepFS,
                                   /*EmitDependencyFile=*/!DepFile.empty(),
-                                  DiagGenerationAsCompilation, getCASOpts(),
+                                  DiagGenerationAsCompilation, Service.getCASOpts(),
                                   /*ModuleName=*/std::nullopt, VerboseOS);
 
   // Ignore result; we're just collecting dependencies.
