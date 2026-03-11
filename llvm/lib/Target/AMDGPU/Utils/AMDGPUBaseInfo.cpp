@@ -641,8 +641,10 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
+  if (ST.hasFeature(AMDGPU::FeatureGFX11_7Insts))
+    return SIEncodingFamily::GFX1170;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
-    return isGFX1170(ST) ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
+    return SIEncodingFamily::GFX11;
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
