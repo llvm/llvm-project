@@ -32,8 +32,10 @@ from __future__ import annotations
 
 # System modules
 import abc
+import ast
 from functools import wraps
 import gc
+import inspect
 import io
 import json
 import os.path
@@ -758,8 +760,42 @@ class Base(unittest.TestCase):
         """Return the full path to the current test."""
         return os.path.join(configuration.test_src_root, self.mydir)
 
+    def _analyze_build_calls(self):
+        """
+        Inspect the AST of the calling class for calls to self.build() with arguments.
+        """
+        if self.SHARED_BUILD_TESTCASE is False:
+            # Skip analysis of explicitly opted out tests.
+            return
+
+        if hasattr(self, "_build_calls_analyzed"):
+            return
+
+        source = inspect.getsource(self.__class__)
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            call = node
+            if (
+                isinstance(call.func, ast.Attribute)
+                and isinstance(call.func.value, ast.Name)
+                and call.func.value.id == "self"
+                and call.func.attr == "build"
+                and (call.args or call.keywords)
+            ):
+                # Found a self.build() call with custom arguments.
+                self.SHARED_BUILD_TESTCASE = False
+                break
+
+        self._build_calls_analyzed = True
+
+    def _use_shared_build(self) -> bool:
+        self._analyze_build_calls()
+        return self.SHARED_BUILD_TESTCASE
+
     def getBuildDirBasename(self):
-        if self.SHARED_BUILD_TESTCASE:
+        if self._use_shared_build():
             return self.__class__.__module__
         else:
             return self.__class__.__module__ + "." + self.testMethodName
@@ -774,7 +810,7 @@ class Base(unittest.TestCase):
         """Create the test-specific working directory, optionally deleting any
         previous contents."""
         bdir = self.getBuildDir()
-        if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
+        if os.path.isdir(bdir) and not self._use_shared_build():
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
 
