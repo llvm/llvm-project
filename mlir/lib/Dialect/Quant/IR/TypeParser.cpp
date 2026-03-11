@@ -48,7 +48,7 @@ static Type parseStorageType(DialectAsmParser &parser, bool &isSigned) {
         return nullptr;
       }
       isSigned = false;
-      type = parser.getBuilder().getIntegerType(storageTypeWidth);
+      type = parser.getBuilder().getIntegerType(storageTypeWidth, isSigned);
     } else {
       parser.emitError(typeLoc, "illegal storage type prefix");
       return nullptr;
