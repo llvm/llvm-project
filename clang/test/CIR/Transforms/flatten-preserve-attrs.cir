@@ -65,8 +65,8 @@ cir.func @test_preserve_side_effect() {
 // Test that argument attributes on an indirect cir.call are preserved on the
 // resulting indirect cir.try_call after flattening.
 cir.func @test_preserve_indirect_call_attrs(
-    %fptr : !cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>,
-    %obj : !cir.ptr<!rec_SomeClass>) {
+      %fptr : !cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>,
+      %obj : !cir.ptr<!rec_SomeClass>) {
   cir.scope {
     cir.try {
       %0 = cir.call %fptr(%obj) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>, !cir.ptr<!rec_SomeClass> {llvm.nonnull}) -> !s32i
@@ -83,6 +83,45 @@ cir.func @test_preserve_indirect_call_attrs(
 // CHECK-LABEL: cir.func @test_preserve_indirect_call_attrs
 // CHECK:         cir.try_call %{{.*}}(%{{.*}}) ^{{.*}}, ^{{.*}} : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>, !cir.ptr<!rec_SomeClass> {llvm.nonnull}) -> !s32i
 
+// Test that all attribute types are preserved.
+cir.func @test_preserve_all_attrs(%arg0 : !cir.ptr<!s32i>) {
+  cir.scope {
+    cir.try {
+      %0 = cir.call @generalFunc(%arg0) side_effect(const) : (!cir.ptr<!s32i> {llvm.nonnull, llvm.noundef}) -> (!cir.ptr<!s32i> {llvm.nonnull})
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_preserve_all_attrs(%arg0 : !cir.ptr<!s32i>)
+// CHECK:         %0 = cir._try_call @generalFunc(%arg0) side_effect(const) : (!cir.ptr<!s32i> {llvm.nonnull, llvm.noundef}) -> (!cir.ptr<!s32i> {llvm.nonnull})
+
+// Test that all attribute types are preserved with indirect calls.
+cir.func @test_preserve_all_attrs_indirect(
+      %fptr : !cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>,
+      %obj : !cir.ptr<!rec_SomeClass>) {
+  cir.scope {
+    cir.try {
+      %0 = cir.call %fptr(%obj) side_effect(const) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>, !cir.ptr<!rec_SomeClass> {llvm.nonnull}) -> (!s32i {llvm.nonnull})
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_preserve_all_attrs_indirect
+// CHECK:      %0 = cir.try_call %fptr(%obj) side_effect(const) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>, !cir.ptr<!rec_SomeClass> {llvm.nonnull}) -> (!s32i {llvm.nonnull})
+
+cir.func private @generalFunc(!cir.ptr<!s32i>) -> !cir.ptr<!s32i>
 cir.func private @takesPtr(!cir.ptr<!s32i>)
 cir.func private @returnsPtr() -> !cir.ptr<!s32i>
 cir.func private @pureFunc() -> !s32i
