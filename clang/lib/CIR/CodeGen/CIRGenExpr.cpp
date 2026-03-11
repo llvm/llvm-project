@@ -384,9 +384,9 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                      dst.isVolatileQualified() &&
                      info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
 
-  mlir::Value dstAddr = dst.getAddress().getPointer();
+  assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
+  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -1490,8 +1490,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     LValue lv = emitLValue(e->getSubExpr());
     // Propagate the volatile qualifier to LValue, if exists in e.
     if (e->changesVolatileQualification())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCastLValue: NoOp changes volatile qual");
+      lv.getQuals() = e->getType().getQualifiers();
     if (lv.isSimple()) {
       Address v = lv.getAddress();
       if (v.isValid()) {
@@ -2820,4 +2819,8 @@ bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
 
   cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
   return false;
+}
+
+LValue CIRGenFunction::emitCXXTypeidLValue(const CXXTypeidExpr *e) {
+  return makeNaturalAlignAddrLValue(emitCXXTypeidExpr(e), e->getType());
 }

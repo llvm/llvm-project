@@ -1,4 +1,4 @@
-//===-- DAPTest.cpp -------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "Protocol/ProtocolBase.h"
 #include "TestBase.h"
+#include "TestUtilities.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>

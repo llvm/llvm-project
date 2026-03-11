@@ -2084,7 +2084,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
     ContextDisambiguation.run(
-        ThinLTO.CombinedIndex, isPrevailing,
+        ThinLTO.CombinedIndex, isPrevailing, RegularLTO.Ctx,
         [&](StringRef PassName, StringRef RemarkName, const Twine &Msg) {
           auto R = OptimizationRemark(PassName.data(), RemarkName,
                                       LinkerRemarkFunction);
@@ -2399,7 +2399,7 @@ public:
     UID = itostr(sys::Process::getProcessId());
     Jobs.resize((size_t)ThinLTONumTasks);
     this->ThinLTOTaskOffset = ThinLTOTaskOffset;
-    this->Triple = Triple;
+    this->Triple = std::move(Triple);
     this->Conf.Dtlto = 1;
   }
 

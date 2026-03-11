@@ -3641,6 +3641,14 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
+      // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
+      // they will read physical regs before any side effect instructions.
+      SDValue ReadFirstLane =
+          DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+      Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
+                        ReadFirstLane, Val);
+    }
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
@@ -15389,7 +15397,8 @@ static ConstantFPSDNode *getSplatConstantFP(SDValue Op) {
 
 SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
                                                   const SDLoc &SL, SDValue Op0,
-                                                  SDValue Op1) const {
+                                                  SDValue Op1,
+                                                  bool IsKnownNoNaNs) const {
   ConstantFPSDNode *K1 = getSplatConstantFP(Op1);
   if (!K1)
     return SDValue();
@@ -15446,7 +15455,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     // then give the other result, which is different from med3 with a NaN
     // input.
     SDValue Var = Op0.getOperand(0);
-    if (!DAG.isKnownNeverSNaN(Var))
+    if (!IsKnownNoNaNs && !DAG.isKnownNeverSNaN(Var))
       return SDValue();
 
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
@@ -15564,7 +15573,8 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
        (VT == MVT::v2bf16 && Subtarget->hasBF16PackedInsts()) ||
        (VT == MVT::v2f16 && Subtarget->hasVOP3PInsts())) &&
       Op0.hasOneUse()) {
-    if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1))
+    if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1,
+                                              N->getFlags().hasNoNaNs()))
       return Res;
   }
 
@@ -15804,13 +15814,36 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
     return V;
   }
 
+  // EXTRACT_VECTOR_ELT (v2i32 bitcast (i64/f64:k), Idx)
+  //   =>
+  // i32:Lo(k) if Idx == 0, or
+  // i32:Hi(k) if Idx == 1
+  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (Vec.getOpcode() == ISD::BITCAST && VecVT == MVT::v2i32 && Idx) {
+    SDLoc SL(N);
+    SDValue PeekThrough = Vec.getOperand(0);
+    auto *KImm = dyn_cast<ConstantSDNode>(PeekThrough);
+    if (KImm && KImm->getValueType(0).getSizeInBits() == 64) {
+      uint64_t KImmValue = KImm->getZExtValue();
+      return DAG.getConstant(
+          (KImmValue >> (32 * Idx->getZExtValue())) & 0xffffffff, SL, MVT::i32);
+    }
+    auto *KFPImm = dyn_cast<ConstantFPSDNode>(PeekThrough);
+    if (KFPImm && KFPImm->getValueType(0).getSizeInBits() == 64) {
+      uint64_t KFPImmValue =
+          KFPImm->getValueAPF().bitcastToAPInt().getZExtValue();
+      return DAG.getConstant((KFPImmValue >> (32 * Idx->getZExtValue())) &
+                                 0xffffffff,
+                             SL, MVT::i32);
+    }
+  }
+
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
   // elements. This exposes more load reduction opportunities by replacing
   // multiple small extract_vector_elements with a single 32-bit extract.
-  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
       VecSize > 32 && VecSize % 32 == 0 && Idx) {
     EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);

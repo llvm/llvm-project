@@ -15,6 +15,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -1250,6 +1251,18 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     return CT;
   }
 
+  case Stmt::SYCLKernelCallStmtClass: {
+    auto *SKCS = cast<SYCLKernelCallStmt>(S);
+    if (getLangOpts().SYCLIsDevice)
+      return canSubStmtsThrow(*this,
+                              SKCS->getOutlinedFunctionDecl()->getBody());
+    assert(getLangOpts().SYCLIsHost);
+    return canSubStmtsThrow(*this, SKCS->getKernelLaunchStmt());
+  }
+
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
+    return CT_Dependent;
+
     // ObjC message sends are like function calls, but never have exception
     // specs.
   case Expr::ObjCMessageExprClass:
@@ -1433,7 +1446,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::CompoundStmtClass:
   case Stmt::ContinueStmtClass:

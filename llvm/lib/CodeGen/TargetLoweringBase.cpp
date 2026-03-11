@@ -651,6 +651,29 @@ RTLIB::Libcall RTLIB::getREM(EVT VT) {
   return getFPLibCall(VT, REM_F32, REM_F64, REM_F80, REM_F128, REM_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getCBRT(EVT VT) {
+  // TODO: Tablegen should generate this function
+  if (VT.isVector()) {
+    if (!VT.isSimple())
+      return RTLIB::UNKNOWN_LIBCALL;
+    switch (VT.getSimpleVT().SimpleTy) {
+    case MVT::v4f32:
+      return RTLIB::CBRT_V4F32;
+    case MVT::v2f64:
+      return RTLIB::CBRT_V2F64;
+    case MVT::nxv4f32:
+      return RTLIB::CBRT_NXV4F32;
+    case MVT::nxv2f64:
+      return RTLIB::CBRT_NXV2F64;
+    default:
+      return RTLIB::UNKNOWN_LIBCALL;
+    }
+  }
+
+  return getFPLibCall(VT, CBRT_F32, CBRT_F64, CBRT_F80, CBRT_F128,
+                      CBRT_PPCF128);
+}
+
 RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
   // TODO: Tablegen should generate this function
   if (RetVT.isVector()) {
@@ -1126,7 +1149,7 @@ void TargetLoweringBase::initActions() {
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
                         ISD::FTANH,          ISD::FATAN2,
-                        ISD::FMULADD},
+                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP},
                        VT, Expand);
 
     // Overflow operations default to expand

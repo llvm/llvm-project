@@ -5,7 +5,7 @@
 
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef short  v8s   __attribute__((ext_vector_type(8)));
-typedef half   v8h   __attribute__((ext_vector_type(8)));
+typedef _Float16 v8h __attribute__((ext_vector_type(8)));
 typedef __bf16 v8y   __attribute__((ext_vector_type(8)));
 
 void amdgcn_global_load_tr(global v2i* v2i_inptr, global v8s* v8s_inptr, global v8h* v8h_inptr, global v8y* v8y_inptr)

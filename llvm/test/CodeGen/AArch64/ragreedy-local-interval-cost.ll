@@ -25,7 +25,7 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    .cfi_offset b13, -64
 ; CHECK-NEXT:    .cfi_offset b14, -72
 ; CHECK-NEXT:    .cfi_offset b15, -80
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v7.2d, #0000000000000000
 ; CHECK-NEXT:    adrp x14, B+48
 ; CHECK-NEXT:    add x14, x14, :lo12:B+48
 ; CHECK-NEXT:    // implicit-def: $q18
@@ -43,15 +43,15 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    // implicit-def: $q3
 ; CHECK-NEXT:    // implicit-def: $q4
 ; CHECK-NEXT:    // implicit-def: $q5
-; CHECK-NEXT:    // implicit-def: $q6
+; CHECK-NEXT:    // implicit-def: $q1
 ; CHECK-NEXT:    // implicit-def: $q16
 ; CHECK-NEXT:    // implicit-def: $q17
-; CHECK-NEXT:    // implicit-def: $q7
+; CHECK-NEXT:    // implicit-def: $q6
 ; CHECK-NEXT:    // implicit-def: $q19
 ; CHECK-NEXT:    // implicit-def: $q20
 ; CHECK-NEXT:    // implicit-def: $q21
 ; CHECK-NEXT:    // implicit-def: $q22
-; CHECK-NEXT:    // implicit-def: $q24
+; CHECK-NEXT:    // implicit-def: $q12
 ; CHECK-NEXT:    // implicit-def: $q23
 ; CHECK-NEXT:    // implicit-def: $q25
 ; CHECK-NEXT:    // implicit-def: $q26
@@ -59,7 +59,7 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    // implicit-def: $q30
 ; CHECK-NEXT:    // implicit-def: $q8
 ; CHECK-NEXT:    // implicit-def: $q11
-; CHECK-NEXT:    // implicit-def: $q12
+; CHECK-NEXT:    // implicit-def: $q28
 ; CHECK-NEXT:    // implicit-def: $q29
 ; CHECK-NEXT:    // implicit-def: $q13
 ; CHECK-NEXT:    // implicit-def: $q10
@@ -69,111 +69,107 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    // kill: killed $q18
 ; CHECK-NEXT:  .LBB0_1: // %for.cond1.preheader
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x17, [x8]
+; CHECK-NEXT:    ldr x18, [x8]
 ; CHECK-NEXT:    ldr x15, [x8]
 ; CHECK-NEXT:    mov v18.16b, v0.16b
 ; CHECK-NEXT:    ldr x16, [x9]
 ; CHECK-NEXT:    stp q15, q4, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    add x5, x10, x11
-; CHECK-NEXT:    mul x1, x15, x17
+; CHECK-NEXT:    mul x1, x15, x18
 ; CHECK-NEXT:    ldr x2, [x13], #64
-; CHECK-NEXT:    ldr x5, [x5, #128]
-; CHECK-NEXT:    stp q7, q23, [sp, #32] // 32-byte Folded Spill
-; CHECK-NEXT:    ldr x14, [x14, #8]
-; CHECK-NEXT:    mul x0, x17, x17
+; CHECK-NEXT:    stp q6, q23, [sp, #32] // 32-byte Folded Spill
 ; CHECK-NEXT:    ldr q23, [sp, #80] // 16-byte Reload
+; CHECK-NEXT:    ldr x14, [x14, #8]
+; CHECK-NEXT:    mul x0, x18, x18
+; CHECK-NEXT:    ldr x5, [x5, #128]
 ; CHECK-NEXT:    mov v9.16b, v30.16b
 ; CHECK-NEXT:    mov v30.16b, v25.16b
 ; CHECK-NEXT:    mov v25.16b, v20.16b
-; CHECK-NEXT:    mov v20.16b, v6.16b
-; CHECK-NEXT:    mul x18, x16, x17
-; CHECK-NEXT:    mov v6.16b, v1.16b
-; CHECK-NEXT:    mov v28.16b, v24.16b
-; CHECK-NEXT:    fmov d14, x1
-; CHECK-NEXT:    mov v24.16b, v19.16b
-; CHECK-NEXT:    mov v19.16b, v5.16b
-; CHECK-NEXT:    mul x4, x2, x17
+; CHECK-NEXT:    mov v20.16b, v1.16b
+; CHECK-NEXT:    mul x17, x16, x18
 ; CHECK-NEXT:    mov v31.16b, v26.16b
 ; CHECK-NEXT:    mov v26.16b, v21.16b
-; CHECK-NEXT:    fmov d15, x0
+; CHECK-NEXT:    fmov d14, x1
 ; CHECK-NEXT:    mov v21.16b, v16.16b
 ; CHECK-NEXT:    mov v16.16b, v2.16b
-; CHECK-NEXT:    mov v0.16b, v14.16b
-; CHECK-NEXT:    mul x20, x2, x5
-; CHECK-NEXT:    mov v7.16b, v10.16b
+; CHECK-NEXT:    mul x4, x2, x18
+; CHECK-NEXT:    mov v6.16b, v10.16b
 ; CHECK-NEXT:    mov v10.16b, v17.16b
+; CHECK-NEXT:    fmov d15, x0
 ; CHECK-NEXT:    mov v17.16b, v3.16b
+; CHECK-NEXT:    mov v24.16b, v19.16b
+; CHECK-NEXT:    mov v0.16b, v14.16b
+; CHECK-NEXT:    mul x3, x14, x18
+; CHECK-NEXT:    mov v19.16b, v5.16b
 ; CHECK-NEXT:    add x11, x11, #8
-; CHECK-NEXT:    mov v15.d[1], x18
-; CHECK-NEXT:    mul x3, x14, x17
+; CHECK-NEXT:    add x12, x12, #1
+; CHECK-NEXT:    mov v15.d[1], x17
+; CHECK-NEXT:    mul x6, x15, x15
 ; CHECK-NEXT:    cmp x11, #64
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    fmov d1, x4
-; CHECK-NEXT:    add x12, x12, #1
-; CHECK-NEXT:    mul x17, x17, x5
-; CHECK-NEXT:    fmov d5, x20
-; CHECK-NEXT:    mul x6, x15, x15
+; CHECK-NEXT:    mul x7, x15, x5
+; CHECK-NEXT:    mul x18, x18, x5
+; CHECK-NEXT:    mov v1.d[1], x3
 ; CHECK-NEXT:    add v23.2d, v23.2d, v0.2d
 ; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
-; CHECK-NEXT:    mov v1.d[1], x3
-; CHECK-NEXT:    mul x7, x15, x5
-; CHECK-NEXT:    add v0.2d, v0.2d, v15.2d
-; CHECK-NEXT:    fmov d2, x17
-; CHECK-NEXT:    mul x0, x14, x5
 ; CHECK-NEXT:    fmov d4, x6
+; CHECK-NEXT:    mul x20, x2, x5
+; CHECK-NEXT:    add v0.2d, v0.2d, v15.2d
+; CHECK-NEXT:    fmov d3, x7
 ; CHECK-NEXT:    mul x19, x16, x5
+; CHECK-NEXT:    mov v4.d[1], x6
+; CHECK-NEXT:    fmov d2, x18
+; CHECK-NEXT:    mul x0, x14, x5
 ; CHECK-NEXT:    stp q0, q23, [sp, #64] // 32-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Reload
-; CHECK-NEXT:    fmov d3, x7
+; CHECK-NEXT:    fmov d5, x20
+; CHECK-NEXT:    mov v3.d[1], x7
 ; CHECK-NEXT:    ldr q23, [sp, #48] // 16-byte Reload
 ; CHECK-NEXT:    mul x17, x2, x15
 ; CHECK-NEXT:    add v0.2d, v0.2d, v15.2d
 ; CHECK-NEXT:    ldr q15, [sp] // 16-byte Reload
-; CHECK-NEXT:    mov v5.d[1], x0
-; CHECK-NEXT:    mov v4.d[1], x6
-; CHECK-NEXT:    mul x16, x16, x15
-; CHECK-NEXT:    mov v3.d[1], x7
-; CHECK-NEXT:    add v15.2d, v15.2d, v1.2d
 ; CHECK-NEXT:    mov v2.d[1], x19
+; CHECK-NEXT:    add v13.2d, v13.2d, v4.2d
+; CHECK-NEXT:    add v12.2d, v12.2d, v4.2d
+; CHECK-NEXT:    mul x16, x16, x15
+; CHECK-NEXT:    add v15.2d, v15.2d, v1.2d
+; CHECK-NEXT:    mov v1.16b, v20.16b
+; CHECK-NEXT:    mov v5.d[1], x0
 ; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Spill
-; CHECK-NEXT:    mov v1.16b, v6.16b
-; CHECK-NEXT:    mul x14, x14, x15
-; CHECK-NEXT:    mov v6.16b, v20.16b
 ; CHECK-NEXT:    mov v20.16b, v25.16b
-; CHECK-NEXT:    fmov d0, x17
+; CHECK-NEXT:    mul x14, x14, x15
 ; CHECK-NEXT:    mov v25.16b, v30.16b
-; CHECK-NEXT:    add v30.2d, v9.2d, v5.2d
-; CHECK-NEXT:    mov v5.16b, v19.16b
-; CHECK-NEXT:    mov v19.16b, v24.16b
 ; CHECK-NEXT:    add v11.2d, v11.2d, v3.2d
-; CHECK-NEXT:    mov v14.d[1], x16
+; CHECK-NEXT:    fmov d0, x17
 ; CHECK-NEXT:    mov v3.16b, v17.16b
 ; CHECK-NEXT:    mov v17.16b, v10.16b
-; CHECK-NEXT:    mov v10.16b, v7.16b
+; CHECK-NEXT:    mov v10.16b, v6.16b
 ; CHECK-NEXT:    add v8.2d, v8.2d, v2.2d
 ; CHECK-NEXT:    mov v2.16b, v16.16b
-; CHECK-NEXT:    mov v0.d[1], x14
+; CHECK-NEXT:    mov v14.d[1], x16
 ; CHECK-NEXT:    mov v16.16b, v21.16b
 ; CHECK-NEXT:    mov v21.16b, v26.16b
-; CHECK-NEXT:    add v13.2d, v13.2d, v4.2d
+; CHECK-NEXT:    add v30.2d, v9.2d, v5.2d
+; CHECK-NEXT:    mov v5.16b, v19.16b
 ; CHECK-NEXT:    add v26.2d, v31.2d, v4.2d
-; CHECK-NEXT:    add v24.2d, v28.2d, v4.2d
-; CHECK-NEXT:    add v19.2d, v19.2d, v4.2d
-; CHECK-NEXT:    add v6.2d, v6.2d, v4.2d
+; CHECK-NEXT:    mov v0.d[1], x14
+; CHECK-NEXT:    add v19.2d, v24.2d, v4.2d
 ; CHECK-NEXT:    add v1.2d, v1.2d, v4.2d
-; CHECK-NEXT:    ldp q4, q7, [sp, #16] // 32-byte Folded Reload
+; CHECK-NEXT:    add v7.2d, v7.2d, v4.2d
+; CHECK-NEXT:    ldp q4, q6, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    add v10.2d, v10.2d, v14.2d
 ; CHECK-NEXT:    add v29.2d, v29.2d, v14.2d
 ; CHECK-NEXT:    add v27.2d, v27.2d, v14.2d
 ; CHECK-NEXT:    add v23.2d, v23.2d, v14.2d
 ; CHECK-NEXT:    add v22.2d, v22.2d, v14.2d
 ; CHECK-NEXT:    add v20.2d, v20.2d, v14.2d
+; CHECK-NEXT:    add v6.2d, v6.2d, v14.2d
 ; CHECK-NEXT:    add v16.2d, v16.2d, v14.2d
-; CHECK-NEXT:    add v7.2d, v7.2d, v14.2d
 ; CHECK-NEXT:    add v5.2d, v5.2d, v14.2d
 ; CHECK-NEXT:    add v3.2d, v3.2d, v14.2d
 ; CHECK-NEXT:    add v2.2d, v2.2d, v14.2d
-; CHECK-NEXT:    add v12.2d, v12.2d, v0.2d
+; CHECK-NEXT:    add v28.2d, v28.2d, v0.2d
 ; CHECK-NEXT:    add v25.2d, v25.2d, v0.2d
 ; CHECK-NEXT:    add v21.2d, v21.2d, v0.2d
 ; CHECK-NEXT:    add v17.2d, v17.2d, v0.2d
@@ -182,30 +178,30 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    mov x14, x13
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
-; CHECK-NEXT:    ldp q28, q18, [sp, #64] // 32-byte Folded Reload
+; CHECK-NEXT:    ldp q24, q18, [sp, #64] // 32-byte Folded Reload
 ; CHECK-NEXT:    adrp x8, C
 ; CHECK-NEXT:    add x8, x8, :lo12:C
 ; CHECK-NEXT:    ldp x20, x19, [sp, #176] // 16-byte Folded Reload
 ; CHECK-NEXT:    stp q10, q13, [x8, #64]
-; CHECK-NEXT:    stp q28, q18, [x8]
+; CHECK-NEXT:    stp q24, q18, [x8]
 ; CHECK-NEXT:    ldr q18, [sp, #96] // 16-byte Reload
-; CHECK-NEXT:    stp q29, q12, [x8, #96]
-; CHECK-NEXT:    ldp d13, d12, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    stp q29, q28, [x8, #96]
 ; CHECK-NEXT:    stp q18, q15, [x8, #32]
 ; CHECK-NEXT:    ldp d15, d14, [sp, #112] // 16-byte Folded Reload
 ; CHECK-NEXT:    stp q11, q8, [x8, #144]
 ; CHECK-NEXT:    ldp d9, d8, [sp, #160] // 16-byte Folded Reload
-; CHECK-NEXT:    stp q30, q27, [x8, #176]
+; CHECK-NEXT:    stp q12, q22, [x8, #272]
 ; CHECK-NEXT:    ldp d11, d10, [sp, #144] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    stp q30, q27, [x8, #176]
 ; CHECK-NEXT:    str q26, [x8, #208]
 ; CHECK-NEXT:    stp q25, q23, [x8, #240]
-; CHECK-NEXT:    stp q24, q22, [x8, #272]
 ; CHECK-NEXT:    stp q21, q20, [x8, #304]
-; CHECK-NEXT:    stp q19, q7, [x8, #336]
+; CHECK-NEXT:    stp q19, q6, [x8, #336]
 ; CHECK-NEXT:    stp q17, q16, [x8, #368]
-; CHECK-NEXT:    stp q6, q5, [x8, #400]
+; CHECK-NEXT:    stp q1, q5, [x8, #400]
 ; CHECK-NEXT:    stp q4, q3, [x8, #432]
-; CHECK-NEXT:    stp q1, q2, [x8, #464]
+; CHECK-NEXT:    stp q7, q2, [x8, #464]
 ; CHECK-NEXT:    str q0, [x8, #496]
 ; CHECK-NEXT:    add sp, sp, #192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0

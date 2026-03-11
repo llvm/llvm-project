@@ -4427,8 +4427,17 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
-        ToUpperCase(EnumToString(category)), kind);
+    if (const semantics::Scope *modFileScope{
+            semantics::FindModuleFileContaining(
+                context_.FindScope(GetContextualMessages().at()))};
+        modFileScope && modFileScope->parent().IsIntrinsicModules()) {
+      // Ignore usage of unsupported intrinsic type kinds in intrinsic module
+      // files.  They might be USE'd into a cross-compilation or into a
+      // compilation with a disabled REAL kind.
+    } else {
+      Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
+          ToUpperCase(EnumToString(category)), kind);
+    }
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,

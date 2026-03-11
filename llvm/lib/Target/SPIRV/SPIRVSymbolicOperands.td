@@ -237,6 +237,7 @@ def Extension : GenericEnum, Operand<i32> {
   let NameField = "Name";
   let ValueField = "Value";
   let PrintMethod = "printExtension";
+  let UnderlyingType = "uint32_t";
 }
 
 class Extension<string name, bits<32> value> {

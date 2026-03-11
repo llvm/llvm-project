@@ -213,7 +213,7 @@ void use_template() {
 // CHECK-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @_ZL2ba, [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
 // CHECK-NEXT:    call void @_ZN2S2C1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
 // CHECK-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_S2:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
-// CHECK-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[CLASS_S2]], ptr @_ZL2ba, i64 5)
+// CHECK-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds nuw (i8, ptr @_ZL2ba, i64 20)
 // CHECK-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
 // CHECK:       arrayctor.cont:
 // CHECK-NEXT:    ret void
@@ -255,7 +255,7 @@ void use_template() {
 // CHECK-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @_ZL2ca, [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
 // CHECK-NEXT:    call void @_ZN2S3C1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
 // CHECK-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_S3:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
-// CHECK-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[CLASS_S3]], ptr @_ZL2ca, i64 5)
+// CHECK-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds nuw (i8, ptr @_ZL2ca, i64 20)
 // CHECK-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
 // CHECK:       arrayctor.cont:
 // CHECK-NEXT:    ret void
@@ -1346,7 +1346,7 @@ void use_template() {
 // SIMD-ONLY0-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @_ZL2ba, [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
 // SIMD-ONLY0-NEXT:    call void @_ZN2S2C1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
 // SIMD-ONLY0-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_S2:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
-// SIMD-ONLY0-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[CLASS_S2]], ptr @_ZL2ba, i64 5)
+// SIMD-ONLY0-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds nuw (i8, ptr @_ZL2ba, i64 20)
 // SIMD-ONLY0-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
 // SIMD-ONLY0:       arrayctor.cont:
 // SIMD-ONLY0-NEXT:    ret void
@@ -1377,7 +1377,7 @@ void use_template() {
 // SIMD-ONLY0-NEXT:    [[ARRAYCTOR_CUR:%.*]] = phi ptr [ @_ZL2ca, [[ENTRY:%.*]] ], [ [[ARRAYCTOR_NEXT:%.*]], [[ARRAYCTOR_LOOP]] ]
 // SIMD-ONLY0-NEXT:    call void @_ZN2S3C1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYCTOR_CUR]])
 // SIMD-ONLY0-NEXT:    [[ARRAYCTOR_NEXT]] = getelementptr inbounds [[CLASS_S3:%.*]], ptr [[ARRAYCTOR_CUR]], i64 1
-// SIMD-ONLY0-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds ([[CLASS_S3]], ptr @_ZL2ca, i64 5)
+// SIMD-ONLY0-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds nuw (i8, ptr @_ZL2ca, i64 20)
 // SIMD-ONLY0-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
 // SIMD-ONLY0:       arrayctor.cont:
 // SIMD-ONLY0-NEXT:    ret void

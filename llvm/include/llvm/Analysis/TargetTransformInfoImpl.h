@@ -278,8 +278,7 @@ public:
     return false;
   }
 
-  virtual TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
+  virtual TailFoldingStyle getPreferredTailFoldingStyle() const {
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
@@ -948,6 +947,10 @@ public:
     case Intrinsic::ssa_copy:
       // These intrinsics don't actually represent code after lowering.
       return 0;
+    case Intrinsic::bswap:
+      if (!ICA.getReturnType()->isVectorTy() &&
+          !isPowerOf2_64(DL.getTypeSizeInBits(ICA.getReturnType())))
+        return InstructionCost::getInvalid();
     }
     return 1;
   }
