@@ -97,7 +97,8 @@ Switching back to the scheduling model linked at the start of this section, we e
 
   // snip
 
-A ``WriteRes`` is defined to associate processor resources, processor resource usage, and latency with each ``SchedWrite``. In this example, the ``SchedWrite`` named ``WriteVC_V_I # mx`` is being said to use the ``VCQ`` (vector command queue) and ``VA1`` (vector arithmetic sequencer) processor resources. ``AcquireAtCycles[i]`` defines a cycle, relative to instruction issue, that processor resource ``i`` in the ``WriteRes`` below is acquired at. ``ReleaseAtCycles[i]`` defines a cycle, relative to instruction issue, that processor resource ``i`` in the ``WriteRes`` below is released at. For this ``WriteRes``, we’re saying that the vector command queue is acquired at cycle 0 and released at cycle 1 and the vector arithmetic sequencer is acquired at cycle 1 and released at cycle 1+Cycles. ``Cycles`` gets its value from a function that describes the default behavior. Looking at the entire VCIX default implementation, you can see that all instructions are given this behavior.
+Here, the ``LMULWriteResMX`` creates a ``WriteRes`` for each supported LMULs, which is represented by ``mx`` above. A ``WriteRes`` associates processor resources, processor resource usage, and latency with each ``SchedWrite``. In this example, the ``SchedWrite`` named ``WriteVC_V_I # mx`` is being said to use the ``VCQ`` (vector command queue) and ``VA1`` (vector arithmetic sequencer) processor resources.
+``AcquireAtCycles[i]`` defines a cycle, relative to instruction issue, that processor resource ``i`` in the ``LMULWriteResMX`` below is acquired at. Similarly, ``ReleaseAtCycles[i]`` defines a cycle, relative to instruction issue, that processor resource ``i`` in the ``LMULWriteResMX`` below is released at. For this ``LMULWriteResMX``, we’re saying that the vector command queue is acquired at cycle 0 and released at cycle 1 and the vector arithmetic sequencer is acquired at cycle 1 and released at cycle 1+Cycles. ``Cycles`` gets its value from a function that describes the default behavior. Looking at the entire VCIX default implementation, you can see that all instructions are given this behavior.
 
 From here, you should have enough background on how the default implementation works.
 
@@ -116,12 +117,6 @@ Let’s assume that ``WriteVC_V_I`` behaves differently from the default impleme
       ReleaseAtCycles = [1, !add(1, CustomCycles)] in
     defm "" : LMULWriteResMX<"WriteVC_V_I",   [VCQ, VA1], mx, IsWorstCase>;
 
-  defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
-  defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = Cycles,
-      AcquireAtCycles = [0, 1],
-      ReleaseAtCycles = [1, !add(1, Cycles)] in {
-    defm "" : LMULWriteResMX<"WriteVC_V_I",   [VCQ, VA1], mx, IsWorstCase>;
     // snip rest
 
 In this example, we wrote a new function ``SiFive7GetCustomCycles`` which takes an argument ``mx`` which describes the LMUL we are scheduling for. It is up to you to determine the number of cycles that should be returned, based on the behavior of your implementation. You can read the implementation of ``SiFive7GetCyclesDefault`` to help you write a custom one.
