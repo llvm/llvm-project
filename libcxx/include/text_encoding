@@ -107,7 +107,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
     return text_encoding(__te_impl::__literal());
   }
-#    if _LIBCPP_HAS_LOCALIZATION && !defined(__ANDROID__)
+#    if _LIBCPP_HAS_LOCALIZATION && (!defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26))
   [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static text_encoding environment() {
     return text_encoding(__te_impl::__environment());
   };
