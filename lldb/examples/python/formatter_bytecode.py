@@ -240,35 +240,68 @@ class BytecodeSection:
         def __init__(self) -> None:
             self.entries = []
 
-        def add_byte(self, x: int, comment: str) -> None:
-            self.add_bytes(_to_byte(x), comment)
+        def emit_byte(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_byte(x), comment)
 
-        def add_uleb(self, x: int, comment: str) -> None:
-            self.add_bytes(_to_uleb(x), comment)
+        def emit_uleb(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_uleb(x), comment)
 
-        def add_bytes(self, x: bytes, comment: str) -> None:
-            # Construct zero padded hex values with length two.
+        def emit_bytes(self, x: bytes, comment: str) -> None:
+            # Construct zero pemited hex values with length two.
             string = "".join(f"\\x{b:02x}" for b in x)
-            self.add_string(string, comment)
+            self.emit_string(string, comment)
 
-        def add_string(self, string: str, comment: str) -> None:
+        def emit_string(self, string: str, comment: str) -> None:
             self.entries.append((f'"{string}"', comment))
+
+    class _SwiftBuilder:
+        """Helper class for emitting binary data as a Swift tuple literal."""
+
+        entries: list[Tuple[bytes, str]]
+
+        def __init__(self) -> None:
+            self.entries = []
+
+        def emit_byte(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_byte(x), comment)
+
+        def emit_uleb(self, x: int, comment: str) -> None:
+            self.emit_bytes(_to_uleb(x), comment)
+
+        def emit_bytes(self, x: bytes, comment: str) -> None:
+            self.entries.append((x, comment))
+
+        def emit_string(self, string: str, comment: str) -> None:
+            self.emit_bytes(string.encode(), comment)
+
+        @property
+        def type_decl(self):
+            total_bytes = sum((len(bs) for bs, _ in self.entries))
+            element_list = ", ".join(["UInt8"] * total_bytes)
+            return f"({element_list})"
+
+    def _build(self, builder) -> None:
+        size = len(self._to_binary())
+        builder.emit_byte(BINARY_VERSION, "version")
+        builder.emit_uleb(size, "remaining record size")
+        builder.emit_uleb(len(self.type_name), "type name size")
+        builder.emit_string(self.type_name, "type name")
+        builder.emit_byte(self.flags, "flags")
+        for sig, bc in self.signatures:
+            builder.emit_byte(SIGNATURES[sig], f"sig_{sig}")
+            builder.emit_uleb(len(bc), "program size")
+            builder.emit_bytes(bc, "program")
+
+    @property
+    def _var_name(self):
+        var_name = re.sub(r"\W", "_", self.type_name)
+        return f"_{var_name}_formatter"
 
     def write_c(self, output: TextIO) -> None:
         self.validate()
 
-        size = len(self._to_binary())
-
-        b = self._CBuilder()
-        b.add_byte(BINARY_VERSION, "version")
-        b.add_uleb(size, "remaining record size")
-        b.add_uleb(len(self.type_name), "type name size")
-        b.add_string(self.type_name, "type name")
-        b.add_byte(self.flags, "flags")
-        for sig, bc in self.signatures:
-            b.add_byte(SIGNATURES[sig], f"sig_{sig}")
-            b.add_uleb(len(bc), "program size")
-            b.add_bytes(bc, "program")
+        builder = self._CBuilder()
+        self._build(builder)
 
         print(
             textwrap.dedent(
@@ -282,59 +315,22 @@ class BytecodeSection:
             ),
             file=output,
         )
-        var_name = re.sub(r"\W", "_", self.type_name)
         print(
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char _{var_name}_formatter[] =", file=output)
+        print(f"unsigned char {self._var_name}[] =", file=output)
         indent = "    "
-        for string, comment in b.entries:
+        for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
             print(f"{indent}{string}", file=output)
         print(";", file=output)
 
-    class _SwiftBuilder:
-        """Helper class for emitting binary data as a Swift tuple literal."""
-
-        entries: list[Tuple[bytes, str]]
-
-        def __init__(self) -> None:
-            self.entries = []
-
-        def add_byte(self, x: int, comment: str) -> None:
-            self.add_bytes(_to_byte(x), comment)
-
-        def add_uleb(self, x: int, comment: str) -> None:
-            self.add_bytes(_to_uleb(x), comment)
-
-        def add_bytes(self, x: bytes, comment: str) -> None:
-            self.entries.append((x, comment))
-
-        def add_string(self, string: str, comment: str) -> None:
-            self.add_bytes(string.encode(), comment)
-
-        @property
-        def type_decl(self):
-            total_bytes = sum((len(bs) for bs, _ in self.entries))
-            element_list = ", ".join(["UInt8"] * total_bytes)
-            return f"({element_list})"
-
     def write_swift(self, output: TextIO) -> None:
         self.validate()
 
-        size = len(self._to_binary())
-
         builder = self._SwiftBuilder()
-        builder.add_byte(BINARY_VERSION, "version")
-        builder.add_uleb(size, "remaining record size")
-        builder.add_uleb(len(self.type_name), "type name size")
-        builder.add_string(self.type_name, f'type name: "{self.type_name}"')
-        builder.add_byte(self.flags, "flags")
-        for sig, bc in self.signatures:
-            builder.add_byte(SIGNATURES[sig], f"sig_{sig}")
-            builder.add_uleb(len(bc), "program size")
-            builder.add_bytes(bc, "program")
+        self._build(builder)
 
         print(
             textwrap.dedent(
@@ -348,9 +344,8 @@ class BytecodeSection:
             ),
             file=output,
         )
-        var_name = re.sub(r"\W", "_", self.type_name)
         print(
-            f"let _{var_name}_formatter: {builder.type_decl} = (",
+            f"let {self._var_name}: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "

@@ -11,7 +11,7 @@ let _RigidArray_formatter: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UIn
     0x47,
     // type name size
     0x0a,
-    // type name: "RigidArray"
+    // type name
     0x52, 0x69, 0x67, 0x69, 0x64, 0x41, 0x72, 0x72, 0x61, 0x79,
     // flags
     0x00,
