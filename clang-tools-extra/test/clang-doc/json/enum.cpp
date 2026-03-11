@@ -1,6 +1,8 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
+// RUN: FileCheck %s < %t/json/GlobalNamespace/index.json --check-prefix=JSON-INDEX-LINE
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json --check-prefix=JSON-INDEX
+// RUN: FileCheck %s < %t/json/Vehicles/index.json --check-prefix=JSON-VEHICLES-INDEX-LINE
 // RUN: FileCheck %s < %t/json/Vehicles/index.json --check-prefix=JSON-VEHICLES-INDEX
 
 typedef unsigned char uint8_t;
@@ -45,7 +47,7 @@ enum Size : uint8_t {
 // JSON-INDEX-NEXT:        "InfoType": "enum",
 // JSON-INDEX-NEXT:        "Location": {
 // JSON-INDEX-NEXT:          "Filename": "{{.*}}enum.cpp",
-// JSON-INDEX-NEXT:          "LineNumber": 10
+// JSON-INDEX-NEXT:          "LineNumber": [[@LINE-38]]
 // JSON-INDEX-NEXT:        },
 // JSON-INDEX-NEXT:        "Members": [
 // JSON-INDEX-NEXT:          {
@@ -138,7 +140,7 @@ enum Car {
 // JSON-VEHICLES-INDEX-NEXT:        "InfoType": "enum",
 // JSON-VEHICLES-INDEX-NEXT:        "Location": {
 // JSON-VEHICLES-INDEX-NEXT:          "Filename": "{{.*}}enum.cpp",
-// JSON-VEHICLES-INDEX-NEXT:          "LineNumber": 115
+// JSON-VEHICLES-INDEX-NEXT:          "LineNumber": [[@LINE-26]]
 // JSON-VEHICLES-INDEX-NEXT:        },
 // JSON-VEHICLES-INDEX-NEXT:        "Members": [
 // JSON-VEHICLES-INDEX-NEXT:          {
