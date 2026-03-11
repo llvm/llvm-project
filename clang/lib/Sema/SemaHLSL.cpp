@@ -3537,13 +3537,7 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
       return true;
   }
 
-  QualType ReturnType = ResourceTy->getContainedType();
-  if (const auto *VecTy = ReturnType->getAs<VectorType>())
-    ReturnType = VecTy->getElementType();
-  ReturnType = S.Context.getExtVectorType(ReturnType, 4);
-
-  TheCall->setType(ReturnType);
-
+  TheCall->setType(ResourceTy->getContainedType());
   return false;
 }
 
