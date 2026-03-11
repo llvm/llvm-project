@@ -15,5 +15,5 @@
 #include "clc/math/tables.h"
 #include "clc/relational/clc_isinf.h"
 
-#define __CLC_BODY <clc_log1p.inc>
+#define __CLC_BODY "clc_log1p.inc"
 #include "clc/math/gentype.inc"

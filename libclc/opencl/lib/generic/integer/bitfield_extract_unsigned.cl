@@ -13,7 +13,7 @@
 #define __CLC_FUNCTION bitfield_extract_unsigned
 #define __CLC_RETTYPE __CLC_U_GENTYPE
 
-#define __CLC_BODY <bitfield_extract_def.inc>
+#define __CLC_BODY "bitfield_extract_def.inc"
 #include "clc/integer/gentype.inc"
 
 #endif // cl_khr_extended_bit_ops

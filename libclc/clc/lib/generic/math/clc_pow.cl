@@ -17,5 +17,5 @@
 #include "clc/math/tables.h"
 #include "clc/relational/clc_select.h"
 
-#define __CLC_BODY <clc_pow.inc>
+#define __CLC_BODY "clc_pow.inc"
 #include "clc/math/gentype.inc"

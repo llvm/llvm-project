@@ -10,6 +10,6 @@
 
 #define __CLC_FUNCTION normalize
 #define __CLC_GEOMETRIC_RET_GENTYPE
-#define __CLC_BODY <clc/geometric/unary_def.inc>
+#define __CLC_BODY "clc/geometric/unary_def.inc"
 
 #include "clc/math/gentype.inc"

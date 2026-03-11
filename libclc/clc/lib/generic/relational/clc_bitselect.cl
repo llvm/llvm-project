@@ -8,7 +8,7 @@
 
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_bitselect.inc>
+#define __CLC_BODY "clc_bitselect.inc"
 #include "clc/integer/gentype.inc"
 
 #define __CLC_FLOAT_BITSELECT(f_type, i_type, width)                           \

@@ -17,5 +17,5 @@
 #include "clc/math/math.h"
 #include "clc/math/tables.h"
 
-#define __CLC_BODY <clc_rootn.inc>
+#define __CLC_BODY "clc_rootn.inc"
 #include "clc/math/gentype.inc"

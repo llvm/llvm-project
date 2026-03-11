@@ -9,5 +9,5 @@
 #include "clc/math/clc_expm1.h"
 
 #define __CLC_FUNCTION expm1
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 #include "clc/math/gentype.inc"

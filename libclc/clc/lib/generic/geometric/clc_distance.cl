@@ -9,5 +9,5 @@
 #include "clc/geometric/clc_length.h"
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_distance.inc>
+#define __CLC_BODY "clc_distance.inc"
 #include "clc/math/gentype.inc"

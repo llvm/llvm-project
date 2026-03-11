@@ -17,5 +17,5 @@
 #include "clc/relational/clc_isnan.h"
 #include "clc/shared/clc_min.h"
 
-#define __CLC_BODY <clc_tanh.inc>
+#define __CLC_BODY "clc_tanh.inc"
 #include "clc/math/gentype.inc"

@@ -14,10 +14,10 @@
 #define __CLC_FUNCTION __clc_atomic_store
 #define __CLC_RETURN_VOID
 
-#define __CLC_BODY <clc/atomic/atomic_decl.inc>
+#define __CLC_BODY "clc/atomic/atomic_decl.inc"
 #include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc/atomic/atomic_decl.inc>
+#define __CLC_BODY "clc/atomic/atomic_decl.inc"
 #include "clc/math/gentype.inc"
 
 #undef __CLC_RETURN_VOID

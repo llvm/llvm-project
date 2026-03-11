@@ -10,5 +10,5 @@
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION fast_distance
-#define __CLC_BODY <clc/geometric/binary_def.inc>
+#define __CLC_BODY "clc/geometric/binary_def.inc"
 #include "clc/math/gentype.inc"

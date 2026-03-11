@@ -12,5 +12,5 @@
 #include "clc/internal/clc.h"
 #include "clc/math/math.h"
 
-#define __CLC_BODY <clc_ilogb.inc>
+#define __CLC_BODY "clc_ilogb.inc"
 #include "clc/math/gentype.inc"

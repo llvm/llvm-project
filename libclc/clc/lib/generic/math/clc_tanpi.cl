@@ -14,5 +14,5 @@
 #include "clc/math/clc_sincos_helpers.h"
 #include "clc/math/math.h"
 
-#define __CLC_BODY <clc_tanpi.inc>
+#define __CLC_BODY "clc_tanpi.inc"
 #include "clc/math/gentype.inc"

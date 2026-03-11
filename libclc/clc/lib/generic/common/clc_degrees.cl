@@ -9,5 +9,5 @@
 #include "clc/common/clc_degrees.h"
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_degrees.inc>
+#define __CLC_BODY "clc_degrees.inc"
 #include "clc/math/gentype.inc"

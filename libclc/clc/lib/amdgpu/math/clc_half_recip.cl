@@ -10,5 +10,5 @@
 
 #define __CLC_FUNC recip
 #define __CLC_FLOAT_ONLY
-#define __CLC_BODY <clc_half_native_unary.inc>
+#define __CLC_BODY "clc_half_native_unary.inc"
 #include "clc/math/gentype.inc"

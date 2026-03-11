@@ -17,7 +17,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-#define __CLC_BODY <clc_ep_log.inc>
+#define __CLC_BODY "clc_ep_log.inc"
 #include "clc/math/gentype.inc"
 
 #endif

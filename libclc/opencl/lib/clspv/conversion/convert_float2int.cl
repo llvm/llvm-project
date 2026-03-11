@@ -30,21 +30,21 @@
 #define __CLC_HAVE_RTE
 
 #define __CLC_SCALAR_TYPE_DST char
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 
 #define __CLC_SCALAR_TYPE_DST short
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 
 #define __CLC_SCALAR_TYPE_DST int
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 
 #define __CLC_SCALAR_TYPE_DST long
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST

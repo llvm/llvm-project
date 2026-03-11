@@ -25,7 +25,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #define __CLC_SCALAR_TYPE_SRC half
 #define __CLC_SCALAR_TYPE_SRC_S short
-#define __CLC_BODY <clc_convert_float.inc>
+#define __CLC_BODY "clc_convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 #undef __CLC_SCALAR_TYPE_SRC_S
@@ -33,7 +33,7 @@
 
 #define __CLC_SCALAR_TYPE_SRC float
 #define __CLC_SCALAR_TYPE_SRC_S int
-#define __CLC_BODY <clc_convert_float.inc>
+#define __CLC_BODY "clc_convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 #undef __CLC_SCALAR_TYPE_SRC_S
@@ -41,7 +41,7 @@
 #ifdef cl_khr_fp64
 #define __CLC_SCALAR_TYPE_SRC double
 #define __CLC_SCALAR_TYPE_SRC_S long
-#define __CLC_BODY <clc_convert_float.inc>
+#define __CLC_BODY "clc_convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 #undef __CLC_SCALAR_TYPE_SRC_S

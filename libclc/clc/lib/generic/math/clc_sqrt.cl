@@ -9,5 +9,5 @@
 #include "clc/float/definitions.h"
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_sqrt.inc>
+#define __CLC_BODY "clc_sqrt.inc"
 #include "clc/math/gentype.inc"

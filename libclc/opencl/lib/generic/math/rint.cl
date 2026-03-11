@@ -9,6 +9,6 @@
 #include "clc/math/clc_rint.h"
 
 #define __CLC_FUNCTION rint
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
 #include "clc/math/gentype.inc"

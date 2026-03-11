@@ -18,5 +18,5 @@
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_isnan.h"
 
-#define __CLC_BODY <clc_cbrt.inc>
+#define __CLC_BODY "clc_cbrt.inc"
 #include "clc/math/gentype.inc"

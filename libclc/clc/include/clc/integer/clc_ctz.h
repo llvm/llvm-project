@@ -10,7 +10,7 @@
 #define __CLC_INTEGER_CLC_CTZ_H__
 
 #define __CLC_FUNCTION __clc_ctz
-#define __CLC_BODY <clc/shared/unary_decl.inc>
+#define __CLC_BODY "clc/shared/unary_decl.inc"
 
 #include "clc/integer/gentype.inc"
 

@@ -11,10 +11,10 @@
 
 #include "clc/shared/clc_less_aligned_types.h"
 
-#define __CLC_BODY <clc/shared/clc_vstore.inc>
+#define __CLC_BODY "clc/shared/clc_vstore.inc"
 #include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc/shared/clc_vstore.inc>
+#define __CLC_BODY "clc/shared/clc_vstore.inc"
 #include "clc/math/gentype.inc"
 
 #endif // __CLC_SHARED_CLC_VSTORE_H__

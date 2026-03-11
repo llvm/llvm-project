@@ -10,7 +10,7 @@
 #define __CLC_MATH_CLC_LGAMMA_R_H__
 
 #define __CLC_FUNCTION __clc_lgamma_r
-#define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
+#define __CLC_BODY "clc/math/unary_decl_with_int_ptr.inc"
 
 #include "clc/math/gentype.inc"
 

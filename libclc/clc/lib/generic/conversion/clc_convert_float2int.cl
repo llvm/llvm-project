@@ -28,28 +28,28 @@
 
 #define __CLC_SCALAR_TYPE_DST char
 #define __CLC_GENSIZE_DST 8
-#define __CLC_BODY <clc_convert_float2int.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST
 
 #define __CLC_SCALAR_TYPE_DST short
 #define __CLC_GENSIZE_DST 16
-#define __CLC_BODY <clc_convert_float2int.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST
 
 #define __CLC_SCALAR_TYPE_DST int
 #define __CLC_GENSIZE_DST 32
-#define __CLC_BODY <clc_convert_float2int.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST
 
 #define __CLC_SCALAR_TYPE_DST long
 #define __CLC_GENSIZE_DST 64
-#define __CLC_BODY <clc_convert_float2int.inc>
+#define __CLC_BODY "clc_convert_float2int.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_DST
 #undef __CLC_GENSIZE_DST

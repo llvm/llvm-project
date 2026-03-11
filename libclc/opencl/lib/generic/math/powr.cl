@@ -9,5 +9,5 @@
 #include "clc/math/clc_powr.h"
 
 #define __CLC_FUNCTION powr
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY "clc/shared/binary_def.inc"
 #include "clc/math/gentype.inc"

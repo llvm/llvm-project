@@ -8,5 +8,5 @@
 
 #include "clc/integer/clc_bitfield_extract_unsigned.h"
 
-#define __CLC_BODY <clc_bitfield_extract_unsigned.inc>
+#define __CLC_BODY "clc_bitfield_extract_unsigned.inc"
 #include "clc/integer/gentype.inc"

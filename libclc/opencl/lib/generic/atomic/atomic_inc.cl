@@ -11,5 +11,5 @@
 #define __CLC_FUNCTION atomic_inc
 #define __CLC_IMPL_FUNCTION __clc_atomic_inc
 
-#define __CLC_BODY <atomic_inc_dec.inc>
+#define __CLC_BODY "atomic_inc_dec.inc"
 #include "clc/integer/gentype.inc"

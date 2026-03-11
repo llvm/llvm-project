@@ -12,5 +12,5 @@
 #include "clc/math/clc_fabs.h"
 #include "clc/math/clc_sqrt.h"
 
-#define __CLC_BODY <clc_length.inc>
+#define __CLC_BODY "clc_length.inc"
 #include "clc/math/gentype.inc"

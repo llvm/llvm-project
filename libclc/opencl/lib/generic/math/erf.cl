@@ -9,5 +9,5 @@
 #include "clc/math/clc_erf.h"
 
 #define __CLC_FUNCTION erf
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 #include "clc/math/gentype.inc"

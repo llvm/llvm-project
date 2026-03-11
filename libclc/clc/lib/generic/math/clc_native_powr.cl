@@ -11,6 +11,6 @@
 #include "clc/math/clc_native_log2.h"
 
 #define __CLC_FLOAT_ONLY
-#define __CLC_BODY <clc_native_powr.inc>
+#define __CLC_BODY "clc_native_powr.inc"
 
 #include "clc/math/gentype.inc"

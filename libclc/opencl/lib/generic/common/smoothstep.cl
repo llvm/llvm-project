@@ -8,5 +8,5 @@
 
 #include "clc/common/clc_smoothstep.h"
 
-#define __CLC_BODY <smoothstep.inc>
+#define __CLC_BODY "smoothstep.inc"
 #include "clc/math/gentype.inc"

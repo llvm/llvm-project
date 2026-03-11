@@ -15,5 +15,5 @@
 #include "clc/math/clc_mad.h"
 #include "clc/math/math.h"
 
-#define __CLC_BODY <clc_atanh.inc>
+#define __CLC_BODY "clc_atanh.inc"
 #include "clc/math/gentype.inc"

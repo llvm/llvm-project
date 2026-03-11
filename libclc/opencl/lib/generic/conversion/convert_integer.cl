@@ -23,21 +23,21 @@
 #define __CLC_IMPL_FUNCTION_SAT __CLC_XCONCAT(__CLC_IMPL_FUNCTION, _sat)
 
 #define __CLC_SCALAR_TYPE_SRC char
-#define __CLC_BODY <convert_integer.inc>
+#define __CLC_BODY "convert_integer.inc"
 #include "clc/integer/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC short
-#define __CLC_BODY <convert_integer.inc>
+#define __CLC_BODY "convert_integer.inc"
 #include "clc/integer/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC int
-#define __CLC_BODY <convert_integer.inc>
+#define __CLC_BODY "convert_integer.inc"
 #include "clc/integer/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC long
-#define __CLC_BODY <convert_integer.inc>
+#define __CLC_BODY "convert_integer.inc"
 #include "clc/integer/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC

@@ -20,5 +20,5 @@
 #include "clc/relational/clc_isnan.h"
 #include "clc/shared/clc_min.h"
 
-#define __CLC_BODY <clc_cosh.inc>
+#define __CLC_BODY "clc_cosh.inc"
 #include "clc/math/gentype.inc"

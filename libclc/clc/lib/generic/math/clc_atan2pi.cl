@@ -22,5 +22,5 @@
 #include "clc/shared/clc_max.h"
 #include "clc/shared/clc_min.h"
 
-#define __CLC_BODY <clc_atan2pi.inc>
+#define __CLC_BODY "clc_atan2pi.inc"
 #include "clc/math/gentype.inc"

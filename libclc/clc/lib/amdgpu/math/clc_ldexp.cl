@@ -11,5 +11,5 @@
 
 #define __CLC_FUNCTION __clc_ldexp
 #define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_ldexp
-#define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
+#define __CLC_BODY "clc/shared/binary_def_with_int_second_arg.inc"
 #include "clc/math/gentype.inc"

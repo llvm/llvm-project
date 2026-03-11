@@ -12,5 +12,5 @@
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_isnan.h"
 
-#define __CLC_BODY <clc_fract.inc>
+#define __CLC_BODY "clc_fract.inc"
 #include "clc/math/gentype.inc"

@@ -8,5 +8,5 @@
 
 #include "clc/common/clc_step.h"
 
-#define __CLC_BODY <step.inc>
+#define __CLC_BODY "step.inc"
 #include "clc/math/gentype.inc"

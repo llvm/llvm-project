@@ -130,5 +130,5 @@ _CLC_OVERLOAD _CLC_DEF half __clc_ldexp(half x, int n) {
 
 #define __CLC_FUNCTION __clc_ldexp
 #define __CLC_ARG2_TYPE int
-#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#define __CLC_BODY "clc/shared/binary_def_scalarize.inc"
 #include "clc/math/gentype.inc"

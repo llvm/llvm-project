@@ -66,5 +66,5 @@ _CLC_OVERLOAD _CLC_DEF half __clc_tgamma(half x) {
 #endif
 
 #define __CLC_FUNCTION __clc_tgamma
-#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#define __CLC_BODY "clc/shared/unary_def_scalarize.inc"
 #include "clc/math/gentype.inc"

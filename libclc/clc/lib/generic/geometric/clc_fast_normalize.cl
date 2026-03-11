@@ -11,5 +11,5 @@
 #include "clc/math/clc_half_rsqrt.h"
 
 #define __CLC_FLOAT_ONLY
-#define __CLC_BODY <clc_fast_normalize.inc>
+#define __CLC_BODY "clc_fast_normalize.inc"
 #include "clc/math/gentype.inc"

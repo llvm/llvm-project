@@ -15,5 +15,5 @@
 #include "clc/math/clc_sqrt.h"
 #include "clc/math/math.h"
 
-#define __CLC_BODY <clc_asin.inc>
+#define __CLC_BODY "clc_asin.inc"
 #include "clc/math/gentype.inc"

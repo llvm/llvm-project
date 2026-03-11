@@ -10,7 +10,7 @@
 #define __CLC_COMMON_CLC_STEP_H__
 
 #define __CLC_FUNCTION __clc_step
-#define __CLC_BODY <clc/shared/binary_decl.inc>
+#define __CLC_BODY "clc/shared/binary_decl.inc"
 
 #include "clc/math/gentype.inc"
 

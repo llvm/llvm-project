@@ -17,5 +17,5 @@
 #include "clc/relational/clc_isnan.h"
 #include "clc/relational/clc_select.h"
 
-#define __CLC_BODY <clc_tan.inc>
+#define __CLC_BODY "clc_tan.inc"
 #include "clc/math/gentype.inc"

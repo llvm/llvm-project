@@ -10,8 +10,8 @@
 
 #define __CLC_FUNCTION shuffle2
 
-#define __CLC_BODY <clc/misc/shuffle2_def.inc>
+#define __CLC_BODY "clc/misc/shuffle2_def.inc"
 #include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc/misc/shuffle2_def.inc>
+#define __CLC_BODY "clc/misc/shuffle2_def.inc"
 #include "clc/math/gentype.inc"

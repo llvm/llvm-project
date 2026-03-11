@@ -8,8 +8,8 @@
 
 #include "clc/relational/clc_bitselect.h"
 
-#define __CLC_BODY <bitselect.inc>
+#define __CLC_BODY "bitselect.inc"
 #include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <bitselect.inc>
+#define __CLC_BODY "bitselect.inc"
 #include "clc/math/gentype.inc"

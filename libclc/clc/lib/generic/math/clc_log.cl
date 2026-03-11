@@ -39,5 +39,5 @@ _CLC_OVERLOAD _CLC_DEF half __clc_log(half x) {
 #endif // cl_khr_fp16
 
 #define __CLC_FUNCTION __clc_log
-#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#define __CLC_BODY "clc/shared/unary_def_scalarize.inc"
 #include "clc/math/gentype.inc"

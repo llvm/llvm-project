@@ -30,5 +30,5 @@ _CLC_OVERLOAD _CLC_DEF half __clc_sqrt(half x) {
 #endif
 
 #define __CLC_FUNCTION __clc_sqrt
-#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#define __CLC_BODY "clc/shared/unary_def_scalarize.inc"
 #include "clc/math/gentype.inc"

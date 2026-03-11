@@ -28,7 +28,7 @@
   HI += LO < C ? 1U : 0U;
 
 #define __CLC_FLOAT_ONLY
-#define __CLC_BODY <clc_sincos_helpers.inc>
+#define __CLC_BODY "clc_sincos_helpers.inc"
 
 #include "clc/math/gentype.inc"
 
@@ -46,7 +46,7 @@
       (((src2) & 3) * 8)))
 
 #define __CLC_DOUBLE_ONLY
-#define __CLC_BODY <clc_sincos_helpers_fp64.inc>
+#define __CLC_BODY "clc_sincos_helpers_fp64.inc"
 
 #include "clc/math/gentype.inc"
 

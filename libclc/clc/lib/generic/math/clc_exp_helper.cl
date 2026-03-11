@@ -15,6 +15,6 @@
 #include "clc/relational/clc_isnan.h"
 
 #define __CLC_DOUBLE_ONLY
-#define __CLC_BODY <clc_exp_helper.inc>
+#define __CLC_BODY "clc_exp_helper.inc"
 
 #include "clc/math/gentype.inc"

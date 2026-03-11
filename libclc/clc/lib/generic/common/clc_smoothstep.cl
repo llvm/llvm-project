@@ -10,5 +10,5 @@
 #include "clc/internal/clc.h"
 #include "clc/shared/clc_clamp.h"
 
-#define __CLC_BODY <clc_smoothstep.inc>
+#define __CLC_BODY "clc_smoothstep.inc"
 #include "clc/math/gentype.inc"

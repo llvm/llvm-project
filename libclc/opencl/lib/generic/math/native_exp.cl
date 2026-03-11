@@ -10,6 +10,6 @@
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION native_exp
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
 #include "clc/math/gentype.inc"

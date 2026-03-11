@@ -27,5 +27,5 @@ _CLC_DEF _CLC_OVERLOAD half __clc_fmax(half x, half y) {
 #endif
 
 #define __CLC_FUNCTION __clc_fmax
-#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#define __CLC_BODY "clc/shared/binary_def_scalarize.inc"
 #include "clc/math/gentype.inc"

@@ -17,5 +17,5 @@
 #include "clc/relational/clc_isnan.h"
 #include "clc/shared/clc_clamp.h"
 
-#define __CLC_BODY <clc_hypot.inc>
+#define __CLC_BODY "clc_hypot.inc"
 #include "clc/math/gentype.inc"

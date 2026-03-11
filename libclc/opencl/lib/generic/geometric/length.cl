@@ -9,5 +9,5 @@
 #include "clc/geometric/clc_length.h"
 
 #define __CLC_FUNCTION length
-#define __CLC_BODY <clc/geometric/unary_def.inc>
+#define __CLC_BODY "clc/geometric/unary_def.inc"
 #include "clc/math/gentype.inc"

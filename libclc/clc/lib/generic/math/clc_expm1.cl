@@ -16,5 +16,5 @@
 #include "clc/math/tables.h"
 #include "clc/relational/clc_isnan.h"
 
-#define __CLC_BODY <clc_expm1.inc>
+#define __CLC_BODY "clc_expm1.inc"
 #include "clc/math/gentype.inc"

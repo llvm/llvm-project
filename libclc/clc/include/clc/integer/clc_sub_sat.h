@@ -10,7 +10,7 @@
 #define __CLC_INTEGER_CLC_SUB_SAT_H__
 
 #define __CLC_FUNCTION __clc_sub_sat
-#define __CLC_BODY <clc/shared/binary_decl.inc>
+#define __CLC_BODY "clc/shared/binary_decl.inc"
 
 #include "clc/integer/gentype.inc"
 

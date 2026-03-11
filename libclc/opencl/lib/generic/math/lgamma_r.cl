@@ -9,5 +9,5 @@
 #include "clc/math/clc_lgamma_r.h"
 
 #define __CLC_FUNCTION lgamma_r
-#define __CLC_BODY <clc/math/unary_def_with_int_ptr.inc>
+#define __CLC_BODY "clc/math/unary_def_with_int_ptr.inc"
 #include "clc/math/gentype.inc"

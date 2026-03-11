@@ -9,5 +9,5 @@
 #include "clc/integer/clc_ctz.h"
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_ctz.inc>
+#define __CLC_BODY "clc_ctz.inc"
 #include "clc/integer/gentype.inc"

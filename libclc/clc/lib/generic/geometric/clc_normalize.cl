@@ -18,5 +18,5 @@
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_select.h"
 
-#define __CLC_BODY <clc_normalize.inc>
+#define __CLC_BODY "clc_normalize.inc"
 #include "clc/math/gentype.inc"

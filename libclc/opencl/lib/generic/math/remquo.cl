@@ -8,5 +8,5 @@
 
 #include "clc/math/clc_remquo.h"
 
-#define __CLC_BODY <remquo.inc>
+#define __CLC_BODY "remquo.inc"
 #include "clc/math/gentype.inc"

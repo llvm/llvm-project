@@ -19,5 +19,5 @@
 #include "clc/relational/clc_select.h"
 #include "clc/shared/clc_max.h"
 
-#define __CLC_BODY <clc_sin.inc>
+#define __CLC_BODY "clc_sin.inc"
 #include "clc/math/gentype.inc"

@@ -12,5 +12,5 @@
 #include "clc/math/math.h"
 #include "clc/relational/clc_isinf.h"
 
-#define __CLC_BODY <clc_modf.inc>
+#define __CLC_BODY "clc_modf.inc"
 #include "clc/math/gentype.inc"

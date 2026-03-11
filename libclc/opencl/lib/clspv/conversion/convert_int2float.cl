@@ -23,21 +23,21 @@
 #define __CLC_I2F
 
 #define __CLC_SCALAR_TYPE_SRC char
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC short
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC int
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC long
-#define __CLC_BODY <convert_float.inc>
+#define __CLC_BODY "convert_float.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC

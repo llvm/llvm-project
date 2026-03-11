@@ -13,7 +13,7 @@
 
 #define __CLC_FUNCTION __clc_atomic_fetch_xor
 
-#define __CLC_BODY <clc/atomic/atomic_decl.inc>
+#define __CLC_BODY "clc/atomic/atomic_decl.inc"
 #include "clc/integer/gentype.inc"
 
 #undef __CLC_FUNCTION

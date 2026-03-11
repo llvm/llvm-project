@@ -9,5 +9,5 @@
 #include "clc/math/clc_cos.h"
 
 #define __CLC_FUNCTION cos
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 #include "clc/math/gentype.inc"

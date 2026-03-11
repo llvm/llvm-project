@@ -13,8 +13,8 @@
 #define __CLC_IMPL_FUNCTION __clc_atomic_load
 #define __CLC_NO_VALUE_ARG
 
-#define __CLC_BODY <atomic_def.inc>
+#define __CLC_BODY "atomic_def.inc"
 #include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <atomic_def.inc>
+#define __CLC_BODY "atomic_def.inc"
 #include "clc/math/gentype.inc"

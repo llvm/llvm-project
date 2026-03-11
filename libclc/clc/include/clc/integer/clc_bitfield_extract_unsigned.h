@@ -14,7 +14,7 @@
 #define __CLC_FUNCTION __clc_bitfield_extract_unsigned
 #define __CLC_RETTYPE __CLC_U_GENTYPE
 
-#define __CLC_BODY <clc/integer/clc_bitfield_extract_decl.inc>
+#define __CLC_BODY "clc/integer/clc_bitfield_extract_decl.inc"
 #include "clc/integer/gentype.inc"
 
 #undef __CLC_RETTYPE

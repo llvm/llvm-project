@@ -8,5 +8,5 @@
 
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_cross.inc>
+#define __CLC_BODY "clc_cross.inc"
 #include "clc/math/gentype.inc"
