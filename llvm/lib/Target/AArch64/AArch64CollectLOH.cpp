@@ -84,7 +84,7 @@
 // This LOH aims at getting rid of redundant ADRP instructions.
 //
 // The overall design for emitting the LOHs is:
-// 1. AArch64CollectLOHLegacy (this pass) records the LOHs in the
+// 1. AArch64CollectLOH (this pass) records the LOHs in the
 // AArch64FunctionInfo.
 // 2. AArch64AsmPrinter reads the LOHs from AArch64FunctionInfo and it:
 //     1. Associates them a label.
@@ -132,9 +132,7 @@ struct AArch64CollectLOHImpl {
 
 struct AArch64CollectLOHLegacy : public MachineFunctionPass {
   static char ID;
-  AArch64CollectLOHLegacy() : MachineFunctionPass(ID) {
-    initializeAArch64CollectLOHLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64CollectLOHLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
