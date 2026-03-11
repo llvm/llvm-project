@@ -294,7 +294,6 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
 
   // --- MUL (non-POW2) base ---
   Value *Magic64     = loadFromTable(getMagicsTable(), I64Ty, RegionIndex);
-  Value *IsPow2_8    = loadFromTable(getIsPow2Table(), I8Ty,  RegionIndex);
 
   Value *Ptr128   = IRB.CreateZExt(PtrInt, I128Ty);
   Value *Magic128 = IRB.CreateZExt(IRB.CreateZExtOrTrunc(Magic64, IntptrTy),
@@ -304,11 +303,7 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
   Value *Idx      = IRB.CreateTrunc(Idx128, IntptrTy);
   Value *BaseMul  = IRB.CreateMul(Idx, AllocSize);
 
-  // Select between the two paths
-  Value *IsPow2_1 = IRB.CreateTrunc(IsPow2_8, Type::getInt1Ty(Ctx));
-  Value *Base     = IRB.CreateSelect(IsPow2_1, BaseAnd, BaseMul);
-
-  return {AllocSize, Base};
+  return {AllocSize, BaseMul};
 }
 #endif  // LOWFAT_CUSTOM_CONFIG
 

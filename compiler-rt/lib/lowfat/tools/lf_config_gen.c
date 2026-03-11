@@ -205,15 +205,15 @@ int main(int argc, char *argv[]) {
 
     is_pow2_arr[i] = pow2;
 
+    uint64_t M    = compute_magic(S);
+    uint64_t err  = precision_error(S, M);
+    magics[i]     = M;
+
     if (pow2) {
-      magics[i]         = 0;                // unused — POW2 uses AND
       masks[i]          = ~(S - 1);
       effective_sizes[i] = S;              // no precision error for POW2
     } else {
-      uint64_t M    = compute_magic(S);
-      uint64_t err  = precision_error(S, M);
-      magics[i]     = M;
-      masks[i]      = 0;                   // not applicable for non-POW2
+      masks[i]          = 0;                   // not applicable for non-POW2
       // Shrink effective size by error so allocator never gives out the
       // bytes that the magic-number math would mis-identify.
       effective_sizes[i] = S - err;
@@ -223,6 +223,7 @@ int main(int argc, char *argv[]) {
                 " bytes; effective size = %" PRIu64 "\n", S, err, effective_sizes[i]);
       }
     }
+
   }
 
   // ---- Open output ----
