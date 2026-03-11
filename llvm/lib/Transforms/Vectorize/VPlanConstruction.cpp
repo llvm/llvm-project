@@ -511,6 +511,13 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
   }
 }
 
+/// Return an iterator range to iterate over pairs of matching phi nodes in
+/// \p Header and \p ScalarHeader, skipping the canonical IV in the former.
+static auto getMatchingPhisForScalarLoop(VPBasicBlock *Header,
+                                         VPBasicBlock *ScalarHeader) {
+  return zip_equal(drop_begin(Header->phis()), ScalarHeader->phis());
+}
+
 static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
                                PredicatedScalarEvolution &PSE, Loop *TheLoop) {
   VPDominatorTree VPDT(Plan);
@@ -562,12 +569,27 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
 
   createExtractsForLiveOuts(Plan, MiddleVPBB);
 
+  // Create resume phis in the scalar preheader for each phi in the scalar loop.
+  // Their incoming value from the vector loop will be the last lane of the
+  // corresponding vector loop header phi.
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
-  for (const auto &[PhiR, ScalarPhiR] : zip_equal(
-           drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
+  assert(equal(ScalarPH->getPredecessors(),
+               ArrayRef<VPBlockBase *>({MiddleVPBB, Plan.getEntry()})) &&
+         "unexpected predecessor order of scalar ph");
+  for (const auto &[PhiR, ScalarPhiR] :
+       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarHeader())) {
     auto *VectorPhiR = cast<VPPhi>(&PhiR);
+    VPValue *BackedgeVal = VectorPhiR->getOperand(1);
+    VPValue *ResumeFromVectorLoop =
+        MiddleBuilder.createNaryOp(VPInstruction::ExtractLastPart, BackedgeVal);
+    ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
+        VPInstruction::ExtractLastLane, ResumeFromVectorLoop);
+    // Create scalar resume phi, with the first operand being the incoming value
+    // from the middle block and the second operand coming from the entry block.
     auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
-        {VectorPhiR, VectorPhiR->getOperand(0)}, VectorPhiR->getDebugLoc());
+        {ResumeFromVectorLoop, VectorPhiR->getOperand(0)},
+        VectorPhiR->getDebugLoc());
     cast<VPIRPhi>(&ScalarPhiR)->addOperand(ResumePhiR);
   }
 }
@@ -626,7 +648,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
 
   VPValue *BackedgeVal = PhiR->getOperand(1);
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
-  // recipes. optimizeInductionExitUsers will later compute the proper
+  // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
   auto ReplaceExtractsWithExitingIVValue = [&](VPHeaderPHIRecipe *WideIV) {
     for (VPUser *U : to_vector(BackedgeVal->users())) {
@@ -741,6 +763,20 @@ void VPlanTransforms::createHeaderPhiRecipes(
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
     PhiR->eraseFromParent();
+  }
+
+  for (const auto &[HeaderPhiR, ScalarPhiR] :
+       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarPreheader())) {
+    auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
+    if (isa<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhiR)) {
+      ResumePhiR->setName("scalar.recur.init");
+      auto *ExtractLastLane = cast<VPInstruction>(ResumePhiR->getOperand(0));
+      ExtractLastLane->setName("vector.recur.extract");
+      continue;
+    }
+    ResumePhiR->setName(isa<VPWidenInductionRecipe>(HeaderPhiR)
+                            ? "bc.resume.val"
+                            : "bc.merge.rdx");
   }
 }
 
@@ -1515,7 +1551,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
-                             {DataSelect, MaskSelect, PhiR->getStartValue()},
+                             {PhiR->getStartValue(), DataSelect, MaskSelect},
                              RdxResult->getDebugLoc());
     RdxResult->replaceAllUsesWith(ExtractLastActive);
     RdxResult->eraseFromParent();
@@ -1817,10 +1853,12 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     bool IsStrictPredicate = ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred);
     if (IsStrictPredicate) {
-      return handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
-                                    cast<VPWidenIntOrFpInductionRecipe>(IVOp),
-                                    MinOrMaxResult, FindIVSelect, FindIVCmp,
-                                    FindIVRdxResult);
+      if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
+                                  cast<VPWidenIntOrFpInductionRecipe>(IVOp),
+                                  MinOrMaxResult, FindIVSelect, FindIVCmp,
+                                  FindIVRdxResult))
+        return false;
+      continue;
     }
 
     // The reduction using MinOrMaxPhiR needs adjusting to compute the correct

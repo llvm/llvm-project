@@ -141,7 +141,6 @@ struct MissingFeatures {
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   // RecordType
-  static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
@@ -151,7 +150,6 @@ struct MissingFeatures {
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
-  static bool deferredVtables() { return false; }
   static bool deferredFuncDecls() { return false; }
 
   // CXXABI
@@ -208,7 +206,6 @@ struct MissingFeatures {
   static bool aggValueSlotGC() { return false; }
   static bool aggValueSlotMayOverlap() { return false; }
   static bool aggValueSlotVolatile() { return false; }
-  static bool alignCXXRecordDecl() { return false; }
   static bool allocToken() { return false; }
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
@@ -291,7 +288,6 @@ struct MissingFeatures {
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
-  static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
   static bool intrinsicElementTypeSupport() { return false; }
@@ -312,7 +308,6 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
-  static bool neonSISDIntrinsics() { return false; }
   static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
@@ -348,6 +343,7 @@ struct MissingFeatures {
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
+  static bool typeAwareAllocation() { return false; }
   static bool typeChecks() { return false; }
   static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }

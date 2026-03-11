@@ -83,6 +83,8 @@ public:
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
+  bool isCLZForZeroUndef() const override { return false; }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
@@ -176,6 +178,10 @@ public:
     Opts["cl_khr_global_int32_extended_atomics"] = true;
     Opts["cl_khr_local_int32_base_atomics"] = true;
     Opts["cl_khr_local_int32_extended_atomics"] = true;
+
+    Opts["__opencl_c_images"] = true;
+    Opts["__opencl_c_3d_image_writes"] = true;
+    Opts["cl_khr_3d_image_writes"] = true;
 
     Opts["__opencl_c_generic_address_space"] = true;
   }

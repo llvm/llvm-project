@@ -28,7 +28,7 @@
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"

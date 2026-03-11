@@ -57,7 +57,7 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 4096
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 4096
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
@@ -89,14 +89,14 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435456
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435456
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @foo2._zbb
 // CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 4096
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 4096
 // CHECK-NEXT:    br i1 [[TMP5]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
@@ -122,7 +122,7 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435460
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435460
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
@@ -148,7 +148,7 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 270532608
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 270532608
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
@@ -187,7 +187,7 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 576460752303423488
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 576460752303423488
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
@@ -225,21 +225,21 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435456
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435456
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @foo7._zbb
 // CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 134217728
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 134217728
 // CHECK-NEXT:    br i1 [[TMP5]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @foo7._zba
 // CHECK:       resolver_else2:
-// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 402653184
 // CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 402653184
 // CHECK-NEXT:    br i1 [[TMP8]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
@@ -277,21 +277,21 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 402653184
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 402653184
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @foo8._zba_zbb
 // CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 268435456
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 268435456
 // CHECK-NEXT:    br i1 [[TMP5]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @foo8._zbb
 // CHECK:       resolver_else2:
-// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 134217728
 // CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 134217728
 // CHECK-NEXT:    br i1 [[TMP8]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
@@ -329,21 +329,21 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5() + foo6() + foo7() 
 // CHECK-SAME: ) #[[ATTR2]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 402653184
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 402653184
 // CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
 // CHECK-NEXT:    ret ptr @foo9._zba_zbb
 // CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 134217728
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 134217728
 // CHECK-NEXT:    br i1 [[TMP5]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
 // CHECK-NEXT:    ret ptr @foo9._zba
 // CHECK:       resolver_else2:
-// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_feature_bits, i64 8), align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 268435456
 // CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 268435456
 // CHECK-NEXT:    br i1 [[TMP8]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]

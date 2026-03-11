@@ -360,7 +360,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
     MO.getMBB()->getSymbol()->print(O, MAI);
     return;
   case MachineOperand::MO_ConstantPoolIndex:
-    O << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    O << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
       << MO.getIndex();
     return;
   case MachineOperand::MO_BlockAddress:
@@ -1728,6 +1728,27 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
     return;
+  }
+  case PPC::BL8:
+  case PPC::BL8_NOP: {
+    const MachineOperand &MO = MI->getOperand(0);
+    if (MO.isSymbol()) {
+      StringRef Name = MO.getSymbolName();
+      Name.consume_front(".");
+      Name.consume_back("[PR]");
+      bool IsLWAT = Name == "__lwat_csne_pseudo";
+      bool IsLDAT = Name == "__ldat_csne_pseudo";
+      if (IsLWAT || IsLDAT) {
+        EmitToStreamer(*OutStreamer,
+                       MCInstBuilder(IsLWAT ? PPC::LWAT : PPC::LDAT)
+                           .addReg(PPC::X3)
+                           .addReg(PPC::X3)
+                           .addReg(PPC::X6)
+                           .addImm(16));
+        return;
+      }
+    }
+    break;
   }
   }
 

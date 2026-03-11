@@ -8055,6 +8055,8 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
 }
 
 QualType ASTContext::getAdjustedParameterType(QualType T) const {
+  if (getLangOpts().HLSL && T.getAddressSpace() == LangAS::hlsl_groupshared)
+    return getLValueReferenceType(T);
   if (getLangOpts().HLSL && T->isConstantArrayType())
     return getArrayParameterType(T);
   if (T->isArrayType() || T->isFunctionType())
@@ -13013,11 +13015,20 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
 
   if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
       isa<CXXConstructorDecl>(FD) &&
-      cast<CXXConstructorDecl>(FD)->isInheritingConstructor())
-    // Our approach to inheriting constructors is fundamentally different from
-    // that used by the MS ABI, so keep our inheriting constructor thunks
-    // internal rather than trying to pick an unambiguous mangling for them.
+      cast<CXXConstructorDecl>(FD)->isInheritingConstructor() &&
+      !FD->hasAttr<DLLExportAttr>()) {
+    // Both Clang and MSVC implement inherited constructors as forwarding
+    // thunks that delegate to the base constructor. Keep non-dllexport
+    // inheriting constructor thunks internal since they are not needed
+    // outside the translation unit.
+    //
+    // dllexport inherited constructors are exempted so they are externally
+    // visible, matching MSVC's export behavior. Inherited constructors
+    // whose parameters prevent ABI-compatible forwarding (e.g. callee-
+    // cleanup types) are excluded from export in Sema to avoid silent
+    // runtime mismatches.
     return GVA_Internal;
+  }
 
   return GVA_DiscardableODR;
 }

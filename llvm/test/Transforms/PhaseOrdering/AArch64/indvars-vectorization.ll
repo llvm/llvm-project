@@ -48,11 +48,11 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], [[TMP0]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP20]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP20]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP21]], align 4, !alias.scope [[META0]]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP22]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4, !alias.scope [[META3]], !noalias [[META0]]
@@ -71,9 +71,9 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER13]] ]
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load i32, ptr [[GEP_B]], align 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[L_A:%.*]] = load i32, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[L_A]], [[L_B]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
