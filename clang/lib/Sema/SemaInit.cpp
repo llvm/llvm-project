@@ -4692,7 +4692,7 @@ static void TryConstructorInitialization(Sema &S,
   // if the initialization is direct-initialization, or if it is
   // copy-initialization where the cv-unqualified version of the source type is
   // the same as or is derived from the class of the destination type,
-  // constructors are considered. The
+  // constructors are considered.
   if ((Kind.getKind() == InitializationKind::IK_Direct ||
        Kind.getKind() == InitializationKind::IK_Copy) &&
       Args.size() == 1 &&
