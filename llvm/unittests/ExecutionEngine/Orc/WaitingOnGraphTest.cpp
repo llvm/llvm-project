@@ -533,8 +533,8 @@ TEST_F(WaitingOnGraphTest, Simplification_SimplifyIntraSimplifyPropagateDeps) {
   auto &SNs = getSNs(SR);
   EXPECT_EQ(SNs.size(), 2U);
 
-  // ContainerElemenstMap ExpectedDefs0({{0, {0}}});
-  // ContainerElemenstMap ExpectedDeps0({{0, {1, 3}}});
+  // ContainerElementsMap ExpectedDefs0({{0, {0}}});
+  // ContainerElementsMap ExpectedDeps0({{0, {1, 3}}});
   EXPECT_EQ(getDefs(*SNs.at(0)), ContainerElementsMap({{0, {0}}}));
   EXPECT_EQ(getDeps(*SNs.at(0)), ContainerElementsMap({{0, {2, 3}}}));
 
