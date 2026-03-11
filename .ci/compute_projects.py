@@ -166,7 +166,7 @@ PROJECT_CHECK_TARGETS = {
     "openmp": "check-openmp",
     "polly": "check-polly",
     "lit": "check-lit",
-    "offload": "check-offload",
+    "offload": "offload",
 }
 
 RUNTIMES = {
