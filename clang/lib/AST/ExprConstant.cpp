@@ -14595,10 +14595,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       if (IsSaturating) {
 		DotProduct = DotProduct.sext(64);
       }
-      for (unsigned J = 0; J < 4; ++J) {
-        APSInt OpA = APSInt(OperandA.getVectorElt(4*I+J).getInt().zext(16), false);
-        APSInt OpB =
-            APSInt(OperandB.getVectorElt(4 * I + J).getInt().sext(16), false);
+      unsigned Iters = IsByteDot ? 4 : 2;
+      for (unsigned J = 0; J < Iters; ++J) {
+        APSInt OpA = IsByteDot
+            ? APSInt(OperandA.getVectorElt(Iters*I+J).getInt().zext(16), false)
+            : APSInt(OperandA.getVectorElt(Iters*I+J).getInt(), false);
+        APSInt OpB = APSInt(OperandB.getVectorElt(Iters*I+J).getInt().sext(16), false);
         DotProduct += APSInt((OpA * OpB).sext(64), false);
       }
       if (IsSaturating) {
