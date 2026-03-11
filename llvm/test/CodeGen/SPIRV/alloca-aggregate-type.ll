@@ -25,9 +25,9 @@
 ; Verify OpVariable uses the array type, not pointer-to-pointer
 ; CHECK: %[[#Var:]] = OpVariable %[[#PtrFunc]] Function
 
-define spir_kernel void @test_alloca_aggregate() local_unnamed_addr {
+define void @test_alloca_aggregate() {
 entry:
-  %y = alloca [1 x { { { ptr addrspace(1), i64, [1 x i64], i64 }, [2 x [1 x i64]] } }], align 8
+  %y = alloca [1 x { { { ptr addrspace(1), i64, [1 x i64], i64 }, [2 x [1 x i64]] } }]
   %ptr = load ptr addrspace(1), ptr %y, align 8
   ret void
 }
