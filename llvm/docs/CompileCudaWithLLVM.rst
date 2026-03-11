@@ -429,6 +429,21 @@ To enable these warnings, use the following compiler flag:
 
     -Wnvcc-compat
 
+Deferred Diagnostics
+--------------------
+
+In CUDA, a ``__host__ __device__`` function can be called from both host and
+device code. When such a function contains operations not valid on the device
+(e.g., calling a host-only function), clang defers the diagnostics and only
+emits them if the function is actually reachable from device code. This avoids
+false errors in ``__host__ __device__`` functions that are only used on the
+host side.
+
+For a detailed description of deferred diagnostics, device-promoted functions,
+and call chain notes, see the
+`HIP Support <https://clang.llvm.org/docs/HIPSupport.html#deferred-diagnostics>`_
+documentation. The same mechanism applies to both CUDA and HIP.
+
 Using a Different Class on Host/Device
 --------------------------------------
 
