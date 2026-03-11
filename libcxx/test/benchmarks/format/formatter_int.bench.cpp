@@ -52,8 +52,8 @@ static void BM_BasicLow(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK(BM_BasicLow<__uint128_t>)->Name("std::format(__uint128_t) (low)");
-BENCHMARK(BM_BasicLow<__int128_t>)->Name("std::format(__int128_t) (low)");
+BENCHMARK(BM_BasicLow<__uint128_t>)->Name("std::format(__uint128_t) (lower 64 bits only)");
+BENCHMARK(BM_BasicLow<__int128_t>)->Name("std::format(__int128_t) (lower 64 bits only)");
 
 BENCHMARK(BM_Basic<__uint128_t>)->Name("std::format(__uint128_t)");
 BENCHMARK(BM_Basic<__int128_t>)->Name("std::format(__int128_t)");
