@@ -651,8 +651,8 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
 }
 
 // Try to recognize table-based log2 implementation.
-// E.g., an exmapel in C (for more cases please the llvm/tests):
-// int f(unsigned x) {
+// E.g., an example in C (for more cases please the llvm/tests):
+// int f(unsigned v) {
 //    static const char table[32] =
 //    {0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
 //     8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31};
@@ -708,9 +708,9 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
 // %mul = mul i64 %or10, 285870213051386505
 // %shr11 = lshr i64 %mul, 58
 // %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr11
-// %0 = load i8, ptr %arrayidx, align 1/
+// %0 = load i8, ptr %arrayidx, align 1
 //
-// All these can be lowered to @llvm.cttz.i32/64 intrinsics and a subtract.
+// All these can be lowered to @llvm.ctlz.i32/64 intrinsics and a subtract.
 static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
                                          TargetTransformInfo &TTI) {
   LoadInst *LI = dyn_cast<LoadInst>(&I);
@@ -755,26 +755,14 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
   if (*ShiftConst != InputBits - Log2_32(InputBits))
     return false;
 
-  if (InputBits >= 64) {
+  // Match the sequence of OR operations with right shifts by powers of 2.
+  for (unsigned ShiftAmt = InputBits / 2; ShiftAmt != 0; ShiftAmt /= 2) {
     Value *Y;
-    if (!match(X, m_c_Or(m_LShr(m_Value(Y), m_SpecificInt(32)), m_Deferred(Y))))
+    if (!match(X, m_c_Or(m_LShr(m_Value(Y), m_SpecificInt(ShiftAmt)),
+                         m_Deferred(Y))))
       return false;
     X = Y;
   }
-
-  Value *Y1, *Y2, *Y3, *Y4, *Y5;
-  if (!match(X,
-             m_c_Or(m_LShr(m_Value(Y1), m_SpecificInt(16)), m_Deferred(Y1))) ||
-      !match(Y1,
-             m_c_Or(m_LShr(m_Value(Y2), m_SpecificInt(8)), m_Deferred(Y2))) ||
-      !match(Y2,
-             m_c_Or(m_LShr(m_Value(Y3), m_SpecificInt(4)), m_Deferred(Y3))) ||
-      !match(Y3,
-             m_c_Or(m_LShr(m_Value(Y4), m_SpecificInt(2)), m_Deferred(Y4))) ||
-      !match(Y4, m_c_Or(m_LShr(m_Value(Y5), m_SpecificInt(1)), m_Deferred(Y5))))
-    return false;
-
-  X = Y5;
 
   if (!GEPScale.isIntN(InputBits) ||
       !isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
