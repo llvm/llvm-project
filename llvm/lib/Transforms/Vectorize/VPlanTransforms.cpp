@@ -6517,11 +6517,10 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
   for (VPInstruction *VPI : MemOps) {
     Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
-    RecipeBuilder.getVPBuilder().setInsertPoint(VPI);
 
     auto ReplaceWith = [&](VPRecipeBase *New) {
       RecipeBuilder.setRecipe(Instr, New);
-      RecipeBuilder.getVPBuilder().insert(New);
+      New->insertBefore(VPI);
       if (VPI->getOpcode() == Instruction::Load)
         VPI->replaceAllUsesWith(New->getVPSingleValue());
       VPI->eraseFromParent();

@@ -73,8 +73,6 @@ public:
                   LoopVectorizationCostModel &CM, VPBuilder &Builder)
       : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
 
-  VPBuilder &getVPBuilder() const { return Builder; }
-
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
   VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
