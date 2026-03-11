@@ -216,6 +216,12 @@ public:
   ///
   void SynchronizeWithReadThread();
 
+  /// Interrupts the current read.
+  ///
+  /// Unlike SynchronizeWithReadThread, this does not wait for the read loop to
+  /// finish processing outstanding data.
+  void InterruptRead();
+
   static llvm::StringRef GetStaticBroadcasterClass();
 
   llvm::StringRef GetBroadcasterClass() const override {

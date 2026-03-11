@@ -120,11 +120,7 @@ using LdStPairFlags = struct LdStPairFlags {
   std::optional<MCPhysReg> getRenameReg() const { return RenameReg; }
 };
 
-struct AArch64LoadStoreOpt : public MachineFunctionPass {
-  static char ID;
-
-  AArch64LoadStoreOpt() : MachineFunctionPass(ID) {}
-
+struct AArch64LoadStoreOpt {
   AliasAnalysis *AA;
   const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -133,11 +129,6 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   // Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
   LiveRegUnits DefinedInBB;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
 
   // Scan the instructions looking for a load/store that can be combined
   // with the current instruction into a load/store pair.
@@ -229,7 +220,20 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
 
   bool optimizeBlock(MachineBasicBlock &MBB, bool EnableNarrowZeroStOpt);
 
+  bool runOnMachineFunction(MachineFunction &MF);
+};
+
+struct AArch64LoadStoreOptLegacy : public MachineFunctionPass {
+  static char ID;
+
+  AArch64LoadStoreOptLegacy() : MachineFunctionPass(ID) {}
+
   bool runOnMachineFunction(MachineFunction &Fn) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AAResultsWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
@@ -238,11 +242,11 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   StringRef getPassName() const override { return AARCH64_LOAD_STORE_OPT_NAME; }
 };
 
-char AArch64LoadStoreOpt::ID = 0;
+char AArch64LoadStoreOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64LoadStoreOpt, "aarch64-ldst-opt",
+INITIALIZE_PASS(AArch64LoadStoreOptLegacy, "aarch64-ldst-opt",
                 AARCH64_LOAD_STORE_OPT_NAME, false, false)
 
 static bool isNarrowStore(unsigned Opc) {
@@ -3113,13 +3117,9 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
 }
 
 bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
   Subtarget = &Fn.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   // Resize the modified and used register unit trackers.  We do this once
   // per function and then clear the register units each time we optimize a load
@@ -3148,8 +3148,31 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
 // The resulting IR is invalid, but nothing uses the KILL markers after this
 // pass, so it's never caused a problem in practice.
 
+bool AArch64LoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  AArch64LoadStoreOpt Impl;
+  Impl.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  return Impl.runOnMachineFunction(MF);
+}
+
 /// createAArch64LoadStoreOptimizationPass - returns an instance of the
 /// load / store optimization pass.
-FunctionPass *llvm::createAArch64LoadStoreOptimizationPass() {
-  return new AArch64LoadStoreOpt();
+FunctionPass *llvm::createAArch64LoadStoreOptLegacyPass() {
+  return new AArch64LoadStoreOptLegacy();
+}
+
+PreservedAnalyses
+AArch64LoadStoreOptPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  AArch64LoadStoreOpt Impl;
+  Impl.AA = &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                 .getManager()
+                 .getResult<AAManager>(MF.getFunction());
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

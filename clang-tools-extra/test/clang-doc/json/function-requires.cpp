@@ -19,8 +19,8 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:      "Name": "increment",
 // CHECK-NEXT:      "Params": [
 // CHECK-NEXT:        {
-// CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Name": "t",
+// CHECK-NEXT:          "ParamEnd": true
 // CHECK-NEXT:          "Type": {
 // CHECK-NEXT:            "Name": "T",
 // CHECK-NEXT:            "QualName": "T",
@@ -50,9 +50,11 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Param": "typename T"
 // CHECK-NEXT:          }
-// CHECK-NEXT:        ]
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "VerticalDisplay": false
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "USR": "{{[0-9A-F]*}}" 
+// CHECK-NEXT:      "USR": "{{[0-9A-F]*}}",
+// CHECK-NEXT:      "VerticalDisplay": false
 // CHECK-NEXT:    },
 // CHECK-NEXT:    {
 // CHECK-NEXT:      "End": true,
@@ -61,8 +63,8 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:      "Name": "incrementTwo",
 // CHECK-NEXT:      "Params": [
 // CHECK-NEXT:        {
-// CHECK-NEXT:          "End": true,
 // CHECK-NEXT:          "Name": "t",
+// CHECK-NEXT:          "ParamEnd": true
 // CHECK-NEXT:          "Type": {
 // CHECK-NEXT:            "Name": "T",
 // CHECK-NEXT:            "QualName": "T",
@@ -92,7 +94,9 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Param": "Incrementable T"
 // CHECK-NEXT:          }
-// CHECK-NEXT:        ]
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "VerticalDisplay": false
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:      "USR": "{{[0-9A-F]*}}",
+// CHECK-NEXT:      "VerticalDisplay": false
 // CHECK-NEXT:    }

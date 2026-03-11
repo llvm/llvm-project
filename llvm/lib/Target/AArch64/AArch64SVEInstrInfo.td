@@ -389,8 +389,10 @@ def AArch64fdot : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
                             ]>;
 
 def SDT_AArch64FCVT : SDTypeProfile<1, 3, [
-  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
-  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>, SDTCisSameAs<0,3>
+  SDTCisVec<0>,
+  SDTCisVec<1>, SDTCisSameNumEltsAs<1,0>, SDTCVecEltisVT<1,i1>,
+  SDTCisVec<2>, SDTCisSameNumEltsAs<2,0>,
+  SDTCisSameAs<3,0>
 ]>;
 
 def SDT_AArch64FCVTR : SDTypeProfile<1, 4, [
@@ -981,6 +983,9 @@ let Predicates = [HasSVE_or_SME] in {
             (DUP_ZI_S $a, $b)>;
   def : Pat<(nxv2i64 (splat_vector (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
             (DUP_ZI_D $a, $b)>;
+
+  def : Pat<(v2i64 (AArch64dup (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
+            (EXTRACT_SUBREG (DUP_ZI_D $a, $b), zsub)>;
 
   // Duplicate immediate FP into all vector elements.
   def : Pat<(nxv2f16 (splat_vector (f16 fpimm:$val))),
@@ -2519,6 +2524,12 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(nxv2f32 (AArch64fcvte_mt (SVEAnyPredicate), nxv2bf16:$op, undef)),
             (LSL_ZZI_S $op, (i32 16))>;
 
+  // A common sequence that occurs when promoting nxv8bf16 operations.
+  def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), (extract_subvector nxv8bf16:$Zs, (i64 0)), undef)),
+            (ZIP1_ZZZ_H (SUBREG_TO_REG (MOVIv2d_ns (i32 0)), zsub), $Zs)>;
+  def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), (extract_subvector nxv8bf16:$Zs, (i64 4)), undef)),
+            (ZIP2_ZZZ_H (SUBREG_TO_REG (MOVIv2d_ns (i32 0)), zsub), $Zs)>;
+
   // Signed integer -> Floating-point
   def : Pat<(nxv2f16 (AArch64scvtf_mt (nxv2i1 (SVEAllActive):$Pg),
                       (sext_inreg nxv2i64:$Zs, nxv2i16), nxv2f16:$Zd)),
@@ -2596,6 +2607,10 @@ let Predicates = [HasBF16, HasSVE_or_SME] in {
                 (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zn, (undef))),
                 (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zm, (undef))))),
             (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$Zn, ZPR:$Zm)>;
+
+  def : Pat<(nxv4f32 (partial_reduce_fmla nxv4f32:$acc, nxv8bf16:$LHS, nxv8bf16:$RHS)),
+            (BFMLALT_ZZZ (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$LHS, ZPR:$RHS),
+                ZPR:$LHS, ZPR:$RHS)>;
 
   defm BFCVT_ZPmZ   : sve_bfloat_convert<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
   defm BFCVTNT_ZPmZ : sve_bfloat_convert_top<"bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
@@ -3615,7 +3630,7 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(v1f64 (scalar_to_vector
                      (f64 (vector_extract nxv2f64:$vec, VectorIndexD:$index)))),
             (DUPi64 (EXTRACT_SUBREG nxv2f64:$vec, zsub), VectorIndexD:$index)>;
-  def : Pat<(v1i64 (scalar_to_vector
+  def : Pat<(v1i64 (scalar_to_vector_v1f64
                      (i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)))),
             (DUPi64 (EXTRACT_SUBREG nxv2i64:$vec, zsub), VectorIndexD:$index)>;
   } // End HasNEON

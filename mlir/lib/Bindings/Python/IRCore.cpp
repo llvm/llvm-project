@@ -803,7 +803,7 @@ nb::tuple PyDiagnostic::getNotes() {
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
     nb::object diagnostic = nb::cast(PyDiagnostic(noteDiag));
-    PyTuple_SET_ITEM(notes.ptr(), i, diagnostic.release().ptr());
+    PyTuple_SetItem(notes.ptr(), i, diagnostic.release().ptr());
   }
   materializedNotes = std::move(notes);
 
@@ -2672,75 +2672,15 @@ void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
 } // namespace mlir
 
 namespace {
-// see
-// https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
-
-#ifndef _Py_CAST
-#define _Py_CAST(type, expr) ((type)(expr))
-#endif
-
-// Static inline functions should use _Py_NULL rather than using directly NULL
-// to prevent C++ compiler warnings. On C23 and newer and on C++11 and newer,
-// _Py_NULL is defined as nullptr.
-#ifndef _Py_NULL
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ > 201710L) ||               \
-    (defined(__cplusplus) && __cplusplus >= 201103)
-#define _Py_NULL nullptr
-#else
-#define _Py_NULL NULL
-#endif
-#endif
-
-// Python 3.10.0a3
-#if PY_VERSION_HEX < 0x030A00A3
-
-// bpo-42262 added Py_XNewRef()
-#if !defined(Py_XNewRef)
-[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
-  Py_XINCREF(obj);
-  return obj;
-}
-#define Py_XNewRef(obj) _Py_XNewRef(_PyObject_CAST(obj))
-#endif
-
-// bpo-42262 added Py_NewRef()
-#if !defined(Py_NewRef)
-[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
-  Py_INCREF(obj);
-  return obj;
-}
-#define Py_NewRef(obj) _Py_NewRef(_PyObject_CAST(obj))
-#endif
-
-#endif // Python 3.10.0a3
-
-// Python 3.9.0b1
-#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
-
-// bpo-40429 added PyThreadState_GetFrame()
-PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
-  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
-}
-
-// bpo-40421 added PyFrame_GetBack()
-PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
-}
-
-// bpo-40421 added PyFrame_GetCode()
-PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
-  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
-}
-
-#endif // Python 3.9.0b1
 
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {
+#if defined(Py_LIMITED_API)
+  // Frame introspection C APIs are not available under the limited API.
+  // Traceback-based auto-location is not supported; return unknown.
+  return mlirLocationUnknownGet(ctx);
+#else
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
   // Use a thread_local here to avoid requiring a large amount of space.
@@ -2749,6 +2689,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t count = 0;
 
   nb::gil_scoped_acquire acquire;
+
   PyThreadState *tstate = PyThreadState_GET();
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
@@ -2812,6 +2753,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     caller = mlirLocationCallSiteGet(frames[i], caller);
 
   return mlirLocationCallSiteGet(callee, caller);
+#endif
 }
 
 PyLocation
@@ -3046,7 +2988,8 @@ void populateIRCore(nb::module_ &m) {
                    "Returns True if an error was encountered during diagnostic "
                    "handling.")
       .def("__enter__", &PyDiagnosticHandler::contextEnter,
-           "Enters the diagnostic handler as a context manager.")
+           "Enters the diagnostic handler as a context manager.",
+           nb::sig("def __enter__(self, /) -> DiagnosticHandler"))
       .def("__exit__", &PyDiagnosticHandler::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the diagnostic handler context manager.");
@@ -3092,7 +3035,8 @@ void populateIRCore(nb::module_ &m) {
                   &PyMlirContext::createFromCapsule,
                   "Creates a Context from a capsule wrapping MlirContext.")
       .def("__enter__", &PyMlirContext::contextEnter,
-           "Enters the context as a context manager.")
+           "Enters the context as a context manager.",
+           nb::sig("def __enter__(self, /) -> Context"))
       .def("__exit__", &PyMlirContext::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the context manager.")
@@ -3318,7 +3262,8 @@ void populateIRCore(nb::module_ &m) {
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyLocation::createFromCapsule,
                   "Creates a Location from a capsule wrapping MlirLocation.")
       .def("__enter__", &PyLocation::contextEnter,
-           "Enters the location as a context manager.")
+           "Enters the location as a context manager.",
+           nb::sig("def __enter__(self, /) -> Location"))
       .def("__exit__", &PyLocation::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the location context manager.")
@@ -4348,7 +4293,8 @@ void populateIRCore(nb::module_ &m) {
       .def(nb::init<PyBlock &>(), "block"_a,
            "Inserts after the last operation but still inside the block.")
       .def("__enter__", &PyInsertionPoint::contextEnter,
-           "Enters the insertion point as a context manager.")
+           "Enters the insertion point as a context manager.",
+           nb::sig("def __enter__(self, /) -> InsertionPoint"))
       .def("__exit__", &PyInsertionPoint::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the insertion point context manager.")

@@ -543,6 +543,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(true);    KEYWORD(false);
   KEYWORD(declare); KEYWORD(define);
   KEYWORD(global);  KEYWORD(constant);
+  KEYWORD(br);
 
   KEYWORD(dso_local);
   KEYWORD(dso_preemptable);
@@ -627,6 +628,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(gc);
   KEYWORD(prefix);
   KEYWORD(prologue);
+  KEYWORD(prefalign);
 
   KEYWORD(no_sanitize_address);
   KEYWORD(no_sanitize_hwaddress);
@@ -808,6 +810,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(importType);
   KEYWORD(definition);
   KEYWORD(declaration);
+  KEYWORD(noRenameOnPromotion);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);
@@ -949,7 +952,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(select,      Select);
   INSTKEYWORD(va_arg,      VAArg);
   INSTKEYWORD(ret,         Ret);
-  INSTKEYWORD(br,          Br);
   INSTKEYWORD(switch,      Switch);
   INSTKEYWORD(indirectbr,  IndirectBr);
   INSTKEYWORD(invoke,      Invoke);

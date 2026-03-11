@@ -58,12 +58,12 @@ gpu.module @test {
   gpu.func @vector_transpose(%src: memref<256x128xf32>, %src1: memref<128x256xf32>) kernel attributes
       {known_block_size = array<i32: 1, 32, 16>} {
     // CHECK: %[[TDESC_LD:.*]] = xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf32> ->
-    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>>
+    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], order = [0, 1]>>
     // CHECK: %[[TDESC_ST:.*]] = xegpu.create_nd_tdesc %[[ARG_1]] : memref<128x256xf32> ->
     // CHECK-SAME: !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32]>>
 
-    // CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC_LD]][0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>}> :
-    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>> -> vector<256x128xf32>
+    // CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC_LD]][0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], order = [0, 1]>}> :
+    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], order = [0, 1]>> -> vector<256x128xf32>
 
     // CHECK: %[[TRANSPOSED:.*]] = vector.transpose %2, [1, 0]
     // CHECK-SAME {layout_result_0 = #xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32]>} : vector<256x128xf32> to vector<128x256xf32>
@@ -173,8 +173,8 @@ gpu.module @test {
     %c128 = arith.constant 128 : index
     %c8192 = arith.constant 8192 : index
     %c0 = arith.constant 0 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %0 = affine.apply affine_map<()[s0] -> (s0 * 128)>()[%block_id_x]
     %1 = affine.apply affine_map<()[s0] -> (s0 * 128)>()[%block_id_y]
     // CHECK: %2 = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (vector<128x128xf32>) {
@@ -222,8 +222,8 @@ gpu.module @test {
     %c16 = arith.constant 16 : index
     %c8192 = arith.constant 8192 : index
     %c0 = arith.constant 0 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %4 = xegpu.create_nd_tdesc %arg0 : memref<2048x8192xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
     %5 = xegpu.load_nd %4[%block_id_x, %c0]  : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<32x16xf16>
     %6 = xegpu.create_nd_tdesc %arg1 : memref<8192x4096xf16> -> !xegpu.tensor_desc<16x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
@@ -251,6 +251,21 @@ gpu.module @test {
     // 8 subgroups could load 1x16 each, but the current infra only considers the largest inst size (larger than 1x16) -> fail propagation.
     // CHECK: xegpu.store_nd %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]  :
     xegpu.store_nd %loaded_add, %tdesc[%c0, %c0]  : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+    gpu.return
+  }
+}
+
+// -----
+gpu.module @xevm_module{
+  // CHECK-LABEL: load_store_matrix
+  gpu.func @load_store_matrix(%arg0: !xegpu.mem_desc<64x128xf32>, %sg_id_lt_2: i1) {
+    %c0 = arith.constant 0 : index
+    scf.if %sg_id_lt_2 {
+      // CHECK: xegpu.load_matrix %{{.*}} <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 16]>}>
+      %1 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<64x128xf32>, index, index -> vector<32x32xf32>
+      // CHECK: xegpu.store_matrix %{{.*}} <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 16]>}>
+      xegpu.store_matrix %1, %arg0[%c0, %c0] <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 16]>}> : vector<32x32xf32>, !xegpu.mem_desc<64x128xf32>, index, index
+    }
     gpu.return
   }
 }

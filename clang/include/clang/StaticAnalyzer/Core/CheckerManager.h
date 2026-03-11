@@ -360,11 +360,8 @@ public:
                                    ExprEngine &Eng);
 
   /// Run checkers on end of function.
-  void runCheckersForEndFunction(NodeBuilderContext &BC,
-                                 ExplodedNodeSet &Dst,
-                                 ExplodedNode *Pred,
-                                 ExprEngine &Eng,
-                                 const ReturnStmt *RS);
+  void runCheckersForEndFunction(ExplodedNodeSet &Dst, ExplodedNode *Pred,
+                                 ExprEngine &Eng, const ReturnStmt *RS);
 
   /// Run checkers for branch condition.
   void runCheckersForBranchCondition(const Stmt *condition,

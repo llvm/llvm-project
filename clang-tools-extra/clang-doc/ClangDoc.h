@@ -22,7 +22,7 @@
 namespace clang {
 namespace doc {
 
-std::unique_ptr<tooling::FrontendActionFactory>
+OwnedPtr<tooling::FrontendActionFactory>
 newMapperActionFactory(ClangDocContext CDCtx);
 
 } // namespace doc

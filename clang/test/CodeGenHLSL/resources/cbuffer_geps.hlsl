@@ -21,24 +21,24 @@ cbuffer CBArrays : register(b2) {
 void cbarrays() {
   // CHECK: load float, ptr addrspace(2) @c1, align 16
   use(c1[0]);
-  // CHECK: load float, ptr addrspace(2) getelementptr (<{ float, target("dx.Padding", 12) }>, ptr addrspace(2) @c1, i32 7, i32 0), align 16
+  // CHECK: load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c1, i32 112), align 16
   use(c1[7]);
-  // CHECK: load float, ptr addrspace(2) getelementptr (<{ float, target("dx.Padding", 12) }>, ptr addrspace(2) @c1, i32 29, i32 0), align 16
+  // CHECK: load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c1, i32 464), align 16
   use(c1[29]);
 
-  // CHECK: load <3 x double>, ptr addrspace(2) getelementptr (<{ <3 x double>, target("dx.Padding", 8) }>, ptr addrspace(2) @c2, i32 8, i32 0), align 32
+  // CHECK: load <3 x double>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c2, i32 256), align 32
   use(c2[8]);
-  // CHECK: load half, ptr addrspace(2) getelementptr (<{ half, target("dx.Padding", 14) }>, ptr addrspace(2) getelementptr (<{ <{ [19 x <{ half, target("dx.Padding", 14) }>], half }>, target("dx.Padding", 14) }>, ptr addrspace(2) @c3, i32 9, i32 0), i32 5, i32 0), align 16
+  // CHECK: load half, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c3, i32 2960), align 16
   use(c3[9][5]);
-  // CHECK: load i64, ptr addrspace(2) getelementptr (<{ i64, target("dx.Padding", 8) }>, ptr addrspace(2) @c4, i32 6, i32 0), align 16
+  // CHECK: load i64, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c4, i32 96), align 16
   use(c4[6]);
-  // CHECK:  load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([40 x <4 x i32>], ptr addrspace(2) getelementptr inbounds ([30 x [40 x <4 x i32>]], ptr addrspace(2) getelementptr inbounds ([20 x [30 x [40 x <4 x i32>]]], ptr addrspace(2) @c5, i32 0, i32 1), i32 0, i32 12), i32 0, i32 15), align 16
+  // CHECK:  load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c5, i32 27120), align 16
   use(c5[1][12][15]);
-  // CHECK: load i16, ptr addrspace(2) getelementptr (<{ i16, target("dx.Padding", 14) }>, ptr addrspace(2) @c6, i32 4, i32 0), align 16
+  // CHECK: load i16, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c6, i32 64), align 16
   use(c6[4]);
-  // CHECK: load i64, ptr addrspace(2) getelementptr (<{ i64, target("dx.Padding", 8) }>, ptr addrspace(2) @c7, i32 17, i32 0), align 16
+  // CHECK: load i64, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c7, i32 272), align 16
   use(c7[17]);
-  // CHECK: load i32, ptr addrspace(2) getelementptr (<{ i32, target("dx.Padding", 12) }>, ptr addrspace(2) @c8, i32 30, i32 0), align 16
+  // CHECK: load i32, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @c8, i32 480), align 16
   use(c8[30]);
 }
 
@@ -71,13 +71,13 @@ cbuffer CBStructs {
 void cbstructs() {
   // CHECK: load <2 x float>, ptr addrspace(2) @s1, align 8
   use(s1.a1);
-  // CHECK: load <3 x i16>, ptr addrspace(2) getelementptr inbounds nuw (%B, ptr addrspace(2) @s2, i32 0, i32 1), align 2
+  // CHECK: load <3 x i16>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s2, i32 8), align 2
   use(s2.b1);
-  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (%C, ptr addrspace(2) @s3, i32 0, i32 2), align 8
+  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s3, i32 16), align 8
   use(s3.c2.a1);
-  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr (<{ %A, target("dx.Padding", 8) }>, ptr addrspace(2) @s4, i32 2, i32 0), align 8
+  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s4, i32 32), align 8
   use(s4[2].a1);
-  // CHECK: load <3 x i16>, ptr addrspace(2) getelementptr inbounds nuw (%B, ptr addrspace(2) getelementptr (<{ %B, target("dx.Padding", 2) }>, ptr addrspace(2) getelementptr (<{ <{ [5 x <{ %B, target("dx.Padding", 2) }>], %B }>, target("dx.Padding", 2) }>, ptr addrspace(2) @s5, i32 3, i32 0), i32 5, i32 0), i32 0, i32 1), align 2
+  // CHECK: load <3 x i16>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s5, i32 376), align 2
   use(s5.d1[3][5].b1);
 }
 
@@ -102,15 +102,15 @@ cbuffer CBMix {
 
 // CHECK-LABEL: define hidden void @_Z5cbmixv()
 void cbmix() {
-  // CHECK: load float, ptr addrspace(2) getelementptr inbounds nuw (%Scalars, ptr addrspace(2) getelementptr (<{ %Scalars, target("dx.Padding", 8) }>, ptr addrspace(2) @m1, i32 2, i32 0), i32 0, i32 1), align 4
+  // CHECK: load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m1, i32 36), align 4
   use(m1[2].b);
-  // CHECK: load float, ptr addrspace(2) getelementptr inbounds nuw (%ArrayAndScalar, ptr addrspace(2) @m3, i32 0, i32 1), align 4
+  // CHECK: load float, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m3, i32 80), align 4
   use(m3.y);
-  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr (<{ <2 x float>, target("dx.Padding", 8) }>, ptr addrspace(2) getelementptr (<{ <{ [3 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>, target("dx.Padding", 8) }>, ptr addrspace(2) @m4, i32 2, i32 0), i32 3, i32 0), align 16
+  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m4, i32 176), align 16
   use(m4[2][3]);
-  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw ([[ANON_1]], ptr addrspace(2) @m5, i32 0, i32 2), align 16
+  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m5, i32 16), align 16
   use(m5.d);
-  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([5 x <4 x i32>], ptr addrspace(2) getelementptr (<{ %ArrayAndScalar, target("dx.Padding", 12) }>, ptr addrspace(2) getelementptr inbounds nuw ([[ANON_2]], ptr addrspace(2) @m6, i32 0, i32 2), i32 2, i32 0), i32 0, i32 2), align 16
+  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m6, i32 240), align 16
   use(m6.j[2].x[2]);
   // CHECK: load <1 x double>, ptr addrspace(2) @m7, align 8
   use(m7);

@@ -1077,7 +1077,7 @@ Expected<void *> PinnedAllocationMapTy::registerMemory(void *HstPtr,
   auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
                                               BaseDevAccessiblePtr, BaseSize);
   if (!IsPinnedOrErr)
-    return std::move(IsPinnedOrErr.takeError());
+    return IsPinnedOrErr.takeError();
 
   // If pinned, just insert the entry representing the whole pinned buffer.
   if (*IsPinnedOrErr) {
@@ -1095,7 +1095,7 @@ Expected<void *> PinnedAllocationMapTy::registerMemory(void *HstPtr,
   // host buffer and retrieve the device accessible pointer.
   auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
   if (!DevAccessiblePtrOrErr)
-    return std::move(DevAccessiblePtrOrErr.takeError());
+    return DevAccessiblePtrOrErr.takeError();
 
   // Now insert the new entry into the map.
   if (auto Err = insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size))
@@ -1652,7 +1652,10 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    return false;
+    auto MatchOrErr = isImageCompatible(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
   }
 }
 
@@ -1689,7 +1692,10 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    return false;
+    auto MatchOrErr = isImageCompatible(DeviceId, Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
   }
 }
 

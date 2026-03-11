@@ -237,10 +237,10 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPsub_select_rank(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<*:i32>> {fir.bindc_name = "arr"}) {{.*}} {
-! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 5 : i32
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 4 : i8
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : i8
+! CHECK-DAG:       %[[CONSTANT_0:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[CONSTANT_1:.*]] = arith.constant 5 : i32
+! CHECK-DAG:       %[[CONSTANT_2:.*]] = arith.constant 4 : i8
+! CHECK-DAG:       %[[CONSTANT_3:.*]] = arith.constant 1 : i8
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ARG0]] : (!fir.box<!fir.array<*:i32>>) -> !fir.box<!fir.array<*:i32>, volatile>
 ! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<*:i32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<*:i32>, volatile>, !fir.box<!fir.array<*:i32>, volatile>)

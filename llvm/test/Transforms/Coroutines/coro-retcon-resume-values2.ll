@@ -44,11 +44,11 @@ declare void @print(i32)
 ; CHECK-LABEL: @f.resume.0(
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[VALUE0_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP2]], i32 0, i32 1
+; CHECK-NEXT:    [[VALUE0_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    store i32 [[TMP1:%.*]], ptr [[VALUE0_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[N_RELOAD:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[SUM0:%.*]] = call i32 @add(i32 [[N_RELOAD]], i32 [[TMP1]])
-; CHECK-NEXT:    [[SUM0_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP2]], i32 0, i32 2
+; CHECK-NEXT:    [[SUM0_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    store i32 [[SUM0]], ptr [[SUM0_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    ret ptr @f.resume.1
 ;
@@ -56,15 +56,15 @@ declare void @print(i32)
 ; CHECK-LABEL: @f.resume.1(
 ; CHECK-NEXT:  entryresume.1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[VALUE1_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP2]], i32 0, i32 3
+; CHECK-NEXT:    [[VALUE1_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 12
 ; CHECK-NEXT:    store i32 [[TMP1:%.*]], ptr [[VALUE1_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[SUM0_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP2]], i32 0, i32 2
+; CHECK-NEXT:    [[SUM0_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; CHECK-NEXT:    [[SUM0_RELOAD:%.*]] = load i32, ptr [[SUM0_RELOAD_ADDR]], align 4
-; CHECK-NEXT:    [[VALUE0_RELOAD_ADDR5:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP2]], i32 0, i32 1
+; CHECK-NEXT:    [[VALUE0_RELOAD_ADDR5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[VALUE0_RELOAD6:%.*]] = load i32, ptr [[VALUE0_RELOAD_ADDR5]], align 4
 ; CHECK-NEXT:    [[SUM1:%.*]] = call i32 @add(i32 [[SUM0_RELOAD]], i32 [[VALUE0_RELOAD6]])
 ; CHECK-NEXT:    [[SUM2:%.*]] = call i32 @add(i32 [[SUM1]], i32 [[TMP1]])
-; CHECK-NEXT:    [[SUM2_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP2]], i32 0, i32 4
+; CHECK-NEXT:    [[SUM2_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    store i32 [[SUM2]], ptr [[SUM2_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    ret ptr @f.resume.2
 ;
@@ -72,11 +72,11 @@ declare void @print(i32)
 ; CHECK-LABEL: @f.resume.2(
 ; CHECK-NEXT:  entryresume.2:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[SUM2_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[TMP2]], i32 0, i32 4
+; CHECK-NEXT:    [[SUM2_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[SUM2_RELOAD:%.*]] = load i32, ptr [[SUM2_RELOAD_ADDR]], align 4
-; CHECK-NEXT:    [[VALUE1_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP2]], i32 0, i32 3
+; CHECK-NEXT:    [[VALUE1_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 12
 ; CHECK-NEXT:    [[VALUE1_RELOAD:%.*]] = load i32, ptr [[VALUE1_RELOAD_ADDR]], align 4
-; CHECK-NEXT:    [[VALUE0_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[TMP2]], i32 0, i32 1
+; CHECK-NEXT:    [[VALUE0_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[VALUE0_RELOAD:%.*]] = load i32, ptr [[VALUE0_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    [[SUM3:%.*]] = call i32 @add(i32 [[SUM2_RELOAD]], i32 [[VALUE0_RELOAD]])
 ; CHECK-NEXT:    [[SUM4:%.*]] = call i32 @add(i32 [[SUM3]], i32 [[VALUE1_RELOAD]])

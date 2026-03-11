@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Wconstant-conversion -Woverflow-behavior-conversion -verify -fsyntax-only
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -fexperimental-overflow-behavior-types -Wconstant-conversion -Woverflow-behavior-conversion -verify -fsyntax-only -fexperimental-new-constant-interpreter
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
@@ -9,9 +10,6 @@ typedef int __attribute__((overflow_behavior(wrap))) ok_wrap; // OK
 typedef long __attribute__((overflow_behavior(trap))) ok_nowrap; // OK
 typedef unsigned long __attribute__((overflow_behavior("wrap"))) str_ok_wrap; // OK
 typedef char __attribute__((overflow_behavior("trap"))) str_ok_nowrap; // OK
-
-#define __wrap __attribute__((overflow_behavior(wrap)))
-#define __trap __attribute__((overflow_behavior(trap)))
 
 struct struct_not_allowed {
   int i;
