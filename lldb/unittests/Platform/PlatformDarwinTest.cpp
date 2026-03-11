@@ -353,8 +353,8 @@ TEST_F(PlatformDarwinLocateTest,
       (m_tmp_dsym_dwarf_dir + "/../Python/import.py").str();
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
-      "conflicts with a keyword. If you intend to have this script loaded, "
-      "please rename it to '_import.py' and retry.\n",
+      "conflicts with the keyword 'import'. If you intend to have this script "
+      "loaded, please rename it to '_import.py' and retry.\n",
       orig_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
@@ -390,8 +390,9 @@ TEST_F(PlatformDarwinLocateTest,
       (m_tmp_dsym_dwarf_dir + "/../Python/import.py").str();
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
-      "conflicts with a keyword. Loading '_import.py' instead. Consider "
-      "removing the file with the malformed name to eliminate this warning.\n",
+      "conflicts with the keyword 'import'. Loading '_import.py' instead. "
+      "Consider removing the file with the malformed name to eliminate this "
+      "warning.\n",
       orig_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
@@ -553,7 +554,8 @@ TEST_F(
           ->LocateExecutableScriptingResourcesFromDSYM(
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 0u);
-  EXPECT_TRUE(ss.GetString().contains("conflicts with a keyword"));
+  EXPECT_TRUE(
+      ss.GetString().contains("conflicts with the keyword 'mykeyword_1_1_1'"));
 }
 
 TEST_F(
