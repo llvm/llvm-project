@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExceptionBaseclassCheck.h"
+#include "StdExceptionBaseclassCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::bugprone {
 
-void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
+void StdExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxThrowExpr(
           unless(has(expr(anyOf(isTypeDependent(), isValueDependent())))),
@@ -34,7 +34,7 @@ void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void ExceptionBaseclassCheck::check(const MatchFinder::MatchResult &Result) {
+void StdExceptionBaseclassCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BadThrow = Result.Nodes.getNodeAs<CXXThrowExpr>("bad_throw");
   assert(BadThrow && "Did not match the throw expression");
 
@@ -54,4 +54,4 @@ void ExceptionBaseclassCheck::check(const MatchFinder::MatchResult &Result) {
     diag(TypeDecl->getBeginLoc(), "type defined here", DiagnosticIDs::Note);
 }
 
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::bugprone
