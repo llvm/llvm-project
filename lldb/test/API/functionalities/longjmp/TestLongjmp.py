@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 class LongjmpTestCase(TestBase):
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFlakeyNetBSD
     def test_step_out(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-out."""
@@ -27,7 +26,6 @@ class LongjmpTestCase(TestBase):
         self.step_over()
 
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFlakeyNetBSD
     def test_step_back_out(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-out after thread step-in."""
