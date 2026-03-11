@@ -357,6 +357,22 @@ LogicalResult MMAMxOp::verify() {
   return success();
 }
 
+LogicalResult TruncfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) && !isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (isa<VectorType>(srcTy)) {
+    VectorType srcVecTy = dyn_cast<VectorType>(srcTy);
+    VectorType dstVecTy = dyn_cast<VectorType>(dstTy);
+    if (srcVecTy.getNumElements() != dstVecTy.getNumElements())
+      return emitOpError(
+          "src and dst vector types should have the same number of elements");
+  }
+  return success();
+}
+
 LogicalResult
 XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
                        StringRef triple, StringRef chip, DictionaryAttr flags,

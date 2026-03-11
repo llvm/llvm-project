@@ -613,8 +613,8 @@ def XeVM_TruncfOp
       Results<(outs AnyTypeOf<[VectorOfRankAndType<[1], [I8, I<4>]>, I8,
                                I<4>]>:$dst)>,
       Arguments<(ins AnyTypeOf<[VectorOfRankAndType<[1], [F16, BF16]>, F16,
-                                BF16]>:$arg,
-          XeVM_TruncfDstElemTypeAttr:$dst_etype)> {
+                                BF16]>:$src,
+          XeVM_TruncfDstElemTypeAttr:$etype)> {
   let summary = "Floating point truncation from f16/bf16 to f8/bf8/f4";
   let description = [{
     The `xevm.truncf` operation truncates a floating point value from
@@ -622,8 +622,10 @@ def XeVM_TruncfOp
   }];
 
   let assemblyFormat = [{
-    $arg ` ` `{` $dst_etype `}` attr-dict `:` functional-type(operands, results)
+    $src ` ` `{` $etype `}` attr-dict `:` functional-type(operands, results)
   }];
+
+  let hasVerifier = 1;
 }
 
 def XeVM_MMAMxOp
